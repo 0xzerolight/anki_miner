@@ -1,5 +1,7 @@
 """Centralized constants for the GUI layer."""
 
+from anki_miner.utils.file_pairing import DEFAULT_SUBTITLE_PRIORITY
+
 # =============================================================================
 # WINDOW CONFIGURATION
 # =============================================================================
@@ -22,7 +24,11 @@ MIN_HEIGHT_LOG_WIDGET = 200
 # FILE FILTERS FOR DIALOGS
 # =============================================================================
 VIDEO_FILE_FILTER = "Video Files (*.mp4 *.mkv *.avi *.m4v *.mov);;All Files (*)"
-SUBTITLE_FILE_FILTER = "Subtitle Files (*.ass *.srt *.ssa);;All Files (*)"
+#: Derived, not restated: the picker offers exactly what FilePairMatcher will
+#: pair, so a format added to the priority tuple can never be missing here.
+SUBTITLE_FILE_FILTER = (
+    f"Subtitle Files ({' '.join(f'*{ext}' for ext in sorted(DEFAULT_SUBTITLE_PRIORITY))});;All Files (*)"
+)
 
 # =============================================================================
 # SUBTITLE OFFSET RANGE

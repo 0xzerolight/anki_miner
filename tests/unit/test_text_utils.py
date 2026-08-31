@@ -922,3 +922,30 @@ class TestStripFormatChars:
     def test_leaves_ordinary_text_untouched(self):
         assert strip_format_chars("普通の日本語です") == "普通の日本語です"
         assert strip_format_chars("") == ""
+
+
+class TestWebVTTCueTimestamps:
+    """yt-dlp auto-captions carry inline cue-timestamp tags; pysubs2 leaves them."""
+
+    def test_strips_hms_cue_timestamp(self):
+        assert strip_subtitle_markup("新しい本を<00:00:01.500>買いました") == "新しい本を買いました"
+
+    def test_strips_ms_cue_timestamp(self):
+        assert strip_subtitle_markup("今日は<01:23.456>学校へ行く") == "今日は学校へ行く"
+
+    def test_strips_long_hour_cue_timestamp(self):
+        assert strip_subtitle_markup("犬が<123:45:06.789>走る") == "犬が走る"
+
+    def test_strips_cue_timestamp_alongside_class_tag(self):
+        assert strip_subtitle_markup("本を<00:00:02.000><c>読む</c>") == "本を読む"
+
+    def test_preserves_literal_angle_comparison(self):
+        """The digit-led tag strip must not eat plain arithmetic."""
+        assert strip_subtitle_markup("a < 3 and b > 4") == "a < 3 and b > 4"
+
+    def test_preserves_non_timestamp_angle_digits(self):
+        assert strip_subtitle_markup("<123>") == "<123>"
+
+    def test_clean_subtitle_text_drops_cue_timestamps(self):
+        """The card sentence is clean_subtitle_text's output, so it must be clean there."""
+        assert clean_subtitle_text("新しい本を<00:00:01.500>買いました") == "新しい本を買いました"

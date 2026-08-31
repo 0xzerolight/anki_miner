@@ -11,6 +11,7 @@ from anki_miner.services.subtitle_cleaner import (
     clean_for_alignment,
     clean_reference,
     map_deltas_back,
+    transcode_for_alignment,
 )
 
 
@@ -173,3 +174,100 @@ class TestMapDeltasBack:
         assert len(out.events) == 13
         assert out.events[5].style == "Signs"
         assert out.events[5].start == 9300 + 300
+
+
+class TestTranscodeForAlignment:
+    """The fallback when clean_for_alignment declines a format alass cannot read."""
+
+    def _vtt(self, path: Path, count: int) -> pysubs2.SSAFile:
+        subs = pysubs2.SSAFile()
+        for i in range(count):
+            start = 1000 + i * 2000
+            subs.append(pysubs2.SSAEvent(start=start, end=start + 1500, text=f"テスト{i}"))
+        subs.save(str(path), format_="vtt")
+        return subs
+
+    def test_transcodes_vtt_to_srt_keeping_every_cue(self, tmp_path):
+        src = tmp_path / "in.vtt"
+        self._vtt(src, 4)
+        dest = tmp_path / "out.srt"
+
+        result = transcode_for_alignment(src, dest)
+
+        assert result is not None
+        assert result.kept_indices == [0, 1, 2, 3]
+        assert result.dropped == 0
+        assert pysubs2.load(str(dest)).format == "srt"
+
+    def test_works_below_the_clean_minimum(self, tmp_path):
+        """clean_for_alignment declines under 10 cues; the transcode must not."""
+        src = tmp_path / "short.vtt"
+        self._vtt(src, 3)
+
+        assert clean_for_alignment(src, tmp_path / "clean.srt") is None
+        assert transcode_for_alignment(src, tmp_path / "trans.srt") is not None
+
+    def test_drops_comments_so_the_cue_count_survives_the_writer(self, tmp_path):
+        """SRT has no comments and its writer drops them; kept_indices must agree
+        or map_deltas_back rejects every candidate on a count mismatch.
+
+        Sourced from .ass because it is the only format here that stores a
+        comment at all -- a .vtt cannot carry one into the function.
+        """
+        subs = pysubs2.SSAFile()
+        for i in range(4):
+            start = 1000 + i * 2000
+            event = pysubs2.SSAEvent(start=start, end=start + 1500, text=f"テスト{i}")
+            if i == 1:
+                event.type = "Comment"
+            subs.append(event)
+        src = tmp_path / "commented.ass"
+        subs.save(str(src), format_="ass")
+        dest = tmp_path / "out.srt"
+
+        result = transcode_for_alignment(src, dest)
+
+        assert result is not None
+        assert result.kept_indices == [0, 2, 3]
+        assert len(pysubs2.load(str(dest)).events) == len(result.kept_indices)
+
+    def test_drops_non_positive_spans(self, tmp_path):
+        """A zero-length cue survives the SRT writer but aligners discard it, so
+        it must not be counted as kept."""
+        subs = pysubs2.SSAFile()
+        subs.append(pysubs2.SSAEvent(start=1000, end=2500, text="いち"))
+        subs.append(pysubs2.SSAEvent(start=3000, end=3000, text="ぜろ"))
+        subs.append(pysubs2.SSAEvent(start=4000, end=5500, text="さん"))
+        src = tmp_path / "zero.vtt"
+        subs.save(str(src), format_="vtt")
+
+        result = transcode_for_alignment(src, tmp_path / "out.srt")
+
+        assert result is not None
+        assert result.kept_indices == [0, 2]
+
+    def test_unparsable_source_returns_none(self, tmp_path):
+        src = tmp_path / "bad.vtt"
+        src.write_bytes(b"\x00\x01 not a subtitle \xff")
+
+        assert transcode_for_alignment(src, tmp_path / "out.srt") is None
+
+    def test_round_trips_through_map_deltas_back_into_the_original_format(self, tmp_path):
+        """The whole point: timings land on the untouched .vtt, which stays .vtt."""
+        src = tmp_path / "in.vtt"
+        self._vtt(src, 4)
+        transcoded = transcode_for_alignment(src, tmp_path / "align.srt")
+        assert transcoded is not None
+
+        synced = pysubs2.load(str(transcoded.path))
+        for event in synced:
+            event.start += 3000
+            event.end += 3000
+        synced.save(str(tmp_path / "synced.srt"), format_="srt")
+
+        out = tmp_path / "out.vtt"
+        assert map_deltas_back(src, tmp_path / "synced.srt", transcoded.kept_indices, out)
+
+        mapped = pysubs2.load(str(out))
+        assert mapped.format == "vtt"
+        assert [event.start for event in mapped] == [4000, 6000, 8000, 10000]

@@ -6,8 +6,10 @@ One episode's retime is a pipeline, not a single tool call:
    align against (embedded dialogue track preferred, extracted audio fallback,
    raw video as last resort).
 2. **Clean** — :mod:`anki_miner.services.subtitle_cleaner` strips non-dialogue
-   cues (signs, songs, ♪ markers, HoH annotations) from the input into a
-   same-format copy; aligners see dialogue only.
+   cues (signs, songs, ♪ markers, HoH annotations) from the input into a copy
+   the aligners can read; aligners see dialogue only. A format no engine reads
+   (WebVTT: alass takes SubRip/SSA/VobSub only) is transcoded to SRT here, and
+   step 4 puts the result back onto the original in its own format.
 3. **Align** — engines are tried in order until one produces a candidate that
    survives validation: ffsubsync in split mode (in-process, has its own
    quality gate), then alass in split mode, then alass with a single global
@@ -42,7 +44,11 @@ from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.exceptions.subtitle import AlassNotFoundError
 from anki_miner.services.retime_reference import ReferenceOverride, resolve_reference
-from anki_miner.services.subtitle_cleaner import clean_for_alignment, map_deltas_back
+from anki_miner.services.subtitle_cleaner import (
+    clean_for_alignment,
+    map_deltas_back,
+    transcode_for_alignment,
+)
 from anki_miner.services.sync_engines import SyncResult
 from anki_miner.services.sync_engines.alass_engine import sync_with_alass
 from anki_miner.services.sync_engines.ffsubsync_engine import sync_with_ffsubsync
@@ -58,11 +64,29 @@ __all__ = ["RetimeOutcome", "retime_subtitle"]
 #: Subdirectory of ``out_sub.parent`` where working files are written. Keeping
 #: them out of the pairing folder itself means a crash-orphaned temp can never
 #: be picked up as a subtitle by ``FilePairMatcher`` (its folder scan is
-#: non-recursive) — the temp keeps its real ``.srt``/``.ass`` suffix, which the
+#: non-recursive) — the temp keeps a real ``.srt``/``.ass`` suffix, which the
 #: sync engines need to infer the output format, while staying invisible to
 #: the episode matcher. Same filesystem as *out_sub*, so ``_commit``'s
 #: ``os.replace`` cannot hit EXDEV.
 TMP_SUBDIR_NAME = ".anki-miner-retime-tmp"
+
+#: Formats every alignment engine can read and write. alass v2.0.0 accepts only
+#: SubRip, SubStationAlpha and VobSub -- handed a .vtt it prints "unknown
+#: subtitle format", exits 1 and writes nothing, costing the chain two of its
+#: four engines. ffsubsync does read and write WebVTT, but the alignment temps
+#: are normalized unconditionally so every engine sees one format.
+_ALIGNER_FORMATS: frozenset[str] = frozenset({".srt", ".ass", ".ssa"})
+
+
+def _alignment_suffix(in_sub: Path) -> str:
+    """Suffix the alignment temps carry: the input's own, or .srt when no engine reads it.
+
+    Internal to the pipeline. The committed output keeps the user's format --
+    :func:`map_deltas_back` writes the untouched original, whose extension
+    decides what pysubs2 emits.
+    """
+    suffix = in_sub.suffix.lower()
+    return suffix if suffix in _ALIGNER_FORMATS else ".srt"
 
 
 @dataclass(frozen=True)
@@ -137,7 +161,13 @@ def retime_subtitle(
         reference_path = reference.path if reference is not None else video
         sub_reference = reference is not None and reference.kind == "subtitle"
 
-        cleaned = clean_for_alignment(in_sub, tmp_dir / (out_sub.stem + ".retime-clean" + in_sub.suffix))
+        align_suffix = _alignment_suffix(in_sub)
+        cleaned = clean_for_alignment(in_sub, tmp_dir / (out_sub.stem + ".retime-clean" + align_suffix))
+        if cleaned is None and align_suffix != in_sub.suffix.lower():
+            # Cleaning declined, but no engine can read this format as-is. Keep
+            # every representable cue rather than dropping non-dialogue: the
+            # cue floor is already unmet, so there is nothing to spare.
+            cleaned = transcode_for_alignment(in_sub, tmp_dir / (out_sub.stem + ".retime-clean" + align_suffix))
         if cleaned is not None:
             temps.append(cleaned.path)
             if cleaned.dropped:
@@ -166,7 +196,12 @@ def retime_subtitle(
             if alass_missing and label.startswith("alass"):
                 continue
 
-            candidate = tmp_dir / f"{out_sub.stem}.retime-cand-{len(attempts)}{out_sub.suffix}"
+            # From align_input, not out_sub: the engine infers its output format
+            # from this suffix, and _commit is a bare os.replace with no
+            # transcode -- a candidate in a format the engine was not given
+            # would be committed under the wrong extension. Identical to
+            # out_sub.suffix for every format the engines read natively.
+            candidate = tmp_dir / f"{out_sub.stem}.retime-cand-{len(attempts)}{align_input.suffix}"
             temps.append(candidate)
             try:
                 result = runner(reference_path, align_input, candidate, log_cb)

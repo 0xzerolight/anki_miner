@@ -384,3 +384,91 @@ class TestCancellation:
         assert outcome.cancelled
         mock_ffs.assert_not_called()
         mock_alass.assert_not_called()
+
+
+def _write_dialogue(path: Path, *, count: int, fmt: str) -> None:
+    """Write *count* plain dialogue cues to *path* in *fmt*."""
+    subs = pysubs2.SSAFile()
+    for i in range(count):
+        start = 1000 + i * 2000
+        subs.append(pysubs2.SSAEvent(start=start, end=start + 1500, text=f"日本語のテスト{i}を読む"))
+    subs.save(str(path), format_=fmt)
+
+
+class TestAlignmentFormatTranscode:
+    """alass reads only SubRip/SSA, so a .vtt is aligned as .srt and mapped back."""
+
+    def test_engines_receive_srt_for_a_vtt_input(self, cfg, video, tmp_path):
+        in_sub = tmp_path / "EP01.vtt"
+        _write_dialogue(in_sub, count=20, fmt="vtt")
+        out_sub = tmp_path / "EP01_retimed.vtt"
+
+        seen: list[Path] = []
+
+        def _spy(config, reference, sub_in, out, **kwargs):
+            seen.append(sub_in)
+            return _fake_engine(1500, engine="ffsubsync")(config, reference, sub_in, out, **kwargs)
+
+        with patch(_FFS, side_effect=_spy), patch(_ALASS):
+            assert retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert seen, "engine should have been handed an input"
+        assert all(path.suffix == ".srt" for path in seen), seen
+
+    def test_committed_output_is_still_vtt(self, cfg, video, tmp_path):
+        in_sub = tmp_path / "EP01.vtt"
+        _write_dialogue(in_sub, count=20, fmt="vtt")
+        out_sub = tmp_path / "EP01_retimed.vtt"
+
+        with patch(_FFS, side_effect=_fake_engine(1500, engine="ffsubsync")), patch(_ALASS):
+            assert retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert pysubs2.load(str(out_sub)).format == "vtt"
+
+    def test_candidate_never_outlives_the_input_format(self, cfg, video, tmp_path):
+        """_commit is a bare os.replace, so a .srt candidate must never reach a
+        .vtt out_sub -- that would write SRT bytes under a .vtt name."""
+        in_sub = tmp_path / "EP01.vtt"
+        _write_dialogue(in_sub, count=20, fmt="vtt")
+        out_sub = tmp_path / "EP01_retimed.vtt"
+
+        with patch(_FFS, side_effect=_fake_engine(1500, engine="ffsubsync")), patch(_ALASS):
+            assert retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert out_sub.read_text(encoding="utf-8").lstrip().startswith("WEBVTT")
+
+    def test_short_vtt_below_the_clean_floor_still_transcodes(self, cfg, video, tmp_path):
+        """Under 10 dialogue cues clean_for_alignment declines; the transcode
+        fallback must still keep alass-readable input reaching the engines."""
+        in_sub = tmp_path / "EP01.vtt"
+        _write_dialogue(in_sub, count=4, fmt="vtt")
+        out_sub = tmp_path / "EP01_retimed.vtt"
+
+        seen: list[Path] = []
+
+        def _spy(config, reference, sub_in, out, **kwargs):
+            seen.append(sub_in)
+            return _fake_engine(1500, engine="ffsubsync")(config, reference, sub_in, out, **kwargs)
+
+        with patch(_FFS, side_effect=_spy), patch(_ALASS):
+            retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert seen and all(path.suffix == ".srt" for path in seen), seen
+
+    def test_srt_input_path_is_unchanged(self, cfg, video, tmp_path):
+        """Regression guard: existing formats must take exactly today's path."""
+        in_sub = tmp_path / "EP01.srt"
+        _write_dialogue(in_sub, count=20, fmt="srt")
+        out_sub = tmp_path / "EP01_retimed.srt"
+
+        seen: list[Path] = []
+
+        def _spy(config, reference, sub_in, out, **kwargs):
+            seen.append(sub_in)
+            return _fake_engine(1500, engine="ffsubsync")(config, reference, sub_in, out, **kwargs)
+
+        with patch(_FFS, side_effect=_spy), patch(_ALASS):
+            assert retime_subtitle(cfg, video, in_sub, out_sub)
+
+        assert all(path.suffix == ".srt" for path in seen)
+        assert pysubs2.load(str(out_sub)).format == "srt"

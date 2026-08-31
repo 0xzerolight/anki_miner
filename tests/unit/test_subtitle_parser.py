@@ -7007,3 +7007,70 @@ class TestMasuStemNominalizationWiring:
         )
         word = self._mined(service, self.SENTENCE)["差し入れ"]
         assert word.expression_reading == "さしいれ"
+
+
+class TestWebVTTFiles:
+    """WebVTT reaches the parser through pysubs2 autodetect, no extension dispatch."""
+
+    _PLAIN = (
+        "WEBVTT\n\n"
+        "00:00:01.000 --> 00:00:03.000\n新しい本を買いました\n\n"
+        "00:00:04.000 --> 00:00:06.000\n今日は学校で勉強する\n"
+    )
+
+    def test_parses_a_plain_vtt(self, test_config, tmp_path):
+        sub_file = tmp_path / "episode.vtt"
+        sub_file.write_text(self._PLAIN, encoding="utf-8")
+
+        words = SubtitleParserService(test_config).parse_subtitle_file(sub_file)
+
+        lemmas = {word.lemma for word in words}
+        assert "本" in lemmas
+        assert "買う" in lemmas
+        assert "勉強" in lemmas
+
+    def test_vtt_cue_settings_do_not_reach_the_text(self, test_config, tmp_path):
+        """Positioning is cue metadata, not dialogue."""
+        sub_file = tmp_path / "positioned.vtt"
+        sub_file.write_text(
+            "WEBVTT\n\n00:00:01.000 --> 00:00:03.000 align:start position:0%\n本を読む\n",
+            encoding="utf-8",
+        )
+
+        entries = SubtitleParserService(test_config).parse_raw_entries(sub_file)
+
+        assert [text for _, _, text in entries] == ["本を読む"]
+
+    def test_yt_dlp_cue_timestamps_do_not_reach_the_card_sentence(self, test_config, tmp_path):
+        """yt-dlp auto-captions tag every word; the sentence stored on the card
+        must not carry <00:00:01.500>."""
+        sub_file = tmp_path / "autocaption.vtt"
+        sub_file.write_text(
+            "WEBVTT\nKind: captions\nLanguage: ja\n\n"
+            "00:00:00.910 --> 00:00:03.129 align:start position:0%\n"
+            "新しい本を<00:00:01.500><c>買いました</c>\n",
+            encoding="utf-8",
+        )
+
+        entries = SubtitleParserService(test_config).parse_raw_entries(sub_file)
+
+        assert [text for _, _, text in entries] == ["新しい本を買いました"]
+
+    def test_parses_a_bom_prefixed_vtt(self, test_config, tmp_path):
+        """A UTF-8 BOM makes pysubs2 autodetect 'srt', which reads WebVTT cues
+        correctly anyway. Pinned so a future format change cannot regress it."""
+        sub_file = tmp_path / "bom.vtt"
+        sub_file.write_bytes(("﻿" + self._PLAIN).encode("utf-8"))
+
+        entries = SubtitleParserService(test_config).parse_raw_entries(sub_file)
+
+        assert [text for _, _, text in entries] == ["新しい本を買いました", "今日は学校で勉強する"]
+
+    def test_parses_a_cp932_encoded_vtt(self, test_config, tmp_path):
+        """The encoding fallback ladder is format-agnostic."""
+        sub_file = tmp_path / "cp932.vtt"
+        sub_file.write_bytes("WEBVTT\r\n\r\n00:00:01.000 --> 00:00:03.000\r\n本を読む\r\n".encode("cp932"))
+
+        words = SubtitleParserService(test_config).parse_subtitle_file(sub_file)
+
+        assert "読む" in {word.lemma for word in words}

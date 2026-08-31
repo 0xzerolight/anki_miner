@@ -60,7 +60,7 @@ from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import matches_language_tag
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
-from anki_miner.utils.file_pairing import find_sibling_subtitle
+from anki_miner.utils.file_pairing import FilePairMatcher, find_sibling_subtitle
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -71,7 +71,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".avi", ".m4v", ".mov"}
-SUBTITLE_EXTENSIONS = {".ass", ".srt", ".ssa"}
+#: Drop routing reuses the pairing set so a subtitle this screen accepts on drop
+#: is always one the matcher can pair. VIDEO_EXTENSIONS stays local: the drop
+#: target splits video from subtitle, and the two sets must stay disjoint.
+SUBTITLE_EXTENSIONS = FilePairMatcher.SUBTITLE_EXTENSIONS
 
 
 class SingleEpisodeTab(MiningTabBase):

@@ -19,7 +19,7 @@ YouTube URL (optional entry point)
 └─────────────────────────────────────────────────────┘
   │
   ▼
-Subtitle file (ASS/SRT/SSA)
+Subtitle file (ASS/SRT/SSA/VTT)
   │
   ▼
 ┌─────────────────────────────────────────────────────┐
@@ -150,7 +150,7 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 
 **Core services (always created):**
 
-- **SubtitleParserService**: parses ASS/SRT/SSA files via `pysubs2`, tokenizes Japanese text with `fugashi` (MeCab wrapper), generates furigana annotations against `TokenizedWord.mined_form` (source-orthography dictionary form for verbs/adjectives, surface for nouns), and deduplicates emitted words by `mined_form`. The token-shaping itself — mining-base selection, prefix / noun-suffix / verb-nominalizer compound merges, synthetic tokens, reading attestation — lives in `services/morphology.py`, which the parser drives.
+- **SubtitleParserService**: parses ASS/SRT/SSA/WebVTT files via `pysubs2` (format is autodetected from content, not the extension), tokenizes Japanese text with `fugashi` (MeCab wrapper), generates furigana annotations against `TokenizedWord.mined_form` (source-orthography dictionary form for verbs/adjectives, surface for nouns), and deduplicates emitted words by `mined_form`. The token-shaping itself — mining-base selection, prefix / noun-suffix / verb-nominalizer compound merges, synthetic tokens, reading attestation — lives in `services/morphology.py`, which the parser drives.
 - **WordFilterService**: multi-layer filtering, applied in this order: `partition_whitelisted` (force-included words split off first; they bypass every optional coverage filter), then `filter_unknown`, `filter_by_frequency`, `filter_by_word_lists` (blacklist only — the whitelist was already consumed), `filter_by_script_type`, `filter_by_wordsets`, `deduplicate_by_sentence`, `filter_by_sentence_length`, `filter_i_plus_one`, `filter_by_episode_count`. Everything keys on `mined_form`, the same string written to the Expression field and the one Anki dedups on. `attach_sentence_candidates` and `attach_occurrence_counts` annotate rather than filter. The name-wordset step runs in `_phase2_filter` and is gated on `bypass_optional_filters`; `config.excluded_wordsets` picks which of the bundled JMnedict-derived lists (`anki_miner/resources/wordsets/`) are active, via `services/wordset_service.py`.
 - **MediaExtractorService**: extracts screenshots and audio clips at subtitle timestamps, in parallel via a `ThreadPoolExecutor` of `max_parallel_workers` threads, auto-detecting the Japanese audio stream with `ffprobe` behind a thread-safe cache. The audio encoder follows `config.audio_format`; optional animated screenshots use `libsvtav1` (AVIF) or `libwebp_anim` (WebP), each probed for availability first.
 - **DefinitionService**: orchestrates the provider chain built by `DictionaryRegistry` from `config.dictionary_chain`. First-hit-wins across offline `IndexedDictProvider` instances, with an enabled `JishoProvider` entry as the online fallback. Returns HTML-formatted definition strings.

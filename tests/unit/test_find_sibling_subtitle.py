@@ -83,12 +83,22 @@ class TestFindSiblingSubtitle:
         sibling.touch()
         assert find_sibling_subtitle(video) == sibling
 
-    def test_default_does_not_find_vtt(self, tmp_path):
-        """The mining default set excludes .vtt, so a .vtt sibling is invisible."""
+    def test_default_finds_vtt(self, tmp_path):
+        """The mining default set includes .vtt, so a .vtt sibling autofills."""
         video = tmp_path / "episode01.mkv"
         video.touch()
+        vtt = tmp_path / "episode01.vtt"
+        vtt.touch()
+        assert find_sibling_subtitle(video) == vtt
+
+    def test_vtt_loses_to_every_richer_format(self, tmp_path):
+        """.vtt sorts last, so an .srt sibling still wins outright."""
+        video = tmp_path / "episode01.mkv"
+        video.touch()
+        srt = tmp_path / "episode01.srt"
+        srt.touch()
         (tmp_path / "episode01.vtt").touch()
-        assert find_sibling_subtitle(video) is None
+        assert find_sibling_subtitle(video) == srt
 
     def test_custom_priority_finds_vtt(self, tmp_path):
         """A caller-supplied priority including .vtt discovers the .vtt sibling."""

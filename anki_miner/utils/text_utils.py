@@ -17,9 +17,10 @@ from anki_miner.utils.ja_normalize import (
 def strip_subtitle_markup(text: str) -> str:
     """Strip subtitle formatting markup without any language normalization.
 
-    Removes the three tag families that :func:`clean_subtitle_text` handles:
+    Removes the four tag families that :func:`clean_subtitle_text` handles:
     ASS/SSA override blocks (``{\\...}``), the ``\\N``/``\\n`` line-break markers
-    (each replaced by a space), and HTML tags (``<tag ...>``). It deliberately does
+    (each replaced by a space), WebVTT cue-timestamp tags (``<00:00:01.500>``),
+    and HTML tags (``<tag ...>``). It deliberately does
     NOT run the MeCab-oriented Japanese normalization (halfwidth→fullwidth kana,
     NFKD folding, kanji-variant mapping) nor collapse whitespace, so the returned
     string is safe to display verbatim to the user (e.g. condensed subtitles).
@@ -35,6 +36,13 @@ def strip_subtitle_markup(text: str) -> str:
 
     # Remove line break tags
     text = re.sub(r"\\[nN]", " ", text)
+
+    # WebVTT inline cue timestamps: <hh:mm:ss.ttt> / <mm:ss.ttt>, hours unbounded.
+    # yt-dlp writes one per word on auto-captions. The HTML rule below cannot
+    # take them — it requires a letter after "<" so that a literal "a < 3"
+    # survives — and pysubs2 passes them through, so without this they reach the
+    # tokenizer and the stored card sentence verbatim.
+    text = re.sub(r"<\d{2,}:\d{2}(?::\d{2})?\.\d{3}>", "", text)
 
     # Remove actual HTML tags while preserving literal angle comparisons.
     text = re.sub(
