@@ -205,6 +205,23 @@ class TestCommandConstruction:
         assert "--write-subs" not in cmd
         assert "--write-auto-subs" not in cmd
         assert "--sub-langs" not in cmd
+        assert "--sub-format" not in cmd
+
+    def test_subtitle_format_prefers_srt_with_a_best_fallback(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        """srt first, "/best" second — and the fallback tier is load-bearing.
+
+        Left unstated, yt-dlp's ``best`` default resolves to the LAST entry of the
+        extractor's format list, which on YouTube is vtt; that is why every download
+        used to write vtt. Tightening this to a bare ``srt`` would break every site
+        that serves no srt, so the trailing ``/best`` is pinned, not incidental.
+        """
+        recorder, _ = _run_download(monkeypatch, service, tmp_path, _opts(write_subtitles=True))
+        cmd = _cmd(recorder)
+        assert cmd[cmd.index("--sub-format") + 1] == "srt/best"
+        # No ffmpeg postprocessor: a subtitle-only download must not need ffmpeg.
+        assert "--convert-subs" not in cmd
 
     def test_embed_flags_gated(
         self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
