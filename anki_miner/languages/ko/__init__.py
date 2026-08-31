@@ -16,12 +16,20 @@ from anki_miner.languages.ko.script import (
 )
 from anki_miner.languages.profile import (
     CaptionLangs,
+    CardFieldSpec,
     ContentTextStyle,
     LanguageProfile,
     PosDefaults,
 )
 
 __all__ = ["build_profile"]
+
+#: Copied verbatim from gui/app.py::_LANGUAGE_SMOKE_LINES["ko"].
+KO_SMOKE_SENTENCE = "학생이 밥을 먹었어요."
+
+#: One spec per KoHanjaHook field (render.py). Placeholder is untranslated, the
+#: same convention as KO_CARD_FIELDS' own Anki-field-name suggestions.
+KO_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (CardFieldSpec(key="hanja", capability="hanja", placeholder="Hanja"),)
 
 #: Korean cards start from the same core fields as Japanese, with every
 #: JA-specific field unmapped ("" = feature off, the existing empty-name skip).
@@ -161,4 +169,7 @@ def build_profile() -> LanguageProfile:
         # builds with neither installed, so this probe is the only thing that
         # keeps the selector and the switch off an install that cannot mine.
         unavailable_reason=ko_missing_required_reason,
+        extra_card_fields=KO_EXTRA_CARD_FIELDS,
+        smoke_sentence=KO_SMOKE_SENTENCE,
+        english_name="Korean",
     )

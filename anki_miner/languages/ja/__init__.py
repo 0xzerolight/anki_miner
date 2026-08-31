@@ -38,6 +38,9 @@ from anki_miner.utils.ja_normalize import normalize_for_tokenization
 
 __all__ = ["JA_AUDIO", "build_profile"]
 
+#: Copied verbatim from gui/app.py::_LANGUAGE_SMOKE_LINES["ja"].
+JA_SMOKE_SENTENCE = "今日は良い天気ですね。"
+
 #: ja keeps today's cache stem literals ("googletts_…", "sentencetts_…"), so
 #: existing cached audio files stay valid byte-for-byte. ``papago_speaker`` is
 #: the JA voice explicitly: the factory used to coerce a missing speaker to it,
@@ -110,4 +113,6 @@ def build_profile() -> LanguageProfile:
         card_field_defaults=dict(base.anki_fields),
         render_hooks=(),
         content_style=ContentTextStyle(font_role="japanese", families=(), wrap=ja_phrase_wrap),
+        english_name="Japanese",
+        smoke_sentence=JA_SMOKE_SENTENCE,
     )

@@ -222,6 +222,34 @@ def test_zh_lookup_yields_the_traditional_variant_with_opencc():
     assert ("銀行", 0) in get_profile("zh").lookup.candidates(PROBE["zh"], "", None)
 
 
+@pytest.mark.parametrize("code", CODES)
+def test_english_name_is_nonempty_ascii(code):
+    name = get_profile(code).english_name
+    assert name and name.isascii()
+
+
+@pytest.mark.parametrize("code", CODES)
+def test_smoke_sentence_is_nonempty(code):
+    assert get_profile(code).smoke_sentence
+
+
+@pytest.mark.parametrize("code", CODES)
+def test_extra_card_fields_match_the_render_hooks_exactly(code):
+    profile = get_profile(code)
+    spec_keys = {spec.key for spec in profile.extra_card_fields}
+    hook_keys = {name for hook in profile.render_hooks for name in hook.field_names()}
+    assert spec_keys <= EXTRA_HOOK_FIELDS
+    assert spec_keys == hook_keys
+
+
+@pytest.mark.parametrize("code", CODES)
+def test_extra_card_field_capabilities_are_declared(code):
+    profile = get_profile(code)
+    for spec in profile.extra_card_fields:
+        assert spec.capability in CAPABILITY_VOCABULARY
+        assert spec.capability in profile.capabilities
+
+
 def test_zh_lookup_stays_contract_shaped_without_opencc(monkeypatch):
     """The other side of the OpenCC branch: no variants, same contract.
 
