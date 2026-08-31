@@ -8,6 +8,7 @@ costs nothing on a machine that has none of them.
 
 from __future__ import annotations
 
+import sys
 from importlib.util import find_spec
 
 # Hard requirements: without a tokenizer or readings there is no zh mining.
@@ -17,6 +18,10 @@ ZH_REQUIRED_PACKAGES: tuple[str, ...] = ("jieba", "pypinyin")
 # reported, because a user whose traditional dictionary stops matching a
 # simplified subtitle needs to be told why.
 ZH_OPTIONAL_PACKAGES: tuple[str, ...] = ("opencc",)
+
+#: A frozen bundle has no pip, so naming a package is dead advice — this names
+#: the download button directly instead.
+ZH_FROZEN_PACK_REASON = "Chinese mining needs the Chinese language pack. Download it in Settings -> Mining Language."
 
 
 def _installed(name: str) -> bool:
@@ -29,6 +34,10 @@ def _installed(name: str) -> bool:
 def _reason(missing: list[str]) -> str | None:
     if not missing:
         return None
+    if getattr(sys, "frozen", False):
+        # No pip in a bundle: name the download button instead of a package
+        # the user cannot install.
+        return ZH_FROZEN_PACK_REASON
     return f"Chinese mining needs {', '.join(missing)}. Install with: pip install \"anki-miner[zh]\""
 
 

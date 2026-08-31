@@ -928,6 +928,19 @@ class TestKoResolutionLadder:
         assert "Mining Language" in message
         assert "pip install" not in message
 
+    def test_a_frozen_build_names_the_pack_not_pip(self, home, monkeypatch) -> None:
+        from anki_miner.languages.ko import tokenizer
+
+        monkeypatch.setattr(tokenizer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(sys, "frozen", True, raising=False)
+
+        with pytest.raises(ImportError) as excinfo:
+            tokenizer.resolve_model_path()
+
+        assert str(excinfo.value) == (
+            "Korean mining needs the Korean language pack. Download it in Settings -> Mining Language."
+        )
+
     def test_the_provider_chains_the_missing_model_into_its_value_error(self, home, monkeypatch) -> None:
         # The contract every caller writes is ``except ValueError``; a bare
         # ImportError would escape it, so the reason has to arrive chained.

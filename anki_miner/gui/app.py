@@ -68,6 +68,7 @@ from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.services.language_pack_installer import ensure_language_packs_on_syspath
 from anki_miner.services.startup_store_recovery import run_startup_store_recovery
 from anki_miner.services.stats_service import StatsService
 from anki_miner.services.validation_service import ValidationService
@@ -1712,6 +1713,15 @@ def main():
        process is finished with its stores.
     """
     _scrub_pyinstaller_env()
+
+    # A downloaded language pack has to be on sys.path before anything can
+    # find_spec() its packages - the smoke dispatch immediately below, config
+    # load, Settings construction (the Mining Language panel probes on build)
+    # and the prewarm all do. Idempotent and never raises (services.
+    # language_pack_installer), so this can run unconditionally, this early,
+    # with nothing else set up yet.
+    ensure_language_packs_on_syspath()
+
     installer_smoke = os.environ.get("ANKI_MINER_SMOKE") == "installer"
 
     # Env-var-gated smoke path (PyInstaller bundled-binary validation).

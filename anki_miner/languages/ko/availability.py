@@ -18,16 +18,23 @@ names the button rather than a pip line the bundled user cannot run.
 
 from __future__ import annotations
 
+import sys
 from importlib.util import find_spec
 
 #: Import names, not pip names — ``find_spec`` takes the module. The install
 #: line in the message is what the user acts on, and the extra pulls both.
 KO_REQUIRED_PACKAGES: tuple[str, ...] = ("kiwipiepy", "kiwipiepy_model")
 
-#: The one sentence naming the in-app model download. Shared with
-#: ``languages.ko.tokenizer`` so the availability refusal and the tokenizer's own
-#: error say the same thing about the same button.
-KO_MODEL_DOWNLOAD_HINT = "Download the Korean model in Settings -> Filtering -> Mining Language."
+#: The one sentence naming the in-app model download for a pip install, where
+#: the missing package name is still meaningful. Shared with
+#: ``languages.ko.tokenizer`` so a pip-build refusal says the same thing about
+#: the same button wherever it surfaces.
+KO_MODEL_DOWNLOAD_HINT = "Download the Korean model in Settings -> Mining Language."
+
+#: A frozen bundle has no pip, so naming a package is dead advice — this names
+#: the download button directly instead. Shared with ``languages.ko.tokenizer``
+#: so a frozen refusal is worded identically everywhere it surfaces.
+KO_FROZEN_MODEL_REASON = "Korean mining needs the Korean language pack. Download it in Settings -> Mining Language."
 
 
 def _installed(name: str) -> bool:
@@ -61,8 +68,13 @@ def ko_missing_required_reason() -> str | None:
     missing = [name for name in KO_REQUIRED_PACKAGES if not _available(name)]
     if not missing:
         return None
+    if getattr(sys, "frozen", False):
+        # No pip in a bundle: every tier collapses onto the one sentence that
+        # names the download button instead of a package the user cannot pip
+        # install.
+        return KO_FROZEN_MODEL_REASON
     if missing == ["kiwipiepy_model"]:
         # The engine is there, so the model is one button away: a pip line here
-        # would be dead advice inside the bundle, where there is no pip.
+        # would be dead advice, and the engine itself is not what is missing.
         return f"Korean mining needs kiwipiepy_model. {KO_MODEL_DOWNLOAD_HINT}"
     return f"Korean mining needs {', '.join(missing)}. Install with: pip install \"anki-miner[ko]\""

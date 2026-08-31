@@ -36,11 +36,12 @@ into one unanalysable NNG.
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Iterable
 from importlib.util import find_spec
 from typing import Any
 
-from anki_miner.languages.ko.availability import KO_MODEL_DOWNLOAD_HINT
+from anki_miner.languages.ko.availability import KO_FROZEN_MODEL_REASON, KO_MODEL_DOWNLOAD_HINT
 from anki_miner.languages.token import LanguageToken
 from anki_miner.services.tagger import LockedTagger
 
@@ -62,7 +63,10 @@ def resolve_model_path() -> str | None:
        install takes once the user has downloaded it.
     3. Neither: raise ``ImportError`` naming the download. ``tagger_provider``
        chains it into the ``ValueError`` every caller already handles, so the
-       reason reaches the user instead of a bare "No tokenizer registered".
+       reason reaches the user instead of a bare "No tokenizer registered". A
+       frozen build gets the pack-naming sentence (no pip to point at); a pip
+       install gets the package-naming one, shared verbatim with
+       ``availability.ko_missing_required_reason``.
 
     Resolved through ``find_spec`` and a couple of stat calls — nothing is
     imported or loaded here.
@@ -79,6 +83,8 @@ def resolve_model_path() -> str | None:
     model_dir = component_path("ko", "kiwipiepy_model")
     if model_dir is not None:
         return str(model_dir)
+    if getattr(sys, "frozen", False):
+        raise ImportError(KO_FROZEN_MODEL_REASON)
     raise ImportError(f"The Korean language model is not installed. {KO_MODEL_DOWNLOAD_HINT}")
 
 
