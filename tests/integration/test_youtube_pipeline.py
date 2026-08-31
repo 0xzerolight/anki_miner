@@ -58,6 +58,7 @@ class TestYouTubeIntegration:
         assert fetched.subtitle_file.stat().st_size > 0
         assert fetched.sub_source == ("manual" if info.has_manual_ja_subs else "auto")
 
-        # The entire point of --convert-subs srt: pysubs2 must parse it.
+        # The entire point of --sub-format srt/vtt/best: pysubs2 must parse whichever
+        # tier YouTube served.
         subs = pysubs2.load(str(fetched.subtitle_file))
         assert len(subs) > 0, "Subtitle file parsed but has zero events"
