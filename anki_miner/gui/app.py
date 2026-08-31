@@ -68,7 +68,7 @@ from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.languages.registry import config_language, get_profile
-from anki_miner.services.language_pack_installer import ensure_language_packs_on_syspath
+from anki_miner.services.language_pack_installer import ensure_language_packs_on_syspath, language_pack_root
 from anki_miner.services.startup_store_recovery import run_startup_store_recovery
 from anki_miner.services.stats_service import StatsService
 from anki_miner.services.validation_service import ValidationService
@@ -1054,8 +1054,12 @@ def _connect_cuda_pack_download(window: MainWindow, settings_tab: SettingsTab) -
     )
 
 
-def _connect_ko_model_download(window: MainWindow, settings_tab: SettingsTab) -> None:
-    """Wire the Mining Language panel's "Download Korean model" button to the worker.
+def _connect_language_pack_download(window: MainWindow, settings_tab: SettingsTab) -> None:
+    """Wire the Mining Language panel's per-language "Download … pack" buttons.
+
+    Not routed through ``_connect_download``: every callback has to be bound to
+    the language the button carries, and that code is only known per emission,
+    whereas ``set_status`` is bound once at connect time.
 
     The pack root is derived, not configured: it is a managed directory under the
     app home like ``cuda_libs_root``, but the tokenizer has to find it without a
@@ -1063,20 +1067,22 @@ def _connect_ko_model_download(window: MainWindow, settings_tab: SettingsTab) ->
     both sides call it.
     """
 
-    def _tail(request_arg: object, ok: bool, message: str) -> None:
-        settings_tab.mining_language_panel.notify_ko_model_download_finished()
+    def _on_requested(code: str) -> None:
+        def _on_status(text: str) -> None:
+            settings_tab.set_language_pack_status(code, text)
 
-    def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
-        from anki_miner.services.language_pack_installer import language_pack_root
+        def _on_finished(ok: bool, message: str) -> None:
+            _on_status(message)
+            # Order is load-bearing: the panel's refresh and its combo
+            # repopulation both answer from find_spec, so the pack has to be
+            # importable BEFORE they run — otherwise the user downloads a pack
+            # and still cannot pick the language it unlocks.
+            ensure_language_packs_on_syspath()
+            settings_tab.mining_language_panel.notify_language_pack_download_finished(code)
 
-        window.background_tasks.start_ko_model_download(language_pack_root("ko"), on_status, on_finished)
+        window.background_tasks.start_language_pack_download(code, language_pack_root(code), _on_status, _on_finished)
 
-    _connect_download(
-        settings_tab.ko_model_download_requested,
-        set_status=settings_tab.set_ko_model_status,
-        start=_start,
-        on_finished_tail=_tail,
-    )
+    settings_tab.language_pack_download_requested.connect(_on_requested)
 
 
 def _connect_vad_pack_download(window: MainWindow, settings_tab: SettingsTab) -> None:
@@ -1377,18 +1383,18 @@ def compose_main_window(
     window.background_tasks.ytdlp_update_result.connect(settings_tab.set_ytdlp_status_from_result)
 
     # Resource download buttons (ASR model, alass, CUDA pack, VAD pack, Vulkan
-    # model, Korean model): each "Download …" button hands off to a background
-    # worker and refreshes its panel on finish. All six share the connect
-    # skeleton in _connect_download; the per-tool builders carry the differences.
-    # Five sit on the Subtitles panel; the Korean model sits on Filtering, beside
-    # the mining-language selector it unlocks.
+    # model, language packs): each "Download …" button hands off to a background
+    # worker and refreshes its panel on finish. The five Subtitles-panel ones
+    # share the connect skeleton in _connect_download; the per-tool builders
+    # carry the differences. The language packs sit on Mining Language, beside
+    # the selector they unlock, and wire per language code.
     for _connect in (
         _connect_asr_download,
         _connect_alass_download,
         _connect_cuda_pack_download,
         _connect_vad_pack_download,
         _connect_vulkan_download,
-        _connect_ko_model_download,
+        _connect_language_pack_download,
     ):
         _connect(window, settings_tab)
     # Wire indexed-resource mutation hooks so replacing or deleting a store

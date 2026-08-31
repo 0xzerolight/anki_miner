@@ -131,10 +131,28 @@ def test_the_panel_title_matches_its_navigator_label(qtbot):
     assert panel._title_label.text() == "Mining Language"
 
 
-def test_the_panel_anchors_the_selector_and_the_model_row(qtbot):
+def test_the_panel_anchors_the_selector_and_every_pack_row(qtbot):
+    """One anchor per row, named for the language: search reaches each download."""
     panel = MiningLanguageSettingsPanel()
     qtbot.addWidget(panel)
 
     ids = {anchor.stable_id for anchor in panel.setting_anchors()}
 
-    assert ids == {"mining_language.mining_language_combo", "mining_language.ko_model"}
+    assert ids == {
+        "mining_language.mining_language_combo",
+        "mining_language.language_pack_ko",
+        "mining_language.language_pack_zh",
+    }
+
+
+def test_repopulating_keeps_the_selection_and_proposes_nothing(qtbot, test_config):
+    """A finished pack download rebuilds the combo under the user's selection."""
+    panel = _panel(qtbot, test_config)
+    panel.set_mining_language("zh")
+    requested: list[str] = []
+    panel.mining_language_requested.connect(requested.append)
+
+    panel._repopulate_mining_languages()
+
+    assert panel.mining_language_combo.currentData() == "zh"
+    assert requested == []
