@@ -67,6 +67,7 @@ from anki_miner.gui.widgets.reading_tab import ReadingTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.widgets.video_tab import VideoTab
+from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.language_pack_installer import ensure_language_packs_on_syspath, language_pack_root
 from anki_miner.services.startup_store_recovery import run_startup_store_recovery
@@ -260,7 +261,10 @@ def _run_asr_bundled_smoke() -> int:
 
 #: One line per mining language for the bundled language smoke. Short, real
 #: sentences: the point is that the tokenizer's packaged data files survived
-#: PyInstaller, which only a real segmentation proves.
+#: PyInstaller, which only a real segmentation proves. Frozen legacy: this
+#: dict never grows past ja/ko/zh (test_ko_smoke_leg.py pins membership) — new
+#: languages ship their line on the profile (``LanguageProfile.smoke_sentence``)
+#: and the lookup below falls back to it.
 _LANGUAGE_SMOKE_LINES: dict[str, str] = {
     "ja": "今日は良い天気ですね。",
     "zh": "我今天早上吃了三个苹果。",
@@ -284,10 +288,10 @@ def _run_language_bundled_smoke(code: str) -> int:
     from anki_miner.models.reading import ReadingUnit
 
     try:
-        line = _LANGUAGE_SMOKE_LINES.get(code)
-        if line is None:
-            raise RuntimeError(f"no bundled smoke line for language {code!r}")
         profile = get_profile(code)
+        line = _LANGUAGE_SMOKE_LINES.get(code) or profile.smoke_sentence
+        if not line:
+            raise RuntimeError(f"no bundled smoke line for language {code!r}")
         config = AnkiMinerConfig() if code == "ja" else switch_language(AnkiMinerConfig(), code)
         get_tagger(code)
         parser = profile.create_parser(config)
@@ -1777,7 +1781,7 @@ def main():
         sys.exit(_run_whispercpp_bundled_smoke())
 
     smoke_language = os.environ.get("ANKI_MINER_SMOKE")
-    if smoke_language in ("ja", "ko", "zh"):
+    if smoke_language in AVAILABLE_LANGUAGES:
         sys.exit(_run_language_bundled_smoke(smoke_language))
 
     # Env-var-gated ASR Vulkan device probe. The parent process
