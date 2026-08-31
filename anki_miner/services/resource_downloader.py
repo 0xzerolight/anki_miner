@@ -23,7 +23,7 @@ from typing import BinaryIO, cast
 
 import requests
 
-from anki_miner.exceptions import OperationCancelled, SetupError
+from anki_miner.exceptions import DownloadFailed, OperationCancelled, SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part
 from anki_miner.services.download_resume import (
@@ -211,7 +211,8 @@ def download_to_temp(
         SetupError: On cancellation, HTTP error, size-cap exceeded, or any
             network/OS failure. The staged temp file is always cleaned up; the
             durable resume state survives only cancellation and retryable
-            transport failures.
+            transport failures. The network/HTTP arm raises the ``DownloadFailed``
+            subclass so a caller can tell an outage from bad bytes.
     """
     if max_bytes is None:
         max_bytes = MAX_DOWNLOAD_BYTES
@@ -267,10 +268,15 @@ def download_to_temp(
             # A permanent HTTP failure does not.
             if state is not None and not _is_retryable(exc):
                 state.discard()
-            raise SetupError(f"Failed to download {url}: {exc}") from exc
+            # DownloadFailed, not a bare SetupError: this is the "the bytes
+            # never arrived" arm, and a caller may legitimately treat an outage
+            # differently from bytes that arrived wrong (the size-cap and
+            # truncation raises above stay plain SetupError for that reason).
+            # It IS a SetupError, so no existing handler changes.
+            raise DownloadFailed(f"Failed to download {url}: {exc}") from exc
 
     # Unreachable: the final attempt either returned or raised above.
-    raise SetupError(f"Failed to download {url}: {last_exc}")
+    raise DownloadFailed(f"Failed to download {url}: {last_exc}")
 
 
 def _sleep_with_cancel(seconds: float, cancelled_check: CancelledCheck | None) -> None:

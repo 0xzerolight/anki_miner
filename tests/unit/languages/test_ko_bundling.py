@@ -44,11 +44,16 @@ def test_neither_kiwipiepy_hook_survives():
         assert not (ROOT / "PyInstaller-Hooks" / name).exists()
 
 
-def test_every_release_matrix_leg_installs_the_ko_engine():
+def test_no_release_matrix_leg_installs_the_ko_engine():
+    """The engine is excluded from the graph, so installing it only costs time.
+
+    The bundle smokes get a real kiwipiepy from the pack seeds instead
+    (``scripts/fetch_language_pack_seeds.py``).
+    """
     matrix = json.loads((ROOT / ".github" / "release-matrix.json").read_text(encoding="utf-8"))
     assert matrix
     for entry in matrix:
-        assert "ko" in entry["install_target"], entry["platform"]
+        assert "ko" not in entry["install_target"], entry["platform"]
 
 
 def test_the_release_preflight_builds_against_the_ko_extra():
