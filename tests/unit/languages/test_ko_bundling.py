@@ -57,6 +57,10 @@ def test_no_release_matrix_leg_installs_the_ko_engine():
 
 
 def test_the_release_preflight_builds_against_the_ko_extra():
-    """The preflight venv must carry both optional engines the release bundles."""
+    """The preflight venv must carry both engines the zh/ko packs deliver.
+
+    The release legs install .[asr] and ship neither; the preflight installs both
+    so the freeze proves the spec's excludes actually exclude them.
+    """
     preflight = (ROOT / "scripts" / "release_preflight.sh").read_text(encoding="utf-8")
     assert '".[asr,zh,ko]"' in preflight

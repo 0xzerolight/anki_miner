@@ -27,6 +27,9 @@ _JIEBA = PackComponent(
         member_prefix="jieba-0.42.1/jieba/",
         # The .p pickles are Jython-only fallbacks; CPython loads the .py
         # tables beside them. lac_small/ is an unrelated bundled model.
+        # analyse/idf.txt goes too: jieba.analyse builds a TFIDF object at
+        # import and opens idf.txt doing it, so `import jieba.analyse` raises
+        # from a pack. Nothing in anki_miner imports it (only jieba.posseg).
         exclude=(
             "lac_small/",
             "analyse/idf.txt",
