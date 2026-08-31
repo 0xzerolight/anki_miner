@@ -145,6 +145,21 @@ def test_the_panel_anchors_the_selector_and_every_pack_row(qtbot):
     }
 
 
+def test_a_pack_row_is_searchable_by_its_english_name(qtbot):
+    """The row names its language natively; "Korean" has to reach it too.
+
+    Everything on the row - label, button caption, tooltip - renders 한국어 /
+    中文, so a user searching Settings for the English name found nothing.
+    """
+    panel = MiningLanguageSettingsPanel()
+    qtbot.addWidget(panel)
+
+    text = {anchor.stable_id: anchor.search_text() for anchor in panel.setting_anchors()}
+
+    assert "Korean" in text["mining_language.language_pack_ko"]
+    assert "Chinese" in text["mining_language.language_pack_zh"]
+
+
 def test_repopulating_keeps_the_selection_and_proposes_nothing(qtbot, test_config):
     """A finished pack download rebuilds the combo under the user's selection."""
     panel = _panel(qtbot, test_config)
