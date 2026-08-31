@@ -248,7 +248,25 @@ class MediaDownloaderService:
         if options.write_subtitles:
             # Both flags: yt-dlp loads manual subs first and lets auto captions
             # only fill languages not already present — manual-preferred fallback.
-            cmd.extend(["--write-subs", "--write-auto-subs", "--sub-langs", options.subtitle_langs])
+            #
+            # --sub-format is stated rather than left to yt-dlp's "best" default,
+            # which resolves to the LAST entry of the extractor's format list — on
+            # YouTube that tuple ends in vtt, so every download here used to write
+            # vtt purely by tuple position. YouTube serves srt directly, so the srt
+            # tier costs nothing and needs no ffmpeg postprocessor. "/best" is the
+            # load-bearing half: this tab takes any yt-dlp-supported site, and one
+            # that offers no srt must still get its subtitle instead of falling
+            # into yt-dlp's "no subtitle format found matching" warning path.
+            cmd.extend(
+                [
+                    "--write-subs",
+                    "--write-auto-subs",
+                    "--sub-langs",
+                    options.subtitle_langs,
+                    "--sub-format",
+                    "srt/best",
+                ]
+            )
         if options.embed_thumbnail:
             cmd.append("--embed-thumbnail")
         if options.embed_metadata:

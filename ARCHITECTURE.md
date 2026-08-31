@@ -378,7 +378,7 @@ GET `https://jisho.org/api/v1/search/words?keyword=<word>`. Rate-limited with co
 
 ### yt-dlp
 
-Subprocess invoked by `YouTubeFetcherService`. Single-video probe uses `--skip-download --dump-single-json --no-playlist`; playlist probe uses `--flat-playlist` with one item past the cap; fetch adds `--sub-lang ja --sub-format vtt/best --convert-subs srt` and a height-capped format string.
+Subprocess invoked by `YouTubeFetcherService`. Single-video probe uses `--skip-download --dump-single-json --no-playlist`; playlist probe uses `--flat-playlist` with one item past the cap; fetch adds `--sub-lang ja --sub-format srt/vtt/best` and a height-capped format string. YouTube serves srt among its caption formats, so the first tier lands SubRip with no ffmpeg postprocessor; vtt is the fall-through, and `_resolve_outputs` accepts either. `MediaDownloaderService` (Utilities → Download) states `--sub-format srt/best` for the same reason — left unstated, yt-dlp's `best` default resolves to the last entry of the extractor's format tuple, which on YouTube is vtt.
 
 The subtitle flags carry one load-bearing invariant. `auto_only` passes `--write-auto-sub`; `manual_only` passes `--write-sub`, and adds `--write-auto-sub` **only** when `fallback_allowed` — meaning the probe already certified the auto track as native Japanese. Both flags in one invocation mean "manual preferred, auto as fallback", because yt-dlp loads manual tracks first and lets `automatic_captions` fill only the languages still missing. Passing the auto flag unconditionally would silently mine machine-translated Japanese whenever a `manual_only` video's manual track vanished between probe and fetch.
 

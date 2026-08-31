@@ -881,7 +881,10 @@ class TestFetchVideoCommand:
         # track can never be substituted for the requested manual one.
         assert "--write-auto-sub" not in cmd
         assert "--sub-lang" in cmd and cmd[cmd.index("--sub-lang") + 1] == "ja"
-        assert "--convert-subs" in cmd and cmd[cmd.index("--convert-subs") + 1] == "srt"
+        # srt first: YouTube serves it directly, so no ffmpeg postprocessor is
+        # needed to reach SubRip. vtt stays as the fall-through tier.
+        assert cmd[cmd.index("--sub-format") + 1] == "srt/vtt/best"
+        assert "--convert-subs" not in cmd
 
     def test_manual_only_with_fallback_allowed_adds_both_flags(
         self, service: YouTubeFetcherService, tmp_path: Path
@@ -1483,10 +1486,10 @@ class TestFetchVideoErrors:
         """
         assert issubclass(NoJapaneseSubtitlesError, YouTubeFetchError)
 
-    def test_vtt_subtitle_accepted_when_conversion_did_not_run(
+    def test_vtt_subtitle_accepted_when_srt_tier_unavailable(
         self, service: YouTubeFetcherService, tmp_path: Path
     ) -> None:
-        """``--convert-subs srt`` is an ffmpeg postprocessor and can be skipped.
+        """``--sub-format srt/vtt/best`` falls through to vtt on a source with no srt.
 
         pysubs2 parses vtt natively, so refusing the surviving vtt threw away a
         usable subtitle and reported "expected output files are missing" instead.
@@ -1501,7 +1504,7 @@ class TestFetchVideoErrors:
         assert result.subtitle_file.name == "abc123.ja.vtt"
 
     def test_srt_preferred_when_both_srt_and_vtt_survive(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
-        """A kept original alongside the converted file is not an ambiguity."""
+        """One fetch writes one subtitle, so a second file is a leftover, not a tie."""
         _touch(tmp_path / "abc123.mp4", b"fake-mp4")
         _touch(tmp_path / "abc123.ja.vtt", b"WEBVTT\n")
         _touch(tmp_path / "abc123.ja.srt", b"1\n00:00:01,000 --> 00:00:02,000\nhello\n")
