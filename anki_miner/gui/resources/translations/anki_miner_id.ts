@@ -699,6 +699,10 @@ Tetap lanjutkan?</translation>
         <source>Quit</source>
         <translation>Keluar</translation>
     </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>Buka Pengaturan</translation>
+    </message>
 </context><context>
     <name>AsrModelDownloadWorker</name>
     <message>

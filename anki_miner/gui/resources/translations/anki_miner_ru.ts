@@ -701,6 +701,10 @@ Continue anyway?</source>
         <source>Quit</source>
         <translation>Выйти</translation>
     </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>Открыть настройки</translation>
+    </message>
 </context><context>
     <name>AsrModelDownloadWorker</name>
     <message>

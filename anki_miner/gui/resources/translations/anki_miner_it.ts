@@ -700,6 +700,10 @@ Continuare comunque?</translation>
         <source>Quit</source>
         <translation>Esci</translation>
     </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>Apri le impostazioni</translation>
+    </message>
 </context><context>
     <name>AsrModelDownloadWorker</name>
     <message>

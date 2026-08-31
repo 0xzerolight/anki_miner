@@ -697,6 +697,10 @@ Continue anyway?</source>
         <source>Quit</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>Open Settings</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>AsrModelDownloadWorker</name>
     <message>

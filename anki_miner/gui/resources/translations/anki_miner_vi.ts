@@ -699,6 +699,10 @@ Vẫn tiếp tục?</translation>
         <source>Quit</source>
         <translation>Thoát</translation>
     </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>Mở Cài đặt</translation>
+    </message>
 </context><context>
     <name>AsrModelDownloadWorker</name>
     <message>

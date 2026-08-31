@@ -699,6 +699,10 @@ Continue anyway?</source>
         <source>Quit</source>
         <translation>結束</translation>
     </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>開啟設定</translation>
+    </message>
 </context><context>
     <name>AsrModelDownloadWorker</name>
     <message>
