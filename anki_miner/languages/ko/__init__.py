@@ -92,27 +92,15 @@ class KoLookupStrategy:
 def _scoped_defaults() -> dict[str, object]:
     """First-visit values for EVERY language-scoped field.
 
-    Derived by iterating LANGUAGE_SCOPED_FIELDS (never hand-written, so a new
-    scoped field cannot silently miss a Korean default), typed from a blank
-    config, then overridden. Nothing is inherited from the JA dataclass defaults:
-    a first Korean switch must not arrive with the jmdict chain, the JA name
-    wordsets, `ja` subtitle langs or the JA deck name.
+    Starts from ``blank_scoped_defaults()`` (never hand-written, so a new
+    scoped field cannot silently miss a Korean default), then overridden.
+    Nothing is inherited from the JA dataclass defaults: a first Korean switch
+    must not arrive with the jmdict chain, the JA name wordsets, `ja` subtitle
+    langs or the JA deck name.
     """
-    from anki_miner.config.config import AnkiMinerConfig
-    from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS
+    from anki_miner.languages.switching import blank_scoped_defaults
 
-    blank = AnkiMinerConfig()
-    defaults: dict[str, object] = {}
-    for name in LANGUAGE_SCOPED_FIELDS:
-        current = getattr(blank, name)
-        if isinstance(current, tuple):
-            defaults[name] = ()
-        elif isinstance(current, bool):
-            defaults[name] = False
-        elif isinstance(current, str):
-            defaults[name] = ""
-        else:
-            defaults[name] = current
+    defaults = blank_scoped_defaults()
     defaults["downloader_subtitle_langs"] = "ko"
     defaults["expression_audio_chain"] = KO_AUDIO.default_chain
     defaults["allowed_pos"] = ko_morphology.KO_ALLOWED_POS

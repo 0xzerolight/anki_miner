@@ -16,7 +16,7 @@ from anki_miner.languages.profile import (
     PosDefaults,
     SentenceRules,
 )
-from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS
+from anki_miner.languages.switching import blank_scoped_defaults
 from anki_miner.languages.zh.audio import ZH_AUDIO
 from anki_miner.languages.zh.availability import zh_missing_required_reason
 from anki_miner.languages.zh.catalog import ZH_CATALOG
@@ -56,26 +56,11 @@ ZH_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (
 def _scoped_defaults() -> Mapping[str, object]:
     """Derive a value for EVERY LANGUAGE_SCOPED_FIELDS name, then override.
 
-    Derived from the dataclass field types rather than hand-written: a field
-    added to the tuple can never be silently missed (switch_language raises).
+    Starts from ``blank_scoped_defaults()`` (derived from the dataclass field
+    types, never hand-written: a field added to the tuple can never be
+    silently missed — ``switch_language`` raises).
     """
-    from anki_miner.config.config import AnkiMinerConfig
-
-    base = AnkiMinerConfig()
-    defaults: dict[str, object] = {}
-    for name in LANGUAGE_SCOPED_FIELDS:
-        current = getattr(base, name)
-        if isinstance(current, tuple):
-            defaults[name] = ()
-        elif isinstance(current, bool):
-            defaults[name] = False
-        elif isinstance(current, str):
-            defaults[name] = ""
-        else:
-            # Everything with no blank of its own: anki_fields (a mapping) and
-            # blacklist_path / whitelist_path (Path | None). Each is overridden
-            # below or is correctly None.
-            defaults[name] = None
+    defaults: dict[str, object] = blank_scoped_defaults()
     defaults.update(
         {
             "downloader_subtitle_langs": "zh-Hans",
