@@ -14,9 +14,17 @@ from pathlib import Path
 import pytest
 
 from anki_miner.gui import app as app_module
-from anki_miner.services import ko_model_installer
+from anki_miner.services import language_pack_installer
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+def _ko_model_component():
+    pack = language_pack_installer.load_pack("ko")
+    assert pack is not None
+    return next(comp for comp in pack.components if comp.import_name == "kiwipiepy_model")
+
+
 SMOKE = ROOT / "scripts" / "bundle_smoke.sh"
 
 
@@ -46,23 +54,25 @@ def test_the_ko_leg_passes_in_process(capsys) -> None:
 
 
 def test_the_seed_writes_where_the_installer_reads() -> None:
-    """The shell literal and ``ko_model_installer`` must name the same directory.
+    """The shell literal and the legacy model tier must name the same directory.
 
     The smoke rebuilds the pack path in shell because it runs against a built
     bundle with no Python of its own; that duplication is only safe while the two
     agree, so this pins it.
     """
     home = Path("/home")
-    relative = ko_model_installer.ko_model_path(ko_model_installer.ko_model_root(home)).relative_to(home)
+    legacy = language_pack_installer.legacy_ko_model_root(home) / _ko_model_component().import_name
 
-    assert f'"$ANKI_MINER_HOME/{relative.as_posix()}"' in SMOKE.read_text(encoding="utf-8")
+    assert f'"$ANKI_MINER_HOME/{legacy.relative_to(home).as_posix()}"' in SMOKE.read_text(encoding="utf-8")
 
 
 def test_the_release_workflow_fetches_the_pinned_model_for_the_leg() -> None:
     workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
 
-    assert ko_model_installer.KO_MODEL_URL in workflow
-    assert ko_model_installer.KO_MODEL_SHA256 in workflow
+    spec = _ko_model_component().universal
+    assert spec is not None
+    assert spec.url in workflow
+    assert spec.sha256 in workflow
     assert "BUNDLE_SMOKE_KO_MODEL: ${{ env.SMOKE_KO_MODEL_PATH }}" in workflow
 
 
@@ -140,7 +150,7 @@ def test_a_fetched_model_is_seeded_into_the_isolated_home(tmp_path: Path) -> Non
     record = tmp_path / "seed.txt"
     model = tmp_path / "fetched" / "kiwipiepy_model"
     model.mkdir(parents=True)
-    for name in ko_model_installer._MODEL_SENTINELS:
+    for name in _ko_model_component().sentinels:
         (model / name).write_bytes(b"x")
 
     result = _run_smoke(tmp_path, dist, record, model)

@@ -29,7 +29,7 @@ def kiwipiepy_installed() -> bool:
 
     Module-level so the Korean model row can be probed (and stubbed) without
     importing kiwipiepy: ``find_spec`` answers without executing it. The MODEL is
-    a separate question — ``ko_model_installer.is_installed`` answers that one.
+    a separate question — ``language_pack_installer.component_path`` answers it.
     """
     from importlib.util import find_spec
 
@@ -104,7 +104,7 @@ class MiningLanguageSettingsPanel(FormPanel):
             self.mining_language_requested.emit(code)
 
     # ------------------------------------------------------------------
-    # Korean model download (services/ko_model_installer.py)
+    # Korean model download (services/language_pack_installer.py)
     # ------------------------------------------------------------------
 
     def _setup_ko_model_row(self) -> None:
@@ -152,7 +152,7 @@ class MiningLanguageSettingsPanel(FormPanel):
 
     def _refresh_ko_model_row(self) -> None:
         """Show, hide and label the row from what this install actually has."""
-        from anki_miner.services.ko_model_installer import is_installed, ko_model_root
+        from anki_miner.services.language_pack_installer import component_path
 
         engine = kiwipiepy_installed()
         for widget in self._ko_model_row_widgets:
@@ -162,7 +162,10 @@ class MiningLanguageSettingsPanel(FormPanel):
         if self._ko_model_active:
             self.download_ko_model_button.setEnabled(False)
             return
-        installed = is_installed(ko_model_root())
+        # The model on disk, not the whole ko pack: this row is about the one
+        # artifact the bundle leaves out, and the engine beside it is what makes
+        # the row visible at all.
+        installed = component_path("ko", "kiwipiepy_model") is not None
         self.download_ko_model_button.setEnabled(not installed)
         self.ko_model_status_label.setText(self.tr("Installed") if installed else self.tr("Not installed"))
 

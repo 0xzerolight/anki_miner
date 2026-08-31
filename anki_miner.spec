@@ -355,7 +355,7 @@ a = Analysis(
         # ASR bundle smoke fails with ModuleNotFoundError: No module named 'av'.
         "onnxruntime",
         # The Korean model (kiwipiepy_model, ~88 MB) ships as an on-demand
-        # download pack (services/ko_model_installer.py), not in the bundle:
+        # download pack (services/language_pack_installer.py), not in the bundle:
         # bundling it grew the artifacts 20% on Linux and 30% on Windows for a
         # language most users never mine. kiwipiepy's own native loader imports
         # the package by name — invisible to bytecode analysis, and the release

@@ -1020,7 +1020,7 @@ jobs:
 
       # Fetch the Korean model so the ko language smoke has something to tokenize
       # with. Unlike zh, the ko model is NOT bundle content: it is an ~88 MB
-      # in-app download pack (anki_miner/services/ko_model_installer.py), so the
+      # in-app download pack (anki_miner/services/language_pack_installer.py), so
       # smoke has to be handed one or the leg cannot run at all. Every platform
       # needs it — BUNDLE_SMOKE_LANGS carries ko on all legs. Pinned to the same
       # immutable PyPI sdist + SHA256 the installer pins, verified fail-closed.

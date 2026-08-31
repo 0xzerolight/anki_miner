@@ -191,11 +191,13 @@ def ko_model_task(ko_model_root: Path) -> InstallTask:
     """Task: download + install the Korean (kiwipiepy) model (percentage progress)."""
 
     def _task(worker: InstallWorker) -> str:
-        from anki_miner.services.ko_model_installer import install_ko_model
+        from anki_miner.services.language_pack_installer import install_language_pack
 
         worker._progress_ctx = "KoModelDownloadWorker"
         worker.status.emit(QCoreApplication.translate("KoModelDownloadWorker", "Downloading the Korean model…"))
-        install_ko_model(ko_model_root, progress=worker._on_progress, cancel_event=worker.cancel_event)
+        install_language_pack(
+            "ko", ko_model_root, progress=worker._on_progress, cancelled_check=worker.cancel_event.is_set
+        )
         return QCoreApplication.translate("KoModelDownloadWorker", "Korean model installed successfully.")
 
     return _task

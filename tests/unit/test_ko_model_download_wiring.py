@@ -15,16 +15,18 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.gui.widgets.panels.mining_language_settings_panel import MiningLanguageSettingsPanel
-from anki_miner.services import ko_model_installer
+from anki_miner.services import language_pack_installer
 from tests.unit._worker_sync import _run_worker_sync
 
-_INSTALL = "anki_miner.services.ko_model_installer.install_ko_model"
+_INSTALL = "anki_miner.services.language_pack_installer.install_language_pack"
 
 
 def _install_fake_pack(root) -> None:
-    model = ko_model_installer.ko_model_path(root)
+    pack = language_pack_installer.load_pack("ko")
+    comp = next(c for c in pack.components if c.import_name == "kiwipiepy_model")
+    model = root / comp.import_name
     model.mkdir(parents=True, exist_ok=True)
-    for name in ko_model_installer._MODEL_SENTINELS:
+    for name in comp.sentinels:
         (model / name).write_bytes(b"x")
 
 
@@ -32,7 +34,7 @@ class TestInstallTask:
     def test_success_emits_result_true(self, qapp, tmp_path, monkeypatch) -> None:
         from anki_miner.gui.workers.install_worker import InstallWorker, ko_model_task
 
-        monkeypatch.setattr(_INSTALL, lambda root, progress=None, cancel_event=None: root)
+        monkeypatch.setattr(_INSTALL, lambda code, root, progress=None, cancelled_check=None: root)
         worker = InstallWorker(ko_model_task(tmp_path))
         results: list[tuple] = []
         worker.result_ready.connect(lambda ok, msg: results.append((ok, msg)))
@@ -44,16 +46,16 @@ class TestInstallTask:
         assert ok is True
         assert isinstance(msg, str)
 
-    def test_the_task_threads_the_cancel_event_and_progress(self, qapp, tmp_path, monkeypatch) -> None:
+    def test_the_task_threads_the_cancel_check_and_progress(self, qapp, tmp_path, monkeypatch) -> None:
         from anki_miner.gui.workers.install_worker import InstallWorker, ko_model_task
 
         seen: dict = {}
 
-        def _install(root, progress=None, cancel_event=None):
+        def _install(code, root, progress=None, cancelled_check=None):
+            seen["code"] = code
             seen["root"] = root
-            seen["progress"] = progress
-            seen["cancel_event"] = cancel_event
-            progress(50, 100, "Korean model: downloading")
+            seen["cancelled_check"] = cancelled_check
+            progress(50, 100, "KO pack (1/1): downloading")
             return root
 
         monkeypatch.setattr(_INSTALL, _install)
@@ -63,15 +65,20 @@ class TestInstallTask:
 
         _run_worker_sync(worker)
 
+        assert seen["code"] == "ko"
         assert seen["root"] == tmp_path
-        assert seen["cancel_event"] is worker.cancel_event
+        # The task hands the installer a live view of the worker's cancel flag,
+        # not a snapshot taken before the run.
+        assert seen["cancelled_check"]() is False
+        worker.cancel()
+        assert seen["cancelled_check"]() is True
         assert any("50" in text for text in statuses)
 
     def test_a_failure_reports_the_reason(self, qapp, tmp_path, monkeypatch) -> None:
         from anki_miner.exceptions import SetupError
         from anki_miner.gui.workers.install_worker import InstallWorker, ko_model_task
 
-        def _boom(root, progress=None, cancel_event=None):
+        def _boom(code, root, progress=None, cancelled_check=None):
             raise SetupError("Korean model download checksum mismatch")
 
         monkeypatch.setattr(_INSTALL, _boom)
@@ -94,7 +101,7 @@ class TestControllerStarter:
         parent = QWidget()
         qtbot.addWidget(parent)
         controller = BackgroundTaskController(parent)
-        monkeypatch.setattr(_INSTALL, lambda root, progress=None, cancel_event=None: root)
+        monkeypatch.setattr(_INSTALL, lambda code, root, progress=None, cancelled_check=None: root)
 
         assert controller.ko_model_download_worker is None
         controller.start_ko_model_download(tmp_path, lambda _text: None, lambda _ok, _msg: None)
@@ -122,7 +129,7 @@ class TestPanelRow:
         import anki_miner.gui.widgets.panels.mining_language_settings_panel as module
 
         monkeypatch.setattr(module, "kiwipiepy_installed", lambda: True)
-        monkeypatch.setattr(ko_model_installer.paths, "ANKI_MINER_HOME", tmp_path)
+        monkeypatch.setattr(language_pack_installer.paths, "ANKI_MINER_HOME", tmp_path)
         panel = MiningLanguageSettingsPanel()
         qtbot.addWidget(panel)
 
@@ -134,8 +141,8 @@ class TestPanelRow:
         import anki_miner.gui.widgets.panels.mining_language_settings_panel as module
 
         monkeypatch.setattr(module, "kiwipiepy_installed", lambda: True)
-        monkeypatch.setattr(ko_model_installer.paths, "ANKI_MINER_HOME", tmp_path)
-        _install_fake_pack(ko_model_installer.ko_model_root())
+        monkeypatch.setattr(language_pack_installer.paths, "ANKI_MINER_HOME", tmp_path)
+        _install_fake_pack(language_pack_installer.language_pack_root("ko"))
         panel = MiningLanguageSettingsPanel()
         qtbot.addWidget(panel)
 
@@ -146,7 +153,7 @@ class TestPanelRow:
         import anki_miner.gui.widgets.panels.mining_language_settings_panel as module
 
         monkeypatch.setattr(module, "kiwipiepy_installed", lambda: True)
-        monkeypatch.setattr(ko_model_installer.paths, "ANKI_MINER_HOME", tmp_path)
+        monkeypatch.setattr(language_pack_installer.paths, "ANKI_MINER_HOME", tmp_path)
         panel = MiningLanguageSettingsPanel()
         qtbot.addWidget(panel)
 
@@ -162,11 +169,11 @@ class TestPanelRow:
         import anki_miner.gui.widgets.panels.mining_language_settings_panel as module
 
         monkeypatch.setattr(module, "kiwipiepy_installed", lambda: True)
-        monkeypatch.setattr(ko_model_installer.paths, "ANKI_MINER_HOME", tmp_path)
+        monkeypatch.setattr(language_pack_installer.paths, "ANKI_MINER_HOME", tmp_path)
         panel = MiningLanguageSettingsPanel()
         qtbot.addWidget(panel)
         panel.download_ko_model_button.click()
-        _install_fake_pack(ko_model_installer.ko_model_root())
+        _install_fake_pack(language_pack_installer.language_pack_root("ko"))
 
         with qtbot.assertNotEmitted(panel.mining_language_requested, wait=10):
             panel.notify_ko_model_download_finished()
@@ -224,7 +231,7 @@ class TestAppWiring:
         app_module._connect_ko_model_download(window, settings_tab)
 
         settings_tab.ko_model_download_requested.emit()
-        assert captured["root"] == ko_model_installer.ko_model_root()
+        assert captured["root"] == language_pack_installer.language_pack_root("ko")
 
         calls: list = []
         monkeypatch.setattr(

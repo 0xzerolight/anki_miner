@@ -361,7 +361,7 @@ class BackgroundTaskController(QObject):
 
         Args:
             ko_model_root: Directory where the Korean model will be placed;
-                ``services.ko_model_installer.ko_model_root()``.
+                ``services.language_pack_installer.language_pack_root("ko")``.
             on_status: Slot for ``status(str)`` — typically
                 ``SettingsTab.set_ko_model_status``.
             on_finished: Slot for ``result_ready(bool, str)`` — called with

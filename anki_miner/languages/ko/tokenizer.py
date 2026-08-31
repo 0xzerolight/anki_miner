@@ -56,9 +56,10 @@ def resolve_model_path() -> str | None:
     1. The ``kiwipiepy_model`` PACKAGE. A pip install with the ``[ko]`` extra and
        every dev/CI env has it, and Kiwi's own native loader finds it — so the
        answer is None and nothing about those environments changes.
-    2. The in-app download PACK (``services.ko_model_installer``). The frozen
-       bundle deliberately excludes the ~88 MB model, so this is the path a
-       bundled install takes once the user has downloaded it.
+    2. The in-app download PACK (``services.language_pack_installer``), or the
+       pre-pack ``ko_model/`` directory it still reads. The frozen bundle
+       deliberately excludes the ~88 MB model, so this is the path a bundled
+       install takes once the user has downloaded it.
     3. Neither: raise ``ImportError`` naming the download. ``tagger_provider``
        chains it into the ``ValueError`` every caller already handles, so the
        reason reaches the user instead of a bare "No tokenizer registered".
@@ -73,11 +74,11 @@ def resolve_model_path() -> str | None:
     if package_present:
         return None
 
-    from anki_miner.services.ko_model_installer import is_installed, ko_model_path, ko_model_root
+    from anki_miner.services.language_pack_installer import component_path
 
-    root = ko_model_root()
-    if is_installed(root):
-        return str(ko_model_path(root))
+    model_dir = component_path("ko", "kiwipiepy_model")
+    if model_dir is not None:
+        return str(model_dir)
     raise ImportError(f"The Korean language model is not installed. {KO_MODEL_DOWNLOAD_HINT}")
 
 

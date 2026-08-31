@@ -12,8 +12,8 @@ without the model, which leaves nothing degraded to fall back to. They are not
 satisfied the same way, though. The engine comes only from the ``[ko]`` extra (or
 the bundle, which ships it). The MODEL is ~88 MB and stays out of the bundle, so
 it is satisfied by the ``kiwipiepy_model`` package OR by the in-app download pack
-(``services.ko_model_installer``) — and when neither is there, the reason names
-the button rather than a pip line the bundled user cannot run.
+(``services.language_pack_installer``) — and when neither is there, the reason
+names the button rather than a pip line the bundled user cannot run.
 """
 
 from __future__ import annotations
@@ -39,9 +39,9 @@ def _installed(name: str) -> bool:
 
 def _pack_installed() -> bool:
     """Return True when the in-app model pack is present in the app home."""
-    from anki_miner.services.ko_model_installer import is_installed, ko_model_root
+    from anki_miner.services.language_pack_installer import component_path
 
-    return is_installed(ko_model_root())
+    return component_path("ko", "kiwipiepy_model") is not None
 
 
 def _available(name: str) -> bool:

@@ -2,9 +2,9 @@
 
 kiwipiepy ships an abi3 wheel (built once against the stable ABI, so one
 per-platform pin covers every CPython minor version — ``abi=None``).
-kiwipiepy_model's pin is the same sdist bytes ``services/ko_model_installer``
-already downloads for the bundled build; keep them identical or a version
-bump re-fetches the ~88 MB model for users who already have it.
+kiwipiepy_model's pin is the same sdist bytes the retired ko model installer
+downloaded into ``ko_model/``; keep them identical or a version bump re-fetches
+the ~88 MB model for users who already have it.
 """
 
 from __future__ import annotations
@@ -78,8 +78,8 @@ _KIWIPIEPY = PackComponent(
 _KIWIPIEPY_MODEL = PackComponent(
     import_name="kiwipiepy_model",
     required=True,
-    # Copied from ko_model_installer._MODEL_SENTINELS: files Kiwi() cannot
-    # start without.
+    # The files Kiwi() cannot start without; also what the legacy ``ko_model/``
+    # tier is checked against.
     sentinels=("sj.morph", "default.dict", "combiningRule.txt"),
     universal=ArtifactSpec(
         # kiwipiepy_model-0.23.0.tar.gz

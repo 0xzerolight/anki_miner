@@ -1058,17 +1058,17 @@ def _connect_ko_model_download(window: MainWindow, settings_tab: SettingsTab) ->
 
     The pack root is derived, not configured: it is a managed directory under the
     app home like ``cuda_libs_root``, but the tokenizer has to find it without a
-    config in scope, so ``ko_model_installer`` owns the one definition and both
-    sides call it.
+    config in scope, so ``language_pack_installer`` owns the one definition and
+    both sides call it.
     """
 
     def _tail(request_arg: object, ok: bool, message: str) -> None:
         settings_tab.mining_language_panel.notify_ko_model_download_finished()
 
     def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
-        from anki_miner.services.ko_model_installer import ko_model_root
+        from anki_miner.services.language_pack_installer import language_pack_root
 
-        window.background_tasks.start_ko_model_download(ko_model_root(), on_status, on_finished)
+        window.background_tasks.start_ko_model_download(language_pack_root("ko"), on_status, on_finished)
 
     _connect_download(
         settings_tab.ko_model_download_requested,
