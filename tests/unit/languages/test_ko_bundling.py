@@ -38,6 +38,15 @@ def test_the_engine_and_model_are_excluded_from_the_graph_not_pinned_into_it():
     assert '"kiwipiepy_model",' in excludes
 
 
+def test_the_ko_tokenizer_and_pack_manifest_are_pinned_into_the_graph():
+    """Both are importlib f-string targets; the pack manifest is what load_pack imports."""
+    from tests.unit.languages.test_zh_bundling import generated_language_hiddenimports
+
+    generated = generated_language_hiddenimports()
+    assert "anki_miner.languages.ko.tokenizer" in generated
+    assert "anki_miner.languages.ko.pack" in generated
+
+
 def test_neither_kiwipiepy_hook_survives():
     """A collect_all hook would repopulate what the excludes just removed."""
     for name in ("hook-kiwipiepy.py", "hook-kiwipiepy_model.py"):

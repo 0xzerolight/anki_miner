@@ -302,7 +302,14 @@ def _run_language_bundled_smoke(code: str) -> int:
         profile.lookup.candidates(words[0].mined_form, words[0].orth_base, None)
         print(f"BUNDLED_SMOKE_PASS: language {code} tokenized {len(words)} words")
     except Exception as exc:  # noqa: BLE001 — bucket C: pre-Qt smoke reports terminal failure to stderr.
-        print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
+        # The chained cause is the whole diagnosis here: the failure surfaces as
+        # get_tagger's flat "No tokenizer registered", raised FROM the
+        # ModuleNotFoundError that names the module the bundle is missing. CI
+        # only ever sees this line, so it carries both.
+        detail = f"{type(exc).__name__}: {exc}"
+        if exc.__cause__ is not None:
+            detail += f" (cause: {type(exc.__cause__).__name__}: {exc.__cause__})"
+        print(f"BUNDLED_SMOKE_FAIL: {detail}", file=sys.stderr)
         return 1
     return 0
 

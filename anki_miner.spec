@@ -1,4 +1,5 @@
 # anki_miner.spec — PyInstaller spec file for Anki Miner GUI
+import importlib.util
 import os
 import platform
 import re
@@ -6,6 +7,8 @@ import sys
 
 import budoux
 import unidic_lite
+
+from anki_miner.languages import AVAILABLE_LANGUAGES
 
 block_cipher = None
 
@@ -241,6 +244,26 @@ if platform.system() == "Windows":
         ],
     )
 
+# Per-language first-party modules PyInstaller's bytecode analysis cannot see:
+# both are reached only through importlib with an f-string target —
+# "anki_miner.languages.<code>.tokenizer" from tagger_provider._build, and
+# "anki_miner.languages.<code>.pack" from
+# services/language_pack_installer.load_pack. Without the tokenizer pin the
+# frozen app ships nothing able to drive a downloaded engine pack; without the
+# pack pin load_pack takes its designed pip-absent path (returns None), no pack
+# root is ever appended to sys.path, and get_tagger dies as "No tokenizer
+# registered for language". Generated from AVAILABLE_LANGUAGES so language N+1
+# needs no edit here; find_spec-guarded because ja has neither module (its
+# engine is bundled, so it has no pack), mirroring the per-code guards in
+# languages/registry.py. FIRST-PARTY ONLY — the engines themselves (jieba/
+# pypinyin/opencc/kiwipiepy) stay in `excludes` below and arrive as packs.
+language_hiddenimports = ["anki_miner.languages.pack_spec"]  # the manifests' own import
+for _code in AVAILABLE_LANGUAGES:
+    for _leaf in ("tokenizer", "pack"):
+        _module = f"anki_miner.languages.{_code}.{_leaf}"
+        if importlib.util.find_spec(_module) is not None:
+            language_hiddenimports.append(_module)
+
 a = Analysis(
     [os.path.join(project_root, "anki_miner", "gui", "launch.py")],
     pathex=[project_root],
@@ -301,16 +324,9 @@ a = Analysis(
         # startup. Bytecode analysis should find the IMPORT opcode; pinned
         # here like mpv/ffsubsync so the graph never loses it.
         "budoux",
-        # The zh/ko tokenizer modules: tagger_provider._build resolves
-        # "anki_miner.languages.<lang>.tokenizer" through importlib with an
-        # f-string, which bytecode analysis cannot follow, and zh/__init__.py
-        # deliberately never imports it (the engine loads lazily). Without these
-        # pins the frozen app ships no module able to drive the downloaded
-        # engine pack, and get_tagger("zh") dies as "No tokenizer registered".
-        # FIRST-PARTY ONLY: the engines themselves (jieba/pypinyin/opencc/
-        # kiwipiepy) are excluded below and arrive as language packs.
-        "anki_miner.languages.zh.tokenizer",
-        "anki_miner.languages.ko.tokenizer",
+        # Per-language tokenizer + pack manifest modules; see the generator
+        # above for why bytecode analysis cannot find them.
+        *language_hiddenimports,
     ],
     # PyInstaller-Hooks/ holds hook-faster_whisper.py (faster_whisper + ctranslate2
     # + av) and hook-pywhispercpp.py (the whisper.cpp/ggml Vulkan ASR backend).
