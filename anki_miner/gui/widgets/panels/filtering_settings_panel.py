@@ -576,6 +576,19 @@ class FilteringSettingsPanel(FormPanel):
             ),
         )
 
+        self.add_section(self.tr("Card Order"))
+
+        self.strict_card_order_checkbox = QCheckBox(self.tr("Create cards in order of appearance"))
+        self.add_field(
+            "",
+            self.strict_card_order_checkbox,
+            helper=self.tr(
+                "Adds cards to Anki in the order the words appear in the media, instead of "
+                "the order their media finished extracting. Overrides the whitelist's "
+                "force-include ordering and any column sort in the Word Curator."
+            ),
+        )
+
         # Card Formatting section (Issue #20)
         self.add_section(self.tr("Card Formatting"))
 
@@ -863,6 +876,16 @@ class FilteringSettingsPanel(FormPanel):
         """Set the deduplicate-sentences checkbox."""
         self.deduplicate_sentences_checkbox.setChecked(value)
 
+    # --- Card order ---
+
+    def get_strict_card_order(self) -> bool:
+        """Return whether strict card-creation order is enabled."""
+        return self.strict_card_order_checkbox.isChecked()
+
+    def set_strict_card_order(self, value: bool) -> None:
+        """Set the strict card-order checkbox."""
+        self.strict_card_order_checkbox.setChecked(value)
+
     # --- Script type ---
 
     def get_exclude_hiragana_only_words(self) -> bool:
@@ -998,6 +1021,7 @@ class FilteringSettingsPanel(FormPanel):
         self.set_subtitle_regex_replacement(config.subtitle_regex_replacement)
         self.set_use_subtitle_regex_filter(config.use_subtitle_regex_filter)
         self.set_deduplicate_sentences(config.deduplicate_sentences)
+        self.set_strict_card_order(config.strict_card_order)
         self.set_exclude_hiragana_only_words(config.exclude_hiragana_only_words)
         self.set_exclude_katakana_only_words(config.exclude_katakana_only_words)
         # Same two booleans, read through whichever language's option named them.
@@ -1043,6 +1067,7 @@ class FilteringSettingsPanel(FormPanel):
             subtitle_regex_replacement=self.get_subtitle_regex_replacement(),
             use_subtitle_regex_filter=self.get_use_subtitle_regex_filter(),
             deduplicate_sentences=self.get_deduplicate_sentences(),
+            strict_card_order=self.get_strict_card_order(),
             exclude_hiragana_only_words=self.get_exclude_hiragana_only_words(),
             exclude_katakana_only_words=self.get_exclude_katakana_only_words(),
             use_i_plus_one_filter=self.get_use_i_plus_one_filter(),

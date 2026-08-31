@@ -416,6 +416,14 @@ class AnkiMinerConfig:
     # (`EpisodeProcessor._phase5_create` → `build_card_style_block`). anki_miner
     # never writes to the note type's card styling.
 
+    # Card creation order. When True, the words handed to phase 3 are re-sorted
+    # into the order they first appear in the media, so the notes AnkiConnect
+    # receives — and therefore Anki's new-card positions — form a clean series.
+    # Off by default because the sort deliberately overrides three upstream
+    # orderings: the whitelist force-include prepend, the Word Curator's
+    # clicked column sort, and the season-mode merged pool order.
+    strict_card_order: bool = False
+
     # Deduplication settings
     deduplicate_sentences: bool = True
 
