@@ -35,6 +35,16 @@ class TestFileExtensionClassification:
     def test_subtitle_extensions_contains_ssa(self):
         assert ".ssa" in SUBTITLE_EXTENSIONS
 
+    def test_subtitle_extensions_contains_vtt(self):
+        assert ".vtt" in SUBTITLE_EXTENSIONS
+
+    def test_subtitle_extensions_track_the_pairing_default(self):
+        """The drop set is the pairing set, not a hand-kept copy of it: a format
+        the matcher pairs must be a format the screen accepts on drop."""
+        from anki_miner.utils.file_pairing import FilePairMatcher
+
+        assert SUBTITLE_EXTENSIONS == FilePairMatcher.SUBTITLE_EXTENSIONS
+
     def test_no_overlap_between_video_and_subtitle(self):
         assert VIDEO_EXTENSIONS.isdisjoint(SUBTITLE_EXTENSIONS)
 
