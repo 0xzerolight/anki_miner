@@ -460,7 +460,7 @@ class TestAppWiring:
         order: list[str] = []
         monkeypatch.setattr(app_module, "ensure_language_packs_on_syspath", lambda: order.append("inject"))
         monkeypatch.setattr(
-            settings_tab.mining_language_panel,
+            settings_tab,
             "notify_language_pack_download_finished",
             lambda code: order.append(f"notify:{code}"),
         )
@@ -472,6 +472,18 @@ class TestAppWiring:
             settings_tab.mining_language_panel.language_pack_rows["ko"].status_label.text()
             == "한국어 pack installed successfully."
         )
+
+    def test_the_finish_makes_the_revealed_row_searchable(self, wired, monkeypatch) -> None:
+        """The row is hidden at index time and revealed by the download, so the
+        index built during construction still calls it invisible."""
+        _window, settings_tab, captured = wired
+        settings_tab.language_pack_download_requested.emit("ko")
+        rebuilt: list[bool] = []
+        monkeypatch.setattr(settings_tab, "refresh_setting_search_index", lambda: rebuilt.append(True))
+
+        captured["on_finished"](True, "한국어 pack installed successfully.")
+
+        assert rebuilt == [True]
 
     def test_status_lines_reach_the_row_that_asked(self, wired) -> None:
         _window, settings_tab, captured = wired

@@ -1089,7 +1089,7 @@ def _connect_language_pack_download(window: MainWindow, settings_tab: SettingsTa
             # importable BEFORE they run — otherwise the user downloads a pack
             # and still cannot pick the language it unlocks.
             ensure_language_packs_on_syspath()
-            settings_tab.mining_language_panel.notify_language_pack_download_finished(code)
+            settings_tab.notify_language_pack_download_finished(code)
 
         window.background_tasks.start_language_pack_download(code, language_pack_root(code), _on_status, _on_finished)
 
