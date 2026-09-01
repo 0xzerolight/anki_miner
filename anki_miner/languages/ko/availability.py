@@ -9,11 +9,12 @@ machine that has neither.
 Both the engine and the model are HARD requirements, so there is no optional tier
 and no ``ko_unavailable_reason`` counterpart to the zh module's: ``Kiwi()`` raises
 without the model, which leaves nothing degraded to fall back to. They are not
-satisfied the same way, though. The engine comes only from the ``[ko]`` extra (or
-the bundle, which ships it). The MODEL is ~88 MB and stays out of the bundle, so
-it is satisfied by the ``kiwipiepy_model`` package OR by the in-app download pack
-(``services.language_pack_installer``) — and when neither is there, the reason
-names the button rather than a pip line the bundled user cannot run.
+satisfied the same way, though. The engine comes from the ``[ko]`` extra, the
+bundle, or the download pack — a pack install lands it on ``sys.path``, so
+``find_spec`` sees it like any other. The MODEL is ~88 MB and stays out of the
+bundle, so it is satisfied by the ``kiwipiepy_model`` package OR by the same
+pack (``services.language_pack_installer``) — and when neither is there, the
+reason names the button rather than a pip line the bundled user cannot run.
 """
 
 from __future__ import annotations
@@ -77,4 +78,11 @@ def ko_missing_required_reason() -> str | None:
         # The engine is there, so the model is one button away: a pip line here
         # would be dead advice, and the engine itself is not what is missing.
         return f"Korean mining needs kiwipiepy_model. {KO_MODEL_DOWNLOAD_HINT}"
-    return f"Korean mining needs {', '.join(missing)}. Install with: pip install \"anki-miner[ko]\""
+    # Both tiers, so both routes: the pack ships the engine as well as the
+    # model, and a source user who skipped the extra never learns the button
+    # exists if the line names only pip.
+    return (
+        f"Korean mining needs {', '.join(missing)}. "
+        'Install with: pip install "anki-miner[ko]" - or download the Korean pack '
+        "in Settings -> Mining Language."
+    )

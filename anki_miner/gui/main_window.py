@@ -368,7 +368,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # any refusal itself and snaps the combo back on every terminal path.
         self.header.profile_changed.connect(self.profile_controller.switch_to)
         self.header.open_profile_manager.connect(self._open_profile_manager)
-        self.header.open_mining_language_settings.connect(self._open_mining_language_settings)
         self.central_layout.addWidget(self.header)
 
         # Whole-window issues (system checks, dictionary mutation refusals) sit
@@ -985,7 +984,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             open_subtab()
 
     def _open_mining_language_settings(self) -> None:
-        """Header chip: land on the selector itself, not just its page."""
+        """Boot banner action: land on the selector itself, not just its page."""
         idx = self._settings_tab_index()
         if idx < 0:
             return
@@ -1010,8 +1009,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
     def sync_mining_language_surfaces(self) -> None:
         """Point every language surface at the language that is actually live."""
-        from anki_miner.gui.utils.language_choices import available_mining_languages
-
         # config_language, never the raw field: the config accepts any stored
         # code, and one with no registered profile mines as ja everywhere else.
         # A surface reading the raw field would name a language nothing uses.
@@ -1032,10 +1029,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             restyle = getattr(self.tabs.widget(index), "set_content_style", None)
             if callable(restyle):
                 restyle(style)
-
-        choices = available_mining_languages()
-        names = dict(choices)
-        self.header.set_mining_language(names.get(code, code), choices=len(choices))
 
     def restart_prewarm(self) -> None:
         """Warm the incoming language's tokenizer and chain caches (spec 6.4).

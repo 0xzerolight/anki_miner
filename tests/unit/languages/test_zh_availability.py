@@ -71,6 +71,25 @@ class TestUnavailableReason:
 
         assert 'pip install "anki-miner[zh]"' in reason
 
+    def test_a_pip_build_also_names_the_download_button(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        monkeypatch.setattr(availability, "_installed", lambda name: name != "jieba")
+
+        reason = availability.zh_missing_required_reason() or ""
+
+        assert "Settings -> Mining Language" in reason
+
+    def test_the_optional_tier_never_names_the_pack(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """opencc pins one ABI, so a pack download cannot satisfy it - pointing
+        a user at the button for a missing opencc is advice that never works."""
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        monkeypatch.setattr(availability, "_installed", lambda name: name != "opencc")
+
+        reason = availability.zh_unavailable_reason() or ""
+
+        assert 'pip install "anki-miner[zh]"' in reason
+        assert "Settings -> Mining Language" not in reason
+
 
 def test_zh_modules_never_import_the_extra_at_module_level() -> None:
     # get_profile("zh") must build with no extra installed, so every jieba /

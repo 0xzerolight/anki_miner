@@ -1021,6 +1021,16 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.mining_language_panel.set_language_pack_status(code, self.tr("Downloading…"))
         self.language_pack_download_requested.emit(code)
 
+    def notify_language_pack_download_finished(self, code: str) -> None:
+        """Re-probe the panel after a pack lands, then re-index the search box.
+
+        Search visibility is resolved once, when the index is built, and the row
+        this download reveals was hidden then. Without the rebuild the setting
+        the user just unlocked cannot be found by typing its name.
+        """
+        self.mining_language_panel.notify_language_pack_download_finished(code)
+        self.refresh_setting_search_index()
+
     def _on_vad_pack_download_clicked(self) -> None:
         """Set a pending status and re-emit so the caller can start the download.
 

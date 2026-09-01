@@ -1089,7 +1089,7 @@ def _connect_language_pack_download(window: MainWindow, settings_tab: SettingsTa
             # importable BEFORE they run — otherwise the user downloads a pack
             # and still cannot pick the language it unlocks.
             ensure_language_packs_on_syspath()
-            settings_tab.mining_language_panel.notify_language_pack_download_finished(code)
+            settings_tab.notify_language_pack_download_finished(code)
 
         window.background_tasks.start_language_pack_download(code, language_pack_root(code), _on_status, _on_finished)
 
@@ -1149,9 +1149,8 @@ def _warn_if_active_language_unavailable(window: MainWindow) -> None:
     ``config.language`` can name zh/ko while the install lacks that language's
     pack — a bundle upgrade that stripped the engines (Task 6) is one way there
     — and without this the gap would surface only mid-run. Screen-issue banner,
-    never modal (D24): reuses the header chip's jump route
-    (``_open_mining_language_settings``, ``main_window.py:995``) so the action
-    lands on the selector itself.
+    never modal (D24): the action runs ``MainWindow._open_mining_language_settings``
+    so it lands on the selector itself, not just on its page.
     """
     code = config_language(window.config)
     if code == "ja":
