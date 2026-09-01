@@ -85,6 +85,16 @@ class TestMissingRequiredReason:
 
         assert 'pip install "anki-miner[ko]"' in reason
 
+    def test_a_pip_build_also_names_the_download_button(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The pack ships the engine AND the model, so a source user with
+        neither has two ways out - naming only pip hides the in-app one."""
+        monkeypatch.delattr(sys, "frozen", raising=False)
+        monkeypatch.setattr(availability, "_installed", lambda _name: False)
+
+        reason = availability.ko_missing_required_reason() or ""
+
+        assert "Settings -> Mining Language" in reason
+
     def test_the_download_hint_names_the_current_settings_path(self) -> None:
         # No stale "Filtering ->" segment - Mining Language moved out from under it.
         assert "Filtering" not in availability.KO_MODEL_DOWNLOAD_HINT
