@@ -93,7 +93,7 @@ auditwheel==6.8.1
 # system one. Pinned here rather than reverting auditwheel, so the next
 # dependabot bump does not reintroduce the same failure.
 patchelf==0.19.1.0
-delvewheel==1.13.0
+delvewheel==1.13.1
 # `wheel` unpacks/repacks the raw wheel to inject the ggml-vulkan MODULE backend
 # lib, which ggml builds to CMAKE_BINARY_DIR/bin (NOT the wheel) and dlopens at
 # runtime, so neither auditwheel nor delvewheel grafts it on its own.
