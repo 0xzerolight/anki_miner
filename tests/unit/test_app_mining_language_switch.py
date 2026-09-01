@@ -4,7 +4,7 @@ The controller (``gui/controllers/language_switch.py``) is covered by its own
 files; what was untested is everything the window owes around it - the one
 ``connect`` that makes the Settings selector reach the controller at all, the
 prewarm restart's re-entry guard, the surfaces ``sync_mining_language_surfaces``
-re-points, and the header chip's hop into the selector. A deleted ``connect``
+re-points, and the boot banner's hop into the selector. A deleted ``connect``
 line leaves the selector silently dead, which no other test notices.
 
 Uses the shared ``wired_window`` fixture (``tests/unit/conftest.py``), which
@@ -124,17 +124,15 @@ class TestThePrewarmRestartGuard:
 
 
 class TestSyncRepointsTheRealSurfaces:
-    def test_the_chip_and_the_combo_both_follow_the_config(self, wired_window):
+    def test_the_combo_follows_the_config(self, wired_window):
         window, _titles, _tabs = wired_window
         combo = _settings_tab(window).mining_language_panel.mining_language_combo
         assert combo.currentData() == "ja"
-        assert window.header.mining_language_button.text() == "日本語"
 
         window.config = dataclasses.replace(window.config, language="zh")
         window.sync_mining_language_surfaces()
 
         assert combo.currentData() == "zh"
-        assert window.header.mining_language_button.text() == "中文"
 
     def test_re_pointing_the_combo_never_re_requests_the_switch(self, wired_window, monkeypatch):
         """The combo is moved by the sync, and a moved combo emits."""
@@ -151,20 +149,23 @@ class TestSyncRepointsTheRealSurfaces:
 
         assert seen == []
 
-    def test_an_unregistered_stored_code_names_the_language_that_mines(self, wired_window, monkeypatch):
+    def test_an_unregistered_stored_code_points_at_the_language_that_mines(self, wired_window, monkeypatch):
         """R7: a code legal on disk but unresolvable here mines as ja, so the
-        chip says ja. ``ko`` registered in Stage 3, so it is hidden to play the
-        part - every other whitelisted code folds to ``ja`` in the config."""
+        selector says ja. ``ko`` registered in Stage 3, so it is hidden to play
+        the part - every other whitelisted code folds to ``ja`` in the config."""
         window, _titles, _tabs = wired_window
+        combo = _settings_tab(window).mining_language_panel.mining_language_combo
         unregister_profile(monkeypatch, "ko")
 
         window.config = dataclasses.replace(window.config, language="ko")
         window.sync_mining_language_surfaces()
 
-        assert window.header.mining_language_button.text() == "日本語"
+        assert combo.currentData() == "ja"
 
 
-class TestTheHeaderChipOpensTheSelector:
+class TestTheBannerActionOpensTheSelector:
+    """``app.py``'s ``language.open-settings`` boot banner action."""
+
     def test_it_lands_on_the_settings_tab_and_the_combo(self, wired_window, monkeypatch):
         window, _titles, _tabs = wired_window
         settings = _settings_tab(window)
@@ -172,12 +173,12 @@ class TestTheHeaderChipOpensTheSelector:
         monkeypatch.setattr(settings, "jump_to_setting", jumps.append)
         window.tabs.setCurrentIndex(0)
 
-        window.header.open_mining_language_settings.emit()
+        window._open_mining_language_settings()
 
         assert window.tabs.currentWidget() is settings
         assert jumps == ["mining_language.mining_language_combo"]
 
-    def test_the_stable_id_the_chip_jumps_to_exists(self, wired_window):
+    def test_the_stable_id_the_banner_jumps_to_exists(self, wired_window):
         """A renamed search id would make the hop a silent no-op."""
         window, _titles, _tabs = wired_window
 
