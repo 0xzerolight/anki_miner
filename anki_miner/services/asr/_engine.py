@@ -69,6 +69,45 @@ def get_download_fn():
     return faster_whisper.download_model
 
 
+# Per-process memo: the reason the first CT2 CUDA attempt failed, or None while
+# CUDA is still worth trying. ctranslate2 loads cuBLAS/cuDNN through
+# function-local statics whose initialiser throws when a DLL is missing
+# (src/cuda/cublas_stub.cc, get_so_handle / load_symbol); re-entering such a
+# static after it threw never returns in the MSVC build, so the SECOND CUDA
+# attempt in one Windows process hangs inside model construction where the first
+# one raised (the Linux build re-runs the initialiser and throws again). The
+# transcriber records the first failure here and every later probe reports 0
+# devices, so no later queue re-enters that code until the app restarts.
+# Whole-class on purpose: from Python there is no telling which CT2 static
+# threw, and a queue already ran on CPU after one failure. A restart is the
+# only reset - none for a mid-session CUDA-pack install, since that retry is
+# the hang.
+_CT2_CUDA_UNUSABLE: str | None = None
+
+
+def mark_ct2_cuda_unusable(reason: str) -> None:
+    """Record the first CT2 CUDA failure of this process; later calls are no-ops."""
+    global _CT2_CUDA_UNUSABLE
+    if _CT2_CUDA_UNUSABLE is not None:
+        return
+    _CT2_CUDA_UNUSABLE = reason
+    logger.warning(
+        "ASR: CUDA disabled for the rest of this session (%s). Restart the app to try the GPU again.",
+        reason,
+    )
+
+
+def ct2_cuda_unusable() -> str | None:
+    """The reason CUDA is off for this process, or None while it is still worth trying."""
+    return _CT2_CUDA_UNUSABLE
+
+
+def _reset_ct2_cuda_state() -> None:
+    """Forget a recorded CUDA failure (test helper)."""
+    global _CT2_CUDA_UNUSABLE
+    _CT2_CUDA_UNUSABLE = None
+
+
 def cuda_device_count() -> int:
     """Return the number of usable CUDA devices, or 0 on ANY failure.
 
@@ -77,7 +116,13 @@ def cuda_device_count() -> int:
     Degrades to 0 on anything — ImportError (extra not installed), OSError (a
     broken native CUDA runtime), or any other surprise — so callers can treat a
     nonzero return as "a GPU is present and usable" without their own guard.
+    Also 0 once this process recorded a CT2 CUDA failure (see
+    :func:`mark_ct2_cuda_unusable`), so the engine cascade routes 'auto' to
+    whisper.cpp or CPU without touching CT2's CUDA setup again.
     """
+    if _CT2_CUDA_UNUSABLE is not None:
+        logger.debug("ASR CUDA probe: devices=0 reason=ct2_cuda_unusable")
+        return 0
     try:
         import ctranslate2  # noqa: PLC0415  (intentional function-local import)
 

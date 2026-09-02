@@ -170,6 +170,22 @@ def _no_logger_level_leak():
 
 
 @pytest.fixture(autouse=True)
+def _forget_ct2_cuda_failure():
+    """Reset the process-global "CUDA failed once" memo around every test.
+
+    ``_engine.mark_ct2_cuda_unusable`` turns every later CUDA probe in the
+    process into 0 devices. A test that drives a CUDA failure through a fake
+    model would otherwise leave later tests on the same xdist worker unable to
+    build on CUDA at all.
+    """
+    from anki_miner.services.asr import _engine
+
+    _engine._reset_ct2_cuda_state()
+    yield
+    _engine._reset_ct2_cuda_state()
+
+
+@pytest.fixture(autouse=True)
 def _clear_resolver_caches():
     """Reset the process-global tool-resolver caches around every test.
 

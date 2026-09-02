@@ -792,6 +792,7 @@ def test_auto_deferred_cuda_memory_error_propagates_and_clears_session(monkeypat
     assert [c["device"] for c in constructed] == ["cuda"]
     assert session.model is None
     assert session.device_used is None
+    assert _engine.ct2_cuda_unusable() is None  # a MemoryError is not a CUDA verdict
 
 
 def test_explicit_cuda_failure_never_retries_vulkan(monkeypatch, tmp_path):
@@ -890,6 +891,78 @@ def test_device_cuda_deferred_inference_failure_falls_back_to_cpu(monkeypatch, t
     assert [c["device"] for c in constructed] == ["cuda", "cpu"]
     assert result == [(0.0, 1.0, "ok")]
     assert any(record.levelno == logging.WARNING for record in caplog.records)
+
+
+def test_cuda_construction_failure_disables_cuda_for_the_process(monkeypatch, tmp_path, caplog):
+    """The second CT2 CUDA attempt in one Windows process hangs where the first
+    one threw (ctranslate2's cuBLAS loader static), so the first failure must be
+    the last attempt until restart: the next queue builds on CPU straight away."""
+    constructed: list[dict] = []
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _recording_model_cls(constructed, cuda_raises=True))
+    monkeypatch.setattr(transcriber, "_preload_cuda_libs", lambda root: None)
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda _audio, _root: None)
+    _fake_ctranslate2(monkeypatch, device_count=1)
+
+    with caplog.at_level(logging.WARNING, logger=_engine.__name__):
+        _run_cpp_transcribe(monkeypatch, tmp_path, device="cuda", ct2_model_session=transcriber.Ct2ModelSession())
+        _run_cpp_transcribe(monkeypatch, tmp_path, device="cuda", ct2_model_session=transcriber.Ct2ModelSession())
+
+    # Run 1: cuda raises, cpu fallback. Run 2: cpu only - CUDA never re-entered.
+    assert [c["device"] for c in constructed] == ["cuda", "cpu", "cpu"]
+    assert _engine.ct2_cuda_unusable() == "cuDNN not found"
+    assert _engine.cuda_device_count() == 0
+    disabled = [r for r in caplog.records if "CUDA disabled for the rest of this session" in r.getMessage()]
+    assert len(disabled) == 1
+    assert disabled[0].levelno == logging.WARNING
+
+
+def test_deferred_cuda_failure_routes_the_next_queue_to_whisper_cpp(monkeypatch, tmp_path):
+    """After a deferred CUDA decode failure, 'auto' never re-enters CT2 CUDA: the
+    next queue sees no CUDA device and takes the whisper.cpp route directly."""
+    ct2_constructed: list[dict] = []
+
+    class DeferredFailModel:
+        def __init__(self, model_name, **kwargs):
+            kwargs["model_name"] = model_name
+            ct2_constructed.append(kwargs)
+            self._device = kwargs.get("device")
+
+        def transcribe(self, audio, **kwargs):
+            if self._device == "cuda":
+
+                def _boom():
+                    raise RuntimeError("cuDNN kernel launch failed")
+                    yield  # pragma: no cover  (makes _boom a generator)
+
+                return _boom(), SimpleNamespace(language="ja")
+            return iter([make_segment(0.0, 1.0, "ok")]), SimpleNamespace(language="ja")
+
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: DeferredFailModel)
+    monkeypatch.setattr(transcriber, "_preload_cuda_libs", lambda root: None)
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda _audio, _root: None)
+    # A CUDA device is reported by the (fake) runtime; cuda_device_count stays
+    # REAL so the memo, not a patch, is what removes it on the second run.
+    _fake_ctranslate2(monkeypatch, device_count=1)
+    # whisper.cpp route ready: Vulkan device, backend, ggml + VAD files.
+    cpp_constructed: list = []
+    monkeypatch.setattr(_engine, "vulkan_device_count", lambda: 1)
+    monkeypatch.setattr(_engine, "whisper_cpp_available", lambda: True)
+    monkeypatch.setattr(_engine, "ensure_ggml_backends_loaded", lambda: None)
+    monkeypatch.setattr(
+        _engine,
+        "get_whisper_cpp_model_cls",
+        lambda: fake_cpp_model_cls_factory([make_cpp_segment(0, 100, "a", 0.9)], constructed=cpp_constructed),
+    )
+    monkeypatch.setattr(transcriber, "_cpp_ggml_present", lambda model_name, models_root: True)
+    monkeypatch.setattr(transcriber.ggml_model_installer, "is_vad_downloaded", lambda models_root: True)
+
+    first = _run_cpp_transcribe(monkeypatch, tmp_path, device="auto", ct2_model_session=transcriber.Ct2ModelSession())
+    second = _run_cpp_transcribe(monkeypatch, tmp_path, device="auto", ct2_model_session=transcriber.Ct2ModelSession())
+
+    assert first == second == [(0.0, 1.0, "a")]
+    assert [c["device"] for c in ct2_constructed] == ["cuda"]  # built once, never again
+    assert len(cpp_constructed) == 2  # run 1 via the cpp reconsideration, run 2 directly
+    assert _engine.ct2_cuda_unusable() == "cuDNN kernel launch failed"
 
 
 def test_is_junk_segment_none_fields_do_not_crash():
