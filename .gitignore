@@ -36,6 +36,8 @@ vendor/
 .release-cache/
 licenses/alass/
 licenses/yt-dlp/
+licenses/libmpv/Copyright
+licenses/libmpv/SOURCES.txt
 
 # Testing
 .pytest_cache/
