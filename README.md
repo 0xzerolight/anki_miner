@@ -65,8 +65,8 @@ Grab the download for your platform from the [latest release](https://github.com
 | Platform | Download |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS (Apple Silicon / M1-M4) | `AnkiMiner-macOS-arm64.tar.gz` |
-| macOS (Intel) | `AnkiMiner-macOS-x86_64.tar.gz` ¹ |
+| macOS (Apple Silicon / M1-M4) | `AnkiMiner-*-macOS-arm64.tar.gz` |
+| macOS (Intel) | `AnkiMiner-*-macOS-x86_64.tar.gz` ¹ |
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (other) | `AnkiMiner-*-Linux-x86_64.AppImage` |
 

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:3faba83f26c9d1af -->
+<!-- i18n-source: README.md sha256:c140ea514189f734 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -67,8 +67,8 @@ Descarga la versión para tu plataforma desde el [último lanzamiento](https://g
 | Plataforma | Descarga |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS (Apple Silicon / M1-M4) | `AnkiMiner-macOS-arm64.tar.gz` |
-| macOS (Intel) | `AnkiMiner-macOS-x86_64.tar.gz` ¹ |
+| macOS (Apple Silicon / M1-M4) | `AnkiMiner-*-macOS-arm64.tar.gz` |
+| macOS (Intel) | `AnkiMiner-*-macOS-x86_64.tar.gz` ¹ |
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (otros) | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
