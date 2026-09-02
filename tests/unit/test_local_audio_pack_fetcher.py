@@ -763,3 +763,52 @@ class TestPersistentHandle:
         fetcher.fetch("食べる", "たべる")
         fetcher.close()
         fetcher.close()  # idempotent
+
+
+# ---------------------------------------------------------------------------
+# A pack whose source medium blocks the copy is bounded by the chain budget
+# ---------------------------------------------------------------------------
+
+
+class TestSlowSourceMediumIsBounded:
+    """The real fetcher, behind the chain, on a folder whose data reads block.
+
+    Bundle 2026-09-02: hits resolved (index lookups are local SQLite) but each
+    fresh hit's copy out of the pack folder took 39-255s, and one run never
+    finished. The chain's per-word budget must turn that into a fast miss that
+    names this pack, not a hung worker.
+    """
+
+    def test_blocking_copy_becomes_a_fast_miss_attributed_to_the_pack(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        import time
+
+        from anki_miner.services.expression_audio_fetcher import ChainedExpressionAudioFetcher
+
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        cache_dir = tmp_path / "cache"
+        fetcher = _make_fetcher(db, pack_dir, cache_dir, pack_id="forvo")
+        released = threading.Event()
+        real_copy2 = audio_pack_fetcher.shutil.copy2
+
+        def _blocking_copy(src, dst):
+            # Bounded so an abandoned worker cannot outlive the test session.
+            released.wait(30)
+            return real_copy2(src, dst)
+
+        monkeypatch.setattr(audio_pack_fetcher.shutil, "copy2", _blocking_copy)
+        chain = ChainedExpressionAudioFetcher([fetcher])
+        monkeypatch.setattr(chain, "PER_WORD_BUDGET_SECONDS", 0.2)
+
+        started = time.perf_counter()
+        result = chain.fetch_candidates([("食べる", "たべる")])
+        elapsed = time.perf_counter() - started
+        released.set()
+
+        assert result is None
+        assert elapsed < 5.0, f"copy on a slow medium was not bounded: {elapsed:.2f}s"
+        assert chain.stats()["slow"] == 1
+        assert chain.slowest_pack_id() == "forvo"

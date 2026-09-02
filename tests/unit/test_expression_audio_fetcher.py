@@ -1520,3 +1520,82 @@ class TestChainPerWordBudget:
         chain = ChainedExpressionAudioFetcher([_Boom()])  # type: ignore[list-item]
 
         assert chain.fetch_candidates([("噓", "うそ")]) is None
+
+
+class TestChainSlowMemberAttribution:
+    """A budget expiry names the member that was running when it fired.
+
+    Regression cover for the 2026-09-02 bundle: four local packs in the chain,
+    every transport counter zero, fresh hits costing 39-255s each and one run
+    that never finished. The 20s budget bounds that, but a "slow" tally on its
+    own cannot say WHICH of four packs is on the slow medium, and the bundle
+    never carries the pack folders — so the expiry line has to.
+    """
+
+    _SlowStub = TestChainPerWordBudget._SlowStub
+
+    def _slow_pack(self, block_s: float = 30.0):
+        class _SlowPack(self._SlowStub):  # type: ignore[name-defined,misc]
+            pack_id = "forvo"
+            pack_dir = Path("/packs/forvo_files")
+
+        return _SlowPack(block_s=block_s)
+
+    def test_budget_expiry_names_the_pack_that_was_running(self, monkeypatch, caplog):
+        slow = self._slow_pack()
+        chain = ChainedExpressionAudioFetcher([slow])  # type: ignore[list-item]
+        monkeypatch.setattr(chain, "PER_WORD_BUDGET_SECONDS", 0.2)
+
+        with caplog.at_level(logging.WARNING, logger=MODULE):
+            chain.fetch_candidates([("噓", "うそ")])
+        slow.released.set()
+
+        assert chain.slowest_pack_id() == "forvo"
+        assert chain.stats()["slow"] == 1
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert any("member=audio pack 'forvo'" in w and "forvo_files" in w for w in warnings), warnings
+
+    def test_budget_expiry_without_a_pack_names_the_member_class(self, monkeypatch, caplog):
+        slow = self._SlowStub(block_s=30.0)
+        chain = ChainedExpressionAudioFetcher([slow])  # type: ignore[list-item]
+        monkeypatch.setattr(chain, "PER_WORD_BUDGET_SECONDS", 0.2)
+
+        with caplog.at_level(logging.WARNING, logger=MODULE):
+            chain.fetch("噓", "うそ")
+        slow.released.set()
+
+        assert chain.slowest_pack_id() is None
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert any("member=_SlowStub" in w for w in warnings), warnings
+
+    def test_attribution_lands_on_the_slow_member_not_the_first(self, monkeypatch, caplog):
+        class _FastMiss:
+            def fetch_candidates(self, candidates, cancelled_check=None):
+                return None
+
+        slow = self._slow_pack()
+        chain = ChainedExpressionAudioFetcher([_FastMiss(), slow])  # type: ignore[list-item]
+        monkeypatch.setattr(chain, "PER_WORD_BUDGET_SECONDS", 0.2)
+
+        with caplog.at_level(logging.WARNING, logger=MODULE):
+            chain.fetch_candidates([("噓", "うそ")])
+        slow.released.set()
+
+        assert chain.slowest_pack_id() == "forvo"
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert any("member=audio pack 'forvo'" in w for w in warnings), warnings
+        assert not any("_FastMiss" in w for w in warnings), warnings
+
+    def test_no_expiry_means_no_slow_pack(self, tmp_path):
+        audio = tmp_path / "word.mp3"
+        audio.touch()
+
+        class _FastPack:
+            pack_id = "jpod"
+
+            def fetch_candidates(self, candidates, cancelled_check=None):
+                return audio
+
+        chain = ChainedExpressionAudioFetcher([_FastPack()])  # type: ignore[list-item]
+        assert chain.fetch_candidates([("噓", "うそ")]) == audio
+        assert chain.slowest_pack_id() is None

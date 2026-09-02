@@ -7,6 +7,7 @@ import os
 import tempfile
 import threading
 import time
+from collections import Counter
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -403,6 +404,10 @@ class ChainedExpressionAudioFetcher:
         # the "slow" bucket is ever bumped here; transport buckets belong to
         # whichever member actually made the request.
         self._failure_counts = _new_failure_counts()
+        # Budget expiries per local pack id. A "slow" count alone cannot say
+        # WHICH of several packs sits on the slow medium, and that is the one
+        # thing the user has to know to fix it (see slowest_pack_id).
+        self._slow_packs: Counter[str] = Counter()
 
     def candidates_for(self, word: Any) -> list[tuple[str, str]]:
         """The ``(term, reading)`` ladder to feed :meth:`fetch_candidates`."""
@@ -433,7 +438,7 @@ class ChainedExpressionAudioFetcher:
             Path to an audio file from the first matching fetcher, or None.
         """
         return self._budgeted(
-            lambda: self._walk(lambda f: f.fetch(mined_form, reading, cancelled_check), cancelled_check),
+            lambda active: self._walk(lambda f: f.fetch(mined_form, reading, cancelled_check), cancelled_check, active),
             identity=f"{mined_form}/{reading}",
         )
 
@@ -455,7 +460,9 @@ class ChainedExpressionAudioFetcher:
         ceiling by its own length.
         """
         return self._budgeted(
-            lambda: self._walk(lambda f: f.fetch_candidates(candidates, cancelled_check), cancelled_check),
+            lambda active: self._walk(
+                lambda f: f.fetch_candidates(candidates, cancelled_check), cancelled_check, active
+            ),
             identity=candidates[0][0] if candidates else "",
         )
 
@@ -463,17 +470,25 @@ class ChainedExpressionAudioFetcher:
         self,
         attempt: "Callable[[ExpressionAudioFetcher], Path | None]",
         cancelled_check: Callable[[], bool] | None,
+        active: list[object],
     ) -> Path | None:
-        """Try each member in priority order; first non-None wins."""
+        """Try each member in priority order; first non-None wins.
+
+        ``active`` is the walk's own one-slot holder, written with the member
+        about to be attempted so a budget expiry can name it. Per walk, never
+        an instance attribute: an abandoned walk keeps running after its
+        budget and must not relabel the next word's expiry.
+        """
         for fetcher in self._fetchers:
             if cancelled_check is not None and cancelled_check():
                 return None
+            active[0] = fetcher
             result = attempt(fetcher)
             if result is not None:
                 return result
         return None
 
-    def _budgeted(self, walk: "Callable[[], Path | None]", identity: str) -> Path | None:
+    def _budgeted(self, walk: "Callable[[list[object]], Path | None]", identity: str) -> Path | None:
         """Run *walk* under the per-word wall-clock budget; None when it expires.
 
         The walk runs on a daemon thread and is ABANDONED rather than
@@ -486,10 +501,11 @@ class ChainedExpressionAudioFetcher:
         a run, and each one ends on its own once the network answers.
         """
         outcome: list[Path | None] = [None]
+        active: list[object] = [None]
 
         def _target() -> None:
             try:
-                outcome[0] = walk()
+                outcome[0] = walk(active)
             except Exception as exc:  # noqa: BLE001 — protocol contract: never raise
                 logger.debug("expression audio chain walk failed identity=%s error=%s", identity, type(exc).__name__)
 
@@ -497,12 +513,21 @@ class ChainedExpressionAudioFetcher:
         worker.start()
         worker.join(self.PER_WORD_BUDGET_SECONDS)
         if worker.is_alive():
+            # The abandoned walk may still be running; reading its one-slot
+            # holder is a benign race (a single reference assignment) and at
+            # worst names the member it moved on to, which is still the
+            # member that was blocking when the budget ran out.
+            member = active[0]
             self._failure_counts["slow"] += 1
+            pack_id = getattr(member, "pack_id", None)
+            if isinstance(pack_id, str) and pack_id:
+                self._slow_packs[pack_id] += 1
             logger.warning(
-                "expression audio exceeded the %.0fs per-word budget identity=%s; "
+                "expression audio exceeded the %.0fs per-word budget identity=%s member=%s; "
                 "treating as a miss and continuing (the fetch is abandoned, not cancelled)",
                 self.PER_WORD_BUDGET_SECONDS,
                 identity,
+                _member_label(member),
             )
             return None
         # join() returned without a timeout, so the write to outcome[0]
@@ -523,6 +548,19 @@ class ChainedExpressionAudioFetcher:
         totals["slow"] = totals.get("slow", 0) + self._failure_counts["slow"]
         return totals
 
+    def slowest_pack_id(self) -> str | None:
+        """The local pack with the most budget expiries so far, or None.
+
+        Duck-typed like ``stats()``/``close()``: the audio stage looks it up
+        with ``getattr`` so a bare Protocol fetcher never has to provide it.
+        Only packs are tracked. An online member that blows the budget has the
+        generic remedy (reorder or disable it); a pack's remedy is its folder,
+        so the diagnosis has to name the pack.
+        """
+        if not self._slow_packs:
+            return None
+        return max(self._slow_packs, key=lambda pack_id: self._slow_packs[pack_id])
+
     def close(self) -> None:
         """Fan out ``close()`` to every member fetcher that defines one.
 
@@ -530,3 +568,22 @@ class ChainedExpressionAudioFetcher:
         Protocol), so members without it are skipped. See ``close_all``.
         """
         _close_all(self._fetchers)
+
+
+def _member_label(member: object) -> str:
+    """Name a chain member for the budget-expiry log line.
+
+    A local pack is named by its id AND its source folder: a diagnostics
+    bundle carries no pack paths otherwise, and "which folder sits on the slow
+    medium" is the one question that line exists to answer. Online members
+    are named by class.
+    """
+    if member is None:
+        return "<none>"
+    pack_id = getattr(member, "pack_id", None)
+    if isinstance(pack_id, str) and pack_id:
+        pack_dir = getattr(member, "pack_dir", None)
+        if pack_dir is not None:
+            return f"audio pack '{pack_id}' ({pack_dir})"
+        return f"audio pack '{pack_id}'"
+    return type(member).__name__

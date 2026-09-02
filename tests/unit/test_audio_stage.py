@@ -872,3 +872,94 @@ class TestProcessorAudioFailureSummary:
         result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         assert result.cards_created == 1
+
+
+class TestSlowPackDiagnosis:
+    """A dominant "slow" bucket names the pack and the pack-specific remedy.
+
+    The generic "responding too slowly" advice (reorder or disable the source)
+    is right for an online source and wrong for a local pack, whose fix is to
+    move the folder onto a local drive and re-import. The chain knows which
+    member expired; the stage has to say so.
+    """
+
+    def test_slow_dominant_with_pack_names_the_pack_and_the_remedy(self):
+        msg = _audio_failure_diagnosis(_counts(slow=6), attempts=10, slow_pack="forvo")
+        assert msg is not None
+        assert "'forvo'" in msg
+        assert "Settings -> Audio" in msg
+        assert "re-import" in msg.lower()
+        assert "local drive" in msg
+
+    def test_slow_dominant_without_pack_keeps_the_generic_message(self):
+        msg = _audio_failure_diagnosis(_counts(slow=6), attempts=10)
+        assert msg is not None
+        assert "responding too slowly" in msg
+        assert "Reorder or disable" in msg
+
+    def test_pack_name_is_ignored_when_slow_is_not_dominant(self):
+        msg = _audio_failure_diagnosis(_counts(ssl=8, slow=1), attempts=10, slow_pack="forvo")
+        assert msg is not None
+        assert "forvo" not in msg
+        assert "connection/certificate failure" in msg
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": MagicMock(),
+            "definition_service": MagicMock(),
+            "anki_service": MagicMock(),
+        }
+
+    @staticmethod
+    def _enabled_config(test_config):
+        return replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
+        )
+
+    def _run(self, test_config, mock_services, tmp_path, fetcher):
+        config = self._enabled_config(test_config)
+        pairs = [(_make_word("食べる"), _make_media("taberu"))]
+        _wire_pipeline(mock_services, pairs)
+        presenter = MagicMock()
+        processor = build_processor(
+            config=config,
+            presenter=presenter,
+            expression_audio_fetcher=fetcher,
+            **mock_services,
+        )
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+        return [c.args[0] for c in presenter.show_warning.call_args_list]
+
+    def test_stage_warning_names_the_slow_pack(self, test_config, mock_services, tmp_path):
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = None
+        fetcher.stats.return_value = _counts(slow=1)
+        fetcher.slowest_pack_id.return_value = "forvo"
+
+        warnings = self._run(test_config, mock_services, tmp_path, fetcher)
+        assert any("'forvo'" in w and "Settings -> Audio" in w for w in warnings), warnings
+
+    def test_stage_warning_stays_generic_without_a_slow_pack(self, test_config, mock_services, tmp_path):
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = None
+        fetcher.stats.return_value = _counts(slow=1)
+        fetcher.slowest_pack_id.return_value = None
+
+        warnings = self._run(test_config, mock_services, tmp_path, fetcher)
+        assert any("responding too slowly" in w for w in warnings), warnings
+
+    def test_non_string_slowest_pack_id_is_treated_as_absent(self, test_config, mock_services, tmp_path):
+        """A MagicMock fetcher auto-stubs slowest_pack_id(); the stage must not crash on it."""
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = None
+        fetcher.stats.return_value = _counts(slow=1)
+
+        warnings = self._run(test_config, mock_services, tmp_path, fetcher)
+        assert any("responding too slowly" in w for w in warnings), warnings

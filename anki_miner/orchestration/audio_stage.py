@@ -82,7 +82,7 @@ def _dominant_transient_failure(counts: dict[str, int], attempts: int) -> str | 
     return max(counts, key=lambda key: counts[key])
 
 
-def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | None:
+def _audio_failure_diagnosis(counts: dict[str, int], attempts: int, slow_pack: str | None = None) -> str | None:
     """Name the dominant expression-audio failure cause, or None.
 
     ``counts`` is a ChainedExpressionAudioFetcher ``stats()`` tally keyed by
@@ -90,11 +90,31 @@ def _audio_failure_diagnosis(counts: dict[str, int], attempts: int) -> str | Non
     aggregated across every enabled word-audio source (packs, JPod101, custom
     URL/JSON, gTTS). Threshold/tie-break semantics live in
     :func:`_dominant_transient_failure`.
+
+    ``slow_pack`` is the local pack the chain saw expire most often (its
+    ``slowest_pack_id()``), or None when no pack did. It only changes the
+    wording when "slow" is the dominant bucket.
     """
     dominant = _dominant_transient_failure(counts, attempts)
     if dominant is None:
         return None
     if dominant == "slow":
+        if slow_pack:
+            # A local pack that blows the budget is not "responding slowly";
+            # its folder is. Every fresh hit copies one file out of that
+            # folder, and on a cloud-placeholder, network or external drive
+            # that copy is what cost 39-255s per word in the reported run.
+            # Reordering or disabling the pack does not fix that; moving the
+            # folder does, so name the pack and say so.
+            return tr_format(
+                QCoreApplication.translate(
+                    "EpisodeProcessor",
+                    "Audio pack '%1' is slow to read — audio skipped for those words. "
+                    "Its folder is probably on a cloud-synced, network or external drive: "
+                    "move it to a local drive, then re-import the pack (Settings -> Audio -> Re-import…).",
+                ),
+                slow_pack,
+            )
         # Distinct from every other bucket: nothing failed and nothing is
         # retried differently next run. The source is reachable and answering,
         # just far slower than the per-word budget, so the actionable advice is
@@ -383,13 +403,22 @@ class AudioStage:
                 return True
             return False
 
+        slowest_pack = getattr(self.expression_audio_fetcher, "slowest_pack_id", None)
+
+        def _diagnose(counts: dict[str, int], attempts: int) -> str | None:
+            # Duck-typed like stats(): the chain names the pack that expired;
+            # anything else (a bare Protocol fetcher, a MagicMock) yields a
+            # non-string and keeps the generic message.
+            pack = slowest_pack() if callable(slowest_pack) else None
+            return _audio_failure_diagnosis(counts, attempts, slow_pack=pack if isinstance(pack, str) else None)
+
         completed, _, hits, _ = self._run_stage(
             media_results,
             progress_callback,
             "expression",
             enabled_entries,
             self.expression_audio_fetcher,
-            _audio_failure_diagnosis,
+            _diagnose,
             QCoreApplication.translate("EpisodeProcessor", "Fetching expression audio"),
             QCoreApplication.translate("EpisodeProcessor", "Expression audio: %1"),
             _per_item,

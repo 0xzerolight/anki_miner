@@ -100,6 +100,16 @@ class LocalAudioPackFetcher:
         """
         return self._pack_id
 
+    @property
+    def pack_dir(self) -> Path:
+        """Resolved source folder of this pack (read-only).
+
+        Named on the chain's budget-expiry log line: a pack that blows the
+        per-word budget is one whose folder sits on a slow medium, and the
+        folder is what the user has to move.
+        """
+        return self._pack_dir
+
     # ------------------------------------------------------------------
     # ExpressionAudioFetcher Protocol
     # ------------------------------------------------------------------
