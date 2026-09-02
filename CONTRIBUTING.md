@@ -1,6 +1,6 @@
 # Contributing to Anki Miner
 
-Thanks for helping out. Anki Miner is a solo-maintained Japanese mining tool, and contributions of any size are welcome — bug reports, fixes, dictionary integrations, GUI polish, doc improvements.
+Thanks for helping out. Anki Miner is a solo-maintained mining tool for Japanese, Chinese and Korean, and contributions of any size are welcome — bug reports, fixes, dictionary integrations, GUI polish, doc improvements.
 
 ## Before you start
 
@@ -20,15 +20,19 @@ python -m venv .venv
 source .venv/bin/activate          # Linux/macOS
 # or: .venv\Scripts\activate       # Windows
 
-pip install -e ".[dev]"
+pip install -e ".[dev,languages]"
 pre-commit install
 ```
+
+Anki Miner requires Python 3.11 or newer; CI runs the suite on 3.11, 3.12 and 3.13, with lint and type checks on 3.12.
+
+The `languages` extra adds the Chinese and Korean engines. Plain `.[dev]` still runs green, because the zh/ko suites skip themselves through `pytest.importorskip` rather than failing - so a contributor without it gets a passing run that never exercised those languages.
 
 External runtime dependencies:
 
 - `ffmpeg` on PATH (`brew install ffmpeg`, `sudo apt install ffmpeg`, or the official Windows build).
 - Anki running with the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on.
-- Optional: a Yomitan-format dictionary installed via **Settings → Add Dictionary…**, or the legacy `JMdict_e` at `~/.anki_miner/JMdict_e` (auto-migrated on first launch).
+- Optional: a Yomitan-format dictionary installed via **Settings -> Dictionaries -> Add Dictionary**, or the legacy `JMdict_e` at `~/.anki_miner/JMdict_e` (auto-migrated on first launch).
 - fugashi/MeCab may need system-level MeCab libraries on some platforms; the bundled `unidic-lite` provides the dictionary.
 - Headless Linux (and CI) also needs the Qt runtime libs `libegl1 libpulse0 libxkbcommon0` for any test that imports a PyQt6 widget (`sudo apt-get install -y libegl1 libpulse0 libxkbcommon0`).
 
@@ -57,7 +61,7 @@ mypy anki_miner
 pytest -m "not youtube and not asr and not e2e and not golden"
 ```
 
-`scripts/health.sh` runs the full local gate in one command (the above plus vulture and shellcheck).
+`scripts/health.sh` runs the full local gate in one command: the four above, then the ASR suite (`pytest -m "asr and not e2e"`), then vulture, shellcheck and the Linux launcher smoke. The first five are hard steps and gate "done"; the last three only warn, and skip when their binary is missing.
 
 ## Tests
 
