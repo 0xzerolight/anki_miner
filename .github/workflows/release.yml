@@ -1151,7 +1151,7 @@ jobs:
         shell: pwsh
         timeout-minutes: 25
         env:
-          INSTALLER_PATH: dist/AnkiMiner-${{ steps.version.outputs.version }}-Windows-x86_64-Setup.exe
+          INSTALLER_PATH: dist/AnkiMiner-${{ steps.version.outputs.version }}-${{ matrix.asset_slug }}-Setup.exe
           EXPECTED_VERSION: ${{ steps.version.outputs.version }}
         run: |
           $ErrorActionPreference = 'Stop'
@@ -1167,7 +1167,7 @@ jobs:
         shell: pwsh
         timeout-minutes: 30
         env:
-          INSTALLER_PATH: dist/AnkiMiner-${{ steps.version.outputs.version }}-Windows-x86_64-Setup.exe
+          INSTALLER_PATH: dist/AnkiMiner-${{ steps.version.outputs.version }}-${{ matrix.asset_slug }}-Setup.exe
           PROBE_INSTALLER_PATH: dist/AnkiMiner-0.0.1-Windows-x86_64-Setup.exe
           EXPECTED_VERSION: ${{ steps.version.outputs.version }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -1241,7 +1241,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           cd dist
-          tar -czf ${{ matrix.artifact_name }}.tar.gz AnkiMiner/
+          tar -czf AnkiMiner-${{ steps.version.outputs.version }}-${{ matrix.asset_slug }}.tar.gz AnkiMiner/
 
       # Per-OS explicit upload with if-no-files-found: error. A single catch-all
       # step with default 'warn' only fails when NOTHING matches, so a sibling
@@ -1255,7 +1255,7 @@ jobs:
           name: ${{ matrix.artifact_name }}
           if-no-files-found: error
           path: |
-            dist/AnkiMiner-${{ steps.version.outputs.version }}-Linux-x86_64.AppImage
+            dist/AnkiMiner-${{ steps.version.outputs.version }}-${{ matrix.asset_slug }}.AppImage
             dist/anki-miner_${{ steps.version.outputs.version }}_amd64.deb
 
       - name: Upload artifact (macOS)
@@ -1264,7 +1264,7 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           if-no-files-found: error
-          path: dist/${{ matrix.artifact_name }}.tar.gz
+          path: dist/AnkiMiner-${{ steps.version.outputs.version }}-${{ matrix.asset_slug }}.tar.gz
 
       - name: Upload artifact (Windows)
         if: runner.os == 'Windows'
@@ -1272,7 +1272,7 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           if-no-files-found: error
-          path: dist/AnkiMiner-${{ steps.version.outputs.version }}-Windows-x86_64-Setup.exe
+          path: dist/AnkiMiner-${{ steps.version.outputs.version }}-${{ matrix.asset_slug }}-Setup.exe
 
   release:
     needs: build
