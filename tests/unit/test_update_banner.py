@@ -37,7 +37,7 @@ class TestDownloadLabel:
         assert banner._download_btn.text() == "Download installer"
 
     def test_tar_gz_label(self, qtbot):
-        banner = UpdateBanner(_info(asset_url="https://example.com/AnkiMiner-macOS-arm64.tar.gz"))
+        banner = UpdateBanner(_info(asset_url="https://example.com/AnkiMiner-3.1.0-macOS-arm64.tar.gz"))
         qtbot.addWidget(banner)
         assert banner._download_btn.text() == "Download archive"
 

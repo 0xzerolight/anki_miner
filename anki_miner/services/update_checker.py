@@ -66,12 +66,19 @@ def _detect_target() -> str:
 # Linux frozen bundle now installs via .deb); AppImage installs match through
 # the separate "appimage" target. If no matching asset exists, _pick_asset
 # returns None and the caller points the banner at the release page.
+#
+# Every pattern is version-agnostic on purpose. The macOS assets shipped
+# unversioned through 3.0 and these two entries were exact literals, so
+# versioning those filenames silently degraded every installed macOS build to a
+# release-page link with no error surfaced anywhere. tests/unit/
+# test_release_asset_names.py asserts each published name is claimed by exactly
+# one target, so the next rename fails the suite instead of the banner.
 _TARGET_PATTERNS: dict[str, tuple[str, ...]] = {
     "windows-frozen": ("*-Windows-x86_64-Setup.exe",),
     "linux-frozen": ("anki-miner_*_amd64.deb",),
     "appimage": ("*-x86_64.AppImage",),
-    "macos-frozen-arm64": ("AnkiMiner-macOS-arm64.tar.gz",),
-    "macos-frozen-x86_64": ("AnkiMiner-macOS-x86_64.tar.gz",),
+    "macos-frozen-arm64": ("AnkiMiner-*-macOS-arm64.tar.gz",),
+    "macos-frozen-x86_64": ("AnkiMiner-*-macOS-x86_64.tar.gz",),
 }
 
 

@@ -110,3 +110,30 @@ def test_deb_filename_matches_nfpm_metadata():
     rendered = DEB_NAME.format(version="${{ steps.version.outputs.version }}")
     assert f"dist/{rendered}" in RELEASE_YML.read_text(encoding="utf-8")
     assert "dist/anki-miner_${VERSION}_amd64.deb" in PREFLIGHT_SH.read_text(encoding="utf-8")
+
+
+def test_every_published_asset_is_claimed_by_exactly_one_update_target():
+    """The macOS drift bug in reverse: if a producer renames an asset and the
+    updater's glob is not updated, _pick_asset silently returns None and the
+    banner degrades to the release page with no error anywhere."""
+    import fnmatch
+
+    from anki_miner.services.update_checker import _TARGET_PATTERNS
+
+    for name in render_asset_names("9.9.9"):
+        matched = [
+            target for target, patterns in _TARGET_PATTERNS.items() if any(fnmatch.fnmatch(name, p) for p in patterns)
+        ]
+        assert len(matched) == 1, f"{name} matched {matched}, expected exactly one target"
+
+
+def test_every_update_target_is_satisfied_by_a_published_asset():
+    import fnmatch
+
+    from anki_miner.services.update_checker import _TARGET_PATTERNS
+
+    names = render_asset_names("9.9.9")
+    for target, patterns in _TARGET_PATTERNS.items():
+        assert any(
+            fnmatch.fnmatch(name, p) for p in patterns for name in names
+        ), f"target {target} matches no published asset"

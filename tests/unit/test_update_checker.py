@@ -135,9 +135,9 @@ class TestDetectTarget:
 def _make_assets() -> list[dict]:
     """Realistic GitHub /releases/latest assets array (subset of fields).
 
-    Deliberately retains the now-dropped Windows .zip and Linux .tar.gz so
-    matcher tests prove those artifacts are *ignored* when present, not merely
-    absent.
+    Deliberately retains the now-dropped Windows .zip and Linux .tar.gz, plus
+    the unversioned macOS tarballs that shipped before 3.1, so matcher tests
+    prove those artifacts are *ignored* when present, not merely absent.
     """
     base = "https://github.com/0xzerolight/anki_miner/releases/download/v2.4.0/"
     return [
@@ -161,6 +161,16 @@ def _make_assets() -> list[dict]:
             "name": "AnkiMiner-2.4.0-x86_64.AppImage",
             "browser_download_url": f"{base}AnkiMiner-2.4.0-x86_64.AppImage",
         },
+        {
+            "name": "AnkiMiner-2.4.0-macOS-arm64.tar.gz",
+            "browser_download_url": f"{base}AnkiMiner-2.4.0-macOS-arm64.tar.gz",
+        },
+        {
+            "name": "AnkiMiner-2.4.0-macOS-x86_64.tar.gz",
+            "browser_download_url": f"{base}AnkiMiner-2.4.0-macOS-x86_64.tar.gz",
+        },
+        # Retired unversioned macOS names (pre-3.1). Kept so the matcher proves
+        # it ignores them rather than merely never seeing them.
         {
             "name": "AnkiMiner-macOS-arm64.tar.gz",
             "browser_download_url": f"{base}AnkiMiner-macOS-arm64.tar.gz",
@@ -199,12 +209,12 @@ class TestPickAsset:
     def test_macos_frozen_arm64_picks_arm64_tar_gz(self):
         url = _pick_asset(_make_assets(), "macos-frozen-arm64")
         assert url is not None
-        assert url.endswith("AnkiMiner-macOS-arm64.tar.gz")
+        assert url.endswith("AnkiMiner-2.4.0-macOS-arm64.tar.gz")
 
     def test_macos_frozen_x86_64_picks_x86_64_tar_gz(self):
         url = _pick_asset(_make_assets(), "macos-frozen-x86_64")
         assert url is not None
-        assert url.endswith("AnkiMiner-macOS-x86_64.tar.gz")
+        assert url.endswith("AnkiMiner-2.4.0-macOS-x86_64.tar.gz")
 
     def test_pip_target_returns_none(self):
         assert _pick_asset(_make_assets(), "pip") is None
