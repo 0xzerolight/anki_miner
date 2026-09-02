@@ -1,7 +1,7 @@
 # E2E GUI test harness
 
 Real-service harness that drives the actual GUI (offscreen Qt) through the full mining pipeline
-against a live Anki, or against an in-process fake. It exists to catch two classes of bug that
+against a live Anki, or against an in-process fake. It exists to catch four classes of bug that
 unit tests structurally cannot, because they mock at the service boundary:
 
 1. **Accumulation and leaks** — mine the same episode several sessions in a row and watch widget
@@ -9,13 +9,20 @@ unit tests structurally cannot, because they mock at the service boundary:
    grows without bound.
 2. **GUI wiring** — widget state, mined word sets, cancel and error paths, and known-words
    accumulation asserted against the real widget stack and real services.
+3. **Engine drift** — the note payloads a Japanese run writes must not change. `test_ja_drift_canary.py`
+   pins the plain path and `test_ja_drift_canary_filters.py` the same guarantee through the optional
+   filters; both are `e2e`-marked.
+4. **Non-Japanese ingestion** — `test_ko_hangul_ingestion.py` drives Korean known-word ingestion
+   through the real `AnkiService` collection scan, with the Japanese gate as a negative control. It is
+   `network`-marked, for a real loopback socket rather than an external service.
 
 ## Prerequisites
 
 - **Anki running** with AnkiConnect on `127.0.0.1:8765`, or `--fake-anki` for an in-process fake
   (loopback-only either way).
 - **ffmpeg** on `PATH` — every run is a full process run.
-- fugashi/MeCab available (the real tokenizer).
+- fugashi/MeCab available — the real Japanese tokenizer, needed by every run that mines Japanese.
+  The Korean oracle exercises the collection scan and needs no tokenizer.
 
 ## Running
 
