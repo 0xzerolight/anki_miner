@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:c140ea514189f734 -->
+<!-- i18n-source: README.md sha256:3bd1e330de2efafb -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -88,6 +88,14 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
+Japanisch braucht nichts Zusätzliches. Für Chinesisch oder Koreanisch die Engine ergänzen:
+
+```bash
+pipx install "anki-miner[languages]"   # both; or [zh] / [ko] for one
+```
+
+Die Downloads oben holen diese stattdessen in der App, unter Einstellungen -> Mining-Sprache.
+
 </details>
 
 <details>
@@ -111,7 +119,7 @@ Die vollständige Entwicklungseinrichtung findest du in [CONTRIBUTING.md](../CON
 - **Audiobooks** - mine Hörbücher, Podcasts, Radio, Songs (Audio- + Untertitel-/Transkript-Paare).
 - **Reading** - mine Manga (mokuro), Romane (`.epub`, `.txt`; einzelnes Buch oder ein ganzer Ordner), eigenständige Untertiteldateien oder eingefügten Text.
 - **Analytics** - Mining-Verlauf, Schwierigkeitsrangliste, Meilensteine.
-- **Utilities** - Untertitel erzeugen (lokales Whisper), Untertitel neu timen (ffsubsync/alass), Medien auf reines Dialog-Audio kondensieren, den lernenswerten Teil eines fertigen Stapels in einen neuen kopieren und Felder bestehender Karten nachträglich befüllen.
+- **Utilities** - Untertitel erzeugen (lokales Whisper), Untertitel neu timen (ffsubsync/alass), Medien auf reines Dialog-Audio kondensieren, Video/Audio/Untertitel von jeder Seite herunterladen, die yt-dlp unterstützt, den lernenswerten Teil eines fertigen Stapels in einen neuen kopieren und Felder bestehender Karten nachträglich befüllen.
 - **Settings** - alles konfigurierbar.
 
 ## Weitere Funktionen
@@ -162,6 +170,8 @@ Möchtest du ein weiteres Theme vorschlagen? Reiche einen Vorschlag als GitHub I
 
 ## Empfohlene Ressourcen
 
+Japanisch, sofern nicht anders markiert. Der Einrichtungsassistent bietet den passenden Satz für deine Mining-Sprache an.
+
 | Typ | Ressource | Download | Hinzufügen über |
 |------|----------|----------|---------|
 | Wörterbuch | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan-ZIP](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Wörterbuch hinzufügen… |
@@ -172,6 +182,8 @@ Möchtest du ein weiteres Theme vorschlagen? Reiche einen Vorschlag als GitHub I
 | Häufigkeit | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan-ZIP](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Häufigkeit -> Häufigkeitsquelle hinzufügen… |
 | Häufigkeit | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan-ZIP](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Häufigkeit -> Häufigkeitsquelle hinzufügen… |
 | Wortaudio | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | Sammlungs-Torrent oder generierte `android.db` | Audio -> Audioquelle hinzufügen… |
+| Wörterbuch (Chinesisch) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Wörterbuch hinzufügen… |
+| Wörterbuch (Koreanisch) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Wörterbuch hinzufügen… |
 
 
 <details>

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:c140ea514189f734 -->
+<!-- i18n-source: README.md sha256:3bd1e330de2efafb -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -88,6 +88,14 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
+Для японского ничего дополнительно не нужно. Для майнинга китайского или корейского добавьте движок:
+
+```bash
+pipx install "anki-miner[languages]"   # both; or [zh] / [ko] for one
+```
+
+Сборки выше получают их прямо в приложении: Настройки -> Язык майнинга.
+
 </details>
 
 <details>
@@ -111,7 +119,7 @@ anki_miner_gui
 - **Аудиокниги** - майнинг аудиокниг, подкастов, радио, песен (пары аудио + субтитры/транскрипт).
 - **Чтение** - майнинг манги (mokuro), новелл (`.epub`, `.txt`; одна книга или целая папка), отдельных файлов субтитров или вставленного текста.
 - **Аналитика** - история майнинга, рейтинги сложности, достижения.
-- **Утилиты** - генерация субтитров (локальный Whisper), синхронизация субтитров по времени (ffsubsync/alass), сжатие медиа до аудио только с диалогами, копирование достойной изучения части готовой колоды в новую, а также дозаполнение полей на существующих карточках.
+- **Утилиты** - генерация субтитров (локальный Whisper), синхронизация субтитров по времени (ffsubsync/alass), сжатие медиа до аудио только с диалогами, загрузка видео/аудио/субтитров с любого сайта, поддерживаемого yt-dlp, копирование достойной изучения части готовой колоды в новую, а также дозаполнение полей на существующих карточках.
 - **Настройки** - все параметры конфигурации.
 
 ## Другие возможности
@@ -162,6 +170,8 @@ anki_miner_gui
 
 ## Рекомендуемые ресурсы
 
+Японский, если не указано иное. Мастер настройки предложит подходящий набор для вашего языка майнинга.
+
 | Тип | Ресурс | Загрузка | Как добавить |
 |------|----------|----------|---------|
 | Словарь | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Добавить словарь… |
@@ -172,6 +182,8 @@ anki_miner_gui
 | Частотность | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Частотность -> Добавить источник частотности… |
 | Частотность | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Частотность -> Добавить источник частотности… |
 | Аудио слов | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | Торрент коллекции или созданный `android.db` | Аудио -> Добавить источник аудио… |
+| Словарь (китайский) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Добавить словарь… |
+| Словарь (корейский) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Добавить словарь… |
 
 
 <details>

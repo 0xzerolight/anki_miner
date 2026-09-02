@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:c140ea514189f734 -->
+<!-- i18n-source: README.md sha256:3bd1e330de2efafb -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -88,6 +88,14 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
+Le japonais ne demande rien de plus. Pour extraire du chinois ou du coréen, ajoutez le moteur :
+
+```bash
+pipx install "anki-miner[languages]"   # both; or [zh] / [ko] for one
+```
+
+Les téléchargements ci-dessus les récupèrent directement dans l'application, via Paramètres -> Langue d'extraction.
+
 </details>
 
 <details>
@@ -111,7 +119,7 @@ Pour une configuration de développement complète, consultez [CONTRIBUTING.md](
 - **Livres audio** - extraire des livres audio, podcasts, radio, chansons (paires audio + sous-titres/transcription).
 - **Lecture** - extraire des mangas (mokuro), des romans (`.epub`, `.txt` ; un seul livre ou un dossier entier), des fichiers de sous-titres autonomes, ou du texte collé.
 - **Statistiques** - historique d'extraction, classements de difficulté, jalons.
-- **Utilitaires** - générer des sous-titres (Whisper local), re-synchroniser les sous-titres (ffsubsync/alass), condenser les médias en audio dialogue uniquement, copier la partie utile d'un paquet préfait dans un nouveau, et compléter les champs des cartes existantes.
+- **Utilitaires** - générer des sous-titres (Whisper local), re-synchroniser les sous-titres (ffsubsync/alass), condenser les médias en audio dialogue uniquement, télécharger vidéo/audio/sous-titres depuis tout site pris en charge par yt-dlp, copier la partie utile d'un paquet préfait dans un nouveau, et compléter les champs des cartes existantes.
 - **Paramètres** - tout ce qui est configurable.
 
 ## Autres fonctionnalités
@@ -162,6 +170,8 @@ Vous voulez qu'un autre thème soit ajouté ? Proposez-le dans une Issue GitHub.
 
 ## Ressources recommandées
 
+Japonais sauf mention contraire. L'assistant de configuration propose l'ensemble adapté à votre langue d'extraction.
+
 | Type | Ressource | Téléchargement | Ajouter via |
 |------|----------|----------|---------|
 | Dictionnaire | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Archive Yomitan](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Ajouter un dictionnaire… |
@@ -172,6 +182,8 @@ Vous voulez qu'un autre thème soit ajouté ? Proposez-le dans une Issue GitHub.
 | Fréquence | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Archive Yomitan](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Fréquence -> Ajouter une source de fréquence… |
 | Fréquence | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Archive Yomitan](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Fréquence -> Ajouter une source de fréquence… |
 | Audio des mots | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | Torrent de la collection ou `android.db` généré | Audio -> Ajouter une source audio… |
+| Dictionnaire (chinois) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Ajouter un dictionnaire… |
+| Dictionnaire (coréen) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Ajouter un dictionnaire… |
 
 
 <details>

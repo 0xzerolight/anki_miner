@@ -86,6 +86,14 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
+Japanese needs nothing extra. For Chinese or Korean mining, add the engine:
+
+```bash
+pipx install "anki-miner[languages]"   # both; or [zh] / [ko] for one
+```
+
+The downloads above fetch these in-app instead, from Settings -> Mining Language.
+
 </details>
 
 <details>
@@ -109,7 +117,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Audiobooks** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
 - **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), standalone subtitle files, or pasted text.
 - **Analytics** - mining history, difficulty rankings, milestones.
-- **Utilities** - generate subtitles (local Whisper), retime subtitles (ffsubsync/alass), condense media to dialogue-only audio, copy the worth-learning part of a premade deck into a new one, and backfill fields on existing cards.
+- **Utilities** - generate subtitles (local Whisper), retime subtitles (ffsubsync/alass), condense media to dialogue-only audio, download video/audio/subtitles from any site yt-dlp supports, copy the worth-learning part of a premade deck into a new one, and backfill fields on existing cards.
 - **Settings** - everything configurable.
 
 ## Other Features
@@ -160,6 +168,8 @@ Want another theme added? Suggest in a GitHub Issue.
 
 ## Recommended Resources
 
+Japanese unless marked otherwise. The Setup Wizard offers the right set for your mining language.
+
 | Type | Resource | Download | Add via |
 |------|----------|----------|---------|
 | Dictionary | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Add Dictionary… |
@@ -170,6 +180,8 @@ Want another theme added? Suggest in a GitHub Issue.
 | Frequency | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Frequency -> Add frequency source… |
 | Frequency | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Frequency -> Add frequency source… |
 | Word audio | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | Collection torrent or generated `android.db` | Audio -> Add audio source… |
+| Dictionary (Chinese) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Add Dictionary… |
+| Dictionary (Korean) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Add Dictionary… |
 
 
 <details>

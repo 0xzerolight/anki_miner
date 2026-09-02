@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:c140ea514189f734 -->
+<!-- i18n-source: README.md sha256:3bd1e330de2efafb -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -88,6 +88,14 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
+日語不需額外安裝。要採集中文或韓文，請加裝引擎:
+
+```bash
+pipx install "anki-miner[languages]"   # both; or [zh] / [ko] for one
+```
+
+上面的下載版改為在應用程式內取得，位於設定 -> 採集語言。
+
 </details>
 
 <details>
@@ -111,7 +119,7 @@ anki_miner_gui
 - **有聲書** - 採集有聲書、Podcast、廣播、歌曲（音訊 + 字幕／逐字稿組合）。
 - **閱讀** - 採集漫畫（mokuro）、小說（`.epub`、`.txt`；單本書或整個資料夾）、獨立字幕檔，或貼上的文字。
 - **分析** - 採集歷史、難度排名、里程碑。
-- **工具** - 生成字幕（本機 Whisper）、重新校時字幕（ffsubsync/alass）、把媒體濃縮成只有對話的音訊、把現成牌組中值得學的部分複製到新牌組，以及為既有卡片補齊欄位。
+- **工具** - 生成字幕（本機 Whisper）、重新校時字幕（ffsubsync/alass）、把媒體濃縮成只有對話的音訊、從 yt-dlp 支援的任何網站下載影片/音訊/字幕、把現成牌組中值得學的部分複製到新牌組，以及為既有卡片補齊欄位。
 - **設定** - 所有可調整的項目。
 
 ## 其他功能
@@ -162,6 +170,8 @@ anki_miner_gui
 
 ## 推薦資源
 
+未特別標註者為日語。設定精靈會依你的採集語言推薦對應的組合。
+
 | 類型 | 資源 | 下載 | 加入方式 |
 |------|----------|----------|---------|
 | 字典 | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | 新增字典… |
@@ -172,6 +182,8 @@ anki_miner_gui
 | 頻率 | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | 頻率 -> 新增頻率來源… |
 | 頻率 | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | 頻率 -> 新增頻率來源… |
 | 單字音訊 | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | 合集種子或產生的 `android.db` | 音訊 -> 新增音訊來源… |
+| 字典（中文） | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | 新增字典… |
+| 字典（韓文） | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | 新增字典… |
 
 
 <details>

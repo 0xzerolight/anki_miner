@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:c140ea514189f734 -->
+<!-- i18n-source: README.md sha256:3bd1e330de2efafb -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -88,6 +88,14 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
+日本語は追加不要です。中国語または韓国語をマイニングする場合はエンジンを追加してください:
+
+```bash
+pipx install "anki-miner[languages]"   # both; or [zh] / [ko] for one
+```
+
+上記のダウンロード版では、設定 -> マイニング言語からアプリ内で取得します。
+
 </details>
 
 <details>
@@ -111,7 +119,7 @@ anki_miner_gui
 - **オーディオブック** - オーディオブック、ポッドキャスト、ラジオ、楽曲（音声 + 字幕/文字起こしのペア）をマイニングします。
 - **読み** - 漫画（mokuro）、小説（`.epub`、`.txt`。1 冊でもフォルダ全体でも可）、単体の字幕ファイル、貼り付けたテキストをマイニングします。
 - **分析** - マイニング履歴、難易度ランキング、マイルストーン。
-- **ユーティリティ** - 字幕の生成（ローカル Whisper）、字幕のタイミング調整（ffsubsync/alass）、メディアをセリフだけの音声に凝縮、既製デッキの学ぶ価値がある部分を新しいデッキにコピー、既存カードのフィールドの補完。
+- **ユーティリティ** - 字幕の生成（ローカル Whisper）、字幕のタイミング調整（ffsubsync/alass）、メディアをセリフだけの音声に凝縮、yt-dlp が対応するあらゆるサイトから動画・音声・字幕をダウンロード、既製デッキの学ぶ価値がある部分を新しいデッキにコピー、既存カードのフィールドの補完。
 - **設定** - 設定できるものすべて。
 
 ## その他の機能
@@ -162,6 +170,8 @@ anki_miner_gui
 
 ## 推奨リソース
 
+特に記載がなければ日本語向けです。セットアップウィザードがマイニング言語に応じた組み合わせを提示します。
+
 | 種類 | リソース | ダウンロード | 追加方法 |
 |------|----------|----------|---------|
 | 辞書 | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | 辞書を追加… |
@@ -172,6 +182,8 @@ anki_miner_gui
 | 頻度 | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | 頻度 -> 頻度ソースを追加… |
 | 頻度 | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | 頻度 -> 頻度ソースを追加… |
 | 単語音声 | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | コレクションの torrent または生成した `android.db` | 音声 -> 音声ソースを追加… |
+| 辞書（中国語） | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | 辞書を追加… |
+| 辞書（韓国語） | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | 辞書を追加… |
 
 
 <details>

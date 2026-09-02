@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:c140ea514189f734 -->
+<!-- i18n-source: README.md sha256:3bd1e330de2efafb -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -88,6 +88,14 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
+Tiếng Nhật không cần gì thêm. Để khai thác tiếng Trung hoặc tiếng Hàn, hãy thêm engine:
+
+```bash
+pipx install "anki-miner[languages]"   # both; or [zh] / [ko] for one
+```
+
+Các bản tải ở trên lấy chúng ngay trong ứng dụng, tại Cài đặt -> Ngôn ngữ khai thác.
+
 </details>
 
 <details>
@@ -111,7 +119,7 @@ anki_miner_gui
 - **Sách nói** - khai thác sách nói, podcast, radio, bài hát (cặp âm thanh + phụ đề/bản chép lời).
 - **Cách đọc** - khai thác manga (mokuro), tiểu thuyết (`.epub`, `.txt`; một cuốn sách hoặc cả thư mục), tệp phụ đề độc lập, hoặc văn bản dán vào.
 - **Phân tích** - lịch sử khai thác, xếp hạng độ khó, cột mốc.
-- **Tiện ích** - tạo phụ đề (Whisper cục bộ), căn lại thời gian phụ đề (ffsubsync/alass), cô đọng media thành âm thanh chỉ có hội thoại, sao chép phần đáng học của một bộ thẻ dựng sẵn sang một bộ thẻ mới, và điền bổ sung các trường trên thẻ đã có.
+- **Tiện ích** - tạo phụ đề (Whisper cục bộ), căn lại thời gian phụ đề (ffsubsync/alass), cô đọng media thành âm thanh chỉ có hội thoại, tải video/âm thanh/phụ đề từ bất kỳ trang nào yt-dlp hỗ trợ, sao chép phần đáng học của một bộ thẻ dựng sẵn sang một bộ thẻ mới, và điền bổ sung các trường trên thẻ đã có.
 - **Cài đặt** - mọi thứ có thể cấu hình.
 
 ## Tính năng khác
@@ -162,6 +170,8 @@ Muốn thêm chủ đề khác? Hãy đề xuất trong một GitHub Issue.
 
 ## Tài nguyên được đề xuất
 
+Tiếng Nhật trừ khi có ghi chú khác. Trình hướng dẫn thiết lập sẽ đề xuất bộ phù hợp với ngôn ngữ khai thác của bạn.
+
 | Loại | Tài nguyên | Tải về | Thêm qua |
 |------|----------|----------|---------|
 | Từ điển | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Zip Yomitan](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Thêm từ điển… |
@@ -172,6 +182,8 @@ Muốn thêm chủ đề khác? Hãy đề xuất trong một GitHub Issue.
 | Tần suất | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Zip Yomitan](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Tần suất -> Thêm nguồn tần suất… |
 | Tần suất | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Zip Yomitan](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Tần suất -> Thêm nguồn tần suất… |
 | Âm thanh từ vựng | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | Torrent bộ sưu tập hoặc `android.db` đã tạo | Âm thanh -> Thêm nguồn âm thanh… |
+| Từ điển (tiếng Trung) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Thêm từ điển… |
+| Từ điển (tiếng Hàn) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Thêm từ điển… |
 
 
 <details>
