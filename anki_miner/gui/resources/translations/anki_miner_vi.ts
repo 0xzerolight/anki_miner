@@ -735,7 +735,7 @@ Vẫn tiếp tục?</translation>
     <name>AudioPackImportFlow</name>
     <message>
         <source>Scanning folder for audio packs…</source>
-        <translation type="unfinished" />
+        <translation>Đang quét thư mục để tìm gói âm thanh…</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -743,7 +743,7 @@ Vẫn tiếp tục?</translation>
     </message>
     <message>
         <source>Scanning %1 …</source>
-        <translation type="unfinished" />
+        <translation>Đang quét %1 …</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -1721,11 +1721,11 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Mine Japanese, Korean or Chinese</source>
-        <translation type="unfinished" />
+        <translation>Khai thác tiếng Nhật, Hàn hoặc Trung</translation>
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
-        <translation type="unfinished" />
+        <translation>Chuyển đổi ngôn ngữ khai thác; mỗi ngôn ngữ có từ điển, bộ lọc, bộ thẻ và trường thẻ riêng.</translation>
     </message>
     <message>
         <source>i+1 sentence mining</source>
@@ -3956,8 +3956,12 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
 </context><context>
     <name>EpisodeProcessor</name>
     <message>
+        <source>Audio pack '%1' is slow to read — audio skipped for those words. Its folder is probably on a cloud-synced, network or external drive: move it to a local drive, then re-import the pack (Settings -&gt; Audio -&gt; Re-import…).</source>
+        <translation>Gói âm thanh '%1' đọc chậm — bỏ qua âm thanh cho các từ đó. Thư mục của gói này có thể nằm trên ổ đĩa đồng bộ đám mây, mạng hoặc ổ ngoài: hãy chuyển sang ổ đĩa cục bộ, rồi nhập lại gói (Cài đặt -&gt; Âm thanh -&gt; Nhập lại…).</translation>
+    </message>
+    <message>
         <source>Word-audio source is responding too slowly — audio skipped for those words. Reorder or disable it in Settings -&gt; Audio if this keeps happening.</source>
-        <translation type="unfinished" />
+        <translation>Nguồn âm thanh từ vựng phản hồi quá chậm — bỏ qua âm thanh cho các từ đó. Hãy sắp xếp lại hoặc tắt nguồn này trong Cài đặt -&gt; Âm thanh nếu tình trạng này tiếp diễn.</translation>
     </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
@@ -4742,6 +4746,18 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <translation>Số lần tối thiểu một từ phải xuất hiện trong một cuốn sách hoặc tập để được khai thác. 1 = không có tối thiểu (tắt bộ lọc).</translation>
     </message>
     <message>
+        <source>Card Order</source>
+        <translation>Thứ tự thẻ</translation>
+    </message>
+    <message>
+        <source>Create cards in order of appearance</source>
+        <translation>Tạo thẻ theo thứ tự xuất hiện</translation>
+    </message>
+    <message>
+        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
+        <translation>Thêm thẻ vào Anki theo thứ tự các từ xuất hiện trong phương tiện, thay vì theo thứ tự phương tiện của chúng được trích xuất xong. Ghi đè thứ tự buộc bao gồm của danh sách trắng và mọi cách sắp xếp cột trong Word Curator.</translation>
+    </message>
+    <message>
         <source>Card Formatting</source>
         <translation>Định dạng thẻ</translation>
     </message>
@@ -4946,14 +4962,6 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Hồ sơ cài đặt đang hoạt động. Việc chuyển đổi thay mọi cài đặt; chọn 'Quản lý hồ sơ…' để thêm, đổi tên hoặc xóa.</translation>
     </message>
     <message>
-        <source>Mining language:</source>
-        <translation>Ngôn ngữ khai thác:</translation>
-    </message>
-    <message>
-        <source>Mining language</source>
-        <translation>Ngôn ngữ khai thác</translation>
-    </message>
-    <message>
         <source>Theme:</source>
         <translation>Giao diện:</translation>
     </message>
@@ -4972,10 +4980,6 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     <message>
         <source>Manage profiles…</source>
         <translation>Quản lý hồ sơ…</translation>
-    </message>
-    <message>
-        <source>Mining language: %1. Opens the selector in Settings.</source>
-        <translation>Ngôn ngữ khai thác: %1. Mở trình chọn trong Cài đặt.</translation>
     </message>
 </context><context>
     <name>InlineReceipt</name>
@@ -5135,11 +5139,11 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
     <name>LanguagePackDownloadWorker</name>
     <message>
         <source>Downloading the %1 pack…</source>
-        <translation type="unfinished" />
+        <translation>Đang tải gói %1…</translation>
     </message>
     <message>
         <source>%1 pack installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>Đã cài đặt gói %1 thành công.</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5881,11 +5885,11 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Download %1 pack</source>
-        <translation type="unfinished" />
+        <translation>Tải gói %1</translation>
     </message>
     <message>
         <source>Download the engine and data Anki Miner needs to mine %1, into its own folder.</source>
-        <translation type="unfinished" />
+        <translation>Tải công cụ và dữ liệu Anki Miner cần để khai thác %1, vào thư mục riêng của nó.</translation>
     </message>
     <message>
         <source>Installed</source>
@@ -5893,7 +5897,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Not installed - about %1 MB download</source>
-        <translation type="unfinished" />
+        <translation>Chưa cài đặt - khoảng %1 MB tải xuống</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>

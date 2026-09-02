@@ -3932,6 +3932,10 @@ Files on disk will be left untouched because the folder could not be proven to b
 </context><context>
     <name>EpisodeProcessor</name>
     <message>
+        <source>Audio pack '%1' is slow to read — audio skipped for those words. Its folder is probably on a cloud-synced, network or external drive: move it to a local drive, then re-import the pack (Settings -&gt; Audio -&gt; Re-import…).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Word-audio source is responding too slowly — audio skipped for those words. Reorder or disable it in Settings -&gt; Audio if this keeps happening.</source>
         <translation type="unfinished" />
     </message>
@@ -4717,6 +4721,18 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Card Order</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create cards in order of appearance</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Card Formatting</source>
         <translation type="unfinished" />
     </message>
@@ -4916,14 +4932,6 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mining language:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Mining language</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Theme:</source>
         <translation type="unfinished" />
     </message>
@@ -4941,10 +4949,6 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Manage profiles…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Mining language: %1. Opens the selector in Settings.</source>
         <translation type="unfinished" />
     </message>
 </context><context>

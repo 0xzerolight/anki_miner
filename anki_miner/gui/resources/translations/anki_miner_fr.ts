@@ -736,7 +736,7 @@ Continuer quand même ?</translation>
     <name>AudioPackImportFlow</name>
     <message>
         <source>Scanning folder for audio packs…</source>
-        <translation type="unfinished" />
+        <translation>Analyse du dossier à la recherche de packs audio…</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -744,7 +744,7 @@ Continuer quand même ?</translation>
     </message>
     <message>
         <source>Scanning %1 …</source>
-        <translation type="unfinished" />
+        <translation>Analyse de %1 …</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -1723,11 +1723,11 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     </message>
     <message>
         <source>Mine Japanese, Korean or Chinese</source>
-        <translation type="unfinished" />
+        <translation>Extraire le japonais, le coréen ou le chinois</translation>
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
-        <translation type="unfinished" />
+        <translation>Changez la langue que vous extrayez ; chacune conserve ses propres dictionnaires, filtres, paquet et champs de carte.</translation>
     </message>
     <message>
         <source>i+1 sentence mining</source>
@@ -3958,8 +3958,12 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
 </context><context>
     <name>EpisodeProcessor</name>
     <message>
+        <source>Audio pack '%1' is slow to read — audio skipped for those words. Its folder is probably on a cloud-synced, network or external drive: move it to a local drive, then re-import the pack (Settings -&gt; Audio -&gt; Re-import…).</source>
+        <translation>Le pack audio « %1 » est lent à lire — l'audio a été ignoré pour ces mots. Son dossier se trouve probablement sur un disque synchronisé dans le cloud, un disque réseau ou un disque externe : déplacez-le vers un disque local, puis réimportez le pack (Paramètres -&gt; Audio -&gt; Réimporter…).</translation>
+    </message>
+    <message>
         <source>Word-audio source is responding too slowly — audio skipped for those words. Reorder or disable it in Settings -&gt; Audio if this keeps happening.</source>
-        <translation type="unfinished" />
+        <translation>La source d'audio de mot répond trop lentement — audio ignoré pour ces mots. Réorganisez-la ou désactivez-la dans Paramètres -&gt; Audio si cela se reproduit.</translation>
     </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
@@ -4755,6 +4759,18 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Nombre minimum de fois qu'un mot doit apparaître dans un livre ou un volume pour être extrait. 1 = aucun minimum (filtre désactivé).</translation>
     </message>
     <message>
+        <source>Card Order</source>
+        <translation>Ordre des cartes</translation>
+    </message>
+    <message>
+        <source>Create cards in order of appearance</source>
+        <translation>Créer les cartes dans l'ordre d'apparition</translation>
+    </message>
+    <message>
+        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
+        <translation>Ajoute les cartes à Anki dans l'ordre d'apparition des mots dans le média, plutôt que dans l'ordre où l'extraction de leur média s'est terminée. Remplace l'ordre d'inclusion forcée de la liste blanche et tout tri de colonne dans le Conservateur de mots.</translation>
+    </message>
+    <message>
         <source>Card Formatting</source>
         <translation>Mise en forme des cartes</translation>
     </message>
@@ -4959,14 +4975,6 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Profil de paramètres actif. Le changement échange tous les paramètres ; choisissez « Gérer les profils… » pour les ajouter, renommer ou supprimer.</translation>
     </message>
     <message>
-        <source>Mining language:</source>
-        <translation>Langue d'extraction :</translation>
-    </message>
-    <message>
-        <source>Mining language</source>
-        <translation>Langue d'extraction</translation>
-    </message>
-    <message>
         <source>Theme:</source>
         <translation>Thème :</translation>
     </message>
@@ -4985,10 +4993,6 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     <message>
         <source>Manage profiles…</source>
         <translation>Gérer les profils…</translation>
-    </message>
-    <message>
-        <source>Mining language: %1. Opens the selector in Settings.</source>
-        <translation>Langue d'extraction : %1. Ouvre le sélecteur dans les paramètres.</translation>
     </message>
 </context><context>
     <name>InlineReceipt</name>
@@ -5148,11 +5152,11 @@ Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
     <name>LanguagePackDownloadWorker</name>
     <message>
         <source>Downloading the %1 pack…</source>
-        <translation type="unfinished" />
+        <translation>Téléchargement du pack %1…</translation>
     </message>
     <message>
         <source>%1 pack installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>Pack %1 installé avec succès.</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5895,11 +5899,11 @@ Continuer ?</translation>
     </message>
     <message>
         <source>Download %1 pack</source>
-        <translation type="unfinished" />
+        <translation>Télécharger le pack %1</translation>
     </message>
     <message>
         <source>Download the engine and data Anki Miner needs to mine %1, into its own folder.</source>
-        <translation type="unfinished" />
+        <translation>Téléchargez le moteur et les données dont Anki Miner a besoin pour extraire %1, dans son propre dossier.</translation>
     </message>
     <message>
         <source>Installed</source>
@@ -5907,7 +5911,7 @@ Continuer ?</translation>
     </message>
     <message>
         <source>Not installed - about %1 MB download</source>
-        <translation type="unfinished" />
+        <translation>Non installé - environ %1 Mo à télécharger</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>

@@ -735,7 +735,7 @@ Continue anyway?</source>
     <name>AudioPackImportFlow</name>
     <message>
         <source>Scanning folder for audio packs…</source>
-        <translation type="unfinished" />
+        <translation>正在掃描資料夾中的音訊包…</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -743,7 +743,7 @@ Continue anyway?</source>
     </message>
     <message>
         <source>Scanning %1 …</source>
-        <translation type="unfinished" />
+        <translation>正在掃描 %1 …</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -1721,11 +1721,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Mine Japanese, Korean or Chinese</source>
-        <translation type="unfinished" />
+        <translation>採集日文、韓文或中文</translation>
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
-        <translation type="unfinished" />
+        <translation>切換你採集的語言；每種語言都保留各自的字典、篩選器、牌組與卡片欄位。</translation>
     </message>
     <message>
         <source>i+1 sentence mining</source>
@@ -3956,8 +3956,12 @@ Files on disk will be left untouched because the folder could not be proven to b
 </context><context>
     <name>EpisodeProcessor</name>
     <message>
+        <source>Audio pack '%1' is slow to read — audio skipped for those words. Its folder is probably on a cloud-synced, network or external drive: move it to a local drive, then re-import the pack (Settings -&gt; Audio -&gt; Re-import…).</source>
+        <translation>音訊包「%1」讀取速度過慢——已略過這些單字的音訊。其資料夾可能位於雲端同步、網路或外接磁碟機上：請移至本機磁碟機，然後重新匯入該音訊包（設定 -&gt; 音訊 -&gt; 重新匯入…）。</translation>
+    </message>
+    <message>
         <source>Word-audio source is responding too slowly — audio skipped for those words. Reorder or disable it in Settings -&gt; Audio if this keeps happening.</source>
-        <translation type="unfinished" />
+        <translation>單字音訊來源回應速度過慢——已略過這些單字的音訊。若持續發生，請在設定 -&gt; 音訊中重新排序或停用它。</translation>
     </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
@@ -4742,6 +4746,18 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>單字在一本書或一卷中至少須出現的次數才會被採集。1 = 無下限（篩選器關閉）。</translation>
     </message>
     <message>
+        <source>Card Order</source>
+        <translation>卡片順序</translation>
+    </message>
+    <message>
+        <source>Create cards in order of appearance</source>
+        <translation>依出現順序建立卡片</translation>
+    </message>
+    <message>
+        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
+        <translation>依單字在媒體中出現的順序，而非依媒體擷取完成的順序，將卡片加入 Anki。會覆寫白名單（強制加入）的排序，以及單字整理工具中依欄位排序的結果。</translation>
+    </message>
+    <message>
         <source>Card Formatting</source>
         <translation>卡片格式</translation>
     </message>
@@ -4946,14 +4962,6 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>使用中的設定檔。切換會替換所有設定；選取「管理設定檔…」即可新增、重新命名或移除。</translation>
     </message>
     <message>
-        <source>Mining language:</source>
-        <translation>採集語言：</translation>
-    </message>
-    <message>
-        <source>Mining language</source>
-        <translation>採集語言</translation>
-    </message>
-    <message>
         <source>Theme:</source>
         <translation>主題：</translation>
     </message>
@@ -4972,10 +4980,6 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Manage profiles…</source>
         <translation>管理設定檔…</translation>
-    </message>
-    <message>
-        <source>Mining language: %1. Opens the selector in Settings.</source>
-        <translation>採集語言：%1。開啟設定中的選擇器。</translation>
     </message>
 </context><context>
     <name>InlineReceipt</name>
@@ -5135,11 +5139,11 @@ Add %3 word(s) to your known list?</source>
     <name>LanguagePackDownloadWorker</name>
     <message>
         <source>Downloading the %1 pack…</source>
-        <translation type="unfinished" />
+        <translation>正在下載 %1 套件…</translation>
     </message>
     <message>
         <source>%1 pack installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>%1 套件安裝成功。</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5881,11 +5885,11 @@ Continue?</source>
     </message>
     <message>
         <source>Download %1 pack</source>
-        <translation type="unfinished" />
+        <translation>下載 %1 套件</translation>
     </message>
     <message>
         <source>Download the engine and data Anki Miner needs to mine %1, into its own folder.</source>
-        <translation type="unfinished" />
+        <translation>下載 Anki Miner 採集 %1 所需的引擎與資料，存放到專屬資料夾。</translation>
     </message>
     <message>
         <source>Installed</source>
@@ -5893,7 +5897,7 @@ Continue?</source>
     </message>
     <message>
         <source>Not installed - about %1 MB download</source>
-        <translation type="unfinished" />
+        <translation>未安裝 - 下載約 %1 MB</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>

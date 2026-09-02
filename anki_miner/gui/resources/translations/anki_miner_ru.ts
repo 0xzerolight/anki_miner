@@ -737,7 +737,7 @@ Continue anyway?</source>
     <name>AudioPackImportFlow</name>
     <message>
         <source>Scanning folder for audio packs…</source>
-        <translation type="unfinished" />
+        <translation>Сканирование папки на наличие аудиопакетов…</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -745,7 +745,7 @@ Continue anyway?</source>
     </message>
     <message>
         <source>Scanning %1 …</source>
-        <translation type="unfinished" />
+        <translation>Сканирование %1 …</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -1725,11 +1725,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Mine Japanese, Korean or Chinese</source>
-        <translation type="unfinished" />
+        <translation>Майнинг японского, корейского или китайского</translation>
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
-        <translation type="unfinished" />
+        <translation>Переключайте язык майнинга — у каждого свои словари, фильтры, колода и поля карточек.</translation>
     </message>
     <message>
         <source>i+1 sentence mining</source>
@@ -3960,8 +3960,12 @@ Files on disk will be left untouched because the folder could not be proven to b
 </context><context>
     <name>EpisodeProcessor</name>
     <message>
+        <source>Audio pack '%1' is slow to read — audio skipped for those words. Its folder is probably on a cloud-synced, network or external drive: move it to a local drive, then re-import the pack (Settings -&gt; Audio -&gt; Re-import…).</source>
+        <translation>Аудиопакет «%1» читается слишком медленно — аудио для этих слов пропущено. Его папка, вероятно, находится на облачном, сетевом или внешнем диске: переместите её на локальный диск и повторно импортируйте пакет (Настройки -&gt; Аудио -&gt; Повторный импорт…).</translation>
+    </message>
+    <message>
         <source>Word-audio source is responding too slowly — audio skipped for those words. Reorder or disable it in Settings -&gt; Audio if this keeps happening.</source>
-        <translation type="unfinished" />
+        <translation>Источник аудио слов отвечает слишком медленно — аудио для этих слов пропущено. Если это повторяется, измените порядок или отключите его в Настройки -&gt; Аудио.</translation>
     </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
@@ -4768,6 +4772,18 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>Минимальное число раз, которое слово должно встретиться в книге или томе, чтобы быть добытым. 1 = без минимума (фильтр выключен).</translation>
     </message>
     <message>
+        <source>Card Order</source>
+        <translation>Порядок карточек</translation>
+    </message>
+    <message>
+        <source>Create cards in order of appearance</source>
+        <translation>Создавать карточки в порядке появления</translation>
+    </message>
+    <message>
+        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
+        <translation>Добавляет карточки в Anki в порядке появления слов в медиафайле, а не в порядке завершения извлечения их медиа. Переопределяет порядок принудительного включения белого списка и любую сортировку столбцов в Кураторе слов.</translation>
+    </message>
+    <message>
         <source>Card Formatting</source>
         <translation>Форматирование карточки</translation>
     </message>
@@ -4972,14 +4988,6 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Активный профиль настроек. При переключении заменяются все настройки; выберите «Управление профилями…», чтобы добавить, переименовать или удалить профиль.</translation>
     </message>
     <message>
-        <source>Mining language:</source>
-        <translation>Язык майнинга:</translation>
-    </message>
-    <message>
-        <source>Mining language</source>
-        <translation>Язык майнинга</translation>
-    </message>
-    <message>
         <source>Theme:</source>
         <translation>Тема:</translation>
     </message>
@@ -4998,10 +5006,6 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Manage profiles…</source>
         <translation>Управление профилями…</translation>
-    </message>
-    <message>
-        <source>Mining language: %1. Opens the selector in Settings.</source>
-        <translation>Язык майнинга: %1. Открывает выбор языка в настройках.</translation>
     </message>
 </context><context>
     <name>InlineReceipt</name>
@@ -5161,11 +5165,11 @@ Add %3 word(s) to your known list?</source>
     <name>LanguagePackDownloadWorker</name>
     <message>
         <source>Downloading the %1 pack…</source>
-        <translation type="unfinished" />
+        <translation>Загрузка пакета %1…</translation>
     </message>
     <message>
         <source>%1 pack installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>Пакет %1 успешно установлен.</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5909,11 +5913,11 @@ Continue?</source>
     </message>
     <message>
         <source>Download %1 pack</source>
-        <translation type="unfinished" />
+        <translation>Скачать пакет %1</translation>
     </message>
     <message>
         <source>Download the engine and data Anki Miner needs to mine %1, into its own folder.</source>
-        <translation type="unfinished" />
+        <translation>Скачивает движок и данные, необходимые Anki Miner для майнинга %1, в отдельную папку.</translation>
     </message>
     <message>
         <source>Installed</source>
@@ -5921,7 +5925,7 @@ Continue?</source>
     </message>
     <message>
         <source>Not installed - about %1 MB download</source>
-        <translation type="unfinished" />
+        <translation>Не установлено - около %1 МБ для загрузки</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>

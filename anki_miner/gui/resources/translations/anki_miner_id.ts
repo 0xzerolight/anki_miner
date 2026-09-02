@@ -735,7 +735,7 @@ Tetap lanjutkan?</translation>
     <name>AudioPackImportFlow</name>
     <message>
         <source>Scanning folder for audio packs…</source>
-        <translation type="unfinished" />
+        <translation>Memindai folder untuk paket audio…</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -743,7 +743,7 @@ Tetap lanjutkan?</translation>
     </message>
     <message>
         <source>Scanning %1 …</source>
-        <translation type="unfinished" />
+        <translation>Memindai %1 …</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
@@ -1721,11 +1721,11 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Mine Japanese, Korean or Chinese</source>
-        <translation type="unfinished" />
+        <translation>Mining bahasa Jepang, Korea, atau Mandarin</translation>
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
-        <translation type="unfinished" />
+        <translation>Ganti bahasa yang Anda mining; masing-masing memiliki kamus, filter, dek, dan bidang kartu sendiri.</translation>
     </message>
     <message>
         <source>i+1 sentence mining</source>
@@ -3956,8 +3956,12 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
 </context><context>
     <name>EpisodeProcessor</name>
     <message>
+        <source>Audio pack '%1' is slow to read — audio skipped for those words. Its folder is probably on a cloud-synced, network or external drive: move it to a local drive, then re-import the pack (Settings -&gt; Audio -&gt; Re-import…).</source>
+        <translation>Paket audio '%1' lambat dibaca — audio dilewati untuk kata-kata tersebut. Foldernya kemungkinan berada di drive yang tersinkron cloud, jaringan, atau eksternal: pindahkan ke drive lokal, lalu impor ulang paket (Pengaturan -&gt; Audio -&gt; Impor ulang…).</translation>
+    </message>
+    <message>
         <source>Word-audio source is responding too slowly — audio skipped for those words. Reorder or disable it in Settings -&gt; Audio if this keeps happening.</source>
-        <translation type="unfinished" />
+        <translation>Sumber audio kata merespons terlalu lambat — audio dilewati untuk kata-kata tersebut. Urutkan ulang atau nonaktifkan di Pengaturan -&gt; Audio jika ini terus terjadi.</translation>
     </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
@@ -4742,6 +4746,18 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>Jumlah minimum kemunculan kata dalam buku atau volume agar bisa di-mining. 1 = tanpa minimum (filter mati).</translation>
     </message>
     <message>
+        <source>Card Order</source>
+        <translation>Urutan Kartu</translation>
+    </message>
+    <message>
+        <source>Create cards in order of appearance</source>
+        <translation>Buat kartu sesuai urutan kemunculan</translation>
+    </message>
+    <message>
+        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
+        <translation>Menambahkan kartu ke Anki sesuai urutan kemunculan kata dalam media, bukan urutan selesainya ekstraksi media. Mengesampingkan urutan paksa-sertakan daftar putih dan pengurutan kolom apa pun di Word Curator.</translation>
+    </message>
+    <message>
         <source>Card Formatting</source>
         <translation>Pemformatan Kartu</translation>
     </message>
@@ -4946,14 +4962,6 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Profil pengaturan aktif. Beralih akan menukar setiap pengaturan; pilih 'Kelola profil…' untuk menambah, mengganti nama, atau menghapusnya.</translation>
     </message>
     <message>
-        <source>Mining language:</source>
-        <translation>Bahasa mining:</translation>
-    </message>
-    <message>
-        <source>Mining language</source>
-        <translation>Bahasa mining</translation>
-    </message>
-    <message>
         <source>Theme:</source>
         <translation>Tema:</translation>
     </message>
@@ -4972,10 +4980,6 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     <message>
         <source>Manage profiles…</source>
         <translation>Kelola profil…</translation>
-    </message>
-    <message>
-        <source>Mining language: %1. Opens the selector in Settings.</source>
-        <translation>Bahasa mining: %1. Membuka pemilihnya di Pengaturan.</translation>
     </message>
 </context><context>
     <name>InlineReceipt</name>
@@ -5135,11 +5139,11 @@ Tambahkan %3 kata ke daftar kata yang dikenal Anda?</translation>
     <name>LanguagePackDownloadWorker</name>
     <message>
         <source>Downloading the %1 pack…</source>
-        <translation type="unfinished" />
+        <translation>Mengunduh paket %1…</translation>
     </message>
     <message>
         <source>%1 pack installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>Paket %1 berhasil dipasang.</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5881,11 +5885,11 @@ Lanjutkan?</translation>
     </message>
     <message>
         <source>Download %1 pack</source>
-        <translation type="unfinished" />
+        <translation>Unduh paket %1</translation>
     </message>
     <message>
         <source>Download the engine and data Anki Miner needs to mine %1, into its own folder.</source>
-        <translation type="unfinished" />
+        <translation>Unduh mesin dan data yang diperlukan Anki Miner untuk mining %1, ke dalam foldernya sendiri.</translation>
     </message>
     <message>
         <source>Installed</source>
@@ -5893,7 +5897,7 @@ Lanjutkan?</translation>
     </message>
     <message>
         <source>Not installed - about %1 MB download</source>
-        <translation type="unfinished" />
+        <translation>Tidak terpasang - sekitar %1 MB unduhan</translation>
     </message>
 </context><context>
     <name>MiningTabBase</name>
