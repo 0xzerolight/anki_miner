@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Added
 
 ### Changed
+- **Release assets all carry the version.** The two macOS tarballs shipped as `AnkiMiner-macOS-arm64.tar.gz` / `AnkiMiner-macOS-x86_64.tar.gz` — the only assets on the Releases page without a version, since the AppImage, the Windows installer and the `.deb` all had one. They are now `AnkiMiner-<version>-macOS-<arch>.tar.gz`, and every non-`.deb` asset path in `release.yml` is built from a single `AnkiMiner-{version}-{asset_slug}` template driven by a new `asset_slug` field in `.github/release-matrix.json`. The `.deb` keeps Debian's mandated `anki-miner_<version>_amd64.deb` shape, which `dpkg-name` and apt repos assume, and is the documented exception. The in-app updater matched the old macOS names as exact literals and now matches every target by a version-agnostic glob, so a future rename cannot silently degrade the update banner again; `tests/unit/test_release_asset_names.py` pins the scheme against all five producers — `release.yml`, `release-matrix.json`, `build-appimage.sh`, `anki_miner.iss` and `nfpm.yaml` — and asserts each published name is claimed by exactly one updater target. Existing macOS installs get a release-page link instead of a direct download for the one upgrade that crosses the rename. CI artifact names are deliberately unchanged: `scripts/artifact_size_baseline.json` is keyed on them.
 
 ### Fixed
 
