@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+## [3.0.0] - 2026-09-02
+
+### Added
 - **Chinese and Korean mining (Settings → Mining Language).** The app mines three languages now, and the selector switches between them without a restart. Chinese runs on jieba for segmentation, pypinyin for readings and OpenCC for script variants, and adds four things Japanese has no use for: a Character Set choice (Simplified 简体 / Traditional 繁體) that steers both the card front and the dictionary lookup, tone-coloured pinyin (each syllable wrapped in a tone class the card styling paints), a Measure Word field taking the classifier off the dictionary entry, and a Traditional field carrying the other spelling when it differs. Korean runs on kiwipiepy with Sejong part-of-speech defaults, adds a Hanja field for the Chinese characters inside a word and two script filters (Hangul-only, contains hanja), and splits reading sentences on its own punctuation rules. Each language brings its own deck default, dictionary catalogue, audio ladder, subtitle decode ladder, sentence rules and mined-form policy; OpenCC is optional, and its absence costs script variants only.
 - **Switching mining language moves the whole configuration with it.** The switch runs behind the same mutation guard a dictionary import takes, so it refuses while resources are busy rather than pulling a database out from under a live lookup, and it refuses outright while mining is running. Queued work is not silently discarded: a switch with rows in a queue asks first and flushes only on confirmation. Everything language-scoped — deck, card fields, dictionary and frequency chains, filters, script settings — is parked in `config.language_stash` on the way out and restored on the way back, so a round trip lands exactly where it left. A settings-profile switch whose snapshot names another language takes the same path rather than a shortcut. On the first visit to a language, the app offers to exclude the decks belonging to the others and to open the Setup Wizard.
 - **Downloadable language packs (Settings → Mining Language).** The frozen bundle ships neither the Chinese nor the Korean engine: both arrive as sha256-pinned PyPI artifacts declared in per-language manifests, downloaded on demand into `~/.anki_miner/language_packs/` and appended to the import path at boot, through the same staged install path the ASR models and alass use. A language whose engine is missing is not in the selector at all, and the download row under Mining Language is the one place on screen that explains where it went — reinforced by a boot banner that opens Settings on the selector when the active language's pack is absent. Korean's pack carries the ~88 MB model alongside the engine; a pre-existing `ko_model/` from an earlier build is honoured read-only, so nobody re-downloads it. A pip install with the `[zh]` or `[ko]` extra already has everything from PyPI and never sees the rows do anything.
@@ -40,8 +50,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **A newly added online audio source goes above the JPod101 fallback (Settings → Audio).** The chain is first-hit-wins and a new source was appended below an enabled jpod101, so it was never consulted for any word jpod101 could answer.
 - **The Add Audio Source dialog opens on the JSON kind.** It defaulted to the direct-audio kind while carrying the local-audio-yomichan server name, so the placeholder server-root URL missed on every word.
 - **Message-box buttons no longer clip their own labels.** A `min-width: 80px` in the stylesheet resolves to `setMinimumWidth`, which *replaces* the text-derived minimum rather than raising it, and the value had grown to 106 px; QMessageBox then sizes itself from the label alone, so a button wanting more — "Exclude these decks" wants 138 px — was squeezed into the shortfall. The rule is horizontal padding now, so every message box sizes to its longest button.
-
-### Removed
 
 ## [2.14.0] - 2026-08-28
 
