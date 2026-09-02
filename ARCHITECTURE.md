@@ -26,7 +26,8 @@ Subtitle file (ASS/SRT/SSA/VTT)
   ▼
 ┌─────────────────────────────────────────────────────┐
 │ 1. Parse Subtitles                                  │
-│    SubtitleParserService (pysubs2 + fugashi/MeCab)   │
+│    SubtitleParserService (pysubs2 + the language's   │
+│    tokenizer: fugashi / kiwipiepy / jieba)           │
 │    → list[TokenizedWord]                            │
 ├─────────────────────────────────────────────────────┤
 │ 2. Filter Unknown Words                             │
@@ -56,7 +57,7 @@ ProcessingResult
 
 Before Phase 1, a pre-flight step validates the configured note type, field mapping, and target deck against Anki. Nothing is created — a missing deck is an error. Cancellation is checked between each phase. An optional curation callback lets the GUI present a word selection dialog between stages 2 and 3.
 
-The offline dictionary also participates in stage 1 when available: `service_factory` injects `DefinitionService.offline_terms_exist` into the parser, whose `CompoundDictionaryMatcher` (`services/compound_matcher.py`) merges adjacent MeCab tokens into a single word whenever the joined form — with the tail token deinflected via UniDic orthBase — is an exact dictionary headword (Yomitan's longest-match principle; fixes fragment mining like 走り出した→走り). With no offline dictionary, stage 1 is unchanged.
+The offline dictionary also participates in stage 1 when available (this paragraph describes the Japanese path; the compound matcher is ja-only): `service_factory` injects `DefinitionService.offline_terms_exist` into the parser, whose `CompoundDictionaryMatcher` (`services/compound_matcher.py`) merges adjacent MeCab tokens into a single word whenever the joined form — with the tail token deinflected via UniDic orthBase — is an exact dictionary headword (Yomitan's longest-match principle; fixes fragment mining like 走り出した→走り). With no offline dictionary, stage 1 is unchanged.
 
 ## Package Dependencies
 
@@ -68,7 +69,10 @@ orchestration/
   │
   ▼
 services/  (+ services/dictionary/providers/)
-  │
+  │        ▲
+  │        └── languages/  ← profile.py imports services/resource_catalog,
+  │                           so this is NOT a leaf; gui/ and services/ both
+  │                           import it
 ┌───────┼───────┐
 ▼       ▼       ▼
 interfaces/ models/ utils/
@@ -84,6 +88,8 @@ resources/   ← packaged data (wordsets, etc.), no code
 ```
 
 Leaf packages (`config`, `models`, `exceptions`, `utils`) have no internal dependencies. `interfaces` depends only on `models` for type signatures. `services` depends on `interfaces`, `models`, `config`, `exceptions`, and `utils`. `orchestration` composes services. `gui` is the sole top-level entry point.
+
+`languages` sits beside `services` rather than under it. The package `__init__.py` deliberately exports nothing but `AVAILABLE_LANGUAGES` and may import neither Qt, a tokenizer, nor `anki_miner.services` — profile types and the registry are imported from `anki_miner.languages.registry` instead, because `profile.py` imports `services/resource_catalog` at module level and an eager re-export would drag the service layer into every `import anki_miner.languages`. `AnkiMinerConfig` duplicates the language tuple as `config.config._LANGUAGE_CODES` for the same reason (config must not import this package); `tests/unit/test_config_language.py` pins the two identical.
 
 ## Core Abstractions
 
@@ -111,6 +117,8 @@ Implementations: `GUIPresenter` (Qt signals) and `NullPresenter` (tests). The pr
 **SentenceAudioFetcher** (`interfaces/sentence_audio.py`): sentence-level TTS lookup via `fetch`.
 
 All use `typing.Protocol` for structural subtyping. Implementations satisfy the protocol via duck typing, without explicit inheritance.
+
+A second protocol family lives in `languages/profile.py` and is the extension point added in v3.0.0. Eight protocols — `SubtitleParser`, `MinedFormPolicy`, `LookupStrategy`, `ReadingSupport`, `SentenceAnnotator`, `ScriptSupport`, `DictKeyFolding`, `CardRenderHook` — describe the decisions that vary by mining language, alongside the frozen dataclasses that carry the non-behavioural half (`ScriptFilterOption`, `SentenceRules`, `AudioDefaults`, `CaptionLangs`, `PosDefaults`, `CardFieldSpec`, `ContentTextStyle`). `LanguageProfile` is the 27-field frozen aggregate holding all of them; see [Mining Languages](#mining-languages).
 
 ## Models
 
@@ -248,6 +256,11 @@ Phase 2 — build: `AnkiService.ensure_deck` creates the target deck if it does 
 - **Optional data:** pitch accent, frequency, known words DB, blacklist/whitelist paths and toggles
 - **Analytics:** stats DB path
 - **Performance:** max parallel workers (default 6)
+- **Language:** `language` (the active mining language) and `language_stash` (parked `LANGUAGE_SCOPED_FIELDS` snapshots for every inactive language — see [Mining Languages](#mining-languages)), plus the scoped `script_variant` and `reading_tone_color`
+- **Card shape:** `card_type` (`Literal["", "word_and_sentence", "click", "sentence", "audio"]`), `card_type_marker_fields`, `strict_card_order` (create cards in order of appearance; off by default), `bold_target_in_sentence`
+- **Downloader (Utilities → Download):** `downloader_format_preset`, `downloader_custom_format`, `downloader_write_subtitles`, `downloader_subtitle_langs`, `downloader_embed_thumbnail`, `downloader_embed_metadata`
+- **yt-dlp:** `ytdlp_location`, `auto_update_ytdlp`, `ytdlp_prerelease` (selects the nightly channel in `services/ytdlp_updater.py`)
+- **Misc:** `excluded_decks` (negated into the vocab query, so a parent deck covers its subdecks), `bin_root`, `alass_location`, `use_native_file_dialogs`, `pitch_category_format`, `subtitle_regex_filter` / `subtitle_regex_replacement` / `use_subtitle_regex_filter`, and `config_version` — a staleness counter on the config object, not to be confused with the `config_schema_version` stamp `gui_config.json` carries
 
 The `__post_init__` method uses `object.__setattr__` to convert string paths to `Path` objects (required because the dataclass is frozen). New config instances are created with `dataclasses.replace()`.
 
@@ -257,6 +270,29 @@ The `__post_init__` method uses `object.__setattr__` to convert string paths to 
 **Named profiles.** `gui_config.json` stays the single live config; profiles are full-config sidecar snapshots in `profiles/<id>.json`, written by `gui/utils/profile_store.py` (storage only, Qt-free). There is deliberately **no index file** — the directory listing enumerates profiles, each file carries its own display name, and the active id is a marker inside `gui_config.json`; an index would duplicate both and buy a class of marker-vs-index divergence bugs. `gui/controllers/profile_controller.py` owns the *ordering* of a switch, which is where the data-loss paths sit: snapshot the outgoing profile first, save an unattributable live config as a **new** profile rather than adopting an existing id (profile files have no `.bak`), read the incoming file before advancing the pointer, and roll the pointer back if the commit fails. Machine-local runtime state is structurally excluded from profiles and settings export, because both serialize only `AnkiMinerConfig`.
 
 **UI language.** `config.ui_language` (normalized to lower-case, empty → `"en"`) selects the catalog `gui/i18n.py` installs at startup — the app's own `.qm` plus Qt's bundled `qtbase_<lang>.qm` for standard dialog buttons and file pickers — before any widget is constructed. `"en"` is the source language and installs nothing. Catalogs are extracted and compiled by `scripts/i18n.py` (`extract`, `compile`); this is a manual step, not CI-gated.
+
+## Mining Languages
+
+Anki Miner mines Japanese, Korean and Chinese. `AVAILABLE_LANGUAGES = ("ja", "ko", "zh")` (`languages/__init__.py`) is the full set; `config.language` names the active one. Everything that varies by language is reached through one object, so no call site branches on a language code.
+
+**The profile is the single dispatch point.** `LanguageProfile` (`languages/profile.py`) is a frozen 27-field dataclass carrying both behaviour (the eight protocols in [Core Abstractions](#core-abstractions)) and data (`sentence_rules`, `audio`, `captions`, `pos_defaults`, `catalog`, `card_field_defaults`, `content_style`, `import_encodings`, `audio_track_codes`, `asr_language`, and the rest). `registry.get_profile(code)` returns it; `registry.config_language(config)` is how a service reads the active code without importing config internals. `orchestration/episode_processor.py` exposes it as a `profile` property, and the composition root threads it in: `service_factory._create_subtitle_parser` builds the run's parser from `get_profile(config_language(config)).create_parser`, so stage 1 gets fugashi for ja, kiwipiepy for ko and jieba for zh without a conditional. `languages/tagger_provider.py::get_tagger(language)` is the shared per-language tagger cache.
+
+The per-language packages are `languages/ja/` (3 modules), `languages/ko/` (10) and `languages/zh/` (14). Japanese is the thinnest because most of its behaviour is the historical default; Chinese carries the most, adding pinyin readings, tone colouring, simplified/traditional variants and its own part-of-speech mapping.
+
+**Settings are scoped, and a switch swaps them.** `LANGUAGE_SCOPED_FIELDS` (`languages/switching.py`) is the 22-name tuple of config fields whose value belongs to the active language — the four resource chains, the filters, the Anki deck/note-type/field mapping, the blacklist and whitelist, `script_variant` and `reading_tone_color`. `switch_language(config, new_code)` parks the outgoing language's values in `config.language_stash[old]` and pops the incoming language's parked snapshot back, or on a first visit fills every scoped field from the profile's `scoped_defaults` — which covers all 22 by construction, so no Japanese-shaped dataclass default can leak into a zh or ko session. `blank_scoped_defaults()` derives that blank from the config dataclass itself, so a field appended to `LANGUAGE_SCOPED_FIELDS` lands in every language's defaults automatically. The stash holds a snapshot for every language that is *not* active; `language` survives a settings import while `language_stash` is machine-specific and stripped from one.
+
+**The switch refuses rather than half-completes.** `gui/controllers/language_switch.py::request_language_change` gates in a fixed order: the profile must exist in this build; its `unavailable_reason()` probe must pass (a profile constructs without the packages it parses with, since every third-party import is function-local, so the probe is what decides whether the destination can actually mine); the dictionary mutation guard must be free, or "Settings are busy"; `release_dictionary_resources()` must succeed, or "Mining is running" — this covers mining, card backfill and prewarm, none of which the settings preflight knows about, and drops the SQLite handles a chain swap needs dropped anyway; and queued rows prompt before being flushed. Every refusal costs the user nothing. The config is read *inside* the guard, because the guard's preflight commits pending Settings edits and a read taken earlier would write them back to their pre-edit values.
+
+**Data is partitioned per language.** Japanese keeps every existing path byte-for-byte; the other two get siblings:
+
+- **Known words**: `service_factory.resolve_known_words_db_path(config)` is the sole derivation site. `ja` returns `config.known_words_db_path` verbatim; every other language returns `<stem>.<lang><suffix>`, so 学生 being known in Japanese never marks it known in Chinese, and Card Backfill and Deck Filter each receive the right database by construction rather than by an audited `WHERE` clause.
+- **Statistics**: one `stats.db`, both tables carrying a `language TEXT NOT NULL DEFAULT 'ja'` column added by `stats_service._migrate_language_column`; reads filter on it. `StatsService.language` is a live-settable property that `gui.app._bind_stats_language` re-stamps on a switch.
+- **Audio caches**: stems come from `AudioDefaults.cache_stem_prefix` and `sentence_cache_stem_prefix`, injected at fetcher construction, rather than the Japanese literals. The ko and zh default expression-audio chain is `(AudioSourceEntry(kind="googletts"),)`, not JPod101; Korean sentence TTS uses the Papago speaker `kyuri`.
+- **Resources**: each profile carries its own `catalog`. Japanese uses `services/resource_catalog.RECOMMENDED_DEFAULT_SET`, Korean `languages/ko/catalog.py` (KRDICT), Chinese `languages/zh/catalog.py` (CC-CEDICT).
+
+**Engines that are not bundled arrive as language packs.** The frozen build ships the Japanese engine only; `anki_miner.spec` lists `jieba`, `pypinyin`, `opencc`, `kiwipiepy` and `kiwipiepy_model` in `excludes` so their absence is a guarantee rather than an accident. Each non-bundled language declares its dependencies in a `languages/<code>/pack.py::PACK` manifest typed by `languages/pack_spec.py` (`ArtifactSpec`, `PackComponent`, `LanguagePack`): sha256-pinned PyPI artifacts, per platform where the wheel is platform-specific. `services/language_pack_installer.py` fetches and extracts them into `~/.anki_miner/language_packs/<code>/`, one extracted top-level package per component, and `ensure_language_packs_on_syspath()` puts those roots on `sys.path` at boot so a plain `import jieba` resolves. A component already satisfied — by a complete extracted directory, or by a package importable from outside the pack roots — is skipped, so a pip install with the `[zh]` or `[ko]` extra never downloads anything. `ko_model/` is a read-only legacy tier: installs that fetched the Korean model before packs existed keep working and are never written to again. Downloads run on `InstallWorker.language_pack_task(code, root, display_name)`, tracked in `BackgroundTaskController.language_pack_workers`.
+
+**Where the GUI touches it.** `gui/widgets/panels/mining_language_settings_panel.py::MiningLanguageSettingsPanel` is the Settings destination (key `mining_language`, group "Mining"). `gui/utils/language_gate.py` and `gui/utils/language_choices.py` decide what a language may show and offer; `gui/utils/content_text.py` applies the profile's `content_style` to displayed source text. `MainWindow.sync_mining_language_surfaces` repaints everything a switch changed, and `gui.app._warn_if_active_language_unavailable` falls back to Japanese when a build cannot supply the configured language, rather than stranding the user with no route back into Settings.
 
 ## GUI Architecture
 
@@ -434,8 +470,8 @@ All persistent user data under `~/.anki_miner/`:
 | `recent_files.json` | JSON | Most-recent video/subtitle pairs (`gui/utils/recent_files.py`) |
 | `JMdict_e` | XML | Source JMdict XML (~60MB); migrated to SQLite on first launch |
 | `dicts/<dict-id>/index.sqlite` | SQLite | Indexed offline dictionaries (e.g. `jmdict-english/`); queried by `IndexedDictProvider` |
-| `known_words.db` | SQLite | Known word cache with Anki sync |
-| `stats.db` | SQLite | Analytics. Exactly two tables — `mining_sessions` and `series_difficulty`; milestones are derived at query time, not stored |
+| `known_words.db` | SQLite | Known word cache with Anki sync. Japanese only: every other mining language gets a `known_words.<lang>.db` sibling, derived solely by `service_factory.resolve_known_words_db_path` |
+| `stats.db` | SQLite | Analytics. Exactly two tables — `mining_sessions` and `series_difficulty`; milestones are derived at query time, not stored. Both carry a `language TEXT NOT NULL DEFAULT 'ja'` column (`_migrate_language_column`) and reads filter on it |
 | `pitch/<source_id>/index.sqlite` | SQLite | Per-source pitch accent index; the runtime-authoritative first-hit-wins chain (`config.pitch_chain`) |
 | `pitch_accent.csv` | CSV | Legacy single pitch file; auto-imported into `pitch/legacy-pitch/` on first launch, then no longer read (kept on disk for downgrade) |
 | `frequency.csv` | CSV | Legacy single frequency list; no longer read (superseded by the `freqs/` chain — the one-time migration was removed) |
@@ -443,7 +479,7 @@ All persistent user data under `~/.anki_miner/`:
 | `audio_cache/jpod101/` | Files | JapanesePod101 expression audio cache: `jpod101_{mined_form}_{reading}.mp3` + zero-byte `.miss` negative markers |
 | `audio_packs/<pack_id>/index.sqlite` | SQLite | Per-pack expression audio index; audio files stay in their original location |
 | `audio_cache/local_packs/` | Files | Per-hit cache copies from installed packs: `{pack_id}_{mined_form}_{reading}{ext}` |
-| `audio_cache/googletts/` | Files | Google Translate synthetic-TTS cache: `googletts_{mined_form}_{reading}.mp3` (no `.miss` markers — synthetic failures are transient) |
+| `audio_cache/googletts/` | Files | Google Translate synthetic-TTS cache: `googletts_{mined_form}_{reading}.mp3` (no `.miss` markers — synthetic failures are transient). The stem prefix comes from the active language's `AudioDefaults.cache_stem_prefix`, so the filenames above are the Japanese case, not a literal |
 | `audio_cache/custom_*/` | Files | Per-source caches for the `custom` / `custom_json` URL-template audio kinds (`services/custom_audio_fetcher.py`) |
 | `audio_cache/sentence_tts/` | Files | Reading-path sentence TTS: `sentencetts_{provider}_{sha1(sentence)[:16]}.mp3` (content-hash keys, no `.miss` markers) |
 | `runtime_state/downloads/` | Files | Partial-download resume state: `<key>.part` bodies + `<key>.json` manifests (`services/download_resume.py`) |
@@ -451,6 +487,8 @@ All persistent user data under `~/.anki_miner/`:
 | `asr_models/` | Files | Downloaded local Whisper models (Utilities → Generate); `asr_models/ggml/` holds the whisper.cpp weights |
 | `cuda_libs/` | Files | In-app CUDA acceleration pack for ASR |
 | `onnx_pack/` | Files | In-app ONNX/VAD pack for ASR |
+| `language_packs/<code>/` | Files | Per-language engine packs downloaded on demand (`services/language_pack_installer.py`), one extracted top-level package per component; the roots join `sys.path` at boot. Japanese has none — its engine is bundled |
+| `ko_model/` | Files | Read-only legacy tier: the Korean model as fetched before language packs existed. Honoured so nobody re-downloads it, never written to again |
 | `bin/` | Files | In-app-installed external binaries (`alass`, the managed yt-dlp binary + its verification receipt) |
 | `.ytdlp_update_check` | Text | Unix timestamp of the last yt-dlp update check; throttles the next one (`services/ytdlp_updater.py`) |
 | `themes/` | JSON | User-added custom theme files |
