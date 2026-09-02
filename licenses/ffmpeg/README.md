@@ -11,7 +11,7 @@ is in [`COPYING.GPLv3`](COPYING.GPLv3).
 | Distribution | Bundles FFmpeg? |
 |--------------|-----------------|
 | Linux AppImage | yes |
-| Windows installer / portable zip | yes |
+| Windows installer | yes |
 | macOS bundle | yes |
 | `.deb` package | yes |
 | `pip` / `pipx` install | no — uses ffmpeg from the system / PATH |
@@ -24,7 +24,7 @@ below does not apply to them.
 The bundled binaries are pre-built static builds taken from:
 
 - **Linux & Windows** — [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds),
-  release tag `autobuild-2026-06-02-14-20`, FFmpeg version
+  release tag `autobuild-2026-05-31-13-22`, FFmpeg version
   `n8.1.1-9-g58d4114d36` (the `gpl-8.1` variant).
 - **macOS (arm64)** — [osxexperts.net](https://www.osxexperts.net) static
   FFmpeg 8.1 arm64 build.
