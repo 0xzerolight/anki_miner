@@ -2,8 +2,10 @@ kiwipiepy - Korean morphological analyser (LGPL-3.0-or-later)
 Upstream source: https://github.com/bab2min/kiwipiepy
 Model data (kiwipiepy_model): https://github.com/bab2min/kiwipiepy_model
 
-The binaries shipped in this application are the unmodified PyPI wheels for the
-versions resolved at build time. Corresponding source for the exact version
-shipped is available from the URLs above and from PyPI:
+The binaries this application downloads are the unmodified PyPI artifacts for
+kiwipiepy 0.23.2 and kiwipiepy_model 0.23.0. Those versions are not resolved at
+build time: they are pinned, with their SHA-256 digests, in
+anki_miner/languages/ko/pack.py. Corresponding source for the exact versions
+downloaded is available from the URLs above and from PyPI:
   https://pypi.org/project/kiwipiepy/#files
   https://pypi.org/project/kiwipiepy-model/#files
