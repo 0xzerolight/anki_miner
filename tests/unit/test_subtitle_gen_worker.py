@@ -205,6 +205,14 @@ def test_happy_path_two_files_signal_sequence(qapp, tmp_path, monkeypatch):
     assert progresses_per_file[0][-1][1] == 100
     assert progresses_per_file[1][-1][1] == 100
 
+    # The stage label flips the moment extraction is done, so a stall in the
+    # transcriber (model load, first decode window) is never shown as
+    # "Extracting audio".
+    for idx in (0, 1):
+        messages = [p[2] for p in progresses_per_file[idx]]
+        assert messages[0].startswith("Extracting audio: ")
+        assert messages[1] == "Transcribing: 0%"
+
     # SRT written for both files.
     assert len(srt_calls) == 2
 

@@ -177,11 +177,19 @@ def test_cancel_after_extraction(tmp_path, monkeypatch):
     _patch_pipeline(monkeypatch)
     cancel = threading.Event()
 
+    events: list[str] = []
+
     result = generate_subtitle_one(
-        config, _FakeExtractor(cancel=True), video, tmp_path / "ep01.srt", cancel_event=cancel
+        config,
+        _FakeExtractor(cancel=True),
+        video,
+        tmp_path / "ep01.srt",
+        cancel_event=cancel,
+        on_transcribe_start=lambda: events.append("transcribe"),
     )
 
     assert result.status is SubtitleGenStatus.CANCELLED
+    assert events == []  # a cancel during extraction never announces transcription
 
 
 def test_cancel_during_transcribe(tmp_path, monkeypatch):
@@ -223,8 +231,9 @@ def test_on_extract_start_and_progress_callbacks(tmp_path, monkeypatch):
         video,
         tmp_path / "ep01.srt",
         on_extract_start=lambda: events.append("extract"),
+        on_transcribe_start=lambda: events.append("transcribe"),
         transcribe_progress_cb=fractions.append,
     )
 
-    assert events == ["extract"]
+    assert events == ["extract", "transcribe"]
     assert fractions == [1.0]

@@ -2,6 +2,7 @@
 
 import dataclasses
 import json
+import logging
 import shutil
 import subprocess
 import wave
@@ -2441,6 +2442,32 @@ class TestExtractFullAudio:
         assert result is True
         cmd = mock_popen.call_args[0][0]
         assert cmd[cmd.index("-map") + 1] == "0:a:0"
+
+    def test_logs_a_completion_receipt(self, service, video_file, tmp_path, caplog):
+        """Success leaves one INFO line naming the file and the elapsed time.
+
+        It is the only success-path line this stage writes. Subtitle generation
+        goes straight from here into a WAV load and model construction, so this
+        receipt is what separates an ffmpeg hang from a model-load hang in the
+        log.
+        """
+        out_wav = tmp_path / "full.wav"
+        _write_min_wav(out_wav)
+        mock_proc = _popen_mock()
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc),
+            patch.object(service, "_get_japanese_audio_stream", return_value=3),
+            patch.object(Path, "exists", return_value=True),
+            caplog.at_level(logging.INFO, logger=MODULE),
+        ):
+            assert service.extract_full_audio(video_file, out_wav) is True
+
+        receipts = [r for r in caplog.records if r.getMessage().startswith("Full audio extraction done:")]
+        assert len(receipts) == 1
+        assert receipts[0].levelno == logging.INFO
+        assert "file=episode_01.mkv" in receipts[0].getMessage()
+        assert "seconds=" in receipts[0].getMessage()
 
     def test_track_override_respected(self, service, video_file, tmp_path):
         """track_override is an audio-index resolved via _resolve_audio_track_global_index.

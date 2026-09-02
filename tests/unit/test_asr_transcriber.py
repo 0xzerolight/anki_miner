@@ -1111,6 +1111,45 @@ def test_cascade_cpu_uses_ct2_cpu(monkeypatch, tmp_path):
     assert [c["device"] for c in ct2] == ["cpu"]
 
 
+def test_ct2_model_load_logged_once_per_session(monkeypatch, tmp_path, caplog):
+    """CT2 construction leaves one INFO receipt; a reused session adds none.
+
+    The subtitle tab shows nothing between "Extracting audio" and the first
+    decoded segment, so this line is what places a stall inside model
+    construction in the log.
+    """
+    ct2: list[dict] = []
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: _recording_model_cls(ct2))
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda _audio, _root: None)
+    session = transcriber.Ct2ModelSession()
+
+    with caplog.at_level(logging.INFO, logger=transcriber.__name__):
+        _run_cpp_transcribe(monkeypatch, tmp_path, device="cpu", ct2_model_session=session)
+        _run_cpp_transcribe(monkeypatch, tmp_path, device="cpu", ct2_model_session=session)
+
+    loads = [r.getMessage() for r in caplog.records if r.getMessage().startswith("ASR model load:")]
+    assert loads == ["ASR model load: backend=ctranslate2 device=cpu model=small"]
+    assert len(ct2) == 1
+
+
+def test_cpp_model_load_logged(monkeypatch, tmp_path, caplog):
+    """whisper.cpp construction leaves the same receipt, tagged vulkan."""
+    ct2 = _wire_cpp(
+        monkeypatch,
+        vulkan=1,
+        cpp_available=True,
+        cpp_segments=[make_cpp_segment(0, 100, "a", 0.9)],
+    )
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda _audio, _root: None)
+
+    with caplog.at_level(logging.INFO, logger=transcriber.__name__):
+        _run_cpp_transcribe(monkeypatch, tmp_path, device="vulkan")
+
+    loads = [r.getMessage() for r in caplog.records if r.getMessage().startswith("ASR model load:")]
+    assert loads == ["ASR model load: backend=whisper.cpp device=vulkan model=small"]
+    assert ct2 == []
+
+
 def test_cascade_cuda_uses_ct2_cuda(monkeypatch, tmp_path):
     """device='cuda' + a CUDA GPU → CT2 CUDA, the whisper.cpp seam untouched."""
     constructed: list[dict] = []

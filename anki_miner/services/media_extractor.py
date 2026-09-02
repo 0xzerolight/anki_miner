@@ -7,6 +7,7 @@ import logging
 import subprocess
 import tempfile
 import threading
+import time
 import wave
 from collections.abc import Callable
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
@@ -809,6 +810,7 @@ class MediaExtractorService:
         # avoids an extra ffprobe round-trip; it is a ceiling, not a target.
         timeout = 1800
 
+        started = time.monotonic()
         success = self._run_ffmpeg(
             cmd,
             "Full audio extraction",
@@ -835,6 +837,16 @@ class MediaExtractorService:
         except (wave.Error, OSError) as exc:
             logger.warning("extract_full_audio: could not verify %s: %s", out_wav.name, exc)
             return False
+        # The only line this stage leaves on success. Subtitle generation runs
+        # this, then a WAV load, then model construction, before it has a segment
+        # to report; without a receipt here the log cannot tell a stall inside
+        # ffmpeg from one after it.
+        log_summary(
+            logger,
+            "Full audio extraction done",
+            file=video_file,
+            seconds=f"{time.monotonic() - started:.1f}",
+        )
         return True
 
     def _extract_screenshot(

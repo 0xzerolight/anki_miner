@@ -59,6 +59,7 @@ def generate_subtitle_one(
     out_srt: Path,
     *,
     on_extract_start: Callable[[], None] | None = None,
+    on_transcribe_start: Callable[[], None] | None = None,
     transcribe_progress_cb: Callable[[float], None] | None = None,
     cancel_event: threading.Event | None = None,
     ct2_model_session: Ct2ModelSession | None = None,
@@ -80,6 +81,9 @@ def generate_subtitle_one(
         out_srt: Destination SRT path (its parent is created if missing).
         on_extract_start: Called once right before extraction begins (the worker
             uses it to emit an "Extracting audio" progress line).
+        on_transcribe_start: Called once after the audio is loaded, right before
+            transcription begins (silence mask, model construction, first decode
+            window). Skipped when a cancel landed during extraction or load.
         transcribe_progress_cb: Forwarded to the transcriber as its
             ``progress_cb`` (called with a 0.0–1.0 fraction).
         cancel_event: Cooperative cancel, forwarded to extractor + transcriber.
@@ -120,6 +124,8 @@ def generate_subtitle_one(
             return SubtitleGenResult(SubtitleGenStatus.CANCELLED)
 
         # --- Stage 3: transcribe ---
+        if on_transcribe_start is not None:
+            on_transcribe_start()
         transcribe_kwargs: dict[str, Any] = {}
         if ct2_model_session is not None:
             transcribe_kwargs["ct2_model_session"] = ct2_model_session

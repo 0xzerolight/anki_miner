@@ -127,6 +127,14 @@ class SubtitleGenWorker(FileQueueWorker):
         def _on_extract_start() -> None:
             self.file_progress.emit(idx, 0, tr_format(self.tr("Extracting audio: %1"), video_path.name))
 
+        def _on_transcribe_start() -> None:
+            # Extraction and the WAV load are done here; the silence mask, model
+            # construction and the first decode window come next and can run for
+            # minutes with no segment to report. Without this line the
+            # "Extracting audio" message stays up through all of it, and a stall
+            # in the transcriber reads as an ffmpeg problem.
+            self.file_progress.emit(idx, 0, tr_format(self.tr("Transcribing: %1%"), 0))
+
         def _transcribe_progress(fraction: float) -> None:
             pct = min(int(fraction * 100), 100)
             self.file_progress.emit(idx, pct, tr_format(self.tr("Transcribing: %1%"), pct))
@@ -138,6 +146,7 @@ class SubtitleGenWorker(FileQueueWorker):
                 video_path,
                 out_srt,
                 on_extract_start=_on_extract_start,
+                on_transcribe_start=_on_transcribe_start,
                 transcribe_progress_cb=_transcribe_progress,
                 cancel_event=self._cancel_event,
                 ct2_model_session=self._ct2_model_session,

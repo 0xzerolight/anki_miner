@@ -815,6 +815,9 @@ def _transcribe_cpp(
         # whisper reads an empty registry and GGML_ASSERT(device) aborts on Model().
         _engine.ensure_ggml_backends_loaded()
         model_cls = _engine.get_whisper_cpp_model_cls()
+        # Same receipt as the CT2 branch: the weights upload inside Model() is
+        # silent and is a place a run can stall.
+        log_summary(logger, "ASR model load", backend="whisper.cpp", device="vulkan", model=model_name)
         model = model_cls(str(ggml_model_installer.ggml_model_path(model_name, models_root)))
 
         # Independent Silero speech mask (same helper the CT2 path uses) to (a) clip
@@ -907,6 +910,11 @@ def _transcribe_ct2(
         model = ct2_model_session.model
         device_used = ct2_model_session.device_used or "cpu"
     else:
+        # Construction (weights load, CUDA/cuDNN init) can run for a long time
+        # and emits nothing itself; this line is what makes a hang inside it
+        # attributable in the log. Once per queue: the session branch above
+        # reuses the model.
+        log_summary(logger, "ASR model load", backend="ctranslate2", device=device, model=model_name)
         model, device_used = _resolve_model(
             device,
             cuda_libs_root,
