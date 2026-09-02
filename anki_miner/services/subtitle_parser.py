@@ -446,6 +446,9 @@ class SubtitleParserService:
 
         language = config_language(config)
         self.tagger = get_shared_tagger() if language == "ja" else get_tagger(language)
+        # The language whose tagger this is - NOT config.language: the two part
+        # ways on the degrade path, and _warn_if_nothing_mined names both.
+        self._tagger_language = language
         # POS/subtype inclusion gate, snapshotted from the (frozen) config.
         self._inclusion_rule = TokenInclusionRule(
             allowed_pos=frozenset(config.allowed_pos),
@@ -600,6 +603,46 @@ class SubtitleParserService:
             file=subtitle_file,
             tokenize_s=f"{self._tokenize_time_s:.4f}",
             probe_s=f"{self._probe_time_s:.4f}",
+        )
+
+    def _warn_if_nothing_mined(
+        self, subtitle_file: Path, all_words: list[TokenizedWord], subtitle_offset: float | None
+    ) -> None:
+        """One WARNING naming why a subtitle with lines mined nothing.
+
+        The GUI says "No words found in subtitles" and the run log only
+        ``tokens=0``; the first zh YouTube report (v3.0.0) was undiagnosable
+        from either. Every zero-word outcome reproduced so far has one shape -
+        every tagger token failing ``TokenInclusionRule`` - with three causes
+        that read identically from outside: a POS whitelist belonging to
+        another language's tagger (unidic names against jieba flags), a
+        language ``config_language`` degraded to ja, or text the engine cannot
+        segment (English cues under a Chinese caption code). The mining
+        language, the language whose tagger ran, the whitelist and the tags the
+        tagger actually emitted tell them apart. Replays the line cache the
+        parse just filled, so nothing is re-tokenized; silent when the file had
+        no mineable lines at all (that case is reported upstream).
+        """
+        if all_words:
+            return
+        lines = raw_tokens = 0
+        tags: collections.Counter[str] = collections.Counter()
+        for _text, raw, _merged, _start, _end, _duration in self._iter_parsed_lines(subtitle_file, subtitle_offset):
+            lines += 1
+            raw_tokens += len(raw)
+            tags.update(str(getattr(getattr(token, "feature", None), "pos1", "") or "?") for token in raw)
+        if lines == 0:
+            return
+        logger.warning(
+            "Subtitle parse mined no words: file=%s language=%s tagger_language=%s allowed_pos=%s "
+            "lines=%d raw_tokens=%d top_pos=%s",
+            subtitle_file.name,
+            getattr(self.config, "language", "?"),
+            self._tagger_language,
+            ",".join(sorted(self._inclusion_rule.allowed_pos)),
+            lines,
+            raw_tokens,
+            ",".join(f"{pos}:{count}" for pos, count in tags.most_common(5)),
         )
 
     @property
@@ -1484,6 +1527,7 @@ class SubtitleParserService:
             all_words.extend(line_words)
 
         self._log_parse_probe_timing(subtitle_file)
+        self._warn_if_nothing_mined(subtitle_file, all_words, subtitle_offset)
         return all_words
 
     def parse_subtitle_file_with_index(
@@ -1531,6 +1575,7 @@ class SubtitleParserService:
             all_words.extend(line_words)
 
         self._log_parse_probe_timing(subtitle_file)
+        self._warn_if_nothing_mined(subtitle_file, all_words, subtitle_offset)
         return all_words, line_index
 
     def parse_text_units(

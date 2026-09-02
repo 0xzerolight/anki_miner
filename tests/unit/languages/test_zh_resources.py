@@ -9,6 +9,7 @@ import pytest
 from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.languages.profile import AudioDefaults, LanguageProfile
 from anki_miner.languages.registry import get_profile
+from anki_miner.languages.switching import switch_language
 from anki_miner.languages.zh import variants
 from anki_miner.languages.zh.audio import ZH_AUDIO, zh_audio_candidates
 from anki_miner.languages.zh.catalog import ZH_CATALOG
@@ -16,6 +17,17 @@ from anki_miner.languages.zh.parser import create_parser
 from anki_miner.languages.zh.reading import ZhReadingSupport
 from anki_miner.services.resource_catalog import RESOURCE_KINDS
 from anki_miner.services.subtitle_parser import SubtitleParserService
+
+
+def _zh_config() -> AnkiMinerConfig:
+    """Built through ``switch_language``, the way the app builds one.
+
+    ``_zh_config()`` keeps every JA-shaped scoped default,
+    the unidic POS names included: a parser built on it tokenizes with jieba
+    and mines nothing. Construction-only tests never noticed, so the fixture
+    must not be the very mismatch a parse test exists to catch.
+    """
+    return switch_language(AnkiMinerConfig(), "zh")
 
 
 @pytest.fixture
@@ -32,11 +44,11 @@ def _word(mined_form: str, reading: str) -> SimpleNamespace:
 
 class TestCreateParser:
     def test_returns_the_shared_subtitle_parser_service(self, zh_profile: LanguageProfile) -> None:
-        parser = create_parser(AnkiMinerConfig(language="zh"))
+        parser = create_parser(_zh_config())
         assert isinstance(parser, SubtitleParserService)
 
     def test_satisfies_the_subtitle_parser_protocol_surface(self, zh_profile: LanguageProfile) -> None:
-        parser = create_parser(AnkiMinerConfig(language="zh"))
+        parser = create_parser(_zh_config())
         for name in ("parse_subtitle_file", "parse_subtitle_file_with_index", "parse_text_units", "count_lemmas"):
             assert callable(getattr(parser, name))
         assert parser.tagger is not None
@@ -44,13 +56,13 @@ class TestCreateParser:
     def test_the_profile_policy_and_reading_are_injected(self, zh_profile: LanguageProfile) -> None:
         # Without the injection TokenizedWord.mined_form falls back to the JA
         # select_mined_form and the reading field stays empty, silently.
-        parser = create_parser(AnkiMinerConfig(language="zh"))
+        parser = create_parser(_zh_config())
         assert parser._mined_form_policy is zh_profile.mined_form
         assert parser._reading_support is zh_profile.reading
 
     def test_an_explicit_argument_still_wins(self, zh_profile: LanguageProfile) -> None:
         other = ZhReadingSupport()
-        parser = create_parser(AnkiMinerConfig(language="zh"), reading_support=other)
+        parser = create_parser(_zh_config(), reading_support=other)
         assert parser._reading_support is other
 
 

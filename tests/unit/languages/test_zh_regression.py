@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 import re
 
 import pysubs2
 import pytest
 
 from anki_miner.config import ChainEntry
-from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
+from anki_miner.gui.utils.service_factory import _create_subtitle_parser, resolve_known_words_db_path
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.models.card_payload import CardPayload
@@ -208,3 +209,47 @@ def test_a_zh_card_carries_its_hook_fields_end_to_end(test_config, tmp_path, mak
     assert fields["Traditional"] == "銀行"
     assert fields["Pinyin"].startswith('<span style="color:')
     assert "ExpressionFurigana" not in fields  # ja-only key blanked by the zh defaults
+
+
+def _srt_file(tmp_path, name, *lines):
+    path = tmp_path / name
+    cues = "".join(f"{i}\n00:00:0{i},000 --> 00:00:0{i},900\n{line}\n\n" for i, line in enumerate(lines, 1))
+    path.write_text(cues, encoding="utf-8")
+    return path
+
+
+def test_a_switched_zh_config_mines_words_from_a_simplified_srt(test_config, tmp_path, caplog):
+    """The composition root's parser seam, on the profile's own POS defaults.
+
+    The release-bundle smoke is the only other real zh parse and no pytest run
+    sees it. A config built without ``switch_language`` keeps the JA POS names,
+    which reject every jieba flag and mine exactly nothing - silently.
+    """
+    parser = _create_subtitle_parser(switch_language(test_config, "zh"))
+    path = _srt_file(tmp_path, "zh.srt", "今天我们来学习中文", "我觉得这个视频非常好看")
+    with caplog.at_level(logging.WARNING, logger="anki_miner.services.subtitle_parser"):
+        words = parser.parse_subtitle_file(path)
+    assert {"今天", "学习", "中文", "视频"} <= {w.mined_form for w in words}
+    assert not [r for r in caplog.records if "mined no words" in r.getMessage()]
+
+
+def test_non_han_cue_text_mines_nothing_and_the_log_names_why(test_config, tmp_path, caplog):
+    """English cues under a Chinese caption code mine nothing - the shape of the
+    first zh YouTube report - and the GUI's "No words found in subtitles" carries
+    no cause. The parser's one WARNING has to carry what tells a wrong-language
+    subtitle apart from a wrong-language POS whitelist: the mining language, the
+    language whose tagger ran, that whitelist, and the tags the tagger emitted.
+    """
+    parser = _create_subtitle_parser(switch_language(test_config, "zh"))
+    path = _srt_file(tmp_path, "en.srt", "Today we are going to learn Chinese", "He went to Beijing yesterday")
+    with caplog.at_level(logging.WARNING, logger="anki_miner.services.subtitle_parser"):
+        words = parser.parse_subtitle_file(path)
+    assert words == []
+    [record] = [r for r in caplog.records if r.levelno == logging.WARNING and "mined no words" in r.getMessage()]
+    message = record.getMessage()
+    assert "language=zh" in message
+    assert "tagger_language=zh" in message
+    assert "allowed_pos=" in message
+    assert "lines=2" in message
+    assert "raw_tokens=0" not in message and "raw_tokens=" in message
+    assert "top_pos=" in message
