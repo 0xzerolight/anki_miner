@@ -867,3 +867,89 @@ class TestRemoveFromKnownWords(TestAddToKnownWords):
         self._stage_row(dlg, 0)
         assert dlg.add_known_button.minimumWidth() == width_before
         assert width_before >= dlg.add_known_button.sizeHint().width()
+
+
+class TestKnownWordsShortcut:
+    """The user-asked-for K key — the toolbar verb, on a key.
+
+    K routes straight to ``_on_add_to_known``, so it inherits the button's
+    whole contract: highlighted rows else the current row, add-unless-every-
+    target-is-already-staged, dead without a commit callback, and inert while
+    a commit is in flight. Nothing here re-tests that contract; these tests
+    pin that the key reaches it and that Search keeps its letters.
+    """
+
+    def _dialog_with_callback(self, qtbot, make_tokenized_words):
+        from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+
+        captured: list[set[str]] = []
+
+        def commit(forms):
+            captured.append(set(forms))
+            return len(forms)
+
+        dlg = WordCurationDialog(make_tokenized_words(3), commit_known_callback=commit)
+        qtbot.addWidget(dlg)
+        return dlg, captured
+
+    def test_k_shortcut_is_registered_on_the_table(self, dialog):
+        assert _find_table_shortcut(dialog, "K") is not None
+
+    def test_k_is_scoped_to_the_table_not_the_window(self, dialog):
+        """Window scope would fire it from the Search box (Issue #55's lesson)."""
+        shortcut = _find_table_shortcut(dialog, "K")
+        assert shortcut is not None
+        assert shortcut.context() == Qt.ShortcutContext.WidgetWithChildrenShortcut
+
+    def test_k_stages_the_highlighted_rows(self, qtbot, make_tokenized_words):
+        dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words)
+        mined = {dlg.table.item(row, 1).text() for row in (0, 2)}
+        _select_rows(dlg, [0, 2])
+
+        shortcut = _find_table_shortcut(dlg, "K")
+        assert shortcut is not None
+        shortcut.activated.emit()
+
+        assert dlg.pending_known_forms() == mined
+        assert captured == [], "K must stage only; Confirm writes"
+
+    def test_k_again_unstages_the_same_rows(self, qtbot, make_tokenized_words):
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        _select_rows(dlg, [0])
+        shortcut = _find_table_shortcut(dlg, "K")
+        assert shortcut is not None
+        shortcut.activated.emit()
+        assert dlg.pending_known_forms()
+
+        shortcut.activated.emit()
+        assert dlg.pending_known_forms() == set()
+
+    def test_k_without_a_commit_callback_does_nothing(self, dialog):
+        """The verb is a dead control without a callback; so is its key."""
+        _select_rows(dialog, [0])
+        shortcut = _find_table_shortcut(dialog, "K")
+        assert shortcut is not None
+        shortcut.activated.emit()
+        assert dialog.pending_known_forms() == set()
+
+    def test_typing_k_in_search_filters_and_stages_nothing(self, qtbot, make_tokenized_words):
+        """A real keypress in the Search box must reach the box as a letter.
+
+        Non-vacuous by construction: the same assertion proves the key was
+        delivered (the field holds "k") and that the shortcut did not eat it
+        (nothing staged). A window-scoped shortcut fails both halves at once.
+        """
+        from PyQt6.QtTest import QTest
+
+        dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
+        _select_rows(dlg, [0])
+        dlg.show()
+        qtbot.waitExposed(dlg)
+        QApplication.setActiveWindow(dlg)
+        dlg.search_input.setFocus()
+        qtbot.waitUntil(lambda: dlg.search_input.hasFocus(), timeout=1000)
+
+        QTest.keyClick(dlg.search_input, Qt.Key.Key_K)
+
+        assert dlg.search_input.text() == "k"
+        assert dlg.pending_known_forms() == set()

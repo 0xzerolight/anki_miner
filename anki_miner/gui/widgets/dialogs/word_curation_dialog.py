@@ -51,7 +51,7 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import session_state
 from anki_miner.gui.utils.content_text import content_cell_font, content_phrase_wrap
 from anki_miner.gui.utils.fonts import make_scaled_font
-from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
+from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut, scoped_shortcut
 from anki_miner.gui.utils.qt_helpers import (
     COPY_ROLE,
     CellRole,
@@ -1259,6 +1259,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         deselect_all_shortcut = QShortcut(QKeySequence("Ctrl+D"), self.table)
         deselect_all_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         deselect_all_shortcut.activated.connect(self._deselect_all)
+
+        # K: stage/unstage the highlighted rows for the known list — the same
+        # verb as the "Add to Known Words" button, which already decides the
+        # direction and no-ops without a commit callback. Table-scoped like the
+        # rest: a window-scoped K would stage words while the user types into
+        # Search.
+        scoped_shortcut(self.table, QKeySequence(Qt.Key.Key_K), self._on_add_to_known)
 
         # Ctrl+Return (and the keypad's Ctrl+Enter): confirm the selection.
         # A bare Return can NOT be used here: this dialog owns a Search field, and
