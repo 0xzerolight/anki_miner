@@ -747,7 +747,25 @@ class SingleEpisodeTab(MiningTabBase):
         self.progress_widget.reset()
         self._cancel_requested = False
         # One episode per run, so the receipt counts notes and never items.
-        self._begin_receipt(1)
+        # The run_fields are every choice this launch froze: none of them are
+        # recoverable from the result, and "which options did that run use" is
+        # the first question a report about a wrong card raises.
+        self._begin_receipt(
+            1,
+            run_fields={
+                "video": video_file,
+                "subtitle": subtitle_file,
+                "secondary": secondary_file,
+                "secondary_offset": secondary_offset,
+                "offset": offset,
+                "audio_track": self._audio_track_override,
+                "source_label": source_label,
+                "deck": self.config.anki_deck_name,
+                "note_type": self.config.anki_note_type,
+                "language": config_language(self.config),
+                "review_words": self.config.review_words_before_mining,
+            },
+        )
 
         # Hide action buttons, show cancel button
         self._is_processing = True
@@ -846,6 +864,7 @@ class SingleEpisodeTab(MiningTabBase):
         finish that will not happen, and the button states plainly that the
         request has been made and is being waited on.
         """
+        self._log_run_control("cancel")
         self._cancel_requested = True
         self._publish_task_cancelling()
         self._cancel_active_curation_dialog()

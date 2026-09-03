@@ -400,6 +400,27 @@ class BatchProcessingTab(MiningTabBase):
 
         self._start_processing_with_pairs(pairs)
 
+    def _quick_run_log_fields(self, pairs) -> dict[str, object]:
+        """Name the quick path's run in the log: how many pairs, and from where.
+
+        Pairing is episode-number based over two folders (Issue #39), so the
+        folders and the first few matched stems are what make a "it mined the
+        wrong episodes" report answerable.
+        """
+        return {
+            "review_words": self.review_words_checkbox.isChecked(),
+            "pairs": len(pairs),
+            "first": [self._pair_stem(pair) for pair in pairs[:5]],
+            "video_folder": self.video_folder_selector.path_or_none(),
+            "subtitle_folder": self.subtitle_folder_selector.path_or_none(),
+        }
+
+    @staticmethod
+    def _pair_stem(pair) -> str:
+        """The episode stem of one ``FilePair``, for the run's log line."""
+        video = getattr(pair, "video", None)
+        return Path(video).stem if video else type(pair).__name__
+
     def _start_processing_with_pairs(self, pairs) -> None:
         """Start processing with manually paired files.
 
@@ -409,7 +430,11 @@ class BatchProcessingTab(MiningTabBase):
         # Clear log and reset the bar from the previous run's end state.
         self.log_widget.clear_log()
         self._begin_run(queue_mode=False)
-        self._begin_receipt(len(pairs), item_noun=self.tr("episodes"))
+        self._begin_receipt(
+            len(pairs),
+            item_noun=self.tr("episodes"),
+            run_fields=self._quick_run_log_fields(pairs),
+        )
 
         # Hide action buttons, show cancel
         self._is_processing = True
@@ -495,7 +520,15 @@ class BatchProcessingTab(MiningTabBase):
         self._run_selection = []
 
         # Whole series per item on this path, so the receipt counts series.
-        self._begin_receipt(len(items), item_noun=self.tr("series"))
+        self._begin_receipt(
+            len(items),
+            item_noun=self.tr("series"),
+            run_fields={
+                "review_words": self.review_words_checkbox.isChecked(),
+                "series": len(items),
+                "first": [item.display_name for item in items[:5]],
+            },
+        )
         self._publish_task_start(self.tr("Batch mining"), total=len(items))
 
         curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
@@ -663,6 +696,7 @@ class BatchProcessingTab(MiningTabBase):
 
     def _on_cancel_clicked(self) -> None:
         """Cancel the run: one verb, no prompt, and no invented progress after it."""
+        self._log_run_control("cancel")
         self._cancel_requested = True
         self._publish_task_cancelling()
         # Release any open curation dialog first so the worker doesn't hang (Issue #60).

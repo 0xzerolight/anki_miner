@@ -234,8 +234,10 @@ class _QueueMiningTabBase(MiningTabBase):
         are per-tab UI concerns owned by the caller.
         """
         if self.worker_thread is not None:
+            self._log_run_refused("worker_busy", busy=type(self.worker_thread).__name__)
             return False
         if not items:
+            self._log_run_refused("no_items")
             return False
 
         # Per-run terminal-state flags + tab accumulators. Read by the terminal
@@ -259,6 +261,7 @@ class _QueueMiningTabBase(MiningTabBase):
             presenter = self._presenter
             if presenter is None:
                 self.log_widget.append_warning(self._run_strings.unavailable)
+                self._log_run_refused("no_presenter")
                 return False
 
             def processor_factory() -> EpisodeProcessor:
@@ -295,7 +298,7 @@ class _QueueMiningTabBase(MiningTabBase):
         # (D20). Every queue tab -- the two list queues and all four reading
         # tabs -- launches through here, so the run is accumulated from one
         # place even though each tab's terminal handling differs.
-        self._begin_receipt(len(items))
+        self._begin_receipt(len(items), run_fields=self._run_log_fields(items))
 
         self.log_widget.append_info(tr_format(self._run_strings.run_starting, self._run_strings.mine_label, len(items)))
         # Published before the thread starts, so the first queued item slot
@@ -303,6 +306,32 @@ class _QueueMiningTabBase(MiningTabBase):
         self._begin_task(items)
         worker.start()
         return True
+
+    def _run_log_fields(self, items: list[Any]) -> dict[str, object]:
+        """Options and subjects to put on this run's ``Run start`` line.
+
+        Bounded on purpose: the first few subjects identify the run without the
+        line growing with a two-hundred-video queue. Subclasses whose items
+        carry more than a name override this.
+        """
+        checkbox = getattr(self, "review_words_checkbox", None)
+        return {
+            "review_words": bool(checkbox.isChecked()) if checkbox is not None else False,
+            "first": [self._run_item_label(item) for item in items[:5]],
+        }
+
+    def _run_item_label(self, item: Any) -> str:
+        """Name one queue item for the log, whatever queue model it comes from.
+
+        The six queue screens share this launch path but not their item type, so
+        the label is taken from whichever identifying attribute the item has
+        rather than from a per-screen branch.
+        """
+        for attr in ("video_id", "title", "audio_file", "url"):
+            value = getattr(item, attr, None)
+            if value:
+                return str(value)
+        return type(item).__name__
 
     def _begin_task(self, items: list[Any]) -> None:
         """Publish the run that just started. Silent without a bound registry."""
@@ -336,6 +365,10 @@ class _QueueMiningTabBase(MiningTabBase):
         """Run-level fatal: flag for the terminal bar state and log it."""
         self._run_failed = True
         self.log_widget.append_error(message)
+        # Also to the application log: Activity is per-session and unexported,
+        # so a run killed before its first item left no trace a report could
+        # carry.
+        logger.error("Run fatal: screen=%s message=%s", self._run_log_id(), message)
 
     def _on_item_warning(self, idx: int, item_description: str, error_message: str) -> None:
         """Keep a recoverable per-word loss in Activity without failing the item."""
@@ -758,6 +791,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         for the same reason: it must not keep advancing towards a finish the run
         is no longer heading for.
         """
+        self._log_run_control("stop")
         self._cancel_requested = True
         # Release any open curation dialog first so the blocked worker resumes
         # instead of hanging on _curation_event (Issue #65).
@@ -778,6 +812,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
 
     def _on_pause_requested(self) -> None:
         """Ask the run to stop at the next item boundary."""
+        self._log_run_control("pause")
         worker = self.worker_thread
         if worker is None:
             return
@@ -786,6 +821,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
 
     def _on_resume_requested(self) -> None:
         """Let a paused run carry on."""
+        self._log_run_control("resume")
         worker = self.worker_thread
         if worker is None:
             return
@@ -798,6 +834,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         for confirmation: D22 keeps one prompt-free verb for stopping, and this
         is the quieter option beside it rather than a dialog on top of it.
         """
+        self._log_run_control("finish_current")
         worker = self.worker_thread
         if worker is None:
             return

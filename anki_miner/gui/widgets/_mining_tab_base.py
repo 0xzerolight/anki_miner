@@ -18,7 +18,7 @@ import contextlib
 import logging
 import threading
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import replace
 from functools import partial
 from time import monotonic, time
@@ -46,6 +46,7 @@ from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -248,14 +249,72 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         self._receipt_noun = item_noun
         return receipt
 
-    def _begin_receipt(self, items_total: int, *, item_noun: str | None = None) -> None:
+    def _run_log_id(self) -> str:
+        """Name this screen in the run-lifecycle log lines.
+
+        The published task id is the same string the task registry, the status
+        bar and the queue snapshot already use, so a report and a log line name
+        one screen the same way. Deck Builder publishes no task, so it falls
+        back to its class name rather than logging an anonymous run.
+        """
+        return self.TASK_ID or type(self).__name__
+
+    def _log_run_refused(self, reason: str, **fields: object) -> None:
+        """Record a launch that returned without starting a worker.
+
+        WARNING, not INFO: from the user's side this is the "I pressed Mine and
+        nothing happened" case, and the reason is the whole diagnosis.
+        """
+        log_summary(
+            logger,
+            "Run refused",
+            level=logging.WARNING,
+            screen=self._run_log_id(),
+            reason=reason,
+            **fields,
+        )
+
+    def _log_run_control(self, action: str) -> None:
+        """Record a button that changes a live run (stop, pause, resume, cancel).
+
+        Logged before the "is there a worker" guard, because a control pressed
+        against a run that is already gone is exactly the case a report is
+        trying to explain.
+        """
+        worker = getattr(self, "worker_thread", None)
+        log_summary(
+            logger,
+            "Run control",
+            screen=self._run_log_id(),
+            action=action,
+            worker=type(worker).__name__ if worker is not None else None,
+        )
+
+    def _begin_receipt(
+        self,
+        items_total: int,
+        *,
+        item_noun: str | None = None,
+        run_fields: Mapping[str, object] | None = None,
+    ) -> None:
         """Start accumulating a run, clearing the previous run's receipt.
 
         Args:
             items_total: Items handed to the worker, frozen at launch.
             item_noun: Overrides the installed noun for this run (Batch mines
                 episodes on one path and whole series on the other).
+            run_fields: Screen-specific options the run was launched with, put
+                verbatim on the ``Run start`` line. What a run *used* is not
+                recoverable from its result, so it is recorded at launch.
         """
+        # Emitted before the receipt guard: a screen with no installed receipt
+        # widget (Deck Builder) still has a run, and a run start that only some
+        # screens log is not a lifecycle record.
+        start_fields: dict[str, object] = {"screen": self._run_log_id(), "items": items_total}
+        start_fields.update(run_fields or {})
+        # `level` is stated rather than defaulted so the screen-supplied fields
+        # expand only into `**fields` -- `log_summary` reserves that one name.
+        log_summary(logger, "Run start", level=logging.INFO, **start_fields)
         if self._receipt_widget is None:
             return
         if item_noun is not None:
@@ -326,6 +385,22 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             accumulator.mark_failed()
         monotonic_now, wall_now = self._receipt_now()
         receipt = accumulator.finish(monotonic_now=monotonic_now, wall_now=wall_now)
+        # The one terminal point all eight mining screens pass through, so the
+        # log restates exactly the numbers the user was shown: a support report
+        # quoting a receipt can be reconciled with the run in the log.
+        log_summary(
+            logger,
+            "Run end",
+            screen=self._run_log_id(),
+            outcome=receipt.outcome.value,
+            items_total=receipt.items_total,
+            completed=receipt.items_completed,
+            failed=receipt.items_failed,
+            notes=receipt.notes_added,
+            note_ids=len(receipt.note_ids),
+            active_s=round(receipt.duration.active_s, 1),
+            wall_s=round(max(0.0, wall_now - accumulator.wall_start), 1),
+        )
         # Cleared first: a second terminal signal for the same run must not
         # produce a second receipt with a longer clock.
         self._receipt_accumulator = None
