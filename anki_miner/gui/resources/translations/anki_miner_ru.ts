@@ -5091,11 +5091,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Copy unmined words</source>
-        <translation type="unfinished" />
+        <translation>Копировать слова без карточек</translation>
     </message>
     <message>
         <source>Whitelist words that got no card this run, one per line</source>
-        <translation type="unfinished" />
+        <translation>Слова из белого списка, для которых за этот запуск не была создана карточка, по одному слову в строке</translation>
     </message>
     <message>
         <source>Dismiss</source>
@@ -7527,15 +7527,19 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Whitelist: %1 of %2 mined</source>
-        <translation type="unfinished" />
+        <translation>Белый список: намайнено %1 из %2</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined.</source>
+        <translation>Белый список: намайнено %1 из %2.</translation>
     </message>
     <message>
         <source>Not mined: %1.</source>
-        <translation type="unfinished" />
+        <translation>Не намайнено: %1.</translation>
     </message>
     <message>
         <source>Already known: %1.</source>
-        <translation type="unfinished" />
+        <translation>Уже известно: %1.</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>

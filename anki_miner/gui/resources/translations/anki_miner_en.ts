@@ -7456,6 +7456,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Whitelist: %1 of %2 mined.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Not mined: %1.</source>
         <translation type="unfinished" />
     </message>

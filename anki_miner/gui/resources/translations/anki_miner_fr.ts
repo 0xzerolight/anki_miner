@@ -5078,11 +5078,11 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     </message>
     <message>
         <source>Copy unmined words</source>
-        <translation type="unfinished" />
+        <translation>Copier les mots non extraits</translation>
     </message>
     <message>
         <source>Whitelist words that got no card this run, one per line</source>
-        <translation type="unfinished" />
+        <translation>Mots de la liste blanche sans carte lors de cette exécution, un par ligne</translation>
     </message>
     <message>
         <source>Dismiss</source>
@@ -7513,15 +7513,19 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     </message>
     <message>
         <source>Whitelist: %1 of %2 mined</source>
-        <translation type="unfinished" />
+        <translation>Liste blanche : %1 sur %2 extraits</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined.</source>
+        <translation>Liste blanche : %1 sur %2 extraits.</translation>
     </message>
     <message>
         <source>Not mined: %1.</source>
-        <translation type="unfinished" />
+        <translation>Non extraits : %1.</translation>
     </message>
     <message>
         <source>Already known: %1.</source>
-        <translation type="unfinished" />
+        <translation>Déjà connus : %1.</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>

@@ -5065,11 +5065,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Copy unmined words</source>
-        <translation type="unfinished" />
+        <translation>マイニングされなかった単語をコピー</translation>
     </message>
     <message>
         <source>Whitelist words that got no card this run, one per line</source>
-        <translation type="unfinished" />
+        <translation>今回の実行でカードが作成されなかったホワイトリストの単語（1 行に 1 つ）</translation>
     </message>
     <message>
         <source>Dismiss</source>
@@ -7499,15 +7499,19 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Whitelist: %1 of %2 mined</source>
-        <translation type="unfinished" />
+        <translation>ホワイトリスト: %2 件中 %1 件マイニング済み</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined.</source>
+        <translation>ホワイトリスト: %2 件中 %1 件マイニング済み。</translation>
     </message>
     <message>
         <source>Not mined: %1.</source>
-        <translation type="unfinished" />
+        <translation>マイニングされなかった単語: %1。</translation>
     </message>
     <message>
         <source>Already known: %1.</source>
-        <translation type="unfinished" />
+        <translation>既知単語: %1。</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>

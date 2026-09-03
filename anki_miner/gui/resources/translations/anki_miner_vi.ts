@@ -5065,11 +5065,11 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Copy unmined words</source>
-        <translation type="unfinished" />
+        <translation>Sao chép từ chưa khai thác</translation>
     </message>
     <message>
         <source>Whitelist words that got no card this run, one per line</source>
-        <translation type="unfinished" />
+        <translation>Các từ trong danh sách trắng chưa có thẻ trong lần chạy này, mỗi dòng một từ</translation>
     </message>
     <message>
         <source>Dismiss</source>
@@ -7499,15 +7499,19 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Whitelist: %1 of %2 mined</source>
-        <translation type="unfinished" />
+        <translation>Danh sách trắng: %1/%2 đã khai thác</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined.</source>
+        <translation>Danh sách trắng: %1/%2 đã khai thác.</translation>
     </message>
     <message>
         <source>Not mined: %1.</source>
-        <translation type="unfinished" />
+        <translation>Chưa khai thác: %1.</translation>
     </message>
     <message>
         <source>Already known: %1.</source>
-        <translation type="unfinished" />
+        <translation>Đã biết: %1.</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>

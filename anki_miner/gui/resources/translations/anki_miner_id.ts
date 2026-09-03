@@ -5065,11 +5065,11 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Copy unmined words</source>
-        <translation type="unfinished" />
+        <translation>Salin kata yang tidak di-mining</translation>
     </message>
     <message>
         <source>Whitelist words that got no card this run, one per line</source>
-        <translation type="unfinished" />
+        <translation>Kata dalam daftar putih yang tidak mendapatkan kartu pada proses ini, satu per baris</translation>
     </message>
     <message>
         <source>Dismiss</source>
@@ -7499,15 +7499,19 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Whitelist: %1 of %2 mined</source>
-        <translation type="unfinished" />
+        <translation>Daftar putih: %1 dari %2 di-mining</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined.</source>
+        <translation>Daftar putih: %1 dari %2 di-mining.</translation>
     </message>
     <message>
         <source>Not mined: %1.</source>
-        <translation type="unfinished" />
+        <translation>Tidak di-mining: %1.</translation>
     </message>
     <message>
         <source>Already known: %1.</source>
-        <translation type="unfinished" />
+        <translation>Sudah dikenal: %1.</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>

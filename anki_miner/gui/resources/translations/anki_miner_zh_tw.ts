@@ -5065,11 +5065,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Copy unmined words</source>
-        <translation type="unfinished" />
+        <translation>複製未採集單字</translation>
     </message>
     <message>
         <source>Whitelist words that got no card this run, one per line</source>
-        <translation type="unfinished" />
+        <translation>本次執行未建立卡片的白名單單字，每行一個</translation>
     </message>
     <message>
         <source>Dismiss</source>
@@ -7499,15 +7499,19 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Whitelist: %1 of %2 mined</source>
-        <translation type="unfinished" />
+        <translation>白名單：%1/%2 已採集</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined.</source>
+        <translation>白名單：%1/%2 已採集。</translation>
     </message>
     <message>
         <source>Not mined: %1.</source>
-        <translation type="unfinished" />
+        <translation>未採集：%1。</translation>
     </message>
     <message>
         <source>Already known: %1.</source>
-        <translation type="unfinished" />
+        <translation>已知：%1。</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>

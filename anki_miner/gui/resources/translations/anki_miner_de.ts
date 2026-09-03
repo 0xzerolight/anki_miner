@@ -5078,11 +5078,11 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
     </message>
     <message>
         <source>Copy unmined words</source>
-        <translation type="unfinished" />
+        <translation>Nicht gesammelte Wörter kopieren</translation>
     </message>
     <message>
         <source>Whitelist words that got no card this run, one per line</source>
-        <translation type="unfinished" />
+        <translation>Whitelist-Wörter, für die in diesem Lauf keine Karte erstellt wurde, ein Wort pro Zeile</translation>
     </message>
     <message>
         <source>Dismiss</source>
@@ -7513,15 +7513,19 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
     </message>
     <message>
         <source>Whitelist: %1 of %2 mined</source>
-        <translation type="unfinished" />
+        <translation>Whitelist: %1 von %2 gesammelt</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined.</source>
+        <translation>Whitelist: %1 von %2 gesammelt.</translation>
     </message>
     <message>
         <source>Not mined: %1.</source>
-        <translation type="unfinished" />
+        <translation>Nicht gesammelt: %1.</translation>
     </message>
     <message>
         <source>Already known: %1.</source>
-        <translation type="unfinished" />
+        <translation>Bereits bekannt: %1.</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>
