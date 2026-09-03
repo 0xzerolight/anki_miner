@@ -30,6 +30,7 @@ that keeps it that way.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -37,9 +38,15 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QBoxLayout, QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.utils.logging_ext import log_summary
 
 #: Object name the stylesheet and the theme tests address the banner by.
 BANNER_OBJECT_NAME = "screen-issue-banner"
+
+#: Logger every reported issue is mirrored to, delivered to a banner or not.
+ISSUE_LOGGER_NAME = "anki_miner.gui.issues"
+
+_ISSUE_LOG = logging.getLogger(ISSUE_LOGGER_NAME)
 
 
 @dataclass(frozen=True)
@@ -66,6 +73,32 @@ class ScreenIssue:
             raise ValueError("a screen issue needs a summary the user can read")
 
 
+def _log_issue(issue: ScreenIssue, *, screen: str, delivered: bool) -> None:
+    """Mirror one reported issue to the log.
+
+    ``delivered`` is the field that makes a support report readable: ``no``
+    means the issue was raised on a screen with no banner installed, so the
+    user was told nothing and this record is the only witness. WARNING either
+    way -- a recoverable problem is by definition a changed, user-visible
+    result.
+
+    Called from the three places an issue can be reported: the banner showing
+    one, a host with no banner, and a controller whose origin has no host.
+    Every reporting site in the app funnels through one of those, so no site
+    logs for itself and none can be forgotten.
+    """
+    log_summary(
+        _ISSUE_LOG,
+        "Screen issue",
+        level=logging.WARNING,
+        screen=screen,
+        summary=issue.summary,
+        details=issue.details,
+        action=issue.action_id,
+        delivered="yes" if delivered else "no",
+    )
+
+
 class ScreenIssueBanner(QFrame):
     """The persistent banner itself. One per screen; reused, never rebuilt.
 
@@ -79,6 +112,11 @@ class ScreenIssueBanner(QFrame):
 
     action_requested = pyqtSignal(str)
     dismissed = pyqtSignal()
+
+    #: Class name of the screen that installed this banner, for the log field.
+    #: Stamped by :meth:`ScreenIssueHost.install_issue_banner`; a banner built
+    #: directly keeps the empty default and logs ``screen=-``.
+    screen_name: str = ""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -171,9 +209,20 @@ class ScreenIssueBanner(QFrame):
         self.action_button.setText(issue.action_text)
         self.action_button.setVisible(bool(issue.action_text))
         self.show()
+        _log_issue(issue, screen=self.screen_name, delivered=True)
 
     def clear_issue(self) -> None:
         """Hide the banner. Callers do this when the failure has since succeeded."""
+        # DEBUG, and unconditional: screens clear on entry, so most calls
+        # remove nothing. Logged before the reset, because the summary of what
+        # was actually removed is what dates a fixed problem in the log.
+        log_summary(
+            _ISSUE_LOG,
+            "Screen issue cleared",
+            level=logging.DEBUG,
+            screen=self.screen_name,
+            summary=self._issue.summary if self._issue is not None else "",
+        )
         self._issue = None
         self._action = None
         self.details_button.setChecked(False)
@@ -223,6 +272,7 @@ class ScreenIssueHost:
         Index 0 by default: a problem with the screen belongs above the screen.
         """
         banner = ScreenIssueBanner()
+        banner.screen_name = type(self).__name__
         layout.insertWidget(index, banner)
         self._screen_issue_banner = banner
         return banner
@@ -234,8 +284,13 @@ class ScreenIssueHost:
     def show_screen_issue(self, issue: ScreenIssue, *, action: Callable[[], None] | None = None) -> None:
         """Report ``issue`` on this screen. No-op if no banner is installed."""
         banner = self.issue_banner()
-        if banner is not None:
-            banner.show_issue(issue, action=action)
+        if banner is None:
+            # Inert, not silent: a screen migrated later still swallows the
+            # problem, and only this record separates that from a run that had
+            # nothing to report.
+            _log_issue(issue, screen=type(self).__name__, delivered=False)
+            return
+        banner.show_issue(issue, action=action)
 
     def clear_screen_issue(self) -> None:
         """Clear this screen's banner. No-op if no banner is installed."""
@@ -277,6 +332,11 @@ def report_screen_issue(
     """
     host = _find_host(origin)
     if host is None:
+        _log_issue(
+            issue,
+            screen=type(origin).__name__ if origin is not None else "",
+            delivered=False,
+        )
         return False
     host.show_screen_issue(issue, action=action)
     return True
