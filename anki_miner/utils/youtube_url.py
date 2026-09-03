@@ -38,7 +38,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from typing import Literal
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, parse_qsl, unquote, urlencode, urlparse, urlsplit, urlunsplit
 
 # ---------------------------------------------------------------------------
 # Compiled patterns
@@ -68,6 +68,12 @@ _YOUTUBE_HOSTS = frozenset(
     }
 )
 _YOUTU_BE_HOST = "youtu.be"
+
+# Query keys a log line may keep verbatim: they identify WHICH video, playlist,
+# playlist position and timestamp a run was about. Everything else in a pasted
+# YouTube URL (``si``, ``pp``, ``ab_channel``, campaign parameters) is tracking
+# that ties the URL to the person who copied it.
+_LOGGABLE_QUERY_KEYS = frozenset({"v", "list", "index", "t"})
 
 
 # ---------------------------------------------------------------------------
@@ -234,3 +240,42 @@ def classify_youtube_url(url: str) -> YouTubeUrlInfo:
             return YouTubeUrlInfo(kind="video", video_id=video_id, playlist_id=None)
 
     return _UNKNOWN
+
+
+def redact_youtube_url_for_log(url: str) -> str:
+    """Render *url* for a log line, keeping the ids and dropping the tracking.
+
+    ``audio_fetch_common.redact_url_for_log`` drops the whole query string,
+    which for YouTube erases the one fact every yt-dlp record needs: every log
+    line about a fetch read ``https://www.youtube.com/watch`` and no support
+    report could say which video failed. The keys in
+    :data:`_LOGGABLE_QUERY_KEYS` are kept verbatim (locked decision: video ids
+    are diagnosis, not a secret) and every other key, plus the fragment, is
+    dropped.
+
+    Fails closed to ``"<redacted-url>"`` on userinfo or anything that does not
+    parse as an absolute URL, the same guard as ``redact_url_for_log``: a token
+    that cannot be parsed cannot be proven free of credentials.
+
+    Args:
+        url: URL as the user supplied it.
+
+    Returns:
+        The redacted URL, or ``"<redacted-url>"``.
+    """
+    try:
+        parts = urlsplit(url)
+        if parts.username is not None or "@" in unquote(parts.netloc):
+            return "<redacted-url>"
+        hostname = parts.hostname
+        port = parts.port
+    except ValueError:
+        return "<redacted-url>"
+    if not parts.scheme or hostname is None:
+        return "<redacted-url>"
+    host = f"[{hostname}]" if ":" in hostname else hostname
+    netloc = f"{host}:{port}" if port is not None else host
+    kept = [
+        (key, value) for key, value in parse_qsl(parts.query, keep_blank_values=True) if key in _LOGGABLE_QUERY_KEYS
+    ]
+    return urlunsplit((parts.scheme, netloc, parts.path, urlencode(kept), ""))

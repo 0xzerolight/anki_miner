@@ -12,6 +12,7 @@ sync by hand across two files.
 from __future__ import annotations
 
 import functools
+import logging
 import re
 import shutil
 import subprocess
@@ -20,8 +21,11 @@ from pathlib import Path
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
+from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.subprocess_utils import no_window_kwargs
 from anki_miner.utils.ytdlp_resolver import managed_ytdlp_lock
+
+logger = logging.getLogger(__name__)
 
 # Message appended to YtdlpNotFoundError so the user can self-serve the fix.
 YTDLP_MISSING_HINT = "yt-dlp executable not found. Use Settings → YouTube → Update yt-dlp now, then retry."
@@ -82,21 +86,10 @@ def ytdlp_supports_js_runtimes(ytdlp_path: str) -> bool:
 
     Cached per resolved path. Guards against older yt-dlp that lacks the flag —
     passing an unknown option would break all YouTube mining. Any failure (yt-dlp
-    missing, timeout) returns False -> behave as before.
+    missing, timeout) returns False -> behave as before, with a WARNING naming
+    the flag that was therefore never passed.
     """
-    try:
-        with managed_ytdlp_lock(ytdlp_path):
-            proc = subprocess.run(
-                [ytdlp_path, "--ignore-config", "--help"],
-                stdin=subprocess.DEVNULL,
-                capture_output=True,
-                text=True,
-                timeout=30,
-                **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
-            )
-    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-        return False
-    return "--js-runtimes" in (proc.stdout or "")
+    return _probe_flag(ytdlp_path, "--js-runtimes")
 
 
 @functools.cache
@@ -108,6 +101,23 @@ def ytdlp_supports_remote_components(ytdlp_path: str) -> bool:
     yt-dlp that knows one flag but not the other still degrades safely. Any
     failure (yt-dlp missing, timeout) returns False -> behave as before. Issue #64.
     """
+    return _probe_flag(ytdlp_path, "--remote-components")
+
+
+def _probe_flag(ytdlp_path: str, flag: str) -> bool:
+    """Run ``yt-dlp --help`` once and report whether it lists *flag*.
+
+    Not cached itself: the two public probes carry the caches (their
+    ``cache_clear`` is a pinned test seam), and each keeps its own so an older
+    binary that knows one flag but not the other still degrades per flag.
+
+    The failure branch is the reason this exists. A probe that fails silently
+    drops the flag from every later argv, and the user then sees "n challenge
+    solving failed" — the visible symptom of Issue #64 — with nothing in the log
+    connecting it to a probe that never ran. The success branch records both
+    capabilities, because one ``--help`` answers both questions and knowing
+    which flags the resolved binary accepts is what makes a pasted argv readable.
+    """
     try:
         with managed_ytdlp_lock(ytdlp_path):
             proc = subprocess.run(
@@ -118,9 +128,26 @@ def ytdlp_supports_remote_components(ytdlp_path: str) -> bool:
                 timeout=30,
                 **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
             )
-    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+        log_summary(
+            logger,
+            "yt-dlp capability probe failed",
+            level=logging.WARNING,
+            flag=flag,
+            path=ytdlp_path,
+            exc=f"{type(exc).__name__}: {exc}",
+        )
         return False
-    return "--remote-components" in (proc.stdout or "")
+    help_text = proc.stdout or ""
+    log_summary(
+        logger,
+        "yt-dlp capability",
+        level=logging.DEBUG,
+        js_runtimes="--js-runtimes" in help_text,
+        remote_components="--remote-components" in help_text,
+        path=ytdlp_path,
+    )
+    return flag in help_text
 
 
 def cookie_args(config: AnkiMinerConfig) -> list[str]:
@@ -129,11 +156,21 @@ def cookie_args(config: AnkiMinerConfig) -> list[str]:
     A cookies file (``--cookies``) takes precedence over the browser
     dropdown (``--cookies-from-browser``); the two flags are mutually
     exclusive — yt-dlp errors if both are passed.
+
+    Which of the three sources a run actually used is the first question of
+    every bot-wall and cookie-decrypt report, and precedence makes it
+    unguessable from the settings alone: a leftover cookies file silently wins
+    over the browser the user just picked. The source is therefore recorded at
+    INFO. The cookie file's PATH is logged verbatim (locked decision: a path is
+    a path); its CONTENTS never reach a log.
     """
     if config.youtube_cookies_file:
+        log_summary(logger, "yt-dlp cookie source", source="file", value=config.youtube_cookies_file)
         return ["--cookies", str(config.youtube_cookies_file)]
     if config.youtube_cookies_from_browser:
+        log_summary(logger, "yt-dlp cookie source", source="browser", value=config.youtube_cookies_from_browser)
         return ["--cookies-from-browser", config.youtube_cookies_from_browser]
+    log_summary(logger, "yt-dlp cookie source", source="none", value=None)
     return []
 
 

@@ -28,8 +28,10 @@ from anki_miner.exceptions.youtube import (
 )
 from anki_miner.models.youtube import FetchedMedia, PlaylistEntry, PlaylistInfo, SubMode, VideoInfo
 from anki_miner.services import ytdlp_invocation
-from anki_miner.services.audio_fetch_common import redact_url_for_log
+from anki_miner.utils.logging_ext import capped, log_summary
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
+from anki_miner.utils.subprocess_log import STDERR_TAIL_LINES, log_command
+from anki_miner.utils.youtube_url import redact_youtube_url_for_log
 from anki_miner.utils.ytdlp_resolver import resolve_ytdlp, ytdlp_generation_lock
 
 if TYPE_CHECKING:
@@ -108,7 +110,7 @@ class YouTubeFetcherService:
                 required keys.
             VideoTooLongError: video duration exceeds configured maximum.
         """
-        logger.info("youtube probe starting: %s", redact_url_for_log(url))
+        logger.info("youtube probe starting: %s", redact_youtube_url_for_log(url))
         with ytdlp_generation_lock() as release_unless_managed:
             cmd: list[str] = [
                 self._ytdlp(),
@@ -125,12 +127,16 @@ class YouTubeFetcherService:
             # probe alone, --config-location loads a planted --exec config). T-34.
             cmd.append("--")
             cmd.append(url)
+            # INFO, not the DEBUG run_supervised already emits: a probe failure is
+            # user-facing, and its argv is the record a support report needs.
+            log_command(logger, "yt-dlp probe", cmd, timeout_s=timeout_s, level=logging.INFO)
             # Only the managed slot keeps the lock across the run; see
             # ytdlp_generation_lock. Must stay the last statement before the spawn.
             release_unless_managed(cmd[0])
             proc = run_supervised(
                 cmd,
                 timeout_s=timeout_s,
+                op="yt-dlp probe",
             )
 
         if isinstance(proc.error, FileNotFoundError):
@@ -256,7 +262,7 @@ class YouTubeFetcherService:
         """
         logger.info(
             "youtube playlist probe starting: %s (limit=%s)",
-            redact_url_for_log(url),
+            redact_youtube_url_for_log(url),
             limit,
         )
         with ytdlp_generation_lock() as release_unless_managed:
@@ -275,12 +281,16 @@ class YouTubeFetcherService:
             # End-of-options separator before the user URL — see probe_metadata. T-34.
             cmd.append("--")
             cmd.append(url)
+            # INFO, not the DEBUG run_supervised already emits: a probe failure is
+            # user-facing, and its argv is the record a support report needs.
+            log_command(logger, "yt-dlp probe", cmd, timeout_s=timeout_s, level=logging.INFO)
             # Only the managed slot keeps the lock across the run; see
             # ytdlp_generation_lock. Must stay the last statement before the spawn.
             release_unless_managed(cmd[0])
             proc = run_supervised(
                 cmd,
                 timeout_s=timeout_s,
+                op="yt-dlp probe",
             )
 
         if isinstance(proc.error, FileNotFoundError):
@@ -494,7 +504,15 @@ class YouTubeFetcherService:
             YouTubeFetchError: any other non-zero exit, cancellation, or
                 missing/zero-byte output file.
         """
-        logger.info("youtube fetch starting: id=%s workspace=%s", video_id, workspace)
+        log_summary(
+            logger,
+            "youtube fetch starting",
+            id=video_id,
+            url=redact_youtube_url_for_log(url),
+            sub_mode=sub_mode,
+            fallback_allowed=fallback_allowed,
+            workspace=workspace,
+        )
         self._preflight_ffmpeg()
 
         tail: collections.deque[str] = collections.deque(maxlen=50)
@@ -528,6 +546,10 @@ class YouTubeFetcherService:
 
         with ytdlp_generation_lock() as release_unless_managed:
             cmd = self._build_fetch_cmd(url, workspace, sub_mode, fallback_allowed=fallback_allowed)
+            # INFO: the format selector, the cookie source and the resolved yt-dlp
+            # path are the three facts a failed fetch is diagnosed from, and a user
+            # who hits one has not enabled debug logging first.
+            log_command(logger, "yt-dlp fetch", cmd, timeout_s=_YTDLP_FETCH_TIMEOUT_S, level=logging.INFO)
             # A fetch runs for as long as the video takes, so only the managed slot
             # keeps the lock across it; see ytdlp_generation_lock. Must stay the
             # last statement before the spawn.
@@ -539,6 +561,8 @@ class YouTubeFetcherService:
                 line_callback=handle_line,
                 combine_stderr=True,
                 retain_output=False,
+                op="yt-dlp fetch",
+                noise_filter=ytdlp_invocation.is_progress_only,
             )
         if isinstance(process_result.error, FileNotFoundError):
             raise YtdlpNotFoundError(ytdlp_invocation.YTDLP_MISSING_HINT) from process_result.error
@@ -550,6 +574,8 @@ class YouTubeFetcherService:
             if process_result.returncode is None and process_result.error is not None:
                 raise YouTubeFetchError(f"yt-dlp process failed: {process_result.error}") from process_result.error
             self._raise_for_error(tail, sub_mode)
+
+        self._log_success_tail(tail)
 
         # Success: locate output files by globbing on video_id.
         result = self._resolve_outputs(workspace, video_id, sub_mode)
@@ -690,6 +716,33 @@ class YouTubeFetcherService:
         return cmd
 
     @staticmethod
+    def _log_failure_tail(tail: collections.deque[str]) -> None:
+        """Record the last 20 non-progress output lines of a failed yt-dlp run."""
+        lines = list(tail)[-STDERR_TAIL_LINES:]
+        if not lines:
+            logger.warning("yt-dlp failed with no output")
+            return
+        # The tail is an argument, never concatenated into the format string: a
+        # yt-dlp line containing '%' would otherwise break %-formatting.
+        logger.warning("yt-dlp failed, output tail:%s", "".join(f"\n  {line}" for line in lines))
+
+    @staticmethod
+    def _log_success_tail(tail: collections.deque[str]) -> None:
+        """Surface yt-dlp's own warnings from a run that still succeeded.
+
+        A fetch that exits zero can still have fallen back — a stale extractor
+        warning, a subtitle track yt-dlp declined to write — and that line is
+        the only warning of the next failure. Progress ticks never reach this
+        deque (``is_progress_only``), so the count is a count of real output.
+        """
+        notable = [line for line in tail if "WARNING:" in line or "ERROR:" in line]
+        if not notable:
+            logger.debug("yt-dlp output lines: count=%d", len(tail))
+            return
+        for line in capped(notable, 20):
+            logger.warning("yt-dlp: %s", line)
+
+    @staticmethod
     def _is_postprocess_line(line: str) -> bool:
         if any(marker in line for marker in ytdlp_invocation.POSTPROCESS_MARKERS):
             return True
@@ -714,6 +767,16 @@ class YouTubeFetcherService:
         """
         joined_lower = "\n".join(tail).lower()
         classification = ytdlp_invocation.classify_error_tail(joined_lower)
+        # Which signature matched (or that none did) decides the message the user
+        # reads and, in the queue worker, whether the item is retried at all — so
+        # the classification is recorded next to the tail it was derived from.
+        log_summary(
+            logger,
+            "yt-dlp classify",
+            tag=classification,
+            sub_mode=sub_mode,
+            tail_lines=len(tail),
+        )
 
         if classification == "bot":
             return BotDetectionError(
@@ -772,7 +835,14 @@ class YouTubeFetcherService:
         return None
 
     def _raise_for_error(self, tail: collections.deque[str], sub_mode: SubMode) -> None:
-        """Raise the fetch-side failure for a non-zero yt-dlp exit."""
+        """Raise the fetch-side failure for a non-zero yt-dlp exit.
+
+        The tail is logged here rather than left to the exception: a typed
+        failure (bot wall, cookie source) replaces yt-dlp's own text with a
+        remedy, so without this record the words yt-dlp actually printed never
+        reach the log at all.
+        """
+        self._log_failure_tail(tail)
         error = self._classified_error(tail, sub_mode)
         if error is not None:
             raise error
@@ -788,6 +858,10 @@ class YouTubeFetcherService:
         unrecognized yt-dlp error is more useful on screen in full than
         paraphrased (pinned by test_long_multiline_probe_error_stays_off_the_row).
         """
+        # No tail log here: a probe keeps its output, so run_supervised already
+        # logged this exact tail at WARNING with the argv. Only the fetch, which
+        # runs with retain_output=False and classifies from its own callback
+        # buffer, has to record the lines it decided on.
         lines = (stderr or "").strip().splitlines()[-20:]
         error = self._classified_error(collections.deque(lines), None)
         if error is not None:
