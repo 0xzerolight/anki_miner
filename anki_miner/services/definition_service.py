@@ -4,15 +4,18 @@ from __future__ import annotations
 
 import contextlib
 import logging
+from collections import Counter
 from collections.abc import Callable, Iterator
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.exceptions import AnkiMinerException
 from anki_miner.interfaces import ProgressCallback
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import capped, log_summary
 
 if TYPE_CHECKING:
     from anki_miner.interfaces import DictionaryProvider
@@ -26,6 +29,43 @@ if TYPE_CHECKING:
     from anki_miner.services.dictionary.registry import DictionaryRegistry
 
 logger = logging.getLogger(__name__)
+
+
+def _log_provider_failure(
+    provider: DictionaryProvider,
+    operation: str,
+    exc: Exception,
+    *,
+    subject: str | None = None,
+) -> None:
+    """One WARNING naming the provider, its slot on disk and the failing input.
+
+    "Definitions are missing" is unactionable without knowing WHICH dictionary
+    failed and where its index lives: two slots can carry the same display name,
+    and the chain silently continues past the failure. ``dict_id``/``db`` come
+    from the offline provider surface (``IndexedDictProvider``); online and stub
+    providers carry neither and render ``-``.
+
+    A typed :class:`AnkiMinerException` is an anticipated, self-describing
+    failure and gets no traceback (matching ``CancellableWorker.report_failure``);
+    anything else is a bug in a provider and keeps its stack.
+    """
+    logger.warning(
+        "Provider '%s' raised during %s%s; skipping: dict_id=%s db=%s %s: %s",
+        provider.name,
+        operation,
+        f" of '{subject}'" if subject is not None else "",
+        getattr(provider, "dict_id", None) or "-",
+        getattr(provider, "_db_path", None) or "-",
+        type(exc).__name__,
+        exc,
+        # The exception object, not True: this helper runs one frame below the
+        # `except` clause, so relying on the ambient sys.exc_info() would break
+        # the moment a caller logs outside its handler.
+        exc_info=None if isinstance(exc, AnkiMinerException) else exc,
+        # 2, so %(lineno)d resolves to the failing call site, not to this helper.
+        stacklevel=2,
+    )
 
 
 def _word_unique_batches(
@@ -311,16 +351,30 @@ class DefinitionService:
                 try:
                     html: str | None = fb(cand_text, cand_conditions)
                 except Exception as e:
-                    logger.warning(
-                        "Provider '%s' raised during lookup_fallback of '%s'; skipping: %s",
-                        provider.name,
-                        cand_text,
-                        e,
-                    )
+                    _log_provider_failure(provider, "lookup_fallback", e, subject=cand_text)
                     continue
                 if html:
                     return html
         return None
+
+    def _chain_description(self) -> list[str]:
+        """Render the walked chain as ``name:dict_id:availability`` per provider.
+
+        The receipt has to answer "which dictionaries were actually consulted",
+        which the configured chain alone cannot: a slot whose index is stale or
+        missing reports itself unavailable and is silently skipped, and that is
+        the usual cause of a batch that resolves nothing.
+        """
+        described: list[str] = []
+        for provider in self._providers:
+            try:
+                availability = "y" if provider.is_available() else "n"
+            except Exception:
+                # The receipt is a diagnostic; a provider that cannot even
+                # answer this must not take the batch down with it.
+                availability = "?"
+            described.append(f"{provider.name}:{getattr(provider, 'dict_id', None) or '-'}:{availability}")
+        return described
 
     def get_definitions_batch(
         self,
@@ -382,6 +436,10 @@ class DefinitionService:
         # but the same spelling with two readings must resolve twice.
         resolved: dict[tuple[str, str | None], str] = {}
         remaining = list(dict.fromkeys(words))
+        # Which provider actually produced each hit — the attribution the
+        # "definitions are missing" report needs and the chain order alone
+        # cannot give.
+        hits_by_provider: Counter[str] = Counter()
 
         # NOTE: the two ``except Exception`` clauses below are deliberately broad,
         # not an oversight. This is the never-raises provider boundary: a provider
@@ -410,11 +468,7 @@ class DefinitionService:
                     try:
                         hits = batch_fn(batch, lemmas=batch_lemmas) if batch_lemmas else batch_fn(batch)
                     except Exception as e:
-                        logger.warning(
-                            "Provider '%s' raised during lookup_many; skipping: %s",
-                            provider.name,
-                            e,
-                        )
+                        _log_provider_failure(provider, "lookup_many", e)
                         still_remaining.extend(batch)
                         for uncalled in batches[batch_index + 1 :]:
                             still_remaining.extend(uncalled)
@@ -424,6 +478,7 @@ class DefinitionService:
                         result = hits.get(word)
                         if result:
                             resolved[pair] = result
+                            hits_by_provider[provider.name] += 1
                         else:
                             still_remaining.append(pair)
                 if cancelled:
@@ -440,16 +495,12 @@ class DefinitionService:
                     try:
                         result = provider.lookup(word)
                     except Exception as e:
-                        logger.warning(
-                            "Provider '%s' raised during lookup of '%s'; skipping: %s",
-                            provider.name,
-                            word,
-                            e,
-                        )
+                        _log_provider_failure(provider, "lookup", e, subject=word)
                         still_remaining.append(pair)
                         continue
                     if result:
                         resolved[pair] = result
+                        hits_by_provider[provider.name] += 1
                     else:
                         still_remaining.append(pair)
                 if cancelled:
@@ -476,6 +527,7 @@ class DefinitionService:
                 )
                 if html:
                     resolved[pair] = html
+                    hits_by_provider["fallback"] += 1
 
         results: list[str | None] = []
         for i, pair in enumerate(words, 1):
@@ -502,6 +554,26 @@ class DefinitionService:
 
         if progress_callback and not cancellation_requested():
             progress_callback.on_complete()
+
+        # Counted over the returned list, not over the internal ``resolved``
+        # map: duplicate pairs collapse there, so only the output tells the
+        # user how many of the words they asked for actually got a definition.
+        missed_words = list(dict.fromkeys(word for (word, _r), hit in zip(words, results, strict=True) if not hit))
+        resolved_count = sum(1 for hit in results if hit)
+        log_summary(
+            logger,
+            "Definitions batch",
+            requested=len(words),
+            resolved=resolved_count,
+            missed=len(results) - resolved_count,
+            chain=capped(self._chain_description()),
+            hits=capped(f"{name}:{count}" for name, count in hits_by_provider.most_common()),
+        )
+        if missed_words:
+            # DEBUG, and capped: the miss list is the follow-up question after
+            # the counts, and a full-episode miss list would otherwise push the
+            # receipt itself out of a readable log.
+            log_summary(logger, "Definitions missed", level=logging.DEBUG, words=capped(missed_words))
         return results
 
     def has_offline_definitions(self, words: list[str]) -> dict[str, bool]:
@@ -549,11 +621,7 @@ class DefinitionService:
                     # survive; the render-path Rule A/B scope would drop it.
                     hits = batch_fn([(w, None) for w in remaining], scope_homographs=False)
                 except Exception as e:
-                    logger.warning(
-                        "Provider '%s' raised during lookup_many; skipping: %s",
-                        provider.name,
-                        e,
-                    )
+                    _log_provider_failure(provider, "lookup_many", e)
                     continue
                 still_remaining: list[str] = []
                 for word in remaining:
@@ -568,12 +636,7 @@ class DefinitionService:
                     try:
                         result = provider.lookup(word)
                     except Exception as e:
-                        logger.warning(
-                            "Provider '%s' raised during lookup of '%s'; skipping: %s",
-                            provider.name,
-                            word,
-                            e,
-                        )
+                        _log_provider_failure(provider, "lookup", e, subject=word)
                         still_remaining.append(word)
                         continue
                     if result:
@@ -615,11 +678,7 @@ class DefinitionService:
             try:
                 hits = has_terms_fn(remaining)
             except Exception as e:
-                logger.warning(
-                    "Provider '%s' raised during has_terms; skipping: %s",
-                    provider.name,
-                    e,
-                )
+                _log_provider_failure(provider, "has_terms", e)
                 continue
             found.update(hits)
             remaining = [t for t in remaining if t not in hits]
@@ -692,11 +751,7 @@ class DefinitionService:
             try:
                 hits = terms_readings_fn(remaining)
             except Exception as e:
-                logger.warning(
-                    "Provider '%s' raised during terms_readings; skipping: %s",
-                    provider.name,
-                    e,
-                )
+                _log_provider_failure(provider, "terms_readings", e)
                 continue
             found.update(hits)
             remaining = [t for t in remaining if t not in hits]
