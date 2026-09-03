@@ -310,6 +310,9 @@ def test_ffsubsync_child_flag_dispatches_before_any_bootstrap(
     monkeypatch.setattr(launch, "_install_early_crash_sink", lambda: calls.append("sink"))
     monkeypatch.setattr(launch, "_create_windows_app_mutex", lambda: calls.append("mutex"))
     monkeypatch.setattr(launch, "_inject_windows_truststore", lambda: calls.append("truststore"))
+    # Stubbed for the order assertion, and because the real one adds a root
+    # handler and the process-wide log hooks for the rest of the session.
+    monkeypatch.setattr(launch, "_install_child_log_sink", lambda: calls.append("child sink"))
     fake_child = ModuleType("anki_miner.services.sync_engines._ffsubsync_child")
     fake_child.main = lambda argv: calls.append(("child", argv)) or 3  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "anki_miner.services.sync_engines._ffsubsync_child", fake_child)
@@ -320,7 +323,7 @@ def test_ffsubsync_child_flag_dispatches_before_any_bootstrap(
     )
 
     assert launch.main() == 3
-    assert calls == [("child", ["ref.srt", "-i", "in.srt", "-o", "out.srt"])]
+    assert calls == ["child sink", ("child", ["ref.srt", "-i", "in.srt", "-o", "out.srt"])]
 
 
 def test_installer_app_mutex_matches_launch_constant() -> None:
