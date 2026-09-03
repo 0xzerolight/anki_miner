@@ -370,3 +370,40 @@ def test_health_snapshot_logs_first_sweep_and_only_changed_states(main_window, c
 
     changed_record = next(record for record in caplog.records if record.getMessage().startswith("health app.updates:"))
     assert "state=warn" in changed_record.getMessage()
+
+
+def test_ui_facts_are_collected_on_the_gui_thread(main_window, monkeypatch, tmp_path):
+    from PyQt6.QtGui import QGuiApplication
+
+    from anki_miner.gui import main_window as main_window_module
+
+    captured: dict[str, object] = {}
+    target = tmp_path / "facts.zip"
+    monkeypatch.setattr(
+        main_window_module.file_dialogs,
+        "pick_save_file",
+        lambda *_args, on_done, **_kwargs: on_done(str(target)),
+    )
+    monkeypatch.setattr(
+        main_window_module, "collect_environment", lambda _config, **_kwargs: _snapshot(tmp_path), raising=False
+    )
+
+    def write(path, **kwargs):
+        captured.update(kwargs)
+        return BundleResult(path=path, members=(), total_bytes=0, missing=())
+
+    monkeypatch.setattr(main_window_module, "write_diagnostics_bundle", write, raising=False)
+    _install_immediate_runner(monkeypatch, main_window_module)
+
+    _help_action(main_window, "Export Diagnostics…").trigger()
+
+    facts = captured["ui_facts"]
+    assert facts["screen_count"] == str(len(QGuiApplication.screens()))
+    assert "dpr=" in facts["screen.0"]
+    assert "dpi=" in facts["screen.0"]
+    assert "geometry=" in facts["screen.0"]
+    assert facts["ui_language"] == main_window.config.ui_language
+    assert facts["ui_font_scale"] == str(main_window.config.ui_font_scale)
+    assert facts["ui_zoom"] == str(main_window.config.ui_zoom)
+    assert facts["theme"]
+    assert "qt_scale_factor" in facts

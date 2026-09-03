@@ -1,6 +1,7 @@
 """Main window for Anki Miner GUI."""
 
 import logging
+import os
 import sys
 from collections import Counter
 from collections.abc import Callable, Iterator
@@ -1099,6 +1100,34 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             on_done=self._on_diagnostics_target_picked,
         )
 
+    def _collect_ui_facts(self) -> dict[str, str]:
+        """Read the display and appearance facts the bundle cannot read itself.
+
+        Screens, scaling and the active theme are Qt state, and the bundle
+        writer runs off the GUI thread on a module that never imports Qt. So
+        they are read here, on the GUI thread, and handed over as plain strings.
+
+        The reports these answer arrive as "the window is unusable" with a
+        screenshot: a fractional device pixel ratio, a second monitor at a
+        different DPI, or a QT_SCALE_FACTOR left in the environment.
+        """
+        facts: dict[str, str] = {}
+        screens = QGuiApplication.screens()
+        facts["screen_count"] = str(len(screens))
+        for index, screen in enumerate(screens):
+            geometry = screen.geometry()
+            facts[f"screen.{index}"] = (
+                f"name={screen.name()} "
+                f"geometry={geometry.width()}x{geometry.height()}+{geometry.x()}+{geometry.y()} "
+                f"dpr={screen.devicePixelRatio()} dpi={screen.logicalDotsPerInch()}"
+            )
+        facts["qt_scale_factor"] = os.environ.get("QT_SCALE_FACTOR", "-")
+        facts["theme"] = Theme.get_current_mode()
+        facts["ui_language"] = self.config.ui_language
+        facts["ui_font_scale"] = str(self.config.ui_font_scale)
+        facts["ui_zoom"] = str(self.config.ui_zoom)
+        return facts
+
     def _on_diagnostics_target_picked(self, path_str: str) -> None:
         """Snapshot GUI-owned state, then collect and write on a worker.
 
@@ -1114,6 +1143,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         config = self.config
         health_report = self._health_report
         platform_name = QGuiApplication.platformName()
+        ui_facts = self._collect_ui_facts()
 
         def work() -> BundleResult:
             snapshot = collect_environment(config, platform_name=platform_name)
@@ -1126,6 +1156,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 config=config,
                 snapshot=snapshot,
                 health_lines=format_health_lines(rows),
+                ui_facts=ui_facts,
             )
 
         self._diagnostics_export_running = True
