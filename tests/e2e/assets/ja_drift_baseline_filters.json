@@ -63,6 +63,7 @@
         "SentenceAudio": "",
         "SentenceFurigana": "友達[ともだち]とよくしゃべる",
         "SentenceReading": "ともだちとよくしゃべる",
+        "SentenceTranslation": "",
         "Source": "canary2 @ p.5",
         "WordAudio": ""
       },
@@ -89,6 +90,7 @@
         "SentenceAudio": "",
         "SentenceFurigana": "コーヒーを 買[か]いました",
         "SentenceReading": "こーひーをかいました",
+        "SentenceTranslation": "",
         "Source": "canary2 @ p.6",
         "WordAudio": ""
       },
@@ -117,6 +119,7 @@
         "SentenceAudio": "",
         "SentenceFurigana": "今日[きょう]は 学校[がっこう]で 勉強[べんきょう]する",
         "SentenceReading": "きょうはがっこうでべんきょうする",
+        "SentenceTranslation": "",
         "Source": "canary2 @ p.2",
         "WordAudio": ""
       },
@@ -145,6 +148,7 @@
         "SentenceAudio": "",
         "SentenceFurigana": "玉子[たまご]を 買[か]いました",
         "SentenceReading": "たまごをかいました",
+        "SentenceTranslation": "",
         "Source": "canary2 @ p.8",
         "WordAudio": ""
       },
@@ -173,6 +177,7 @@
         "SentenceAudio": "",
         "SentenceFurigana": "新[あたら]しい 本[ほん]を 買[か]いました",
         "SentenceReading": "あたらしいほんをかいました",
+        "SentenceTranslation": "",
         "Source": "canary2 @ p.1",
         "WordAudio": ""
       },
@@ -201,6 +206,7 @@
         "SentenceAudio": "",
         "SentenceFurigana": "友達[ともだち]と 公園[こうえん]を 走[はし]る",
         "SentenceReading": "ともだちとこうえんをはしる",
+        "SentenceTranslation": "",
         "Source": "canary2 @ p.4",
         "WordAudio": ""
       },

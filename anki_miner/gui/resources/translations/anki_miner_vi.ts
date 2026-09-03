@@ -562,6 +562,14 @@
         <translation>Lưu tên show/tập và dấu thời gian mà từ xuất phát. Để trống = bỏ qua.</translation>
     </message>
     <message>
+        <source>Translation Field</source>
+        <translation>Trường Bản dịch</translation>
+    </message>
+    <message>
+        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
+        <translation>Lưu dòng phụ đề ngôn ngữ thứ hai cho câu (Video -&gt; Đơn lẻ, khi bật phụ đề thứ hai trong Lọc). Để trống = bỏ qua.</translation>
+    </message>
+    <message>
         <source>Card Type</source>
         <translation>Loại thẻ</translation>
     </message>
@@ -1558,6 +1566,14 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.</source>
         <translation>Chấp nhận hoặc từ chối từng từ, chọn câu và cảnh của nó, cắt âm thanh, và đánh dấu từ đã biết -- trước khi bất kỳ thẻ nào được tạo.</translation>
+    </message>
+    <message>
+        <source>Secondary-language subtitles</source>
+        <translation>Phụ đề ngôn ngữ thứ hai</translation>
+    </message>
+    <message>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
+        <translation>Tải tệp phụ đề thứ hai bằng ngôn ngữ của bạn, đặt bên cạnh tệp bằng ngôn ngữ khai thác: dòng của nó hiển thị dưới dòng kia trong bản xem trước Word Curator và có thể được lưu vào trường Bản dịch. Bật trong Cài đặt -&gt; Lọc.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -4668,6 +4684,18 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     <message>
         <source>Click to append a built-in pattern to the regex field above.</source>
         <translation>Nhấp để nối một mẫu tích hợp vào trường regex ở trên.</translation>
+    </message>
+    <message>
+        <source>Secondary Subtitles</source>
+        <translation>Phụ đề thứ hai</translation>
+    </message>
+    <message>
+        <source>Enable secondary-language subtitles</source>
+        <translation>Bật phụ đề ngôn ngữ thứ hai</translation>
+    </message>
+    <message>
+        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
+        <translation>Thêm một bộ chọn tệp phụ đề thứ hai và độ lệch riêng vào Video -&gt; Đơn lẻ. Dòng phụ đề của nó hiển thị dưới dòng ngôn ngữ khai thác trong bản xem trước Word Curator, và hiển thị trên thẻ khi trường Bản dịch được ánh xạ (Thẻ &amp; Anki).</translation>
     </message>
     <message>
         <source>Deduplication</source>
@@ -8050,6 +8078,14 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Độ lệch phụ đề:</translation>
     </message>
     <message>
+        <source>Translation Subtitles:</source>
+        <translation>Tệp phụ đề dịch:</translation>
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation>Độ lệch phụ đề dịch:</translation>
+    </message>
+    <message>
         <source>Select recent file pair...</source>
         <translation>Chọn cặp tệp gần đây...</translation>
     </message>
@@ -8072,6 +8108,10 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>Điều chỉnh canh thời gian phụ đề (dương = trễ hơn, âm = sớm hơn)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation>Chỉ dời thời gian phụ đề dịch (dương = trễ hơn, âm = sớm hơn)</translation>
     </message>
     <message>
         <source>Choose a video file first.</source>
@@ -8116,6 +8156,10 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
         <translation>Không thể đọc phụ đề. Kiểm tra định dạng tệp.</translation>
+    </message>
+    <message>
+        <source>That translation subtitle file no longer exists.</source>
+        <translation>Tệp phụ đề dịch đó không còn tồn tại.</translation>
     </message>
     <message>
         <source>Single episode</source>
@@ -9394,6 +9438,10 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Độ dài câu</translation>
     </message>
     <message>
+        <source>Translation</source>
+        <translation>Bản dịch</translation>
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
@@ -9412,6 +9460,10 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên trước — những dò
     <message>
         <source>Characters in the example sentence. Sort ascending for the shortest.</source>
         <translation>Số ký tự trong câu ví dụ. Sắp xếp tăng dần để xem câu ngắn nhất trước.</translation>
+    </message>
+    <message>
+        <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
+        <translation>Dòng phụ đề ngôn ngữ thứ hai cho câu này. Dòng này cập nhật theo lựa chọn trong mục “Câu” hoặc theo nút + Dòng trước/+ Dòng sau.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>

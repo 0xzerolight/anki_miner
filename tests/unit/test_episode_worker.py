@@ -444,3 +444,19 @@ def test_run_calls_process_episode_with_keyword_args_only(qapp):
     assert len(args) == 2  # video_file, subtitle_file only
     assert "progress_callback" in kwargs
     assert "curation_callback" in kwargs
+
+
+def test_worker_forwards_the_secondary_track(qapp):
+    worker = _make_worker(qapp, secondary_subtitle_file=Path("/fake/subs.en.srt"), secondary_subtitle_offset=-1.5)
+    worker.run()
+    _, kwargs = worker.processor.process_episode.call_args
+    assert kwargs["secondary_subtitle_file"] == Path("/fake/subs.en.srt")
+    assert kwargs["secondary_subtitle_offset"] == -1.5
+
+
+def test_worker_secondary_defaults_off(qapp):
+    worker = _make_worker(qapp)
+    worker.run()
+    _, kwargs = worker.processor.process_episode.call_args
+    assert kwargs["secondary_subtitle_file"] is None
+    assert kwargs["secondary_subtitle_offset"] == 0.0

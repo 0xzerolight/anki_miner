@@ -256,3 +256,16 @@ def test_the_unranked_checkbox_is_disabled_while_no_bound_is_set(qtbot):
     panel.load_from_config(AnkiMinerConfig())
     panel.set_max_frequency_rank(15000)
     assert panel.keep_unranked_checkbox.isEnabled()
+
+
+def test_secondary_subtitle_toggle_round_trips(qtbot):
+    from dataclasses import replace
+
+    from anki_miner.config import AnkiMinerConfig
+
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.secondary_subtitle_checkbox.isChecked() is False
+    panel.load_from_config(replace(AnkiMinerConfig(), secondary_subtitle_enabled=True))
+    assert panel.secondary_subtitle_checkbox.isChecked()
+    assert panel.contribute(AnkiMinerConfig()).secondary_subtitle_enabled is True

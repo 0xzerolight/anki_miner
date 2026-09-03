@@ -139,6 +139,19 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("curator", "review", "approve", "confirm", "pick words", "preview cards", "trim audio", "curation"),
     ),
     Capability(
+        id="secondary-subtitles",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Secondary-language subtitles"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Load a second subtitle file in your own language beside the mining-language one: it shows under "
+            "the line in the Word Curator preview and can be saved to a Translation field. "
+            "Turn it on under Settings -> Filtering.",
+        ),
+        category=_CAT_WORKFLOWS,
+        target=CapabilityTarget("video", "single"),
+        keywords=("translation", "bilingual", "english subtitles", "second subtitle", "secondary", "dual subtitles"),
+    ),
+    Capability(
         id="deck-builder",
         title=QT_TRANSLATE_NOOP("Capabilities", "Build a deck by coverage %"),
         description=QT_TRANSLATE_NOOP(

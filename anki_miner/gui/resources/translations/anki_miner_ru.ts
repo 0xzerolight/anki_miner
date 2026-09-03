@@ -564,6 +564,14 @@
         <translation>Хранит шоу/эпизод и метку времени, откуда взято слово. Пусто = пропустить.</translation>
     </message>
     <message>
+        <source>Translation Field</source>
+        <translation>Поле перевода</translation>
+    </message>
+    <message>
+        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
+        <translation>Хранит строку субтитров перевода для предложения (Видео -&gt; Один, если в разделе «Фильтрация» включены субтитры перевода). Пусто = пропустить.</translation>
+    </message>
+    <message>
         <source>Card Type</source>
         <translation>Тип карточки</translation>
     </message>
@@ -1562,6 +1570,14 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.</source>
         <translation>Принимайте или отклоняйте каждое слово, выбирайте его предложение и сцену, обрезайте его аудио и отмечайте слова как известные — ещё до создания карточки.</translation>
+    </message>
+    <message>
+        <source>Secondary-language subtitles</source>
+        <translation>Субтитры перевода</translation>
+    </message>
+    <message>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
+        <translation>Загрузите второй файл субтитров на вашем языке рядом с файлом на языке майнинга: его строка отображается под строкой в предпросмотре Куратора слов и может быть сохранена в поле перевода. Включите эту функцию в разделе Настройки -&gt; Фильтрация.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -4694,6 +4710,18 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Click to append a built-in pattern to the regex field above.</source>
         <translation>Нажмите, чтобы добавить встроенный шаблон в поле регулярного выражения выше.</translation>
+    </message>
+    <message>
+        <source>Secondary Subtitles</source>
+        <translation>Субтитры перевода</translation>
+    </message>
+    <message>
+        <source>Enable secondary-language subtitles</source>
+        <translation>Включить субтитры перевода</translation>
+    </message>
+    <message>
+        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
+        <translation>Добавляет второй выбор файла субтитров с собственным смещением на вкладку «Видео -&gt; Один». Строка этих субтитров отображается под строкой языка майнинга в предпросмотре Куратора слов, а также на карточке, если сопоставлено поле перевода (Карточки и Anki).</translation>
     </message>
     <message>
         <source>Deduplication</source>
@@ -8078,6 +8106,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>Смещение субтитров:</translation>
     </message>
     <message>
+        <source>Translation Subtitles:</source>
+        <translation>Субтитры перевода:</translation>
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation>Смещение перевода:</translation>
+    </message>
+    <message>
         <source>Select recent file pair...</source>
         <translation>Выбрать недавнюю пару файлов...</translation>
     </message>
@@ -8100,6 +8136,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>Скорректировать тайминг субтитров (положительное = позже, отрицательное = раньше)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation>Сдвинуть только субтитры перевода (положительное = позже, отрицательное = раньше)</translation>
     </message>
     <message>
         <source>Choose a video file first.</source>
@@ -8144,6 +8184,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
         <translation>Не удалось прочитать субтитры. Проверьте формат файла.</translation>
+    </message>
+    <message>
+        <source>That translation subtitle file no longer exists.</source>
+        <translation>Этот файл субтитров перевода больше не существует.</translation>
     </message>
     <message>
         <source>Single episode</source>
@@ -9426,6 +9470,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>Длина предложения</translation>
     </message>
     <message>
+        <source>Translation</source>
+        <translation>Перевод</translation>
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
@@ -9444,6 +9492,10 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     <message>
         <source>Characters in the example sentence. Sort ascending for the shortest.</source>
         <translation>Число символов в примере предложения. Сортировка по возрастанию — от самых коротких.</translation>
+    </message>
+    <message>
+        <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
+        <translation>Строка субтитров перевода для этого предложения. Она следует за выбором предложения в разделе «Предложения» или за нажатием «+ Предыдущая строка» / «+ Следующая строка».</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>

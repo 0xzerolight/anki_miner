@@ -2059,6 +2059,19 @@ class TestParseRawEntries:
         assert start == pytest.approx(3.0)  # 1.0 + 2.0 offset
         assert end == pytest.approx(5.0)  # 3.0 + 2.0 offset
 
+    def test_parse_raw_entries_can_skip_the_mining_language_ladder(self, test_config, tmp_path):
+        """A cp1252 English file: cp932 in the ja ladder swallows the curly apostrophe as
+        one double-byte char (don't -> don稚); an empty ladder goes straight to detection."""
+        srt = tmp_path / "en.srt"
+        srt.write_bytes("1\n00:00:01,000 --> 00:00:03,000\nI don’t know.\n".encode("cp1252"))
+
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            parser = SubtitleParserService(test_config)
+
+        entries = parser.parse_raw_entries(srt, 0.0, encodings=())
+        assert entries == [(1.0, 3.0, "I don’t know.")]
+        assert parser.parse_raw_entries(srt, 0.0)[0][2] != "I don’t know."  # the ja ladder mis-decodes it
+
 
 class TestCompoundReassembly:
     """Tests for _merge_compound_suffixes — 名詞+接尾辞 reassembly."""

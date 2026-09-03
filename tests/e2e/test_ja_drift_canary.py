@@ -66,6 +66,7 @@ FIELD_MAP: dict[str, str] = {
     "frequency_sort": "FreqSort",
     "source": "Source",
     "expression_audio": "WordAudio",
+    "sentence_translation": "SentenceTranslation",
 }
 MODEL_FIELDS = [*FIELD_MAP.values(), "IsWordAndSentenceCard"]
 DECK = "canary-deck"

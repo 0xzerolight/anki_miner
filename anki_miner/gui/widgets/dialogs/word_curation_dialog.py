@@ -74,6 +74,7 @@ from anki_miner.languages.profile import ContentTextStyle
 from anki_miner.languages.registry import get_profile
 from anki_miner.models import TokenizedWord
 from anki_miner.services.dictionary.preview_html import PREVIEW_CSS, to_preview_html
+from anki_miner.services.secondary_subtitles import match_secondary_line
 from anki_miner.services.word_filter import MergedLineWindow, find_cue_index, merge_cue_window
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
 from anki_miner.utils.i18n import tr_format
@@ -86,6 +87,9 @@ logger = logging.getLogger(__name__)
 # share a page, so 4 pages of backtrack covers real navigation.
 _PAGE_CACHE_CAP = 4
 _PAGE_CACHE_MAX_BYTES = 64 * 1024 * 1024
+
+#: The secondary-language line; hidden unless the run has a second track.
+TRANSLATION_COLUMN = 9
 
 #: Table column : side column, as stretch factors. Also the ratio the split
 #: opens at, so the first frame and every resize after it agree.
@@ -125,6 +129,13 @@ class CurationMediaContext:
     #: True, because an animated screenshot's window comes from the audio clip
     #: (which the strip already edits), not from a single instant.
     screenshot_animated: bool = False
+    # Secondary-language track (F7): raw cues parsed at a ZERO offset like
+    # subtitle_entries, plus the offset the run was started with. Empty on
+    # every path but Video -> Single with the feature on. Feeds the player's
+    # second strip and the Translation column; the card text comes from the
+    # processor, which runs the same match_secondary_line over the same cues.
+    secondary_entries: list[tuple[float, float, str]] = dataclasses.field(default_factory=list)
+    secondary_offset: float = 0.0
     #: Season curation (batch tab): resolves another episode's video to its own
     #: media context so the player can follow cross-episode word focus. Pure
     #: and thread-safe over a snapshot (never the live worker) — the dialog
@@ -523,7 +534,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         # Table
         self.table = QTableWidget()
-        self.table.setColumnCount(9)
+        self.table.setColumnCount(10)
         self.table.setHorizontalHeaderLabels(
             [
                 "",
@@ -535,6 +546,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 self.tr("Occurrences"),
                 self.tr("Unknowns in line"),
                 self.tr("Sentence length"),
+                self.tr("Translation"),
             ]
         )
         # Occurrences and the Sentences picker count different things, and a user
@@ -569,6 +581,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         length_header = self.table.horizontalHeaderItem(8)
         if length_header is not None:
             length_header.setToolTip(self.tr("Characters in the example sentence. Sort ascending for the shortest."))
+        translation_header = self.table.horizontalHeaderItem(TRANSLATION_COLUMN)
+        if translation_header is not None:
+            translation_header.setToolTip(
+                self.tr(
+                    "The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line."
+                )
+            )
 
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -576,6 +595,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.table.setSortingEnabled(True)
 
         self._apply_header_resize_modes()
+        # The Translation column is meaningful only for a run with a second
+        # track: forced hidden otherwise, and kept out of the header menu, so
+        # an empty column never shows and cannot be "lost" by hiding it. Its
+        # visibility is never taken from the saved header state (see
+        # _restore_layout_state) -- a run with a track always shows it.
+        self._has_translations = bool(self._media_context is not None and self._media_context.secondary_entries)
+        self._apply_translation_column_gate()
         header_view = self.table.horizontalHeader()
         if header_view:
             # Columns are the user's to arrange: drag to reorder, right-click to
@@ -709,6 +735,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         header_view = self.table.horizontalHeader()
         if columns is not None and header_view and header_view.restoreState(columns):
             self._apply_header_resize_modes()
+        self._apply_translation_column_gate()
 
     def _is_on_a_live_screen(self) -> bool:
         """True when the window's centre sits on a screen that exists."""
@@ -814,7 +841,16 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # puts there, which is why it is not Fixed: the column widens only
         # while a stage exists and shrinks back when the marks are discarded.
         header_view.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        for column in (1, 2, 3, 5, 6, 7, 8):  # mined form, surface, reading, rank, count, signals
+        for column in (
+            1,
+            2,
+            3,
+            5,
+            6,
+            7,
+            8,
+            TRANSLATION_COLUMN,
+        ):  # mined form, surface, reading, rank, count, signals, translation
             header_view.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
         header_view.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)  # sentence
 
@@ -828,6 +864,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         """
         actions: dict[int, QAction] = {}
         for column in range(1, self.table.columnCount()):
+            if column == TRANSLATION_COLUMN and not self._has_translations:
+                continue
             header_item = self.table.horizontalHeaderItem(column)
             action = QAction(header_item.text() if header_item is not None else str(column), self)
             action.setCheckable(True)
@@ -866,6 +904,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             if header_view:
                 header_view.moveSection(header_view.visualIndex(column), column)
         self._apply_header_resize_modes()
+        self._apply_translation_column_gate()
+
+    def _apply_translation_column_gate(self) -> None:
+        self.table.setColumnHidden(TRANSLATION_COLUMN, not self._has_translations)
 
     def _build_right_pane(self) -> QWidget:
         """Build the right pane from whichever optional sub-panes are enabled.
@@ -1376,6 +1418,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             ctx.subtitle_entries,
             ctx.offset,
             audio_track_override=ctx.audio_track_override,
+            secondary_entries=ctx.secondary_entries,
+            secondary_offset=ctx.secondary_offset,
         )
         return widget
 
@@ -1537,6 +1581,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                     self._make_readonly_item(text, role=CellRole.NUMBER, sort_value=sort_value),
                 )
 
+            for column, text, tooltip, copy_text in self._translation_cell_values(row):
+                self.table.setItem(row, column, self._make_readonly_item(text, tooltip=tooltip, copy_text=copy_text))
+
         self.table.blockSignals(False)
         self.table.setSortingEnabled(True)
 
@@ -1592,6 +1639,27 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             (7, "-" if unknowns <= 0 else str(unknowns), float("inf") if unknowns <= 0 else float(unknowns)),
             (8, str(length), float(length)),
         )
+
+    def _translation_cell_values(self, idx: int) -> tuple[tuple[int, str, str, str], ...]:
+        """``(column, text, tooltip, copy_text)`` for the Translation column.
+
+        Computed from the media context's secondary cues with the same
+        ``match_secondary_line`` the processor stamps onto the card, over the
+        window the row currently shows: the chosen sentence variant, widened
+        by any active line expansion. Reads the chosen variant off ``_chosen``
+        rather than taking it as an argument because ``_apply_expansion``
+        repaints through a display copy whose sentence is already merged, and
+        the cue lookup needs the real one. Empty text when the run has no
+        second track, which is also when the column is hidden.
+        """
+        ctx = self._media_context
+        if ctx is None or not ctx.secondary_entries:
+            return ((TRANSLATION_COLUMN, "", "", ""),)
+        chosen = self._chosen.get(idx, self._words[idx])
+        window = self._expanded_window(chosen, idx)
+        start, end = (window.start, window.end) if window is not None else (chosen.start_time, chosen.end_time)
+        text = match_secondary_line(ctx.secondary_entries, start, end, offset=ctx.secondary_offset)
+        return ((TRANSLATION_COLUMN, self._sentence_display(text, 1), text, text),)
 
     def _pick_cell_values(self, word: TokenizedWord, chosen: TokenizedWord) -> tuple[tuple[int, str, str, str], ...]:
         """``(column, text, tooltip, copy_text)`` for every cell the pick decides.
@@ -1678,11 +1746,14 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 self.table.setRowHidden(row, False)
                 continue
 
-            # Check surface, lemma, reading, sentence columns
+            # Check surface, lemma, reading, sentence, and (when shown) translation
+            # columns. Sentence and translation cells' visible text is truncated;
+            # COPY_ROLE holds the full text.
+            columns = (1, 2, 3, 4) + ((TRANSLATION_COLUMN,) if self._has_translations else ())
             visible = False
-            for col in (1, 2, 3, 4):
+            for col in columns:
                 cell = self.table.item(row, col)
-                value = cell.data(COPY_ROLE) if cell and col == 4 else cell.text() if cell else ""
+                value = cell.data(COPY_ROLE) if cell and col in (4, TRANSLATION_COLUMN) else cell.text() if cell else ""
                 if text_lower in str(value).lower():
                     visible = True
                     break
@@ -2086,6 +2157,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 item = self.table.item(row, column)
                 if item is not None:
                     update_table_item(item, text, sort_value=sort_value)
+            for column, text, tooltip, copy_text in self._translation_cell_values(idx):
+                item = self.table.item(row, column)
+                if item is not None:
+                    update_table_item(item, text, tooltip=tooltip, copy_text=copy_text)
         finally:
             if sorting:
                 self.table.setSortingEnabled(True)
@@ -2184,6 +2259,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             ctx.subtitle_entries,
             ctx.offset,
             audio_track_override=ctx.audio_track_override,
+            secondary_entries=ctx.secondary_entries,
+            secondary_offset=ctx.secondary_offset,
         )
         self._displayed_media_video = ctx.video_file
         # The landed context may make the focused word's neighbors resolvable,

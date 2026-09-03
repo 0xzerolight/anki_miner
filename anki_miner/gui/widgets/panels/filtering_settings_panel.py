@@ -426,6 +426,19 @@ class FilteringSettingsPanel(FormPanel):
             anchor_text=lambda: tuple(_preset_labels),
         )
 
+        # Secondary Subtitles (F7). One toggle gates every new surface.
+        self.add_section(self.tr("Secondary Subtitles"))
+        self.secondary_subtitle_checkbox = QCheckBox(self.tr("Enable secondary-language subtitles"))
+        self.add_field(
+            "",
+            self.secondary_subtitle_checkbox,
+            helper=self.tr(
+                "Adds a second subtitle picker and its own offset to Video -> Single. Its line shows under "
+                "the mining-language line in the Word Curator preview and, when the Translation field is "
+                "mapped (Cards & Anki), on the card."
+            ),
+        )
+
         # Deduplication section
         self.add_section(self.tr("Deduplication"))
 
@@ -882,6 +895,12 @@ class FilteringSettingsPanel(FormPanel):
         """Set the subtitle regex filter checkbox."""
         self.use_subtitle_regex_checkbox.setChecked(value)
 
+    def get_secondary_subtitle_enabled(self) -> bool:
+        return self.secondary_subtitle_checkbox.isChecked()
+
+    def set_secondary_subtitle_enabled(self, value: bool) -> None:
+        self.secondary_subtitle_checkbox.setChecked(value)
+
     # --- Deduplication ---
 
     def get_deduplicate_sentences(self) -> bool:
@@ -1036,6 +1055,7 @@ class FilteringSettingsPanel(FormPanel):
         self.set_subtitle_regex_filter(config.subtitle_regex_filter)
         self.set_subtitle_regex_replacement(config.subtitle_regex_replacement)
         self.set_use_subtitle_regex_filter(config.use_subtitle_regex_filter)
+        self.set_secondary_subtitle_enabled(config.secondary_subtitle_enabled)
         self.set_deduplicate_sentences(config.deduplicate_sentences)
         self.set_strict_card_order(config.strict_card_order)
         self.set_exclude_hiragana_only_words(config.exclude_hiragana_only_words)
@@ -1082,6 +1102,7 @@ class FilteringSettingsPanel(FormPanel):
             subtitle_regex_filter=self.get_subtitle_regex_filter(),
             subtitle_regex_replacement=self.get_subtitle_regex_replacement(),
             use_subtitle_regex_filter=self.get_use_subtitle_regex_filter(),
+            secondary_subtitle_enabled=self.get_secondary_subtitle_enabled(),
             deduplicate_sentences=self.get_deduplicate_sentences(),
             strict_card_order=self.get_strict_card_order(),
             exclude_hiragana_only_words=self.get_exclude_hiragana_only_words(),

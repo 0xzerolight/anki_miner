@@ -146,6 +146,12 @@ def test_word_curator_is_findable() -> None:
     assert any(c.id == "word-curator" for c in hits)
 
 
+def test_secondary_subtitles_is_findable() -> None:
+    hits = search("bilingual")
+    assert hits and hits[0].id == "secondary-subtitles"
+    assert hits[0].target == CapabilityTarget("video", "single")
+
+
 def test_name_wordsets_is_findable() -> None:  # audit AP3-010
     hits = search("surname")
     capability = next(c for c in hits if c.id == "name-wordsets")

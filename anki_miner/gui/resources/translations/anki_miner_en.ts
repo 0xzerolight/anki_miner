@@ -562,6 +562,14 @@
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Translation Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Card Type</source>
         <translation type="unfinished" />
     </message>
@@ -1544,6 +1552,14 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Secondary-language subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4642,6 +4658,18 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Click to append a built-in pattern to the regex field above.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Secondary Subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable secondary-language subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7994,6 +8022,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Translation Subtitles:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select recent file pair...</source>
         <translation type="unfinished" />
     </message>
@@ -8015,6 +8051,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8059,6 +8099,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That translation subtitle file no longer exists.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -9338,6 +9382,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Translation</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
@@ -9351,6 +9399,10 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Characters in the example sentence. Sort ascending for the shortest.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
         <translation type="unfinished" />
     </message>
     <message>

@@ -35,7 +35,7 @@ def test_the_two_signal_columns_are_present(qtbot):
     dlg = WordCurationDialog([_word("食べる", "猫が魚を食べた", 2)])
     qtbot.addWidget(dlg)
 
-    assert dlg.table.columnCount() == 9
+    assert dlg.table.columnCount() == 10
     assert dlg.table.horizontalHeaderItem(_UNKNOWNS_COL).text() == "Unknowns in line"
     assert dlg.table.horizontalHeaderItem(_LENGTH_COL).text() == "Sentence length"
 

@@ -252,7 +252,8 @@ QTextEdit#log-widget {
    the whole session (set from Python metrics) so the video never jumps when a
    cue arrives, wraps onto a second line, or ends. No font-size here: the
    Japanese content rule above owns it. */
-QTextEdit#subtitle-strip {
+QTextEdit#subtitle-strip,
+QTextEdit#secondary-subtitle-strip {
     border: none;
     padding: ${spacing-xxs}px ${spacing-sm}px;
 }
@@ -1186,7 +1187,8 @@ QToolTip {
 /* The subtitle strip reads like a tooltip over the video and borrows its keys,
    so it follows all 29 themes. It used to hardcode rgba(0,0,0,180) on white,
    which ignored every one of them. */
-QTextEdit#subtitle-strip {
+QTextEdit#subtitle-strip,
+QTextEdit#secondary-subtitle-strip {
     background-color: ${color-tooltip-bg};
     color: ${color-tooltip-text};
 }

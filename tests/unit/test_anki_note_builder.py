@@ -226,3 +226,28 @@ class TestProfileDeclaredExtraKeys:
             extra_raw_html_keys=frozenset({self._STUB_HTML}),
         ).note["fields"]
         assert all(value != "<b>x</b>" for value in fields.values())
+
+
+def test_sentence_translation_is_written_escaped_when_mapped(test_config, make_tokenized_word):
+    from dataclasses import replace
+
+    config = replace(
+        test_config, anki_fields={**test_config.anki_fields, "sentence_translation": "SentenceTranslation"}
+    )
+    word = make_tokenized_word()
+    word.sentence_translation = "I <3 fish & chips"
+    item = CardPayload(word=word, media=MediaData(), definition="def")
+
+    built = build_note(item, config, stored_files=set())
+
+    assert built.note["fields"]["SentenceTranslation"] == "I &lt;3 fish &amp; chips"
+
+
+def test_sentence_translation_is_skipped_when_unmapped(test_config, make_tokenized_word):
+    word = make_tokenized_word()
+    word.sentence_translation = "Hello."
+    item = CardPayload(word=word, media=MediaData(), definition="def")
+
+    built = build_note(item, test_config, stored_files=set())
+
+    assert "Hello." not in built.note["fields"].values()

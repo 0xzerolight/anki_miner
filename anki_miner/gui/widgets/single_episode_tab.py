@@ -140,6 +140,9 @@ class SingleEpisodeTab(MiningTabBase):
         self._curation_subtitle_raw: str | None = None
         self._curation_offset: float = 0.0
         self._curation_audio_track_override: int | None = None
+        self._curation_secondary: Path | None = None
+        self._curation_secondary_raw: str | None = None
+        self._curation_secondary_offset: float = 0.0
 
         self._init_curation_bridge()
 
@@ -304,6 +307,8 @@ class SingleEpisodeTab(MiningTabBase):
             self.tr("Subtitle File:"),
             self.tr("Card Source:"),
             self.tr("Subtitle Offset:"),
+            self.tr("Translation Subtitles:"),
+            self.tr("Translation Offset:"),
         )
 
         # Recent files dropdown
@@ -354,6 +359,20 @@ class SingleEpisodeTab(MiningTabBase):
         )
         layout.addWidget(self.subtitle_selector)
 
+        # Secondary-language track (F7). Both rows always exist and are shown
+        # only while config.secondary_subtitle_enabled is on (update_config
+        # re-gates them live), so nothing new is on screen for anyone who
+        # never switched it on under Settings -> Filtering. Drops still land
+        # on the primary picker; the second file is browsed for.
+        self.secondary_selector = FileSelector(
+            label=self.tr("Translation Subtitles:"),
+            file_mode=True,
+            file_filter=SUBTITLE_FILE_FILTER,
+            label_width=label_w,
+            history_key="video.single.inputs",
+        )
+        layout.addWidget(self.secondary_selector)
+
         source_layout = QHBoxLayout()
         source_layout.setSpacing(SPACING.xs)
         source_label = QLabel(self.tr("Card Source:"))
@@ -395,6 +414,30 @@ class SingleEpisodeTab(MiningTabBase):
         offset_layout.addWidget(self.offset_spinbox)
         offset_layout.addStretch()
         layout.addLayout(offset_layout)
+
+        # A widget rather than a bare layout so the whole row can be hidden.
+        self.secondary_offset_row = QWidget()
+        secondary_offset_layout = QHBoxLayout(self.secondary_offset_row)
+        secondary_offset_layout.setContentsMargins(0, 0, 0, 0)
+        secondary_offset_layout.setSpacing(SPACING.xs)
+        secondary_offset_label = QLabel(self.tr("Translation Offset:"))
+        secondary_offset_label.setObjectName("field-label")
+        secondary_offset_label.setMinimumWidth(label_w)
+        make_label_fit_text(secondary_offset_label)
+        self.secondary_offset_spinbox = QDoubleSpinBox()
+        self.secondary_offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
+        self.secondary_offset_spinbox.setSingleStep(0.5)
+        self.secondary_offset_spinbox.setValue(0.0)
+        self.secondary_offset_spinbox.setSuffix(self.tr(" seconds"))
+        self.secondary_offset_spinbox.setToolTip(
+            self.tr("Shift the translation subtitles only (positive = later, negative = earlier)")
+        )
+        secondary_offset_label.setBuddy(self.secondary_offset_spinbox)
+        secondary_offset_layout.addWidget(secondary_offset_label)
+        secondary_offset_layout.addWidget(self.secondary_offset_spinbox)
+        secondary_offset_layout.addStretch()
+        layout.addWidget(self.secondary_offset_row)
+        self._apply_secondary_gate()
 
         group.setLayout(layout)
 
@@ -665,6 +708,17 @@ class SingleEpisodeTab(MiningTabBase):
             )
             return
 
+        # Only an on-screen picker counts: a path left in the hidden one is
+        # not an instruction.
+        secondary_path = self.secondary_selector.path_or_none() if self.config.secondary_subtitle_enabled else None
+        if secondary_path is not None and not self.secondary_selector.is_valid():
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("That translation subtitle file no longer exists."), details=secondary_path)
+            )
+            return
+        secondary_file = Path(secondary_path) if secondary_path is not None else None
+        secondary_offset = self.secondary_offset_spinbox.value() if secondary_file is not None else 0.0
+
         video_file = Path(video_path)
         subtitle_file = Path(subtitle_path)
         source_label = self.card_source_edit.text().strip() or sanitize_source_label(video_file.stem)
@@ -683,6 +737,9 @@ class SingleEpisodeTab(MiningTabBase):
         self._curation_subtitle_raw = subtitle_path
         self._curation_offset = offset
         self._curation_audio_track_override = self._audio_track_override
+        self._curation_secondary = secondary_file
+        self._curation_secondary_raw = secondary_path
+        self._curation_secondary_offset = secondary_offset
 
         # Clear log and reset the bar from the previous run's end state
         # (success leaves the bar pinned at 100% with a summary).
@@ -735,6 +792,8 @@ class SingleEpisodeTab(MiningTabBase):
             # identities untouched so existing analytics groups do not split.
             source_label_override=source_label,
             processor_factory=_processor_factory,
+            secondary_subtitle_file=secondary_file,
+            secondary_subtitle_offset=secondary_offset,
         )
 
         self.worker_thread.result_ready.connect(self._on_processing_finished)
@@ -770,6 +829,8 @@ class SingleEpisodeTab(MiningTabBase):
             self._curation_subtitle,
             offset=self._curation_offset,
             audio_track_override=self._curation_audio_track_override,
+            secondary_subtitle=self._curation_secondary,
+            secondary_offset=self._curation_secondary_offset,
         )
         proc = self.worker_thread.curation_processor if self.worker_thread is not None else None
         return media_context, self._lookup_fn_from_processor(proc)
@@ -839,7 +900,16 @@ class SingleEpisodeTab(MiningTabBase):
             subtitle_file = self._curation_subtitle
             completed_offset = self._curation_offset
             if video_file is not None and subtitle_file is not None:
-                self.recent_manager.add_entry(video_file, subtitle_file, completed_offset)
+                if self._curation_secondary is not None:
+                    self.recent_manager.add_entry(
+                        video_file,
+                        subtitle_file,
+                        completed_offset,
+                        secondary_subtitle=self._curation_secondary,
+                        secondary_offset=self._curation_secondary_offset,
+                    )
+                else:
+                    self.recent_manager.add_entry(video_file, subtitle_file, completed_offset)
                 self._refresh_recent_combo()
 
             # Clear only inputs still owned by this run. A pair selected while
@@ -851,6 +921,11 @@ class SingleEpisodeTab(MiningTabBase):
                 and self.subtitle_selector.path_or_none() == self._curation_subtitle_raw
             ):
                 self.subtitle_selector.clear()
+            if (
+                self._curation_secondary_raw is not None
+                and self.secondary_selector.path_or_none() == self._curation_secondary_raw
+            ):
+                self.secondary_selector.clear()
 
         # Show result
         self.presenter.show_processing_result(result)
@@ -911,6 +986,12 @@ class SingleEpisodeTab(MiningTabBase):
             self.video_selector.set_path(entry["video"])
             self.subtitle_selector.set_path(entry["subtitle"])
             self.offset_spinbox.setValue(entry.get("subtitle_offset", 0.0))
+            secondary = entry.get("secondary_subtitle")
+            if secondary:
+                self.secondary_selector.set_path(secondary)
+            else:
+                self.secondary_selector.clear()
+            self.secondary_offset_spinbox.setValue(entry.get("secondary_offset", 0.0))
 
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:
         """Accept drag if files have video or subtitle extensions."""
@@ -935,6 +1016,12 @@ class SingleEpisodeTab(MiningTabBase):
                 self.subtitle_selector.set_path(file_path)
         event.acceptProposedAction()
 
+    def _apply_secondary_gate(self) -> None:
+        """Show the secondary-track rows only while the Settings toggle is on."""
+        enabled = self.config.secondary_subtitle_enabled
+        self.secondary_selector.setVisible(enabled)
+        self.secondary_offset_row.setVisible(enabled)
+
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Update configuration.
 
@@ -949,6 +1036,7 @@ class SingleEpisodeTab(MiningTabBase):
         if config.subtitle_offset != self.config.subtitle_offset:
             self.offset_spinbox.setValue(config.subtitle_offset)
         self.config = config
+        self._apply_secondary_gate()
 
     def shutdown(self) -> None:
         """Invalidate in-flight Tracks/Timing probe callbacks before app close.

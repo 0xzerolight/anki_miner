@@ -47,6 +47,8 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
         audio_track_override: int | None = None,
         source_label_override: str | None = None,
         processor_factory: Callable[[], EpisodeProcessor] | None = None,
+        secondary_subtitle_file: Path | None = None,
+        secondary_subtitle_offset: float = 0.0,
     ):
         """Initialize the episode worker thread.
 
@@ -65,6 +67,9 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
             processor_factory: Zero-arg callable that returns an EpisodeProcessor.
                 Mutually exclusive with a non-None ``processor``.  When supplied,
                 the processor is constructed on the worker thread inside run().
+            secondary_subtitle_file: Optional path to secondary subtitle file.
+            secondary_subtitle_offset: Time offset in seconds for secondary
+                subtitle synchronization. Defaults to 0.0.
         """
         self._validate_processor_xor_factory(processor, processor_factory)
         super().__init__(parent)
@@ -76,6 +81,8 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
         self.curation_callback = curation_callback
         self.audio_track_override = audio_track_override
         self.source_label_override = source_label_override
+        self.secondary_subtitle_file = secondary_subtitle_file
+        self.secondary_subtitle_offset = secondary_subtitle_offset
 
     @property
     def curation_processor(self) -> EpisodeProcessor | None:
@@ -124,6 +131,8 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
                 curation_callback=self.curation_callback,
                 audio_track_override=self.audio_track_override,
                 source_label_override=self.source_label_override,
+                secondary_subtitle_file=self.secondary_subtitle_file,
+                secondary_subtitle_offset=self.secondary_subtitle_offset,
                 cancel_event=self._cancel_event,
             )
 

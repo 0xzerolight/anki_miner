@@ -562,6 +562,14 @@
         <translation>存储单词来源的剧集/节目及时间戳。留空 = 跳过。</translation>
     </message>
     <message>
+        <source>Translation Field</source>
+        <translation>翻译字段</translation>
+    </message>
+    <message>
+        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
+        <translation>存储该句的第二语言字幕行（视频 -&gt; 单个，需在过滤中启用第二语言字幕）。留空 = 跳过。</translation>
+    </message>
+    <message>
         <source>Card Type</source>
         <translation>卡片类型</translation>
     </message>
@@ -1558,6 +1566,14 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.</source>
         <translation>在制作任何卡片之前，逐一批准或拒绝单词、挑选例句和场景、修剪音频，并将单词标记为已知。</translation>
+    </message>
+    <message>
+        <source>Secondary-language subtitles</source>
+        <translation>第二语言字幕</translation>
+    </message>
+    <message>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
+        <translation>在挖词语言字幕旁加载一份你自己语言的第二字幕文件：其内容会显示在单词整理器预览中挖词语言行的下方，并可保存到翻译字段。在设置 -&gt; 过滤中开启此功能。</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -4668,6 +4684,18 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Click to append a built-in pattern to the regex field above.</source>
         <translation>点击将内置模式追加到上方的正则字段。</translation>
+    </message>
+    <message>
+        <source>Secondary Subtitles</source>
+        <translation>第二语言字幕</translation>
+    </message>
+    <message>
+        <source>Enable secondary-language subtitles</source>
+        <translation>启用第二语言字幕</translation>
+    </message>
+    <message>
+        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
+        <translation>在视频 -&gt; 单个中新增第二个字幕选择器及其独立的偏移设置。该行会显示在单词整理器预览中挖词语言行的下方；若已映射翻译字段（卡片和 Anki），还会显示在卡片上。</translation>
     </message>
     <message>
         <source>Deduplication</source>
@@ -8050,6 +8078,14 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>字幕偏移：</translation>
     </message>
     <message>
+        <source>Translation Subtitles:</source>
+        <translation>翻译字幕文件：</translation>
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation>翻译偏移：</translation>
+    </message>
+    <message>
         <source>Select recent file pair...</source>
         <translation>选择最近的文件配对...</translation>
     </message>
@@ -8072,6 +8108,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>调整字幕时间轴（正值 = 延后，负值 = 提前）</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation>仅偏移翻译字幕（正值 = 延后，负值 = 提前）</translation>
     </message>
     <message>
         <source>Choose a video file first.</source>
@@ -8116,6 +8156,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
         <translation>无法读取字幕。请检查文件格式。</translation>
+    </message>
+    <message>
+        <source>That translation subtitle file no longer exists.</source>
+        <translation>该翻译字幕文件已不存在。</translation>
     </message>
     <message>
         <source>Single episode</source>
@@ -9394,6 +9438,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>句子长度</translation>
     </message>
     <message>
+        <source>Translation</source>
+        <translation>翻译</translation>
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
@@ -9412,6 +9460,10 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     <message>
         <source>Characters in the example sentence. Sort ascending for the shortest.</source>
         <translation>例句中的字符数。按升序排序可优先显示最短的。</translation>
+    </message>
+    <message>
+        <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
+        <translation>该例句的第二语言字幕行。切换例句或使用“+ 上一行”/“+ 下一行”后会随之更新。</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>

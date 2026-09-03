@@ -104,6 +104,7 @@ _FIELD_KEYWORDS: dict[str, list[str]] = {
     "frequency": ["frequency", "frequencies", "freq", "rank", "frequencyrank"],
     "frequency_sort": ["freqsort", "frequencysort"],
     "source": ["source", "origin", "miscinfo"],
+    "sentence_translation": ["sentencetranslation", "translation", "sentencemeaning"],
 }
 
 # JP Mining Note card-type marker ids → default field names. Mirrors the
@@ -561,6 +562,18 @@ class AnkiSettingsPanel(FormPanel):
             helper=self.tr("Stores the show/episode and timestamp the word came from. Blank = skip."),
         )
 
+        # Translation field (secondary-language subtitles, F7)
+        self.sentence_translation_field_input = QLineEdit()
+        self.sentence_translation_field_input.setPlaceholderText("SentenceTranslation")
+        self.add_field(
+            self.tr("Translation Field"),
+            self.sentence_translation_field_input,
+            helper=self.tr(
+                "Stores the secondary-language subtitle line for the sentence "
+                "(Video -> Single, with secondary subtitles enabled under Filtering). Blank = skip."
+            ),
+        )
+
         # Card Type section. JP Mining Note-style note types render a card
         # differently depending on which marker field holds an "x". The dropdown
         # is the only visible control by default; the editable field names hide
@@ -918,6 +931,7 @@ class AnkiSettingsPanel(FormPanel):
             "frequency": self.frequency_field_input,
             "frequency_sort": self.frequency_sort_field_input,
             "source": self.source_field_input,
+            "sentence_translation": self.sentence_translation_field_input,
         }
 
         # Only overwrite a widget when a field actually matched — an empty result
@@ -957,6 +971,7 @@ class AnkiSettingsPanel(FormPanel):
             "frequency": self.frequency_field_input.text().strip(),
             "frequency_sort": self.frequency_sort_field_input.text().strip(),
             "source": self.source_field_input.text().strip(),
+            "sentence_translation": self.sentence_translation_field_input.text().strip(),
         }
         # Language-scoped keys are contributed only while their row is on screen
         # (or the mapping already carried them). Keeps a ja anki_fields
@@ -994,6 +1009,7 @@ class AnkiSettingsPanel(FormPanel):
         self.frequency_field_input.setText(fields.get("frequency", ""))
         self.frequency_sort_field_input.setText(fields.get("frequency_sort", ""))
         self.source_field_input.setText(fields.get("source", ""))
+        self.sentence_translation_field_input.setText(fields.get("sentence_translation", ""))
 
     def get_pitch_category_format(self) -> Literal["jp", "romaji"]:
         """Return the selected pitch category format ("jp" or "romaji")."""

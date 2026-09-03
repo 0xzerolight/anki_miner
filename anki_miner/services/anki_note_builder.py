@@ -298,6 +298,7 @@ def build_note(
         "expression_reading": html.escape(word.expression_reading),
         "sentence_furigana": sentence_furigana_field,
         "sentence_reading": html.escape(word.sentence_reading),
+        "sentence_translation": html.escape(word.sentence_translation),
     }
     # Profile-declared raw-HTML keys only; the four above are already in place
     # at their frozen positions.

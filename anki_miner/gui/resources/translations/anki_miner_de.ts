@@ -563,6 +563,14 @@
         <translation>Speichert die Serie/Folge und den Zeitstempel, aus dem das Wort stammt. Leer = überspringen.</translation>
     </message>
     <message>
+        <source>Translation Field</source>
+        <translation>Übersetzungsfeld</translation>
+    </message>
+    <message>
+        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
+        <translation>Speichert die zweitsprachige Untertitelzeile für den Satz (Video -&gt; Einzeln, bei aktivierten zweitsprachigen Untertiteln unter Filterung). Leer = überspringen.</translation>
+    </message>
+    <message>
         <source>Card Type</source>
         <translation>Kartentyp</translation>
     </message>
@@ -1560,6 +1568,14 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.</source>
         <translation>Jedes Wort annehmen oder ablehnen, seinen Satz und seine Szene wählen, sein Audio kürzen und Wörter als bekannt markieren -- bevor eine Karte erstellt wird.</translation>
+    </message>
+    <message>
+        <source>Secondary-language subtitles</source>
+        <translation>Zweitsprachige Untertitel</translation>
+    </message>
+    <message>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
+        <translation>Eine zweite Untertiteldatei in Ihrer eigenen Sprache neben der in der Mining-Sprache laden: sie erscheint in der Vorschau des Wort-Kurators unter der Zeile in der Mining-Sprache und lässt sich in einem Übersetzungsfeld speichern. Unter Einstellungen -&gt; Filterung aktivieren.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -4681,6 +4697,18 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
     <message>
         <source>Click to append a built-in pattern to the regex field above.</source>
         <translation>Klicken Sie hier, um ein integriertes Muster an das obige Regex-Feld anzuhängen.</translation>
+    </message>
+    <message>
+        <source>Secondary Subtitles</source>
+        <translation>Zweitsprachige Untertitel</translation>
+    </message>
+    <message>
+        <source>Enable secondary-language subtitles</source>
+        <translation>Zweitsprachige Untertitel aktivieren</translation>
+    </message>
+    <message>
+        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
+        <translation>Fügt zu Video -&gt; Einzeln eine zweite Untertitel-Dateiauswahl mit eigenem Versatz hinzu. Die Zeile erscheint in der Vorschau des Wort-Kurators unter der Zeile in der Mining-Sprache und, wenn das Übersetzungsfeld zugeordnet ist (Karten &amp; Anki), auf der Karte.</translation>
     </message>
     <message>
         <source>Deduplication</source>
@@ -8064,6 +8092,14 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
         <translation>Untertitel-Versatz:</translation>
     </message>
     <message>
+        <source>Translation Subtitles:</source>
+        <translation>Übersetzungs-Untertitel:</translation>
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation>Übersetzungs-Versatz:</translation>
+    </message>
+    <message>
         <source>Select recent file pair...</source>
         <translation>Zuletzt verwendetes Dateipaar wählen...</translation>
     </message>
@@ -8086,6 +8122,10 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>Untertitel-Timing anpassen (positiv = später, negativ = früher)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation>Nur die Übersetzungs-Untertitel verschieben (positiv = später, negativ = früher)</translation>
     </message>
     <message>
         <source>Choose a video file first.</source>
@@ -8130,6 +8170,10 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
         <translation>Die Untertitel konnten nicht gelesen werden. Prüfen Sie das Dateiformat.</translation>
+    </message>
+    <message>
+        <source>That translation subtitle file no longer exists.</source>
+        <translation>Diese Übersetzungs-Untertiteldatei existiert nicht mehr.</translation>
     </message>
     <message>
         <source>Single episode</source>
@@ -9410,6 +9454,10 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
         <translation>Satzlänge</translation>
     </message>
     <message>
+        <source>Translation</source>
+        <translation>Übersetzung</translation>
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
@@ -9428,6 +9476,10 @@ Aufsteigend sortieren, um i+1-Zeilen zuerst anzuzeigen – jene, deren einziges 
     <message>
         <source>Characters in the example sentence. Sort ascending for the shortest.</source>
         <translation>Zeichen im Beispielsatz. Aufsteigend sortieren für den kürzesten.</translation>
+    </message>
+    <message>
+        <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
+        <translation>Die zweitsprachige Untertitelzeile für diesen Satz. Sie folgt einer Satzauswahl unter „Sätze“ oder „+ Vorherige Zeile“ / „+ Nächste Zeile“.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>

@@ -175,6 +175,26 @@ class TestRecentFilesManager:
         assert len(entries) == 1
         assert entries[0]["video"] == "/video/ep01.mkv"
 
+    def test_add_entry_stores_the_secondary_track(self, manager):
+        manager.add_entry(
+            Path("/v.mkv"), Path("/s.ass"), 1.0, secondary_subtitle=Path("/s.en.srt"), secondary_offset=-0.5
+        )
+        entry = manager.get_recent()[0]
+        assert entry["secondary_subtitle"] == "/s.en.srt"
+        assert entry["secondary_offset"] == -0.5
+
+    def test_add_entry_without_a_secondary_track_writes_no_secondary_keys(self, manager):
+        manager.add_entry(Path("/v.mkv"), Path("/s.ass"))
+        assert "secondary_subtitle" not in manager.get_recent()[0]
+
+    def test_entry_with_a_bad_secondary_offset_is_rejected(self, manager):
+        manager._file_path.parent.mkdir(parents=True, exist_ok=True)
+        manager._file_path.write_text(
+            '[{"video": "/v.mkv", "subtitle": "/s.ass", "secondary_subtitle": "/s.en.srt", "secondary_offset": "x"}]',
+            encoding="utf-8",
+        )
+        assert manager.get_recent() == []
+
 
 class TestAtomicSave:
     """recent_files.json is written atomically and save failures are logged (T-32)."""

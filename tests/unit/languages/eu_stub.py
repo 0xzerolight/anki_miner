@@ -297,6 +297,7 @@ EU_CARD_FIELDS: dict[str, str] = {
     "frequency_sort": "",
     "source": "",
     "expression_audio": "",
+    "sentence_translation": "",
     "stub_extra": "",
 }
 

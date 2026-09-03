@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.exceptions import AnkiMinerException, SetupError
+from anki_miner.exceptions import AnkiMinerException, SetupError, SubtitleParseError
 from anki_miner.exceptions.youtube import (
     TranscriptionFailedError,
     TranscriptionProducedNothingError,
@@ -55,6 +55,7 @@ from anki_miner.services.pitch_accent.render import (
 )
 from anki_miner.services.reading.images import ReadingImageArchiveError, ReadingImageMemberError, prepare_card_image
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
+from anki_miner.services.secondary_subtitles import attach_translations
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.services.word_filter import enabled_script_options, script_options_kwarg
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
@@ -2029,6 +2030,28 @@ class EpisodeProcessor:
             for word in words
         ]
 
+    def _load_secondary_entries(self, secondary_subtitle_file: Path | None) -> list[tuple[float, float, str]] | None:
+        """Raw cues of the secondary-language track at a ZERO offset, or None without one.
+
+        The same ``parse_raw_entries`` the curator context uses, so both see
+        identical cues; the track's own offset is applied by
+        ``attach_translations`` (and by the curator's column), never baked into
+        the times here. The second track skips the mining language's decode
+        ladder -- it's not in that language -- and goes through BOM detection
+        then charset detection instead; the user's subtitle regex filter still
+        runs like the primary. A track that cannot be decoded raises
+        ``SubtitleParseError`` and fails the run.
+        """
+        if secondary_subtitle_file is None:
+            return None
+        try:
+            entries = self.subtitle_parser.parse_raw_entries(secondary_subtitle_file, 0.0, encodings=())
+        except SubtitleParseError as exc:
+            # Two subtitle files are in play; the decoder's message names neither.
+            raise SubtitleParseError(f"Secondary subtitle file {secondary_subtitle_file.name}: {exc}") from exc
+        logger.info("secondary subtitle: %d cue(s) from %s", len(entries), secondary_subtitle_file.name)
+        return entries
+
     def _apply_strict_card_order(
         self,
         words: list[TokenizedWord],
@@ -2071,6 +2094,8 @@ class EpisodeProcessor:
         audio_only: bool = False,
         cancel_event: threading.Event | None = None,
         subtitle_offset: float | None = None,
+        secondary_subtitle_file: Path | None = None,
+        secondary_subtitle_offset: float = 0.0,
     ) -> ProcessingResult:
         """Process a single episode and create Anki cards.
 
@@ -2120,6 +2145,14 @@ class EpisodeProcessor:
                 over items with different offsets and passes each item's here,
                 so a per-item config copy (and the per-item service rebuild it
                 forced) is no longer needed.
+            secondary_subtitle_file: A second subtitle file in another language
+                (F7). Parsed once at a ZERO offset; each surviving word gets the
+                cues overlapping its final sentence window as
+                ``sentence_translation``. None (every path but Video -> Single
+                with the feature on) leaves the field "".
+            secondary_subtitle_offset: Seconds to shift that track by, applied
+                at match time so the curator, which holds the same zero-offset
+                cues, can move the offset without a re-parse.
 
         Returns:
             ProcessingResult with statistics.
@@ -2162,6 +2195,9 @@ class EpisodeProcessor:
                 )
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
+            # Parsed here, not lazily: a second file that will not parse should
+            # fail the run before filtering and curation spend their time.
+            secondary_entries = self._load_secondary_entries(secondary_subtitle_file)
             if not all_words:
                 entries = self.subtitle_parser.parse_raw_entries(subtitle_file, subtitle_offset)
                 self.presenter.show_warning(self._no_words_message(text for _start, _end, text in entries))
@@ -2187,6 +2223,13 @@ class EpisodeProcessor:
                 if isinstance(outcome, ProcessingResult):
                     return outcome
                 unknown_words = self._materialize_line_expansions(outcome, subtitle_file, subtitle_offset)
+
+            if secondary_entries is not None:
+                # After curation and expansion materialisation on purpose: a
+                # sentence pick or a +line has already moved the window this
+                # matches against. The curator painted its column from the same
+                # cues with the same function, so the card agrees with it.
+                attach_translations(unknown_words, secondary_entries, offset=secondary_subtitle_offset)
 
             unknown_words = self._apply_strict_card_order(unknown_words, all_words)
 

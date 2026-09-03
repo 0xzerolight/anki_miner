@@ -563,6 +563,14 @@
         <translation>Armazena o programa/episódio e o horário de onde a palavra veio. Em branco = ignorar.</translation>
     </message>
     <message>
+        <source>Translation Field</source>
+        <translation>Campo de Tradução</translation>
+    </message>
+    <message>
+        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
+        <translation>Armazena a linha de legenda em idioma secundário da frase (Vídeo -&gt; Único, com legendas secundárias ativadas em Filtragem). Em branco = ignorar.</translation>
+    </message>
+    <message>
         <source>Card Type</source>
         <translation>Tipo de Cartão</translation>
     </message>
@@ -1560,6 +1568,14 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.</source>
         <translation>Aprove ou rejeite cada palavra, escolha sua frase e cena, corte seu áudio e marque palavras como conhecidas -- antes de qualquer cartão ser criado.</translation>
+    </message>
+    <message>
+        <source>Secondary-language subtitles</source>
+        <translation>Legendas em idioma secundário</translation>
+    </message>
+    <message>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
+        <translation>Carregue um segundo arquivo de legenda no seu próprio idioma, ao lado do idioma de mineração: a linha dele aparece abaixo da linha na prévia do Curador de Palavras e pode ser salva em um campo de Tradução. Ative essa opção em Configurações -&gt; Filtragem.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -4681,6 +4697,18 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
     <message>
         <source>Click to append a built-in pattern to the regex field above.</source>
         <translation>Clique para acrescentar um padrão integrado ao campo de regex acima.</translation>
+    </message>
+    <message>
+        <source>Secondary Subtitles</source>
+        <translation>Legendas Secundárias</translation>
+    </message>
+    <message>
+        <source>Enable secondary-language subtitles</source>
+        <translation>Ativar Legendas em Idioma Secundário</translation>
+    </message>
+    <message>
+        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
+        <translation>Adiciona um segundo seletor de legendas e seu próprio deslocamento a Vídeo -&gt; Único. Sua linha aparece abaixo da linha do idioma de mineração na prévia do Curador de Palavras e, quando o campo Tradução está mapeado (Cartões e Anki), no cartão.</translation>
     </message>
     <message>
         <source>Deduplication</source>
@@ -8064,6 +8092,14 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>Deslocamento da Legenda:</translation>
     </message>
     <message>
+        <source>Translation Subtitles:</source>
+        <translation>Legenda de Tradução:</translation>
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation>Deslocamento da Tradução:</translation>
+    </message>
+    <message>
         <source>Select recent file pair...</source>
         <translation>Selecionar par de arquivos recente...</translation>
     </message>
@@ -8086,6 +8122,10 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>Ajustar a sincronização da legenda (positivo = mais tarde, negativo = mais cedo)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation>Deslocar apenas as legendas de tradução (positivo = mais tarde, negativo = mais cedo)</translation>
     </message>
     <message>
         <source>Choose a video file first.</source>
@@ -8130,6 +8170,10 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
         <translation>Não foi possível ler as legendas. Verifique o formato do arquivo.</translation>
+    </message>
+    <message>
+        <source>That translation subtitle file no longer exists.</source>
+        <translation>Esse arquivo de legenda de tradução não existe mais.</translation>
     </message>
     <message>
         <source>Single episode</source>
@@ -9410,6 +9454,10 @@ Seus dicionários instalados, áudio, listas de frequência e tema são mantidos
         <translation>Tamanho da frase</translation>
     </message>
     <message>
+        <source>Translation</source>
+        <translation>Tradução</translation>
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
@@ -9428,6 +9476,10 @@ Ordene de forma crescente para colocar primeiro as linhas i+1 — aquelas cuja �
     <message>
         <source>Characters in the example sentence. Sort ascending for the shortest.</source>
         <translation>Caracteres na frase de exemplo. Ordene de forma crescente para ver as mais curtas.</translation>
+    </message>
+    <message>
+        <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
+        <translation>A linha de legenda em idioma secundário desta frase. Acompanha a frase escolhida em “Frases” ou o uso de “+ Linha anterior” / “+ Próxima linha”.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>

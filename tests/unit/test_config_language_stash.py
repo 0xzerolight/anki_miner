@@ -110,6 +110,12 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
     for key, value in recorded.items():
         if key == "config_schema_version":  # envelope key, not a dataclass field
             continue
+        if key == "anki_fields":
+            # Keys added to the default mapping since the fixture are backfilled
+            # on load (_backfill_anki_fields); every recorded one must be unchanged.
+            assert {k: reserialized[key][k] for k in value} == value
+            assert set(reserialized[key]) - set(value) == {"sentence_translation"}
+            continue
         assert reserialized[key] == value, key
     assert set(reserialized) - set(recorded) == {
         "language",
@@ -118,5 +124,6 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "reading_tone_color",
         "strict_card_order",
         "condenser_merge_output",
+        "secondary_subtitle_enabled",
     }
     assert loaded.script_variant == "" and loaded.reading_tone_color is False
