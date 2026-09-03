@@ -12,6 +12,24 @@ import pytest
 from anki_miner.gui import app
 
 
+@pytest.fixture(autouse=True)
+def _restore_process_log_hooks():
+    """Undo the process-wide hooks the "stop late in main()" case installs.
+
+    Left behind, the thread/unraisable/warnings hooks and the Qt message bridge
+    turn later tests' Qt warnings and thread failures into extra log records in
+    files that never asked for them.
+    """
+    from anki_miner.gui import qt_log_bridge
+    from anki_miner.utils import log_hooks
+
+    try:
+        yield
+    finally:
+        log_hooks.uninstall_process_log_hooks()
+        qt_log_bridge.uninstall_qt_message_handler()
+
+
 def test_probe_env_routes_into_probe_and_exits(monkeypatch):
     """Setting the probe env var exits with the probe's return code."""
     monkeypatch.setenv("ANKI_MINER_ASR_VULKAN_PROBE", "1")

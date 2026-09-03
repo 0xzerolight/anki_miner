@@ -35,10 +35,20 @@ _LOG_FORMAT = "%(asctime)s.%(msecs)03d %(levelname)-8s [%(threadName)s] %(name)s
 _LOG_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 
+# Mirrors ``config.paths.HOME_FALLBACK_REASON``, deliberately duplicated rather
+# than imported: this module is the bootstrap and stays free of package imports
+# (importing config here would drag Qt into every launch). Whichever of the two
+# resolved the home first is the one that recorded a reason, so the session
+# header reports either.
+HOME_FALLBACK_REASON: str | None = None
+
+
 def _default_anki_miner_home() -> Path:
+    global HOME_FALLBACK_REASON
     try:
         return Path.home() / ".anki_miner"
-    except Exception:
+    except Exception as exc:
+        HOME_FALLBACK_REASON = f"{type(exc).__name__}: {exc}"
         return Path(tempfile.gettempdir()) / ".anki_miner"
 
 

@@ -21,6 +21,25 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 
+@pytest.fixture(autouse=True)
+def _restore_process_log_hooks():
+    """Take the process-wide hooks back out after any test that runs ``main()``.
+
+    ``main()`` installs the thread/unraisable/warnings hooks and the Qt message
+    bridge for the life of the process. Left behind by a test, they turn later
+    tests' Qt warnings and thread failures into extra log records and break
+    record counts in files that never asked for them.
+    """
+    from anki_miner.gui import qt_log_bridge
+    from anki_miner.utils import log_hooks
+
+    try:
+        yield
+    finally:
+        log_hooks.uninstall_process_log_hooks()
+        qt_log_bridge.uninstall_qt_message_handler()
+
+
 # ---------------------------------------------------------------------------
 # Config field tests
 # ---------------------------------------------------------------------------
@@ -1106,3 +1125,69 @@ class TestMainUsesConfigLogPath:
             assert seen[0] == "main"
         finally:
             threading.main_thread().name = thread_name_before
+
+
+# ---------------------------------------------------------------------------
+# What an unhandled GUI-thread exception records
+# ---------------------------------------------------------------------------
+
+
+class TestUnhandledExceptionRecord:
+    """The CRITICAL line the crash net writes before it opens its dialog.
+
+    A bare "Unhandled exception" carried nothing greppable and nothing about
+    where the user was. Type, message and the active window class are what
+    narrow a report to one screen without asking the user to reproduce it.
+    """
+
+    def test_message_names_the_type_the_value_and_the_active_window(self, qapp, monkeypatch, caplog):
+        import sys
+
+        from PyQt6.QtWidgets import QMessageBox
+
+        from anki_miner.gui import app as app_module
+
+        monkeypatch.setattr(sys, "excepthook", sys.excepthook)
+        monkeypatch.setattr(app_module, "_in_excepthook", False, raising=False)
+        monkeypatch.setattr(QMessageBox, "exec", lambda *args, **kwargs: 0)
+        monkeypatch.setattr(app_module, "_active_window_name", lambda: "MainWindow")
+
+        app_module._install_excepthook(qapp)
+        with caplog.at_level(logging.CRITICAL, logger=app_module.logger.name):
+            sys.excepthook(ValueError, ValueError("boom"), None)
+
+        records = [r for r in caplog.records if r.getMessage().startswith("Unhandled exception:")]
+        assert len(records) == 1
+        assert records[0].getMessage() == "Unhandled exception: ValueError: boom (window=MainWindow)"
+        assert records[0].exc_info is not None
+
+    def test_no_active_window_is_reported_rather_than_omitted(self, qapp, monkeypatch, caplog):
+        import sys
+
+        from PyQt6.QtWidgets import QMessageBox
+
+        from anki_miner.gui import app as app_module
+
+        monkeypatch.setattr(sys, "excepthook", sys.excepthook)
+        monkeypatch.setattr(app_module, "_in_excepthook", False, raising=False)
+        monkeypatch.setattr(QMessageBox, "exec", lambda *args, **kwargs: 0)
+
+        app_module._install_excepthook(qapp)
+        with caplog.at_level(logging.CRITICAL, logger=app_module.logger.name):
+            sys.excepthook(RuntimeError, RuntimeError("no window"), None)
+
+        message = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Unhandled exception:"))
+        assert "(window=none)" in message
+
+    def test_a_dead_qt_object_does_not_cost_the_record(self, monkeypatch):
+        """The window lookup runs inside the crash net; it must never raise."""
+        from anki_miner.gui import app as app_module
+
+        class _DeadApplication:
+            @staticmethod
+            def instance():
+                raise RuntimeError("wrapped C/C++ object has been deleted")
+
+        monkeypatch.setattr(app_module, "QApplication", _DeadApplication)
+
+        assert app_module._active_window_name() == "unknown"
