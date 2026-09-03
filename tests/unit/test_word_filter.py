@@ -1436,6 +1436,72 @@ class TestAttachOccurrenceCounts:
         assert word.occurrence_count == 2
 
 
+class TestAttachLineUnknownCounts:
+    """Tests for WordFilterService.attach_line_unknown_counts."""
+
+    @staticmethod
+    def _line(text: str, lemmas: set[str]) -> LineLemmas:
+        return LineLemmas(
+            line_text=text,
+            lemmas=frozenset(lemmas),
+            start_time=0.0,
+            end_time=2.0,
+            duration=2.0,
+        )
+
+    def test_counts_distinct_unknowns_on_the_words_own_line(self, test_config):
+        service = WordFilterService(test_config)
+        line = self._line("猫が魚を食べた", {"猫", "魚", "食べる"})
+        word = create_word("魚", sentence="猫が魚を食べた")
+
+        service.attach_line_unknown_counts([word], [line], {"魚", "食べる"})
+
+        assert word.line_unknown_count == 2
+
+    def test_an_i_plus_one_line_counts_one(self, test_config):
+        service = WordFilterService(test_config)
+        line = self._line("猫が魚を食べた", {"猫", "魚", "食べる"})
+        word = create_word("魚", sentence="猫が魚を食べた")
+
+        service.attach_line_unknown_counts([word], [line], {"魚"})
+
+        assert word.line_unknown_count == 1
+
+    def test_a_word_whose_sentence_matches_no_line_stays_zero(self, test_config):
+        service = WordFilterService(test_config)
+        line = self._line("猫が魚を食べた", {"猫", "魚"})
+        word = create_word("犬", sentence="犬が走る")
+
+        service.attach_line_unknown_counts([word], [line], {"犬"})
+
+        assert word.line_unknown_count == 0
+
+    def test_empty_line_index_is_a_no_op(self, test_config):
+        service = WordFilterService(test_config)
+        word = create_word("魚", sentence="猫が魚を食べた")
+
+        service.attach_line_unknown_counts([word], [], {"魚"})
+
+        assert word.line_unknown_count == 0
+
+    def test_candidates_are_stamped_too(self, test_config):
+        """The curator repaints the column from the picked variant."""
+        service = WordFilterService(test_config)
+        lines = [
+            self._line("猫が魚を食べた", {"猫", "魚", "食べる"}),
+            self._line("魚だ", {"魚"}),
+        ]
+        word = create_word("魚", sentence="猫が魚を食べた")
+        word.sentence_candidates = [
+            create_word("魚", sentence="猫が魚を食べた"),
+            create_word("魚", sentence="魚だ"),
+        ]
+
+        service.attach_line_unknown_counts([word], lines, {"魚", "食べる"})
+
+        assert [c.line_unknown_count for c in word.sentence_candidates] == [2, 1]
+
+
 class TestCompoundInteractions:
     """Compound-matched words (dictionary-attested merges) through the filters.
 

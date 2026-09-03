@@ -154,6 +154,12 @@ class TokenizedWord:
     # Times this word's lemma occurs in the current episode. Display/sort-only,
     # attached on the interactive curation path (Issue #88); 0 when not computed.
     occurrence_count: int = 0
+    # Distinct unknown lemmas on this word's own subtitle line — the raw i+1
+    # signal, since a count of 1 IS the i+1 condition. Display/sort-only,
+    # attached on the interactive curation path; 0 means "not computed" (no
+    # line index, or the sentence matched no line), which the curator renders
+    # as "-" sorting last rather than as a better-than-i+1 zero.
+    line_unknown_count: int = 0
     pos: str | None = None  # MeCab pos1 (動詞/形容詞/名詞/...) — used for kifuku/odaka distinction
     # Character offsets of the target morpheme within ``sentence`` (post-filter).
     # -1 sentinel means "not tracked" — card builder falls back to plain escape.
