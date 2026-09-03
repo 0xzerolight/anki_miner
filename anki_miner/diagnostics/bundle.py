@@ -26,8 +26,30 @@ from urllib.parse import unquote, urlsplit, urlunsplit
 from anki_miner.config import AudioSourceEntry, paths
 from anki_miner.diagnostics.environment import EnvironmentSnapshot, format_environment_lines
 from anki_miner.utils.atomic_io import atomic_write_path
+from anki_miner.utils.logging_ext import capped, log_summary
+
+logger = logging.getLogger(__name__)
 
 DIAGNOSTICS_ZIP_SUFFIX = ".zip"
+
+# Bumped whenever the member layout changes, so a report can be read against the
+# expectations it was written for. 1 = logs + environment + health + settings;
+# 2 adds the on-disk config/state members and the inventories.
+BUNDLE_FORMAT = 2
+
+# Per-member ceiling for everything except the logs. A single runaway artifact
+# (a corrupt ui_state.ini, a queue snapshot that grew unbounded) must not push
+# the log ring out of an attachable ZIP. The logs are exempt: they are the
+# evidence the bundle exists for, and the ring already bounds them.
+_MEMBER_MAX_BYTES = 2 * 1024 * 1024
+
+# Written beside the active log by the child-process launcher
+# (gui/launch.py CHILD_LOG_NAME). Spelled out rather than imported: that module
+# pulls in Qt and this one must stay importable without it.
+_CHILD_LOG_NAME = "anki_miner.child.log"
+
+# gui/utils/session_state.py FILENAME. Same reason as the child log: no Qt here.
+_UI_STATE_NAME = "ui_state.ini"
 
 _GITHUB_ISSUES_URL = "https://github.com/0xzerolight/anki_miner/issues"
 _PRIVACY_SENTENCE = "This bundle contains file paths and file names from your computer. Review it before uploading."
@@ -138,6 +160,66 @@ def collect_log_members() -> tuple[list[tuple[str, bytes]], list[str]]:
     crash_path = paths.ANKI_MINER_HOME / "anki_miner.crash"
     collect("anki_miner.crash", crash_path, None)
     collect("anki_miner.crash.1", crash_path.with_suffix(".crash.1"), None)
+
+    # The child process writes its own stderr sink beside the active log, so a
+    # crash that never reached this process still has a record here.
+    collect(_CHILD_LOG_NAME, active_path.with_name(_CHILD_LOG_NAME), None)
+    return members, missing
+
+
+def _capped_bytes(content: bytes) -> bytes:
+    """Trim one non-log member to ``_MEMBER_MAX_BYTES`` and say how much was cut."""
+    if len(content) <= _MEMBER_MAX_BYTES:
+        return content
+    omitted = len(content) - _MEMBER_MAX_BYTES
+    return content[:_MEMBER_MAX_BYTES] + f"\n<truncated: {omitted} bytes omitted>\n".encode()
+
+
+def _globbed(directory: Path, pattern: str) -> list[Path]:
+    """Sorted files matching ``pattern``; an unreadable or absent dir yields none."""
+    try:
+        return sorted(path for path in directory.glob(pattern) if path.is_file())
+    except OSError:
+        return []
+
+
+def _state_sources(home: Path) -> list[tuple[str, Path]]:
+    """Map every on-disk config/state artifact to its member name in the ZIP.
+
+    ``gui_config*`` covers the live file plus the recovery artifacts the config
+    manager writes beside it (``.bak`` one-overwrite rotation and the
+    ``.from-schema-<N>.json`` archive; see gui/utils/config_manager.py). Both are
+    the evidence for "my settings changed by themselves".
+
+    Download manifests are included; the ``.part`` payloads beside them never
+    are — they are the bytes, not the state.
+    """
+    runtime_state = home / "runtime_state"
+    return [
+        *((f"config/{path.name}", path) for path in _globbed(home, "gui_config*")),
+        *((f"config/{path.name}", path) for path in _globbed(home, _UI_STATE_NAME)),
+        *((f"config/profiles/{path.name}", path) for path in _globbed(home / "profiles", "*.json")),
+        *((f"state/queues/{path.name}", path) for path in _globbed(runtime_state / "queues", "*.json")),
+        *((f"state/downloads/{path.name}", path) for path in _globbed(runtime_state / "downloads", "*.json")),
+    ]
+
+
+def collect_state_members() -> tuple[list[tuple[str, bytes]], list[str]]:
+    """Read the on-disk config and runtime state, best effort.
+
+    The settings member records the config the session is *running*; these
+    members record what is on disk. A divergence between the two is the whole
+    diagnosis for a setting that did not survive a restart, a profile switch
+    that half-applied, or a queue that came back empty.
+    """
+    members: list[tuple[str, bytes]] = []
+    missing: list[str] = []
+    for name, path in _state_sources(paths.ANKI_MINER_HOME):
+        content = _read_plain(path)
+        if content is None:
+            missing.append(name)
+        else:
+            members.append((name, _capped_bytes(content)))
     return members, missing
 
 
@@ -187,6 +269,7 @@ def _readme_bytes(member_names: list[str], missing: list[str]) -> bytes:
     missing_text = ", ".join(missing) or "-"
     return (
         "Anki Miner diagnostics bundle\n\n"
+        f"bundle_format: {BUNDLE_FORMAT}\n\n"
         f"Contents:\n{inventory}\n\n"
         f"{_PRIVACY_SENTENCE}\n"
         f"GitHub issues: {_GITHUB_ISSUES_URL}\n"
@@ -202,12 +285,20 @@ def write_diagnostics_bundle(
     health_lines: list[str],
 ) -> BundleResult:
     """Atomically write a diagnostics ZIP and return its inventory."""
-    log_members, missing = collect_log_members()
+    log_members, log_missing = collect_log_members()
+    state_members, state_missing = collect_state_members()
+    missing = [*log_missing, *state_missing]
     effective_health = health_lines or [_UNCHECKED_HEALTH]
-    body_members = [
+    generated_members = [
         ("environment.txt", _text_bytes(format_environment_lines(snapshot))),
         ("health.txt", _text_bytes(effective_health)),
         ("settings.json", _settings_bytes(config)),
+    ]
+    # State members arrive already capped by their collector; the logs are
+    # exempt by design. Capping here would double-stamp the truncation marker.
+    body_members = [
+        *((name, _capped_bytes(content)) for name, content in generated_members),
+        *state_members,
         *log_members,
     ]
     member_names = ["README.txt", *(name for name, _content in body_members)]
@@ -217,9 +308,24 @@ def write_diagnostics_bundle(
         for name, content in payloads:
             archive.writestr(name, content)
 
+    total_bytes = sum(len(content) for _name, content in payloads)
+    try:
+        zip_bytes: int | None = target.stat().st_size
+    except OSError:
+        zip_bytes = None
+    log_summary(
+        logger,
+        "Diagnostics exported",
+        path=target,
+        members=len(payloads),
+        bytes=total_bytes,
+        zip_bytes=zip_bytes,
+        missing=capped(missing),
+    )
+
     return BundleResult(
         path=target,
         members=tuple(name for name, _content in payloads),
-        total_bytes=sum(len(content) for _name, content in payloads),
+        total_bytes=total_bytes,
         missing=tuple(missing),
     )

@@ -481,3 +481,123 @@ def test_write_failure_leaves_no_target_or_staging_file(tmp_path: Path, monkeypa
 
 def test_default_bundle_name_uses_passed_datetime() -> None:
     assert default_bundle_name(datetime(2026, 8, 4, 12, 34, 56)) == "anki-miner-diagnostics-20260804-123456.zip"
+
+
+def _seed_home(tmp_path: Path, monkeypatch) -> Path:
+    """Point the bundle at an isolated home holding one of every state artifact."""
+    home = tmp_path / "home"
+    (home / "profiles").mkdir(parents=True)
+    (home / "runtime_state" / "queues").mkdir(parents=True)
+    (home / "runtime_state" / "downloads").mkdir(parents=True)
+    (home / "gui_config.json").write_text('{"theme": "dark"}', encoding="utf-8")
+    (home / "gui_config.json.bak").write_text('{"theme": "light"}', encoding="utf-8")
+    (home / "gui_config.from-schema-9.json").write_text('{"schema_version": 9}', encoding="utf-8")
+    (home / "ui_state.ini").write_text("[window]\ngeometry=abc\n", encoding="utf-8")
+    (home / "profiles" / "work.json").write_text('{"profile_name": "Work"}', encoding="utf-8")
+    (home / "runtime_state" / "queues" / "video.json").write_text('{"items": []}', encoding="utf-8")
+    (home / "runtime_state" / "downloads" / "x.json").write_text('{"url": "x"}', encoding="utf-8")
+    (home / "runtime_state" / "downloads" / "x.part").write_bytes(b"partial")
+    monkeypatch.setattr(bundle.paths, "ANKI_MINER_HOME", home)
+    return home
+
+
+def test_bundle_ships_on_disk_config_and_runtime_state(tmp_path: Path, monkeypatch) -> None:
+    home = _seed_home(tmp_path, monkeypatch)
+    _disable_early_crash_member(monkeypatch, tmp_path)
+    target = tmp_path / "state-diagnostics.zip"
+
+    write_diagnostics_bundle(
+        target,
+        config=AnkiMinerConfig(log_path=home / "anki_miner.log"),
+        snapshot=_snapshot(tmp_path),
+        health_lines=[],
+    )
+
+    members = _archive_members(target)
+    assert members["config/gui_config.json"] == b'{"theme": "dark"}'
+    assert members["config/gui_config.json.bak"] == b'{"theme": "light"}'
+    assert members["config/gui_config.from-schema-9.json"] == b'{"schema_version": 9}'
+    assert b"geometry=abc" in members["config/ui_state.ini"]
+    assert members["config/profiles/work.json"] == b'{"profile_name": "Work"}'
+    assert members["state/queues/video.json"] == b'{"items": []}'
+    assert members["state/downloads/x.json"] == b'{"url": "x"}'
+    assert "state/downloads/x.part" not in members
+
+
+def test_bundle_includes_the_child_log_beside_the_active_log(tmp_path: Path, monkeypatch) -> None:
+    _seed_home(tmp_path, monkeypatch)
+    active = tmp_path / "anki_miner.log"
+    active.write_bytes(b"active")
+    (tmp_path / "anki_miner.child.log").write_bytes(b"child stderr")
+    _disable_early_crash_member(monkeypatch, tmp_path)
+
+    with _installed_sink(active):
+        members, missing = collect_log_members()
+
+    assert ("anki_miner.child.log", b"child stderr") in members
+    assert missing == []
+
+
+def test_readme_declares_the_bundle_format(tmp_path: Path, monkeypatch) -> None:
+    _seed_home(tmp_path, monkeypatch)
+    _disable_early_crash_member(monkeypatch, tmp_path)
+    target = tmp_path / "format-diagnostics.zip"
+
+    write_diagnostics_bundle(
+        target,
+        config=AnkiMinerConfig(),
+        snapshot=_snapshot(tmp_path),
+        health_lines=[],
+    )
+
+    readme = _archive_members(target)["README.txt"].decode("utf-8")
+    assert readme.splitlines()[2] == f"bundle_format: {bundle.BUNDLE_FORMAT}"
+    assert bundle.BUNDLE_FORMAT == 2
+
+
+def test_oversized_state_member_is_truncated_while_logs_stay_whole(tmp_path: Path, monkeypatch) -> None:
+    home = _seed_home(tmp_path, monkeypatch)
+    big = b"u" * (5 * 1024 * 1024)
+    (home / "ui_state.ini").write_bytes(big)
+    active = home / "anki_miner.log"
+    active.write_bytes(b"L" * (5 * 1024 * 1024))
+    _disable_early_crash_member(monkeypatch, tmp_path)
+    target = tmp_path / "capped-diagnostics.zip"
+
+    with _installed_sink(active):
+        write_diagnostics_bundle(
+            target,
+            config=AnkiMinerConfig(log_path=active),
+            snapshot=_snapshot(tmp_path),
+            health_lines=[],
+        )
+
+    members = _archive_members(target)
+    omitted = len(big) - bundle._MEMBER_MAX_BYTES
+    assert len(members["config/ui_state.ini"]) < len(big)
+    assert f"<truncated: {omitted} bytes omitted>".encode() in members["config/ui_state.ini"]
+    assert len(members["anki_miner.log"]) == 5 * 1024 * 1024
+
+
+def test_export_logs_one_receipt(tmp_path: Path, monkeypatch, caplog) -> None:
+    _seed_home(tmp_path, monkeypatch)
+    _disable_early_crash_member(monkeypatch, tmp_path)
+    target = tmp_path / "receipt-diagnostics.zip"
+
+    with caplog.at_level(logging.INFO, logger="anki_miner.diagnostics.bundle"):
+        result = write_diagnostics_bundle(
+            target,
+            config=AnkiMinerConfig(),
+            snapshot=_snapshot(tmp_path),
+            health_lines=[],
+        )
+
+    receipts = [
+        record.getMessage()
+        for record in caplog.records
+        if record.name == "anki_miner.diagnostics.bundle" and record.getMessage().startswith("Diagnostics exported:")
+    ]
+    assert len(receipts) == 1
+    assert f"path={target}" in receipts[0]
+    assert f"members={len(result.members)}" in receipts[0]
+    assert f"zip_bytes={target.stat().st_size}" in receipts[0]
