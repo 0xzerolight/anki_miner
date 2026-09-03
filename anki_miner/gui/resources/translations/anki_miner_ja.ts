@@ -563,11 +563,11 @@
     </message>
     <message>
         <source>Translation Field</source>
-        <translation type="unfinished" />
+        <translation>翻訳フィールド</translation>
     </message>
     <message>
         <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>例文の翻訳字幕の行を保存します（動画 -&gt; 単一、フィルタリングで翻訳字幕を有効にしている場合）。空欄でスキップします。</translation>
     </message>
     <message>
         <source>Card Type</source>
@@ -1569,11 +1569,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Secondary-language subtitles</source>
-        <translation type="unfinished" />
+        <translation>翻訳字幕</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
-        <translation type="unfinished" />
+        <translation>マイニング言語の字幕と並べて、自分の言語の字幕ファイルをもう1つ読み込めます。単語キュレーターのプレビューではマイニング言語の行の下に表示され、翻訳フィールドに保存できます。設定 -&gt; フィルタリングで有効にしてください。</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -4687,15 +4687,15 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Secondary Subtitles</source>
-        <translation type="unfinished" />
+        <translation>翻訳字幕</translation>
     </message>
     <message>
         <source>Enable secondary-language subtitles</source>
-        <translation type="unfinished" />
+        <translation>翻訳字幕を有効化</translation>
     </message>
     <message>
         <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
-        <translation type="unfinished" />
+        <translation>動画 -&gt; 単一に2つ目の字幕ファイル選択と専用のオフセットを追加します。その行は単語キュレーターのプレビューでマイニング言語の行の下に表示され、翻訳フィールドが割り当てられている場合（カードと Anki）はカードにも表示されます。</translation>
     </message>
     <message>
         <source>Deduplication</source>
@@ -8079,11 +8079,11 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Translation Subtitles:</source>
-        <translation type="unfinished" />
+        <translation>翻訳字幕ファイル:</translation>
     </message>
     <message>
         <source>Translation Offset:</source>
-        <translation type="unfinished" />
+        <translation>翻訳字幕オフセット:</translation>
     </message>
     <message>
         <source>Select recent file pair...</source>
@@ -8111,7 +8111,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
-        <translation type="unfinished" />
+        <translation>翻訳字幕のみのタイミングを調整します（正の値 = 遅く、負の値 = 早く）</translation>
     </message>
     <message>
         <source>Choose a video file first.</source>
@@ -8159,7 +8159,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>That translation subtitle file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>その翻訳字幕ファイルは存在しなくなっています。</translation>
     </message>
     <message>
         <source>Single episode</source>
@@ -9439,7 +9439,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Translation</source>
-        <translation type="unfinished" />
+        <translation>翻訳</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -9463,7 +9463,7 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
-        <translation type="unfinished" />
+        <translation>この例文に対応する翻訳字幕の行です。「文」の選択や「+ 前の行」/「+ 次の行」の操作に応じて更新されます。</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>

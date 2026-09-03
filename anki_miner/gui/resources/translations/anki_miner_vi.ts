@@ -563,11 +563,11 @@
     </message>
     <message>
         <source>Translation Field</source>
-        <translation type="unfinished" />
+        <translation>Trường Bản dịch</translation>
     </message>
     <message>
         <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Lưu dòng phụ đề ngôn ngữ thứ hai cho câu (Video -&gt; Đơn lẻ, khi bật phụ đề thứ hai trong Lọc). Để trống = bỏ qua.</translation>
     </message>
     <message>
         <source>Card Type</source>
@@ -1569,11 +1569,11 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Secondary-language subtitles</source>
-        <translation type="unfinished" />
+        <translation>Phụ đề ngôn ngữ thứ hai</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
-        <translation type="unfinished" />
+        <translation>Tải tệp phụ đề thứ hai bằng ngôn ngữ của bạn, đặt bên cạnh tệp bằng ngôn ngữ khai thác: dòng của nó hiển thị dưới dòng kia trong bản xem trước Word Curator và có thể được lưu vào trường Bản dịch. Bật trong Cài đặt -&gt; Lọc.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -4687,15 +4687,15 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     </message>
     <message>
         <source>Secondary Subtitles</source>
-        <translation type="unfinished" />
+        <translation>Phụ đề thứ hai</translation>
     </message>
     <message>
         <source>Enable secondary-language subtitles</source>
-        <translation type="unfinished" />
+        <translation>Bật phụ đề ngôn ngữ thứ hai</translation>
     </message>
     <message>
         <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
-        <translation type="unfinished" />
+        <translation>Thêm một bộ chọn tệp phụ đề thứ hai và độ lệch riêng vào Video -&gt; Đơn lẻ. Dòng phụ đề của nó hiển thị dưới dòng ngôn ngữ khai thác trong bản xem trước Word Curator, và hiển thị trên thẻ khi trường Bản dịch được ánh xạ (Thẻ &amp; Anki).</translation>
     </message>
     <message>
         <source>Deduplication</source>
@@ -8079,11 +8079,11 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>Translation Subtitles:</source>
-        <translation type="unfinished" />
+        <translation>Tệp phụ đề dịch:</translation>
     </message>
     <message>
         <source>Translation Offset:</source>
-        <translation type="unfinished" />
+        <translation>Độ lệch phụ đề dịch:</translation>
     </message>
     <message>
         <source>Select recent file pair...</source>
@@ -8111,7 +8111,7 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
-        <translation type="unfinished" />
+        <translation>Chỉ dời thời gian phụ đề dịch (dương = trễ hơn, âm = sớm hơn)</translation>
     </message>
     <message>
         <source>Choose a video file first.</source>
@@ -8159,7 +8159,7 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>That translation subtitle file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Tệp phụ đề dịch đó không còn tồn tại.</translation>
     </message>
     <message>
         <source>Single episode</source>
@@ -9439,7 +9439,7 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>Translation</source>
-        <translation type="unfinished" />
+        <translation>Bản dịch</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -9463,7 +9463,7 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên trước — những dò
     </message>
     <message>
         <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
-        <translation type="unfinished" />
+        <translation>Dòng phụ đề ngôn ngữ thứ hai cho câu này. Dòng này cập nhật theo lựa chọn trong mục “Câu” hoặc theo nút + Dòng trước/+ Dòng sau.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>

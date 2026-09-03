@@ -563,11 +563,11 @@
     </message>
     <message>
         <source>Translation Field</source>
-        <translation type="unfinished" />
+        <translation>翻譯欄位</translation>
     </message>
     <message>
         <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>儲存此例句的次要語言字幕行（影片 -&gt; 單一，需在篩選中啟用次要語言字幕）。留空＝略過。</translation>
     </message>
     <message>
         <source>Card Type</source>
@@ -1569,11 +1569,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Secondary-language subtitles</source>
-        <translation type="unfinished" />
+        <translation>次要語言字幕</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
-        <translation type="unfinished" />
+        <translation>在採集語言字幕旁，載入一份您自己語言的第二個字幕檔案：它會顯示在單字整理工具預覽中該行的下方，並可儲存至翻譯欄位。請在設定 -&gt; 篩選中開啟此功能。</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -4687,15 +4687,15 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Secondary Subtitles</source>
-        <translation type="unfinished" />
+        <translation>次要字幕</translation>
     </message>
     <message>
         <source>Enable secondary-language subtitles</source>
-        <translation type="unfinished" />
+        <translation>啟用次要語言字幕</translation>
     </message>
     <message>
         <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
-        <translation type="unfinished" />
+        <translation>在影片 -&gt; 單一新增第二個字幕選擇器與其專屬偏移。其文字行會顯示在單字整理工具預覽中採集語言行的下方；當已對應翻譯欄位時（卡片與 Anki），也會顯示在卡片上。</translation>
     </message>
     <message>
         <source>Deduplication</source>
@@ -8079,11 +8079,11 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Translation Subtitles:</source>
-        <translation type="unfinished" />
+        <translation>翻譯字幕檔案：</translation>
     </message>
     <message>
         <source>Translation Offset:</source>
-        <translation type="unfinished" />
+        <translation>翻譯偏移：</translation>
     </message>
     <message>
         <source>Select recent file pair...</source>
@@ -8111,7 +8111,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
-        <translation type="unfinished" />
+        <translation>僅調整翻譯字幕的偏移（正值 = 延後，負值 = 提前）</translation>
     </message>
     <message>
         <source>Choose a video file first.</source>
@@ -8159,7 +8159,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>That translation subtitle file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>該翻譯字幕檔案已不存在。</translation>
     </message>
     <message>
         <source>Single episode</source>
@@ -9439,7 +9439,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Translation</source>
-        <translation type="unfinished" />
+        <translation>翻譯</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -9463,7 +9463,7 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
-        <translation type="unfinished" />
+        <translation>此句子的次要語言字幕行。點選其他句子或使用「+ 上一行／+ 下一行」時會隨之更新。</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>

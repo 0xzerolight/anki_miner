@@ -564,11 +564,11 @@
     </message>
     <message>
         <source>Translation Field</source>
-        <translation type="unfinished" />
+        <translation>Champ Traduction</translation>
     </message>
     <message>
         <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Stocke la ligne de sous-titres en langue secondaire de la phrase (Vidéo -&gt; Unique, avec les sous-titres en langue secondaire activés dans Filtrage). Vide = ignorer.</translation>
     </message>
     <message>
         <source>Card Type</source>
@@ -1571,11 +1571,11 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     </message>
     <message>
         <source>Secondary-language subtitles</source>
-        <translation type="unfinished" />
+        <translation>Sous-titres en langue secondaire</translation>
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
-        <translation type="unfinished" />
+        <translation>Chargez un second fichier de sous-titres dans votre propre langue à côté de celui en langue d'extraction : il s'affiche sous la ligne dans l'aperçu du Curateur de mots et peut être enregistré dans un champ Traduction. Activez-le dans Paramètres -&gt; Filtrage.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -4700,15 +4700,15 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     </message>
     <message>
         <source>Secondary Subtitles</source>
-        <translation type="unfinished" />
+        <translation>Sous-titres en langue secondaire</translation>
     </message>
     <message>
         <source>Enable secondary-language subtitles</source>
-        <translation type="unfinished" />
+        <translation>Activer les sous-titres en langue secondaire</translation>
     </message>
     <message>
         <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
-        <translation type="unfinished" />
+        <translation>Ajoute un second sélecteur de sous-titres et son propre décalage à Vidéo -&gt; Unique. Sa ligne s'affiche sous la ligne en langue d'extraction dans l'aperçu du Curateur de mots et, quand le champ Traduction est mappé (Cartes et Anki), sur la carte.</translation>
     </message>
     <message>
         <source>Deduplication</source>
@@ -8093,11 +8093,11 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     </message>
     <message>
         <source>Translation Subtitles:</source>
-        <translation type="unfinished" />
+        <translation>Sous-titres de traduction :</translation>
     </message>
     <message>
         <source>Translation Offset:</source>
-        <translation type="unfinished" />
+        <translation>Décalage des sous-titres de traduction :</translation>
     </message>
     <message>
         <source>Select recent file pair...</source>
@@ -8125,7 +8125,7 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     </message>
     <message>
         <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
-        <translation type="unfinished" />
+        <translation>Décaler uniquement les sous-titres de traduction (positif = plus tard, négatif = plus tôt)</translation>
     </message>
     <message>
         <source>Choose a video file first.</source>
@@ -8173,7 +8173,7 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     </message>
     <message>
         <source>That translation subtitle file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Ce fichier de sous-titres de traduction n'existe plus.</translation>
     </message>
     <message>
         <source>Single episode</source>
@@ -9455,7 +9455,7 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     </message>
     <message>
         <source>Translation</source>
-        <translation type="unfinished" />
+        <translation>Traduction</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -9479,7 +9479,7 @@ Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le 
     </message>
     <message>
         <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
-        <translation type="unfinished" />
+        <translation>La ligne de sous-titres en langue secondaire pour cette phrase. Elle suit la phrase choisie sous « Phrases » ou l'usage de « + Ligne précédente » / « + Ligne suivante ».</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
