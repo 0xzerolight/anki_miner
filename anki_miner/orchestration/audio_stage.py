@@ -28,8 +28,9 @@ from anki_miner.models import MediaData, TokenizedWord
 from anki_miner.services.audio_fetch_common import (
     expression_audio_candidates as _expression_audio_candidates,
 )
+from anki_miner.services.audio_fetch_common import reset_fetch_outcome_rate_limit
 from anki_miner.utils.i18n import tr_format
-from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.logging_ext import capped, log_summary
 from anki_miner.utils.timing import timed_phase
 
 if TYPE_CHECKING:
@@ -57,6 +58,81 @@ def _candidate_ladder(fetcher: Any, word: TokenizedWord) -> list[tuple[str, str]
         ladder: list[tuple[str, str]] = fetcher.candidates_for(word)
         return ladder
     return _expression_audio_candidates(word)
+
+
+def _chain_label(kind: str, source_id: str | None, enabled: bool) -> str:
+    """Render one chain member as ``kind:id``, marking a disabled entry.
+
+    A bare count ("chain_entries=3") answers none of the questions a stalled
+    or empty audio stage raises: which sources were in the chain, in what
+    order, and which of them was switched off. The label carries no
+    whitespace, so ``log_summary`` keeps the whole chain one token.
+    """
+    label = f"{kind}:{source_id}" if source_id else kind
+    return label if enabled else f"{label}(disabled)"
+
+
+def _expression_chain_labels(config: AnkiMinerConfig) -> tuple[list[str], int]:
+    """Ordered ``kind:pack_id`` labels for the word-audio chain, plus enabled count."""
+    labels = [_chain_label(entry.kind, entry.pack_id, entry.enabled) for entry in config.expression_audio_chain]
+    enabled = sum(1 for entry in config.expression_audio_chain if entry.enabled)
+    return labels, enabled
+
+
+def _sentence_chain_labels(config: AnkiMinerConfig) -> tuple[list[str], int]:
+    """Ordered provider labels for the sentence-TTS chain, plus enabled count.
+
+    Sentence TTS has no chain dataclass — its providers are two flags — so the
+    labels are built from those, keeping both stages' ``chain=`` field one
+    vocabulary.
+    """
+    providers = (
+        ("google", config.reading_tts_google_enabled),
+        ("papago", config.reading_tts_papago_enabled),
+    )
+    labels = [_chain_label(name, None, enabled) for name, enabled in providers]
+    return labels, sum(1 for _, enabled in providers if enabled)
+
+
+def _mounted_packs(fetcher: object) -> list[Any]:
+    """Local audio packs reachable through *fetcher*, in chain order.
+
+    Read off the chain's member list rather than the config: config names the
+    packs a user asked for, while this names the packs that actually mounted
+    (the registry drops a stale, cross-language or missing-folder pack). A
+    fetcher that is not a chain is examined itself, so a single pack fetcher
+    injected directly still reports.
+
+    The member list is read defensively — a duck-typed or MagicMock fetcher
+    hands back something that is not a sequence, and a pack is only counted
+    when its ``pack_id`` is a real non-empty string.
+    """
+    members = getattr(fetcher, "_fetchers", None)
+    candidates = list(members) if isinstance(members, (list, tuple)) else [fetcher]
+    packs = []
+    for member in candidates:
+        pack_id = getattr(member, "pack_id", None)
+        if isinstance(pack_id, str) and pack_id:
+            packs.append(member)
+    return packs
+
+
+def _log_mounted_packs(packs: list[Any]) -> None:
+    """Record which pack folders this run will read from, once per run.
+
+    The diagnosis this exists for: an expression-audio stage that stalls names
+    a pack id, and a bundle carried no way to map that id to the folder on the
+    slow medium. ``entries`` is the pack's indexed row count, which separates
+    "the pack is huge" from "the pack is empty and every word falls through".
+    """
+    log_summary(
+        logger,
+        "Audio packs mounted",
+        packs=capped(
+            f"id={pack.pack_id};dir={getattr(pack, 'pack_dir', None)};entries={getattr(pack, 'entry_count', None)}"
+            for pack in packs
+        ),
+    )
 
 
 def _dominant_transient_failure(counts: dict[str, int], attempts: int) -> str | None:
@@ -235,12 +311,14 @@ class AudioStage:
         media_results: list[tuple[TokenizedWord, MediaData]],
         progress_callback: ProgressCallback | None,
         stage: str,
+        chain_labels: list[str],
         enabled_entries: int,
         fetcher: object,
         diagnose_fn: Callable[[dict[str, int], int], str | None],
         start_label: str,
         item_template: str,
         per_item: Callable[[TokenizedWord, MediaData], bool | None],
+        done_fields: Callable[[], dict[str, object]] | None = None,
     ) -> tuple[bool, int, int, int]:
         """Cancel-aware loop skeleton shared by both fetch entry points.
 
@@ -261,8 +339,17 @@ class AudioStage:
         when cancelled mid-loop (``on_complete`` already emitted; caller must
         return early without a presenter summary). The diagnostic and log
         summary are emitted here only after a completed loop.
+
+        ``done_fields`` contributes the caller's stage-specific fields to the
+        ``Audio stage done`` receipt (the stalling pack and its folder, for
+        expression audio); it is called once, after the loop.
         """
         words = len(media_results)
+        # Each run gets a fresh first-occurrence WARNING per (source, reason):
+        # the counters are process-wide, so without this the second run in a
+        # session reports its failures at DEBUG and the log looks clean while
+        # every word misses.
+        reset_fetch_outcome_rate_limit()
         if stage in self._started_diagnostic_stages:
             failure_counts_before = self._failure_counts(fetcher)
         else:
@@ -276,7 +363,8 @@ class AudioStage:
             "Audio stage",
             stage=stage,
             words=words,
-            chain_entries=enabled_entries,
+            chain=chain_labels,
+            enabled=enabled_entries,
         )
         attempts = 0
         hits = 0
@@ -308,16 +396,17 @@ class AudioStage:
                 stage,
                 failure_counts_before,
             )
-            log_summary(
-                logger,
-                "Audio stage done",
-                stage=stage,
-                words=words,
-                attempts=attempts,
-                hits=hits,
-                misses=misses,
+            done_summary: dict[str, object] = {
+                "stage": stage,
+                "words": words,
+                "attempts": attempts,
+                "hits": hits,
+                "misses": misses,
                 **failure_counts,
-            )
+            }
+            if done_fields is not None:
+                done_summary.update(done_fields())
+            log_summary(logger, "Audio stage done", level=logging.INFO, **done_summary)
         return True, attempts, hits, misses
 
     @staticmethod
@@ -386,7 +475,10 @@ class AudioStage:
         log_summary(logger, "Expression audio gate", active=active, reason=reason)
         if not active:
             return
-        enabled_entries = sum(entry.enabled for entry in self.config.expression_audio_chain)
+        chain_labels, enabled_entries = _expression_chain_labels(self.config)
+        packs = _mounted_packs(self.expression_audio_fetcher)
+        _log_mounted_packs(packs)
+        pack_dirs = {pack.pack_id: getattr(pack, "pack_dir", None) for pack in packs}
 
         def _per_item(word: TokenizedWord, media: MediaData) -> bool:
             # Source-priority outer / candidate-ladder inner: each source
@@ -405,23 +497,35 @@ class AudioStage:
 
         slowest_pack = getattr(self.expression_audio_fetcher, "slowest_pack_id", None)
 
-        def _diagnose(counts: dict[str, int], attempts: int) -> str | None:
+        def _slow_pack_id() -> str | None:
             # Duck-typed like stats(): the chain names the pack that expired;
             # anything else (a bare Protocol fetcher, a MagicMock) yields a
-            # non-string and keeps the generic message.
+            # non-string and is treated as absent.
             pack = slowest_pack() if callable(slowest_pack) else None
-            return _audio_failure_diagnosis(counts, attempts, slow_pack=pack if isinstance(pack, str) else None)
+            return pack if isinstance(pack, str) and pack else None
+
+        def _diagnose(counts: dict[str, int], attempts: int) -> str | None:
+            return _audio_failure_diagnosis(counts, attempts, slow_pack=_slow_pack_id())
+
+        def _done_fields() -> dict[str, object]:
+            # The user-facing warning names the pack; the log line adds the
+            # folder, because moving that folder off the slow medium is the
+            # whole remedy and a bundle otherwise carries no path for it.
+            pack = _slow_pack_id()
+            return {"slow_pack": pack, "slow_pack_dir": pack_dirs.get(pack) if pack else None}
 
         completed, _, hits, _ = self._run_stage(
             media_results,
             progress_callback,
             "expression",
+            chain_labels,
             enabled_entries,
             self.expression_audio_fetcher,
             _diagnose,
             QCoreApplication.translate("EpisodeProcessor", "Fetching expression audio"),
             QCoreApplication.translate("EpisodeProcessor", "Expression audio: %1"),
             _per_item,
+            done_fields=_done_fields,
         )
         if not completed:
             return
@@ -451,7 +555,7 @@ class AudioStage:
         # centralized in _run_stage.
         active = self.reading_tts_active
         reason: str | None = None
-        enabled_entries = sum((self.config.reading_tts_google_enabled, self.config.reading_tts_papago_enabled))
+        chain_labels, enabled_entries = _sentence_chain_labels(self.config)
         if not active:
             if not self.config.reading_tts_enabled:
                 reason = "disabled"
@@ -490,6 +594,7 @@ class AudioStage:
             media_results,
             progress_callback,
             "sentence",
+            chain_labels,
             enabled_entries,
             self.sentence_audio_fetcher,
             _sentence_audio_failure_diagnosis,

@@ -14,6 +14,7 @@ from collections.abc import Callable
 from functools import partial
 from pathlib import Path
 
+from anki_miner.services._sqlite_index import meta_int
 from anki_miner.services.audio_fetch_common import MAX_AUDIO_BYTES
 from anki_miner.services.audio_fetch_common import (
     find_cached_by_stem as _find_cached_by_stem,
@@ -26,6 +27,7 @@ from anki_miner.services.audio_fetch_common import (
 )
 from anki_miner.services.audio_packs import storage
 from anki_miner.utils.file_utils import safe_filename
+from anki_miner.utils.logging_ext import suppressed
 from anki_miner.utils.robust_fs import robust_rmtree
 from anki_miner.utils.text_utils import hiragana_to_katakana, is_kana_only, katakana_to_hiragana
 
@@ -90,6 +92,7 @@ class LocalAudioPackFetcher:
         self._cache_dir = _pack_cache_dir(cache_dir, pack_id)
         self._blob_db_path = blob_db_path
         self._conn: sqlite3.Connection | None = None
+        self._entry_count: int | None = None
 
     @property
     def pack_id(self) -> str:
@@ -109,6 +112,27 @@ class LocalAudioPackFetcher:
         folder is what the user has to move.
         """
         return self._pack_dir
+
+    @property
+    def entry_count(self) -> int:
+        """Rows this pack was imported with, 0 when the meta cannot be read.
+
+        Logged with the pack inventory at the start of the audio stage, where
+        it separates "the pack is huge" from "the pack indexed nothing and
+        every word falls through to the online sources". Read from the
+        ``meta.json`` sidecar (falling back to the index's meta table), never
+        by counting rows: an android_db pack's entries live in a multi-GB
+        file, and a count over it at stage start would pay exactly the cost
+        this line exists to diagnose. Memoized — the value cannot change
+        while the fetcher lives.
+        """
+        if self._entry_count is None:
+            count = 0
+            with suppressed(logger, f"reading entry_count for audio pack '{self._pack_id}'"):
+                meta = storage.read_meta_cached(self._db_path)
+                count = meta_int(logger, self._db_path.parent, meta, "entry_count")
+            self._entry_count = count
+        return self._entry_count
 
     # ------------------------------------------------------------------
     # ExpressionAudioFetcher Protocol
