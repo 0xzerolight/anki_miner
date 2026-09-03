@@ -39,6 +39,8 @@ import threading
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
+from anki_miner.utils.logging_ext import log_summary
+
 if TYPE_CHECKING:  # pragma: no cover - typing only; never a runtime import
     import mpv
 
@@ -252,13 +254,18 @@ def _load_mpv_uncached() -> Any:
         # system libmpv rescued it. Either way the notice would otherwise be the
         # only trace, and mpv_available() swallows this raise silently.
         frozen, meipass = _frozen_state()
+        # source= is the tier that actually resolved. It reads None here, and
+        # that is the point: it proves no tier won, distinguishing "libmpv never
+        # loaded" from "libmpv loaded and then something else broke" in a report
+        # where this warning is the only libmpv line.
         logger.warning(
-            "libmpv unavailable via system search (%s)%s; frozen=%s meipass=%s bundled_found=%s",
+            "libmpv unavailable via system search (%s)%s; frozen=%s meipass=%s bundled_found=%s source=%s",
             exc,
             _cause_detail(exc),
             frozen,
             meipass,
             bundled is not None,
+            resolved_source(),
         )
         raise MpvUnavailableError(f"libmpv not available via system search: {exc}") from exc
     _RESOLVED_SOURCE = "system"
@@ -279,7 +286,20 @@ def mpv_available() -> bool:
     """Return True iff python-mpv AND libmpv are importable. Never raises."""
     try:
         load_mpv()
-    except Exception:  # noqa: BLE001 - availability probe must never raise
+    except Exception as exc:  # noqa: BLE001 - availability probe must never raise
+        # DEBUG and cheap: load_mpv caches both outcomes, so this re-raises the
+        # ORIGINAL error without re-dlopening, and the widget-side callers ask
+        # once per player. The one WARNING that explains the failure was already
+        # emitted by the load that produced this cached error; what a False here
+        # adds is which caller saw it and that the answer came from the cache.
+        log_summary(
+            logger,
+            "libmpv unavailable",
+            level=logging.DEBUG,
+            error_type=type(exc).__name__,
+            error=str(exc),
+            source=resolved_source(),
+        )
         return False
     return True
 

@@ -141,6 +141,8 @@ def test_unverified_ytdlp_asset_never_installs_or_executes(
     class _FailedProcess:
         returncode = 1
         stdout = ""
+        # capture_output=True always sets both streams, so the fake carries both.
+        stderr = ""
 
     def fake_run(command: list[str], *args, **kwargs):
         run_commands.append(command)

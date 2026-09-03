@@ -1,6 +1,7 @@
 """Tests for the ffmpeg/ffprobe runtime resolver."""
 
 import dataclasses
+import logging
 
 import pytest
 
@@ -192,3 +193,60 @@ class TestCaching:
         monkeypatch.setattr(ffmpeg_resolver.sys, "platform", "linux")
 
         assert resolve_ffmpeg(base_config) == str(bundled)
+
+
+class TestResolutionLogging:
+    """Provenance receipts: which tier won, and which candidate was refused."""
+
+    def test_stable_resolution_logs_one_receipt_across_two_calls(self, base_config, tmp_path, caplog):
+        binary = tmp_path / "my-ffmpeg"
+        binary.write_text("#!/bin/sh\n")
+        binary.chmod(0o755)
+        config = dataclasses.replace(base_config, ffmpeg_location=binary)
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.utils.ffmpeg_resolver"):
+            resolve_ffmpeg(config)
+            ffmpeg_resolver._clear_cache()
+            resolve_ffmpeg(config)
+
+        receipts = [r for r in caplog.records if r.getMessage().startswith("ffmpeg resolved:")]
+        assert len(receipts) == 1
+        assert f"tier=override path={binary}" in receipts[0].getMessage()
+
+    def test_changed_override_logs_a_second_receipt(self, base_config, tmp_path, caplog):
+        first_binary = tmp_path / "first-ffmpeg"
+        second_binary = tmp_path / "second-ffmpeg"
+        for binary in (first_binary, second_binary):
+            binary.write_text("#!/bin/sh\n")
+            binary.chmod(0o755)
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.utils.ffmpeg_resolver"):
+            resolve_ffmpeg(dataclasses.replace(base_config, ffmpeg_location=first_binary))
+            resolve_ffmpeg(dataclasses.replace(base_config, ffmpeg_location=second_binary))
+
+        receipts = [r for r in caplog.records if r.getMessage().startswith("ffmpeg resolved:")]
+        assert len(receipts) == 2
+        assert str(second_binary) in receipts[1].getMessage()
+
+    def test_non_executable_override_is_refused_then_falls_back(self, base_config, tmp_path, caplog):
+        binary = tmp_path / "ffmpeg"
+        binary.write_text("#!/bin/sh\n")
+        binary.chmod(0o600)
+        config = dataclasses.replace(base_config, ffmpeg_location=binary)
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.utils.ffmpeg_resolver"):
+            assert resolve_ffmpeg(config) == "ffmpeg"
+
+        refusals = [r for r in caplog.records if "ffmpeg resolution refused:" in r.getMessage()]
+        assert len(refusals) == 1
+        assert refusals[0].levelno == logging.WARNING
+        assert f"reason=override_not_executable override={binary}" in refusals[0].getMessage()
+        assert "ffmpeg resolved: tier=literal path=ffmpeg" in caplog.text
+
+    def test_ffprobe_receipt_is_tracked_separately_from_ffmpeg(self, base_config, tmp_path, caplog):
+        with caplog.at_level(logging.INFO, logger="anki_miner.utils.ffmpeg_resolver"):
+            resolve_ffmpeg(base_config)
+            resolve_ffprobe(base_config)
+
+        assert "ffmpeg resolved: tier=literal path=ffmpeg" in caplog.text
+        assert "ffprobe resolved: tier=literal path=ffprobe" in caplog.text

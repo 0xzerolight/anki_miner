@@ -200,14 +200,19 @@ def _clear_resolver_caches():
     before AND after pins every test's resolver-cache view to a clean slate so
     no cross-test write survives the boundary.
     """
-    from anki_miner.utils import alass_resolver, ffmpeg_resolver, ytdlp_resolver
+    from anki_miner.utils import alass_resolver, ffmpeg_resolver, resolver_log, ytdlp_resolver
 
     _resolver_mods = (alass_resolver, ffmpeg_resolver, ytdlp_resolver)
     for _mod in _resolver_mods:
         _mod._CACHE.clear()
+    # The provenance receipts are deduped by a second process-global (the last
+    # logged tier/path per tool), so a leak there silences an "exactly one INFO"
+    # assertion in whichever test the worker runs next.
+    resolver_log._reset_for_tests()
     yield
     for _mod in _resolver_mods:
         _mod._CACHE.clear()
+    resolver_log._reset_for_tests()
 
 
 @pytest.fixture(autouse=True)

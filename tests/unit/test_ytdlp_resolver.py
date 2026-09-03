@@ -2,6 +2,7 @@
 
 import dataclasses
 import hashlib
+import logging
 import shutil
 import threading
 import time
@@ -534,3 +535,109 @@ class TestGenerationLock:
         with pytest.raises(RuntimeError), ytdlp_generation_lock():
             raise RuntimeError("boom")
         assert _acquirable_from_another_thread()
+
+
+class TestResolutionLogging:
+    """Provenance receipts: which tier won, and why a managed binary was refused."""
+
+    def test_stable_resolution_logs_one_receipt_across_two_calls(self, base_config, tmp_path, monkeypatch, caplog):
+        monkeypatch.setattr(ytdlp_resolver.paths, "ANKI_MINER_HOME", tmp_path / "home")
+        binary = _make_executable(ytdlp_download_dir() / ytdlp_binary_name())
+        _write_receipt(binary)
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.utils.ytdlp_resolver"):
+            assert resolve_ytdlp(base_config) == str(binary)
+            ytdlp_resolver._clear_cache()
+            assert resolve_ytdlp(base_config) == str(binary)
+
+        receipts = [r for r in caplog.records if r.getMessage().startswith("yt-dlp resolved:")]
+        assert len(receipts) == 1
+        assert f"tier=managed path={binary} verified=True" in receipts[0].getMessage()
+
+    def test_changed_override_logs_a_second_receipt(self, base_config, tmp_path, caplog):
+        first = _make_executable(tmp_path / "first" / "yt-dlp")
+        second = _make_executable(tmp_path / "second" / "yt-dlp")
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.utils.ytdlp_resolver"):
+            resolve_ytdlp(dataclasses.replace(base_config, ytdlp_location=first))
+            resolve_ytdlp(dataclasses.replace(base_config, ytdlp_location=second))
+
+        receipts = [r for r in caplog.records if r.getMessage().startswith("yt-dlp resolved:")]
+        assert len(receipts) == 2
+        assert f"tier=override path={second}" in receipts[1].getMessage()
+
+    def test_receipt_mismatch_is_refused_with_both_digests(self, base_config, tmp_path, monkeypatch, caplog):
+        monkeypatch.setattr(ytdlp_resolver.paths, "ANKI_MINER_HOME", tmp_path / "home")
+        binary = _make_executable(ytdlp_download_dir() / ytdlp_binary_name())
+        receipt = _write_receipt(binary)
+        binary.write_text("#!/bin/sh\n# tampered\n")
+        binary.chmod(0o755)
+        recorded = receipt.read_text().strip()
+        computed = hashlib.sha256(binary.read_bytes()).hexdigest()
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.utils.ytdlp_resolver"):
+            resolve_ytdlp(base_config)
+
+        refusals = [r for r in caplog.records if "yt-dlp resolution refused:" in r.getMessage()]
+        assert len(refusals) == 1
+        assert refusals[0].levelno == logging.WARNING
+        assert refusals[0].getMessage() == (
+            f"yt-dlp resolution refused: reason=receipt_mismatch binary={binary} "
+            f"receipt={receipt} recorded={recorded} computed={computed}"
+        )
+
+    def test_missing_receipt_is_refused_under_its_own_reason(self, base_config, tmp_path, monkeypatch, caplog):
+        monkeypatch.setattr(ytdlp_resolver.paths, "ANKI_MINER_HOME", tmp_path / "home")
+        binary = _make_executable(ytdlp_download_dir() / ytdlp_binary_name())
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.utils.ytdlp_resolver"):
+            resolve_ytdlp(base_config)
+
+        text = "\n".join(r.getMessage() for r in caplog.records)
+        assert f"yt-dlp resolution refused: reason=receipt_missing binary={binary}" in text
+
+    def test_malformed_receipt_is_refused_with_the_recorded_value(self, base_config, tmp_path, monkeypatch, caplog):
+        monkeypatch.setattr(ytdlp_resolver.paths, "ANKI_MINER_HOME", tmp_path / "home")
+        binary = _make_executable(ytdlp_download_dir() / ytdlp_binary_name())
+        receipt = ytdlp_resolver.ytdlp_verification_receipt_path(binary)
+        receipt.write_text("not-a-digest")
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.utils.ytdlp_resolver"):
+            resolve_ytdlp(base_config)
+
+        text = "\n".join(r.getMessage() for r in caplog.records)
+        assert "reason=receipt_malformed" in text
+        assert "recorded=not-a-digest" in text
+
+    def test_unreadable_receipt_reports_the_exception(self, base_config, tmp_path, monkeypatch, caplog):
+        monkeypatch.setattr(ytdlp_resolver.paths, "ANKI_MINER_HOME", tmp_path / "home")
+        binary = _make_executable(ytdlp_download_dir() / ytdlp_binary_name())
+        receipt = ytdlp_resolver.ytdlp_verification_receipt_path(binary)
+        receipt.write_text("x" * 64)
+
+        def _boom(*args, **kwargs):
+            raise PermissionError(13, "Permission denied")
+
+        monkeypatch.setattr(Path, "read_text", _boom)
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.utils.ytdlp_resolver"):
+            resolve_ytdlp(base_config)
+
+        text = "\n".join(r.getMessage() for r in caplog.records)
+        assert "reason=receipt_unreadable" in text
+        assert "error_type=PermissionError" in text
+        assert "Permission denied" in text
+
+    def test_unverified_managed_on_path_is_refused_before_the_raise(self, base_config, tmp_path, monkeypatch, caplog):
+        monkeypatch.setattr(ytdlp_resolver.paths, "ANKI_MINER_HOME", tmp_path / "home")
+        binary = _make_executable(ytdlp_download_dir() / ytdlp_binary_name())
+        monkeypatch.setattr(shutil, "which", lambda name: str(binary))
+
+        with (
+            caplog.at_level(logging.INFO, logger="anki_miner.utils.ytdlp_resolver"),
+            pytest.raises(FileNotFoundError),
+        ):
+            resolve_ytdlp(base_config)
+
+        text = "\n".join(r.getMessage() for r in caplog.records)
+        assert "reason=unverified_managed_on_path" in text

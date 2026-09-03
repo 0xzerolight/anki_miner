@@ -1,5 +1,7 @@
 """Tests for the alass runtime resolver."""
 
+import logging
+
 from anki_miner.utils import alass_resolver
 from anki_miner.utils.alass_resolver import alass_available, resolve_alass
 
@@ -313,3 +315,40 @@ class TestAlassAvailable:
         monkeypatch.setattr(alass_resolver.shutil, "which", lambda name: None)
 
         assert alass_available(None, bin_root) is False
+
+
+class TestResolutionLogging:
+    """Provenance receipts for the alass tier ladder."""
+
+    def test_stable_resolution_logs_one_receipt_across_two_calls(self, tmp_path, caplog):
+        binary = tmp_path / "my-alass"
+        binary.write_text("#!/bin/sh\n")
+        binary.chmod(0o755)
+        config = _Cfg(alass_location=binary)
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.utils.alass_resolver"):
+            resolve_alass(config)
+            alass_resolver._clear_cache()
+            resolve_alass(config)
+
+        receipts = [r for r in caplog.records if r.getMessage().startswith("alass resolved:")]
+        assert len(receipts) == 1
+        assert f"tier=override path={binary}" in receipts[0].getMessage()
+
+    def test_managed_tier_is_named_and_bad_override_refused(self, tmp_path, monkeypatch, caplog):
+        monkeypatch.setattr(alass_resolver.sys, "frozen", False, raising=False)
+        monkeypatch.setattr(alass_resolver.sys, "platform", "linux")
+        override = tmp_path / "override-alass"
+        override.write_text("#!/bin/sh\n")
+        override.chmod(0o644)
+        bin_root = tmp_path / "bin"
+        bin_root.mkdir()
+        managed = bin_root / "alass"
+        managed.write_text("#!/bin/sh\n")
+        managed.chmod(0o755)
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.utils.alass_resolver"):
+            assert resolve_alass(_Cfg(alass_location=override, bin_root=bin_root)) == str(managed)
+
+        assert f"alass resolution refused: reason=override_not_executable override={override}" in caplog.text
+        assert f"alass resolved: tier=managed path={managed}" in caplog.text

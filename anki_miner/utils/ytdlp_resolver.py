@@ -52,6 +52,7 @@ replacement or tampering cannot outlive a stale cache entry.
 
 import contextlib
 import hashlib
+import logging
 import os
 import shutil
 import sys
@@ -62,6 +63,8 @@ from typing import Any
 
 from anki_miner.config import paths
 from anki_miner.utils.bundled_binary import bundled_name, frozen_state
+from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.resolver_log import log_resolution, log_resolution_refused
 
 __all__ = [
     "resolve_ytdlp",
@@ -78,6 +81,8 @@ __all__ = [
 # masked. Cached concrete paths are rechecked before every return, with managed
 # paths also re-verified against their receipt.
 _CACHE: dict[tuple, str] = {}
+
+logger = logging.getLogger(__name__)
 
 # Serializes resolver cache transactions and each app-managed yt-dlp generation
 # with updater promotion. RLock permits one caller to cover resolution/argv
@@ -126,18 +131,71 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _is_verified_managed_binary(path: Path) -> bool:
-    """True when *path* is runnable and its receipt matches its current bytes."""
+def _verify_managed_binary(path: Path) -> tuple[bool, str | None, dict[str, object]]:
+    """Verify the managed binary and say precisely why it was rejected.
+
+    A silent rejection here is the "I updated yt-dlp and nothing changed" report:
+    the freshly-installed managed copy is skipped, the stale PATH binary keeps
+    running, and the next check re-downloads the same asset forever. Splitting
+    the reasons apart is what makes the log line actionable — a missing receipt
+    is a legacy pre-receipt file, a mismatch is a replaced or tampered binary,
+    and an unreadable one is a permissions problem on the user's machine.
+
+    Returns:
+        ``(verified, refusal_reason, refusal_fields)``. ``refusal_reason`` is
+        ``None`` both when verification succeeds and when there was no candidate
+        to refuse (the managed slot is simply empty).
+    """
     if not _is_runnable(path):
-        return False
+        if path.is_file():
+            return (False, "managed_not_executable", {"binary": path})
+        return (False, None, {})
     receipt = ytdlp_verification_receipt_path(path)
     try:
         recorded = receipt.read_text(encoding="ascii").strip().lower()
-        if len(recorded) != 64 or any(char not in "0123456789abcdef" for char in recorded):
-            return False
-        return _sha256_file(path) == recorded
-    except (OSError, UnicodeError):
-        return False
+    except FileNotFoundError:
+        return (False, "receipt_missing", {"binary": path, "receipt": receipt})
+    except (OSError, UnicodeError) as exc:
+        return (
+            False,
+            "receipt_unreadable",
+            {"binary": path, "receipt": receipt, "error_type": type(exc).__name__, "error": str(exc)},
+        )
+    if len(recorded) != 64 or any(char not in "0123456789abcdef" for char in recorded):
+        return (False, "receipt_malformed", {"binary": path, "receipt": receipt, "recorded": recorded})
+    try:
+        computed = _sha256_file(path)
+    except (OSError, UnicodeError) as exc:
+        return (
+            False,
+            "binary_unreadable",
+            {"binary": path, "error_type": type(exc).__name__, "error": str(exc)},
+        )
+    if computed != recorded:
+        return (
+            False,
+            "receipt_mismatch",
+            {"binary": path, "receipt": receipt, "recorded": recorded, "computed": computed},
+        )
+    return (True, None, {})
+
+
+def _is_verified_managed_binary(path: Path) -> bool:
+    """True when *path* is runnable and its receipt matches its current bytes.
+
+    Silent by design: this is the re-verification a *cache hit* runs on every
+    resolve, so logging here would repeat one line per spawn. ``_compute``
+    uses :func:`_report_managed_binary` instead, on the cache-miss path.
+    """
+    return _verify_managed_binary(path)[0]
+
+
+def _report_managed_binary(path: Path) -> bool:
+    """Verify the managed binary and log a refusal when one is warranted."""
+    verified, reason, fields = _verify_managed_binary(path)
+    if reason is not None:
+        log_resolution_refused(logger, "yt-dlp", reason, **fields)
+    return verified
 
 
 def _is_managed_path(candidate: str | Path, managed: Path) -> bool:
@@ -282,12 +340,23 @@ def ytdlp_available(config) -> bool:
     try:
         resolved = resolve_ytdlp(config)
     except FileNotFoundError:
+        # _compute already logged the WARNING that explains the containment.
         return False
     if resolved == "yt-dlp":
         # The bare literal means nothing above the fallback tier resolved; it is
         # only usable if the OS can find it at spawn time.
-        return shutil.which("yt-dlp") is not None
-    return Path(resolved).exists()
+        if shutil.which("yt-dlp") is not None:
+            return True
+        reason = "literal_not_on_path"
+    elif Path(resolved).exists():
+        return True
+    else:
+        reason = "resolved_path_missing"
+    # DEBUG, not WARNING: this is a probe whose False answer the caller renders
+    # as a user-visible message of its own (System Health, the settings panel),
+    # and it can be asked several times per screen.
+    log_summary(logger, "yt-dlp unavailable", level=logging.DEBUG, reason=reason, path=Path(resolved))
+    return False
 
 
 def _compute(
@@ -299,15 +368,33 @@ def _compute(
 ) -> str:
     downloaded = download_dir / ytdlp_binary_name()
 
+    # Managed verification is expensive (a full SHA-256 of a ~30 MB binary) and
+    # is consulted from two tiers, so it runs at most once per _compute — and
+    # only when a tier actually needs the answer, so an override that wins
+    # outright never pays for it.
+    managed_state: list[bool] = []
+
+    def managed_verified() -> bool:
+        if not managed_state:
+            managed_state.append(_report_managed_binary(downloaded))
+        return managed_state[0]
+
     # 1. Config override.
     if override:
         override_path = Path(override)
         # Pointing the override at the managed slot must not bypass its
         # verification requirement.
-        if _is_runnable(override_path) and (
-            not _is_managed_path(override_path, downloaded) or _is_verified_managed_binary(downloaded)
-        ):
-            return str(override_path)
+        if _is_runnable(override_path):
+            if not _is_managed_path(override_path, downloaded):
+                log_resolution(logger, "yt-dlp", "override", str(override_path))
+                return str(override_path)
+            if managed_verified():
+                log_resolution(logger, "yt-dlp", "override", str(override_path), verified=True)
+                return str(override_path)
+            # No extra refusal line here: managed_verified() has already logged
+            # the receipt reason, and it names this very path.
+        else:
+            log_resolution_refused(logger, "yt-dlp", "override_not_runnable", override=override_path)
 
     # A PATH entry resolving to the managed slot must still pass the receipt check;
     # PATH must not launder that file. Computed here because the fail-closed step
@@ -319,12 +406,14 @@ def _compute(
     # 2. App-managed copy, but only with a receipt matching its current bytes.
     #    Ahead of PATH so a completed update actually takes effect — see the
     #    module docstring.
-    if _is_verified_managed_binary(downloaded):
+    if managed_verified():
+        log_resolution(logger, "yt-dlp", "managed", str(downloaded), verified=True)
         return str(downloaded)
 
     # 3. An executable that actually exists on PATH. Do not return the bare
     #    literal here: it would shadow the bundled tier below.
     if path_ytdlp is not None and not managed_path_hit:
+        log_resolution(logger, "yt-dlp", "path", path_ytdlp)
         return path_ytdlp
 
     # 4. Bundled binary inside the frozen distributable. Deliberately after PATH
@@ -332,12 +421,24 @@ def _compute(
     if frozen and meipass is not None:
         bundled = Path(meipass) / "bin" / bundled_name("yt-dlp")
         if _is_runnable(bundled):
+            log_resolution(logger, "yt-dlp", "bundled", str(bundled))
             return str(bundled)
+        if bundled.is_file():
+            log_resolution_refused(logger, "yt-dlp", "bundled_not_executable", bundled=bundled)
 
     # 5. Fail closed on a rejected managed PATH hit. This MUST stay ahead of the
     #    sibling tier and the bare fallback: both would otherwise hand back a
     #    working executable and defeat the rejection.
     if managed_path_hit:
+        # The raise reaches the user as a bare "yt-dlp not available" from
+        # ytdlp_available(), so without this line the containment is invisible.
+        log_resolution_refused(
+            logger,
+            "yt-dlp",
+            "unverified_managed_on_path",
+            path=Path(str(path_ytdlp)),
+            managed=downloaded,
+        )
         raise FileNotFoundError("Refusing unverified managed yt-dlp executable on PATH")
 
     # 6. The console script a pip/pipx install drops next to the interpreter.
@@ -350,7 +451,9 @@ def _compute(
         sibling = Path(sys.executable).parent / ytdlp_binary_name()
         sibling_is_managed = _is_managed_path(sibling, downloaded) or _is_within_directory(sibling, download_dir)
         if not sibling_is_managed and _is_runnable(sibling):
+            log_resolution(logger, "yt-dlp", "sibling", str(sibling))
             return str(sibling)
 
     # Historical fallback when nothing above resolved.
+    log_resolution(logger, "yt-dlp", "literal", "yt-dlp")
     return "yt-dlp"

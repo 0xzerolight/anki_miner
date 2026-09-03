@@ -510,3 +510,35 @@ class TestWin32Loader:
         assert module.seen["libmpv-2.dll"] == str(lib)
         assert module.seen["zzz-not-mpv"] == "SENTINEL:zzz-not-mpv"  # non-mpv names fall through
         assert ctypes.util.find_library is original  # restored in finally
+
+
+class TestUnavailabilityProvenance:
+    """The libmpv failure trail names the resolved source and the cached error."""
+
+    def test_unavailable_warning_carries_the_resolved_source(self, monkeypatch, caplog):
+        monkeypatch.setattr(ctypes.util, "find_library", lambda name: None)
+        with (
+            caplog.at_level(logging.WARNING, logger="anki_miner.utils.mpv_loader"),
+            pytest.raises(mpv_loader.MpvUnavailableError),
+        ):
+            mpv_loader.load_mpv()
+        assert "source=None" in caplog.text
+
+    def test_available_probe_logs_the_cached_error_without_reloading(self, monkeypatch, caplog):
+        calls: list[int] = []
+
+        def _find(name):
+            calls.append(1)
+            return None
+
+        monkeypatch.setattr(ctypes.util, "find_library", _find)
+        with caplog.at_level(logging.DEBUG, logger="anki_miner.utils.mpv_loader"):
+            assert mpv_loader.mpv_available() is False
+            before = len(calls)
+            assert mpv_loader.mpv_available() is False
+            assert len(calls) == before  # cached failure: never re-dlopened
+
+        probes = [r for r in caplog.records if r.getMessage().startswith("libmpv unavailable:")]
+        assert len(probes) == 2
+        assert "error_type=MpvUnavailableError" in probes[0].getMessage()
+        assert "libmpv not available via system search" in probes[0].getMessage()
