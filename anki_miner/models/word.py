@@ -211,6 +211,15 @@ class TokenizedWord:
     # Static screenshots only: an animated screenshot's window comes from the
     # audio clip, which clip_override already edits.
     screenshot_override: float | None = None
+    # Secondary-language subtitle text for this word's sentence window (F7):
+    # every cue of the second track overlapping [start_time, end_time] by at
+    # least services.secondary_subtitles.DEFAULT_MIN_OVERLAP, joined in time
+    # order. "" on every run without a second track. Attached by
+    # EpisodeProcessor via secondary_subtitles.attach_translations AFTER
+    # curation and line-expansion materialisation, so a sentence pick or a
+    # +line expansion has already moved the window it is matched against.
+    # Read by anki_note_builder.build_note only (the sentence_translation field).
+    sentence_translation: str = ""
     # The parser's resolved card front, set at the emit site. Non-empty means
     # "already decided" — the profile's MinedFormPolicy answered, and for a
     # non-ja token select_mined_form's JA POS table would answer wrongly
