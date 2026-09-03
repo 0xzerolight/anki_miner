@@ -274,7 +274,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
 
         # Issue #65: opt-in per-video word curation popup (default off).
         self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
-        self.review_words_checkbox.setChecked(False)
+        self._bind_review_words_checkbox()
         self.review_words_checkbox.setToolTip(
             self.tr("Show the word-selection popup for each video before creating cards.")
         )
