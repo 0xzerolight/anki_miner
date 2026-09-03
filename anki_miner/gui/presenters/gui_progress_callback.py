@@ -1,6 +1,18 @@
-"""GUI progress callback implementation using Qt signals for thread-safe communication."""
+"""GUI progress callback implementation using Qt signals for thread-safe communication.
+
+Only ``on_error`` logs. The start/progress/stage/complete calls are a per-item
+hot loop whose totals the pipeline already summarizes once, so a record per call
+would bury the one event that matters: an item the run dropped. That failure is
+WARNING because it changes what the user gets -- a card that was not made.
+"""
+
+import logging
 
 from PyQt6.QtCore import QObject, pyqtSignal
+
+from anki_miner.utils.logging_ext import log_summary
+
+logger = logging.getLogger(__name__)
 
 
 class GUIProgressCallback(QObject):
@@ -71,4 +83,11 @@ class GUIProgressCallback(QObject):
             item_description: Description of the failed item
             error_message: Error message explaining the failure
         """
+        log_summary(
+            logger,
+            "Pipeline item error",
+            level=logging.WARNING,
+            item=item_description,
+            error=error_message,
+        )
         self.error_signal.emit(item_description, error_message)
