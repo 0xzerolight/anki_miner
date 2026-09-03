@@ -4013,7 +4013,7 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Subtitles contain no %1 text</source>
-        <translation type="unfinished" />
+        <translation>字幕に%1のテキストが含まれていません</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>
@@ -4248,6 +4248,18 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Text: %1</source>
         <translation>テキスト：%1</translation>
+    </message>
+    <message>
+        <source>Extracting audio</source>
+        <translation>音声を抽出中</translation>
+    </message>
+    <message>
+        <source>Transcribing</source>
+        <translation>文字起こし中</translation>
+    </message>
+    <message>
+        <source>Aligning subtitles</source>
+        <translation>字幕を同期中</translation>
     </message>
 </context><context>
     <name>ExportDialog</name>
@@ -9508,6 +9520,10 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
         <translation>自動 JA 字幕（吹き替え音声）</translation>
     </message>
     <message>
+        <source>Transcribed locally</source>
+        <translation>ローカルで文字起こし</translation>
+    </message>
+    <message>
         <source>Checking</source>
         <translation>確認中</translation>
     </message>
@@ -9517,6 +9533,10 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
     </message>
 </context><context>
     <name>YouTubeQueueWorker</name>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings -&gt; Transcription &amp; Alignment, or set Subtitles to Captions only.</source>
+        <translation>今回の実行にはローカルでの文字起こしが必要ですが、モデル%1がインストールされていません。設定 -&gt; 文字起こしとアラインメントでインストールするか、字幕を「字幕のみ」に設定してください。</translation>
+    </message>
     <message>
         <source>%1 · %2%</source>
         <translation>%1・%2%</translation>
@@ -9698,6 +9718,34 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
         <translation>カードを作成する前に、各動画の単語選択ポップアップを表示します。</translation>
     </message>
     <message>
+        <source>Subtitles:</source>
+        <translation>字幕:</translation>
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation>自動</translation>
+    </message>
+    <message>
+        <source>Always transcribe</source>
+        <translation>常に文字起こし</translation>
+    </message>
+    <message>
+        <source>Captions only</source>
+        <translation>字幕のみ</translation>
+    </message>
+    <message>
+        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
+        <translation>「自動」はYouTubeの字幕がある場合はそれを使用し、ない場合は動画を文字起こしします。「常に文字起こし」はYouTubeの字幕を無視します。「字幕のみ」は字幕のない動画をスキップします。</translation>
+    </message>
+    <message>
+        <source>Align captions to audio</source>
+        <translation>字幕を音声に同期</translation>
+    </message>
+    <message>
+        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>マイニング前にYouTubeの字幕を動画の音声に合わせて再調整します。字幕がローカルで文字起こしされた場合は無視されます。</translation>
+    </message>
+    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>キュー内のすべての READY 項目を Anki カードにマイニングします。</translation>
     </message>
@@ -9728,6 +9776,14 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
     <message>
         <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
         <translation>ここに YouTube リンクをドロップしてください。ローカルファイルは「動画」および「音声」タブからマイニングします。</translation>
+    </message>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings, or set Subtitles to Captions only.</source>
+        <translation>今回の実行にはローカルでの文字起こしが必要ですが、モデル%1がインストールされていません。設定でインストールするか、字幕を「字幕のみ」に設定してください。</translation>
+    </message>
+    <message>
+        <source>Open Transcription Settings</source>
+        <translation>文字起こし設定を開く</translation>
     </message>
 </context><context>
     <name>_AddSourceDialog</name>

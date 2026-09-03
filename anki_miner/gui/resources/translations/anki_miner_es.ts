@@ -4015,7 +4015,7 @@ Los archivos en el disco quedarán sin modificar porque no se pudo comprobar que
     </message>
     <message>
         <source>Subtitles contain no %1 text</source>
-        <translation type="unfinished" />
+        <translation>Los subtítulos no contienen texto en %1</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>
@@ -4261,6 +4261,18 @@ Los archivos en el disco quedarán sin modificar porque no se pudo comprobar que
     <message>
         <source>Text: %1</source>
         <translation>Texto: %1</translation>
+    </message>
+    <message>
+        <source>Extracting audio</source>
+        <translation>Extrayendo audio</translation>
+    </message>
+    <message>
+        <source>Transcribing</source>
+        <translation>Transcribiendo</translation>
+    </message>
+    <message>
+        <source>Aligning subtitles</source>
+        <translation>Alineando subtítulos</translation>
     </message>
 </context><context>
     <name>ExportDialog</name>
@@ -9524,6 +9536,10 @@ El selector «Frases» ofrece una opción por línea de subtítulos, así que su
         <translation>Subtítulos JA automáticos (audio doblado)</translation>
     </message>
     <message>
+        <source>Transcribed locally</source>
+        <translation>Transcrito localmente</translation>
+    </message>
+    <message>
         <source>Checking</source>
         <translation>Comprobando</translation>
     </message>
@@ -9533,6 +9549,10 @@ El selector «Frases» ofrece una opción por línea de subtítulos, así que su
     </message>
 </context><context>
     <name>YouTubeQueueWorker</name>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings -&gt; Transcription &amp; Alignment, or set Subtitles to Captions only.</source>
+        <translation>Esta ejecución necesita transcripción local, pero el modelo %1 no está instalado. Instálelo en Configuración -&gt; Transcripción y alineación, o configure Subtítulos como Solo subtítulos.</translation>
+    </message>
     <message>
         <source>%1 · %2%</source>
         <translation>%1 · %2%</translation>
@@ -9714,6 +9734,34 @@ El selector «Frases» ofrece una opción por línea de subtítulos, así que su
         <translation>Muestra la ventana emergente de selección de palabras para cada video antes de crear tarjetas.</translation>
     </message>
     <message>
+        <source>Subtitles:</source>
+        <translation>Subtítulos:</translation>
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation>Automático</translation>
+    </message>
+    <message>
+        <source>Always transcribe</source>
+        <translation>Transcribir siempre</translation>
+    </message>
+    <message>
+        <source>Captions only</source>
+        <translation>Solo subtítulos</translation>
+    </message>
+    <message>
+        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
+        <translation>Automático usa los subtítulos de YouTube cuando existen y transcribe el video cuando no existen. Transcribir siempre ignora los subtítulos de YouTube. Solo subtítulos omite un video que no tenga ninguno.</translation>
+    </message>
+    <message>
+        <source>Align captions to audio</source>
+        <translation>Alinear subtítulos con el audio</translation>
+    </message>
+    <message>
+        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>Reajusta el tiempo de los subtítulos de YouTube según el audio del video antes de minar. Se ignora cuando el subtítulo se transcribió localmente.</translation>
+    </message>
+    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>Mina en tarjetas de Anki cada elemento LISTO de la cola.</translation>
     </message>
@@ -9744,6 +9792,14 @@ El selector «Frases» ofrece una opción por línea de subtítulos, así que su
     <message>
         <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
         <translation>Suelte aquí un enlace de YouTube. Los archivos locales se minan desde las pestañas Vídeo y Audio.</translation>
+    </message>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings, or set Subtitles to Captions only.</source>
+        <translation>Esta ejecución necesita transcripción local, pero el modelo %1 no está instalado. Instálelo en Configuración, o configure Subtítulos como Solo subtítulos.</translation>
+    </message>
+    <message>
+        <source>Open Transcription Settings</source>
+        <translation>Abrir configuración de transcripción</translation>
     </message>
 </context><context>
     <name>_AddSourceDialog</name>

@@ -4017,7 +4017,7 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Subtitles contain no %1 text</source>
-        <translation type="unfinished" />
+        <translation>Субтитры не содержат текста на %1</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>
@@ -4274,6 +4274,18 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Text: %1</source>
         <translation>Текст: %1</translation>
+    </message>
+    <message>
+        <source>Extracting audio</source>
+        <translation>Извлечение звука</translation>
+    </message>
+    <message>
+        <source>Transcribing</source>
+        <translation>Расшифровка</translation>
+    </message>
+    <message>
+        <source>Aligning subtitles</source>
+        <translation>Синхронизация субтитров</translation>
     </message>
 </context><context>
     <name>ExportDialog</name>
@@ -9540,6 +9552,10 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
         <translation>Автоматические JA-субтитры (дублированное аудио)</translation>
     </message>
     <message>
+        <source>Transcribed locally</source>
+        <translation>Расшифровано локально</translation>
+    </message>
+    <message>
         <source>Checking</source>
         <translation>Проверка</translation>
     </message>
@@ -9549,6 +9565,10 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
     </message>
 </context><context>
     <name>YouTubeQueueWorker</name>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings -&gt; Transcription &amp; Alignment, or set Subtitles to Captions only.</source>
+        <translation>Для этого запуска требуется локальная расшифровка, но модель %1 не установлена. Установите её в разделе Настройки -&gt; Транскрипция и выравнивание, либо задайте для параметра «Субтитры» значение «Только субтитры».</translation>
+    </message>
     <message>
         <source>%1 · %2%</source>
         <translation>%1 · %2%</translation>
@@ -9730,6 +9750,34 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
         <translation>Показывать всплывающее окно выбора слов для каждого видео перед созданием карточек.</translation>
     </message>
     <message>
+        <source>Subtitles:</source>
+        <translation>Субтитры:</translation>
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation>Авто</translation>
+    </message>
+    <message>
+        <source>Always transcribe</source>
+        <translation>Всегда расшифровывать</translation>
+    </message>
+    <message>
+        <source>Captions only</source>
+        <translation>Только субтитры</translation>
+    </message>
+    <message>
+        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
+        <translation>«Авто» использует субтитры YouTube, если они есть, и расшифровывает видео, если их нет. «Всегда расшифровывать» игнорирует субтитры YouTube. «Только субтитры» пропускает видео, у которого их нет.</translation>
+    </message>
+    <message>
+        <source>Align captions to audio</source>
+        <translation>Синхронизировать субтитры со звуком</translation>
+    </message>
+    <message>
+        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>Синхронизировать субтитры YouTube со звуковой дорожкой видео перед майнингом. Не применяется, если субтитры были расшифрованы локально.</translation>
+    </message>
+    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>Намайнить в карточки Anki каждый элемент очереди со статусом READY.</translation>
     </message>
@@ -9760,6 +9808,14 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
     <message>
         <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
         <translation>Перетащите сюда ссылку на YouTube. Локальные файлы майнятся на вкладках «Видео» и «Аудио».</translation>
+    </message>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings, or set Subtitles to Captions only.</source>
+        <translation>Для этого запуска требуется локальная расшифровка, но модель %1 не установлена. Установите её в Настройках, либо задайте для параметра «Субтитры» значение «Только субтитры».</translation>
+    </message>
+    <message>
+        <source>Open Transcription Settings</source>
+        <translation>Открыть настройки транскрипции</translation>
     </message>
 </context><context>
     <name>_AddSourceDialog</name>

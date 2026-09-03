@@ -315,6 +315,7 @@ class TestShutdown:
             refresh_row=MagicMock(),
             recompute_buttons=MagicMock(),
             clear_url_input=MagicMock(),
+            run_active=lambda: False,
             log_info=MagicMock(),
             log_warning=MagicMock(),
             log_error=MagicMock(),

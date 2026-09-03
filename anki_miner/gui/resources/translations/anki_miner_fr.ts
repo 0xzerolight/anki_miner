@@ -4015,7 +4015,7 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     </message>
     <message>
         <source>Subtitles contain no %1 text</source>
-        <translation type="unfinished" />
+        <translation>Les sous-titres ne contiennent aucun texte en %1</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>
@@ -4261,6 +4261,18 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     <message>
         <source>Text: %1</source>
         <translation>Texte : %1</translation>
+    </message>
+    <message>
+        <source>Extracting audio</source>
+        <translation>Extraction de l'audio</translation>
+    </message>
+    <message>
+        <source>Transcribing</source>
+        <translation>Transcription en cours</translation>
+    </message>
+    <message>
+        <source>Aligning subtitles</source>
+        <translation>Alignement des sous-titres</translation>
     </message>
 </context><context>
     <name>ExportDialog</name>
@@ -9524,6 +9536,10 @@ Le sélecteur « Phrases » propose une option par ligne de sous-titres et en li
         <translation>Sous-titres JA automatiques (audio doublé)</translation>
     </message>
     <message>
+        <source>Transcribed locally</source>
+        <translation>Transcrit localement</translation>
+    </message>
+    <message>
         <source>Checking</source>
         <translation>Vérification</translation>
     </message>
@@ -9533,6 +9549,10 @@ Le sélecteur « Phrases » propose une option par ligne de sous-titres et en li
     </message>
 </context><context>
     <name>YouTubeQueueWorker</name>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings -&gt; Transcription &amp; Alignment, or set Subtitles to Captions only.</source>
+        <translation>Cette exécution nécessite une transcription locale, mais le modèle %1 n'est pas installé. Installez-le dans Paramètres -&gt; Transcription et alignement, ou réglez Sous-titres sur Sous-titres uniquement.</translation>
+    </message>
     <message>
         <source>%1 · %2%</source>
         <translation>%1 · %2 %</translation>
@@ -9714,6 +9734,34 @@ Le sélecteur « Phrases » propose une option par ligne de sous-titres et en li
         <translation>Afficher la fenêtre de sélection des mots pour chaque vidéo avant de créer les cartes.</translation>
     </message>
     <message>
+        <source>Subtitles:</source>
+        <translation>Sous-titres :</translation>
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation>Auto</translation>
+    </message>
+    <message>
+        <source>Always transcribe</source>
+        <translation>Toujours transcrire</translation>
+    </message>
+    <message>
+        <source>Captions only</source>
+        <translation>Sous-titres uniquement</translation>
+    </message>
+    <message>
+        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
+        <translation>Auto utilise les sous-titres YouTube lorsqu'ils existent et transcrit la vidéo lorsqu'ils n'existent pas. Toujours transcrire ignore les sous-titres YouTube. Sous-titres uniquement ignore une vidéo qui n'en a aucun.</translation>
+    </message>
+    <message>
+        <source>Align captions to audio</source>
+        <translation>Aligner les sous-titres sur l'audio</translation>
+    </message>
+    <message>
+        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>Recale les sous-titres YouTube sur l'audio de la vidéo avant l'extraction. Ignoré lorsque le sous-titre a été transcrit localement.</translation>
+    </message>
+    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>Extraire chaque élément PRÊT de la file d'attente vers des cartes Anki.</translation>
     </message>
@@ -9744,6 +9792,14 @@ Le sélecteur « Phrases » propose une option par ligne de sous-titres et en li
     <message>
         <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
         <translation>Déposez un lien YouTube ici. Les fichiers locaux sont extraits depuis les onglets Vidéo et Audio.</translation>
+    </message>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings, or set Subtitles to Captions only.</source>
+        <translation>Cette exécution nécessite une transcription locale, mais le modèle %1 n'est pas installé. Installez-le dans Paramètres, ou réglez Sous-titres sur Sous-titres uniquement.</translation>
+    </message>
+    <message>
+        <source>Open Transcription Settings</source>
+        <translation>Ouvrir les paramètres de transcription</translation>
     </message>
 </context><context>
     <name>_AddSourceDialog</name>

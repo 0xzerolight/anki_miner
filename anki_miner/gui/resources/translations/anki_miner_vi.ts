@@ -4013,7 +4013,7 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     </message>
     <message>
         <source>Subtitles contain no %1 text</source>
-        <translation type="unfinished" />
+        <translation>Phụ đề không chứa văn bản %1</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>
@@ -4248,6 +4248,18 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     <message>
         <source>Text: %1</source>
         <translation>Văn bản: %1</translation>
+    </message>
+    <message>
+        <source>Extracting audio</source>
+        <translation>Đang trích xuất âm thanh</translation>
+    </message>
+    <message>
+        <source>Transcribing</source>
+        <translation>Đang phiên âm</translation>
+    </message>
+    <message>
+        <source>Aligning subtitles</source>
+        <translation>Đang căn chỉnh phụ đề</translation>
     </message>
 </context><context>
     <name>ExportDialog</name>
@@ -9508,6 +9520,10 @@ Khung chọn “Câu” đưa ra một lựa chọn cho mỗi dòng phụ đề 
         <translation>Phụ đề JA tự động (âm thanh lồng tiếng)</translation>
     </message>
     <message>
+        <source>Transcribed locally</source>
+        <translation>Được phiên âm cục bộ</translation>
+    </message>
+    <message>
         <source>Checking</source>
         <translation>Đang kiểm tra</translation>
     </message>
@@ -9517,6 +9533,10 @@ Khung chọn “Câu” đưa ra một lựa chọn cho mỗi dòng phụ đề 
     </message>
 </context><context>
     <name>YouTubeQueueWorker</name>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings -&gt; Transcription &amp; Alignment, or set Subtitles to Captions only.</source>
+        <translation>Lượt chạy này cần phiên âm cục bộ, nhưng chưa cài đặt mô hình %1. Cài đặt mô hình tại Cài đặt -&gt; Phiên âm &amp; Căn chỉnh, hoặc đặt Phụ đề thành Chỉ dùng phụ đề.</translation>
+    </message>
     <message>
         <source>%1 · %2%</source>
         <translation>%1 · %2%</translation>
@@ -9698,6 +9718,34 @@ Khung chọn “Câu” đưa ra một lựa chọn cho mỗi dòng phụ đề 
         <translation>Hiển thị hộp thoại chọn từ cho mỗi video trước khi tạo thẻ.</translation>
     </message>
     <message>
+        <source>Subtitles:</source>
+        <translation>Phụ đề:</translation>
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation>Tự động</translation>
+    </message>
+    <message>
+        <source>Always transcribe</source>
+        <translation>Luôn phiên âm</translation>
+    </message>
+    <message>
+        <source>Captions only</source>
+        <translation>Chỉ dùng phụ đề</translation>
+    </message>
+    <message>
+        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
+        <translation>Tự động dùng phụ đề của YouTube nếu có, và phiên âm video nếu không có. Luôn phiên âm bỏ qua phụ đề của YouTube. Chỉ dùng phụ đề bỏ qua video không có phụ đề.</translation>
+    </message>
+    <message>
+        <source>Align captions to audio</source>
+        <translation>Căn chỉnh phụ đề theo âm thanh</translation>
+    </message>
+    <message>
+        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>Chỉnh lại thời gian phụ đề của YouTube theo âm thanh video trước khi khai thác. Bỏ qua khi phụ đề đã được phiên âm cục bộ.</translation>
+    </message>
+    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>Khai thác mọi mục SẴN SÀNG trong hàng đợi thành thẻ Anki.</translation>
     </message>
@@ -9728,6 +9776,14 @@ Khung chọn “Câu” đưa ra một lựa chọn cho mỗi dòng phụ đề 
     <message>
         <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
         <translation>Thả liên kết YouTube vào đây. Tệp cục bộ được khai thác từ các tab Video và Âm thanh.</translation>
+    </message>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings, or set Subtitles to Captions only.</source>
+        <translation>Lượt chạy này cần phiên âm cục bộ, nhưng chưa cài đặt mô hình %1. Cài đặt mô hình trong Cài đặt, hoặc đặt Phụ đề thành Chỉ dùng phụ đề.</translation>
+    </message>
+    <message>
+        <source>Open Transcription Settings</source>
+        <translation>Mở Cài đặt Phiên âm</translation>
     </message>
 </context><context>
     <name>_AddSourceDialog</name>
