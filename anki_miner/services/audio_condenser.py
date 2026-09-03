@@ -300,6 +300,14 @@ _PROBE_REQUIRED: frozenset[str] = frozenset({"libmp3lame", "libopus"})
 _MERGE_SAMPLE_RATE = "48000"
 _MERGE_CHANNELS = "2"
 
+# Suffixes a merge must re-encode instead of stream-copying. A native .flac
+# carries its own ``fLaC`` header and STREAMINFO per file, so concatenated
+# parts restart the timeline: the merged file holds every part's bytes but
+# reports the FIRST part's duration, and ffmpeg emits non-monotonic dts while
+# decoding it. Re-encoding costs nothing that matters here — flac is lossless,
+# so the merged audio is identical. mp3 and opus stitch correctly by copy.
+_MERGE_REENCODE_SUFFIXES: frozenset[str] = frozenset({".flac"})
+
 # A ``-progress pipe:1`` line is ``key=value`` where *key* is lowercase snake_case
 # (frame, out_time_us, progress, ...). Anything whose pre-``=`` token is not a
 # bare identifier (ffmpeg banner/error lines, e.g. ``[libopus @ 0x..] bad``) is
@@ -673,7 +681,8 @@ class AudioCondenserService:
         ``uniform_layout=True``, so codec, bitrate, sample rate and channel
         layout already match and the concat demuxer can stream-copy them. This
         does not weaken D2: D2 is about condensing ONE file in a single pass,
-        and that path is untouched — this joins finished outputs.
+        and that path is untouched — this joins finished outputs. FLAC is the
+        one exception and is re-encoded; see ``_MERGE_REENCODE_SUFFIXES``.
 
         Returns ``(ok, failure)`` on the same contract as :meth:`condense`: a
         step failure is returned, never raised, and ``failure`` is None on both
@@ -707,10 +716,12 @@ class AudioCondenserService:
                         "0",
                         "-i",
                         str(list_path),
-                        "-c",
-                        "copy",
-                        str(staged_audio),
                     ]
+                    if out_audio.suffix.lower() in _MERGE_REENCODE_SUFFIXES:
+                        cmd += ["-c:a", _encoder_settings(out_audio.suffix)[0]]
+                    else:
+                        cmd += ["-c", "copy"]
+                    cmd.append(str(staged_audio))
                     ok, failure = self._run_streaming(
                         cmd,
                         # A stream copy still reports out_time, so the same

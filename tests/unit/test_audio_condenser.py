@@ -1305,6 +1305,40 @@ def test_concat_failure_leaves_no_partial_output(tmp_path):
     assert not out.exists()
 
 
+def test_concat_reencodes_flac_instead_of_copying(tmp_path):
+    """A native .flac restarts its timeline per file, so copy is not an option."""
+    svc = _service(tmp_path, global_index=0)
+    captured: dict = {}
+    parts = [tmp_path / "0000_condensed.flac", tmp_path / "0001_condensed.flac"]
+    for part in parts:
+        part.write_bytes(b"")
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory(captured, _progress_block(0, end=True))),
+    ):
+        svc.concat(parts, tmp_path / "season.flac", total_ms=4000)
+
+    cmd = captured["cmd"]
+    assert cmd[cmd.index("-c:a") + 1] == "flac"
+    assert "copy" not in cmd
+
+
+def test_concat_stream_copies_opus(tmp_path):
+    svc = _service(tmp_path, global_index=0)
+    captured: dict = {}
+    parts = [tmp_path / "0000_condensed.opus"]
+    parts[0].write_bytes(b"")
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory(captured, _progress_block(0, end=True))),
+    ):
+        svc.concat(parts, tmp_path / "season.opus", total_ms=2000)
+
+    cmd = captured["cmd"]
+    assert cmd[cmd.index("-c") + 1] == "copy"
+    assert "-c:a" not in cmd
+
+
 def test_concat_list_quotes_a_path_containing_an_apostrophe(tmp_path):
     rendered = _concat_list([tmp_path / "Kaguya's ep01.mp3"])
     assert rendered == f"file '{tmp_path}/Kaguya'\\''s ep01.mp3'\n"
