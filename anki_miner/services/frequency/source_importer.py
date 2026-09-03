@@ -65,10 +65,16 @@ from anki_miner.services.yomitan_meta_bank import (
     open_yomitan_meta_banks,
 )
 from anki_miner.utils.csv_utils import detect_delimiter
+from anki_miner.utils.logging_ext import capped, log_summary
 from anki_miner.utils.robust_fs import robust_rmtree
 from anki_miner.utils.slug import slugify
 
 logger = logging.getLogger(__name__)
+
+# How many raw rows the one CSV skip WARNING quotes back. A frequency list that
+# drops half its rows to a delimiter or column-order mistake shows the mistake
+# in the first few; a longer list would only push the counts off the line.
+_CSV_SKIP_EXAMPLE_LIMIT = 5
 
 FREQUENCY_SOURCE_SUFFIXES = (".zip", ".csv", ".tsv", ".txt")
 _ZIP_SUFFIXES = frozenset(FREQUENCY_SOURCE_SUFFIXES[:1])
@@ -376,6 +382,17 @@ def _import_csv(
     # CSV loader's semantics, which kept the first rank per word). Plain rank
     # lists carry no Yomitan display string, so display_value is always None here.
     ranks: dict[tuple[str, str | None], int] = {}
+    # Counted, never logged per row: a 100k-row list with the wrong delimiter
+    # would otherwise write 100k lines. One class per reason the row was
+    # unusable, plus a few verbatim rows so the mistake is visible.
+    skipped: dict[str, int] = {"short_row": 0, "no_word_rank": 0}
+    skip_examples: list[str] = []
+
+    def _skip(kind: str, row: list[str]) -> None:
+        skipped[kind] += 1
+        if len(skip_examples) < _CSV_SKIP_EXAMPLE_LIMIT:
+            skip_examples.append(delimiter.join(row))
+
     try:
         with open(csv_path, encoding="utf-8") as f:
             sample = f.read(4096)
@@ -392,6 +409,7 @@ def _import_csv(
                 if cancel_check is not None and cancel_check():
                     raise OperationCancelled("Import cancelled")
                 if len(row) < 2:
+                    _skip("short_row", row)
                     continue
                 if first_row:
                     first_row = False
@@ -402,6 +420,7 @@ def _import_csv(
 
                 word, rank = _extract_word_rank(row, word_first=word_first)
                 if not word or rank is None:
+                    _skip("no_word_rank", row)
                     continue
 
                 reading = _csv_reading(row, word)
@@ -413,6 +432,18 @@ def _import_csv(
                     ranks[key] = rank
     except OSError as e:
         raise SetupError(f"Error reading frequency source '{csv_path.name}': {e}") from e
+
+    total_skipped = sum(skipped.values())
+    if total_skipped:
+        log_summary(
+            logger,
+            "Frequency import skipped rows",
+            level=logging.WARNING,
+            source=csv_path,
+            skipped=total_skipped,
+            **skipped,
+            first_examples=capped(skip_examples, _CSV_SKIP_EXAMPLE_LIMIT),
+        )
 
     if not ranks:
         raise SetupError(

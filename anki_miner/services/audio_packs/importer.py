@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import sqlite3
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -29,8 +31,11 @@ from anki_miner.services.audio_packs.storage import (
     create_index,
     write_meta,
 )
+from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.robust_fs import robust_rmtree
 from anki_miner.utils.slug import slugify
+
+logger = logging.getLogger(__name__)
 
 # Canonical folder name → canonical pack_id mapping for known local-audio-yomichan packs.
 _CANONICAL_IDS: dict[str, str] = {
@@ -246,6 +251,12 @@ def import_audio_pack(
     if fmt is None:
         raise SetupError(f"Not a recognised audio pack: {pack_dir}")
 
+    # Start receipt. "The pack imported but is empty" is a question about which
+    # folder was read and which parser claimed it — both are here, and the
+    # matching done line carries the counts.
+    started_at = time.perf_counter()
+    log_summary(logger, "Audio pack import", pack_dir=pack_dir, pack_id=pack_id, fmt=fmt, language=language)
+
     # --- exists check (before staging so we fail fast) ---
     managed_root.mkdir(parents=True, exist_ok=True)
     if os.path.lexists(final_path):
@@ -338,6 +349,31 @@ def import_audio_pack(
 
     if progress:
         progress(f"Finalised '{pack_id}' ({total_entries:,} entries)")
+
+    # Done receipt. The two skip counters are kept apart on purpose: a parser
+    # skip means the pack's own index described a row this format cannot
+    # express, a storage skip means the row survived parsing and failed the
+    # index's own shape check. They point at different files.
+    log_summary(
+        logger,
+        "Audio pack import done",
+        pack_id=pack_id,
+        fmt=fmt,
+        entries=total_entries,
+        parser_skipped=parser_skipped,
+        storage_skipped=storage_skipped,
+        elapsed=f"{time.perf_counter() - started_at:.2f}s",
+    )
+    if parser_skipped or storage_skipped:
+        log_summary(
+            logger,
+            "Audio pack import skipped rows",
+            level=logging.WARNING,
+            pack_id=pack_id,
+            pack_dir=pack_dir,
+            parser_skipped=parser_skipped,
+            storage_skipped=storage_skipped,
+        )
 
     return AudioPackImportResult(
         pack_id=pack_id,

@@ -1,5 +1,6 @@
 """Tests for the Yomitan zip importer."""
 
+import logging
 import sqlite3
 from pathlib import Path
 
@@ -1403,3 +1404,108 @@ class TestReadYomitanTitle:
 
         zip_path = build_yomitan_zip(tmp_path / "src" / "t.zip", title="Jitendex.org [2026-06-06]")
         assert read_yomitan_title(zip_path) == "Jitendex.org [2026-06-06]"
+
+
+class TestImportReceipts:
+    """T23: one INFO start receipt, one INFO done receipt, one WARNING skip line."""
+
+    LOGGER = "anki_miner.services.dictionary.importers.yomitan_importer"
+
+    def test_start_and_done_receipts_logged(self, tmp_path: Path, caplog):
+        zip_path = build_yomitan_zip(tmp_path / "src" / "ok.zip")
+        dest_root = tmp_path / "dicts"
+
+        with caplog.at_level(logging.INFO, logger=self.LOGGER):
+            result = import_yomitan_zip(zip_path, dest_root)
+
+        messages = [r.message for r in caplog.records if r.name == self.LOGGER]
+        starts = [m for m in messages if m.startswith("Yomitan import:")]
+        dones = [m for m in messages if m.startswith("Yomitan import done:")]
+        assert len(starts) == 1
+        assert len(dones) == 1
+        assert f"dict_id={result.dict_id}" in starts[0]
+        assert str(zip_path) in starts[0]
+        assert 'title="Test Dict"' in starts[0]
+        for field in ("entries=2", "tags=1", "media_copied=0", "media_rejected=0", "skipped_malformed=0"):
+            assert field in dones[0], dones[0]
+        assert "elapsed=" in dones[0]
+
+    def test_clean_import_logs_no_skip_warning(self, tmp_path: Path, caplog):
+        zip_path = build_yomitan_zip(tmp_path / "src" / "ok.zip")
+
+        with caplog.at_level(logging.INFO, logger=self.LOGGER):
+            import_yomitan_zip(zip_path, tmp_path / "dicts")
+
+        assert not [r for r in caplog.records if r.message.startswith("Yomitan import skipped rows:")]
+
+    def test_malformed_rows_counted_once_with_first_members(self, tmp_path: Path, caplog):
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "bad.zip",
+            term_banks=[
+                [
+                    ["食べる", "たべる", "", "", 0, ["to eat"], 1, ""],
+                    ["飲む", "のむ"],  # arity < 6
+                    "not-a-list",  # not a list
+                ]
+            ],
+        )
+
+        with caplog.at_level(logging.INFO, logger=self.LOGGER):
+            result = import_yomitan_zip(zip_path, tmp_path / "dicts")
+
+        assert result.skipped_malformed == 2
+        warnings = [
+            r for r in caplog.records if r.name == self.LOGGER and r.message.startswith("Yomitan import skipped rows:")
+        ]
+        assert len(warnings) == 1
+        assert warnings[0].levelno == logging.WARNING
+        assert "term_bank_arity=2" in warnings[0].message
+        assert "first_members=" in warnings[0].message
+        assert "term_bank_1.json#1" in warnings[0].message
+
+    def test_non_numeric_score_counted_in_its_own_class(self, tmp_path: Path, caplog):
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "score.zip",
+            term_banks=[
+                [
+                    ["食べる", "たべる", "", "", 0, ["to eat"], 1, ""],
+                    ["飲む", "のむ", "", "", "high", ["to drink"], 2, ""],
+                ]
+            ],
+        )
+
+        with caplog.at_level(logging.INFO, logger=self.LOGGER):
+            import_yomitan_zip(zip_path, tmp_path / "dicts")
+
+        warnings = [r for r in caplog.records if r.message.startswith("Yomitan import skipped rows:")]
+        assert len(warnings) == 1
+        assert "term_bank_numeric=1" in warnings[0].message
+
+    def test_rejected_media_counted_in_done_receipt(self, tmp_path: Path, caplog):
+        term_banks = [
+            [
+                [
+                    "走る",
+                    "はしる",
+                    "",
+                    "",
+                    0,
+                    [{"type": "structured-content", "content": {"tag": "img", "path": "assets/note.txt"}}],
+                    1,
+                    "",
+                ]
+            ]
+        ]
+        zip_path = build_yomitan_zip(
+            tmp_path / "src" / "media.zip",
+            term_banks=term_banks,
+            media_files={"assets/note.txt": b"hello"},
+        )
+
+        with caplog.at_level(logging.INFO, logger=self.LOGGER):
+            import_yomitan_zip(zip_path, tmp_path / "dicts", dict_id="mediadict")
+
+        dones = [r.message for r in caplog.records if r.message.startswith("Yomitan import done:")]
+        assert len(dones) == 1
+        assert "media_copied=0" in dones[0]
+        assert "media_rejected=1" in dones[0]

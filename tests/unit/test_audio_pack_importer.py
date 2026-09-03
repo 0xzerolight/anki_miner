@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 from pathlib import Path
 from unittest.mock import patch
@@ -881,3 +882,58 @@ class TestCreateIndexFailureCleansUp:
         if dest.exists():
             staging_leftovers = [p for p in dest.iterdir() if p.name.startswith(".staging-")]
             assert staging_leftovers == []
+
+
+class TestImportReceipts:
+    """T23: start/done receipts and a counted (never per-row) skip breakdown."""
+
+    LOGGER = "anki_miner.services.audio_packs.importer"
+
+    def test_start_and_done_receipts_logged(self, tmp_path: Path, caplog):
+        pack = _make_ajt_pack(tmp_path / "my_pack")
+
+        with caplog.at_level(logging.INFO, logger=self.LOGGER):
+            result = import_audio_pack(pack, tmp_path / "out")
+
+        messages = [r.message for r in caplog.records if r.name == self.LOGGER]
+        starts = [m for m in messages if m.startswith("Audio pack import:")]
+        dones = [m for m in messages if m.startswith("Audio pack import done:")]
+        assert len(starts) == 1
+        assert len(dones) == 1
+        assert str(pack) in starts[0]
+        assert f"pack_id={result.pack_id}" in starts[0]
+        assert "fmt=ajt" in starts[0]
+        assert "entries=2" in dones[0]
+        assert "parser_skipped=0" in dones[0]
+        assert "storage_skipped=0" in dones[0]
+        assert "elapsed=" in dones[0]
+
+    def test_done_receipt_reports_skipped_counts(self, tmp_path: Path, caplog):
+        pack = tmp_path / "ozk5_files"
+        media = pack / "media"
+        media.mkdir(parents=True)
+        (media / "good.aac").touch()
+        (pack / "index.json").write_text(
+            json.dumps(
+                {
+                    "entries": [
+                        {"kanji": ["犬"], "kana": "いぬ", "audio_file": "good.aac"},
+                        {"kanji": "鳥", "kana": "とり", "audio_file": {"bad": "path"}},
+                        {"kanji": 0, "kana": "偽", "audio_file": "good.aac"},
+                        {"kanji": "偽", "kana": False, "audio_file": "good.aac"},
+                        {"kanji": "猫", "kana": "ねこ", "audio_file": "good.aac"},
+                    ],
+                    "kana_index": {},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        with caplog.at_level(logging.INFO, logger=self.LOGGER):
+            import_audio_pack(pack, tmp_path / "out")
+
+        dones = [r.message for r in caplog.records if r.message.startswith("Audio pack import done:")]
+        assert len(dones) == 1
+        assert "entries=2" in dones[0]
+        assert "parser_skipped=4" in dones[0]
+        assert "storage_skipped=0" in dones[0]

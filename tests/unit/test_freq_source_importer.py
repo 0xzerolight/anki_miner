@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 import tracemalloc
 import zipfile
@@ -945,3 +946,41 @@ class TestCsvSourceNamePreserved:
             overwrite=True,
         )
         assert storage.read_meta(dest / "s1" / "index.sqlite")["source_name"] == "JPDB"
+
+
+class TestCsvSkippedRowReceipt:
+    """T23: unusable CSV rows are counted once, never logged per row."""
+
+    LOGGER = "anki_miner.services.frequency.source_importer"
+
+    def test_skipped_rows_counted_once_with_examples(self, tmp_path: Path, caplog) -> None:
+        csv_path = tmp_path / "messy.csv"
+        csv_path.write_text(
+            "term,rank\n猫,5\n犬,3\nlonely\n鳥,notanumber\n馬,unparseable\n",
+            encoding="utf-8",
+        )
+
+        with caplog.at_level(logging.INFO, logger=self.LOGGER):
+            import_frequency_source(csv_path, tmp_path / "sources")
+
+        records = [
+            r
+            for r in caplog.records
+            if r.name == self.LOGGER and r.message.startswith("Frequency import skipped rows:")
+        ]
+        assert len(records) == 1
+        assert records[0].levelno == logging.WARNING
+        assert "skipped=3" in records[0].message
+        assert "short_row=1" in records[0].message
+        assert "no_word_rank=2" in records[0].message
+        assert "first_examples=" in records[0].message
+        assert "鳥" in records[0].message
+
+    def test_clean_csv_logs_no_skip_receipt(self, tmp_path: Path, caplog) -> None:
+        csv_path = tmp_path / "clean.csv"
+        csv_path.write_text("term,rank\n猫,5\n犬,3\n", encoding="utf-8")
+
+        with caplog.at_level(logging.INFO, logger=self.LOGGER):
+            import_frequency_source(csv_path, tmp_path / "sources")
+
+        assert not [r for r in caplog.records if r.message.startswith("Frequency import skipped rows:")]
