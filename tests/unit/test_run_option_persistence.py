@@ -8,6 +8,8 @@ pytest.importorskip("PyQt6.QtWidgets")
 
 from PyQt6.QtWidgets import QWidget
 
+from anki_miner.gui.widgets import backfill_tab as backfill_tab_module
+
 
 def _screen(window, class_name: str):
     """The one live screen of that class, by name — never by tab index."""
@@ -188,3 +190,86 @@ def test_seeding_a_mode_still_sets_the_value_widget_visibility(wired_window):
 
     assert tab.top_n_spinbox.isVisibleTo(tab) is True
     assert tab.coverage_spinbox.isVisibleTo(tab) is False
+
+
+def _map_pitch(config):
+    """A config whose pitch group is mapped, so the gate leaves it actionable."""
+    from dataclasses import replace
+
+    fields = dict(config.anki_fields)
+    fields["pitch_graph"] = "PitchGraph"
+    fields["pitch_text"] = "PitchText"
+    return replace(config, anki_fields=fields)
+
+
+def test_the_backfill_field_groups_reopen_where_they_were(wired_window):
+    """`definition` and `frequency` are the two groups test_config maps."""
+    window, _titles, _tabs = wired_window
+    tab = _screen(window, "CardBackfillTab")
+
+    tab.field_checkboxes["definition"].setChecked(True)
+    tab.field_checkboxes["frequency"].setChecked(True)
+
+    assert set(window.config.backfill_field_groups) == {"definition", "frequency"}
+
+    tab.update_config(window.config)
+    assert tab.field_checkboxes["definition"].isChecked() is True
+    assert tab.field_checkboxes["frequency"].isChecked() is True
+
+
+def test_a_language_gate_hides_a_group_without_erasing_the_preference(wired_window, monkeypatch):
+    """Config holds intent; the gate only masks what this language can do."""
+    from unittest.mock import MagicMock
+
+    window, _titles, _tabs = wired_window
+    tab = _screen(window, "CardBackfillTab")
+    tab.update_config(_map_pitch(window.config))
+
+    tab.field_checkboxes["pitch"].setChecked(True)
+    assert "pitch" in tab.config.backfill_field_groups
+
+    # Re-gate as a mining language with no capabilities at all.
+    profile = MagicMock()
+    profile.capabilities = frozenset()
+    monkeypatch.setattr(backfill_tab_module, "get_profile", lambda _code: profile)
+    tab._refresh_checkbox_gates()
+
+    assert tab.field_checkboxes["pitch"].isChecked() is False
+    assert "pitch" in tab.config.backfill_field_groups  # intent survives
+
+
+def test_an_unmapped_anki_field_also_leaves_the_preference_alone(wired_window):
+    """The other forced uncheck, the field-mapping gate, is guarded too."""
+    from dataclasses import replace
+
+    window, _titles, _tabs = wired_window
+    tab = _screen(window, "CardBackfillTab")
+
+    tab.field_checkboxes["definition"].setChecked(True)
+    assert "definition" in tab.config.backfill_field_groups
+
+    unmapped = dict(window.config.anki_fields)
+    unmapped["definition"] = ""
+    tab.update_config(replace(window.config, anki_fields=unmapped))
+
+    assert tab.field_checkboxes["definition"].isChecked() is False
+    assert "definition" in tab.config.backfill_field_groups  # intent survives
+
+
+def test_toggling_one_group_does_not_erase_a_masked_one(wired_window):
+    """The bug the merge in _on_field_groups_changed exists to prevent."""
+    from dataclasses import replace
+
+    window, _titles, _tabs = wired_window
+    tab = _screen(window, "CardBackfillTab")
+
+    tab.field_checkboxes["definition"].setChecked(True)
+    # Unmap definition: the gate un-ticks it, but the intent is still stored.
+    unmapped = dict(window.config.anki_fields)
+    unmapped["definition"] = ""
+    tab.update_config(replace(window.config, anki_fields=unmapped))
+    assert "definition" in tab.config.backfill_field_groups
+
+    tab.field_checkboxes["frequency"].setChecked(True)
+
+    assert set(tab.config.backfill_field_groups) == {"definition", "frequency"}

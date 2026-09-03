@@ -19,7 +19,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterator
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -50,6 +50,7 @@ from anki_miner.gui.utils.qt_helpers import (
     urls_from_event,
 )
 from anki_miner.gui.utils.run_off_thread import still_running
+from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets.base import (
     PageWidth,
     TaskPublisherMixin,
@@ -103,8 +104,13 @@ def _set_variant(button: ModernButton, variant: ButtonVariant) -> None:
         style.polish(button)
 
 
-class CardBackfillTab(TaskPublisherMixin, QWidget):
+class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
     """Scan → preview table → Apply, over the configured note type."""
+
+    #: Which field groups to fill is a remembered preference; the two gates in
+    #: _refresh_checkbox_gates only mask it. Connected once, by discovery, in
+    #: compose_main_window.
+    run_options_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
 
     #: Tables and queue rows genuinely use the extra width.
     PAGE_WIDTH = PageWidth.PAGE
@@ -194,6 +200,9 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
             checkbox.setToolTip(self._group_tooltips.get(group, ""))
             self.field_checkboxes[group] = checkbox
             layout.addWidget(checkbox)
+        self._seed_field_groups()
+        for checkbox in self.field_checkboxes.values():
+            checkbox.toggled.connect(self._on_field_groups_changed)
         self._language_gate_pairs.extend(
             (self.field_checkboxes[group], capability) for group, capability in _GROUP_CAPABILITIES.items()
         )
@@ -382,30 +391,80 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
 
         Then hide the groups the active mining language has no capability for:
         pitch and reading are Japanese-only, the other four are neutral.
+
+        The whole body runs inside the seed guard. Both forced unchecks below
+        are a *view* concern: ``config.backfill_field_groups`` holds what the
+        user asked for, so unmapping a field or switching to a language without
+        pitch hides that row without erasing the preference, and mapping it
+        again or switching back restores it at the next seed.
         """
-        for group, keys in FIELD_GROUPS.items():
-            mapped = [bool(self.config.anki_fields.get(key)) for key in keys]
-            enabled = all(mapped) if group == "reading" else any(mapped)
-            checkbox = self.field_checkboxes[group]
-            checkbox.setEnabled(enabled)
-            if not enabled:
-                checkbox.setChecked(False)
-                checkbox.setToolTip(self.tr("Map this field in Settings → Anki"))
-            else:
-                # Restore the group's own tooltip; without this branch the
-                # "Map this field…" text set above outlives the condition that
-                # produced it and the group's explanation is gone for good.
-                checkbox.setToolTip(self._group_tooltips.get(group, ""))
-        # Capability gate, second and last word: a group the language cannot
-        # fill is hidden outright, and un-ticked on the way out — the scan
-        # collects keys from isChecked(), which a hidden box still answers.
-        # The gate is two-way and owns these boxes' whole visibility, so a
-        # switch away from Japanese and back re-offers them.
-        capabilities = get_profile(config_language(self.config)).capabilities
-        apply_language_gate(self._language_gate_pairs, capabilities)
-        for group, capability in _GROUP_CAPABILITIES.items():
-            if capability not in capabilities:
-                self.field_checkboxes[group].setChecked(False)
+        with self.seeding():
+            for group in FIELD_GROUPS:
+                enabled = self._group_fields_mapped(group)
+                checkbox = self.field_checkboxes[group]
+                checkbox.setEnabled(enabled)
+                if not enabled:
+                    checkbox.setChecked(False)
+                    checkbox.setToolTip(self.tr("Map this field in Settings → Anki"))
+                else:
+                    # Restore the group's own tooltip; without this branch the
+                    # "Map this field…" text set above outlives the condition that
+                    # produced it and the group's explanation is gone for good.
+                    checkbox.setToolTip(self._group_tooltips.get(group, ""))
+            # Capability gate, second and last word: a group the language cannot
+            # fill is hidden outright, and un-ticked on the way out — the scan
+            # collects keys from isChecked(), which a hidden box still answers.
+            # The gate is two-way and owns these boxes' whole visibility, so a
+            # switch away from Japanese and back re-offers them.
+            capabilities = get_profile(config_language(self.config)).capabilities
+            apply_language_gate(self._language_gate_pairs, capabilities)
+            for group, capability in _GROUP_CAPABILITIES.items():
+                if capability not in capabilities:
+                    self.field_checkboxes[group].setChecked(False)
+
+    def _group_fields_mapped(self, group: str) -> bool:
+        """Whether this group's Anki fields are mapped well enough to run.
+
+        Non-reading groups need at least one key mapped (per-field compute skips
+        unmapped keys); reading is pure cross-fill and needs both.
+        """
+        mapped = [bool(self.config.anki_fields.get(key)) for key in FIELD_GROUPS[group]]
+        return all(mapped) if group == "reading" else any(mapped)
+
+    def _group_is_masked(self, group: str) -> bool:
+        """Whether a gate is currently hiding this group from the user.
+
+        A masked group's checkbox was un-ticked by :meth:`_refresh_checkbox_gates`,
+        not by the user, so its stored preference must never be rewritten from
+        that widget -- otherwise toggling any *other* group would erase it.
+        """
+        if not self._group_fields_mapped(group):
+            return True
+        capability = _GROUP_CAPABILITIES.get(group)
+        if capability is None:
+            return False
+        return capability not in get_profile(config_language(self.config)).capabilities
+
+    def _seed_field_groups(self) -> None:
+        """Tick the groups the user last asked for; the gates mask after."""
+        with self.seeding():
+            for group, checkbox in self.field_checkboxes.items():
+                checkbox.setChecked(group in self.config.backfill_field_groups)
+
+    def _on_field_groups_changed(self, _checked: bool) -> None:
+        """Persist the ticked groups in FIELD_GROUPS order, not click order.
+
+        A masked group keeps its stored value rather than contributing its
+        (gate-forced) widget state. Stable ordering means re-ticking the same
+        set never counts as a change, so it never triggers a redundant save.
+        """
+        stored = set(self.config.backfill_field_groups)
+        chosen = tuple(
+            group
+            for group in FIELD_GROUPS
+            if (group in stored if self._group_is_masked(group) else self.field_checkboxes[group].isChecked())
+        )
+        self.persist_run_options(backfill_field_groups=chosen)
 
     def update_config(self, config: AnkiMinerConfig) -> None:
         """Adopt a new config: re-gate checkboxes and drop any held plan.
@@ -421,6 +480,9 @@ class CardBackfillTab(TaskPublisherMixin, QWidget):
         self.apply_button.setEnabled(False)
         self.summary_label.setText("")
         self._sync_action_prominence()
+        # Restore full intent first, then let the gates mask it — the other
+        # order would re-tick a group the new config cannot fill.
+        self._seed_field_groups()
         self._refresh_checkbox_gates()
 
     def iter_close_workers(self) -> Iterator[BackfillScanWorker | BackfillApplyWorker | SingleCallWorker]:
