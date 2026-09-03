@@ -5064,6 +5064,14 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Salin ringkasan</translation>
     </message>
     <message>
+        <source>Copy unmined words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Whitelist words that got no card this run, one per line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Dismiss</source>
         <translation>Tutup</translation>
     </message>
@@ -7488,6 +7496,18 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     <message>
         <source>(asleep time excluded)</source>
         <translation>(waktu tidur tidak dihitung)</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not mined: %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Already known: %1.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ResultsDialog</name>

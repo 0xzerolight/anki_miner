@@ -5077,6 +5077,14 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
         <translation>Zusammenfassung kopieren</translation>
     </message>
     <message>
+        <source>Copy unmined words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Whitelist words that got no card this run, one per line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Dismiss</source>
         <translation>Schließen</translation>
     </message>
@@ -7502,6 +7510,18 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
     <message>
         <source>(asleep time excluded)</source>
         <translation>(Schlafzeit ausgeschlossen)</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not mined: %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Already known: %1.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ResultsDialog</name>

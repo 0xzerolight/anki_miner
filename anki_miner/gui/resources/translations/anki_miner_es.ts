@@ -5077,6 +5077,14 @@ Los archivos de índice en disco quedarán intactos porque no se pudo comprobar 
         <translation>Copiar resumen</translation>
     </message>
     <message>
+        <source>Copy unmined words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Whitelist words that got no card this run, one per line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Dismiss</source>
         <translation>Descartar</translation>
     </message>
@@ -7502,6 +7510,18 @@ Los archivos de índice en disco quedarán intactos porque no se pudo comprobar 
     <message>
         <source>(asleep time excluded)</source>
         <translation>(tiempo en suspensión excluido)</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not mined: %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Already known: %1.</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ResultsDialog</name>
