@@ -1,10 +1,15 @@
 """Utility for pairing video and subtitle files across folders."""
 
+import logging
 import sys
 import unicodedata
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+
+from anki_miner.utils.logging_ext import suppressed
+
+logger = logging.getLogger(__name__)
 
 #: Mining subtitle formats, best first. Richest format wins when a folder holds
 #: several variants for one episode: ASS/SSA carry styling and typesetting, SRT
@@ -82,10 +87,12 @@ def resolve_output_paths(out_dir: Path, names: Sequence[str]) -> list[Path]:
     before either exists resolve to one target.
     """
     exact_paths = [out_dir / name for name in names]
-    try:
+    # WARNING, not silent: an unreadable folder makes every name resolve to the
+    # exact spelling, so an existing NFD/case-variant file is left in place and
+    # the write lands beside it as a visually-identical twin.
+    entries: list[Path] = []
+    with suppressed(logger, f"scanning output folder {out_dir}", level=logging.WARNING):
         entries = sorted(p for p in out_dir.iterdir() if p.is_file())
-    except OSError:
-        entries = []
 
     exact_by_name = {path.name: path for path in entries}
     matches_by_key: dict[str, list[Path]] = {}
@@ -139,9 +146,12 @@ def find_sibling_subtitle(video_path: Path, priority: Sequence[str] | None = Non
     folder = video_path.parent
     stem_cf = _nfc(video_path.stem).casefold()
     retimed_cf = stem_cf + RETIMED_SUFFIX
-    try:
+    # WARNING, not silent: no sibling means the caller mines without a
+    # subtitle, and an unreadable folder is indistinguishable from an empty one.
+    entries: list[Path] = []
+    with suppressed(logger, f"scanning {folder} for a sibling subtitle", level=logging.WARNING):
         entries = [p for p in folder.iterdir() if p.is_file()]
-    except OSError:
+    if not entries:
         return None
     by_group: dict[tuple[bool, str], list[Path]] = {}
     for p in entries:
@@ -228,10 +238,15 @@ class FilePairMatcher:
         # yields no pairs rather than escaping — an unhandled FileNotFoundError
         # here reaches a Qt slot and aborts the whole process. Matches the
         # module's except-OSError idiom (resolve_output_path, find_sibling_subtitle).
-        try:
+        # WARNING, not silent: zero pairs is what the user sees, and "the
+        # folder is empty" and "the folder could not be read" look identical
+        # from the batch screen.
+        videos: list[Path] = []
+        subtitles: list[Path] = []
+        with suppressed(logger, f"scanning {video_folder} and {subtitle_folder} for pairs", level=logging.WARNING):
             videos = [f for f in video_folder.iterdir() if f.is_file() and f.suffix.lower() in video_exts]
             subtitles = [f for f in subtitle_folder.iterdir() if f.is_file() and f.suffix.lower() in subtitle_exts]
-        except OSError:
+        if not videos or not subtitles:
             return []
 
         # Deterministic video order: iterdir() order is filesystem-dependent, and

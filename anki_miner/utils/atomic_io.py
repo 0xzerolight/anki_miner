@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import logging
 import os
 import tempfile
 import time
@@ -11,7 +12,10 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
+from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.robust_fs import robust_rmtree
+
+logger = logging.getLogger(__name__)
 
 
 @contextmanager
@@ -77,7 +81,19 @@ def reconcile_dir(dest_dir: Path) -> None:
             return
     try:
         os.replace(backups[0][2], dest_dir)
-    except OSError:
+    except OSError as exc:
+        # WARNING: the slot stays absent or empty, so the dictionary/pitch/
+        # frequency/audio-pack family it holds silently disappears from the app
+        # even though a good backup is sitting right beside it.
+        log_summary(
+            logger,
+            "Index restore failed",
+            level=logging.WARNING,
+            backup=backups[0][2],
+            dest=dest_dir,
+            exc=type(exc).__name__,
+            detail=str(exc),
+        )
         return
 
 
@@ -117,7 +133,18 @@ def _restore_backup(backup: Path, dest_dir: Path) -> None:
             return
     try:
         os.replace(backup, dest_dir)
-    except OSError:
+    except OSError as exc:
+        # WARNING: this is the rollback arm of a promotion that already failed,
+        # so the user is left with neither the new slot nor the old one.
+        log_summary(
+            logger,
+            "Index rollback failed",
+            level=logging.WARNING,
+            backup=backup,
+            dest=dest_dir,
+            exc=type(exc).__name__,
+            detail=str(exc),
+        )
         return
 
 

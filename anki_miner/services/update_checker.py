@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from packaging.version import InvalidVersion, Version
 
+from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.version_compare import is_newer
 
 logger = logging.getLogger(__name__)
@@ -115,7 +116,16 @@ def _validate_github_url(url: str) -> bool:
         return False
     try:
         parts = urllib.parse.urlsplit(url)
-    except ValueError:
+    except ValueError as exc:
+        # DEBUG: the URL is rejected either way, but a release feed that starts
+        # emitting an unsplittable asset URL is otherwise indistinguishable from
+        # one that stopped publishing the asset at all.
+        logger.debug(
+            "Ignored failure during update URL validation of %s: %s: %s",
+            url,
+            type(exc).__name__,
+            exc,
+        )
         return False
     # Hosts are case-insensitive; urlsplit lowercases the scheme but not the
     # netloc, so normalise it before the allowlist check or a "GitHub.com" URL
@@ -224,9 +234,22 @@ class UpdateChecker:
                 release_notes=release_notes,
             )
 
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - bucket B: an update check never blocks the app
             self.last_error = exc
-            logger.debug("Failed to check for updates", exc_info=True)
+            # The URL and the HTTP status are the two facts that separate "the
+            # network is down", "GitHub rate-limited this IP" and "the feed
+            # changed shape"; the bare message named none of them.
+            log_summary(
+                logger,
+                "Update check failed",
+                level=logging.DEBUG,
+                url=self.GITHUB_API_URL,
+                # urllib.error.HTTPError carries the status as `.code`; every
+                # other failure (DNS, timeout, JSON) legitimately has none.
+                status=getattr(exc, "code", None),
+                exc=type(exc).__name__,
+                detail=str(exc),
+            )
             return None
 
     @staticmethod

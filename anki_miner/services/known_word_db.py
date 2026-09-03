@@ -180,7 +180,11 @@ class KnownWordDB:
         with closing(self._connect()) as conn:
             cursor = conn.execute("SELECT lemma FROM known_words")
             words = _normalize_all({row[0] for row in cursor.fetchall()})
-        log_summary(logger, "Known words load done", rows=len(words))
+            # The schema version rides along because a DB left behind by an
+            # older build reads as "0 known words" rather than as an unmigrated
+            # file, and the path says WHICH per-language sibling answered.
+            schema = int(conn.execute("PRAGMA user_version").fetchone()[0])
+        log_summary(logger, "Known words load done", rows=len(words), schema=schema, db=self._db_path)
         self._known_cache = words
         return words
 

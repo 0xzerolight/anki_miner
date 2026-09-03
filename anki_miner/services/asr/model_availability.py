@@ -22,6 +22,7 @@ imported ``ggml_model_installer`` would cycle.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from anki_miner.services.asr import _engine, ggml_model_installer, model_manager
@@ -30,6 +31,9 @@ if TYPE_CHECKING:
     from anki_miner.config.config import AnkiMinerConfig
 
 __all__ = ["usable_model_installed"]
+
+
+logger = logging.getLogger(__name__)
 
 
 def usable_model_installed(config: AnkiMinerConfig) -> bool:
@@ -48,5 +52,14 @@ def usable_model_installed(config: AnkiMinerConfig) -> bool:
             and ggml_model_installer.is_ggml_downloaded(config.asr_model, config.asr_models_root)
             and ggml_model_installer.is_vad_downloaded(config.asr_models_root)
         )
-    except Exception:  # noqa: BLE001 - a probe failure means "not usable", never a crash
+    except Exception as exc:  # noqa: BLE001 - bucket B: a probe failure means "not usable"
+        # DEBUG: the screen says "model not downloaded", which is right for an
+        # absent model and wrong for an engine that failed to load -- and those
+        # two send a user down completely different paths.
+        logger.debug(
+            "Ignored failure during ASR model availability probe of %s: %s: %s",
+            config.asr_model,
+            type(exc).__name__,
+            exc,
+        )
         return False

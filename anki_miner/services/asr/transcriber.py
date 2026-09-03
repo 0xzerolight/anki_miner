@@ -127,7 +127,7 @@ def _ensure_onnx_pack_on_syspath(onnx_pack_root: Path | None) -> None:
         raise  # never degrade a real allocation failure to "no speech mask" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001  (best-effort; a path problem must not abort)
         # Bucket B: an unusable optional VAD pack falls back to no speech mask.
-        logger.debug("ASR VAD pack probe: available=false exc=%s", type(exc).__name__)
+        logger.debug("ASR VAD pack probe: available=false exc=%s: %s", type(exc).__name__, exc)
 
 
 def vad_available(onnx_pack_root: Path | None = None) -> bool:
@@ -318,9 +318,10 @@ def _cpp_ggml_present(model_name: str, models_root: Path) -> bool:
     except Exception as exc:  # noqa: BLE001 — unknown model / odd path → treat as absent
         # Bucket B: a missing optional ggml model falls back to CT2.
         logger.debug(
-            "ASR ggml model probe: model=%s available=false exc=%s",
+            "ASR ggml model probe: model=%s available=false exc=%s: %s",
             model_name,
             type(exc).__name__,
+            exc,
         )
         return False
 
@@ -424,10 +425,13 @@ def _preload_cuda_libs(cuda_libs_root: Path | None) -> None:
             raise  # never degrade a real allocation failure to "bypass this library" (service_factory.py policy)
         except Exception as exc:  # noqa: BLE001  (best-effort; a single bad lib must not abort)
             # Bucket B: one unusable optional CUDA library may be bypassed.
+            # The message names the dependent DLL that could not be found,
+            # which is the whole question when CUDA silently falls back to CPU.
             logger.debug(
-                "ASR CUDA library preload: path=%s result=failed exc=%s",
+                "ASR CUDA library preload: path=%s result=failed exc=%s: %s",
                 path,
                 type(exc).__name__,
+                exc,
             )
 
     # --- Source 1: managed pack dir ---
@@ -447,7 +451,11 @@ def _preload_cuda_libs(cuda_libs_root: Path | None) -> None:
             raise  # never degrade a real allocation failure to "fall back" (service_factory.py policy)
         except Exception as exc:  # noqa: BLE001
             # Bucket B: an unusable optional managed CUDA pack falls back to other sources.
-            logger.debug("ASR CUDA pack probe: source=managed available=false exc=%s", type(exc).__name__)
+            logger.debug(
+                "ASR CUDA pack probe: source=managed available=false exc=%s: %s",
+                type(exc).__name__,
+                exc,
+            )
 
     # --- Source 2: pip packages (nvidia-cudnn-cu12 / nvidia-cublas-cu12) ---
     for pkg_name, lib_glob, dll_glob in (
@@ -470,9 +478,10 @@ def _preload_cuda_libs(cuda_libs_root: Path | None) -> None:
         except Exception as exc:  # noqa: BLE001
             # Bucket B: an absent optional pip CUDA package is a normal fallback.
             logger.debug(
-                "ASR CUDA pack probe: source=%s available=false exc=%s",
+                "ASR CUDA pack probe: source=%s available=false exc=%s: %s",
                 pkg_name,
                 type(exc).__name__,
+                exc,
             )
 
 
@@ -493,7 +502,7 @@ def _cuda_device_count() -> int:
         raise  # never degrade a real allocation failure to "no GPU" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001  (no backend / driver error → treat as no GPU)
         # Bucket B: an absent optional CUDA accelerator is a normal fallback.
-        logger.debug("ASR CUDA probe: devices=0 exc=%s", type(exc).__name__)
+        logger.debug("ASR CUDA probe: devices=0 exc=%s: %s", type(exc).__name__, exc)
         return 0
 
 

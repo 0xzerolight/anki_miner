@@ -523,7 +523,12 @@ class TestScanLogging:
             if r.levelno == logging.WARNING and r.name == "anki_miner.services.card_backfiller"
         ]
         assert len(warnings) == 1
-        assert "mined_form=猫" in warnings[0].getMessage()
+        # The per-scan `Tagger failures:` receipt, shared with deck_filter: the
+        # words it choked on, plus the exception that named the broken engine.
+        message = warnings[0].getMessage()
+        assert message.startswith("Tagger failures: reading=2 lemma=2")
+        assert "sample_words=猫,犬" in message
+        assert "RuntimeError: broken tagger" in message
 
     def test_apply_logs_a_summary_line(self, caplog):
         anki = RecordingAnkiService({1: _note(1, word="猫", Frequency="")})

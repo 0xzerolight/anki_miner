@@ -74,7 +74,7 @@ def _read_header(path: Path) -> dict[str, str] | None:
                     key, _, value = body.partition(":")
                     meta[key.strip().lower()] = value.strip()
     except (OSError, UnicodeDecodeError) as exc:
-        logger.warning("Could not decode wordset %s: %s", path, exc)
+        logger.warning("Could not read wordset %s: exc=%s: %s", path, type(exc).__name__, exc)
         return None
     return meta
 
@@ -91,7 +91,7 @@ def _read_words(path: Path) -> set[str] | None:
                 if stripped and not stripped.startswith("#"):
                     words.add(stripped)
     except (OSError, UnicodeDecodeError) as exc:
-        logger.warning("Could not decode wordset %s: %s", path, exc)
+        logger.warning("Could not read wordset %s: exc=%s: %s", path, type(exc).__name__, exc)
         return None
     return words
 
@@ -143,7 +143,18 @@ def load_wordset_catalog(resource_dir: Path | None = None) -> list[WordsetInfo]:
         label = meta.get("label", _FALLBACK_LABELS.get(set_id, set_id))
         try:
             count = int(meta.get("count", "0"))
-        except ValueError:
+        except ValueError as exc:
+            # WARNING: the catalog row then advertises 0 entries for a set that
+            # is about to load hundreds of thousands, and the count is the only
+            # thing distinguishing a healthy set from a truncated one.
+            logger.warning(
+                "Wordset count header unparseable: set=%s file=%s raw=%r exc=%s: %s",
+                set_id,
+                path,
+                meta.get("count", ""),
+                type(exc).__name__,
+                exc,
+            )
             count = 0
         catalog.append(WordsetInfo(id=set_id, label=label, count=count))
     return catalog

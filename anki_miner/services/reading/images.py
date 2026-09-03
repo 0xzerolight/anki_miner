@@ -170,7 +170,16 @@ def validate_card_image(path: Path) -> bool:
             # Budget first: verify() leaves the file object unusable.
             validate_image_pixel_budget(img)
             img.verify()
-    except Exception:  # noqa: BLE001 - any read failure means "not usable"
+    except Exception as exc:  # noqa: BLE001 - bucket B: any read failure means "not usable"
+        # DEBUG: the gate's answer is a plain False by design, but "wrong
+        # format", "decompression bomb" and "file vanished" are one message
+        # apart and the user only hears "unreadable image".
+        logger.debug(
+            "Ignored failure during image readability probe of %s: %s: %s",
+            path,
+            type(exc).__name__,
+            exc,
+        )
         return False
     return True
 
@@ -179,7 +188,15 @@ def _validate_archive_once(zf: zipfile.ZipFile, source: Path, dest_dir: Path) ->
     """Run the full zip-safety scan once per unchanged archive and destination."""
     try:
         stat = source.stat()
-    except OSError:
+    except OSError as exc:
+        # DEBUG: the scan still runs, it just cannot be memoized, so a large
+        # archive is re-validated on every page and the run looks slow.
+        logger.debug(
+            "Ignored failure during archive identity stat of %s: %s: %s",
+            source,
+            type(exc).__name__,
+            exc,
+        )
         validate_zip_safe(zf, dest_dir)
         return
     key = (

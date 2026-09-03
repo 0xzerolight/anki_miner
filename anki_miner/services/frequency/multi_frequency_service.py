@@ -17,7 +17,6 @@ service only reads them.
 
 from __future__ import annotations
 
-import contextlib
 import logging
 import math
 from fractions import Fraction
@@ -26,7 +25,7 @@ from anki_miner.services.frequency.providers.indexed_freq_provider import (
     IndexedFreqProvider,
 )
 from anki_miner.services.frequency.storage import CATEGORICAL_RANK
-from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.logging_ext import log_summary, suppressed
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +149,14 @@ class MultiFrequencyService:
             close = getattr(provider, "close", None)
             if callable(close):
                 # Teardown is best-effort; one broken handle must not leak others.
-                with contextlib.suppress(Exception):
+                # WARNING, not silent: the leaked sqlite handle file-locks
+                # freqs_root/<id>/index.sqlite on Windows, so "mine then
+                # Settings -> Remove source" fails with no trace of the cause.
+                with suppressed(
+                    logger,
+                    f"closing frequency provider {getattr(provider, 'name', '?')}",
+                    level=logging.WARNING,
+                ):
                     close()
 
 
