@@ -109,6 +109,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         max_sentence_chars=50,
         reading_min_occurrence=7,
         bold_target_in_sentence=True,
+        secondary_subtitle_enabled=True,
         # --- YouTubeSettingsPanel ---
         youtube_cookies_from_browser="firefox",
         youtube_cookies_file=cookies_txt,
@@ -168,6 +169,7 @@ _SAVE_PATH_FIELDS = frozenset(
         "max_sentence_chars",
         "reading_min_occurrence",
         "bold_target_in_sentence",
+        "secondary_subtitle_enabled",
         # YouTubeSettingsPanel
         "youtube_cookies_from_browser",
         "youtube_cookies_file",

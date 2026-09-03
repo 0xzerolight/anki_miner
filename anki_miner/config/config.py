@@ -213,6 +213,15 @@ class AnkiMinerConfig:
     screenshot_animated_quality: int = 30  # 0-100 user scale, mapped per codec
     subtitle_offset: float = 0.0  # Seconds to shift subtitles (+ later, - earlier)
 
+    # Secondary-language subtitle track (Video -> Single, F7). Off by default
+    # and global (not language-scoped): the second file picker and its offset
+    # appear on the tab only while this is on, so nothing new is on screen for
+    # anyone who never asked. The track's offset is per run, never persisted
+    # here -- like the subtitle offset spinbox, it is dialled per episode and
+    # remembered with the recent file pair. Whether the translation reaches a
+    # card is a separate switch: the "sentence_translation" anki_fields key.
+    secondary_subtitle_enabled: bool = False
+
     # Word filtering settings
     allowed_pos: tuple[str, ...] = field(default_factory=lambda: ("名詞", "動詞", "形容詞", "副詞", "形状詞", "代名詞"))
     # NOTE: "非自立" here does NOT match unidic's "非自立可能" — and must not be

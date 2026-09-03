@@ -234,6 +234,10 @@ def test_anki_fields_includes_source_default():
     assert cfg.anki_fields["source"] == ""
 
 
+def test_secondary_subtitles_default_off():
+    assert AnkiMinerConfig().secondary_subtitle_enabled is False
+
+
 class TestExpressionAudioConfig:
     """Tests for expression audio config fields (Issue #73)."""
 
