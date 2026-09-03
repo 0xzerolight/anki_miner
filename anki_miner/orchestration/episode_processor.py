@@ -2763,6 +2763,51 @@ class EpisodeProcessor:
             return fetched
         return replace(fetched, subtitle_file=result.out_srt)
 
+    def _align_fetched(
+        self,
+        fetched: FetchedMedia,
+        workspace: Path,
+        cancel_event: threading.Event,
+        fetch_progress_cb: Callable[[str, float | None], None] | None,
+    ) -> FetchedMedia | None:
+        """Retime fetched captions against the video's own audio.
+
+        Returns None when the alignment was cancelled — the outcome carries that
+        fact, so the caller never has to re-read the event to learn it.
+
+        Best-effort by contract: ``retime_subtitle`` never raises for content or
+        tool reasons — every failure comes back as a falsy ``RetimeOutcome`` with
+        the original file untouched — so alignment can degrade but never fail a
+        run. YouTube's auto-captions being out of sync is why this exists.
+
+        Writes a sibling rather than overwriting: ``retime_subtitle`` keeps no
+        copy when ``out_sub`` is ``in_sub``, and a bad alignment must not destroy
+        the captions we would otherwise mine.
+        """
+        from anki_miner.services.subtitle_retimer import retime_subtitle
+
+        if fetched.subtitle_file is None:  # pragma: no cover - callers gate on this
+            return fetched
+        if fetch_progress_cb is not None:
+            fetch_progress_cb(QCoreApplication.translate("EpisodeProcessor", "Aligning subtitles"), None)
+        source = fetched.subtitle_file
+        out_sub = workspace / f"{source.stem}.retimed{source.suffix}"
+        outcome = retime_subtitle(
+            self.config,
+            fetched.video_file,
+            source,
+            out_sub,
+            cancel_event=cancel_event,
+            log_cb=logger.debug,
+        )
+        if outcome.cancelled:
+            return None
+        if not outcome:
+            logger.info("YouTube caption alignment did not apply: %s", outcome.reason)
+            return fetched
+        logger.info("YouTube captions aligned with %s", outcome.engine)
+        return replace(fetched, subtitle_file=out_sub)
+
     def process_youtube_url(
         self,
         url: str,
@@ -2889,6 +2934,21 @@ class EpisodeProcessor:
                 # Cancelled mid-transcription. A result, not a raise: the queue
                 # worker's post-fetch contract expects item_finished to fire.
                 return self._make_cancelled_result(start_time)
+        elif align_captions:
+            # elif, not if: a locally transcribed track already came from this
+            # audio, so retiming it against the same audio is pointless work.
+            if cancel_event.is_set():
+                return self._make_cancelled_result(start_time)
+            with timed_phase("youtube-align", logger):
+                aligned = self._align_fetched(fetched, workspace, cancel_event, fetch_progress_cb)
+            if aligned is None:
+                return self._make_cancelled_result(start_time)
+            fetched = aligned
+
+        # Both branches above guarantee it: a caption fetch resolves one, and a
+        # transcribe fetch either fills it or returned a cancelled result.
+        subtitle_file = fetched.subtitle_file
+        assert subtitle_file is not None
 
         if on_fetched is not None:
             on_fetched(fetched)
@@ -2900,7 +2960,7 @@ class EpisodeProcessor:
 
         return self.process_episode(
             fetched.video_file,
-            fetched.subtitle_file,
+            subtitle_file,
             progress_callback=progress_callback,
             curation_callback=curation_callback,
             episode_name_override=f"YT:{video_id}",
