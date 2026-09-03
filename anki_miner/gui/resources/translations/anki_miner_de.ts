@@ -2696,6 +2696,18 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
         <translation>Wenn deaktiviert, werden Dateien, deren kondensiertes Audio bereits existiert, übersprungen und nicht überschrieben.</translation>
     </message>
     <message>
+        <source>Merge into one file</source>
+        <translation>In eine Datei zusammenführen</translation>
+    </message>
+    <message>
+        <source>Join every condensed file in the folder into a single output, in queue order.</source>
+        <translation>Jede kondensierte Datei im Ordner in Warteschlangenreihenfolge zu einer einzigen Ausgabe zusammenführen.</translation>
+    </message>
+    <message>
+        <source>Output name (defaults to the folder's name)</source>
+        <translation>Ausgabename (standardmäßig der Ordnername)</translation>
+    </message>
+    <message>
         <source>Condense Audio</source>
         <translation>Audio kondensieren</translation>
     </message>
@@ -2738,6 +2750,10 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
     <message>
         <source>Subtitle tracks could not be read.</source>
         <translation>Untertitelspuren konnten nicht gelesen werden.</translation>
+    </message>
+    <message>
+        <source>That merged file already exists. Rename it, or tick Overwrite.</source>
+        <translation>Diese zusammengeführte Datei existiert bereits. Benennen Sie sie um, oder aktivieren Sie Überschreiben.</translation>
     </message>
     <message>
         <source>Multiple media files would write to the same output file.</source>
@@ -2793,6 +2809,18 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
     </message>
 </context><context>
     <name>CondenseWorker</name>
+    <message>
+        <source>Nothing to merge: no file was condensed.</source>
+        <translation>Nichts zum Zusammenführen: Es wurde keine Datei kondensiert.</translation>
+    </message>
+    <message>
+        <source>Merging %1 files into one…</source>
+        <translation>%1 Dateien werden zu einer zusammengeführt…</translation>
+    </message>
+    <message>
+        <source>Merging: %1%</source>
+        <translation>Zusammenführen: %1 %</translation>
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation>Übersprungen, existiert bereits</translation>

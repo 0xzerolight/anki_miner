@@ -186,6 +186,7 @@ class AnkiMinerConfig:
     condenser_filtered_chars: str = "♪♫♬♩〜～"  # Cues consisting only of these are dropped
     condenser_write_subtitles: bool = False  # Also write condensed .srt + .lrc sidecars
     condenser_tag_outputs: bool = False  # Show the pre-run metadata editor and tag outputs (Issue #113)
+    condenser_merge_output: bool = False  # Folder mode: join the whole run into one file (F5)
 
     # Media Downloader settings (Utilities → Download). Persisted defaults for
     # the Download tab's inline run options, seeded/written back the same way as

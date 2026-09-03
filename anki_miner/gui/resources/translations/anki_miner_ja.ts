@@ -2694,6 +2694,18 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>チェックを外すと、凝縮音声が既に存在するファイルはスキップされ、上書きされません。</translation>
     </message>
     <message>
+        <source>Merge into one file</source>
+        <translation>1つのファイルに結合する</translation>
+    </message>
+    <message>
+        <source>Join every condensed file in the folder into a single output, in queue order.</source>
+        <translation>フォルダ内のすべての凝縮ファイルを、キュー順で1つの出力に結合します。</translation>
+    </message>
+    <message>
+        <source>Output name (defaults to the folder's name)</source>
+        <translation>出力名（既定ではフォルダの名前）</translation>
+    </message>
+    <message>
         <source>Condense Audio</source>
         <translation>音声を凝縮</translation>
     </message>
@@ -2736,6 +2748,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Subtitle tracks could not be read.</source>
         <translation>字幕トラックを読み取れませんでした。</translation>
+    </message>
+    <message>
+        <source>That merged file already exists. Rename it, or tick Overwrite.</source>
+        <translation>その結合ファイルはすでに存在します。名前を変更するか、「上書き」を有効にしてください。</translation>
     </message>
     <message>
         <source>Multiple media files would write to the same output file.</source>
@@ -2791,6 +2807,18 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
 </context><context>
     <name>CondenseWorker</name>
+    <message>
+        <source>Nothing to merge: no file was condensed.</source>
+        <translation>結合対象なし：凝縮されたファイルがありません。</translation>
+    </message>
+    <message>
+        <source>Merging %1 files into one…</source>
+        <translation>%1 個のファイルを1つに結合中…</translation>
+    </message>
+    <message>
+        <source>Merging: %1%</source>
+        <translation>結合中: %1%</translation>
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation>スキップしました（既に存在）</translation>

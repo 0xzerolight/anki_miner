@@ -2694,6 +2694,18 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>取消勾选时，已存在压缩音频的文件将被跳过，而非覆盖。</translation>
     </message>
     <message>
+        <source>Merge into one file</source>
+        <translation>合并为单个文件</translation>
+    </message>
+    <message>
+        <source>Join every condensed file in the folder into a single output, in queue order.</source>
+        <translation>按队列顺序，将文件夹内所有压缩文件合并为单个输出。</translation>
+    </message>
+    <message>
+        <source>Output name (defaults to the folder's name)</source>
+        <translation>输出名称（默认为文件夹名称）</translation>
+    </message>
+    <message>
         <source>Condense Audio</source>
         <translation>压缩音频</translation>
     </message>
@@ -2736,6 +2748,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Subtitle tracks could not be read.</source>
         <translation>无法读取字幕轨道。</translation>
+    </message>
+    <message>
+        <source>That merged file already exists. Rename it, or tick Overwrite.</source>
+        <translation>该合并文件已存在。请重命名，或启用“覆盖”。</translation>
     </message>
     <message>
         <source>Multiple media files would write to the same output file.</source>
@@ -2791,6 +2807,18 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
 </context><context>
     <name>CondenseWorker</name>
+    <message>
+        <source>Nothing to merge: no file was condensed.</source>
+        <translation>没有可合并的内容：未压缩任何文件。</translation>
+    </message>
+    <message>
+        <source>Merging %1 files into one…</source>
+        <translation>正在将 %1 个文件合并为一个…</translation>
+    </message>
+    <message>
+        <source>Merging: %1%</source>
+        <translation>正在合并：%1%</translation>
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation>已跳过，已存在</translation>

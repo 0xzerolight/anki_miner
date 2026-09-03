@@ -2696,6 +2696,18 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Cuando está desmarcado, los archivos cuyo audio condensado ya existe se omiten, no se sobrescriben.</translation>
     </message>
     <message>
+        <source>Merge into one file</source>
+        <translation>Fusionar en un solo archivo</translation>
+    </message>
+    <message>
+        <source>Join every condensed file in the folder into a single output, in queue order.</source>
+        <translation>Une todos los archivos condensados de la carpeta en una sola salida, en el orden de la cola.</translation>
+    </message>
+    <message>
+        <source>Output name (defaults to the folder's name)</source>
+        <translation>Nombre de salida (usa el nombre de la carpeta de forma predeterminada)</translation>
+    </message>
+    <message>
         <source>Condense Audio</source>
         <translation>Condensar audio</translation>
     </message>
@@ -2738,6 +2750,10 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
     <message>
         <source>Subtitle tracks could not be read.</source>
         <translation>No se pudieron leer las pistas de subtítulos.</translation>
+    </message>
+    <message>
+        <source>That merged file already exists. Rename it, or tick Overwrite.</source>
+        <translation>Ese archivo fusionado ya existe. Cámbiele el nombre o active Sobrescribir.</translation>
     </message>
     <message>
         <source>Multiple media files would write to the same output file.</source>
@@ -2793,6 +2809,18 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
     </message>
 </context><context>
     <name>CondenseWorker</name>
+    <message>
+        <source>Nothing to merge: no file was condensed.</source>
+        <translation>Nada que fusionar: no se condensó ningún archivo.</translation>
+    </message>
+    <message>
+        <source>Merging %1 files into one…</source>
+        <translation>Fusionando %1 archivos en uno…</translation>
+    </message>
+    <message>
+        <source>Merging: %1%</source>
+        <translation>Fusionando: %1%</translation>
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation>Omitido, ya existe</translation>

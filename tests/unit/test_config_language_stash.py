@@ -117,5 +117,6 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "script_variant",
         "reading_tone_color",
         "strict_card_order",
+        "condenser_merge_output",
     }
     assert loaded.script_variant == "" and loaded.reading_tone_color is False

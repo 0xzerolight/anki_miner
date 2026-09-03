@@ -36,7 +36,7 @@ import subprocess
 import tempfile
 import threading
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
@@ -49,7 +49,11 @@ from anki_miner.services.asr.srt_writer import segments_to_srt
 from anki_miner.services.audio_tagger import TaggingError, TrackMetadata, tag_audio_file
 from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.utils.atomic_io import atomic_write_path
-from anki_miner.utils.audio_track_detector import list_subtitle_streams, matches_language_tag
+from anki_miner.utils.audio_track_detector import (
+    get_media_duration_seconds,
+    list_subtitle_streams,
+    matches_language_tag,
+)
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.file_pairing import find_sibling_subtitle, resolve_output_path
 from anki_miner.utils.subprocess_utils import no_window_kwargs
@@ -288,6 +292,22 @@ _ENCODER_SETTINGS: dict[str, tuple[str, bool, bool]] = {
 # it is not probed (a probe spawns a process; skip the cost).
 _PROBE_REQUIRED: frozenset[str] = frozenset({"libmp3lame", "libopus"})
 
+# Sample rate and channel count every part of a MERGE run is pinned to. The
+# concat demuxer stream-copies, which needs byte-identical stream parameters,
+# and the encoder args alone do not give that: sample rate and channel layout
+# follow each source (44.1k vs 48k, 5.1 vs 2.0). Off outside merge mode, so a
+# normal run still keeps its source's own rate and layout.
+_MERGE_SAMPLE_RATE = "48000"
+_MERGE_CHANNELS = "2"
+
+# Suffixes a merge must re-encode instead of stream-copying. A native .flac
+# carries its own ``fLaC`` header and STREAMINFO per file, so concatenated
+# parts restart the timeline: the merged file holds every part's bytes but
+# reports the FIRST part's duration, and ffmpeg emits non-monotonic dts while
+# decoding it. Re-encoding costs nothing that matters here — flac is lossless,
+# so the merged audio is identical. mp3 and opus stitch correctly by copy.
+_MERGE_REENCODE_SUFFIXES: frozenset[str] = frozenset({".flac"})
+
 # A ``-progress pipe:1`` line is ``key=value`` where *key* is lowercase snake_case
 # (frame, out_time_us, progress, ...). Anything whose pre-``=`` token is not a
 # bare identifier (ffmpeg banner/error lines, e.g. ``[libopus @ 0x..] bad``) is
@@ -368,6 +388,20 @@ class FfmpegStepFailure:
         else:
             head = f"ffmpeg exited {self.returncode}"
         return f"{head}: {self.reason}" if self.reason else head
+
+
+def _concat_list(parts: Sequence[Path]) -> str:
+    """Render ffmpeg's concat-demuxer list file for *parts*.
+
+    Paths are single-quoted with the demuxer's own escape for an embedded
+    quote (``'`` -> ``'\\''``), so a folder like ``Kaguya's`` does not
+    truncate the list.
+    """
+    lines = []
+    for part in parts:
+        escaped = str(part).replace("'", "'\\''")
+        lines.append(f"file '{escaped}'")
+    return "\n".join(lines) + "\n"
 
 
 def _failure_reason(lines: Iterable[str], fallback: str = "") -> str:
@@ -520,6 +554,7 @@ class AudioCondenserService:
         *,
         audio_track_override: int | None = None,
         bitrate_kbps: int = 96,
+        uniform_layout: bool = False,
         progress_cb: Callable[[int], None] | None = None,
         cancel_event: threading.Event | None = None,
     ) -> tuple[bool, FfmpegStepFailure | None]:
@@ -536,6 +571,10 @@ class AudioCondenserService:
         ffmpeg with a select-nothing graph). Progress is reported 0–100 via
         *progress_cb* off the ``-progress`` stream; *cancel_event* kills the
         in-flight process.
+
+        *uniform_layout* pins the output to 48 kHz stereo. Only a merge run sets
+        it: :meth:`concat` stream-copies its parts, which requires identical
+        stream parameters, and those follow the source otherwise.
 
         Returns ``(ok, failure)`` — see :meth:`_run_streaming`. ``failure`` is
         None on both success and cancel.
@@ -595,6 +634,10 @@ class AudioCondenserService:
                         cmd += ["-b:a", f"{bitrate_kbps}k"]
                     if downmix:
                         cmd += ["-ac", "2"]
+                    if uniform_layout:
+                        cmd += ["-ar", _MERGE_SAMPLE_RATE]
+                        if not downmix:
+                            cmd += ["-ac", _MERGE_CHANNELS]
                     cmd.append(str(staged_audio))
 
                     total_ms = sum(end - start for start, end in periods)
@@ -620,6 +663,83 @@ class AudioCondenserService:
             # belong to the caller). Clean it on every path.
             with contextlib.suppress(OSError):
                 graph_path.unlink()
+
+    # -- Merge run: join finished parts (F5) ------------------------------
+
+    def concat(
+        self,
+        parts: Sequence[Path],
+        out_audio: Path,
+        *,
+        total_ms: int,
+        progress_cb: Callable[[int], None] | None = None,
+        cancel_event: threading.Event | None = None,
+    ) -> tuple[bool, FfmpegStepFailure | None]:
+        """Join already-condensed *parts* into *out_audio* without re-encoding.
+
+        Every part came out of :meth:`condense` in the same run with
+        ``uniform_layout=True``, so codec, bitrate, sample rate and channel
+        layout already match and the concat demuxer can stream-copy them. This
+        does not weaken D2: D2 is about condensing ONE file in a single pass,
+        and that path is untouched — this joins finished outputs. FLAC is the
+        one exception and is re-encoded; see ``_MERGE_REENCODE_SUFFIXES``.
+
+        Returns ``(ok, failure)`` on the same contract as :meth:`condense`: a
+        step failure is returned, never raised, and ``failure`` is None on both
+        success and cancel.
+        """
+        if not parts:
+            logger.warning("Concat called with no condensed parts for %s — nothing to do.", out_audio)
+            return False, FfmpegStepFailure(None, False, "no condensed parts to merge")
+
+        self.config.media_temp_folder.mkdir(parents=True, exist_ok=True)
+        list_fd, list_name = tempfile.mkstemp(
+            suffix=".txt", prefix="condense_concat_", dir=str(self.config.media_temp_folder)
+        )
+        list_path = Path(list_name)
+        try:
+            with os.fdopen(list_fd, "w", encoding="utf-8") as fh:
+                fh.write(_concat_list(parts))
+
+            try:
+                with atomic_write_path(out_audio) as staged_audio:
+                    cmd = [
+                        resolve_ffmpeg(self.config),
+                        "-y",
+                        "-hide_banner",
+                        "-nostdin",
+                        "-progress",
+                        "pipe:1",
+                        "-f",
+                        "concat",
+                        "-safe",
+                        "0",
+                        "-i",
+                        str(list_path),
+                    ]
+                    if out_audio.suffix.lower() in _MERGE_REENCODE_SUFFIXES:
+                        cmd += ["-c:a", _encoder_settings(out_audio.suffix)[0]]
+                    else:
+                        cmd += ["-c", "copy"]
+                    cmd.append(str(staged_audio))
+                    ok, failure = self._run_streaming(
+                        cmd,
+                        # A stream copy still reports out_time, so the same
+                        # percentage maths works; the floor keeps a zero-length
+                        # merge from dividing by zero.
+                        total_period_ms=max(total_ms, 1),
+                        timeout=max(600.0, total_ms / 1000 * 4),
+                        progress_cb=progress_cb,
+                        cancel_event=cancel_event,
+                    )
+                    if not ok:
+                        raise _CondenseOutputIncomplete(failure)
+            except _CondenseOutputIncomplete as incomplete:
+                return False, incomplete.failure
+            return True, None
+        finally:
+            with contextlib.suppress(OSError):
+                list_path.unlink()
 
     # -- Streaming runner (D7/D8) -----------------------------------------
 
@@ -819,6 +939,22 @@ class CondenseResult:
     sidecar_error: str | None = None
     failure_reason: str | None = None
     tag_error: str | None = None
+    #: This file's own condensed timeline, populated only when a caller asks
+    #: (``collect_events``) — a merge run needs it to build one season-long
+    #: sidecar. Left empty by default, so result equality is unchanged.
+    condensed_events: tuple[Event, ...] = ()
+    #: Interval-arithmetic length of that timeline in ms — the fallback offset
+    #: when the written part cannot be probed.
+    condensed_duration_ms: int = 0
+
+
+@dataclass(frozen=True)
+class CondensedPart:
+    """One finished part of a merge run: its staged audio and its own timeline."""
+
+    audio: Path
+    events: tuple[Event, ...]
+    duration_ms: int
 
 
 def condense_one(
@@ -835,6 +971,8 @@ def condense_one(
     audio_track_override: int | None = None,
     subtitle_track_override: int | None = None,
     write_subs: bool = False,
+    uniform_layout: bool = False,
+    collect_events: bool = False,
     metadata: TrackMetadata | None = None,
     progress_cb: Callable[[int], None] | None = None,
     cancel_event: threading.Event | None = None,
@@ -881,6 +1019,7 @@ def condense_one(
             out_audio,
             audio_track_override=audio_track_override,
             bitrate_kbps=bitrate_kbps,
+            uniform_layout=uniform_layout,
             progress_cb=progress_cb,
             cancel_event=cancel_event,
         )
@@ -892,10 +1031,16 @@ def condense_one(
                 failure_reason=step_failure.summary() if step_failure is not None else None,
             )
 
-        sidecar_error = _write_condensed_subs(filtered, periods, out_audio) if write_subs else None
+        condensed = map_events_to_condensed(filtered, periods)
+        sidecar_error = _write_condensed_subs(condensed, out_audio) if write_subs else None
         tag_error = _apply_tags(out_audio, metadata) if metadata is not None else None
         return CondenseResult(
-            CondenseStatus.SUCCESS, out_audio=out_audio, sidecar_error=sidecar_error, tag_error=tag_error
+            CondenseStatus.SUCCESS,
+            out_audio=out_audio,
+            sidecar_error=sidecar_error,
+            tag_error=tag_error,
+            condensed_events=tuple(condensed) if collect_events else (),
+            condensed_duration_ms=sum(end - start for start, end in periods) if collect_events else 0,
         )
     finally:
         # Delete the extracted embedded-subtitle temp file (external / sibling
@@ -991,16 +1136,90 @@ def _pick_subtitle_stream(
     )
 
 
-def _write_condensed_subs(filtered_events: list[Event], periods: list[Period], out_audio: Path) -> str | None:
-    """Write condensed SRT + LRC sidecars beside *out_audio*.
+def _write_merged_subs(parts: Sequence[CondensedPart], out_audio: Path, config: AnkiMinerConfig) -> str | None:
+    """Write one SRT + LRC covering every part, on the merged timeline.
 
-    Consumes the **filtered, shifted** events (D4) so the sidecars show only the
-    audible dialogue. Returns None on success, or the raw exception string when a
-    writer fails — the audio is already written, so this is non-fatal (the GUI
-    worker wraps the string in a translated warning).
+    Each part's cues sit on its OWN condensed timeline, so they shift by the
+    length of everything before them. That offset is the written part's probed
+    duration, not its interval arithmetic: the encoder pads each part out to a
+    whole frame (and mp3 adds its own delay), so summing computed durations
+    drifts tens of milliseconds per episode and a season ends about a second
+    out. The computed length is the fallback when the probe cannot answer.
+
+    Same non-fatal contract as :func:`_write_condensed_subs`: the merged audio
+    is already on disk, so a failure here is returned as a string, never raised.
     """
     try:
-        condensed = map_events_to_condensed(filtered_events, periods)
+        merged: list[Event] = []
+        offset_ms = 0
+        ffprobe = resolve_ffprobe(config)
+        for part in parts:
+            merged.extend((start + offset_ms, end + offset_ms, text) for start, end, text in part.events)
+            probed = get_media_duration_seconds(part.audio, ffprobe)
+            offset_ms += int(round(probed * 1000)) if probed is not None else part.duration_ms
+        srt_path = resolve_output_path(out_audio.parent, f"{out_audio.stem}.srt")
+        lrc_path = resolve_output_path(out_audio.parent, f"{out_audio.stem}.lrc")
+        write_condensed_srt(merged, srt_path)
+        write_condensed_lrc(merged, lrc_path)
+        return None
+    except Exception as exc:  # noqa: BLE001 — a sidecar failure must never fail written audio
+        logger.warning("merge_condensed: merged subtitle write failed for %s: %s", out_audio, exc)
+        return str(exc)
+
+
+def merge_condensed(
+    service: AudioCondenserService,
+    config: AnkiMinerConfig,
+    parts: Sequence[CondensedPart],
+    out_audio: Path,
+    *,
+    write_subs: bool = False,
+    metadata: TrackMetadata | None = None,
+    progress_cb: Callable[[int], None] | None = None,
+    cancel_event: threading.Event | None = None,
+) -> CondenseResult:
+    """Join *parts* into one *out_audio*, with one merged sidecar pair.
+
+    The merge-run sibling of :func:`condense_one`, returning the same
+    :class:`CondenseResult` so the GUI worker maps both through one code path.
+    An empty *parts* list is NO_DIALOGUE: every file in the run failed, so
+    there is nothing to merge and ffmpeg is never launched.
+    """
+    if not parts:
+        return CondenseResult(CondenseStatus.NO_DIALOGUE)
+
+    total_ms = sum(part.duration_ms for part in parts)
+    ok, step_failure = service.concat(
+        [part.audio for part in parts],
+        out_audio,
+        total_ms=total_ms,
+        progress_cb=progress_cb,
+        cancel_event=cancel_event,
+    )
+    if not ok:
+        if _is_cancelled(cancel_event):
+            return CondenseResult(CondenseStatus.CANCELLED)
+        return CondenseResult(
+            CondenseStatus.CONDENSE_FAILED,
+            failure_reason=step_failure.summary() if step_failure is not None else None,
+        )
+
+    sidecar_error = _write_merged_subs(parts, out_audio, config) if write_subs else None
+    tag_error = _apply_tags(out_audio, metadata) if metadata is not None else None
+    return CondenseResult(CondenseStatus.SUCCESS, out_audio=out_audio, sidecar_error=sidecar_error, tag_error=tag_error)
+
+
+def _write_condensed_subs(condensed: list[Event], out_audio: Path) -> str | None:
+    """Write condensed SRT + LRC sidecars beside *out_audio*.
+
+    Consumes events already mapped onto the condensed timeline by
+    :func:`map_events_to_condensed` from the **filtered, shifted** events (D4),
+    so the sidecars show only the audible dialogue. Returns None on success, or
+    the raw exception string when a writer fails — the audio is already written,
+    so this is non-fatal (the GUI worker wraps the string in a translated
+    warning).
+    """
+    try:
         srt_path = resolve_output_path(out_audio.parent, f"{out_audio.stem}.srt")
         lrc_path = resolve_output_path(out_audio.parent, f"{out_audio.stem}.lrc")
         write_condensed_srt(condensed, srt_path)

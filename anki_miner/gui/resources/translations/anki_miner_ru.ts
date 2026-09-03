@@ -2698,6 +2698,18 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Если флажок снят, файлы, у которых сжатое аудио уже существует, пропускаются, а не перезаписываются.</translation>
     </message>
     <message>
+        <source>Merge into one file</source>
+        <translation>Объединить в один файл</translation>
+    </message>
+    <message>
+        <source>Join every condensed file in the folder into a single output, in queue order.</source>
+        <translation>Объединяет все сжатые файлы в папке в один выходной файл в порядке очереди.</translation>
+    </message>
+    <message>
+        <source>Output name (defaults to the folder's name)</source>
+        <translation>Имя выходного файла (по умолчанию — имя папки)</translation>
+    </message>
+    <message>
         <source>Condense Audio</source>
         <translation>Сжать аудио</translation>
     </message>
@@ -2740,6 +2752,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Subtitle tracks could not be read.</source>
         <translation>Не удалось прочитать дорожки субтитров.</translation>
+    </message>
+    <message>
+        <source>That merged file already exists. Rename it, or tick Overwrite.</source>
+        <translation>Такой объединённый файл уже существует. Переименуйте его или включите «Перезаписывать».</translation>
     </message>
     <message>
         <source>Multiple media files would write to the same output file.</source>
@@ -2795,6 +2811,18 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
 </context><context>
     <name>CondenseWorker</name>
+    <message>
+        <source>Nothing to merge: no file was condensed.</source>
+        <translation>Нечего объединять: ни один файл не был сжат.</translation>
+    </message>
+    <message>
+        <source>Merging %1 files into one…</source>
+        <translation>Объединение %1 файлов в один…</translation>
+    </message>
+    <message>
+        <source>Merging: %1%</source>
+        <translation>Объединение: %1%</translation>
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation>Пропущено, уже существует</translation>

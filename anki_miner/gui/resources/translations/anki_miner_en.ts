@@ -2679,6 +2679,18 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Merge into one file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Join every condensed file in the folder into a single output, in queue order.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output name (defaults to the folder's name)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Condense Audio</source>
         <translation type="unfinished" />
     </message>
@@ -2720,6 +2732,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Subtitle tracks could not be read.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That merged file already exists. Rename it, or tick Overwrite.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2776,6 +2792,18 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
 </context><context>
     <name>CondenseWorker</name>
+    <message>
+        <source>Nothing to merge: no file was condensed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Merging %1 files into one…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Merging: %1%</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation type="unfinished" />
