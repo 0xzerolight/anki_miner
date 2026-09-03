@@ -2536,7 +2536,7 @@ class TestExtractFullAudio:
         receipts = [r for r in caplog.records if r.getMessage().startswith("Full audio extraction done:")]
         assert len(receipts) == 1
         assert receipts[0].levelno == logging.INFO
-        assert "file=episode_01.mkv" in receipts[0].getMessage()
+        assert f"file={video_file}" in receipts[0].getMessage()
         assert "seconds=" in receipts[0].getMessage()
 
     def test_track_override_respected(self, service, video_file, tmp_path):
