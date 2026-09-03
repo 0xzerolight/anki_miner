@@ -64,6 +64,8 @@ from anki_miner.exceptions.youtube import (
     CookieDatabaseLockedError,
     DubAudioUnavailableError,
     NoJapaneseSubtitlesError,
+    TranscriptionFailedError,
+    TranscriptionProducedNothingError,
     VideoTooLongError,
     YouTubeFetchError,
     YtdlpNotFoundError,
@@ -120,6 +122,8 @@ _DETERMINISTIC_FETCH_ERRORS: tuple[type[BaseException], ...] = (
     VideoTooLongError,
     YtdlpNotFoundError,
     DubAudioUnavailableError,
+    TranscriptionFailedError,
+    TranscriptionProducedNothingError,
 )
 
 

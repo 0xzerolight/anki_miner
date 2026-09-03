@@ -27,6 +27,8 @@ from anki_miner.exceptions.youtube import (
     CookieDatabaseLockedError,
     DubAudioUnavailableError,
     NoJapaneseSubtitlesError,
+    TranscriptionFailedError,
+    TranscriptionProducedNothingError,
     VideoTooLongError,
     YouTubeFetchError,
     YtdlpNotFoundError,
@@ -124,6 +126,8 @@ def make_worker(qapp, processor, test_config):
         VideoTooLongError("too long"),
         YtdlpNotFoundError("missing"),
         DubAudioUnavailableError("gone"),
+        TranscriptionFailedError("no audio"),
+        TranscriptionProducedNothingError("silence"),
     ],
     ids=lambda e: type(e).__name__,
 )
