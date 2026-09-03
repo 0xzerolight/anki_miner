@@ -46,7 +46,13 @@ from anki_miner.gui.workers.youtube_playlist_probe_worker import (
 )
 from anki_miner.gui.workers.youtube_probe_worker import YouTubeProbeWorker
 from anki_miner.languages.registry import config_language, get_profile
-from anki_miner.models.youtube import PlaylistEntry, PlaylistInfo, SubMode, VideoInfo
+from anki_miner.models.youtube import (
+    PlaylistEntry,
+    PlaylistInfo,
+    SubMode,
+    SubtitleSource,
+    VideoInfo,
+)
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 from anki_miner.utils.i18n import tr_format
@@ -92,8 +98,14 @@ def _is_acceptable_add_input(url: str) -> bool:
     return classify_youtube_url(candidate).kind != "unknown"
 
 
-def _classify_probe_result(info: VideoInfo, config: AnkiMinerConfig) -> tuple[bool, str | None, SubMode | None]:
-    """Classify a probe result.
+def _classify_probe_result(
+    info: VideoInfo, config: AnkiMinerConfig, source: SubtitleSource
+) -> tuple[bool, str | None, SubMode | None]:
+    """Classify a probe result against the run's requested subtitle source.
+
+    ``source`` is required, with no default: it decides whether a caption-less
+    video is refused or transcribed, and a default would silently reinstate the
+    refusal for callers that forgot to thread the user's choice through.
 
     Returns:
         (is_mineable, error_message, resolved_sub_mode). On success
@@ -115,6 +127,11 @@ def _classify_probe_result(info: VideoInfo, config: AnkiMinerConfig) -> tuple[bo
             "Age-restricted video. Set Cookies (Browser or File) in Settings and retry.",
             None,
         )
+    if source == "transcribe":
+        # The user asked for local transcription outright. Skip the caption
+        # cascade entirely: a badly-timed auto track must not win over the ASR
+        # pass that was explicitly requested.
+        return True, None, "transcribe"
     if info.has_manual_ja_subs:
         return True, None, "manual_only"
     if info.has_auto_ja_subs:
@@ -124,6 +141,11 @@ def _classify_probe_result(info: VideoInfo, config: AnkiMinerConfig) -> tuple[bo
         # VideoInfo.has_dub_ja_subs). Lowest priority — a real manual track or
         # native captions always describe the video better than the dub pipeline.
         return True, None, "auto_dub"
+    if source == "auto":
+        # No caption track of any kind. Auto pays for a local transcription
+        # rather than refusing the video, which is the whole point of the
+        # picker: the user's alternative was Download + Generate + Video/Single.
+        return True, None, "transcribe"
     # english_name, like the fetcher's NoSourceSubtitlesError: a zh run used
     # to be refused with "No Japanese subtitles available".
     label = get_profile(config_language(config)).english_name or "source"
@@ -399,7 +421,7 @@ class PlaylistAddController:
             self._mark_probe_error(item, "Invalid probe result.")
             return
 
-        mineable, error, sub_mode = _classify_probe_result(info, self._config)
+        mineable, error, sub_mode = _classify_probe_result(info, self._config, "captions")
         if not mineable:
             item.video_info = info
             self._mark_probe_error(item, error or "Probe rejected.")

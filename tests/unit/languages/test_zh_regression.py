@@ -318,6 +318,6 @@ def test_the_probe_rejection_names_the_mining_language(test_config):
         is_live=False,
         is_age_restricted=False,
     )
-    mineable, message, mode = _classify_probe_result(info, switch_language(test_config, "zh"))
+    mineable, message, mode = _classify_probe_result(info, switch_language(test_config, "zh"), "captions")
     assert (mineable, mode) == (False, None)
     assert message == "No Chinese subtitles available for this video."
