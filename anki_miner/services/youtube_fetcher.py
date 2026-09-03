@@ -502,7 +502,10 @@ class YouTubeFetcherService:
 
         def handle_line(line: str) -> None:
             nonlocal postprocessing_seen
-            tail.append(line)
+            # A pure progress line is not a diagnostic; keeping it would evict
+            # the yt-dlp error this tail exists to carry. See is_progress_only.
+            if not ytdlp_invocation.is_progress_only(line):
+                tail.append(line)
             m = ytdlp_invocation.PROGRESS_RE.search(line)
             if m is not None:
                 if progress_cb is not None:

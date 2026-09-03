@@ -28,6 +28,25 @@ YTDLP_MISSING_HINT = "yt-dlp executable not found. Use Settings → YouTube → 
 
 PROGRESS_RE = re.compile(r"\[ankimine_dl\] (\S+) (\S+)")
 
+
+def is_progress_only(line: str) -> bool:
+    """True when *line* carries a progress record and nothing else.
+
+    The failure tails both yt-dlp services keep are DIAGNOSTIC buffers, and
+    ``--progress-template`` emits one line per progress tick: measured on a real
+    8-minute fetch, 45 of 60 output lines were progress. Retaining them evicted
+    the yt-dlp error the tail exists to carry, so a failed download reported 20
+    lines of byte counts — and ``classify_error_tail`` reading the same tail saw
+    them too, which silently disabled every typed remedy (bot wall, cookie
+    source, stale extractor) once a download had started. Progress belongs to
+    ``progress_cb``, not to the tail.
+
+    yt-dlp can flush a warning onto the same line as a progress record, so only
+    a line with no remainder is droppable.
+    """
+    return PROGRESS_RE.search(line) is not None and not PROGRESS_RE.sub("", line).strip()
+
+
 # Union of both services' postprocessor markers. youtube_fetcher's yt-dlp
 # invocation never requests --embed-thumbnail/--embed-metadata/thumbnail
 # conversion, so the markers those postprocessors emit never appear in its

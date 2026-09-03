@@ -1471,6 +1471,60 @@ class TestFetchVideoErrors:
         # Not the bot/cookies subclasses.
         assert not isinstance(exc.value, (BotDetectionError, CookieDatabaseLockedError))
 
+    def test_progress_flood_does_not_evict_the_classified_error(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        # The v3.0.0 field shape: yt-dlp reports the failure while extracting,
+        # downloads and merges anyway, then exits non-zero. The progress lines
+        # in between used to fill the tail and push the error out of it, so the
+        # classifier saw only byte counts and the user got a wall of them
+        # instead of the cookie remedy.
+        lines = [
+            "[youtube] abc123: Downloading webpage",
+            "ERROR: Sign in to confirm you're not a bot",
+            *[f"[ankimine_dl] {n * 1024} 8315519" for n in range(1, 61)],
+            '[Merger] Merging formats into "abc123.mkv"',
+            "Deleting original file abc123.f136.mp4 (pass -k to keep)",
+        ]
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=1)),
+            pytest.raises(BotDetectionError),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+    def test_generic_failure_message_carries_output_not_byte_counts(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        lines = [
+            "ERROR: Video unavailable",
+            *[f"[ankimine_dl] {n * 1024} 8315519" for n in range(1, 61)],
+        ]
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=1)),
+            pytest.raises(YouTubeFetchError) as exc,
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        message = str(exc.value)
+        assert "Video unavailable" in message
+        assert "[ankimine_dl]" not in message
+
+    def test_warning_sharing_a_progress_line_survives(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        # yt-dlp can flush a warning onto the same line as a progress record.
+        # Only a line that is *nothing but* progress is droppable.
+        lines = [
+            "WARNING: nsig extraction failed [ankimine_dl] 1024 2048",
+            *[f"[ankimine_dl] {n * 1024} 8315519" for n in range(1, 61)],
+        ]
+        with (
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=1)),
+            pytest.raises(YouTubeFetchError) as exc,
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+        assert "nsig extraction failed" in str(exc.value)
+
     def test_missing_output_after_exit_zero(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         # No files created in workspace.
         lines: list[str] = []

@@ -445,6 +445,44 @@ class TestErrors:
                 returncode=1,
             )
 
+    def test_progress_flood_does_not_evict_the_classified_error(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        # Same defect as the YouTube fetcher: progress lines outnumber real
+        # output on any healthy download, so retaining them in the failure tail
+        # pushes the yt-dlp error out of it and blinds the classifier.
+        with pytest.raises(BotDetectionError):
+            _run_download(
+                monkeypatch,
+                service,
+                tmp_path,
+                _opts(),
+                lines=[
+                    "ERROR: Sign in to confirm you're not a bot",
+                    *[f"[ankimine_dl] {n * 1024} 8315519" for n in range(1, 61)],
+                ],
+                returncode=1,
+            )
+
+    def test_generic_failure_message_carries_output_not_byte_counts(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        with pytest.raises(MediaDownloadError) as exc:
+            _run_download(
+                monkeypatch,
+                service,
+                tmp_path,
+                _opts(),
+                lines=[
+                    "ERROR: something exploded",
+                    *[f"[ankimine_dl] {n * 1024} 8315519" for n in range(1, 61)],
+                ],
+                returncode=1,
+            )
+        message = str(exc.value)
+        assert "something exploded" in message
+        assert "[ankimine_dl]" not in message
+
     def test_cookie_database_locked_marker(
         self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
     ) -> None:
