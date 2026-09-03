@@ -9,6 +9,7 @@ Hidden ``ANKI_MINER_SMOKE`` modes:
   marker before exiting.
 """
 
+import atexit
 import contextlib
 import faulthandler
 import locale
@@ -18,6 +19,7 @@ import platform
 import signal
 import sys
 import threading
+import time
 import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
@@ -44,7 +46,9 @@ from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
 from anki_miner import __version__
 from anki_miner.config import AnkiMinerConfig, create_default_config
+from anki_miner.config import paths as config_paths
 from anki_miner.config.paths import ANKI_MINER_HOME
+from anki_miner.gui import launch as gui_launch
 from anki_miner.gui import restart
 from anki_miner.gui.controllers import recovery_controller
 from anki_miner.gui.controllers.recovery_controller import RecoveryController
@@ -62,7 +66,12 @@ from anki_miner.gui.utils.focus_ring import install_keyboard_focus_ring
 from anki_miner.gui.utils.fonts import initialize_application_fonts
 from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, run_off_thread, still_running
 from anki_miner.gui.utils.service_factory import create_youtube_fetcher
-from anki_miner.gui.utils.stall_watchdog import install_stall_watchdog
+from anki_miner.gui.utils.stall_watchdog import (
+    cancel_stack_dump,
+    dump_stacks_later,
+    get_global_stall_count,
+    install_stall_watchdog,
+)
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.gui.widgets.base import ScreenIssue
@@ -82,7 +91,7 @@ from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.file_utils import ensure_directory
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.log_hooks import install_process_log_hooks
-from anki_miner.utils.logging_ext import suppressed
+from anki_miner.utils.logging_ext import capped, log_summary, suppressed
 
 logger = logging.getLogger(__name__)
 
@@ -563,8 +572,116 @@ def get_effective_log_path() -> Path:
     return _get_effective_log_path(ANKI_MINER_HOME / "anki_miner.log")
 
 
+#: Set by :func:`_log_session_boundary` and repeated on the ``Session end``
+#: record, so one grep pairs a start with its end even in a log that several
+#: runs of the app have appended to.
+SESSION_ID: str = ""
+
+#: Monotonic stamp the session's uptime is measured from. Set at import so a
+#: crash before the boundary still reports a plausible number.
+_SESSION_STARTED: float = time.monotonic()
+
+_SESSION_ENDED = False
+
+
+def _log_session_end(exit_code: int | None = None, *, reason: str) -> None:
+    """Write the one ``Session end`` receipt for this process.
+
+    Registered with ``atexit`` and also called explicitly once ``app.exec()``
+    returns; the first call wins, so a clean quit reports ``exec-returned`` with
+    the real exit code rather than the later, blinder ``atexit`` one.
+
+    The absence of this record is itself the diagnosis: two ``Session start``
+    lines with nothing between them mean the process was killed, the machine
+    went down, or a native crash took it — none of which run Python again.
+
+    ``threads`` is the census a long-lived session is judged on. A daemon thread
+    is marked with ``*``; a run of these records across a ten-hour session is
+    what shows a worker class that never joins.
+    """
+    global _SESSION_ENDED
+    if _SESSION_ENDED:
+        return
+    _SESSION_ENDED = True
+    with suppressed(logger, "session end record"):
+        threads = capped(f"{thread.name}{'*' if thread.daemon else ''}" for thread in threading.enumerate())
+        log_summary(
+            logger,
+            "Session end",
+            session_id=SESSION_ID,
+            reason=reason,
+            exit_code=exit_code,
+            uptime_s=round(time.monotonic() - _SESSION_STARTED, 1),
+            stalls=get_global_stall_count(),
+            threads=threads,
+        )
+
+
+def _chain_counts(chain: object) -> str:
+    """Render ``<enabled>/<total>`` for one resource chain."""
+    entries = list(chain) if isinstance(chain, (list, tuple)) else []
+    return f"{sum(1 for entry in entries if getattr(entry, 'enabled', False))}/{len(entries)}"
+
+
+def _log_effective_config(config: Any) -> None:
+    """Record the settings that decide what a run produces.
+
+    Not the whole config: this is the subset every support thread turns on.
+    ``note_type`` plus the mapped ``fields`` separate the Backfill-shaped
+    reports ("nothing was written") from real failures in one line, and the
+    four chain counts answer "is any dictionary, frequency, pitch or audio
+    source even enabled" before a single lookup line is read.
+
+    Only MAPPED field keys are listed — an empty field name is how a feature is
+    switched off in this app, so listing the unmapped ones would make every
+    install look identically configured.
+    """
+    with suppressed(logger, "effective config record"):
+        fields = capped(sorted(key for key, name in dict(config.anki_fields).items() if name))
+        log_summary(
+            logger,
+            "Config effective",
+            language=config.language,
+            ui_language=config.ui_language,
+            deck=config.anki_deck_name,
+            note_type=config.anki_note_type,
+            fields=fields,
+            dicts=_chain_counts(config.dictionary_chain),
+            freqs=_chain_counts(config.frequency_chain),
+            pitch=_chain_counts(config.pitch_chain),
+            audio=_chain_counts(config.expression_audio_chain),
+            dicts_root=config.dicts_root,
+            ankiconnect=config.ankiconnect_url,
+            theme=config.theme,
+            zoom=config.ui_zoom,
+            native_dialogs=config.use_native_file_dialogs,
+            asr=f"{config.asr_model}/{config.asr_device}",
+            log=config.log_path,
+        )
+
+
+def _log_home_fallback() -> None:
+    """Warn when config, logs and caches were relocated out of the real home.
+
+    A failing ``Path.home()`` silently moves the whole application directory
+    into the system temp dir, which a reboot clears. The install then looks
+    empty — no dictionaries, no known words, no settings — with nothing in the
+    log to say why, which is the single most confusing state this app has.
+    Either bootstrap may have resolved the home first, so both record a reason.
+    """
+    reason = config_paths.HOME_FALLBACK_REASON or getattr(gui_launch, "HOME_FALLBACK_REASON", None)
+    if not reason:
+        return
+    logger.warning(
+        "Home directory unavailable (%s); home and log relocated to %s",
+        reason,
+        ANKI_MINER_HOME,
+    )
+
+
 def _log_session_boundary() -> None:
     """Write one searchable boundary after final log-sink selection."""
+    global SESSION_ID, _SESSION_STARTED
     sinks = [handler for handler in logging.getLogger().handlers if getattr(handler, "_anki_miner_sink", False)]
     if sinks:
         logging.getLogger("anki_miner").setLevel(logging.DEBUG)
@@ -622,8 +739,11 @@ def _log_session_boundary() -> None:
         max_bytes,
         backups,
     )
+    SESSION_ID = str(session_id)
+    _SESSION_STARTED = time.monotonic()
     if failed_fields:
         logger.warning("Session header degraded: fields=%s", ",".join(failed_fields))
+    _log_home_fallback()
 
 
 def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:
@@ -1912,6 +2032,7 @@ def main():
             logger.exception("Failed to configure custom log path; keeping startup logger")
 
     _log_session_boundary()
+    _log_effective_config(_early_config)
 
     # Everything the interpreter reports out of band — a thread that died on an
     # exception, an unraisable __del__ failure, warnings.warn — plus Qt's own
@@ -1921,6 +2042,11 @@ def main():
     # they are the whole reason a "black window" report carries no evidence.
     install_process_log_hooks()
     install_qt_message_handler()
+    # A hard kill, an OS shutdown or a native crash leaves no end record, so two
+    # adjacent "Session start" lines with nothing between them are themselves
+    # the diagnosis. Registered before the event loop so even a boot-time
+    # SystemExit still writes one.
+    atexit.register(_log_session_end, None, reason="atexit")
 
     # Clean-install nicety: make the default dicts_root exist before any
     # settings UI validates it (Issue #100 red-border state).
@@ -2067,8 +2193,15 @@ def main():
     # sys.exit so a requested restart (D39b-A) can start the replacement only
     # after the loop has returned and this process is done with its stores.
     exit_code = app.exec()
+    # Everything below is expected to take well under a second. If it wedges
+    # instead — a worker that will not join, a sip teardown walking a dead
+    # QObject — nothing of ours runs again to report it, so arm the dump first
+    # and disarm it once the exit is actually reached.
+    dump_stacks_later(20)
     _relaunch_if_requested(app)
     _destroy_window_before_exit(app, window)
+    _log_session_end(exit_code, reason="exec-returned")
+    cancel_stack_dump()
     sys.exit(exit_code)
 
 
