@@ -512,7 +512,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         # Table
         self.table = QTableWidget()
-        self.table.setColumnCount(7)
+        self.table.setColumnCount(9)
         self.table.setHorizontalHeaderLabels(
             [
                 "",
@@ -522,6 +522,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 self.tr("Sentence"),
                 self.tr("Freq. Rank"),
                 self.tr("Occurrences"),
+                self.tr("Unknowns in line"),
+                self.tr("Sentence length"),
             ]
         )
         # Occurrences and the Sentences picker count different things, and a user
@@ -540,6 +542,22 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                     "are skipped."
                 )
             )
+        # The two sentence signals. They are columns rather than filters
+        # deliberately: the i+1 and sentence-length filters answer the same
+        # questions by DROPPING words, and sorting keeps every word minable.
+        unknowns_header = self.table.horizontalHeaderItem(7)
+        if unknowns_header is not None:
+            unknowns_header.setToolTip(
+                self.tr(
+                    "How many words you do not know yet appear on this word’s own "
+                    "subtitle line.\n\n"
+                    "Sort ascending to put i+1 lines first — the ones whose only "
+                    "unknown word is this one. “-” means the line could not be counted."
+                )
+            )
+        length_header = self.table.horizontalHeaderItem(8)
+        if length_header is not None:
+            length_header.setToolTip(self.tr("Characters in the example sentence. Sort ascending for the shortest."))
 
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -785,7 +803,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # puts there, which is why it is not Fixed: the column widens only
         # while a stage exists and shrinks back when the marks are discarded.
         header_view.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        for column in (1, 2, 3, 5, 6):  # mined form, surface, reading, rank, count
+        for column in (1, 2, 3, 5, 6, 7, 8):  # mined form, surface, reading, rank, count, signals
             header_view.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
         header_view.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)  # sentence
 
@@ -1430,6 +1448,14 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 self._make_readonly_item(str(occ), role=CellRole.NUMBER, sort_value=float(occ)),
             )
 
+            # The two sentence signals, sortable rather than filtered.
+            for column, text, sort_value in self._signal_cell_values(word):
+                self.table.setItem(
+                    row,
+                    column,
+                    self._make_readonly_item(text, role=CellRole.NUMBER, sort_value=sort_value),
+                )
+
         self.table.blockSignals(False)
         self.table.setSortingEnabled(True)
 
@@ -1461,6 +1487,30 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         if japanese:
             item.setFont(content_cell_font(self._content_style))
         return item
+
+    def _signal_cell_values(self, chosen: TokenizedWord) -> tuple[tuple[int, str, float], ...]:
+        """``(column, text, sort_value)`` for the two sentence-signal columns.
+
+        Both describe the sentence, so both move with the picked variant --
+        which is why they are one spec shared by :meth:`_populate_table` and
+        :meth:`_apply_pick_to_row`, the way :meth:`_pick_cell_values` is for the
+        columns beside them. They are not part of that spec because these two
+        sort numerically and it carries no sort key.
+
+        ``line_unknown_count`` 0 means "not computed", so it prints "-" and
+        sorts last exactly like an unranked Freq. Rank: a 0 sorting above a real
+        1 would read as better-than-i+1.
+
+        A line-expanded row keeps its own line's unknown count -- the merged
+        text spans cues whose lemma sets this dialog never sees -- while the
+        length follows the text actually shown.
+        """
+        unknowns = chosen.line_unknown_count
+        length = len(chosen.sentence)
+        return (
+            (7, "-" if unknowns <= 0 else str(unknowns), float("inf") if unknowns <= 0 else float(unknowns)),
+            (8, str(length), float(length)),
+        )
 
     def _pick_cell_values(self, word: TokenizedWord, chosen: TokenizedWord) -> tuple[tuple[int, str, str, str], ...]:
         """``(column, text, tooltip, copy_text)`` for every cell the pick decides.
@@ -1945,6 +1995,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 item = self.table.item(row, column)
                 if item is not None:
                     update_table_item(item, text, tooltip=tooltip, copy_text=copy_text)
+            # Inside the same suspension: the sort indicator may sit on a signal
+            # column too, and these describe the sentence the pick just changed.
+            for column, text, sort_value in self._signal_cell_values(chosen):
+                item = self.table.item(row, column)
+                if item is not None:
+                    update_table_item(item, text, sort_value=sort_value)
         finally:
             if sorting:
                 self.table.setSortingEnabled(True)

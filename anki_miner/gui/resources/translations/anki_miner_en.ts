@@ -9290,9 +9290,27 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Unknowns in line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence length</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>How many words you do not know yet appear on this word’s own subtitle line.
+
+Sort ascending to put i+1 lines first — the ones whose only unknown word is this one. “-” means the line could not be counted.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Characters in the example sentence. Sort ascending for the shortest.</source>
         <translation type="unfinished" />
     </message>
     <message>

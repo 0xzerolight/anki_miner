@@ -9346,12 +9346,30 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>出現次數</translation>
     </message>
     <message>
+        <source>Unknowns in line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence length</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
         <translation>此單字在本集出現的次數。
 
 「句子」選單每一行字幕只提供一個選項，因此列出的通常較少：同一行中的重複在這裡只算一次，而單字以會改變卡片「單字（已採集）」的形式出現的行會被略過。</translation>
+    </message>
+    <message>
+        <source>How many words you do not know yet appear on this word’s own subtitle line.
+
+Sort ascending to put i+1 lines first — the ones whose only unknown word is this one. “-” means the line could not be counted.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Characters in the example sentence. Sort ascending for the shortest.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>

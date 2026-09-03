@@ -830,6 +830,42 @@ class WordFilterService:
         for word in words:
             word.occurrence_count = counts.get(word.lemma, 0)
 
+    def attach_line_unknown_counts(
+        self,
+        words: list[TokenizedWord],
+        line_index: list[LineLemmas],
+        unknown_lemmas: set[str],
+    ) -> None:
+        """Set ``line_unknown_count`` — distinct unknown lemmas on the word's own line.
+
+        ``unknown_lemmas`` must be the basis :meth:`filter_i_plus_one` counts
+        against (the pre-optional-filter snapshot unioned with the mineable
+        targets), or the curator's column disagrees with the filter: a count of
+        1 is exactly the i+1 condition, which is what makes sorting that column
+        ascending i+1 without i+1's word loss.
+
+        Lines are matched by TEXT, not by time. Both the mining parse and the
+        i+1 swap set ``sentence`` to a line's cleaned text, and two lines with
+        identical text necessarily carry identical lemma sets — so the
+        duplicate-text case ``find_cue_index`` exists to disambiguate cannot
+        change this count, and no timing tie-break is needed.
+
+        Each word's ``sentence_candidates`` are stamped too: the curator
+        repaints the column from the picked variant, and an unstamped variant
+        would blank the cell on the first pick.
+
+        Mutates ``words`` in place; display/sort-only data for the curator.
+        Safe to call with an empty ``line_index``.
+        """
+        if not line_index:
+            return
+        lemmas_by_text = {line.line_text: line.lemmas for line in line_index}
+        for word in words:
+            for variant in (word, *word.sentence_candidates):
+                lemmas = lemmas_by_text.get(variant.sentence)
+                if lemmas is not None:
+                    variant.line_unknown_count = len(lemmas & unknown_lemmas)
+
     def filter_by_episode_count(
         self,
         words: list[TokenizedWord],

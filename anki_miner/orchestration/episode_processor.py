@@ -187,6 +187,11 @@ class _EpisodeContext:
     comprehension_percentage: float = 0.0
     difficulty_total_words: int = 0
     difficulty_unknown_words: int = 0
+    # Every lemma the learner doesn't know, snapshotted BEFORE the optional
+    # filters shrink the set (Issue #74's basis). Phase 2 stamps it; the
+    # curation step reads it to count unknowns per line. Empty on any path
+    # that never reached phase 2.
+    unknown_lemmas: set[str] = field(default_factory=set)
 
     def build_result(self, **overrides: Any) -> ProcessingResult:
         """Construct a ProcessingResult from accumulated state.
@@ -891,6 +896,9 @@ class EpisodeProcessor:
         # The i+1 check must see ALL words the learner doesn't know, not
         # just the mineable ones.
         all_unknown_lemmas = {w.lemma for w in unknown_words}
+        # The curator's "Unknowns in line" column counts against this same
+        # basis, so the column and the i+1 filter can never disagree.
+        ctx.unknown_lemmas = all_unknown_lemmas
 
         # Offline definition existence filter. Drops words with no entry in any
         # OFFLINE dictionary so the curation dialog never surfaces words that
@@ -1939,8 +1947,9 @@ class EpisodeProcessor:
     ) -> list[TokenizedWord] | ProcessingResult:
         """Shared interactive-curation step for both mining paths.
 
-        Attaches the per-word sentence candidates (when a line index exists) and
-        occurrence counts the curator dialog needs, then invokes the callback.
+        Attaches the per-word sentence candidates and per-line unknown counts
+        (when a line index exists) plus the occurrence counts the curator dialog
+        needs, then invokes the callback.
         Preserves the trichotomy of the inline blocks it replaces:
 
         * cancelled/rejected (callback returns ``None``) → returns a cancelled
@@ -1957,6 +1966,16 @@ class EpisodeProcessor:
             # Attach alternative example sentences so the curator can offer a
             # per-word sentence picker (no-op for words on a single line).
             self.word_filter.attach_sentence_candidates(unknown_words, line_index)
+            # Per-word i+1 signal for the curator's "Unknowns in line" column.
+            # Runs after the candidates, which it stamps too. The targets are
+            # unioned in exactly as filter_i_plus_one does: a snapshot that
+            # somehow misses a mineable word must not make its line look
+            # emptier than it is.
+            self.word_filter.attach_line_unknown_counts(
+                unknown_words,
+                line_index,
+                ctx.unknown_lemmas | {w.lemma for w in unknown_words},
+            )
         # Attach per-run occurrence counts for the curator's "Occurrences"
         # column/sort (Issue #88).
         self.word_filter.attach_occurrence_counts(unknown_words, occurrence_counts)
