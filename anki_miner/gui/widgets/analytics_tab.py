@@ -53,6 +53,7 @@ from anki_miner.models.stats import (
 )
 from anki_miner.services.stats_service import StatsService
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
 
 #: Rows a populated analytics table must show before it reads as "a table".
 MIN_VISIBLE_ROWS = 6
@@ -485,6 +486,13 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
+        )
+        log_summary(
+            logging.getLogger(__name__),
+            "Confirm",
+            action="reset_statistics",
+            answer="yes" if confirm == QMessageBox.StandardButton.Yes else "no",
+            scope=self.stats_service.language,
         )
         if confirm != QMessageBox.StandardButton.Yes:
             return

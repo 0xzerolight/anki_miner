@@ -49,6 +49,7 @@ from anki_miner.gui.utils.runtime_state import is_within, queue_state_root, vali
 from anki_miner.models.reading import ReadingSourceRef
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.bounded_reader import read_json_bounded
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -286,22 +287,71 @@ def load(key: str) -> QueueSnapshot | None:
     wrong-shaped alike: a queue is a convenience, and half a restored queue is
     worse than none. Individual rows that fail validation are dropped; the rows
     around them keep their order and their ids.
+
+    Both outcomes are logged, because "restore lost my items" is otherwise
+    indistinguishable from a bug in the screen that took the rows back. An
+    unusable file is DEBUG — an absent snapshot is the normal first launch —
+    while rows silently dropped out of a snapshot the user *did* get back are
+    WARNING: that is the case where the count on screen is lower than the count
+    they left behind, and nothing else records why. One line per restore, never
+    one per row.
     """
     try:
         path = snapshot_path(key)
     except ValueError:
+        log_summary(logger, "Queue restore skipped", level=logging.DEBUG, key=key, reason="invalid_key")
         return None
     raw = read_json_bounded(path, MAX_BYTES, _UNREADABLE, "queue snapshot")
     if raw is _UNREADABLE or not isinstance(raw, dict):
+        reason = "unreadable" if raw is _UNREADABLE else "not_an_object"
+        log_summary(logger, "Queue restore skipped", level=logging.DEBUG, key=key, reason=reason, path=path)
         return None
     if raw.get("version") != SCHEMA_VERSION or raw.get("key") != key:
+        reason = "version_mismatch" if raw.get("version") != SCHEMA_VERSION else "key_mismatch"
+        log_summary(
+            logger,
+            "Queue restore skipped",
+            level=logging.DEBUG,
+            key=key,
+            reason=reason,
+            found_version=raw.get("version"),
+            found_key=raw.get("key"),
+        )
         return None
     rows = raw.get("items")
     if not isinstance(rows, list) or len(rows) > MAX_ITEMS:
+        log_summary(
+            logger,
+            "Queue restore skipped",
+            level=logging.DEBUG,
+            key=key,
+            reason="items_not_a_bounded_list",
+            rows=len(rows) if isinstance(rows, list) else None,
+            limit=MAX_ITEMS,
+        )
         return None
     items = tuple(item for item in (_decode_item(row) for row in rows) if item is not None)
     if not items:
+        log_summary(
+            logger,
+            "Queue restore skipped",
+            level=logging.DEBUG,
+            key=key,
+            reason="no_valid_rows",
+            rows=len(rows),
+        )
         return None
+    dropped = len(rows) - len(items)
+    if dropped:
+        log_summary(
+            logger,
+            "Queue restore dropped rows",
+            level=logging.WARNING,
+            key=key,
+            kept=len(items),
+            dropped=dropped,
+            path=path,
+        )
     return QueueSnapshot(key=key, items=items)
 
 

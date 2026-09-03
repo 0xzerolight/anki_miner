@@ -2,9 +2,10 @@
 
 import dataclasses
 import json
+import logging
 import os
 from collections.abc import Callable, Mapping
-from dataclasses import replace
+from dataclasses import fields, replace
 from pathlib import Path
 from typing import Protocol, cast, runtime_checkable
 
@@ -90,6 +91,9 @@ from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.pitch_accent.registry import PitchSourceMeta, PitchSourceRegistry
 from anki_miner.services.subtitle_parser import compile_subtitle_regex_filter
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import capped, log_summary, suppressed
+
+logger = logging.getLogger(__name__)
 
 # Debounce for the Settings auto-save: a burst of edits coalesces into one
 # commit this many ms after the last change. Long enough to not commit per
@@ -1490,11 +1494,40 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self._debounce_timer.stop()
             self._commit_settings()
 
+    def _pending_field_names(self) -> list[str]:
+        """Config fields the panels currently propose changing, for a log line.
+
+        ``contribute`` is a pure widget read that returns a new frozen config, so
+        folding it here costs nothing and cannot disturb the commit it is
+        reporting on. The names are what makes "my settings don't stick"
+        actionable: a refusal that lists ``anki_deck_name`` is a different bug
+        report from one that lists ``dicts_root``. Bounded by ``capped`` so a
+        wholesale reload cannot put a hundred names on one line, and guarded
+        because a diagnostic must never be the thing that raises.
+        """
+        names: list[str] = []
+        with suppressed(logger, "collecting pending settings field names"):
+            proposed = self.config
+            for panel in self._save_panels:
+                proposed = panel.contribute(proposed)
+            names = [
+                spec.name
+                for spec in fields(self.config)
+                if getattr(proposed, spec.name) != getattr(self.config, spec.name)
+            ]
+        return capped(sorted(names))
+
     def commit_pending_settings_for_mutation(self) -> bool:
         """Commit pending edits normally before a root-bound mutation.
 
         Refuse re-entry or an already-owned panel without consuming the
         debounce timer.
+
+        Every refusal is logged with the arm that produced it. All four return
+        the same ``False`` to the caller and leave the same silent screen, so
+        without the ``reason`` field "the setting I typed did not stick" cannot
+        be told apart from a commit that never ran, one the disk rejected, and
+        one that raised.
         """
         if self._committing or any(
             panel.has_active_mutation()
@@ -1502,17 +1535,42 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         ):
             if self._settings_dirty:
                 self._debounce_timer.start()
+            log_summary(
+                logger,
+                "Settings flush refused",
+                level=logging.WARNING,
+                reason="active_mutation",
+                dirty_fields=self._pending_field_names(),
+                committing=self._committing,
+                error=None,
+            )
             return False
         if not self._settings_dirty:
             return True
         try:
             committed = self._commit_settings(commit_config=self._commit_config)
         except ConfigCommitError as error:
+            log_summary(
+                logger,
+                "Settings flush refused",
+                level=logging.WARNING,
+                reason="commit_error_persisted" if error.result.persisted else "commit_error_retry",
+                dirty_fields=self._pending_field_names(),
+                error=f"{type(error).__name__}: {error}",
+            )
             if error.result.persisted:
                 return False
             self._debounce_timer.start()
             return False
-        except Exception:  # noqa: BLE001 - unknown commit phase must refuse the mutation
+        except Exception as error:  # noqa: BLE001 - unknown commit phase must refuse the mutation
+            log_summary(
+                logger,
+                "Settings flush refused",
+                level=logging.WARNING,
+                reason="commit_raised",
+                dirty_fields=self._pending_field_names(),
+                error=f"{type(error).__name__}: {error}",
+            )
             self._debounce_timer.start()
             return False
         return committed and not self._settings_dirty
@@ -1617,7 +1675,19 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         if subtitle_regex or subtitle_regex_replacement:
             try:
                 compile_subtitle_regex_filter(subtitle_regex, subtitle_regex_replacement)
-            except ValueError:
+            except ValueError as error:
+                # Verbatim, both halves: the reverted pattern is the one thing
+                # the sticky warning cannot show, and it is what a support
+                # reply has to quote back.
+                log_summary(
+                    logger,
+                    "Subtitle regex rejected",
+                    level=logging.WARNING,
+                    source="commit",
+                    pattern=subtitle_regex,
+                    replacement=subtitle_regex_replacement,
+                    error=f"{type(error).__name__}: {error}",
+                )
                 kept_back.append(self.tr("subtitle regex (Filtering)"))
                 new_config = replace(
                     new_config,
@@ -1770,6 +1840,13 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
+        log_summary(
+            logger,
+            "Confirm",
+            action="import_settings",
+            answer="yes" if reply == QMessageBox.StandardButton.Yes else "no",
+            scope=source,
+        )
         if reply != QMessageBox.StandardButton.Yes:
             return
         try:
@@ -1795,6 +1872,15 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             try:
                 compile_subtitle_regex_filter(new_config.subtitle_regex_filter, new_config.subtitle_regex_replacement)
             except ValueError as e:
+                log_summary(
+                    logger,
+                    "Subtitle regex rejected",
+                    level=logging.WARNING,
+                    source="import",
+                    pattern=new_config.subtitle_regex_filter,
+                    replacement=new_config.subtitle_regex_replacement,
+                    error=f"{type(e).__name__}: {e}",
+                )
                 new_config = replace(
                     new_config,
                     subtitle_regex_filter=self.config.subtitle_regex_filter,
@@ -1862,6 +1948,13 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,  # safe default focus / Enter target
+        )
+        log_summary(
+            logger,
+            "Confirm",
+            action="reset_settings",
+            answer="yes" if reply == QMessageBox.StandardButton.Yes else "no",
+            scope="behavioural settings",
         )
         if reply != QMessageBox.StandardButton.Yes:
             if self._settings_dirty:
@@ -2003,14 +2096,34 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         )
 
     def _commit_remove_config(self, config: AnkiMinerConfig) -> ConfigCommitResult:
-        """Commit one remove and normalize its durable failure boundary."""
+        """Commit one remove and normalize its durable failure boundary.
+
+        Both failure arms are logged: the caller turns a ``ConfigCommitResult``
+        into a row that stays on screen, which reads the same whether the write
+        failed before or after the disk. The bare arm carries ``exc_info`` —
+        anything reaching it is outside the commit protocol and the stack is the
+        only way to find it.
+        """
         try:
             self._commit_immediate_config(config, self._commit_config)
         except ConfigCommitError as error:
             if error.result.persisted:
                 self._sync_persisted_config(config)
+            log_summary(
+                logger,
+                "Resource removal refused",
+                level=logging.WARNING,
+                persisted=error.result.persisted,
+                error=f"{type(error).__name__}: {error}",
+            )
             return error.result
         except Exception as error:
+            logger.warning(
+                "Resource removal refused: persisted=False error=%s: %s",
+                type(error).__name__,
+                error,
+                exc_info=True,
+            )
             return ConfigCommitResult.pre_save_failure(error)
         return ConfigCommitResult.committed()
 
@@ -2148,6 +2261,13 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
+        )
+        log_summary(
+            logger,
+            "Confirm",
+            action="rebuild_known_words",
+            answer="yes" if confirm == QMessageBox.StandardButton.Yes else "no",
+            scope=resolve_known_words_db_path(self.config),
         )
         if confirm != QMessageBox.StandardButton.Yes:
             return

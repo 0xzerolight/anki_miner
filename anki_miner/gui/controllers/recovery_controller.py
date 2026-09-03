@@ -77,7 +77,19 @@ class RecoveryInventory:
 
 def take_inventory() -> RecoveryInventory:
     """Report what is recoverable. Never raises, never mutates anything."""
-    inventory = RecoveryInventory(downloads=_partial_downloads(), queues=_queue_snapshots())
+    partials, dropped = _partial_downloads()
+    inventory = RecoveryInventory(downloads=partials, queues=_queue_snapshots())
+    # Two lines, because they answer different questions. The inventory is what
+    # the user is about to be offered; the scan is what was on disk before the
+    # offer was assembled, and it is the only record of a partial that existed
+    # and was not offered ("it said it kept my download, and then it didn't").
+    log_summary(
+        logger,
+        "Recovery scan",
+        partials=len(partials),
+        dropped=dropped,
+        queues=len(inventory.queues),
+    )
     log_summary(
         logger,
         "Recovery inventory",
@@ -88,34 +100,52 @@ def take_inventory() -> RecoveryInventory:
     return inventory
 
 
-def _partial_downloads() -> tuple[PartialDownload, ...]:
+def _partial_downloads() -> tuple[tuple[PartialDownload, ...], int]:
+    """Every offerable partial, plus how many candidates were passed over.
+
+    Each skip arm is a different fact about the same file — a key the resume
+    root refuses, a manifest that no longer parses, a ``.part`` that is gone,
+    a transfer too short to be worth a question — and all four leave exactly
+    the same empty prompt. DEBUG, because none of them is a failure: a swept
+    downloads folder produces a handful on every launch.
+    """
     root = download_resume_root()
     found: list[PartialDownload] = []
+    dropped = 0
     try:
         with os.scandir(root) as entries:
             names = sorted(entry.name for entry in entries if entry.is_file() and entry.name.endswith(".json"))
-    except OSError:
-        return ()
+    except OSError as error:
+        logger.debug("Recovery partial skipped: key=- reason=root_unreadable error=%s: %s", type(error).__name__, error)
+        return (), 0
     for name in names:
         key = name[: -len(".json")]
         try:
             state = ResumeState(root, key)
-        except ValueError:
+        except ValueError as error:
+            dropped += 1
+            logger.debug("Recovery partial skipped: key=%s reason=invalid_key error=%s", key, error)
             continue
         manifest = state.load()
         if manifest is None:
+            dropped += 1
+            logger.debug("Recovery partial skipped: key=%s reason=no_manifest", key)
             continue
         try:
             saved = state.part_path.stat().st_size
-        except OSError:
+        except OSError as error:
+            dropped += 1
+            logger.debug("Recovery partial skipped: key=%s reason=part_missing error=%s", key, error)
             continue
         # The manifest is the authority on how many bytes are DURABLE; anything
         # past it was never fsynced and is truncated away on resume.
         saved = min(saved, manifest.length)
         if saved < MIN_OFFERED_BYTES:
+            dropped += 1
+            logger.debug("Recovery partial skipped: key=%s reason=below_offer_floor saved=%d", key, saved)
             continue
         found.append(PartialDownload(key=key, saved_bytes=saved, total_bytes=manifest.total, url=manifest.url))
-    return tuple(found)
+    return tuple(found), dropped
 
 
 def _queue_snapshots() -> tuple[QueueSnapshot, ...]:

@@ -11,6 +11,7 @@ inputs (not the saved config) so the user can probe without first hitting
 Save.
 """
 
+import logging
 from collections.abc import Callable
 from dataclasses import replace
 
@@ -26,6 +27,9 @@ from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.fetch_workers import FetchDecksWorker, FetchFieldsWorker, FetchNotetypesWorker
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
+
+logger = logging.getLogger(__name__)
 
 
 class AnkiProbeController:
@@ -166,6 +170,19 @@ class AnkiProbeController:
             service = AnkiService(probe_config)
         except ValueError as e:
             # Misconfigured anki_fields keys — surface, don't crash.
+            # This arm writes a panel status label instead of going through
+            # ``_report``, so nothing else records it. The URL and note type
+            # are the two inputs that decide whether the probe could have
+            # worked, and both come from the form rather than the saved config.
+            log_summary(
+                logger,
+                "AnkiService config rejected",
+                level=logging.WARNING,
+                probe="fetch_fields",
+                url=ankiconnect_url,
+                note_type=note_type,
+                error=f"{type(e).__name__}: {e}",
+            )
             self._anki_panel.set_notetype_status(False, f"Cannot build AnkiService: {e}")
             return
 
@@ -341,6 +358,18 @@ class AnkiProbeController:
         try:
             service = AnkiService(probe_config)
         except ValueError as e:
+            # Two status labels, no ``_report`` and so no screen-issue record:
+            # the naming probe is the one that leaves "the deck list is empty"
+            # with nothing behind it.
+            log_summary(
+                logger,
+                "AnkiService config rejected",
+                level=logging.WARNING,
+                probe="fetch_names",
+                url=ankiconnect_url,
+                note_type=probe_config.anki_note_type,
+                error=f"{type(e).__name__}: {e}",
+            )
             message = tr_format(QCoreApplication.translate("AnkiProbeController", "Cannot build AnkiService: %1"), e)
             self._anki_panel.set_deck_status(False, message)
             self._set_notetype_status(False, message)
