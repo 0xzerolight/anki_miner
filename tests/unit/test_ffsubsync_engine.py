@@ -584,3 +584,103 @@ class TestChildDispatch:
         # import: no GUI, no instance-lock contention with the parent.
         assert "APP_IMPORTED=False QTWIDGETS_IMPORTED=False" in result.stderr
         assert not (tmp_path / "home").exists()
+
+
+_FFS_LOGGER = "anki_miner.services.sync_engines.ffsubsync_engine"
+
+
+class TestSyncLogging:
+    def test_start_line_carries_inputs_and_knobs(self, cfg, paths, caplog):
+        import logging
+
+        reference, in_sub, out = paths
+        with (
+            caplog.at_level(logging.INFO, logger=_FFS_LOGGER),
+            patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
+            patch(_RUN_SUPERVISED, side_effect=_completed(out)),
+        ):
+            sync_with_ffsubsync(cfg, reference, in_sub, out, split_penalty=4.0)
+
+        line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Subtitle sync:"))
+        assert "engine=ffsubsync" in line
+        assert f"reference={reference}" in line
+        assert f"in_sub={in_sub}" in line
+        assert f"out={out}" in line
+        assert "split_penalty=4.0" in line
+        assert "no_split=False" in line
+
+    def test_success_line_reports_offset_and_scale(self, cfg, paths, caplog):
+        import logging
+
+        reference, in_sub, out = paths
+        with (
+            caplog.at_level(logging.INFO, logger=_FFS_LOGGER),
+            patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
+            patch(_RUN_SUPERVISED, side_effect=_completed(out, offset=2.25, scale=1.001)),
+        ):
+            result = sync_with_ffsubsync(cfg, reference, in_sub, out)
+
+        assert result.ok
+        line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Subtitle sync done:"))
+        assert "engine=ffsubsync" in line
+        assert "ok=True" in line
+        assert "offset=2.25" in line
+        assert "scale=1.001" in line
+        assert f"reference={reference}" in line
+        assert f"in_sub={in_sub}" in line
+
+    def test_rejected_sync_logs_not_ok(self, cfg, paths, caplog):
+        import logging
+
+        reference, in_sub, out = paths
+        with (
+            caplog.at_level(logging.INFO, logger=_FFS_LOGGER),
+            patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
+            patch(_RUN_SUPERVISED, side_effect=_completed(out, successful=False, offset=None, scale=None)),
+        ):
+            sync_with_ffsubsync(cfg, reference, in_sub, out)
+
+        line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Subtitle sync done:"))
+        assert "ok=False" in line
+
+    def test_run_supervised_is_labelled_ffsubsync(self, cfg, paths):
+        reference, in_sub, out = paths
+        captured: dict[str, Any] = {}
+
+        def _run(command: Any, **kwargs: Any) -> SupervisedResult:
+            captured.update(kwargs)
+            Path(out).touch()
+            return _supervised(_verdict_line())
+
+        with (
+            patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
+            patch(_RUN_SUPERVISED, side_effect=_run),
+        ):
+            sync_with_ffsubsync(cfg, reference, in_sub, out)
+
+        assert captured["op"] == "ffsubsync"
+
+    def test_unparsable_verdict_line_warns_with_stdout_head(self, cfg, paths, caplog):
+        import logging
+
+        reference, in_sub, out = paths
+        garbage = "{not json at all" + "x" * 400
+
+        def _run(command: Any, **kwargs: Any) -> SupervisedResult:
+            Path(out).touch()
+            return _supervised(garbage + "\n")
+
+        with (
+            caplog.at_level(logging.WARNING, logger=_FFS_LOGGER),
+            patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
+            patch(_RUN_SUPERVISED, side_effect=_run),
+        ):
+            result = sync_with_ffsubsync(cfg, reference, in_sub, out)
+
+        assert not result.ok
+        warned = [r for r in caplog.records if r.levelno == logging.WARNING and "Ignored failure" in r.getMessage()]
+        assert warned, [r.getMessage() for r in caplog.records]
+        message = warned[0].getMessage()
+        assert garbage[:200] in message
+        assert garbage[:250] not in message
+        assert "JSONDecodeError" in message

@@ -109,3 +109,41 @@ class TestValidateCandidate:
         cand = tmp_path / "c.srt"
         cand.write_bytes(b"\x00garbage")
         assert not validate_candidate(orig, cand, _OK).ok
+
+
+class TestRejectionLogging:
+    _LOGGER = "anki_miner.services.sync_validator"
+
+    def test_rejection_logs_the_reasons(self, tmp_path, caplog):
+        import logging
+
+        orig = _save(tmp_path / "o.srt", _starts(20))
+        cand = _save(tmp_path / "c.srt", [s + 6 * 60 * 1000 for s in _starts(20)])
+        with caplog.at_level(logging.INFO, logger=self._LOGGER):
+            verdict = validate_candidate(orig, cand, SyncResult(ok=True, engine="alass"))
+
+        assert not verdict.ok
+        line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Subtitle sync rejected:"))
+        assert "engine=alass" in line
+        assert str(orig) in line
+        assert str(cand) in line
+        assert "max cue shift" in line
+
+    def test_engine_failure_rejection_is_logged(self, tmp_path, caplog):
+        import logging
+
+        missing = tmp_path / "nowhere.srt"
+        with caplog.at_level(logging.INFO, logger=self._LOGGER):
+            validate_candidate(missing, missing, SyncResult(ok=False, engine="alass", detail="exit 1"))
+
+        assert any(r.getMessage().startswith("Subtitle sync rejected:") for r in caplog.records)
+
+    def test_accepted_candidate_logs_no_rejection(self, tmp_path, caplog):
+        import logging
+
+        orig = _save(tmp_path / "o.srt", _starts(20))
+        cand = _save(tmp_path / "c.srt", [s + 1500 for s in _starts(20)])
+        with caplog.at_level(logging.INFO, logger=self._LOGGER):
+            assert validate_candidate(orig, cand, _OK).ok
+
+        assert not [r for r in caplog.records if r.getMessage().startswith("Subtitle sync rejected:")]
