@@ -3,6 +3,7 @@
 import logging
 import re
 import time
+from collections import Counter
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -33,7 +34,7 @@ from anki_miner.services.anki_note_builder import (
     REQUIRED_FIELD_KEYS as _REQUIRED_FIELD_KEYS,
 )
 from anki_miner.utils.i18n import tr_format
-from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.logging_ext import capped, log_summary
 
 if TYPE_CHECKING:
     # Type-only: `services` must not take a module-level runtime import of
@@ -63,6 +64,18 @@ _UPDATE_NOTES_MAX_BYTES = 4 * 1024 * 1024
 # services must not import gui.
 _PROBE_ATTEMPTS = 3
 _PROBE_RETRY_DELAY_S = 8.0
+
+# Evidence budget for the "cards silently not created" receipt: how many refused
+# words and distinct refusal reasons reach the log line, and how many notes the
+# diagnostic error-detail probe re-submits. The probe is read-only, runs at most
+# once per run, and uses a short timeout with NO retry — it must never lengthen
+# a failing run (contrast _PROBE_ATTEMPTS above, which guards real creation).
+_FAILED_WORDS_LOGGED = 20
+_NULL_SLOT_PROBE_NOTES = 20
+_NULL_SLOT_PROBE_TIMEOUT_S = 15
+# Longest refusal string kept per reason; AnkiConnect errors are short, but a
+# stack-trace-shaped one must not swallow the line.
+_NULL_REASON_CHARS = 120
 
 
 def _chunk_note_updates(
@@ -779,6 +792,8 @@ class AnkiService:
                 duplicates=0,
                 bold_used=0,
                 bold_fallback=0,
+                failed_words=[],
+                null_reasons=[],
             )
             return []
 
@@ -836,6 +851,13 @@ class AnkiService:
         # see the rationale there (F10).
         created_forms: list[str] = []
         created_lemmas: list[str] = []
+        # "Cards silently not created" evidence: the words whose addNotes slot
+        # came back null despite the duplicate probe clearing them, plus a
+        # bounded sample of those payloads for the after-the-run explanation
+        # probe. Without these the receipt only ever said how MANY cards were
+        # missing, never which or why.
+        failed_words: list[str] = []
+        null_notes: list[dict] = []
         # Diagnostic counters for the bold path (Issue #20). Surface whether
         # the precomputed bolded strings actually made it to the note body,
         # so users who enable the option but see no bold can tell from the
@@ -947,6 +969,18 @@ class AnkiService:
                 # into the not-created count so the gap is never silent.
                 batch_created = sum(1 for nid in note_ids if nid is not None)
                 skipped_duplicates += len(submit_notes) - batch_created
+                if batch_created < len(submit_notes):
+                    failed_words.extend(
+                        item.word.mined_form for item, nid in zip(submit_payloads, note_ids, strict=True) if nid is None
+                    )
+                    # Keep a sample of the refused payloads for the after-the-run
+                    # explanation probe; the probe itself must not run inside the
+                    # loop (see below).
+                    null_notes.extend(
+                        note
+                        for note, nid in zip(submit_notes, note_ids, strict=True)
+                        if nid is None and len(null_notes) < _NULL_SLOT_PROBE_NOTES
+                    )
                 total_created += batch_created
                 all_created_ids.extend(nid for nid in note_ids if nid is not None)
                 # note_ids align positionally with `submit_payloads` (both derive
@@ -1013,6 +1047,15 @@ class AnkiService:
                 len(word_data_list),
                 bold_fallback,
             )
+        # Ask AnkiConnect why, but only for the report this exists to serve: a
+        # run that submitted notes and created NOTHING. One read-only request,
+        # after every batch is done, on a run that already produced no cards -
+        # so it cannot slow a working run, cannot multiply across batches, and
+        # cannot interleave with the writes above. A partial run keeps
+        # `failed_words` alone; the words are enough to find the cards by hand.
+        null_reasons: Counter[str] = Counter()
+        if null_notes and total_created == 0 and not cancelled_between_batches:
+            null_reasons = self._explain_null_slots(null_notes)
         log_summary(
             logger,
             "Anki create cards done",
@@ -1023,6 +1066,11 @@ class AnkiService:
             duplicates=probed_duplicates,
             bold_used=bold_used,
             bold_fallback=bold_fallback,
+            failed_words=capped(failed_words, _FAILED_WORDS_LOGGED),
+            null_reasons=capped(
+                (f"{count}x{reason}" for reason, count in null_reasons.most_common()),
+                _FAILED_WORDS_LOGGED,
+            ),
         )
         return list(all_created_ids)
 
@@ -1130,6 +1178,51 @@ class AnkiService:
                         raise
                     time.sleep(min(1.0, max(0.0, deadline - time.monotonic())))
         raise AssertionError("unreachable: every attempt returns or raises")
+
+    def _explain_null_slots(self, notes: list[dict]) -> Counter[str]:
+        """Count AnkiConnect's own reasons for refusing *notes*; never raise.
+
+        Diagnostic only, for the ``Anki create cards done`` receipt: a null
+        ``addNotes`` slot for a note the duplicate probe had cleared is the
+        "cards silently not created" report, and the per-note error string is
+        the only thing that separates a raced duplicate from a bad field
+        mapping. Read-only (``canAddNotesWithErrorDetail`` writes nothing), sent
+        at most once per run - after every batch, only when the run created
+        nothing - with a short timeout and no retry. Every failure, including an
+        older AnkiConnect that lacks the action, degrades to an empty counter so
+        the receipt still prints.
+        """
+        reasons: Counter[str] = Counter()
+        if not notes:
+            return reasons
+        try:
+            result = post_action(
+                self.config.ankiconnect_url,
+                "canAddNotesWithErrorDetail",
+                params={"notes": notes},
+                timeout=_NULL_SLOT_PROBE_TIMEOUT_S,
+            )
+        except Exception as e:  # noqa: BLE001 — bucket diagnostic probe: evidence is optional, the run is not
+            logger.debug(
+                "Anki null-slot probe unavailable: notes=%d exc=%s error=%s",
+                len(notes),
+                type(e).__name__,
+                e,
+            )
+            return reasons
+        if not isinstance(result, list):
+            return reasons
+        for item in result:
+            if not isinstance(item, dict):
+                continue
+            error = item.get("error")
+            if isinstance(error, str) and error:
+                reasons[error[:_NULL_REASON_CHARS]] += 1
+            elif item.get("canAdd") is True:
+                # Addable now, refused a moment ago: the collection changed
+                # under the run (a concurrent sync, or Anki's own dedup).
+                reasons["addable on re-probe"] += 1
+        return reasons
 
     def _probe_duplicates(self, notes: list[dict]) -> list[bool]:
         """Return, per note, whether AnkiConnect would reject it as a duplicate.

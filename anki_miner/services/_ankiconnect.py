@@ -21,13 +21,126 @@ patch seam keep working.
 
 import logging
 import threading
+import time
 from typing import Any
 
 import requests
 
 from anki_miner.exceptions import AnkiConnectionError
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
+
+# Protocol version this module speaks; echoed on the readiness receipt when the
+# call was not the `version` action (AnkiConnect's envelope carries no version).
+_API_VERSION = 6
+
+# How much of a failing response body reaches the log. Enough to recognize a
+# proxy error page, an HTML login wall, or another service answering on 8765;
+# short enough that a multi-MB body cannot flood the ring.
+_BODY_SNIPPET_CHARS = 200
+
+# Once-per-process log state. A refused connection is the single most common
+# AnkiConnect failure and every probe in the app retries it, so the per-call
+# record stays DEBUG and exactly one WARNING names the endpoint that is not
+# answering. `_ready_logged` likewise pins the first proven-good call.
+# Guarded by _LOG_STATE_LOCK because validation/episode/backfill workers reach
+# this from their own QThreads.
+_LOG_STATE_LOCK = threading.Lock()
+_connection_warning_logged = False
+_ready_logged = False
+
+
+def reset_connection_warning() -> None:
+    """Re-arm the once-per-process connection WARNING.
+
+    Exists for tests and for callers that want a fresh endpoint verdict after
+    the user has been told to start Anki; it does not touch the readiness
+    receipt.
+    """
+    global _connection_warning_logged
+    with _LOG_STATE_LOCK:
+        _connection_warning_logged = False
+
+
+def _body_snippet(response: requests.Response | None) -> str:
+    """Return the first ``_BODY_SNIPPET_CHARS`` of *response*'s body, whitespace-collapsed."""
+    if response is None:
+        return ""
+    try:
+        text = response.text
+    except Exception:  # noqa: BLE001 — bucket unreadable body: evidence is optional, the real failure is not
+        return ""
+    if not isinstance(text, str):
+        return ""
+    return " ".join(text.split())[:_BODY_SNIPPET_CHARS]
+
+
+def _log_connection_failure(url: str, action: str, exc: BaseException, elapsed_s: float) -> None:
+    """DEBUG every refused connection; WARNING the first one in the process."""
+    log_summary(
+        logger,
+        "AnkiConnect connection failed",
+        level=logging.DEBUG,
+        url=url,
+        action=action,
+        elapsed=f"{elapsed_s:.3f}s",
+        exc_type=type(exc).__name__,
+        error=str(exc),
+    )
+    global _connection_warning_logged
+    with _LOG_STATE_LOCK:
+        if _connection_warning_logged:
+            return
+        _connection_warning_logged = True
+    log_summary(
+        logger,
+        "AnkiConnect unreachable",
+        level=logging.WARNING,
+        url=url,
+        action=action,
+        exc_type=type(exc).__name__,
+        error=str(exc),
+    )
+
+
+def _log_ready(url: str, action: str, result: dict) -> None:
+    """INFO the first validated response of the process: Anki answered here."""
+    global _ready_logged
+    with _LOG_STATE_LOCK:
+        if _ready_logged:
+            return
+        _ready_logged = True
+    version = result.get("result") if action == "version" else None
+    if not isinstance(version, int):
+        version = _API_VERSION
+    log_summary(logger, "AnkiConnect ready", url=url, version=version)
+
+
+def _log_request_failed(
+    url: str,
+    action: str,
+    exc: BaseException,
+    elapsed_s: float,
+    response: requests.Response | None,
+) -> None:
+    """WARNING a transport/decode failure with the endpoint, timing, and body evidence."""
+    error_response = getattr(exc, "response", None)
+    if error_response is None:
+        error_response = response
+    log_summary(
+        logger,
+        "AnkiConnect request failed",
+        level=logging.WARNING,
+        action=action,
+        url=url,
+        status=getattr(error_response, "status_code", None),
+        elapsed=f"{elapsed_s:.3f}s",
+        exc_type=type(exc).__name__,
+        error=str(exc),
+        body=_body_snippet(error_response),
+    )
+
 
 # Stashed at import time so `_post` can detect a test having patched
 # `requests.post` on this module (see module docstring) and honour it instead
@@ -131,59 +244,66 @@ def post_action(
         len(params or {}),
         timeout,
     )
+    started = time.monotonic()
+    response: requests.Response | None = None
     try:
         response = _post(
             ankiconnect_url,
-            json={"action": action, "version": 6, "params": params or {}},
+            json={"action": action, "version": _API_VERSION, "params": params or {}},
             timeout=timeout,
         )
         response.raise_for_status()
         _check_response_size(response, action)
         result = response.json()
     except requests.exceptions.ConnectionError as e:
-        logger.debug(
-            "AnkiConnect connection failed: url=%s action=%s exc=%s",
-            ankiconnect_url,
-            action,
-            type(e).__name__,
-        )
+        _log_connection_failure(ankiconnect_url, action, e, time.monotonic() - started)
         raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
     except requests.exceptions.Timeout as e:
         # Only read timeouts reach here: ConnectTimeout is also a
         # ConnectionError, so the branch above already claimed it.
-        logger.warning(
-            "AnkiConnect request timed out: action=%s timeout=%d",
-            action,
-            timeout,
+        log_summary(
+            logger,
+            "AnkiConnect request timed out",
+            level=logging.WARNING,
+            action=action,
+            url=ankiconnect_url,
+            timeout=timeout,
+            elapsed=f"{time.monotonic() - started:.3f}s",
+            exc_type=type(e).__name__,
         )
         raise AnkiConnectionError(_timeout_message(action, timeout)) from e
     except (requests.RequestException, ValueError) as e:
-        logger.warning(
-            "AnkiConnect request failed: action=%s status=%s exc=%s",
-            action,
-            getattr(getattr(e, "response", None), "status_code", None),
-            type(e).__name__,
-        )
+        _log_request_failed(ankiconnect_url, action, e, time.monotonic() - started, response)
         raise AnkiConnectionError(f"AnkiConnect call '{action}' failed: {e}") from e
     if not isinstance(result, dict):
         # A non-object body (wrong service on the port, a proxy error page that
         # still parses as JSON) would otherwise crash on `result.get(...)`.
-        logger.warning(
-            "AnkiConnect response invalid: action=%s type=%s",
-            action,
-            type(result).__name__,
+        log_summary(
+            logger,
+            "AnkiConnect response invalid",
+            level=logging.WARNING,
+            action=action,
+            url=ankiconnect_url,
+            type=type(result).__name__,
+            body=_body_snippet(response),
         )
         raise AnkiConnectionError(
             f"AnkiConnect '{action}' returned a non-object response "
             f"({type(result).__name__}); is another service listening on this port?"
         )
     if result.get("error"):
+        # Hand-rolled, not `log_summary`: the AnkiConnect error string is the
+        # whole diagnosis and must stay unquoted at the end of the line, where
+        # both readers and the pinned test look for it verbatim.
         logger.warning(
-            "AnkiConnect error: action=%s error=%s",
+            "AnkiConnect error: action=%s url=%s elapsed=%.3fs error=%s",
             action,
+            ankiconnect_url,
+            time.monotonic() - started,
             result["error"],
         )
         raise AnkiConnectionError(f"AnkiConnect error in '{action}': {result['error']}")
+    _log_ready(ankiconnect_url, action, result)
     return result.get("result")
 
 
@@ -215,52 +335,61 @@ def post_multi(
         len(actions),
         timeout,
     )
+    started = time.monotonic()
+    response: requests.Response | None = None
     try:
         response = _post(
             ankiconnect_url,
-            json={"action": "multi", "version": 6, "params": {"actions": actions}},
+            json={"action": "multi", "version": _API_VERSION, "params": {"actions": actions}},
             timeout=timeout,
         )
         response.raise_for_status()
         _check_response_size(response, "multi")
         result = response.json()
     except requests.exceptions.ConnectionError as e:
-        logger.debug(
-            "AnkiConnect connection failed: url=%s action=multi exc=%s",
-            ankiconnect_url,
-            type(e).__name__,
-        )
+        _log_connection_failure(ankiconnect_url, "multi", e, time.monotonic() - started)
         raise AnkiConnectionError("Cannot connect to AnkiConnect. Is Anki running?") from e
     except requests.exceptions.Timeout as e:
         # Only read timeouts reach here: ConnectTimeout is also a
         # ConnectionError, so the branch above already claimed it.
-        logger.warning(
-            "AnkiConnect request timed out: action=multi timeout=%d",
-            timeout,
+        log_summary(
+            logger,
+            "AnkiConnect request timed out",
+            level=logging.WARNING,
+            action="multi",
+            url=ankiconnect_url,
+            timeout=timeout,
+            elapsed=f"{time.monotonic() - started:.3f}s",
+            exc_type=type(e).__name__,
         )
         raise AnkiConnectionError(_timeout_message("multi", timeout)) from e
     except (requests.RequestException, ValueError) as e:
-        logger.warning(
-            "AnkiConnect request failed: action=multi status=%s exc=%s",
-            getattr(getattr(e, "response", None), "status_code", None),
-            type(e).__name__,
-        )
+        _log_request_failed(ankiconnect_url, "multi", e, time.monotonic() - started, response)
         raise AnkiConnectionError(f"AnkiConnect call 'multi' failed: {e}") from e
     if not isinstance(result, dict):
-        logger.warning(
-            "AnkiConnect response invalid: action=multi type=%s",
-            type(result).__name__,
+        log_summary(
+            logger,
+            "AnkiConnect response invalid",
+            level=logging.WARNING,
+            action="multi",
+            url=ankiconnect_url,
+            type=type(result).__name__,
+            body=_body_snippet(response),
         )
         raise AnkiConnectionError(
             f"AnkiConnect 'multi' returned a non-object response "
             f"({type(result).__name__}); is another service listening on this port?"
         )
     if result.get("error"):
+        # See post_action: the error string stays verbatim at end of line.
         logger.warning(
-            "AnkiConnect error: action=multi error=%s",
+            "AnkiConnect error: action=multi url=%s elapsed=%.3fs error=%s",
+            ankiconnect_url,
+            time.monotonic() - started,
             result["error"],
         )
         raise AnkiConnectionError(f"AnkiConnect error in 'multi': {result['error']}")
+    _log_ready(ankiconnect_url, "multi", result)
     return _expect_list(result.get("result"), "multi", len(actions))
 
 
