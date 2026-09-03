@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:3bd1e330de2efafb -->
+<!-- i18n-source: README.md sha256:2694be0f35a3ecf6 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -205,8 +205,8 @@ Usa conjuntos de nomes empacotados derivados do [JMnedict](https://www.edrdg.org
 | O instalador do Windows não abre / aviso do SmartScreen | Veja [Notas de primeira execução](#notas-de-primeira-execução-compilações-não-assinadas): selecione **Mais informações** -> **Executar assim mesmo**; restaure falsos positivos do Defender pelo **Histórico de proteção**. |
 | Instalação nova sem definições | Execute Ferramentas -> Assistente de Configuração ou Ferramentas -> Baixar Recursos Recomendados. Para importação manual, mantenha o ZIP do Yomitan intacto (não o descompacte). |
 | Adicionar dicionário trava ou falha | Anote o último estágio visível e anexe os registros (veja "Onde estão os registros?" abaixo). Inclua o nome do ZIP do dicionário, a fonte e o tamanho no relatório. |
-| Onde estão os registros?      | Use Ajuda -> Abrir Pasta de Registros, ou abra `%USERPROFILE%\.anki_miner\anki_miner.log` no Windows ou `~/.anki_miner/anki_miner.log` no macOS/Linux. Os registros rotacionados usam os sufixos `.1` a `.5`. |
-| Reportando um bug          | Ajuda -> Exportar Diagnósticos… grava um ZIP com registros e detalhes do sistema no local que você escolher. Revise-o antes de enviar, pois ele contém caminhos e nomes de arquivos do seu computador. Nada é enviado automaticamente. |
+| Onde estão os registros?      | Use Ajuda -> Abrir Pasta de Registros, ou abra `%USERPROFILE%\.anki_miner\anki_miner.log` no Windows ou `~/.anki_miner/anki_miner.log` no macOS/Linux. Os registros rotacionados usam os sufixos `.1` a `.5`. Envie também `anki_miner.crash`, se existir - uma queda que derrubou o aplicativo grava a pilha nesse arquivo, não no registro - e `anki_miner.child.log`, que guarda a saída de um processo auxiliar. |
+| Reportando um bug          | Ajuda -> Exportar Diagnósticos… grava um ZIP no local que você escolher, contendo os registros (`anki_miner.log` e suas rotações, `anki_miner.crash`, `anki_miner.child.log`), o seu `settings.json`, os arquivos de configuração e de estado da interface, os instantâneos das filas e os manifestos de download, além de relatórios gerados sobre a máquina e o estado do aplicativo (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Revise-o antes de enviar, pois ele contém caminhos e nomes de arquivos do seu computador. Nada é enviado automaticamente. |
 | Mais registro de diagnóstico | Defina `ANKI_MINER_LOG_LEVEL=DEBUG` antes de iniciar o Anki Miner para capturar detalhes de terceiros do yt-dlp, urllib3 e fugashi. O padrão é `WARNING`; os registros do Anki Miner permanecem em DEBUG. |
 | O áudio está no idioma errado  | A ferramenta tenta primeiro as faixas de áudio no idioma de mineração e depois usa a padrão.      |
 | Legendas fora de sincronia    | Use o controle de deslocamento de legenda na interface (faixa de ±300 segundos).                 |

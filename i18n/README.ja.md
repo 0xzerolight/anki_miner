@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:3bd1e330de2efafb -->
+<!-- i18n-source: README.md sha256:2694be0f35a3ecf6 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -205,8 +205,8 @@ anki_miner_gui
 | Windows のインストーラーが開かない / SmartScreen の警告 | [初回起動時の注意](#初回起動時の注意未署名ビルド)を参照してください: **詳細情報** -> **実行** を選びます。Defender の誤検知は **保護の履歴** から復元してください。 |
 | 新規インストールで語義が出ない | ツール -> セットアップウィザード、またはツール -> 推奨リソースをダウンロード を実行してください。手動でインポートする場合は、Yomitan の ZIP をそのままの状態にしておいてください（解凍しないでください）。 |
 | 辞書を追加 が止まる、または失敗する | 最後に見えた段階を控え、ログを添付してください（下の「ログはどこにありますか？」を参照）。報告には辞書 ZIP の名前、入手元、サイズを含めてください。 |
-| ログはどこにありますか？ | ヘルプ -> ログフォルダを開く を使うか、Windows では `%USERPROFILE%\.anki_miner\anki_miner.log`、macOS/Linux では `~/.anki_miner/anki_miner.log` を開いてください。ローテーションされたログには `.1` から `.5` の接尾辞が付きます。 |
-| バグを報告する           | ヘルプ -> 診断情報をエクスポート… で、ログとシステム情報を含む ZIP を任意の場所に書き出します。お使いのコンピューターのファイルパスやファイル名が含まれるため、アップロードする前に内容を確認してください。自動でアップロードされるものはありません。 |
+| ログはどこにありますか？ | ヘルプ -> ログフォルダを開く を使うか、Windows では `%USERPROFILE%\.anki_miner\anki_miner.log`、macOS/Linux では `~/.anki_miner/anki_miner.log` を開いてください。ローテーションされたログには `.1` から `.5` の接尾辞が付きます。 `anki_miner.crash` があれば一緒に送ってください。アプリを落としたクラッシュは、ログではなくこのファイルにスタックを書き出します。補助プロセスの出力が入る `anki_miner.child.log` も同じです。 |
+| バグを報告する           | ヘルプ -> 診断情報をエクスポート… で、ログ（`anki_miner.log` とそのローテーション、`anki_miner.crash`、`anki_miner.child.log`）、`settings.json`、設定と UI 状態のファイル、キューのスナップショットとダウンロードのマニフェスト、そしてマシンとアプリの状態をまとめたレポート（`environment.txt`、`health.txt`、`resources.txt`、`stores.txt`、`disk.txt`、`screens.txt`）を含む ZIP を任意の場所に書き出します。お使いのコンピューターのファイルパスやファイル名が含まれるため、アップロードする前に内容を確認してください。自動でアップロードされるものはありません。 |
 | 診断ログを増やしたい | Anki Miner を起動する前に `ANKI_MINER_LOG_LEVEL=DEBUG` を設定すると、サードパーティの yt-dlp、urllib3、fugashi の詳細を記録できます。既定は `WARNING` で、Anki Miner 自身のログは DEBUG のままです。 |
 | 音声の言語が違う         | 最初にマイニング言語の音声トラックを試し、なければ既定のものにフォールバックします。      |
 | 字幕がずれている         | GUI の字幕オフセット調整を使ってください（範囲は ±300 秒）。                     |

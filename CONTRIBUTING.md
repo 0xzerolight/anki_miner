@@ -110,6 +110,119 @@ Patch at the smallest boundary that still exercises your code:
 
 New code should add tests where reasonable; refactors should not regress existing coverage by a meaningful amount.
 
+## Logging
+
+The log is the only evidence a maintainer gets from a bug report, so it is a contract rather than a
+convenience. Every rule below exists because a real report arrived that the log could not explain.
+
+**Every failure record carries four things**: the operation, its subject (path, word, URL, deck, id),
+`type(exc).__name__`, and `str(exc)`. A message that drops the exception text ("Audio fetch failed")
+is a line that cost a round trip with the reporter. A typed `AnkiMinerException` is one WARNING line
+and no traceback; anything else is logged with `exc_info=True`, because an unexpected type is exactly
+the case where the stack is the diagnosis.
+
+**Levels.**
+
+| Level | When |
+|---|---|
+| `ERROR` | Unexpected failures — the `logger.exception` class. Something we did not model went wrong. |
+| `WARNING` | A user-visible result changed, or the failure is user-facing. |
+| `INFO` | Lifecycle receipts: start, end, inventory, effective configuration. |
+| `DEBUG` | Per-item and cosmetic detail. Always written to disk (see below), so it is cheap to add. |
+
+**What reaches the file.** The `anki_miner` logger is pinned to `DEBUG` and the rotating file handler
+is at `DEBUG`, so the project's own DEBUG lines are always on disk — there is nothing for a user to
+enable before reproducing a bug. The root logger sits at `WARNING` so third-party libraries
+(yt-dlp, fugashi, PyQt) stay quiet; `ANKI_MINER_LOG_LEVEL` lowers the *root* level when you need
+their chatter too. The ring is 16 MiB × 5 backups.
+
+**Log through a choke point, not a fresh `logger.info`.** Each of these already stamps the fields the
+contract asks for, and a new one drifts from them within a release:
+
+| Choke point | Where | Covers |
+|---|---|---|
+| `CancellableWorker.log_start` / `log_end` / `report_failure` | `gui/workers/base_worker.py` | Worker lifecycle, thread naming, elapsed. `report_failure` is the *only* worker catch-all — extend it, never add a second. |
+| `log_summary` | `utils/logging_ext.py` | Every `event: key=value` receipt. Paths render verbatim; values containing whitespace are quoted. |
+| `timed_phase` | `utils/timing.py` | Pipeline phase boundaries with a duration. |
+| `run_supervised` + `log_command` / `log_command_result` | `utils/process_supervisor.py`, `utils/subprocess_log.py` | Every external process: argv (secrets masked), cwd, timeout, exit state, stderr tail. |
+| `log_resolution` / `log_resolution_refused` | `utils/resolver_log.py` | Which binary was chosen, from which tier, and why a tier was refused. |
+| `TaskRegistry` | `gui/controllers/task_registry.py` | Task start, end, cancel, stall. Progress has one owner; so does its log. |
+| `GUIPresenter` | `gui/presenters/gui_presenter.py` | Presenter messages are mirrored to the file log, so a screen message is never GUI-only. |
+| `LogWidget` | `gui/widgets/log_widget.py` | The Activity Log; every line it shows is also written to disk. |
+| `ScreenIssueBanner` | `gui/widgets/base/screen_issue_banner.py` | Recoverable failures shown inline — including the ones no screen was there to display. |
+| `write_diagnostics_bundle` | `diagnostics/bundle.py` | The export a reporter attaches. Adding a member means bumping `BUNDLE_FORMAT`. |
+
+**`suppressed()` is the only sanctioned broad swallow.** A `except Exception: pass`, or a
+`contextlib.suppress(Exception)`, deletes the one record of a failure that already decided not to
+surface itself:
+
+```python
+from anki_miner.utils.logging_ext import suppressed
+
+with suppressed(logger, "SIGUSR1 stack dump registration"):
+    faulthandler.register(signal.SIGUSR1, file=stream, all_threads=True, chain=False)
+```
+
+It writes `Ignored failure during <what>: <Type>: <message>` at DEBUG (raise `level=`, or pass
+`exc_info=True`, when the swallow is load-bearing). `tests/unit/test_silent_except_ratchet.py`
+enforces this against the per-file budget in `tests/unit/silent_except_budget.txt`: a new silent
+broad handler fails the suite, and a file that drops to zero must have its budget entry removed, so
+the ratchet only turns one way. Handlers narrow enough to be self-documenting (`except OSError: pass`
+on a best-effort unlink) are not counted.
+
+**Keep a broad `except` annotated** with why it is broad and what the caller loses, in the established
+form — `# noqa: BLE001 — bucket A: boot continues without native-crash capture.`
+
+**Bound every list you log.** `capped(items, 50)` renders at most the limit and appends `"+N more"`.
+Per-row importer and parser failures are counted and reported once at the end, never one line per row —
+a malformed 400k-entry dictionary must not become 400k log lines.
+
+**Log strings are English and untranslated.** Never wrap one in `tr()`: the event names are grep
+anchors, and a log written in the user's UI language is a log no maintainer can search.
+
+**No new config for logging.** The locked rule for the whole project applies here with no exceptions:
+no toggle, no verbosity preference, no "enable diagnostics" checkbox. A module constant or an
+environment variable is the escape hatch when one is genuinely needed.
+
+### Grep anchors
+
+Event names are stable strings, so a report is answered by grepping rather than reading. The current
+set, condensed — match them verbatim when adding to an area:
+
+| Area | Anchors |
+|---|---|
+| Session | `Session start:` · `Session end:` · `Config effective:` · `Home directory unavailable` |
+| Process | `Unhandled exception:` · `Unhandled exception in thread` · `Unraisable exception` |
+| Watchdog | `GUI thread stall detected:` · `stall detection resumed:` · `stall watchdog stopped:` |
+| GUI run | `Run start:` · `Run end:` · `Run refused:` · `Run control:` · `Run fatal:` |
+| Tasks | `Task start:` · `Task end:` · `Task cancelling:` · `Task stalled:` · `Task cancel ignored:` |
+| Queues | `<Worker> started:` · `<Worker> finished:` · `Queue refused:` · `Queue item:` · `Queue retry:` |
+| Surfaces | `Screen issue:` · `Presenter warning:` · `Pipeline item error:` · `Curator decision:` |
+| Off-thread | `<Parent>.<work> started:` · `Off-thread dispatch rejected` · `File picker:` |
+| Shutdown | `Close requested:` · `Close join:` · `Deferring close:` · `Close finalized:` |
+| Subprocess | `<op>: argv=` · `<op> spawn failed:` · `<op> failed: state= rc=` |
+| yt-dlp | `yt-dlp cookie source:` · `yt-dlp capability` · `yt-dlp classify:` · `youtube fetch starting:` |
+| Pipeline | `Pipeline start:` · `Pipeline end:` · `Phase N ...:` · `Frequency cutoff ignored:` |
+| Lookup | `Definitions batch:` · `Definitions missed:` · `Audio fetch:` · `Audio packs mounted:` |
+| Encoding | `Subtitle decode:` · `Subtitle parse failed:` · `Known words import done:` |
+| Stores | `Index rejected:` · `Index meta invalid:` · `Yomitan import:` · `Audio pack import:` |
+| Inventory | `Resource inventory:` · `Diagnostics exported:` · `Validation check:` · `AnkiConnect ready:` |
+| Sweep | `Ignored failure during <what>:` |
+
+### Privacy
+
+Diagnosis comes first: file paths, mined words and readings, YouTube video ids, deck and note-type
+names, and exception messages are logged **verbatim**. A basename cannot locate the pack folder that
+stalled, and a log line that reads `https://www.youtube.com/watch` cannot say which video failed.
+
+Redact secrets only, and only these: URL userinfo, the values of `--username` / `--password` /
+`--ap-*` / `--video-password` in an argv (`mask_argv`), the query string of custom audio URLs
+(`redact_url_for_log` — it may carry an API key), and cookie *contents*. A cookie file's path is a
+path and is logged like any other.
+
+The diagnostics bundle inherits this: it is inert, it preserves paths by design, and it carries a
+privacy sentence telling the reporter to read it before uploading.
+
 ## Translations
 
 If your change adds or edits a user-facing UI string, refresh the translation catalogs before committing:

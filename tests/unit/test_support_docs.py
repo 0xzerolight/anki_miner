@@ -99,3 +99,91 @@ def test_bug_report_collects_log_files_and_status() -> None:
     assert "optional paste alternative" in fields["logs"]["attributes"]["label"]
     assert fields["logs"]["attributes"]["render"] == "shell"
     assert fields["logs"]["validations"]["required"] is False
+
+
+def test_contributing_records_the_logging_contract() -> None:
+    contributing = (ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    assert "## Logging" in contributing
+    logging_section = contributing.split("## Logging", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
+
+    # The failure-record rule: operation, subject, exception type AND message.
+    assert "`type(exc).__name__`" in logging_section
+    assert "`str(exc)`" in logging_section
+    assert "exc_info" in logging_section
+
+    # The choke points a new call site is supposed to reuse instead of inventing one.
+    for choke_point in (
+        "log_start",
+        "report_failure",
+        "log_end",
+        "timed_phase",
+        "log_summary",
+        "run_supervised",
+        "log_command",
+        "write_diagnostics_bundle",
+        "LogWidget",
+        "ScreenIssueBanner",
+        "GUIPresenter",
+        "TaskRegistry",
+    ):
+        assert choke_point in logging_section, choke_point
+
+    # `suppressed()` is the only sanctioned broad swallow, and the ratchet that
+    # keeps new ones out is named so the failure message can be acted on.
+    assert "suppressed" in logging_section
+    assert "silent_except_budget.txt" in logging_section
+
+    # Levels and the on-disk contract.
+    assert "`ANKI_MINER_LOG_LEVEL`" in logging_section
+    assert "capped" in logging_section
+    # No config toggles: the locked decision, stated where a contributor reads it.
+    assert "no new config" in logging_section.lower()
+
+    # The grep-anchor table has to be here for the anchors to be greppable.
+    for anchor in ("Run start:", "Task start:", "Session end:", "Pipeline start:"):
+        assert anchor in logging_section, anchor
+
+
+def test_architecture_describes_the_real_crash_and_early_sinks() -> None:
+    architecture = (ROOT / "ARCHITECTURE.md").read_text(encoding="utf-8")
+
+    # The old row claimed the crash file is an early-boot sink. It is not: it is
+    # faulthandler's native-crash sink, folded into the log at the next start.
+    assert "captures a failure early enough that logging is not up yet" not in architecture
+    assert "_fold_previous_crash" in architecture
+    assert "SIGUSR1" in architecture
+    assert "AnkiMiner-early-crash.log" in architecture
+    assert "anki_miner.child.log" in architecture
+
+    # Watchdog paragraph names the pause spans that turn a suppressed freeze
+    # into a record instead of silence.
+    assert "paused_stall_detection" in architecture
+    assert "stall detection resumed" in architecture
+
+
+def test_readme_names_every_file_a_reporter_has_to_send() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    troubleshooting = readme.split("## Troubleshooting", maxsplit=1)[1].split("## Roadmap", maxsplit=1)[0]
+
+    assert "anki_miner.crash" in troubleshooting
+    assert "anki_miner.child.log" in troubleshooting
+    # The privacy warning stays honest only if the bundle's contents are listed.
+    assert "settings.json" in troubleshooting
+    assert "environment.txt" in troubleshooting
+    for member in ("resources.txt", "stores.txt", "disk.txt", "screens.txt", "health.txt"):
+        assert member in troubleshooting, member
+    assert "queue snapshots" in troubleshooting
+
+
+def test_changelog_unreleased_records_the_logging_overhaul() -> None:
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    unreleased = changelog.split("## [Unreleased]", maxsplit=1)[1].split("\n## [", maxsplit=1)[0]
+
+    changed = unreleased.split("### Changed", maxsplit=1)[1].split("### Removed", maxsplit=1)[0]
+    assert "16 MiB" in changed
+    assert "threadName" in changed or "thread name" in changed
+    assert "bundle_format" in changed or "bundle format" in changed
+
+    fixed = unreleased.split("### Fixed", maxsplit=1)[1]
+    assert "audio" in fixed.lower()
+    assert "video id" in fixed.lower() or "video ids" in fixed.lower()

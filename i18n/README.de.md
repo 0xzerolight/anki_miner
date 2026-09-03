@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:3bd1e330de2efafb -->
+<!-- i18n-source: README.md sha256:2694be0f35a3ecf6 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -205,8 +205,8 @@ Verwendet mitgelieferte Namens-Wortgruppen, abgeleitet von [JMnedict](https://ww
 | Windows-Installer öffnet nicht / SmartScreen-Warnung | Siehe [Hinweise zum ersten Start](#hinweise-zum-ersten-start-unsignierte-builds): **Weitere Informationen** -> **Trotzdem ausführen** wählen; Defender-Fehlalarme aus dem **Schutzverlauf** wiederherstellen. |
 | Frische Installation hat keine Definitionen | Tools -> Einrichtungsassistent oder Tools -> Empfohlene Ressourcen herunterladen ausführen. Für den manuellen Import die Yomitan-ZIP unverändert lassen (nicht entpacken). |
 | Wörterbuch hinzufügen bleibt hängen oder schlägt fehl | Die zuletzt sichtbare Phase notieren und Logs anhängen (siehe „Wo sind die Logs?“ unten). Name, Quelle und Größe der Wörterbuch-ZIP in der Meldung angeben. |
-| Wo sind die Logs?      | Hilfe -> Protokollordner öffnen verwenden, oder unter Windows `%USERPROFILE%\.anki_miner\anki_miner.log` bzw. unter macOS/Linux `~/.anki_miner/anki_miner.log` öffnen. Rotierte Logs verwenden die Endungen `.1` bis `.5`. |
-| Einen Fehler melden          | Hilfe -> Diagnose exportieren… schreibt eine ZIP mit Logs und Systemdetails an einen Ort deiner Wahl. Vor dem Hochladen prüfen, da sie Dateipfade und Dateinamen von deinem Computer enthält. Es wird nichts automatisch hochgeladen. |
+| Wo sind die Logs?      | Hilfe -> Protokollordner öffnen verwenden, oder unter Windows `%USERPROFILE%\.anki_miner\anki_miner.log` bzw. unter macOS/Linux `~/.anki_miner/anki_miner.log` öffnen. Rotierte Logs verwenden die Endungen `.1` bis `.5`. Sende auch `anki_miner.crash`, falls vorhanden - ein Absturz, der die App beendet hat, schreibt seinen Stack in diese Datei und nicht ins Log - sowie `anki_miner.child.log` mit der Ausgabe eines Hilfsprozesses. |
+| Einen Fehler melden          | Hilfe -> Diagnose exportieren… schreibt eine ZIP an einen Ort deiner Wahl: die Logs (`anki_miner.log` samt Rotationen, `anki_miner.crash`, `anki_miner.child.log`), deine `settings.json`, die Konfigurations- und UI-Zustandsdateien, Warteschlangen-Snapshots und Download-Manifeste sowie erzeugte Berichte zu Rechner und App-Zustand (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Vor dem Hochladen prüfen, da sie Dateipfade und Dateinamen von deinem Computer enthält. Es wird nichts automatisch hochgeladen. |
 | Mehr Diagnoseprotokollierung | `ANKI_MINER_LOG_LEVEL=DEBUG` vor dem Start von Anki Miner setzen, um Details von yt-dlp, urllib3 und fugashi (Drittanbieter) zu erfassen. Standard ist `WARNING`; Anki-Miner-Logs bleiben bei DEBUG. |
 | Audio ist in falscher Sprache  | Das Tool versucht zuerst Audiospuren in der Mining-Sprache, dann greift es auf die Standardspur zurück. |
 | Untertitel sind nicht synchron    | Die Untertitel-Offset-Steuerung in der GUI verwenden (Bereich ±300 Sekunden).      |
