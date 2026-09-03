@@ -23,11 +23,11 @@ def _word(lemma: str, occurrence_count: int) -> TokenizedWord:
 
 
 def test_occurrences_column_present(qtbot):
-    """The table gains a 7th 'Occurrences' column."""
+    """'Occurrences' sits at index 6, before the two sentence-signal columns."""
     dlg = WordCurationDialog([_word("食べる", 3)])
     qtbot.addWidget(dlg)
 
-    assert dlg.table.columnCount() == 7
+    assert dlg.table.columnCount() == 9
     header = dlg.table.horizontalHeaderItem(_OCC_COL)
     assert header is not None
     assert header.text() == "Occurrences"

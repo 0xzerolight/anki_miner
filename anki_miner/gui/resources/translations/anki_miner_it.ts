@@ -9362,12 +9362,30 @@ I dizionari installati, l'audio, gli elenchi di frequenza e il tema vengono mant
         <translation>Occorrenze</translation>
     </message>
     <message>
+        <source>Unknowns in line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence length</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
         <translation>Quante volte questa parola compare in questo episodio.
 
 Il selettore “Frasi” offre un'opzione per ogni riga di sottotitoli, quindi di solito ne elenca meno: le ripetizioni sulla stessa riga contano una volta sola qui, e le righe in cui la parola assume una forma che cambierebbe la “Parola (estratta)” della carta vengono saltate.</translation>
+    </message>
+    <message>
+        <source>How many words you do not know yet appear on this word’s own subtitle line.
+
+Sort ascending to put i+1 lines first — the ones whose only unknown word is this one. “-” means the line could not be counted.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Characters in the example sentence. Sort ascending for the shortest.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>

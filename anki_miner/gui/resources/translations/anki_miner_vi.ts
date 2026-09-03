@@ -9346,12 +9346,30 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Số lần xuất hiện</translation>
     </message>
     <message>
+        <source>Unknowns in line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence length</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
         <translation>Số lần từ này xuất hiện trong tập phim.
 
 Khung chọn “Câu” đưa ra một lựa chọn cho mỗi dòng phụ đề nên thường liệt kê ít hơn: các lần lặp trong cùng một dòng chỉ được tính một lần ở đây, và những dòng mà từ mang dạng làm thay đổi “Từ (đã khai thác)” của thẻ sẽ bị bỏ qua.</translation>
+    </message>
+    <message>
+        <source>How many words you do not know yet appear on this word’s own subtitle line.
+
+Sort ascending to put i+1 lines first — the ones whose only unknown word is this one. “-” means the line could not be counted.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Characters in the example sentence. Sort ascending for the shortest.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
