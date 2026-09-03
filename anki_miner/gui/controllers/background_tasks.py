@@ -10,8 +10,8 @@ badge) stays in MainWindow.
 
 from __future__ import annotations
 
-import contextlib
 import logging
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -24,8 +24,10 @@ from anki_miner.gui.utils.run_off_thread import (
     join_all_off_thread_workers,
     join_or_retain,
     still_running,
+    worker_context,
 )
 from anki_miner.gui.workers.validation_worker import ValidationWorkerThread
+from anki_miner.utils.logging_ext import capped, log_summary, suppressed
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -57,6 +59,25 @@ logger = logging.getLogger(__name__)
 # for laggard threads to finish.
 _CLOSE_JOIN_GRACE_MS = 2000
 _CLOSE_POLL_INTERVAL_MS = 200
+# How often a deferred close repeats that it is still waiting. The poll runs
+# five times a second; one line per poll would bury the shutdown in thousands
+# of records over a long wait, while silence is what made the 10 h zombie
+# unreadable -- a live process with nothing logged after "Deferring close".
+_CLOSE_POLL_LOG_INTERVAL_S = 30.0
+
+
+def _worker_label(worker: object) -> str:
+    """Log label for a worker whose C++ object may already be gone.
+
+    A laggard can be deleted between the poll that recorded it and the line
+    that names it, and ``worker_context`` reads an attribute off the wrapper --
+    which raises once sip has deleted it. A shutdown trace must never be the
+    thing that breaks a shutdown.
+    """
+    try:
+        return worker_context(worker)
+    except RuntimeError:
+        return "<deleted>"
 
 
 def _needs_jmdict_migration(xml_path: Path, dicts_root: Path, chain: tuple | None = None) -> bool:
@@ -164,6 +185,12 @@ class BackgroundTaskController(QObject):
         self._close_poll_timer: QTimer | None = None
         self._close_laggards: list = []
         self._close_finalized = False
+        # Shutdown trace state: when the close began (so every later line can
+        # report how long the app has been closing) and how many deferred polls
+        # have run (the "still waiting" cadence counts polls, not wall clock,
+        # so it survives a machine that suspended mid-shutdown).
+        self._close_started_at: float | None = None
+        self._close_poll_count = 0
 
     # --- Task starters -----------------------------------------------------
 
@@ -645,6 +672,7 @@ class BackgroundTaskController(QObject):
             means the caller must defer the close via :meth:`defer_close`
             instead of letting Qt destroy running QThreads.
         """
+        self._close_started_at = time.monotonic()
         dispatch_root = self.parent()
         if dispatch_root is not None:
             close_off_thread_dispatch(dispatch_root)
@@ -739,7 +767,23 @@ class BackgroundTaskController(QObject):
 
         Returns True when the worker has exited (or was None / not running).
         """
-        return join_or_retain(worker, timeout_ms) is None
+        # Only a LIVE worker is worth a line: most of the handles routed
+        # through here are None on any given close, and a receipt per absent
+        # handle would push the two or three real joins off the readable part
+        # of the shutdown.
+        if not still_running(worker):
+            return True
+        started_at = time.monotonic()
+        retained = join_or_retain(worker, timeout_ms)
+        log_summary(
+            logger,
+            "Close join",
+            worker=_worker_label(worker),
+            outcome="joined" if retained is None else "timeout",
+            timeout_ms=timeout_ms,
+            elapsed_ms=round((time.monotonic() - started_at) * 1000),
+        )
+        return retained is None
 
     def defer_close(self, event, laggards: list) -> None:
         """Deferred arm of the shutdown join policy.
@@ -750,12 +794,16 @@ class BackgroundTaskController(QObject):
         that never exits keeps the hidden process alive by design: a
         discoverable lingering process beats an abort mid-shutdown.
         """
-        logger.warning(
-            "Deferring close: %d worker thread(s) still running after %d ms grace",
-            len(laggards),
-            _CLOSE_JOIN_GRACE_MS,
+        log_summary(
+            logger,
+            "Deferring close",
+            level=logging.WARNING,
+            count=len(laggards),
+            grace_ms=_CLOSE_JOIN_GRACE_MS,
+            workers=capped(_worker_label(worker) for worker in laggards),
         )
         self._close_laggards = laggards
+        self._close_poll_count = 0
         if self._close_poll_timer is None:
             self._close_poll_timer = QTimer(self)
             self._close_poll_timer.setInterval(_CLOSE_POLL_INTERVAL_MS)
@@ -774,23 +822,62 @@ class BackgroundTaskController(QObject):
         """
         if self._close_finalized:
             return
+        self._close_poll_count += 1
         if any(still_running(worker) for worker in self._close_laggards):
+            self._log_still_waiting()
             return
         late_laggards = join_all_off_thread_workers(timeout_ms=0)
         if late_laggards:
             self._close_laggards = late_laggards
+            self._log_still_waiting()
             return
         self._close_finalized = True
         if self._close_poll_timer is not None:
             self._close_poll_timer.stop()
+        # Before the release and the save below, not after: a close that hangs
+        # in either of those two is then a "Close finalized" with no "Session
+        # end" after it, which is the whole point of the anchor.
+        log_summary(
+            logger,
+            "Close finalized",
+            deferred="yes",
+            waited_s=self._close_waited_s(),
+            polls=self._close_poll_count,
+            laggards=capped(_worker_label(worker) for worker in self._close_laggards),
+        )
         # Every laggard has exited, so no thread is reading through the per-tab
         # processor sqlite handles; release them deterministically here too, not
         # just on the immediate-close path, or OVH-061's deterministic teardown
         # is skipped whenever a worker deferred the close (F7). Guarded so a
         # refusal can't block the quit.
-        with contextlib.suppress(Exception):
+        with suppressed(logger, "dictionary resource release"):
             self._window.release_dictionary_resources()
         try:
             GUIConfigManager.save_config(self._window.config)
         finally:
             QApplication.quit()
+
+    def _close_waited_s(self) -> float:
+        """Seconds since the close began, or ``0.0`` before it has."""
+        if self._close_started_at is None:
+            return 0.0
+        return round(time.monotonic() - self._close_started_at, 1)
+
+    def _log_still_waiting(self) -> None:
+        """Repeat the laggard list on a bounded cadence while the poll waits.
+
+        Counting polls rather than reading the clock keeps the cadence honest
+        on a machine that suspended mid-shutdown, and makes the line reachable
+        from a test that drives the poll by hand.
+        """
+        polls_per_line = max(1, round(_CLOSE_POLL_LOG_INTERVAL_S * 1000 / _CLOSE_POLL_INTERVAL_MS))
+        if self._close_poll_count % polls_per_line:
+            return
+        log_summary(
+            logger,
+            "Close still waiting",
+            level=logging.WARNING,
+            workers=capped(_worker_label(worker) for worker in self._close_laggards),
+            polls=self._close_poll_count,
+            waited_s=self._close_waited_s(),
+        )

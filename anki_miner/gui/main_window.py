@@ -3,6 +3,7 @@
 import logging
 import os
 import sys
+import time
 from collections import Counter
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
@@ -84,6 +85,7 @@ from anki_miner.services import ShortcutResult, ShortcutService, ValidationServi
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.utils.bundled_binary import frozen_state
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
 
 if TYPE_CHECKING:
     from anki_miner.gui.capabilities import CapabilityTarget
@@ -2055,6 +2057,26 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         Args:
             event: Close event
         """
+        # First statement in the method: everything below can hide the window,
+        # defer, or return, and a close that leaves no trace at all is what
+        # made a hung shutdown unreadable. The clock started here is what the
+        # immediate arm reports as waited_s.
+        close_started_at = time.monotonic()
+        log_summary(
+            logger,
+            "Close requested",
+            tabs=self.tabs.count(),
+            current=self.tabs.tabText(self.tabs.currentIndex()),
+            committed="yes" if self._close_committed else "no",
+            health_window="open" if self._system_health_window is not None else "-",
+            monitor="open" if self._mini_job_monitor is not None else "-",
+            download_window=(
+                "open"
+                if self._resource_download_session is not None and self._resource_download_session.window is not None
+                else "-"
+            ),
+        )
+
         # Where the user was, captured BEFORE anything can move or hide the
         # window: background_tasks.shutdown below may hand off to the deferred
         # close path, which hides the window and polls — and a hidden window's
@@ -2143,6 +2165,17 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # than at Python GC.  Safe here: all workers are joined above so no
         # live thread is reading through these handles (OVH-061 / Issue #30).
         self.release_dictionary_resources()
+
+        # The immediate arm's counterpart to the deferred one in
+        # _poll_deferred_close, logged before the save so a close that hangs in
+        # save_config still leaves this line behind.
+        log_summary(
+            logger,
+            "Close finalized",
+            deferred="no",
+            waited_s=round(time.monotonic() - close_started_at, 1),
+            laggards=None,
+        )
 
         # Save configuration before closing
         try:
