@@ -29,6 +29,8 @@ from pathlib import Path
 from anki_miner.config import AnkiMinerConfig, paths
 from anki_miner.exceptions import OperationCancelled
 from anki_miner.utils import ytdlp_resolver
+from anki_miner.utils.logging_ext import capped, log_summary
+from anki_miner.utils.subprocess_log import tail_for_log
 from anki_miner.utils.subprocess_utils import no_window_kwargs
 from anki_miner.utils.version_compare import is_newer
 
@@ -121,14 +123,50 @@ class _PromotionDeferred(Exception):
 
 
 def _validate_github_url(url: str) -> bool:
-    """Return True iff *url* is an https URL on the GitHub allowlist (fail-closed)."""
+    """Return True iff *url* is an https URL on the GitHub allowlist (fail-closed).
+
+    Every rejection is logged at WARNING. A rejected URL silently turns the whole
+    update into "Could not reach GitHub releases" / "No downloadable asset", and
+    those two messages are indistinguishable from an offline machine — which is
+    exactly the shape of an "auto-update never runs" report.
+    """
     if not isinstance(url, str) or not url:
+        log_summary(logger, "yt-dlp URL rejected", level=logging.WARNING, reason="empty_or_not_a_string", url=url)
         return False
     try:
         parts = urllib.parse.urlsplit(url)
-    except ValueError:
+    except ValueError as exc:
+        log_summary(
+            logger,
+            "yt-dlp URL rejected",
+            level=logging.WARNING,
+            reason="unparseable",
+            url=url,
+            error_type=type(exc).__name__,
+            error=str(exc),
+        )
         return False
-    return parts.scheme == "https" and parts.netloc.lower() in _GITHUB_URL_ALLOWLIST
+    if parts.scheme != "https":
+        log_summary(
+            logger,
+            "yt-dlp URL rejected",
+            level=logging.WARNING,
+            reason="scheme_not_https",
+            url=url,
+            scheme=parts.scheme,
+        )
+        return False
+    if parts.netloc.lower() not in _GITHUB_URL_ALLOWLIST:
+        log_summary(
+            logger,
+            "yt-dlp URL rejected",
+            level=logging.WARNING,
+            reason="netloc_not_allowlisted",
+            url=url,
+            netloc=parts.netloc.lower(),
+        )
+        return False
+    return True
 
 
 def _release_asset_url(tag: str, asset_name: str, repo: str = _STABLE_REPO) -> str:
@@ -259,12 +297,39 @@ class YtdlpUpdater:
                     timeout=15,
                     **no_window_kwargs(),
                 )
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            # A None here makes check_and_update treat the machine as having no
+            # yt-dlp and re-install on every run, so the reason it failed is the
+            # difference between "not installed" and "installed but unrunnable".
+            log_summary(
+                logger,
+                "yt-dlp version probe failed",
+                level=logging.WARNING,
+                reason="spawn_failed",
+                error_type=type(exc).__name__,
+                error=str(exc),
+            )
             return None
         if proc.returncode != 0:
+            log_summary(
+                logger,
+                "yt-dlp version probe failed",
+                level=logging.WARNING,
+                reason="nonzero_exit",
+                executable=Path(executable),
+                returncode=proc.returncode,
+                stderr_tail=capped(tail_for_log(proc.stderr or "")),
+            )
             return None
         line = (proc.stdout or "").strip().splitlines()
         if not line:
+            log_summary(
+                logger,
+                "yt-dlp version probe failed",
+                level=logging.WARNING,
+                reason="empty_output",
+                executable=Path(executable),
+            )
             return None
         version = line[0].strip()
         return version or None
@@ -277,8 +342,8 @@ class YtdlpUpdater:
         yields ``(None, None)`` (or a parsed version with a None URL when only
         the release assets are invalid). Never raises.
         """
+        api_url = _api_url(self._repo)
         try:
-            api_url = _api_url(self._repo)
             request = urllib.request.Request(
                 api_url,
                 headers={
@@ -297,15 +362,39 @@ class YtdlpUpdater:
             tag_name = data.get("tag_name", "")
             version = tag_name.lstrip("v") or None
             if version is None:
+                log_summary(logger, "yt-dlp asset refused", level=logging.WARNING, reason="no_tag_name", url=api_url)
                 return (None, None)
 
             asset_name = _ASSET_BY_PLATFORM.get(sys.platform)
             url: str | None = None
-            if asset_name:
+            if asset_name is None:
+                log_summary(
+                    logger,
+                    "yt-dlp asset refused",
+                    level=logging.WARNING,
+                    reason="no_asset_for_platform",
+                    tag=tag_name,
+                    platform=sys.platform,
+                )
+            else:
                 assets = data.get("assets") or []
                 asset_candidates = [asset for asset in assets if asset.get("name") == asset_name]
                 sums_candidates = [asset for asset in assets if asset.get("name") == _SUMS_ASSET_NAME]
-                if len(asset_candidates) == 1 and len(sums_candidates) == 1:
+                if len(asset_candidates) != 1 or len(sums_candidates) != 1:
+                    # The commonest shape of "the updater found a release but
+                    # will not install it": a release that has not finished
+                    # publishing its per-OS asset or its checksum manifest.
+                    log_summary(
+                        logger,
+                        "yt-dlp asset refused",
+                        level=logging.WARNING,
+                        reason="asset_not_unique",
+                        tag=tag_name,
+                        asset=asset_name,
+                        matches=len(asset_candidates),
+                        sums_matches=len(sums_candidates),
+                    )
+                else:
                     asset_url = asset_candidates[0].get("browser_download_url")
                     sums_url = sums_candidates[0].get("browser_download_url")
                     if (
@@ -315,9 +404,31 @@ class YtdlpUpdater:
                         and sums_url == _release_asset_url(tag_name, _SUMS_ASSET_NAME, self._repo)
                     ):
                         url = asset_url
+                        log_summary(logger, "yt-dlp asset selected", tag=tag_name, asset=asset_name, url=url)
+                    else:
+                        log_summary(
+                            logger,
+                            "yt-dlp asset refused",
+                            level=logging.WARNING,
+                            reason="asset_url_not_canonical",
+                            tag=tag_name,
+                            asset=asset_name,
+                            asset_url=asset_url,
+                            sums_url=sums_url,
+                        )
             return (version, url)
-        except Exception:
-            logger.debug("yt-dlp latest-release lookup failed", exc_info=True)
+        except Exception as exc:  # noqa: BLE001 — bucket: never propagate to the caller
+            # WARNING, not DEBUG: the caller renders this as "Could not reach
+            # GitHub releases", which reads identically for an offline machine,
+            # a rate-limited API and a changed response shape. The url and the
+            # exception message are what separate them.
+            logger.warning(
+                "yt-dlp latest-release lookup failed: url=%s error_type=%s error=%s",
+                api_url,
+                type(exc).__name__,
+                exc,
+                exc_info=True,
+            )
             return (None, None)
 
     # --- throttle ----------------------------------------------------------
@@ -372,11 +483,23 @@ class YtdlpUpdater:
             self._cancel = cancel
         previous_throttle_mtime_ns: int | None = None
         try:
+            # "The auto-update never runs" is a report about a code path that
+            # normally exits before touching the network. Each early return says
+            # which of them it took.
             if not force and self._throttled():
+                log_summary(
+                    logger,
+                    "yt-dlp update skipped",
+                    level=logging.DEBUG,
+                    reason="throttled",
+                    marker=self._throttle_path(),
+                    window_s=_THROTTLE_SECONDS,
+                )
                 return YtdlpUpdateResult(action="skipped_throttle", message="Checked recently; skipped.")
 
             with ytdlp_resolver.managed_ytdlp_lock(blocking=False) as acquired:
                 if not acquired:
+                    log_summary(logger, "yt-dlp update deferred", reason="managed_binary_in_use")
                     return YtdlpUpdateResult(
                         action="deferred",
                         message="yt-dlp is in use; update deferred.",
@@ -394,6 +517,7 @@ class YtdlpUpdater:
 
             local = self.local_version()
             if local and not is_newer(latest, local):
+                log_summary(logger, "yt-dlp up to date", installed=local, available=latest)
                 return YtdlpUpdateResult(
                     action="up_to_date",
                     installed_version=local,
@@ -418,6 +542,10 @@ class YtdlpUpdater:
             )
         except _PromotionDeferred:
             self._restore_throttle(previous_throttle_mtime_ns)
+            # Distinct from the pre-download defer above: the asset is already
+            # downloaded and verified, and only the promotion into the managed
+            # slot lost the race.
+            log_summary(logger, "yt-dlp update deferred", reason="promotion_blocked")
             return YtdlpUpdateResult(
                 action="deferred",
                 message="yt-dlp is in use; update deferred.",
@@ -526,7 +654,17 @@ class YtdlpUpdater:
 
                 ytdlp_invocation.ytdlp_supports_js_runtimes.cache_clear()
                 ytdlp_invocation.ytdlp_supports_remote_components.cache_clear()
-            logger.info("Installed yt-dlp %s to %s", version, final)
+            # The sha256 is the other half of the receipt the resolver checks:
+            # with it, a later "receipt_mismatch" refusal can be traced to the
+            # exact generation that was installed here.
+            log_summary(
+                logger,
+                "yt-dlp installed",
+                version=version,
+                path=final,
+                bytes=written,
+                sha256=actual_sha256,
+            )
             return final
         except BaseException:
             # Clean up the partial / rejected tmp on ANY failure (incl. cancel).
@@ -587,6 +725,21 @@ class YtdlpUpdater:
         """``os.replace`` with one retry on PermissionError (Windows AV / lock)."""
         try:
             os.replace(tmp, final)
-        except PermissionError:
+        except PermissionError as exc:
+            # Both paths, because the retry runs at four different points of the
+            # promotion (binary backup, receipt backup, staged install, receipt
+            # install) and the pair is the only thing that says which. A retry
+            # that succeeds still means an AV scanner or a running image is
+            # racing the install, which is the precursor to the failure that
+            # leaves the user on the old binary.
+            log_summary(
+                logger,
+                "yt-dlp replace retry",
+                level=logging.WARNING,
+                src=tmp,
+                dst=final,
+                error_type=type(exc).__name__,
+                error=str(exc),
+            )
             time.sleep(0.5)
             os.replace(tmp, final)

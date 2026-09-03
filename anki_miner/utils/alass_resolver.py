@@ -17,6 +17,7 @@ non-frozen / no-override case is intentional: it preserves the historical behavi
 that existing subprocess tests assert (``cmd[0] == "alass"``).
 """
 
+import logging
 import os
 import shutil
 import sys
@@ -24,8 +25,11 @@ from pathlib import Path
 from typing import Any
 
 from anki_miner.utils.bundled_binary import bundled_name, frozen_state
+from anki_miner.utils.resolver_log import log_resolution, log_resolution_refused
 
 __all__ = ["alass_available", "resolve_alass"]
+
+logger = logging.getLogger(__name__)
 
 # Cache keyed by (name, override-as-str, bin-root-as-str, frozen-state, meipass)
 # so that a changed override, bin_root, or frozen state is never masked by a
@@ -67,11 +71,20 @@ def _executable_file(path: Path) -> bool:
 
 
 def _compute(base: str, override: Any, bin_root: Any, frozen: bool, meipass: str | None) -> str:
+    # Provenance is logged from here, never from `_resolve`: this runs only on a
+    # cache miss, so both the receipt and any refusal are bounded to once per
+    # cache generation.
     # 1. Config override.
     if override:
         override_path = Path(override)
         if _executable_file(override_path):
+            log_resolution(logger, base, "override", str(override_path))
             return str(override_path)
+        if override_path.exists():
+            # An in-app alass install lands 0755; a hand-copied one often does
+            # not, and the retime tab then reports alass as missing while the
+            # user is looking at the file they configured.
+            log_resolution_refused(logger, base, "override_not_executable", override=override_path)
 
     # 2. Bundled binary inside the frozen distributable. Require the executable
     #    bit (POSIX) so a present-but-non-exec bundle falls through instead of
@@ -79,15 +92,22 @@ def _compute(base: str, override: Any, bin_root: Any, frozen: bool, meipass: str
     if frozen and meipass is not None:
         bundled = Path(meipass) / "bin" / bundled_name(base)
         if _executable_file(bundled):
+            log_resolution(logger, base, "bundled", str(bundled))
             return str(bundled)
+        if bundled.exists():
+            log_resolution_refused(logger, base, "bundled_not_executable", bundled=bundled)
 
     # 3. Managed in-app-downloaded binary under bin_root.
     if bin_root:
         managed = Path(bin_root) / bundled_name(base)
         if _executable_file(managed):
+            log_resolution(logger, base, "managed", str(managed))
             return str(managed)
+        if managed.exists():
+            log_resolution_refused(logger, base, "managed_not_executable", managed=managed)
 
     # 4. PATH fallback — bare literal.
+    log_resolution(logger, base, "literal", base)
     return base
 
 

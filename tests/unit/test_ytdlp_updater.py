@@ -6,6 +6,7 @@ the real ~/.anki_miner (home isolation fixtures redirect it to a tmp dir).
 
 import io
 import json
+import logging
 import os
 import subprocess
 import time
@@ -744,3 +745,99 @@ class TestDownloadAndInstall:
 
         assert final.read_bytes() == old_data
         assert receipt.read_text(encoding="ascii") == old_digest
+
+
+class TestUpdaterProvenanceLogging:
+    """Receipts that answer "did the auto-update run, and what did it pick"."""
+
+    def test_asset_pick_logs_tag_asset_and_url(self, config, home, monkeypatch, caplog):
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _fake_urlopen_json(_releases_json()))
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.services.ytdlp_updater"):
+            version, url = YtdlpUpdater(config).latest_version_and_asset()
+
+        picks = [r for r in caplog.records if r.getMessage().startswith("yt-dlp asset selected:")]
+        assert len(picks) == 1
+        assert picks[0].getMessage() == f"yt-dlp asset selected: tag=2024.03.10 asset={_LINUX_ASSET} url={url}"
+        assert version == "2024.03.10"
+
+    def test_non_canonical_asset_url_is_refused(self, config, home, monkeypatch, caplog):
+        monkeypatch.setattr(ytdlp_updater.sys, "platform", "linux")
+        payload = {
+            "tag_name": "2024.03.10",
+            "assets": [
+                {"name": _LINUX_ASSET, "browser_download_url": f"https://evil.example.com/{_LINUX_ASSET}"},
+                {"name": "SHA2-256SUMS", "browser_download_url": "https://evil.example.com/SHA2-256SUMS"},
+            ],
+        }
+        monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _fake_urlopen_json(payload))
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.services.ytdlp_updater"):
+            assert YtdlpUpdater(config).latest_version_and_asset()[1] is None
+
+        refusals = [r for r in caplog.records if r.getMessage().startswith("yt-dlp asset refused:")]
+        assert len(refusals) == 1
+        assert refusals[0].levelno == logging.WARNING
+        assert "reason=asset_url_not_canonical" in refusals[0].getMessage()
+        assert "evil.example.com" in refusals[0].getMessage()
+
+    def test_off_allowlist_netloc_is_warned(self, caplog):
+        with caplog.at_level(logging.INFO, logger="anki_miner.services.ytdlp_updater"):
+            assert ytdlp_updater._validate_github_url("https://evil.example.com/x") is False
+
+        rejections = [r for r in caplog.records if r.getMessage().startswith("yt-dlp URL rejected:")]
+        assert len(rejections) == 1
+        assert rejections[0].levelno == logging.WARNING
+        assert "reason=netloc_not_allowlisted" in rejections[0].getMessage()
+        assert "netloc=evil.example.com" in rejections[0].getMessage()
+
+    def test_plain_http_url_is_warned_under_its_own_reason(self, caplog):
+        with caplog.at_level(logging.INFO, logger="anki_miner.services.ytdlp_updater"):
+            assert ytdlp_updater._validate_github_url("http://github.com/x") is False
+
+        assert "reason=scheme_not_https" in caplog.text
+
+    def test_latest_release_failure_warns_with_url_and_message(self, config, home, monkeypatch, caplog):
+        def _raise(*a, **k):
+            raise OSError("boom")
+
+        monkeypatch.setattr(ytdlp_updater.urllib.request, "urlopen", _raise)
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.services.ytdlp_updater"):
+            assert YtdlpUpdater(config).latest_version_and_asset() == (None, None)
+
+        failures = [r for r in caplog.records if "latest-release lookup failed" in r.getMessage()]
+        assert len(failures) == 1
+        assert failures[0].levelno == logging.WARNING
+        message = failures[0].getMessage()
+        assert ytdlp_updater.GITHUB_API_URL in message
+        assert "error_type=OSError" in message
+        assert "boom" in message
+
+    def test_atomic_replace_retry_warns_with_both_paths(self, tmp_path, monkeypatch, caplog):
+        src = tmp_path / "staged"
+        src.write_text("x")
+        dst = tmp_path / "final"
+        calls = []
+        real_replace = os.replace
+
+        def _replace(a, b):
+            calls.append((a, b))
+            if len(calls) == 1:
+                raise PermissionError(13, "Permission denied")
+            real_replace(a, b)
+
+        monkeypatch.setattr(ytdlp_updater.os, "replace", _replace)
+        monkeypatch.setattr(ytdlp_updater.time, "sleep", lambda _s: None)
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.services.ytdlp_updater"):
+            YtdlpUpdater._atomic_replace(src, dst)
+
+        retries = [r for r in caplog.records if r.getMessage().startswith("yt-dlp replace retry:")]
+        assert len(retries) == 1
+        assert retries[0].levelno == logging.WARNING
+        assert f"src={src}" in retries[0].getMessage()
+        assert f"dst={dst}" in retries[0].getMessage()
+        assert "error_type=PermissionError" in retries[0].getMessage()
+        assert dst.read_text() == "x"
