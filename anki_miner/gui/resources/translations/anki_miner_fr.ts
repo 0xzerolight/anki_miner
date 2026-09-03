@@ -563,6 +563,14 @@
         <translation>Stocke l'émission/l'épisode et l'horodatage d'où provient le mot. Vide = ignorer.</translation>
     </message>
     <message>
+        <source>Translation Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Card Type</source>
         <translation>Type de carte</translation>
     </message>
@@ -1560,6 +1568,14 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.</source>
         <translation>Approuvez ou rejetez chaque mot, choisissez sa phrase et sa scène, ajustez son audio, et marquez des mots comme connus — avant la création de toute carte.</translation>
+    </message>
+    <message>
+        <source>Secondary-language subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -4681,6 +4697,18 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     <message>
         <source>Click to append a built-in pattern to the regex field above.</source>
         <translation>Cliquez pour ajouter un motif intégré au champ regex ci-dessus.</translation>
+    </message>
+    <message>
+        <source>Secondary Subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable secondary-language subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deduplication</source>
@@ -8064,6 +8092,14 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Décalage des sous-titres :</translation>
     </message>
     <message>
+        <source>Translation Subtitles:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select recent file pair...</source>
         <translation>Sélectionner une paire de fichiers récente...</translation>
     </message>
@@ -8086,6 +8122,10 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>Ajuster la synchronisation des sous-titres (positif = plus tard, négatif = plus tôt)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Choose a video file first.</source>
@@ -8130,6 +8170,10 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
         <translation>Les sous-titres n'ont pas pu être lus. Vérifiez le format du fichier.</translation>
+    </message>
+    <message>
+        <source>That translation subtitle file no longer exists.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Single episode</source>
@@ -9410,6 +9454,10 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Longueur de la phrase</translation>
     </message>
     <message>
+        <source>Translation</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
@@ -9428,6 +9476,10 @@ Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le 
     <message>
         <source>Characters in the example sentence. Sort ascending for the shortest.</source>
         <translation>Nombre de caractères de la phrase d'exemple. Triez par ordre croissant pour les plus courtes.</translation>
+    </message>
+    <message>
+        <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>

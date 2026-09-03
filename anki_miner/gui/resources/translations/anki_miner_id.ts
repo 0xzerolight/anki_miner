@@ -562,6 +562,14 @@
         <translation>Menyimpan acara/episode dan stempel waktu asal kata. Kosong = lewati.</translation>
     </message>
     <message>
+        <source>Translation Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Card Type</source>
         <translation>Tipe Kartu</translation>
     </message>
@@ -1558,6 +1566,14 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.</source>
         <translation>Setujui atau tolak setiap kata, pilih kalimat dan adegannya, pangkas audionya, dan tandai kata sebagai dikenal -- sebelum kartu apa pun dibuat.</translation>
+    </message>
+    <message>
+        <source>Secondary-language subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -4668,6 +4684,18 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <message>
         <source>Click to append a built-in pattern to the regex field above.</source>
         <translation>Klik untuk menambahkan pola bawaan ke bidang regex di atas.</translation>
+    </message>
+    <message>
+        <source>Secondary Subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable secondary-language subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Deduplication</source>
@@ -8050,6 +8078,14 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Offset Subtitel:</translation>
     </message>
     <message>
+        <source>Translation Subtitles:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Select recent file pair...</source>
         <translation>Pilih pasangan berkas terkini...</translation>
     </message>
@@ -8072,6 +8108,10 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>Sesuaikan waktu subtitel (positif = lebih lambat, negatif = lebih awal)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Choose a video file first.</source>
@@ -8116,6 +8156,10 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
         <translation>Subtitel tidak dapat dibaca. Periksa format berkas.</translation>
+    </message>
+    <message>
+        <source>That translation subtitle file no longer exists.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Single episode</source>
@@ -9394,6 +9438,10 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Panjang kalimat</translation>
     </message>
     <message>
+        <source>Translation</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
@@ -9412,6 +9460,10 @@ Urutkan menaik untuk menampilkan baris i+1 lebih dulu — baris yang satu-satuny
     <message>
         <source>Characters in the example sentence. Sort ascending for the shortest.</source>
         <translation>Jumlah karakter dalam kalimat contoh. Urutkan menaik untuk yang terpendek.</translation>
+    </message>
+    <message>
+        <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
