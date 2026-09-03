@@ -189,7 +189,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         self._install_receipt(layout, self.overall_progress_widget, item_noun=self.tr("subtitle files"))
 
         # LogWidget: own header + Copy/Clear actions; install_workflow_shell moves it into the Activity drawer (D6).
-        self.log_widget = LogWidget()
+        self.log_widget = LogWidget(source=self.TASK_ID or type(self).__name__)
 
         container.setLayout(layout)
 

@@ -168,7 +168,7 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         layout.addWidget(self.progress_widget)
 
         # ``install_workflow_shell`` moves it into the Activity drawer (D6).
-        self.log_widget = LogWidget()
+        self.log_widget = LogWidget(source=self.TASK_ID or type(self).__name__)
         # The Activity console already carries a typed problem channel; a second
         # "something failed" signal would be two answers to one question (D24).
         self.log_widget.problem_logged.connect(self._on_log_problem)

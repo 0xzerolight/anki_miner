@@ -196,7 +196,7 @@ class ReadingTextTab(_ReadingMiningTabBase):
         # LogWidget: own header + Copy/Clear actions; install_workflow_shell
         # moves it into the Activity drawer (D6). Built before the card because
         # the card's controls report into it.
-        self.log_widget = LogWidget()
+        self.log_widget = LogWidget(source=self.TASK_ID or type(self).__name__)
 
         layout.addWidget(self._create_text_card())
 

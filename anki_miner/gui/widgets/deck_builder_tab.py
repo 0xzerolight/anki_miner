@@ -318,7 +318,7 @@ class DeckBuilderTab(MiningTabBase):
         layout.addWidget(self.progress_widget)
 
         # Log widget
-        self.log_widget = LogWidget()
+        self.log_widget = LogWidget(source=self.TASK_ID or type(self).__name__)
         layout.addWidget(self.log_widget)
 
         group.setLayout(layout)
