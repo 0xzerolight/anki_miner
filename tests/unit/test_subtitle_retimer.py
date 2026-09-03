@@ -472,3 +472,23 @@ class TestAlignmentFormatTranscode:
 
         assert all(path.suffix == ".srt" for path in seen)
         assert pysubs2.load(str(out_sub)).format == "srt"
+
+
+class TestEngineSkipLogging:
+    def test_missing_alass_logs_a_skip_line(self, cfg, video, in_sub, out_sub, caplog):
+        import logging
+
+        def _alass(*args: Any, **kwargs: Any) -> SyncResult:
+            raise AlassNotFoundError("alass binary not found: 'alass'.")
+
+        with (
+            caplog.at_level(logging.WARNING, logger="anki_miner.services.subtitle_retimer"),
+            patch(_FFS, side_effect=_fake_engine(ok=False, engine="ffsubsync")),
+            patch(_ALASS, side_effect=_alass),
+        ):
+            retime_subtitle(cfg, video, in_sub, out_sub)
+
+        line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Retime engine skipped:"))
+        assert "engine=alass" in line
+        assert "reason=not_found" in line
+        assert "alass binary not found" in line

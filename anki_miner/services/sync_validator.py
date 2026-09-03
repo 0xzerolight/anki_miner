@@ -26,6 +26,7 @@ from pathlib import Path
 
 from anki_miner.services.subtitle_cleaner import _load
 from anki_miner.services.sync_engines import SyncResult
+from anki_miner.utils.logging_ext import capped, log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ def validate_candidate(
 
     if not result.ok:
         reasons.append(f"{result.engine}: {result.detail or 'engine reported failure'}")
-        return ValidationVerdict(False, tuple(reasons))
+        return _verdict(original, candidate, result, reasons)
     reasons.extend(f"{result.engine}: {warning}" for warning in result.warnings)
 
     try:
@@ -87,14 +88,14 @@ def validate_candidate(
         cand_events = _load(candidate).events
     except Exception:  # noqa: BLE001 — unreadable file means unverifiable candidate
         logger.warning("sync validator: could not parse candidate or original", exc_info=True)
-        return ValidationVerdict(False, (*reasons, "candidate or original unparsable"))
+        return _verdict(original, candidate, result, [*reasons, "candidate or original unparsable"])
 
     if len(cand_events) != len(orig_events):
         reasons.append(f"cue count changed: {len(orig_events)} -> {len(cand_events)}")
-        return ValidationVerdict(False, tuple(reasons))
+        return _verdict(original, candidate, result, reasons)
     if not cand_events:
         reasons.append("candidate has no cues")
-        return ValidationVerdict(False, tuple(reasons))
+        return _verdict(original, candidate, result, reasons)
 
     max_shift = max(abs(c.start - o.start) for c, o in zip(cand_events, orig_events, strict=True))
     if max_shift > _MAX_SHIFT_MS:
@@ -127,4 +128,30 @@ def validate_candidate(
         if not (low <= ratio <= high):
             reasons.append(f"total span scaled by {ratio:.2f} (outside {low}-{high})")
 
-    return ValidationVerdict(not reasons, tuple(reasons))
+    return _verdict(original, candidate, result, reasons)
+
+
+def _verdict(
+    original: Path,
+    candidate: Path,
+    result: SyncResult,
+    reasons: list[str],
+) -> ValidationVerdict:
+    """Build the verdict and, when it is a no, record why on one line.
+
+    Every rejection goes through here, so a discarded candidate is never silent:
+    the retimer only reports that "no engine produced a trustworthy sync", which
+    leaves the per-engine reasons nowhere in the log. INFO, not WARNING -- a
+    rejection is the chain working as designed, and the next engine gets a turn.
+    """
+    verdict = ValidationVerdict(not reasons, tuple(reasons))
+    if not verdict.ok:
+        log_summary(
+            logger,
+            "Subtitle sync rejected",
+            engine=result.engine,
+            original=original,
+            candidate=candidate,
+            reasons=capped(reasons),
+        )
+    return verdict

@@ -401,3 +401,73 @@ class TestCancellationPosix:
         mock_killpg.assert_any_call(12345, signal.SIGTERM)
         mock_killpg.assert_any_call(12345, signal.SIGKILL)
         assert killed_event.is_set()
+
+
+# ---------------------------------------------------------------------------
+# Diagnostic logging
+# ---------------------------------------------------------------------------
+
+
+_ALASS_LOGGER = "anki_miner.services.sync_engines.alass_engine"
+
+
+class TestSyncLogging:
+    def test_start_line_carries_inputs_and_knobs(self, video, in_sub, out_sub, cfg, caplog):
+        import logging
+
+        captured: list[list[str]] = []
+        with caplog.at_level(logging.INFO, logger=_ALASS_LOGGER):
+            _run(cfg, video, in_sub, out_sub, _touch_factory(captured), split_penalty=3.5)
+
+        line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Subtitle sync:"))
+        assert "engine=alass" in line
+        assert f"reference={video}" in line
+        assert f"in_sub={in_sub}" in line
+        assert f"out={out_sub}" in line
+        assert "split_penalty=3.5" in line
+        assert "no_split=False" in line
+
+    def test_success_line_reports_offsets_and_full_paths(self, video, in_sub, out_sub, cfg, caplog):
+        import logging
+
+        lines = ["shifted block of 3 subtitles with length 0:00:06.000 by -0:00:04.916"]
+        captured: list[list[str]] = []
+        with caplog.at_level(logging.INFO, logger=_ALASS_LOGGER):
+            result = _run(cfg, video, in_sub, out_sub, _touch_factory(captured, lines))
+
+        assert result.ok
+        line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Subtitle sync done:"))
+        assert "engine=alass" in line
+        assert "ok=True" in line
+        assert "offset=-" in line
+        assert "scale=-" in line
+        assert "block_shifts=-4.916" in line
+        assert f"reference={video}" in line
+        assert f"in_sub={in_sub}" in line
+
+    def test_failure_line_reports_not_ok(self, video, in_sub, out_sub, cfg, caplog):
+        import logging
+
+        captured: list[list[str]] = []
+        with caplog.at_level(logging.INFO, logger=_ALASS_LOGGER):
+            _run(cfg, video, in_sub, out_sub, _touch_factory(captured, ["error: nope"], returncode=1))
+
+        line = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Subtitle sync done:"))
+        assert "ok=False" in line
+
+    def test_run_supervised_is_labelled_alass(self, video, in_sub, out_sub, cfg):
+        captured: dict[str, Any] = {}
+
+        def _supervised(_command: list[str], **kwargs: Any) -> SupervisedResult:
+            captured.update(kwargs)
+            return SupervisedResult(SupervisedState.TIMED_OUT, -9, "", "")
+
+        with (
+            patch(_RESOLVE_ALASS, return_value="alass"),
+            patch(_RESOLVE_FFMPEG, return_value="ffmpeg"),
+            patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
+            patch(f"{_ALASS_LOGGER}.run_supervised", side_effect=_supervised),
+        ):
+            sync_with_alass(cfg, video, in_sub, out_sub, sub_reference=False)
+
+        assert captured["op"] == "alass"

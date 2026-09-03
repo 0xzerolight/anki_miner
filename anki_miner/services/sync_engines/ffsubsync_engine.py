@@ -43,6 +43,7 @@ from typing import Any
 from anki_miner.services.sync_engines import SyncResult
 from anki_miner.services.sync_engines._ffsubsync_child import CHILD_FLAG
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
+from anki_miner.utils.logging_ext import log_summary, suppressed
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,11 @@ _QUALITY_MAX_OFFSET_S = 120.0
 #: Matches alass's bound: a retime that has run for an hour is stuck, not slow.
 _FFSUBSYNC_TIMEOUT_S = 60 * 60
 
+#: How much of the child's stdout an unparsable-verdict diagnostic carries. The
+#: verdict is one short JSON line, so this is generous for the real case and
+#: still bounded when the child spewed a traceback instead.
+_VERDICT_LOG_CHARS = 200
+
 
 def _child_command(argv: list[str]) -> list[str]:
     """The argv that re-enters this application as the ffsubsync child."""
@@ -67,15 +73,25 @@ def _child_command(argv: list[str]) -> list[str]:
 
 
 def _parse_verdict(stdout: str) -> dict[str, Any] | None:
-    """Return the child's verdict line, or ``None`` when it never printed one."""
+    """Return the child's verdict line, or ``None`` when it never printed one.
+
+    A brace-led line that will not parse is the interesting failure: the child
+    reached the point of printing its verdict and produced something this parser
+    cannot read, which is otherwise indistinguishable from a child that crashed
+    before printing anything. WARNING, not DEBUG, and with a bounded head of the
+    child's stdout attached, because the caller only reports "ffsubsync failed".
+    """
     for line in reversed(stdout.splitlines()):
         candidate = line.strip()
         if not candidate.startswith("{"):
             continue
-        try:
+        payload: Any = None
+        with suppressed(
+            logger,
+            f"parsing the ffsubsync verdict from {stdout[:_VERDICT_LOG_CHARS]!r}",
+            level=logging.WARNING,
+        ):
             payload = json.loads(candidate)
-        except ValueError:
-            continue
         if isinstance(payload, dict):
             return payload
     return None
@@ -128,15 +144,32 @@ def sync_with_ffsubsync(
     if reference_stream is not None:
         argv += ["--reference-stream", reference_stream]
 
+    # Before the call, not after: an alignment that never returns (the hour-long
+    # timeout, a kill) still leaves the pair it was working on in the log.
+    log_summary(
+        logger,
+        "Subtitle sync",
+        engine=engine,
+        reference=reference,
+        in_sub=in_sub,
+        out=out,
+        split_penalty=split_penalty if split_mode else None,
+        no_split=not split_mode,
+    )
+
     supervised = run_supervised(
         _child_command(argv),
         timeout_s=_FFSUBSYNC_TIMEOUT_S,
         cancel=cancel_event,
         retain_output=False,
+        op="ffsubsync",
     )
 
     if supervised.state in {SupervisedState.CANCELLED, SupervisedState.TIMED_OUT}:
         _unlink_quiet(out)
+        # INFO, not WARNING: a cancel is the user's own decision and a timeout
+        # is already reported by the supervisor; neither is a surprise here.
+        _log_outcome(engine, reference, in_sub, ok=False, detail=supervised.state.value)
         return SyncResult(ok=False, engine=engine, detail=supervised.state.value)
 
     result = _parse_verdict(supervised.stdout) if supervised.state is SupervisedState.COMPLETED else None
@@ -150,7 +183,9 @@ def sync_with_ffsubsync(
             supervised.returncode,
             tail,
         )
-        return SyncResult(ok=False, engine=engine, detail=f"{supervised.state.value}, exit {supervised.returncode}")
+        detail = f"{supervised.state.value}, exit {supervised.returncode}"
+        _log_outcome(engine, reference, in_sub, ok=False, detail=detail, level=logging.WARNING)
+        return SyncResult(ok=False, engine=engine, detail=detail)
 
     successful = bool(result.get("sync_was_successful")) and result.get("retval", 1) == 0
     offset = _number_or_none(result.get("offset_seconds"))
@@ -160,19 +195,55 @@ def sync_with_ffsubsync(
 
     if not successful or not out.exists():
         _unlink_quiet(out)
+        detail = "low-quality sync rejected" if result.get("retval", 1) == 0 else "ffsubsync error"
+        _log_outcome(engine, reference, in_sub, ok=False, offset=offset, scale=scale, detail=detail)
         return SyncResult(
             ok=False,
             engine=engine,
             offset_seconds=offset,
             framerate_scale=scale,
-            detail="low-quality sync rejected" if result.get("retval", 1) == 0 else "ffsubsync error",
+            detail=detail,
         )
 
+    _log_outcome(engine, reference, in_sub, ok=True, offset=offset, scale=scale)
     return SyncResult(
         ok=True,
         engine=engine,
         offset_seconds=offset,
         framerate_scale=scale,
+    )
+
+
+def _log_outcome(
+    engine: str,
+    reference: Path,
+    in_sub: Path,
+    *,
+    ok: bool,
+    offset: float | None = None,
+    scale: float | None = None,
+    detail: str = "",
+    level: int = logging.INFO,
+) -> None:
+    """Emit the one receipt that says what this alignment actually did.
+
+    ``block_shifts`` stays in the field list even though ffsubsync reports none:
+    both engines share the anchor, so a reader greps one event name and gets the
+    same columns whichever engine won.
+    """
+    log_summary(
+        logger,
+        "Subtitle sync done",
+        level=level,
+        engine=engine,
+        ok=ok,
+        offset=offset,
+        scale=scale,
+        block_shifts=None,
+        warnings=None,
+        detail=detail,
+        reference=reference,
+        in_sub=in_sub,
     )
 
 

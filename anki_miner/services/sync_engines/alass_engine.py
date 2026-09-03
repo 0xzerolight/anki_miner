@@ -44,6 +44,7 @@ from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.sync_engines import SyncResult
 from anki_miner.utils.alass_resolver import resolve_alass
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
+from anki_miner.utils.logging_ext import capped, log_summary
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 from anki_miner.utils.subtitle_encoding import detect_subtitle_encoding
 
@@ -136,6 +137,21 @@ def sync_with_alass(
     env["ALASS_FFMPEG_PATH"] = resolve_ffmpeg(config)
     env["ALASS_FFPROBE_PATH"] = resolve_ffprobe(config)
 
+    engine = "alass (single offset)" if no_split else "alass"
+
+    # Before the call, not after: an alignment that never returns (the hour-long
+    # timeout, a kill) still leaves the pair it was working on in the log.
+    log_summary(
+        logger,
+        "Subtitle sync",
+        engine=engine,
+        reference=reference,
+        in_sub=in_sub,
+        out=out,
+        split_penalty=split_penalty,
+        no_split=no_split,
+    )
+
     result = run_supervised(
         cmd,
         timeout_s=_ALASS_TIMEOUT_S,
@@ -143,24 +159,29 @@ def sync_with_alass(
         env=env,
         line_callback=log_cb,
         combine_stderr=True,
+        op="alass",
     )
     if isinstance(result.error, FileNotFoundError):
         raise AlassNotFoundError(
             f"alass binary not found: {alass_bin!r}.  Install alass or set its path in Settings → Transcription & Alignment."
         ) from result.error
 
-    engine = "alass (single offset)" if no_split else "alass"
-
     if result.state in {SupervisedState.CANCELLED, SupervisedState.TIMED_OUT}:
         _unlink_quiet(out)
+        # INFO, not WARNING: a cancel is the user's own decision and a timeout
+        # is already reported by the supervisor; neither is a surprise here.
+        _log_outcome(engine, reference, in_sub, ok=False, detail=result.state.value)
         return SyncResult(ok=False, engine=engine, detail=result.state.value)
 
     if result.state is SupervisedState.COMPLETED and out.exists():
+        shifts = _parse_block_shifts(result.stdout)
+        warnings = _parse_warnings(result.stdout)
+        _log_outcome(engine, reference, in_sub, ok=True, block_shifts=shifts, warnings=warnings)
         return SyncResult(
             ok=True,
             engine=engine,
-            block_shifts_seconds=_parse_block_shifts(result.stdout),
-            warnings=_parse_warnings(result.stdout),
+            block_shifts_seconds=shifts,
+            warnings=warnings,
         )
 
     _unlink_quiet(out)
@@ -171,10 +192,45 @@ def sync_with_alass(
         result.returncode,
         tail,
     )
+    detail = f"{result.state.value}, exit {result.returncode}"
+    _log_outcome(engine, reference, in_sub, ok=False, detail=detail, level=logging.WARNING)
     return SyncResult(
         ok=False,
         engine=engine,
-        detail=f"{result.state.value}, exit {result.returncode}",
+        detail=detail,
+    )
+
+
+def _log_outcome(
+    engine: str,
+    reference: Path,
+    in_sub: Path,
+    *,
+    ok: bool,
+    detail: str = "",
+    block_shifts: tuple[float, ...] = (),
+    warnings: tuple[str, ...] = (),
+    level: int = logging.INFO,
+) -> None:
+    """Emit the one receipt that says what this alignment actually did.
+
+    ``offset``/``scale`` stay in the field list even though alass reports
+    neither: both engines share the anchor, so a reader greps one event name and
+    gets the same columns whichever engine won.
+    """
+    log_summary(
+        logger,
+        "Subtitle sync done",
+        level=level,
+        engine=engine,
+        ok=ok,
+        offset=None,
+        scale=None,
+        block_shifts=capped(block_shifts),
+        warnings=capped(warnings),
+        detail=detail,
+        reference=reference,
+        in_sub=in_sub,
     )
 
 

@@ -56,6 +56,7 @@ from anki_miner.services.sync_validator import validate_candidate
 from anki_miner.utils.audio_track_detector import get_media_duration_seconds
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -205,8 +206,19 @@ def retime_subtitle(
             temps.append(candidate)
             try:
                 result = runner(reference_path, align_input, candidate, log_cb)
-            except AlassNotFoundError:
+            except AlassNotFoundError as exc:
                 alass_missing = True
+                # The user-facing line says only "alass is not installed"; the
+                # resolver's message names the path it looked for, which is the
+                # half that tells a bundled install from a missing one.
+                log_summary(
+                    logger,
+                    "Retime engine skipped",
+                    level=logging.WARNING,
+                    engine=label,
+                    reason="not_found",
+                    detail=str(exc),
+                )
                 attempts.append(f"{label}: binary not installed")
                 _log(
                     log_cb,
