@@ -9,6 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 import requests
 
+from anki_miner.services.audio_fetch_common import reset_fetch_outcome_rate_limit
 from anki_miner.services.custom_audio_fetcher import (
     CustomAudioFetcher,
     _substitute_custom_url,
@@ -18,6 +19,17 @@ from anki_miner.services.expression_audio_fetcher import (
     audio_extension_for_media_type,
     download_audio_to_cache,
 )
+
+CUSTOM_MODULE = "anki_miner.services.custom_audio_fetcher"
+
+
+@pytest.fixture(autouse=True)
+def _reset_fetch_outcome_counters():
+    """The outcome choke point rate-limits process-wide; isolate every test."""
+    reset_fetch_outcome_rate_limit()
+    yield
+    reset_fetch_outcome_rate_limit()
+
 
 # Minimal valid ID3v2-tagged MP3 body.
 _VALID_MP3 = b"ID3" + b"\x00" * 7 + b"\xff\xfb\x90\x00" + b"\x00" * 100
@@ -65,7 +77,7 @@ def test_audio_fetch_url_secret_never_logged(tmp_path, caplog):
     fetcher._session.get.side_effect = requests.ConnectionError(json_error_url)
 
     with caplog.at_level(logging.DEBUG):
-        assert download_audio_to_cache(direct_session, direct_url, tmp_path, "stem") is None
+        assert download_audio_to_cache(direct_session, direct_url, tmp_path, "stem", source="custom") is None
         # Kana reading: anything else is refused by the homograph guard before
         # a request is made, and this test is about what a failed one logs.
         assert fetcher.fetch("word", "よみ") is None
@@ -426,3 +438,56 @@ class TestCustomAudioFetcherJson:
         f = self._fetcher(tmp_path)
         assert set(f.stats()) >= {"non_audio", "http_status", "connection"}
         f.close()  # must not raise
+
+
+class TestCustomOutcomeLogging:
+    """A custom source's failures name the word and drop the URL's query."""
+
+    def _fetcher(self, tmp_path, kind="custom_json"):
+        f = CustomAudioFetcher(
+            url_template="http://h/?t={term}&key=SECRET",
+            kind=kind,
+            cache_dir=tmp_path / "cache",
+            file_prefix="custom_abc",
+            delay=0,
+        )
+        f._session = MagicMock()
+        return f
+
+    def test_json_endpoint_non_200_logs_the_word_without_the_query(self, tmp_path, caplog):
+        f = self._fetcher(tmp_path)
+        f._session.get.return_value = _json_response({}, status=500)
+
+        with caplog.at_level(logging.DEBUG, logger=CUSTOM_MODULE):
+            assert f.fetch("食べる", "たべる") is None
+
+        message = caplog.records[-1].getMessage()
+        assert "source=custom_json" in message
+        assert "word=食べる" in message
+        assert "status=500" in message
+        assert "reason=http_status" in message
+        assert "SECRET" not in message
+
+    def test_malformed_json_logs_not_json(self, tmp_path, caplog):
+        f = self._fetcher(tmp_path)
+        bad = _json_response(None)
+        bad.json.side_effect = json.JSONDecodeError("bad", "", 0)
+        f._session.get.return_value = bad
+
+        with caplog.at_level(logging.DEBUG, logger=CUSTOM_MODULE):
+            assert f.fetch("食べる", "たべる") is None
+
+        message = caplog.records[-1].getMessage()
+        assert "reason=not_json" in message
+        assert "error=" in message
+
+    def test_transport_error_logs_type_and_message(self, tmp_path, caplog):
+        f = self._fetcher(tmp_path)
+        f._session.get.side_effect = requests.exceptions.ConnectionError("offline")
+
+        with caplog.at_level(logging.DEBUG, logger=CUSTOM_MODULE):
+            assert f.fetch("食べる", "たべる") is None
+
+        message = caplog.records[-1].getMessage()
+        assert "reason=transport" in message
+        assert 'error="ConnectionError: offline"' in message

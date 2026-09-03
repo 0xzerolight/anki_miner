@@ -34,6 +34,8 @@ import gtts  # type: ignore[import-untyped]
 
 from anki_miner.services.audio_fetch_common import (
     MAX_AUDIO_BYTES,
+    log_fetch_outcome,
+    scrub_url_secrets,
 )
 from anki_miner.services.audio_fetch_common import (
     classify_request_exception as _classify_request_exception,
@@ -52,6 +54,10 @@ from anki_miner.utils.text_utils import is_kana_only
 
 logger = logging.getLogger(__name__)
 
+# gtts owns the exact request URL; this names the endpoint an outcome line
+# refers to so the log says which service answered (or did not).
+GTTS_ENDPOINT = "https://translate.google.com/translate_tts"
+
 
 def _synthesize_gtts_to_cache(
     cache_dir: Path,
@@ -61,6 +67,9 @@ def _synthesize_gtts_to_cache(
     failure_counts: dict[str, int],
     cancelled_check: Callable[[], bool] | None,
     lang: str = "ja",
+    source: str = "googletts",
+    word: str = "",
+    reading: str = "",
 ) -> Path | None:
     """Synthesize *text* via gTTS and atomically cache it as ``<stem>.mp3``.
 
@@ -103,17 +112,20 @@ def _synthesize_gtts_to_cache(
         # nothing written.
         if len(body) > MAX_AUDIO_BYTES:
             failure_counts["non_audio"] += 1
+            log_fetch_outcome(logger, source, word or stem, reading, GTTS_ENDPOINT, bytes_=len(body), reason="oversize")
             return None
 
         # Empty body is a transient failure (premature close, etc.).
         if not body:
             failure_counts["connection"] += 1
+            log_fetch_outcome(logger, source, word or stem, reading, GTTS_ENDPOINT, bytes_=0, reason="empty_body")
             return None
 
         # Reject non-audio bodies (HTML error / rate-limit pages) as
         # transient; no marker so the input is retried next run.
         if not _is_mp3(body):
             failure_counts["non_audio"] += 1
+            log_fetch_outcome(logger, source, word or stem, reading, GTTS_ENDPOINT, bytes_=len(body), reason="not_mp3")
             return None
 
         # Write atomically: stage to a unique temp file then rename so a
@@ -151,10 +163,19 @@ def _synthesize_gtts_to_cache(
         # requests exception _classify_request_exception recognizes; a
         # gTTSError or other synthesis fault falls to "connection".
         failure_counts[_classify_request_exception(exc)] += 1
-        # Log the stem, not the input text: the stem identifies the item for
-        # both the word fetcher (embeds mined_form+reading) and the sentence
-        # fetcher (content hash) without dumping sentence text into logs.
-        logger.debug("google translate audio fetch failed for %s: %s", stem, exc)
+        # The word fetcher supplies its mined form and reading; the sentence
+        # fetcher has neither and passes its stem as the subject — a content
+        # hash that identifies the item without dumping the reader's sentence
+        # into the log.
+        log_fetch_outcome(
+            logger,
+            source,
+            word or stem,
+            reading,
+            GTTS_ENDPOINT,
+            reason="transport",
+            error=f"{type(exc).__name__}: {scrub_url_secrets(str(exc), GTTS_ENDPOINT, source)}",
+        )
         return None
 
 
@@ -242,6 +263,8 @@ class GoogleTranslateAudioFetcher:
             failure_counts=self._failure_counts,
             cancelled_check=cancelled_check,
             lang=self._gtts_lang,
+            word=mined_form,
+            reading=reading,
         )
 
     def fetch_candidates(

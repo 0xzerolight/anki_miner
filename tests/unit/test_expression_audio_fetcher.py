@@ -8,8 +8,10 @@ import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 import requests
 
+from anki_miner.services.audio_fetch_common import reset_fetch_outcome_rate_limit
 from anki_miner.services.expression_audio_fetcher import (
     FAILURE_KEYS,
     JPOD101_NOT_FOUND_SHA256,
@@ -23,6 +25,15 @@ from anki_miner.services.expression_audio_fetcher import (
 )
 
 MODULE = "anki_miner.services.expression_audio_fetcher"
+
+
+@pytest.fixture(autouse=True)
+def _reset_fetch_outcome_counters():
+    """The outcome choke point rate-limits process-wide; isolate every test."""
+    reset_fetch_outcome_rate_limit()
+    yield
+    reset_fetch_outcome_rate_limit()
+
 
 # Minimal valid ID3v2-tagged MP3 body for tests that expect a successful cache write.
 _VALID_MP3 = b"ID3" + b"\x00" * 7 + b"\xff\xfb\x90\x00" + b"\x00" * 100
@@ -561,8 +572,8 @@ class TestJPod101AudioFetcher:
         fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=float("nan"))
         assert fetcher._delay == 0.0
 
-    def test_request_exception_emits_debug_log(self, tmp_path, caplog):
-        """DNS/connection failure emits a debug log so failures are diagnosable."""
+    def test_request_exception_emits_a_log(self, tmp_path, caplog):
+        """DNS/connection failure emits a log so failures are diagnosable."""
         fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
         with (
             caplog.at_level(logging.DEBUG, logger="anki_miner.services.expression_audio_fetcher"),
@@ -575,16 +586,20 @@ class TestJPod101AudioFetcher:
 
         assert result is None
         assert any(
-            "expression audio" in r.message.lower() or "食べる" in r.message
-            for r in caplog.records
-            if r.levelno == logging.DEBUG
-        ), f"No debug log emitted; records: {caplog.records}"
+            "Audio fetch" in r.message or "食べる" in r.message for r in caplog.records
+        ), f"No outcome log emitted; records: {caplog.records}"
 
-    def test_failure_log_uses_identity_digest_without_term_or_exception_text(self, tmp_path, caplog):
+    def test_failure_log_names_the_word_and_the_exception_text(self, tmp_path, caplog):
+        """Reversal of the identity-digest rule: a hash diagnoses nothing.
+
+        "Expression audio failed for everything" needs the word that was asked
+        for and what the transport said; both are the user's own data, already
+        in the log everywhere else.
+        """
         fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
         mined_form = "個人語彙"
         reading = "こじんごい"
-        exception_text = "private transport detail"
+        exception_text = "Name or service not known"
         identity = hashlib.sha256(f"{mined_form}\0{reading}".encode()).hexdigest()[:12]
 
         with (
@@ -597,11 +612,11 @@ class TestJPod101AudioFetcher:
             assert fetcher.fetch(mined_form, reading) is None
 
         log_text = "\n".join(record.getMessage() for record in caplog.records)
-        assert identity in log_text
         assert "ConnectionError" in log_text
-        assert mined_form not in log_text
-        assert reading not in log_text
-        assert exception_text not in log_text
+        assert f"word={mined_form}" in log_text
+        assert f"reading={reading}" in log_text
+        assert exception_text in log_text
+        assert identity not in log_text
 
     def test_cancelled_between_response_chunks_does_not_cache(self, tmp_path):
         fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
@@ -1599,3 +1614,81 @@ class TestChainSlowMemberAttribution:
         chain = ChainedExpressionAudioFetcher([_FastPack()])  # type: ignore[list-item]
         assert chain.fetch_candidates([("噓", "うそ")]) == audio
         assert chain.slowest_pack_id() is None
+
+
+class TestJPod101FailureLogging:
+    """The fetch outcome names the word, not a hash of it (privacy reversal)."""
+
+    def test_transport_failure_names_the_word_and_the_exception_message(self, tmp_path, caplog):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with (
+            caplog.at_level(logging.DEBUG, logger=MODULE),
+            patch("requests.Session.get", side_effect=requests.RequestException("boom")),
+        ):
+            assert fetcher.fetch("食べる", "たべる") is None
+
+        message = caplog.records[-1].getMessage()
+        assert "source=jpod101" in message
+        assert "word=食べる" in message
+        assert "reading=たべる" in message
+        assert "reason=transport" in message
+        assert 'error="RequestException: boom"' in message
+        assert "identity=" not in message
+
+    def test_non_200_names_the_status_and_the_word(self, tmp_path, caplog):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with (
+            caplog.at_level(logging.DEBUG, logger=MODULE),
+            patch("requests.Session.get", return_value=_response(status_code=503)),
+        ):
+            assert fetcher.fetch("食べる", "たべる") is None
+
+        message = caplog.records[-1].getMessage()
+        assert "status=503" in message
+        assert "reason=http_status" in message
+        assert "word=食べる" in message
+
+    def test_https_downgrade_is_its_own_reason(self, tmp_path, caplog):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        with (
+            caplog.at_level(logging.DEBUG, logger=MODULE),
+            patch("requests.Session.get", return_value=_response(url="http://insecure.example/audio.mp3")),
+        ):
+            assert fetcher.fetch("食べる", "たべる") is None
+
+        message = caplog.records[-1].getMessage()
+        assert "reason=insecure_redirect" in message
+        assert "url=http://insecure.example/audio.mp3" in message
+
+    def test_confirmed_miss_marker_is_logged(self, tmp_path, caplog):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        not_found = b"not-found-body"
+        with (
+            caplog.at_level(logging.DEBUG, logger=MODULE),
+            patch(f"{MODULE}.JPOD101_NOT_FOUND_SHA256", hashlib.sha256(not_found).hexdigest()),
+            patch("requests.Session.get", return_value=_response(content=not_found)),
+        ):
+            assert fetcher.fetch("食べる", "たべる") is None
+
+        assert list(tmp_path.glob("*.miss"))
+        assert "reason=miss_marker_written" in caplog.records[-1].getMessage()
+
+    def test_budget_expiry_names_the_word_not_an_identity(self, tmp_path, caplog, monkeypatch):
+        released = threading.Event()
+
+        class _Slow:
+            def fetch(self, mined_form, reading, cancelled_check=None):
+                released.wait(5)
+                return None
+
+        chain = ChainedExpressionAudioFetcher([_Slow()])  # type: ignore[list-item]
+        monkeypatch.setattr(chain, "PER_WORD_BUDGET_SECONDS", 0.2)
+        try:
+            with caplog.at_level(logging.WARNING, logger=MODULE):
+                assert chain.fetch("食べる", "たべる") is None
+        finally:
+            released.set()
+
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert any("word=食べる/たべる" in w for w in warnings), warnings
+        assert not any("identity=" in w for w in warnings), warnings

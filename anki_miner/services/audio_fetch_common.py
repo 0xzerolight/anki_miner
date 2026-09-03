@@ -11,6 +11,7 @@ underscore-prefixed names for backward compatibility.
 import contextlib
 import logging
 import os
+import re
 import tempfile
 import threading
 from collections import OrderedDict
@@ -24,6 +25,7 @@ import requests
 from anki_miner.models import TokenizedWord
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.utils import has_katakana, hiragana_to_katakana
+from anki_miner.utils.logging_ext import log_summary
 
 if TYPE_CHECKING:
     from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
@@ -251,6 +253,130 @@ def new_failure_counts() -> dict[str, int]:
     return dict.fromkeys(FAILURE_KEYS, 0)
 
 
+# One choke point for "the audio fetch did not produce a file". The bucket
+# counters above answer "how many" and nothing else: a run where expression
+# audio is missing for every word reported one number and no way to tell a
+# dead endpoint from a wrong URL template from a body the server labelled
+# text/html. Each outcome now names the source, the word, the URL and the
+# reason, so the log alone diagnoses it.
+#
+# Volume is the reason this is rate-limited rather than plainly logged: a run
+# can miss thousands of words on one source, and the first failure of each
+# (source, reason) carries the whole diagnosis while the rest are repetition.
+# First → WARNING with every field, the next 98 → DEBUG, every hundredth →
+# WARNING again carrying the running total. The counters are process-wide, not
+# per-fetcher: a chain builds fresh fetchers per run and the point is one
+# prominent line per cause, not one per run.
+FETCH_OUTCOME_WARN_EVERY = 100
+_FETCH_OUTCOME_LOCK = threading.Lock()
+_FETCH_OUTCOME_COUNTS: dict[tuple[str, str], int] = {}
+
+# custom/custom_json URLs come from a user-supplied template whose query string
+# may carry an API key (the same reason ``redact_url_for_log`` guards those
+# fetchers' own debug lines). Every other source's URL is ours and is logged
+# verbatim — the query is what says which word was requested.
+_REDACTED_URL_SOURCES = frozenset({"custom", "custom_json"})
+
+# A URL-looking token inside an exception message. Requests names the URL it
+# failed on, so the message is where a credential travels.
+_URL_IN_TEXT_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.\-]*://[^\s\"'<>]+")
+
+
+def scrub_url_secrets(text: str, url: str, source: str) -> str:
+    """Mask the secrets a request exception's message can carry.
+
+    Two of them, and only two. Any URL in *text* carrying userinfo is replaced
+    whole — the same fail-closed rule ``redact_url_for_log`` applies, because a
+    credential can repeat in the path. A custom/custom_json template's query
+    may carry an API key, so *url*'s query string is additionally masked by
+    exact substring match rather than by guessing sensitive parameter names.
+    Everything else survives verbatim: the exception text is the diagnosis.
+    """
+
+    def _mask(match: "re.Match[str]") -> str:
+        candidate = match.group(0)
+        try:
+            has_userinfo = urlsplit(candidate).username is not None or "@" in unquote(urlsplit(candidate).netloc)
+        except ValueError:
+            return "<redacted-url>"
+        return "<redacted-url>" if has_userinfo else candidate
+
+    scrubbed = _URL_IN_TEXT_RE.sub(_mask, text)
+    if source not in _REDACTED_URL_SOURCES:
+        return scrubbed
+    try:
+        query = urlsplit(url).query
+    except ValueError:
+        return scrubbed
+    return scrubbed.replace(query, "<redacted-query>") if query else scrubbed
+
+
+def reset_fetch_outcome_rate_limit() -> None:
+    """Clear the per-``(source, reason)`` counters.
+
+    Test seam only: the counters are deliberately process-wide, so a test that
+    asserts on the first-occurrence WARNING must start from a clean slate.
+    """
+    with _FETCH_OUTCOME_LOCK:
+        _FETCH_OUTCOME_COUNTS.clear()
+
+
+def log_fetch_outcome(
+    log: logging.Logger,
+    source: str,
+    word: str,
+    reading: str,
+    url: str,
+    *,
+    status: int | None = None,
+    content_type: str | None = None,
+    bytes_: int | None = None,
+    reason: str,
+    **fields: object,
+) -> None:
+    """Record one failed audio fetch, rate-limited per ``(source, reason)``.
+
+    Args:
+        log: The calling module's logger, so the record keeps its attribution.
+        source: Fetcher identity (``jpod101``, ``googletts``, ``custom_json``,
+            ``papago``, ...). Half of the rate-limit key.
+        word: The mined form requested, verbatim. Sentence fetchers have no
+            word and pass their cache stem, which identifies the item without
+            copying the sentence into the log.
+        reading: Kana reading requested, verbatim; empty where there is none.
+        url: The URL that was requested. Redacted for custom sources only.
+        status: HTTP status, when there was a response.
+        content_type: Response ``Content-Type``, when the body was the problem.
+        bytes_: Body size, when the body was the problem.
+        reason: Stable outcome bucket (``http_status``, ``insecure_redirect``,
+            ``oversize``, ``empty_body``, ``unknown_content_type``,
+            ``not_mp3``, ``not_json``, ``no_audio_url``, ``miss_marker_written``,
+            ``transport``). The other half of the rate-limit key.
+        **fields: Extra trailing fields, notably ``error="<Type>: <message>"``
+            on a transport failure.
+    """
+    key = (source, reason)
+    with _FETCH_OUTCOME_LOCK:
+        occurrences = _FETCH_OUTCOME_COUNTS.get(key, 0) + 1
+        _FETCH_OUTCOME_COUNTS[key] = occurrences
+    periodic = occurrences % FETCH_OUTCOME_WARN_EVERY == 0
+    level = logging.WARNING if occurrences == 1 or periodic else logging.DEBUG
+
+    summary: dict[str, object] = {"source": source, "word": word, "reading": reading}
+    if status is not None:
+        summary["status"] = status
+    if content_type is not None:
+        summary["content_type"] = content_type
+    if bytes_ is not None:
+        summary["bytes"] = bytes_
+    summary["reason"] = reason
+    summary["url"] = redact_url_for_log(url) if source in _REDACTED_URL_SOURCES else url
+    summary.update(fields)
+    if periodic:
+        summary["occurrences"] = occurrences
+    log_summary(log, "Audio fetch", level=level, **summary)
+
+
 def classify_request_exception(exc: BaseException) -> str:
     """Map a raised request/OS exception to a failure-cause bucket.
 
@@ -277,6 +403,9 @@ def download_audio_to_cache(
     timeout: int = 10,
     failure_counts: dict[str, int] | None = None,
     cancelled_check: Callable[[], bool] | None = None,
+    source: str = "",
+    word: str = "",
+    reading: str = "",
 ) -> Path | None:
     """GET *url*, validate it is audio, and atomically cache it as ``<stem><ext>``.
 
@@ -294,6 +423,9 @@ def download_audio_to_cache(
     by the caller). The write is atomic (unique ``.part`` temp + ``os.replace``)
     so a killed process cannot leave a truncated file that passes a later
     cache-hit check.
+
+    *source*, *word* and *reading* only label the outcome log lines
+    (``log_fetch_outcome``); they never reach the request.
     """
 
     def _bump(key: str) -> None:
@@ -305,6 +437,7 @@ def download_audio_to_cache(
         try:
             if response.status_code != 200:
                 _bump("http_status")
+                log_fetch_outcome(logger, source, word, reading, url, status=response.status_code, reason="http_status")
                 return None
 
             chunks: list[bytes] = []
@@ -315,24 +448,47 @@ def download_audio_to_cache(
                 total += len(chunk)
                 if total > MAX_AUDIO_BYTES:
                     _bump("non_audio")
+                    log_fetch_outcome(logger, source, word, reading, url, bytes_=total, reason="oversize")
                     return None
                 chunks.append(chunk)
             body = b"".join(chunks)
 
             if not body:
                 _bump("connection")
+                log_fetch_outcome(logger, source, word, reading, url, bytes_=0, reason="empty_body")
                 return None
 
-            ext = audio_extension_for_media_type(response.headers.get("Content-Type"))
+            media_type = response.headers.get("Content-Type")
+            ext = audio_extension_for_media_type(media_type)
             if ext is None and is_mp3(body):
                 ext = ".mp3"
             if ext == ".mp3" and not is_mp3(body):
                 _bump("non_audio")
+                log_fetch_outcome(
+                    logger,
+                    source,
+                    word,
+                    reading,
+                    url,
+                    content_type=media_type,
+                    bytes_=len(body),
+                    reason="not_mp3",
+                )
                 return None
             if ext is None:
                 # Not recognizable audio (HTML error page, unknown type) —
                 # transient; retried next run since no marker is written.
                 _bump("non_audio")
+                log_fetch_outcome(
+                    logger,
+                    source,
+                    word,
+                    reading,
+                    url,
+                    content_type=media_type,
+                    bytes_=len(body),
+                    reason="unknown_content_type",
+                )
                 return None
 
             cache_dir.mkdir(parents=True, exist_ok=True)
@@ -357,11 +513,14 @@ def download_audio_to_cache(
             response.close()
     except (requests.RequestException, OSError) as exc:
         _bump(classify_request_exception(exc))
-        logger.debug(
-            "audio download failed (%s): %s: %s",
-            redact_url_for_log(url),
-            type(exc).__name__,
-            redact_url_for_log(str(exc)),
+        log_fetch_outcome(
+            logger,
+            source,
+            word,
+            reading,
+            url,
+            reason="transport",
+            error=f"{type(exc).__name__}: {scrub_url_secrets(str(exc), url, source)}",
         )
         return None
 

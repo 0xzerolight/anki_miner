@@ -4,6 +4,9 @@ import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+from anki_miner.services.audio_fetch_common import reset_fetch_outcome_rate_limit
 from anki_miner.services.expression_audio_fetcher import FAILURE_KEYS
 from anki_miner.services.sentence_tts_fetcher import (
     MAX_TTS_SENTENCE_CHARS,
@@ -17,6 +20,16 @@ from anki_miner.services.sentence_tts_fetcher import (
 # The shared gtts synthesis leaf lives in the word-fetcher module; the
 # sentence Google fetcher delegates to it, so gTTS is patched there.
 GTTS_MODULE = "anki_miner.services.google_translate_audio_fetcher"
+SENTENCE_MODULE = "anki_miner.services.sentence_tts_fetcher"
+
+
+@pytest.fixture(autouse=True)
+def _reset_fetch_outcome_counters():
+    """The outcome choke point rate-limits process-wide; isolate every test."""
+    reset_fetch_outcome_rate_limit()
+    yield
+    reset_fetch_outcome_rate_limit()
+
 
 _VALID_MP3 = b"ID3" + b"\x00" * 7 + b"\xff\xfb\x90\x00" + b"\x00" * 100
 
@@ -422,14 +435,55 @@ class TestChainedSentenceAudioFetcher:
         assert chain.fetch("") is None
 
 
-def test_failure_emits_debug_log(tmp_path, caplog):
+def test_failure_emits_an_outcome_log(tmp_path, caplog):
     fetcher = PapagoSentenceTtsFetcher(cache_dir=tmp_path, delay=0)
     session = MagicMock()
     import requests
 
     session.post.side_effect = requests.exceptions.ConnectionError("down")
     fetcher._session = session
-    with caplog.at_level(logging.DEBUG, logger="anki_miner.services.sentence_tts_fetcher"):
+    with caplog.at_level(logging.DEBUG, logger=SENTENCE_MODULE):
         assert fetcher.fetch(_SENTENCE) is None
-    assert any(r.levelno == logging.DEBUG for r in caplog.records)
+    message = caplog.records[-1].getMessage()
+    assert "source=papago" in message
+    assert "reason=transport" in message
+    assert 'error="ConnectionError: down"' in message
     assert fetcher.stats()["connection"] == 1
+
+
+def test_papago_non_200_logs_the_status_and_the_stem(tmp_path, caplog):
+    fetcher = PapagoSentenceTtsFetcher(cache_dir=tmp_path, delay=0)
+    session = MagicMock()
+    session.post.return_value = MagicMock(status_code=429)
+    fetcher._session = session
+    with caplog.at_level(logging.DEBUG, logger=SENTENCE_MODULE):
+        assert fetcher.fetch(_SENTENCE) is None
+    message = caplog.records[-1].getMessage()
+    assert "source=papago" in message
+    assert "status=429" in message
+    assert "reason=http_status" in message
+    assert _sentence_stem("papago", _SENTENCE) in message
+
+
+def test_papago_non_json_body_logs_not_json(tmp_path, caplog):
+    fetcher = PapagoSentenceTtsFetcher(cache_dir=tmp_path, delay=0)
+    response = MagicMock(status_code=200)
+    response.json.side_effect = ValueError("no json")
+    session = MagicMock()
+    session.post.return_value = response
+    fetcher._session = session
+    with caplog.at_level(logging.DEBUG, logger=SENTENCE_MODULE):
+        assert fetcher.fetch(_SENTENCE) is None
+    assert "reason=not_json" in caplog.records[-1].getMessage()
+
+
+def test_papago_missing_id_logs_no_audio_url(tmp_path, caplog):
+    fetcher = PapagoSentenceTtsFetcher(cache_dir=tmp_path, delay=0)
+    response = MagicMock(status_code=200)
+    response.json.return_value = {"error": "nope"}
+    session = MagicMock()
+    session.post.return_value = response
+    fetcher._session = session
+    with caplog.at_level(logging.DEBUG, logger=SENTENCE_MODULE):
+        assert fetcher.fetch(_SENTENCE) is None
+    assert "reason=no_audio_url" in caplog.records[-1].getMessage()
