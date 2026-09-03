@@ -129,12 +129,6 @@ class CurationMediaContext:
     #: True, because an animated screenshot's window comes from the audio clip
     #: (which the strip already edits), not from a single instant.
     screenshot_animated: bool = False
-    #: Season curation (batch tab): resolves another episode's video to its own
-    #: media context so the player can follow cross-episode word focus. Pure
-    #: and thread-safe over a snapshot (never the live worker) — the dialog
-    #: calls it off the GUI thread. ``None`` (every single-episode caller)
-    #: keeps the player pinned to ``video_file``.
-    context_resolver: Callable[[Path], CurationMediaContext | None] | None = None
     # Secondary-language track (F7): raw cues parsed at a ZERO offset like
     # subtitle_entries, plus the offset the run was started with. Empty on
     # every path but Video -> Single with the feature on. Feeds the player's
@@ -142,6 +136,12 @@ class CurationMediaContext:
     # processor, which runs the same match_secondary_line over the same cues.
     secondary_entries: list[tuple[float, float, str]] = dataclasses.field(default_factory=list)
     secondary_offset: float = 0.0
+    #: Season curation (batch tab): resolves another episode's video to its own
+    #: media context so the player can follow cross-episode word focus. Pure
+    #: and thread-safe over a snapshot (never the live worker) — the dialog
+    #: calls it off the GUI thread. ``None`` (every single-episode caller)
+    #: keeps the player pinned to ``video_file``.
+    context_resolver: Callable[[Path], CurationMediaContext | None] | None = None
 
 
 class WordCurationDialog(ScreenIssueHost, QDialog):
@@ -841,7 +841,16 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # puts there, which is why it is not Fixed: the column widens only
         # while a stage exists and shrinks back when the marks are discarded.
         header_view.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        for column in (1, 2, 3, 5, 6, 7, 8, TRANSLATION_COLUMN):  # mined form, surface, reading, rank, count, signals
+        for column in (
+            1,
+            2,
+            3,
+            5,
+            6,
+            7,
+            8,
+            TRANSLATION_COLUMN,
+        ):  # mined form, surface, reading, rank, count, signals, translation
             header_view.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
         header_view.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)  # sentence
 
