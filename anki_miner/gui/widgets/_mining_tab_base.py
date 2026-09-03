@@ -732,7 +732,7 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             if secondary_subtitle is not None:
                 try:
                     secondary_entries = parser.parse_raw_entries(secondary_subtitle)
-                except Exception as exc:  # noqa: BLE001 — the primary preview must survive a second-track failure.
+                except Exception as exc:  # noqa: BLE001 — bucket A: the preview loses only the second track.
                     logger.warning("Secondary subtitle unavailable for curation: error=%s", type(exc).__name__)
             return CurationMediaContext(
                 video_file=video,
