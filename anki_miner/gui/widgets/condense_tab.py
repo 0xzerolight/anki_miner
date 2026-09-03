@@ -530,6 +530,11 @@ class CondenseTab(_ToolTabBase):
 
         layout.addLayout(out_row)
 
+        # Deliberately NOT persisted, unlike the six run options above. Ticking
+        # overwrite in March must not still be ticked in June: off-by-default
+        # each launch is the safety property, and a remembered destructive
+        # default carries no reminder. Pinned by
+        # tests/unit/test_run_option_persistence.py::test_overwrite_is_never_persisted.
         self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing condensed files"))
         self.overwrite_checkbox.setToolTip(
             self.tr("When unchecked, files whose condensed audio already exists are skipped, not overwritten.")

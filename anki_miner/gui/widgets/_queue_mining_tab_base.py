@@ -471,6 +471,7 @@ class _QueueMiningTabBase(MiningTabBase):
         """
         self.config = config
         self._config_generation += 1
+        self._seed_review_words_checkbox()
 
         worker_busy = still_running(self.worker_thread)
         if worker_busy:

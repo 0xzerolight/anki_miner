@@ -204,6 +204,20 @@ class AnkiMinerConfig:
     downloader_embed_thumbnail: bool = False  # --embed-thumbnail
     downloader_embed_metadata: bool = False  # --embed-metadata
 
+    # --- Inline run options remembered between launches --------------------
+    # Set on a workflow screen rather than in Settings, and persisted the same
+    # way condenser_*/downloader_* are: the screen folds its edit into a fresh
+    # config and emits run_options_changed, which MainWindow.update_config
+    # saves. Global, not language-scoped: each is the same decision in ja/zh/ko.
+    review_words_before_mining: bool = False  # The word curator popup, all 7 mining screens
+    youtube_align_captions: bool = False  # Align downloaded captions to the audio
+    youtube_subtitle_source: str = "auto"  # "auto" | "transcribe" | "captions"
+    deck_builder_mode: str = "all"  # DeckSelectionMode value: "all" | "top_n" | "coverage_pct"
+    deck_builder_top_n: int = 1000
+    deck_builder_coverage_pct: float = 90.0
+    deck_builder_skip_known: bool = True  # "Skip words already in my Anki collection"
+    backfill_field_groups: tuple[str, ...] = ()  # Ticked card_backfiller.FIELD_GROUPS keys
+
     # Animated screenshot settings (opt-in; static JPEG remains default)
     screenshot_animated: bool = False
     screenshot_animated_format: str = "avif"  # "avif" | "webp"
@@ -748,6 +762,26 @@ class AnkiMinerConfig:
 
         # Clamp ui_zoom to [0.5, 2.0]
         object.__setattr__(self, "ui_zoom", max(0.5, min(2.0, float(self.ui_zoom))))
+
+        # JSON round-trip yields a list for backfill_field_groups; coerce to tuple.
+        if isinstance(self.backfill_field_groups, list):
+            object.__setattr__(self, "backfill_field_groups", tuple(self.backfill_field_groups))
+
+        # Clamp the Deck Builder inputs to their spinbox ranges. A config value
+        # outside them would otherwise be silently re-clamped by the widget at
+        # seed time, so the saved value and the shown value would disagree.
+        object.__setattr__(self, "deck_builder_top_n", max(1, min(100_000, int(self.deck_builder_top_n))))
+        object.__setattr__(
+            self, "deck_builder_coverage_pct", max(1.0, min(100.0, float(self.deck_builder_coverage_pct)))
+        )
+
+        # Reset an unrecognised enumerated value rather than carrying it into a
+        # combo lookup, which would silently leave the widget on whatever index
+        # it happened to hold (mirrors the asr_model / asr_device resets).
+        if self.deck_builder_mode not in {"all", "top_n", "coverage_pct"}:
+            object.__setattr__(self, "deck_builder_mode", "all")
+        if self.youtube_subtitle_source not in {"auto", "transcribe", "captions"}:
+            object.__setattr__(self, "youtube_subtitle_source", "auto")
 
         # Normalize ui_language: lower-case, strip, empty → "en". Lenient (no
         # whitelist) so a contributor's freshly-added language code is accepted

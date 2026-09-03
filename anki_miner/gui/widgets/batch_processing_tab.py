@@ -168,7 +168,7 @@ class BatchProcessingTab(MiningTabBase):
         # Issue #60: opt-in word curation popup (default off). Season-level on
         # this tab: one popup per series (queue) / per run (quick pairs).
         self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
-        self.review_words_checkbox.setChecked(False)
+        self._bind_review_words_checkbox()
         self.review_words_checkbox.setToolTip(
             self.tr("Show the word-selection popup once per series, covering every episode's words")
         )
@@ -1180,6 +1180,9 @@ class BatchProcessingTab(MiningTabBase):
         if config.subtitle_offset != self.config.subtitle_offset:
             self.offset_spinbox.setValue(config.subtitle_offset)
         self.config = config
+        # Not a _QueueMiningTabBase, so the shared re-seed in its update_config
+        # never reaches here — the curation checkbox has to be re-seeded itself.
+        self._seed_review_words_checkbox()
 
     def release_dictionary_resources(self) -> bool:
         """Close sqlite handles cached by the most recent worker run.

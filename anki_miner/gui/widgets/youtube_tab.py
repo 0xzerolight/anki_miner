@@ -196,6 +196,11 @@ class YouTubeTab(_ListQueueMiningTabBase):
             parent=self,
         )
 
+        # Seeding the caption controls runs _on_subtitle_source_changed, which
+        # reaches into _add_flow — so it cannot live in _setup_ui, which runs
+        # before the controller exists.
+        self._seed_caption_controls()
+
         # Drops are answered here rather than swallowed (D50); the add flow has
         # to exist first, because a valid drop goes straight into it.
         self._setup_drag_drop()
@@ -274,7 +279,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
 
         # Issue #65: opt-in per-video word curation popup (default off).
         self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
-        self.review_words_checkbox.setChecked(False)
+        self._bind_review_words_checkbox()
         self.review_words_checkbox.setToolTip(
             self.tr("Show the word-selection popup for each video before creating cards.")
         )
@@ -303,8 +308,12 @@ class YouTubeTab(_ListQueueMiningTabBase):
         source_row.addStretch(1)
         queue_layout.addLayout(source_row)
 
+        # Seeded from config in _seed_caption_controls, called from __init__
+        # once the add flow exists.
         self.align_captions_checkbox = QCheckBox(self.tr("Align captions to audio"))
-        self.align_captions_checkbox.setChecked(False)
+        self.align_captions_checkbox.toggled.connect(
+            lambda checked: self.persist_run_options(youtube_align_captions=checked)
+        )
         self.align_captions_checkbox.setToolTip(
             self.tr(
                 "Retime YouTube's captions against the video's audio before mining. "
@@ -592,9 +601,25 @@ class YouTubeTab(_ListQueueMiningTabBase):
             return
         super()._start_run(items)
 
+    def _seed_caption_controls(self) -> None:
+        """Seed the caption source and alignment from the remembered config.
+
+        The push into the add flow is deliberately outside the guard: the flow's
+        own default is ``"auto"`` and ``set_subtitle_source`` early-returns on an
+        unchanged value, so a remembered ``"captions"`` would never reach it. The
+        persist inside the handler compares equal and no-ops.
+        """
+        with self.seeding():
+            index = self.subtitle_source_combo.findData(self.config.youtube_subtitle_source)
+            if index >= 0:
+                self.subtitle_source_combo.setCurrentIndex(index)
+            self.align_captions_checkbox.setChecked(self.config.youtube_align_captions)
+        self._on_subtitle_source_changed()
+
     def _on_subtitle_source_changed(self) -> None:
         """Adopt the picker's value and re-decide the rows already probed."""
         self._add_flow.set_subtitle_source(self.subtitle_source_combo.currentData())
+        self.persist_run_options(youtube_subtitle_source=self.subtitle_source_combo.currentData())
 
     def _recompute_buttons(self) -> None:
         """Freeze the per-run subtitle controls while a run owns the queue.
@@ -678,6 +703,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
         self._fetcher = create_youtube_fetcher(config)
         self._add_flow.update_config(config, self._fetcher)
         super().update_config(config)
+        self._seed_caption_controls()
 
     def shutdown(self) -> None:
         """Stop the active worker (base), then tear down the probe/playlist workers.
