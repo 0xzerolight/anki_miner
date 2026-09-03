@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING, cast
 
@@ -35,6 +36,12 @@ class CancellableWorker(QThread):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._cancel_event = threading.Event()
+        # Stamped by log_start; read by log_end and report_failure so an end or
+        # failure record can state how long the run had been going. The class
+        # name is the pre-start default so a worker that fails before log_start
+        # still names itself.
+        self._log_context = type(self).__name__
+        self._log_started_at: float | None = None
 
     def cancel(self) -> None:
         """Request cancellation of the worker.
@@ -65,10 +72,20 @@ class CancellableWorker(QThread):
         return self._cancel_event.is_set()
 
     def log_start(self, context: str, **fields: object) -> None:
-        """Log this worker's single boundary-entry receipt at INFO.
+        """Name this thread, then log its single boundary-entry receipt at INFO.
 
         Call exactly once at the top of ``run()``, before any work. This is not
         a progress hook and must never be called in a loop.
+
+        The thread rename is what makes the ``[threadName]`` column in the log
+        format worth having: without it every worker record reads ``Dummy-7``,
+        so interleaved lines from two concurrent runs cannot be told apart. Not
+        truncated — the whole context is the identity.
+
+        The MAIN thread is never renamed. ``main()`` owns that name (it is how
+        GUI-thread records are recognised), and many tests drive ``run()``
+        inline on the main thread, where a rename would leak into every later
+        record in the process.
 
         Like :meth:`report_failure`, this resolves the logger from the concrete
         instance so records keep the subclass's own module name instead of
@@ -79,11 +96,43 @@ class CancellableWorker(QThread):
             context: Worker identity for the stable ``<context> started:`` prefix.
             **fields: Bounded operation-shape fields for the start receipt.
         """
+        current = threading.current_thread()
+        if current is not threading.main_thread():
+            current.name = context
+        self._log_context = context
+        self._log_started_at = time.monotonic()
         log = logging.getLogger(type(self).__module__)
         # ``log_summary`` reserves the keyword ``level``, so forwarding an
         # untyped ``**fields`` dict cannot be proven safe statically. Direct
         # callers with literal kwargs type-check without this.
         log_summary(log, f"{context} started", **fields)  # type: ignore[arg-type]
+
+    def log_end(self, context: str | None = None, **fields: object) -> None:
+        """Close the start receipt with the run's duration and its tallies.
+
+        The pair matters more than either line: a start line with no end line is
+        itself the diagnosis (the worker never returned), and a run's duration
+        cannot be read off two timestamps when a log holds several interleaved
+        runs. Emit it from a ``finally`` so a cancelled or failed run still
+        closes its own receipt.
+
+        Args:
+            context: Overrides the identity stamped by :meth:`log_start`.
+            **fields: Bounded outcome fields, normally the run's counts.
+        """
+        log = logging.getLogger(type(self).__module__)
+        log_summary(
+            log,
+            f"{context or self._log_context} finished",
+            elapsed_s=self.elapsed_s(),
+            **fields,  # type: ignore[arg-type]
+        )
+
+    def elapsed_s(self) -> float | None:
+        """Seconds since :meth:`log_start`, or None when it was never called."""
+        if self._log_started_at is None:
+            return None
+        return round(time.monotonic() - self._log_started_at, 2)
 
     def report_failure(
         self,
@@ -132,19 +181,24 @@ class CancellableWorker(QThread):
         # rather than collapsing onto base_worker.
         log = logging.getLogger(type(self).__module__)
         cancelled = self.check_cancelled()
+        # How long the run had been going when it died. Appended rather than
+        # inserted so every existing `<context> cancelled` / `<context>: <exc>`
+        # grep still matches. Absent when log_start was never called.
+        elapsed = self.elapsed_s()
+        suffix = "" if elapsed is None else f" elapsed_s={elapsed}"
         # The TYPE is the cancel proof, not the flag and not the message text --
         # a worker can set its flag and then fail for an unrelated reason.
         if isinstance(exc, OperationCancelled) or (cancelled and cancel_flag_suppresses_error):
-            log.info("%s cancelled", context)
+            log.info("%s cancelled%s", context, suffix)
             if on_cancelled is not None:
                 on_cancelled()
             return
         if isinstance(exc, AnkiMinerException):
-            log.warning("%s: %s", context, exc)
+            log.warning("%s: %s%s", context, exc, suffix)
         else:
             # error(exc_info=exc), not exception(): identical output, but this
             # runs outside the handler that caught `exc` (ruff LOG004).
-            log.error("%s unhandled exception", context, exc_info=exc)
+            log.error("%s unhandled exception%s", context, suffix, exc_info=exc)
         on_error(str(exc))
 
 

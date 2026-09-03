@@ -56,7 +56,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Generic, TypeVar
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 
 from anki_miner.exceptions import SetupError
 from anki_miner.exceptions.youtube import (
@@ -73,6 +73,7 @@ from anki_miner.exceptions.youtube import (
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.models import AnkiWriteState, MiningOutcome, classify_result
 from anki_miner.services.anki_service import is_transient_anki_transport_error
+from anki_miner.utils.logging_ext import capped, log_summary
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
@@ -382,6 +383,19 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
         self._retry_delay_s = RETRY_DELAY_S
         # Live only for the duration of one item's attempt cycle.
         self._item_curation: _MemoizedCuration | None = None
+        # Queue position the loop is on, so the run()-level catch-all can name
+        # the item a crash died on instead of only the worker class.
+        self._current_idx: int | None = None
+        # Per-item outcome tallies for the end receipt, counted where the
+        # outcome is already classified rather than re-derived at the bottom.
+        self._logged_succeeded = 0
+        self._logged_failed = 0
+        self._logged_cancelled = 0
+        # DirectConnection so the tally and its log line run on the worker
+        # thread at emit time (same pattern as FileQueueWorker's counters): the
+        # default auto-connection would defer both onto the GUI event loop,
+        # which a run joined without spinning it never delivers.
+        self.item_finished.connect(self._log_item_finished, Qt.ConnectionType.DirectConnection)  # type: ignore[call-arg]
         # D29 boundary controls. The gate starts open; only a consumed pause
         # request closes it, and cancel() always reopens it.
         self._init_boundary_controls()
@@ -434,14 +448,34 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
         """
         previous = getattr(_active_queue_run, "worker", None)
         _active_queue_run.worker = self
+        self.log_start(
+            type(self).__name__,
+            items=len(self._items),
+            first=capped((self._item_log_label(item) for item in self._items), 5),
+            curation=self._curation_callback is not None,
+            processor_factory=self._processor is None,
+        )
         try:
             try:
                 self._run_queue()
             except Exception as exc:  # noqa: BLE001 - QThread.run exception boundary
-                logger.exception("%s run failed", type(self).__name__)
+                logger.exception(
+                    "%s run failed: idx=%s items=%d",
+                    type(self).__name__,
+                    self._current_idx if self._current_idx is not None else "-",
+                    len(self._items),
+                )
                 self.error.emit(f"{type(exc).__name__}: {exc}")
                 self.queue_finished.emit()
         finally:
+            # In the finally so a refused, cancelled, or crashed run still
+            # closes its own start line -- an unclosed start line means the
+            # worker never returned, and that has to stay the only reading.
+            self.log_end(
+                succeeded=self._logged_succeeded,
+                failed=self._logged_failed,
+                cancelled=self._logged_cancelled,
+            )
             if previous is None:
                 del _active_queue_run.worker
             else:
@@ -455,6 +489,7 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
         # failure row per queued item.
         stale_msg = self._stale_reimport_message()
         if stale_msg is not None:
+            self._log_refusal("stale_reimport", stale_msg)
             self.error.emit(stale_msg)
             self.queue_finished.emit()
             return
@@ -463,6 +498,7 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
         # after paying for it.
         asr_msg = self._asr_preflight_message()
         if asr_msg is not None:
+            self._log_refusal("asr_preflight", asr_msg)
             self.error.emit(asr_msg)
             self.queue_finished.emit()
             return
@@ -475,7 +511,16 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
             try:
                 self._processor = self._processor_factory()
             except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
-                logger.exception("%s processor build failed", type(self).__name__)
+                # The resource shape is the diagnosis: a factory blows up on the
+                # registry it was told to build, so the language, how many chain
+                # entries it walked, and where it looked are what a report needs.
+                logger.exception(
+                    "%s processor build failed: language=%s chain=%d dicts_root=%s",
+                    type(self).__name__,
+                    self._config.language,
+                    len(self._config.dictionary_chain),
+                    self._config.dicts_root,
+                )
                 self.error.emit(f"{type(exc).__name__}: {exc}")
                 self.queue_finished.emit()
                 return
@@ -487,10 +532,12 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
             self._processor.check_offline_dictionary,
         )
         if preflight_error is not None:
+            self._log_refusal("queue_preflight", preflight_error)
             self.error.emit(preflight_error)
             self.queue_finished.emit()
             return
         for idx, item in enumerate(self._items):
+            self._current_idx = idx
             if self.is_cancelled:
                 break
             if not self._wait_at_boundary():
@@ -502,6 +549,64 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
                 # that suppresses queue_finished entirely.
                 return
         self.queue_finished.emit()
+
+    # ------------------------------------------------------------------
+    # Diagnostic receipts
+    # ------------------------------------------------------------------
+
+    def _item_log_label(self, item: ItemT) -> str:
+        """Short identity for one queue item, for log lines only.
+
+        Overridden where the item's own title is not its useful identity (the
+        YouTube worker logs the URL). Never used for display.
+        """
+        return str(getattr(item, "title", item))
+
+    def _log_refusal(self, reason: str, detail: str) -> None:
+        """Record a whole-queue refusal that aborts before any item is mined.
+
+        The three refusals used to abort the run with a dialog and nothing in
+        the log at all, so a support report about a queue that "did nothing"
+        carried no evidence of which gate closed it.
+        """
+        log_summary(
+            logging.getLogger(type(self).__module__),
+            "Queue refused",
+            level=logging.WARNING,
+            worker=type(self).__name__,
+            reason=reason,
+            detail=detail,
+        )
+
+    def _log_item_finished(self, idx: int, result: object, error: object, attempts: int) -> None:
+        """Tally and log one item's terminal outcome. Bound to ``item_finished``.
+
+        One slot covers all six queue tabs: every sequential worker emits the
+        same signal, so the per-item receipt does not have to be repeated in
+        each subclass's item body.
+        """
+        outcome = MiningOutcome.FAILED if error is not None else classify_result(result)
+        if outcome is MiningOutcome.SUCCESS:
+            self._logged_succeeded += 1
+        elif outcome is MiningOutcome.CANCELLED:
+            self._logged_cancelled += 1
+        else:
+            self._logged_failed += 1
+        # Only a real int: a MagicMock stand-in's auto-generated attribute would
+        # otherwise render its repr into the field.
+        cards = getattr(result, "cards_created", None)
+        log_summary(
+            logging.getLogger(type(self).__module__),
+            "Queue item",
+            level=logging.WARNING if outcome is MiningOutcome.FAILED else logging.INFO,
+            worker=type(self).__name__,
+            idx=idx,
+            label=self._item_log_label(self._items[idx]) if 0 <= idx < len(self._items) else None,
+            outcome=outcome.value,
+            attempts=attempts,
+            cards=cards if isinstance(cards, int) else None,
+            error=error,
+        )
 
     # ------------------------------------------------------------------
     # Bounded automatic retry (D30-B)
@@ -540,6 +645,18 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
             attempt = 0
             for attempt in range(1, MAX_ATTEMPTS + 1):
                 outcome = attempt_fn()
+                # DEBUG, and bounded by MAX_ATTEMPTS: the retry VERDICT is what
+                # is otherwise invisible -- a failure that was never repeated
+                # looks identical in the log to one the classifier refused.
+                log_summary(
+                    logging.getLogger(type(self).__module__),
+                    "Queue retry",
+                    level=logging.DEBUG,
+                    idx=idx,
+                    attempt=attempt,
+                    retryable=outcome.retryable,
+                    abort=outcome.abort_queue,
+                )
                 if outcome.abort_queue or not outcome.failed or not outcome.retryable:
                     return outcome, attempt
                 if attempt == MAX_ATTEMPTS or self.is_cancelled:
