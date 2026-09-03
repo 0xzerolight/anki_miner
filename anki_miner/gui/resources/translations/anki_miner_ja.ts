@@ -4012,6 +4012,14 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>文章音声: %1/%2 文</translation>
     </message>
     <message>
+        <source>Subtitles contain no %1 text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No words found in subtitles</source>
+        <translation>字幕に単語が見つかりませんでした</translation>
+    </message>
+    <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
         <translation>%1 個の新出単語はすべて有効なフィルターで除外されました — カードは作成されませんでした</translation>
     </message>
@@ -4184,10 +4192,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>
             <numerusform>選択した %n 語をマイニング中</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>No words found in subtitles</source>
-        <translation>字幕に単語が見つかりませんでした</translation>
     </message>
     <message>
         <source>No media extracted successfully</source>

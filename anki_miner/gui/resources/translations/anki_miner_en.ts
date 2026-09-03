@@ -3988,6 +3988,14 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitles contain no %1 text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No words found in subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
         <translation type="unfinished" />
     </message>
@@ -4160,10 +4168,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished">
             <numerusform />
         </translation>
-    </message>
-    <message>
-        <source>No words found in subtitles</source>
-        <translation type="unfinished" />
     </message>
     <message>
         <source>No media extracted successfully</source>

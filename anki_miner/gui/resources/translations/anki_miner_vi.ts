@@ -4012,6 +4012,14 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <translation>Âm thanh câu: %1/%2 câu</translation>
     </message>
     <message>
+        <source>Subtitles contain no %1 text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No words found in subtitles</source>
+        <translation>Không tìm thấy từ nào trong phụ đề</translation>
+    </message>
+    <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
         <translation>Tất cả %1 từ mới đã bị loại bỏ bởi các bộ lọc đang hoạt động — không tạo thẻ nào</translation>
     </message>
@@ -4184,10 +4192,6 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <translation>
             <numerusform>Đang khai thác %n từ đã chọn</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>No words found in subtitles</source>
-        <translation>Không tìm thấy từ nào trong phụ đề</translation>
     </message>
     <message>
         <source>No media extracted successfully</source>

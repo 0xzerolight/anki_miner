@@ -4014,6 +4014,14 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
         <translation>Satz-Audio: %1/%2 Sätze</translation>
     </message>
     <message>
+        <source>Subtitles contain no %1 text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No words found in subtitles</source>
+        <translation>Keine Wörter in den Untertiteln gefunden</translation>
+    </message>
+    <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
         <translation>Alle %1 neuen Wörter wurden von aktiven Filtern entfernt — keine Karten erstellt</translation>
     </message>
@@ -4195,10 +4203,6 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
             <numerusform>%n ausgewähltes Wort wird gesammelt</numerusform>
             <numerusform>%n ausgewählte Wörter werden gesammelt</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>No words found in subtitles</source>
-        <translation>Keine Wörter in den Untertiteln gefunden</translation>
     </message>
     <message>
         <source>No media extracted successfully</source>

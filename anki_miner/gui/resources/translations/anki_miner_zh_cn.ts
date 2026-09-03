@@ -4012,6 +4012,14 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>句子音频：%1/%2 个句子</translation>
     </message>
     <message>
+        <source>Subtitles contain no %1 text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No words found in subtitles</source>
+        <translation>字幕中未找到单词</translation>
+    </message>
+    <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
         <translation>全部 %1 个新单词已被启用的过滤器移除——未创建卡片</translation>
     </message>
@@ -4184,10 +4192,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>
             <numerusform>正在挖取 %n 个已选单词</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>No words found in subtitles</source>
-        <translation>字幕中未找到单词</translation>
     </message>
     <message>
         <source>No media extracted successfully</source>

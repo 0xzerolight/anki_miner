@@ -4016,6 +4016,14 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>Аудио предложений: %1/%2 предложений</translation>
     </message>
     <message>
+        <source>Subtitles contain no %1 text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No words found in subtitles</source>
+        <translation>Слов в субтитрах не найдено</translation>
+    </message>
+    <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
         <translation>Все новые слова (%1) были удалены активными фильтрами — карточки не созданы</translation>
     </message>
@@ -4206,10 +4214,6 @@ Files on disk will be left untouched because the folder could not be proven to b
             <numerusform>Майнятся %n выбранных слова</numerusform>
             <numerusform>Майнится %n выбранных слов</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>No words found in subtitles</source>
-        <translation>Слов в субтитрах не найдено</translation>
     </message>
     <message>
         <source>No media extracted successfully</source>

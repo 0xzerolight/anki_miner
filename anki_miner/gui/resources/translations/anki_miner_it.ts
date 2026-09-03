@@ -4014,6 +4014,14 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
         <translation>Audio delle frasi: %1/%2 frasi</translation>
     </message>
     <message>
+        <source>Subtitles contain no %1 text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No words found in subtitles</source>
+        <translation>Nessuna parola trovata nei sottotitoli</translation>
+    </message>
+    <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
         <translation>Tutte le %1 nuove parole sono state rimosse dai filtri attivi — nessuna carta creata</translation>
     </message>
@@ -4195,10 +4203,6 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
             <numerusform>Estrazione di %n parola selezionata</numerusform>
             <numerusform>Estrazione di %n parole selezionate</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>No words found in subtitles</source>
-        <translation>Nessuna parola trovata nei sottotitoli</translation>
     </message>
     <message>
         <source>No media extracted successfully</source>

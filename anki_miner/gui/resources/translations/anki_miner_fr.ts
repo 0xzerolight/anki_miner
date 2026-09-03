@@ -4014,6 +4014,14 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Audio de phrase : %1/%2 phrases</translation>
     </message>
     <message>
+        <source>Subtitles contain no %1 text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No words found in subtitles</source>
+        <translation>Aucun mot trouvé dans les sous-titres</translation>
+    </message>
+    <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
         <translation>Tous les %1 nouveau(x) mot(s) ont été supprimés par les filtres actifs — aucune carte créée</translation>
     </message>
@@ -4195,10 +4203,6 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
             <numerusform>Extraction de %n mot sélectionné</numerusform>
             <numerusform>Extraction de %n mots sélectionnés</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>No words found in subtitles</source>
-        <translation>Aucun mot trouvé dans les sous-titres</translation>
     </message>
     <message>
         <source>No media extracted successfully</source>

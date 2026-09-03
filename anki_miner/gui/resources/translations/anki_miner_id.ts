@@ -4012,6 +4012,14 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>Audio kalimat: %1/%2 kalimat</translation>
     </message>
     <message>
+        <source>Subtitles contain no %1 text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No words found in subtitles</source>
+        <translation>Tidak ada kata yang ditemukan di subtitel</translation>
+    </message>
+    <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
         <translation>Semua %1 kata baru dihapus oleh filter aktif — tidak ada kartu yang dibuat</translation>
     </message>
@@ -4184,10 +4192,6 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>
             <numerusform>Mining %n kata yang dipilih</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>No words found in subtitles</source>
-        <translation>Tidak ada kata yang ditemukan di subtitel</translation>
     </message>
     <message>
         <source>No media extracted successfully</source>

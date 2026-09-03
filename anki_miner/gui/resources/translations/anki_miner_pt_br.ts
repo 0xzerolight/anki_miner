@@ -4014,6 +4014,14 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
         <translation>Áudio de frase: %1/%2 frases</translation>
     </message>
     <message>
+        <source>Subtitles contain no %1 text</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No words found in subtitles</source>
+        <translation>Nenhuma palavra encontrada nas legendas</translation>
+    </message>
+    <message>
         <source>All %1 new word(s) were removed by active filters — no cards created</source>
         <translation>Todas as %1 nova(s) palavra(s) foram removidas pelos filtros ativos — nenhum cartão criado</translation>
     </message>
@@ -4195,10 +4203,6 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
             <numerusform>Minerando %n palavra selecionada</numerusform>
             <numerusform>Minerando %n palavras selecionadas</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>No words found in subtitles</source>
-        <translation>Nenhuma palavra encontrada nas legendas</translation>
     </message>
     <message>
         <source>No media extracted successfully</source>
