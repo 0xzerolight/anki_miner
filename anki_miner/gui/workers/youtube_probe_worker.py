@@ -26,7 +26,7 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
-from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.youtube_url import redact_youtube_url_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -60,10 +60,19 @@ class _SingleCallProbeThread(CancellableWorker):
         try:
             result = self._do_call()
         except Exception as exc:  # noqa: BLE001 - surface every failure to GUI
-            self.report_failure(exc, context="YouTubeProbeWorker", on_error=self._emit_error)
+            # type(self).__name__, not the literal: the playlist resolve worker
+            # shares this body, and a hardcoded context filed its failures under
+            # the single-video worker's name.
+            self.report_failure(exc, context=type(self).__name__, on_error=self._emit_error)
         else:
             self._emit_result(result)
-            log_summary(logger, "YouTube probe done", results=1)
+            # The end line carries the URL and the elapsed time: which probe
+            # took the timeout is the question a hung YouTube tab asks.
+            self.log_end(url=self._url_for_log(), results=1)
+
+    def _url_for_log(self) -> str:
+        """The probed URL, stripped of userinfo and of unrelated parameters."""
+        return redact_youtube_url_for_log(str(getattr(self, "_url", "")))
 
     def _url_host(self) -> str:
         """Return the bounded URL host used by the worker start receipt."""

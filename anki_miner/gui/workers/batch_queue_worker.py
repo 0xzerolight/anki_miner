@@ -175,6 +175,15 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
             # Close the run's processor on every exit (normal, cancel, or
             # exception) so its sqlite handles / Session don't leak.
             self._close_current_processor()
+            # Tallied off the frozen snapshot's terminal statuses, so the end
+            # line describes the same set of series the start line named.
+            self.log_end(
+                items=len(self._run_items),
+                completed=sum(1 for item in self._run_items if item.status == QueueItemStatus.COMPLETED),
+                failed=sum(1 for item in self._run_items if item.status == QueueItemStatus.ERROR),
+                cards=total_cards,
+                cancelled=self.is_cancelled,
+            )
             self.queue_finished.emit(total_cards, self.whitelist_coverage)
 
     def _snapshot_items(self) -> list[QueueItem]:

@@ -30,6 +30,7 @@ from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.models import classify_terminal_outcome
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +103,16 @@ class FileQueueWorker(CancellableWorker):
                 cancelled=self.is_cancelled,
                 fatal=self._fatal_error,
             )
+            # In the finally so a cancelled or crashed queue still closes its
+            # own start line: an unclosed start must keep meaning "the worker
+            # never returned" and nothing else.
+            self.log_end(
+                succeeded=self._succeeded_count,
+                skipped=self._skipped_count,
+                failed=self._failed_count,
+                cancelled=self.is_cancelled,
+                outcome=outcome.name,
+            )
             self.queue_finished.emit(outcome)
 
     @pyqtSlot(int, object, object)
@@ -129,6 +140,20 @@ class FileQueueWorker(CancellableWorker):
                 # item's failure, then flag the queue to stop. Do NOT touch
                 # _cancel_event: is_cancelled must stay False so callers can tell
                 # a tool error from a user cancel.
+                #
+                # WARNING, and its own event: the user-visible result changes
+                # for every item after this one. A 40-file Condense queue that
+                # died on a missing encoder used to leave one per-item error and
+                # no record at all of why the other 39 never ran.
+                log_summary(
+                    logger,
+                    "Queue aborted by fatal tool error",
+                    level=logging.WARNING,
+                    worker=type(self).__name__,
+                    idx=idx,
+                    error_type=type(exc).__name__,
+                    error=str(exc),
+                )
                 self.file_finished.emit(idx, None, str(exc))
                 self._fatal_error = True
                 self._stop_queue = True

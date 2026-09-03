@@ -202,6 +202,38 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
 
         except Exception as e:  # noqa: BLE001 — surface every failure to GUI
             self.report_failure(e, context="ManualPairWorkerThread", on_error=self.error.emit)
+        finally:
+            # Read off ``results``, which is what the tab's receipt is built
+            # from: the log and the on-screen receipt then agree by
+            # construction. In the finally so a refused or crashed run closes
+            # its own start line.
+            succeeded, cards = self._run_tallies(results)
+            self.log_end(
+                results=len(results),
+                succeeded=succeeded,
+                failed=len(results) - succeeded,
+                cards=cards,
+                cancelled=self.is_cancelled,
+            )
+
+    @staticmethod
+    def _run_tallies(results: list) -> tuple[int, int]:
+        """``(succeeded, cards)`` read defensively off whatever ``results`` holds.
+
+        Every attribute is fetched with a default. The end line runs in a
+        ``finally`` inside ``QThread.run()``, where an escaping exception is a
+        PyQt6 process abort — a receipt must never be the thing that kills the
+        run it is reporting on.
+        """
+        succeeded = 0
+        cards = 0
+        for result in results:
+            if getattr(result, "success", False):
+                succeeded += 1
+            created = getattr(result, "cards_created", 0)
+            if isinstance(created, int):
+                cards += created
+        return succeeded, cards
 
     def _soft_failure(self, pair, error: Exception) -> ProcessingResult:
         """Per-pair soft-failure result (mirrors BatchQueueWorkerThread)."""
