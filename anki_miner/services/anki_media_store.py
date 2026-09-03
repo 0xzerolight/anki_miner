@@ -29,6 +29,7 @@ from anki_miner.exceptions import AnkiConnectionError
 from anki_miner.models import CardPayload, MediaData
 from anki_miner.services._ankiconnect import post_action, post_multi
 from anki_miner.services.dictionary.yomitan_renderer import DICT_MEDIA_CLASS
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -458,7 +459,16 @@ class AnkiMediaStore:
         for src in all_srcs:
             file_path = _resolve_dict_media_path(src, self.config.dicts_root)
             if file_path is None:
-                logger.warning("Dict media file missing on disk: %s", src)
+                # The dicts_root is half the diagnosis: a src that resolves
+                # nowhere is usually a slot indexed under a different home
+                # (a profile switch, a moved ANKI_MINER_HOME), not a lost file.
+                log_summary(
+                    logger,
+                    "Dict media file missing on disk",
+                    level=logging.WARNING,
+                    src=src,
+                    dicts_root=self.config.dicts_root,
+                )
                 # Cache anyway so we don't retry every card.
                 self._dict_media_uploaded.add(src)
                 continue
