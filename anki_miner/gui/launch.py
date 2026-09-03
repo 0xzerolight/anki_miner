@@ -25,9 +25,13 @@ FFSUBSYNC_CHILD_FLAG = "--ffsubsync-child"
 
 _CA_ENV_VARS = ("REQUESTS_CA_BUNDLE", "SSL_CERT_FILE", "CURL_CA_BUNDLE")
 # Module + line number form an exact source coordinate against the version in
-# the later session header. Thread name is intentionally absent: bare Qt worker
-# names are unhelpful ``Dummy-N`` noise and consume materially more ring space.
-_LOG_FORMAT = "%(asctime)s %(levelname)-8s %(name)s:%(lineno)d: %(message)s"
+# the later session header. Thread name is present because threads now carry
+# meaningful names: ``CancellableWorker.log_start`` renames each worker to its
+# run context and ``main()`` names the GUI thread ``main``, so the field says
+# which worker produced a line instead of the old ``Dummy-N`` noise.
+# Milliseconds order records that share a second, which interleaved worker
+# output otherwise leaves ambiguous.
+_LOG_FORMAT = "%(asctime)s.%(msecs)03d %(levelname)-8s [%(threadName)s] %(name)s:%(lineno)d: %(message)s"
 _LOG_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
 
