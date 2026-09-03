@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:3bd1e330de2efafb -->
+<!-- i18n-source: README.md sha256:2694be0f35a3ecf6 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -205,8 +205,8 @@ anki_miner_gui
 | Windows 安裝程式無法開啟／出現 SmartScreen 警告 | 見[首次執行注意事項](#首次執行注意事項未簽章版本)：選擇**其他資訊** -> **仍要執行**；Defender 誤判請從**保護歷程記錄**還原。 |
 | 全新安裝後沒有任何釋義 | 執行工具 -> 設定精靈，或工具 -> 下載推薦資源。若要手動匯入，請保持 Yomitan ZIP 原樣（不要解壓縮）。 |
 | 新增字典卡住或失敗 | 記下最後看到的階段並附上記錄檔（見下方「記錄檔在哪裡？」）。回報時請附上字典 ZIP 的檔名、來源與大小。 |
-| 記錄檔在哪裡？      | 使用說明 -> 開啟記錄資料夾，或在 Windows 上開啟 `%USERPROFILE%\.anki_miner\anki_miner.log`，macOS/Linux 上開啟 `~/.anki_miner/anki_miner.log`。輪替後的記錄檔使用 `.1` 到 `.5` 的後綴。 |
-| 回報錯誤          | 說明 -> 匯出診斷資訊… 會把記錄檔與系統資訊寫成 ZIP，存到你選擇的位置。上傳前請先檢視內容，因為其中包含你電腦上的檔案路徑與檔名。程式不會自動上傳任何東西。 |
+| 記錄檔在哪裡？      | 使用說明 -> 開啟記錄資料夾，或在 Windows 上開啟 `%USERPROFILE%\.anki_miner\anki_miner.log`，macOS/Linux 上開啟 `~/.anki_miner/anki_miner.log`。輪替後的記錄檔使用 `.1` 到 `.5` 的後綴。 若有 `anki_miner.crash` 也請一併提供：讓應用程式崩潰的錯誤會把呼叫堆疊寫進該檔案而非記錄檔；保存輔助行程輸出的 `anki_miner.child.log` 同樣如此。 |
+| 回報錯誤          | 說明 -> 匯出診斷資訊… 會把記錄檔（`anki_miner.log` 及其輪替檔、`anki_miner.crash`、`anki_miner.child.log`）、你的 `settings.json`、設定與介面狀態檔案、佇列快照與下載清單，以及關於本機和應用程式狀態的產生報告（`environment.txt`、`health.txt`、`resources.txt`、`stores.txt`、`disk.txt`、`screens.txt`）寫成 ZIP，存到你選擇的位置。上傳前請先檢視內容，因為其中包含你電腦上的檔案路徑與檔名。程式不會自動上傳任何東西。 |
 | 更詳細的診斷記錄 | 啟動 Anki Miner 前設定 `ANKI_MINER_LOG_LEVEL=DEBUG`，以擷取第三方 yt-dlp、urllib3 與 fugashi 的細節。預設為 `WARNING`；Anki Miner 本身的記錄維持在 DEBUG。 |
 | 音訊語言不對  | 程式會先嘗試採集語言的音軌，找不到才退回預設音軌。      |
 | 字幕不同步    | 使用 GUI 中的字幕位移控制項（範圍 ±300 秒）。                 |

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:3bd1e330de2efafb -->
+<!-- i18n-source: README.md sha256:2694be0f35a3ecf6 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -205,8 +205,8 @@ Menggunakan kumpulan kata nama bawaan yang berasal dari [JMnedict](https://www.e
 | Installer Windows tidak mau terbuka / peringatan SmartScreen | Lihat [Catatan penjalanan pertama](#catatan-penjalanan-pertama-build-tanpa-tanda-tangan): pilih **Info lainnya** -> **Tetap jalankan**; pulihkan positif palsu Defender dari **Riwayat perlindungan**. |
 | Instalasi baru tidak punya definisi | Jalankan Alat -> Wizard Penyiapan atau Alat -> Unduh Sumber Daya yang Direkomendasikan. Untuk impor manual, biarkan ZIP Yomitan utuh (jangan diekstrak). |
 | Tambahkan kamus macet atau gagal | Catat tahap terakhir yang terlihat dan lampirkan log (lihat "Di mana letak lognya?" di bawah). Sertakan nama ZIP kamus, sumber, dan ukurannya dalam laporan. |
-| Di mana letak lognya?      | Gunakan Bantuan -> Buka Folder Log, atau buka `%USERPROFILE%\.anki_miner\anki_miner.log` di Windows atau `~/.anki_miner/anki_miner.log` di macOS/Linux. Log yang dirotasi memakai akhiran `.1` sampai `.5`. |
-| Melaporkan bug          | Bantuan -> Ekspor Diagnostik… menulis ZIP berisi log dan detail sistem ke lokasi pilihan Anda. Tinjau dulu sebelum mengunggahnya karena berisi jalur berkas dan nama berkas dari komputer Anda. Tidak ada yang diunggah otomatis. |
+| Di mana letak lognya?      | Gunakan Bantuan -> Buka Folder Log, atau buka `%USERPROFILE%\.anki_miner\anki_miner.log` di Windows atau `~/.anki_miner/anki_miner.log` di macOS/Linux. Log yang dirotasi memakai akhiran `.1` sampai `.5`. Kirim juga `anki_miner.crash` bila ada - crash yang mematikan aplikasi menulis stack-nya ke berkas itu, bukan ke log - dan `anki_miner.child.log`, yang memuat keluaran proses pembantu. |
+| Melaporkan bug          | Bantuan -> Ekspor Diagnostik… menulis ZIP ke lokasi pilihan Anda, berisi log (`anki_miner.log` beserta rotasinya, `anki_miner.crash`, `anki_miner.child.log`), `settings.json` Anda, berkas konfigurasi dan status antarmuka, snapshot antrean dan manifes unduhan, serta laporan yang dihasilkan tentang mesin dan status aplikasi (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Tinjau dulu sebelum mengunggahnya karena berisi jalur berkas dan nama berkas dari komputer Anda. Tidak ada yang diunggah otomatis. |
 | Logging diagnostik lebih rinci | Atur `ANKI_MINER_LOG_LEVEL=DEBUG` sebelum menjalankan Anki Miner untuk menangkap detail yt-dlp, urllib3, dan fugashi pihak ketiga. Default-nya `WARNING`; log Anki Miner tetap di DEBUG. |
 | Audio bahasanya salah  | Alat ini mencoba trek audio dalam bahasa mining terlebih dahulu, lalu beralih ke default.      |
 | Subtitel tidak sinkron    | Gunakan kontrol offset subtitel di GUI (rentang ±300 detik).                 |
