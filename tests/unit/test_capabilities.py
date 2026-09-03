@@ -42,6 +42,12 @@ def test_system_health_is_findable() -> None:
     assert any(c.id == "system-health" for c in hits)
 
 
+def test_merging_a_season_is_findable() -> None:
+    """The merge option lives inside Condense, so it needs its own keywords."""
+    assert any(c.id == "condense-options" for c in search("season"))
+    assert any(c.id == "condense-options" for c in search("merge"))
+
+
 def test_mining_language_is_findable() -> None:
     """Its own destination since v2.13; without an entry nothing points at it."""
     assert any(c.id == "mining-language" for c in search("korean"))
