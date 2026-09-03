@@ -1,5 +1,6 @@
 """Tests for validation_service module."""
 
+import logging
 import subprocess
 import sys
 import threading
@@ -1746,3 +1747,133 @@ class TestOptionalIndexedResourceChecks:
         # silently drops the warning off the screen.
         assert any(issue.component == "Audio Packs" for issue in result.issues)
         assert "audio-packs" not in result.tool_versions
+
+
+class TestValidationCheckLogging:
+    """Every health check leaves one ``Validation check:`` receipt in the log."""
+
+    _LOGGER = "anki_miner.services.validation_service"
+
+    @staticmethod
+    def _records(caplog):
+        return [r for r in caplog.records if r.getMessage().startswith("Validation check:")]
+
+    def test_tool_failure_logs_warning_with_path_and_argv(self, test_config, caplog):
+        """A missing binary is a WARNING naming the resolved path and the argv."""
+        service = ValidationService(test_config)
+
+        with (
+            caplog.at_level(logging.DEBUG, logger=self._LOGGER),
+            patch(
+                "anki_miner.services.validation_service.subprocess.run",
+                side_effect=FileNotFoundError(),
+            ),
+        ):
+            success, _message = service._check_ffmpeg()
+
+        assert success is False
+        records = self._records(caplog)
+        assert len(records) == 1
+        assert records[0].levelno == logging.WARNING
+        text = records[0].getMessage()
+        assert "check=ffmpeg" in text
+        assert "ok=False" in text
+        assert "detail=" in text
+        assert "path=" in text
+        assert "argv=" in text
+
+    def test_tool_failure_logs_the_argv_before_running(self, test_config, caplog):
+        """``log_command`` records the argv even when the process never starts."""
+        service = ValidationService(test_config)
+
+        with (
+            caplog.at_level(logging.DEBUG, logger=self._LOGGER),
+            patch(
+                "anki_miner.services.validation_service.subprocess.run",
+                side_effect=FileNotFoundError(),
+            ),
+        ):
+            service._check_ffmpeg()
+
+        assert any(r.getMessage().startswith("ffmpeg: argv=") for r in caplog.records)
+
+    def test_tool_success_logs_info(self, test_config, caplog):
+        """A healthy binary is an INFO receipt, not a warning."""
+        service = ValidationService(test_config)
+
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "ffmpeg version 5.0"
+
+        with (
+            caplog.at_level(logging.DEBUG, logger=self._LOGGER),
+            patch("anki_miner.services.validation_service.subprocess.run", return_value=mock_result),
+        ):
+            success, _message = service._check_ffmpeg()
+
+        assert success is True
+        records = self._records(caplog)
+        assert len(records) == 1
+        assert records[0].levelno == logging.INFO
+        assert "check=ffmpeg" in records[0].getMessage()
+        assert "ok=True" in records[0].getMessage()
+
+    def test_ankiconnect_success_logs_url_and_version(self, test_config, caplog):
+        """The AnkiConnect receipt carries the endpoint and the reported version."""
+        service = ValidationService(test_config)
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"result": 6, "error": None}
+
+        with (
+            caplog.at_level(logging.DEBUG, logger=self._LOGGER),
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response),
+        ):
+            service._check_ankiconnect()
+
+        records = self._records(caplog)
+        assert len(records) == 1
+        text = records[0].getMessage()
+        assert "check=ankiconnect" in text
+        assert f"url={test_config.ankiconnect_url}" in text
+        assert "version=6" in text
+
+    def test_ankiconnect_failure_logs_warning_with_error_type(self, test_config, caplog):
+        """A refused connection names the exception type on the receipt."""
+        import requests
+
+        service = ValidationService(test_config)
+
+        with (
+            caplog.at_level(logging.DEBUG, logger=self._LOGGER),
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=requests.exceptions.ConnectionError(),
+            ),
+        ):
+            service._check_ankiconnect()
+
+        records = self._records(caplog)
+        assert len(records) == 1
+        assert records[0].levelno == logging.WARNING
+        assert "error=AnkiConnectionError" in records[0].getMessage()
+
+    def test_deck_check_logs_the_deck_name(self, test_config, caplog):
+        """The deck receipt names the deck that was looked for."""
+        service = ValidationService(test_config)
+
+        with (
+            caplog.at_level(logging.DEBUG, logger=self._LOGGER),
+            patch(
+                "anki_miner.services.validation_service.post_action",
+                return_value=[test_config.anki_deck_name],
+            ),
+        ):
+            success, _message = service._check_deck_exists()
+
+        assert success is True
+        records = self._records(caplog)
+        assert len(records) == 1
+        assert "check=deck" in records[0].getMessage()
+        assert f"deck={test_config.anki_deck_name}" in records[0].getMessage()

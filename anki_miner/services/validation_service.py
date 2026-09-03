@@ -1,11 +1,13 @@
 """Service for validating system setup and dependencies."""
 
 import logging
+import shlex
 import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
+from typing import overload
 
 import requests
 
@@ -21,10 +23,15 @@ from anki_miner.services.anki_note_builder import (
 from anki_miner.utils import ensure_directory
 from anki_miner.utils.alass_resolver import resolve_alass
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
+from anki_miner.utils.logging_ext import capped, log_summary
+from anki_miner.utils.subprocess_log import log_command, mask_argv
 from anki_miner.utils.subprocess_utils import no_window_kwargs
 from anki_miner.utils.ytdlp_resolver import managed_ytdlp_lock, resolve_ytdlp
 
 logger = logging.getLogger(__name__)
+
+#: How long a ``--version`` probe may run before the check reports a timeout.
+_TOOL_PROBE_TIMEOUT_SECONDS = 10
 
 #: Age at which a resolved yt-dlp earns a staleness nudge. Generous on purpose:
 #: yt-dlp ships roughly monthly and a bundled binary is already weeks old on release
@@ -96,6 +103,48 @@ def _is_within(candidate: Path, directory: Path) -> bool:
     except (ValueError, OSError):
         return False
     return True
+
+
+@overload
+def _record(key: str, ok: bool, message: str, **fields: object) -> tuple[bool, str]: ...
+
+
+@overload
+def _record(key: str, ok: None, message: str, **fields: object) -> tuple[None, str]: ...
+
+
+def _record(key: str, ok: bool | None, message: str, **fields: object) -> tuple[bool | None, str]:
+    """Log one ``Validation check:`` receipt and return the check's verdict.
+
+    System Health renders a badge per check and keeps only the failures as
+    issues, so a log read after the fact had no record of what was actually
+    probed -- which binary path answered, which AnkiConnect endpoint was tried,
+    which deck was looked for. Every check routes its verdict through here so
+    the log carries one line per check with that subject attached.
+
+    Returns the ``(ok, message)`` tuple unchanged so a call site stays a single
+    ``return _record(...)``.
+
+    Args:
+        key: Stable check name (the grep key: ``ffmpeg``, ``ankiconnect``, ...).
+        ok: True for a passing check, False for a failing one, None for an
+            optional resource that is simply not configured.
+        message: The user-facing detail the check returns.
+        **fields: Extra subject context (``path``, ``url``, ``deck``, ...).
+
+    Returns:
+        ``(ok, message)``.
+    """
+    if ok is False:
+        level = logging.WARNING
+    elif ok is None:
+        # Nothing configured is a resting state for the optional families, not
+        # a problem: recorded for the inventory, not for the user's attention.
+        level = logging.DEBUG
+    else:
+        level = logging.INFO
+    log_summary(logger, "Validation check:", level=level, check=key, ok=ok, detail=message, **fields)
+    return ok, message
 
 
 class ValidationService:
@@ -186,6 +235,7 @@ class ValidationService:
         else:
             stale_msg = self._ytdlp_staleness_warning(ytdlp_msg)
             if stale_msg is not None:
+                _record("yt-dlp-age", False, stale_msg, version=ytdlp_msg.split()[0] if ytdlp_msg else None)
                 issues.append(
                     ValidationIssue(
                         component="yt-dlp",
@@ -238,6 +288,14 @@ class ValidationService:
             ensure_directory(self.config.media_temp_folder)
         except Exception as e:
             logger.exception("Unexpected error creating temp folder")
+            _record(
+                "temp-folder",
+                False,
+                f"Could not create temp folder: {e}",
+                path=self.config.media_temp_folder,
+                error=type(e).__name__,
+                cause=str(e),
+            )
             issues.append(
                 ValidationIssue(
                     component="Temp Folder",
@@ -245,6 +303,8 @@ class ValidationService:
                     message=f"Could not create temp folder: {e}",
                 )
             )
+        else:
+            _record("temp-folder", True, "Temp folder is writable", path=self.config.media_temp_folder)
 
         # Offline dictionary readiness. Reported for its own sake, not as a
         # by-product of a file existing: mining without a usable offline
@@ -366,23 +426,34 @@ class ValidationService:
         Returns:
             Tuple of (success, message)
         """
+        url = self.config.ankiconnect_url
         try:
             version = post_action(
-                self.config.ankiconnect_url,
+                url,
                 "version",
                 timeout=5,
             )
         except AnkiConnectionError as e:
             cause = e.__cause__
             if isinstance(cause, requests.exceptions.ConnectionError):
-                return False, "Cannot connect to Anki. Is Anki running with AnkiConnect installed?"
-            if isinstance(cause, requests.exceptions.Timeout):
-                return False, "Connection to AnkiConnect timed out"
-            return False, f"AnkiConnect error: {e}"
+                message = "Cannot connect to Anki. Is Anki running with AnkiConnect installed?"
+            elif isinstance(cause, requests.exceptions.Timeout):
+                message = "Connection to AnkiConnect timed out"
+            else:
+                message = f"AnkiConnect error: {e}"
+            return _record("ankiconnect", False, message, url=url, error=type(e).__name__, cause=str(e))
         except Exception as e:
             logger.exception("Unexpected error checking AnkiConnect")
-            return False, f"Unexpected error: {e}"
-        return True, f"AnkiConnect v{version if version is not None else 'unknown'} is running"
+            return _record(
+                "ankiconnect", False, f"Unexpected error: {e}", url=url, error=type(e).__name__, cause=str(e)
+            )
+        return _record(
+            "ankiconnect",
+            True,
+            f"AnkiConnect v{version if version is not None else 'unknown'} is running",
+            url=url,
+            version=version,
+        )
 
     @staticmethod
     def _check_tool(
@@ -410,30 +481,58 @@ class ValidationService:
         Returns:
             Tuple of (success, message)
         """
+        argv = [resolved_path, *prefix_args, version_flag]
+        # Logged before the run: a spawn that never happens (missing binary,
+        # unverified path) still has to leave the exact command in the log.
+        log_command(logger, name, argv, timeout_s=_TOOL_PROBE_TIMEOUT_SECONDS)
+        rendered_argv = shlex.join(mask_argv(argv))
         try:
             result = subprocess.run(
-                [resolved_path, *prefix_args, version_flag],
+                argv,
                 stdin=subprocess.DEVNULL,
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=_TOOL_PROBE_TIMEOUT_SECONDS,
                 **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
             )
 
             if result.returncode != 0:
-                return False, f"{name} returned non-zero exit code"
+                return _record(
+                    name,
+                    False,
+                    f"{name} returned non-zero exit code",
+                    path=resolved_path,
+                    argv=rendered_argv,
+                    rc=result.returncode,
+                )
 
             # Extract version from first line
             version_line = result.stdout.split("\n")[0] if result.stdout else "unknown"
-            return True, f"{version_line} {_classify_resolved(name, resolved_path)}"
+            message = f"{version_line} {_classify_resolved(name, resolved_path)}"
+            return _record(name, True, message, path=resolved_path)
 
         except FileNotFoundError:
-            return False, missing_message or f"{name} not found. Install it and ensure it's in PATH"
+            message = missing_message or f"{name} not found. Install it and ensure it's in PATH"
+            return _record(name, False, message, path=resolved_path, argv=rendered_argv, error="FileNotFoundError")
         except subprocess.TimeoutExpired:
-            return False, f"{name} check timed out"
+            return _record(
+                name,
+                False,
+                f"{name} check timed out",
+                path=resolved_path,
+                argv=rendered_argv,
+                error="TimeoutExpired",
+            )
         except Exception as e:
             logger.exception("Unexpected error checking %s", name)
-            return False, f"Unexpected error: {e}"
+            return _record(
+                name,
+                False,
+                f"Unexpected error: {e}",
+                path=resolved_path,
+                argv=rendered_argv,
+                error=type(e).__name__,
+            )
 
     def _check_ffmpeg(self) -> tuple[bool, str]:
         """Check if ffmpeg is installed and accessible.
@@ -504,18 +603,23 @@ class ValidationService:
         """
         with managed_ytdlp_lock(timeout=_YTDLP_LOCK_WAIT_SECONDS) as acquired:
             if not acquired:
-                return (
+                return _record(
+                    "yt-dlp",
                     False,
                     "yt-dlp is busy — a yt-dlp task is running, so its version could not be checked. "
                     "Re-run this check once that task finishes.",
+                    reason="lock-busy",
+                    waited_s=_YTDLP_LOCK_WAIT_SECONDS,
                 )
             try:
                 resolved = resolve_ytdlp(self.config)
             except FileNotFoundError:
-                return (
+                return _record(
+                    "yt-dlp",
                     False,
                     "yt-dlp is present but unverified, so it will not be used. "
                     "Re-run Settings → YouTube → Update yt-dlp now.",
+                    reason="unverified",
                 )
             return self._check_tool(
                 "yt-dlp",
@@ -580,22 +684,37 @@ class ValidationService:
 
         enabled = [e for e in self.config.dictionary_chain if e.kind == "indexed" and e.enabled]
         if not enabled:
-            return False, (
+            return _record(
+                "offline-dictionary",
+                False,
                 "No offline dictionary is enabled, so mined cards will have no definitions. "
-                "Import one in Settings → Dictionaries, or use Tools → Download Recommended Resources."
+                "Import one in Settings → Dictionaries, or use Tools → Download Recommended Resources.",
+                root=self.config.dicts_root,
+                reason="none-enabled",
             )
 
         registry = DictionaryRegistry(self.config.dicts_root)
         registry.load()
         usable = registry.usable_enabled(self.config)
         if usable:
-            return True, ", ".join(f"{meta.source_name} ({meta.entry_count:,} entries)" for meta in usable)
+            return _record(
+                "offline-dictionary",
+                True,
+                ", ".join(f"{meta.source_name} ({meta.entry_count:,} entries)" for meta in usable),
+                root=self.config.dicts_root,
+                sources=capped([meta.source_name for meta in usable]),
+            )
 
         stale = [meta.source_name for meta in registry.stale_enabled(self.config)]
         if stale:
-            return False, (
+            return _record(
+                "offline-dictionary",
+                False,
                 f"Dictionary index(es) need reimporting after an upgrade: {', '.join(stale)}. "
-                "Use Settings → Dictionaries → Reimport All."
+                "Use Settings → Dictionaries → Reimport All.",
+                root=self.config.dicts_root,
+                reason="schema-stale",
+                sources=capped(stale),
             )
         empty = [
             meta.source_name
@@ -603,14 +722,24 @@ class ValidationService:
             if meta is not None and meta.schema_ok and meta.entry_count == 0
         ]
         if empty:
-            return False, (
+            return _record(
+                "offline-dictionary",
+                False,
                 f"Dictionary index(es) contain no entries: {', '.join(empty)}. "
-                "Reimport them in Settings → Dictionaries."
+                "Reimport them in Settings → Dictionaries.",
+                root=self.config.dicts_root,
+                reason="empty",
+                sources=capped(empty),
             )
         missing = [e.dict_id for e in enabled if e.dict_id]
-        return False, (
+        return _record(
+            "offline-dictionary",
+            False,
             f"Dictionary index(es) not found on disk: {', '.join(missing)}. "
-            "Import them again in Settings → Dictionaries."
+            "Import them again in Settings → Dictionaries.",
+            root=self.config.dicts_root,
+            reason="missing",
+            sources=capped(missing),
         )
 
     def _check_frequency_sources(self) -> tuple[bool | None, str]:
@@ -641,7 +770,9 @@ class ValidationService:
 
         enabled = [e for e in self.config.frequency_chain if e.enabled and e.source_id]
         if not enabled:
-            return None, ""
+            # Message stays empty: callers render "not set up (optional)" from
+            # the None verdict, and the reason lives on the log line instead.
+            return _record("frequency-sources", None, "", reason="none-enabled")
 
         registry = FrequencySourceRegistry(self.config.freqs_root)
         registry.load()
@@ -649,9 +780,14 @@ class ValidationService:
 
         stale = [meta.source_name for meta in registry.stale_enabled(self.config)]
         if stale:
-            return False, (
+            return _record(
+                "frequency-sources",
+                False,
                 f"Frequency source(s) need reimporting after an upgrade: {', '.join(stale)}. "
-                "Use Settings → Frequency → Reimport All."
+                "Use Settings → Frequency → Reimport All.",
+                root=self.config.freqs_root,
+                reason="schema-stale",
+                sources=capped(stale),
             )
         empty = [
             meta.source_name
@@ -659,13 +795,33 @@ class ValidationService:
             if meta is not None and meta.schema_ok and meta.entry_count == 0
         ]
         if empty:
-            return False, (
-                f"Frequency source(s) contain no entries: {', '.join(empty)}. " "Reimport them in Settings → Frequency."
+            return _record(
+                "frequency-sources",
+                False,
+                f"Frequency source(s) contain no entries: {', '.join(empty)}. "
+                "Reimport them in Settings → Frequency.",
+                root=self.config.freqs_root,
+                reason="empty",
+                sources=capped(empty),
             )
         if usable:
-            return True, ", ".join(f"{meta.source_name} ({meta.entry_count:,} entries)" for meta in usable)
-        # Enabled but absent from disk. Not reported — see the docstring.
-        return None, ""
+            return _record(
+                "frequency-sources",
+                True,
+                ", ".join(f"{meta.source_name} ({meta.entry_count:,} entries)" for meta in usable),
+                root=self.config.freqs_root,
+                sources=capped([meta.source_name for meta in usable]),
+            )
+        # Enabled but absent from disk. Not reported to the user — see the
+        # docstring — but the log still says which slots went missing.
+        return _record(
+            "frequency-sources",
+            None,
+            "",
+            root=self.config.freqs_root,
+            reason="missing",
+            sources=capped([e.source_id for e in enabled]),
+        )
 
     def _check_pitch_sources(self) -> tuple[bool | None, str]:
         """Check that the configured pitch chain can answer a lookup.
@@ -683,7 +839,7 @@ class ValidationService:
 
         enabled = [e for e in self.config.pitch_chain if e.enabled and e.source_id]
         if not enabled:
-            return None, ""
+            return _record("pitch-sources", None, "", reason="none-enabled")
 
         registry = PitchSourceRegistry(self.config.pitch_root)
         registry.load()
@@ -691,9 +847,14 @@ class ValidationService:
 
         stale = [meta.source_name for meta in registry.stale_enabled(self.config)]
         if stale:
-            return False, (
+            return _record(
+                "pitch-sources",
+                False,
                 f"Pitch accent source(s) need reimporting after an upgrade: {', '.join(stale)}. "
-                "Use Settings → Pitch Accent → Reimport All."
+                "Use Settings → Pitch Accent → Reimport All.",
+                root=self.config.pitch_root,
+                reason="schema-stale",
+                sources=capped(stale),
             )
         empty = [
             meta.source_name
@@ -701,14 +862,32 @@ class ValidationService:
             if meta is not None and meta.schema_ok and meta.entry_count == 0
         ]
         if empty:
-            return False, (
+            return _record(
+                "pitch-sources",
+                False,
                 f"Pitch accent source(s) contain no entries: {', '.join(empty)}. "
-                "Reimport them in Settings → Pitch Accent."
+                "Reimport them in Settings → Pitch Accent.",
+                root=self.config.pitch_root,
+                reason="empty",
+                sources=capped(empty),
             )
         if usable:
-            return True, ", ".join(f"{meta.source_name} ({meta.entry_count:,} entries)" for meta in usable)
+            return _record(
+                "pitch-sources",
+                True,
+                ", ".join(f"{meta.source_name} ({meta.entry_count:,} entries)" for meta in usable),
+                root=self.config.pitch_root,
+                sources=capped([meta.source_name for meta in usable]),
+            )
         # Enabled but absent from disk. Not reported — see the docstring.
-        return None, ""
+        return _record(
+            "pitch-sources",
+            None,
+            "",
+            root=self.config.pitch_root,
+            reason="missing",
+            sources=capped([e.source_id for e in enabled]),
+        )
 
     def _check_audio_packs(self) -> tuple[bool | None, str]:
         """Check that the configured audio pack chain can answer a lookup.
@@ -737,13 +916,13 @@ class ValidationService:
         from anki_miner.services.audio_packs.registry import AudioPackRegistry
 
         if not self.config.anki_fields.get("expression_audio"):
-            return None, ""
+            return _record("audio-packs", None, "", reason="expression-audio-unmapped")
 
         enabled_ids = [
             e.pack_id for e in self.config.expression_audio_chain if e.enabled and e.kind == "pack" and e.pack_id
         ]
         if not enabled_ids:
-            return None, ""
+            return _record("audio-packs", None, "", reason="none-enabled")
 
         registry = AudioPackRegistry(self.config.audio_packs_root)
         registry.load()
@@ -751,9 +930,14 @@ class ValidationService:
 
         stale = [meta.source for meta in registry.stale_enabled(self.config)]
         if stale:
-            return False, (
+            return _record(
+                "audio-packs",
+                False,
                 f"Audio pack(s) need reimporting after an upgrade: {', '.join(stale)}. "
-                "Use Settings → Audio → Reimport All."
+                "Use Settings → Audio → Reimport All.",
+                root=self.config.audio_packs_root,
+                reason="schema-stale",
+                sources=capped(stale),
             )
         usable = [
             meta
@@ -761,10 +945,23 @@ class ValidationService:
             if meta is not None and meta.schema_ok and meta.source_available
         ]
         if usable:
-            return True, ", ".join(f"{meta.source} ({meta.entry_count:,} entries)" for meta in usable)
+            return _record(
+                "audio-packs",
+                True,
+                ", ".join(f"{meta.source} ({meta.entry_count:,} entries)" for meta in usable),
+                root=self.config.audio_packs_root,
+                sources=capped([meta.source for meta in usable]),
+            )
         # Enabled but absent from disk, or its audio is unreachable. Not
         # reported — see the docstring.
-        return None, ""
+        return _record(
+            "audio-packs",
+            None,
+            "",
+            root=self.config.audio_packs_root,
+            reason="missing-or-unreachable",
+            sources=capped(enabled_ids),
+        )
 
     def _check_deck_exists(self) -> tuple[bool, str]:
         """Check if the target deck exists in Anki.
@@ -788,21 +985,35 @@ class ValidationService:
             msg = str(e)
             prefix = "AnkiConnect error in 'deckNames': "
             if msg.startswith(prefix):
-                return False, f"Error fetching decks: {msg[len(prefix) :]}"
-            return False, f"Error checking deck: {e}"
+                message = f"Error fetching decks: {msg[len(prefix) :]}"
+            else:
+                message = f"Error checking deck: {e}"
+            return _record("deck", False, message, deck=self.config.anki_deck_name, error=type(e).__name__, cause=msg)
         except Exception as e:
             logger.exception("Unexpected error checking deck existence")
-            return False, f"Error checking deck: {e}"
+            return _record(
+                "deck",
+                False,
+                f"Error checking deck: {e}",
+                deck=self.config.anki_deck_name,
+                error=type(e).__name__,
+                cause=str(e),
+            )
 
         deck_name = self.config.anki_deck_name
         if deck_name in decks:
-            return True, f"Deck '{deck_name}' found"
+            return _record("deck", True, f"Deck '{deck_name}' found", deck=deck_name, decks=len(decks))
         available = ", ".join(decks[:5])
         more = "..." if len(decks) > 5 else ""
-        return False, (
+        return _record(
+            "deck",
+            False,
             f"Deck '{deck_name}' not found in Anki. "
             f"Pick an existing deck in Settings → Anki. "
-            f"Available: {available}{more}"
+            f"Available: {available}{more}",
+            deck=deck_name,
+            reason="missing",
+            available=capped(decks),
         )
 
     def _check_note_type_exists(self) -> tuple[bool, str]:
@@ -824,18 +1035,41 @@ class ValidationService:
             msg = str(e)
             prefix = "AnkiConnect error in 'modelNames': "
             if msg.startswith(prefix):
-                return False, f"Error fetching models: {msg[len(prefix) :]}"
-            return False, f"Error checking note type: {e}"
+                message = f"Error fetching models: {msg[len(prefix) :]}"
+            else:
+                message = f"Error checking note type: {e}"
+            return _record(
+                "note-type",
+                False,
+                message,
+                note_type=self.config.anki_note_type,
+                error=type(e).__name__,
+                cause=msg,
+            )
         except Exception as e:
             logger.exception("Unexpected error checking note type existence")
-            return False, f"Error checking note type: {e}"
+            return _record(
+                "note-type",
+                False,
+                f"Error checking note type: {e}",
+                note_type=self.config.anki_note_type,
+                error=type(e).__name__,
+                cause=str(e),
+            )
 
         note_type = self.config.anki_note_type
         if note_type in models:
-            return True, f"Note type '{note_type}' found"
+            return _record("note-type", True, f"Note type '{note_type}' found", note_type=note_type, models=len(models))
         available = ", ".join(models[:5])
         more = "..." if len(models) > 5 else ""
-        return False, f"Note type '{note_type}' not found. Available: {available}{more}"
+        return _record(
+            "note-type",
+            False,
+            f"Note type '{note_type}' not found. Available: {available}{more}",
+            note_type=note_type,
+            reason="missing",
+            available=capped(models),
+        )
 
     def _check_field_names_exist(self) -> tuple[bool, str]:
         """Check configured field presence and the first-field invariant.
@@ -857,11 +1091,27 @@ class ValidationService:
             msg = str(e)
             prefix = "AnkiConnect error in 'modelFieldNames': "
             if msg.startswith(prefix):
-                return False, f"Error fetching fields: {msg[len(prefix) :]}"
-            return False, f"Error checking fields: {e}"
+                message = f"Error fetching fields: {msg[len(prefix) :]}"
+            else:
+                message = f"Error checking fields: {e}"
+            return _record(
+                "field-mapping",
+                False,
+                message,
+                note_type=self.config.anki_note_type,
+                error=type(e).__name__,
+                cause=msg,
+            )
         except Exception as e:
             logger.exception("Unexpected error checking field names")
-            return False, f"Error checking fields: {e}"
+            return _record(
+                "field-mapping",
+                False,
+                f"Error checking fields: {e}",
+                note_type=self.config.anki_note_type,
+                error=type(e).__name__,
+                cause=str(e),
+            )
 
         targets = [target for target in self.config.anki_fields.values() if target]
         if self.config.card_type:
@@ -870,7 +1120,14 @@ class ValidationService:
                 targets.append(marker_target)
         collision_error = field_target_collision_message(self.config.anki_note_type, targets)
         if collision_error:
-            return False, collision_error
+            return _record(
+                "field-mapping",
+                False,
+                collision_error,
+                note_type=self.config.anki_note_type,
+                reason="target-collision",
+                targets=capped(targets),
+            )
 
         configured_fields = configured_target_field_names(self.config)
         word_target = self.config.anki_fields["word"]
@@ -881,5 +1138,19 @@ class ValidationService:
             word_target,
         )
         if mapping_error:
-            return False, mapping_error
-        return True, "All configured fields exist"
+            return _record(
+                "field-mapping",
+                False,
+                mapping_error,
+                note_type=self.config.anki_note_type,
+                reason="mapping",
+                configured=capped(sorted(configured_fields)),
+                actual=capped(actual_fields_list),
+            )
+        return _record(
+            "field-mapping",
+            True,
+            "All configured fields exist",
+            note_type=self.config.anki_note_type,
+            fields=len(configured_fields),
+        )
