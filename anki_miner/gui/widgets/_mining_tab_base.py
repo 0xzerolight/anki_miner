@@ -730,6 +730,7 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
                 audio_track_override=audio_track_override,
                 audio_track_codes=get_profile(config_language(config)).audio_track_codes,
                 audio_padding=config.audio_padding,
+                screenshot_animated=config.screenshot_animated,
             )
         except Exception as exc:  # noqa: BLE001 — bucket A: curation loses its media player.
             logger.warning("Curation media unavailable: error=%s", type(exc).__name__)

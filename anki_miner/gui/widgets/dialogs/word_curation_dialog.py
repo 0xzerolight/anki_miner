@@ -119,6 +119,12 @@ class CurationMediaContext:
     #: built where the config is in scope. The audio clip strip needs it to
     #: show the user the window that would be cut without an edit.
     audio_padding: float = 0.3
+    #: ``config.screenshot_animated`` — whether this run mines animated
+    #: screenshots. Carried for the same reason as ``audio_padding``: the
+    #: dialog is built without a config. The frame-pick buttons hide when it is
+    #: True, because an animated screenshot's window comes from the audio clip
+    #: (which the strip already edits), not from a single instant.
+    screenshot_animated: bool = False
     #: Season curation (batch tab): resolves another episode's video to its own
     #: media context so the player can follow cross-episode word focus. Pure
     #: and thread-safe over a snapshot (never the live worker) — the dialog
@@ -226,6 +232,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # #120). Stamped onto the selection as TokenizedWord.line_expansion;
         # the processor materializes the merged sentence/timings.
         self._line_expansions: dict[int, tuple[int, int]] = {}
+        # Per-word screenshot frames the user picked off the player, keyed by
+        # original word index exactly like _clip_overrides. Stamped onto the
+        # selection as TokenizedWord.screenshot_override; empty for every run
+        # where nobody clicked, which is the common case.
+        self._screenshot_overrides: dict[int, float] = {}
         # Context for the candidate list while a row is focused: the focused
         # word's index + its candidate variants. Guards programmatic
         # repopulation from being mistaken for a user pick.
@@ -1074,6 +1085,33 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 expand_row.addWidget(button)
             expand_row.addStretch(1)
             vbox.addLayout(expand_row)
+        # Screenshot frame pick. Its own row rather than sharing the expansion
+        # one: five buttons abreast would raise this pane's minimum width, and
+        # a button row's width is a hard floor on a splitter pane. Gated on an
+        # actual picture — an animated screenshot's window comes from the audio
+        # clip, and a preview-disabled (audio-only) player has no frame to grab.
+        surface = getattr(self.player_widget, "video_surface_available", True)
+        animated = self._media_context is not None and self._media_context.screenshot_animated
+        if self._show_player and surface and not animated:
+            frame_row = QHBoxLayout()
+            frame_row.setContentsMargins(0, 0, 0, 0)
+            frame_row.setSpacing(SPACING.xs)
+            self.use_frame_button = ModernButton(self.tr("Use current frame"), variant="ghost")
+            self.frame_reset_button = ModernButton(self.tr("Reset frame"), variant="ghost")
+            self.use_frame_button.setToolTip(
+                self.tr(
+                    "Take this word's screenshot from the frame the player is showing, "
+                    "instead of the configured offset from the line's start."
+                )
+            )
+            self.frame_reset_button.setToolTip(self.tr("Restore this word's default screenshot frame."))
+            self.use_frame_button.clicked.connect(self._on_use_current_frame)
+            self.frame_reset_button.clicked.connect(self._on_frame_reset)
+            for button in (self.use_frame_button, self.frame_reset_button):
+                button.setEnabled(False)
+                frame_row.addWidget(button)
+            frame_row.addStretch(1)
+            vbox.addLayout(frame_row)
         return container
 
     # ------------------------------------------------------------------
@@ -1241,6 +1279,49 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.expand_prev_button.setEnabled(prev_ok)
         self.expand_next_button.setEnabled(next_ok)
         self.expand_reset_button.setEnabled(reset_ok)
+
+    # ------------------------------------------------------------------
+    # Screenshot frame pick
+    # ------------------------------------------------------------------
+
+    def _on_use_current_frame(self) -> None:
+        """Stamp the player's current position as this word's screenshot frame."""
+        word, idx = self._pending_word, self._pending_index
+        if word is None or idx is None or not hasattr(self, "player_widget"):
+            return
+        if not self._chosen_episode_displayed():
+            # Season curation: the source swap for the chosen episode is still
+            # in flight, so the frame on screen belongs to the PREVIOUS one.
+            return
+        self._screenshot_overrides[idx] = max(0.0, float(self.player_widget.current_seconds))
+        self._refresh_frame_buttons()
+
+    def _on_frame_reset(self) -> None:
+        word, idx = self._pending_word, self._pending_index
+        if word is None or idx is None:
+            return
+        self._screenshot_overrides.pop(idx, None)
+        self._refresh_frame_buttons()
+
+    def _refresh_frame_buttons(self) -> None:
+        """Recompute the frame buttons' enabled states and the reset tooltip.
+
+        Picking needs a focused word whose own episode is the one on screen;
+        resetting needs a live override — the same "an enabled reset means an
+        edit is in effect" convention the expansion row uses. The tooltip names
+        the stamped second, the only visible confirmation the click landed.
+        """
+        if not hasattr(self, "use_frame_button"):
+            return
+        word, idx = self._pending_word, self._pending_index
+        picked = None if idx is None else self._screenshot_overrides.get(idx)
+        self.use_frame_button.setEnabled(word is not None and idx is not None and self._chosen_episode_displayed())
+        self.frame_reset_button.setEnabled(picked is not None)
+        self.frame_reset_button.setToolTip(
+            self.tr("Restore this word's default screenshot frame.")
+            if picked is None
+            else tr_format(self.tr("Restore this word's default screenshot frame (now %1 s)."), f"{picked:.2f}")
+        )
 
     def _build_sentence_pane(self) -> QWidget:
         """Build the "Sentences" picker pane (label + candidate list).
@@ -1692,8 +1773,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # first occurrence's entry after the user picked another (Issue #108).
         self._refresh_definition(chosen)
 
-        # Line-expansion buttons follow the focused word.
+        # Line-expansion and frame-pick buttons follow the focused word.
         self._refresh_expansion_buttons()
+        self._refresh_frame_buttons()
 
     def _refresh_definition(self, word: TokenizedWord) -> None:
         """Point the definition pane at ``word``'s card front.
@@ -1935,9 +2017,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # invalidates it: dropping the override and reseeding from the new
         # variant's default is the only reading that cannot mine a window
         # belonging to a different scene. A line expansion was counted against
-        # the old cue for the same reason, so it dies with the pick too.
+        # the old cue for the same reason, so it dies with the pick too — and so
+        # does a picked screenshot frame, chosen while looking at the old scene.
         self._clip_overrides.pop(idx, None)
         self._line_expansions.pop(idx, None)
+        self._screenshot_overrides.pop(idx, None)
         self._seed_clip_editor(chosen, idx)
 
         # Everything that describes the occurrence follows the pick, not just the
@@ -1947,6 +2031,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._apply_pick_to_row(idx, chosen)
         self._refresh_definition(chosen)
         self._refresh_expansion_buttons()
+        self._refresh_frame_buttons()
 
         # Preview the chosen scene. Defer the seek to the next event-loop tick:
         # this handler runs synchronously inside the list's currentRowChanged
@@ -2101,8 +2186,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             audio_track_override=ctx.audio_track_override,
         )
         self._displayed_media_video = ctx.video_file
-        # The landed context may make the focused word's neighbors resolvable.
+        # The landed context may make the focused word's neighbors resolvable,
+        # and it decides whether the frame on screen is the focused word's.
         self._refresh_expansion_buttons()
+        self._refresh_frame_buttons()
 
     def _chosen_episode_displayed(self) -> bool:
         """Whether the player shows the focused word's episode.
@@ -2698,9 +2785,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         words keep their default pick).
 
         A word whose audio clip window was edited is returned as a COPY carrying
-        that window. The copy matters: variants come from the shared
-        ``sentence_candidates`` list, and stamping an override onto one in place
-        would attach this run's edit to an object the filter service still owns.
+        that window, and likewise for a screenshot frame picked off the player.
+        The copy matters: variants come from the shared ``sentence_candidates``
+        list, and stamping an override onto one in place would attach this run's
+        edit to an object the filter service still owns.
         """
         selected = []
         for row in range(self.table.rowCount()):
@@ -2711,11 +2799,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                     word = self._chosen.get(original_index, self._words[original_index])
                     override = self._clip_overrides.get(original_index)
                     expansion = self._line_expansions.get(original_index, (0, 0))
-                    if override is not None or expansion != (0, 0):
+                    frame = self._screenshot_overrides.get(original_index)
+                    if override is not None or expansion != (0, 0) or frame is not None:
                         word = dataclasses.replace(
                             word,
                             clip_override=override if override is not None else word.clip_override,
                             line_expansion=expansion,
+                            screenshot_override=frame if frame is not None else word.screenshot_override,
                         )
                     selected.append(word)
         return selected
