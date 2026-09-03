@@ -178,7 +178,15 @@ def whitelist_report(coverage: WhitelistCoverage) -> str:
     Args:
         coverage: The run's folded whitelist coverage.
     """
-    line = f"{whitelist_summary(len(coverage.mined), len(coverage.entries))}."
+    # A full sentence of its own, not the receipt clause with a "." bolted on:
+    # appending an ASCII stop to a translated string puts a half-width period
+    # inside CJK text, where the sibling sentences below end in a full-width
+    # one. The English renders identically either way; the catalogs do not.
+    line = tr_format(
+        QCoreApplication.translate("ResultCopy", "Whitelist: %1 of %2 mined."),
+        len(coverage.mined),
+        len(coverage.entries),
+    )
     if coverage.missing:
         line = f"{line} " + tr_format(
             QCoreApplication.translate("ResultCopy", "Not mined: %1."), ", ".join(sorted(coverage.missing))
