@@ -712,7 +712,7 @@ class Theme:
         # (theme -> gui.utils package __init__ -> fonts -> theme).
         from anki_miner.gui.utils.stall_watchdog import paused_stall_detection
 
-        with paused_stall_detection():
+        with paused_stall_detection("theme repolish"):
             app.setStyleSheet(cls.get_stylesheet(mode))
 
     @classmethod
