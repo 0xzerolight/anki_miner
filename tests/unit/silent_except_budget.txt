@@ -1,0 +1,50 @@
+# Regression ratchets. Both sections may shrink and never grow.
+#
+# Section 1 — silent broad exception handlers (test_silent_except_ratchet.py):
+#   "<path><TAB><count>": broad handlers with an empty body plus
+#   suppress(Exception) blocks, counted only when nothing inside logs.
+#   Delete a line once its file has no site left; a stale line fails the test.
+#
+# Section 2 — subprocess call sites (test_subprocess_choke_point.py):
+#   "subprocess: <path>": a module that still spawns a child process itself
+#   instead of going through utils.process_supervisor.run_supervised, which
+#   logs argv, exit state and the stderr tail. A module not listed here fails.
+
+anki_miner/gui/app.py	1
+anki_miner/gui/controllers/frequency_import_flow.py	1
+anki_miner/gui/controllers/pitch_import_flow.py	1
+anki_miner/gui/launch.py	1
+anki_miner/gui/utils/service_factory.py	2
+anki_miner/gui/utils/stall_watchdog.py	1
+anki_miner/gui/widgets/_mining_tab_base.py	3
+anki_miner/gui/widgets/_queue_mining_tab_base.py	1
+anki_miner/gui/widgets/dialogs/word_curation_dialog.py	1
+anki_miner/gui/widgets/mpv_video_widget.py	1
+anki_miner/gui/widgets/reading_manga_tab.py	1
+anki_miner/gui/widgets/reading_novels_tab.py	1
+anki_miner/gui/widgets/reading_subtitles_tab.py	1
+anki_miner/gui/widgets/reading_text_tab.py	1
+anki_miner/gui/workers/backfill_worker.py	1
+anki_miner/gui/workers/batch_queue_worker.py	1
+anki_miner/gui/workers/deck_builder_worker.py	2
+anki_miner/services/_ankiconnect.py	1
+anki_miner/services/_staging.py	1
+anki_miner/services/audio_fetch_common.py	2
+anki_miner/services/audio_packs/fetcher.py	1
+anki_miner/services/definition_service.py	1
+anki_miner/services/deinflection.py	1
+anki_miner/services/dictionary/importers/yomitan_importer.py	1
+anki_miner/services/dictionary/providers/indexed_provider.py	1
+anki_miner/services/frequency/providers/indexed_freq_provider.py	1
+anki_miner/utils/log_hooks.py	1
+anki_miner/utils/mpv_loader.py	1
+
+subprocess: anki_miner/gui/app.py
+subprocess: anki_miner/services/asr/_engine.py
+subprocess: anki_miner/services/audio_condenser.py
+subprocess: anki_miner/services/media_extractor.py
+subprocess: anki_miner/services/shortcut_service.py
+subprocess: anki_miner/services/validation_service.py
+subprocess: anki_miner/services/ytdlp_invocation.py
+subprocess: anki_miner/services/ytdlp_updater.py
+subprocess: anki_miner/utils/audio_track_detector.py
