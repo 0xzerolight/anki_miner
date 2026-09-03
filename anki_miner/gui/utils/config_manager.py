@@ -10,13 +10,14 @@ import typing
 from collections.abc import Mapping
 from dataclasses import fields
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from anki_miner.config import AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.services.startup_store_recovery import backup_config_repair_is_safe
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.bounded_reader import read_json_bounded
+from anki_miner.utils.logging_ext import capped, log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +64,28 @@ class GUIConfigManager:
     # test/home retargeting cannot carry the hold onto another config.
     _DEFERRED_BACKUP_REPAIR_FOR: Path | None = None
 
+    # The serialized dict of the last save that reached disk THIS PROCESS, plus
+    # the file it was written to. Feeds the `Config saved` field diff, which is
+    # the only record of WHICH setting a save moved: "my settings don't stick"
+    # and "a setting changed by itself" are both unanswerable from the resulting
+    # file, which shows only the end state. In memory and process-lifetime, like
+    # ACTIVE_PROFILE_ID — a save must never read the previous config back.
+    #
+    # Keyed to the path, like _DEFERRED_BACKUP_REPAIR_FOR: a profile switch or a
+    # test retarget points CONFIG_FILE at a different file, and diffing the new
+    # file against the old file's contents would report every field as changed.
+    _LAST_SAVED_DICT: ClassVar[dict[str, Any] | None] = None
+    _LAST_SAVED_FOR: ClassVar[Path | None] = None
+
+    # How many changed fields the save receipt renders before eliding the rest.
+    # A save that touches everything (an import, a profile switch) is identified
+    # by its count, not by a line listing 90 fields.
+    _SAVE_DIFF_LIMIT = 12
+
+    # Scalar values are the diagnosis, but one field must not swallow the line:
+    # a long word list or a pasted URL is trimmed to its first characters.
+    _SAVE_DIFF_VALUE_CHARS = 60
+
     # Schema version stamped into every saved gui_config.json. Bump it only
     # when introducing a migration shim that a load MUST run for files written
     # under an older schema; that shim then gates on the loaded marker being
@@ -101,6 +124,38 @@ class GUIConfigManager:
     # pre-flip export silently reverts the user (the field is portable; it is
     # not in machine_specific_fields).
     CONFIG_SCHEMA_VERSION = 4
+
+    @classmethod
+    def _changed_fields(cls, new: dict[str, Any]) -> list[str]:
+        """Render which serialized fields differ from the last save this process.
+
+        Scalars carry their new value (``anki_deck_name=Mining2``) because the
+        value IS the diagnosis when a user reports a setting that moved on its
+        own. Containers — the four chains, ``anki_fields``, the stash — render
+        as a bare name: their contents would bury the rest of the receipt, and
+        knowing WHICH one moved is enough to go read the file.
+
+        Returns an empty list when there is no baseline for the current
+        CONFIG_FILE; the caller reports that first save as such rather than as
+        "nothing changed".
+        """
+        previous = cls._LAST_SAVED_DICT
+        if previous is None or cls._LAST_SAVED_FOR != cls.CONFIG_FILE:
+            return []
+
+        changed: list[str] = []
+        for key, value in new.items():
+            if key in previous and previous[key] == value:
+                continue
+            if isinstance(value, (str, int, float, bool)) or value is None:
+                rendered = str(value)
+                if len(rendered) > cls._SAVE_DIFF_VALUE_CHARS:
+                    rendered = rendered[: cls._SAVE_DIFF_VALUE_CHARS] + "..."
+                changed.append(f"{key}={rendered}")
+            else:
+                changed.append(key)
+        changed.extend(sorted(set(previous) - set(new)))
+        return changed
 
     @classmethod
     def save_config(cls, config: AnkiMinerConfig) -> None:
@@ -147,6 +202,12 @@ class GUIConfigManager:
         # marker; absent (not null) when no profile is active.
         if cls.ACTIVE_PROFILE_ID is not None:
             config_dict["active_profile_id"] = cls.ACTIVE_PROFILE_ID
+
+        # Diffed BEFORE the write, against the last dict that reached disk, and
+        # reported only after it: a save that raises must leave the baseline
+        # (and the receipt) describing what is actually on disk.
+        first_save = cls._LAST_SAVED_DICT is None or cls._LAST_SAVED_FOR != cls.CONFIG_FILE
+        changed = cls._changed_fields(config_dict)
 
         # Atomic write: stage to a unique sibling temp file then os.replace. A
         # truncating in-place write (open("w")) leaves invalid JSON if we
@@ -197,6 +258,28 @@ class GUIConfigManager:
                     if os.name == "posix":
                         os.chmod(bak_path, 0o600)
                     shutil.copyfile(cls.CONFIG_FILE, bak_path)
+                    # DEBUG: rotation working is the uninteresting case. It is
+                    # logged at all so a recovery report can tell "the .bak is
+                    # stale" from "rotation never ran this session".
+                    log_summary(
+                        logger,
+                        "Config backup rotated",
+                        level=logging.DEBUG,
+                        path=bak_path,
+                        bytes=len(primary_bytes),
+                    )
+
+        cls._LAST_SAVED_DICT = config_dict
+        cls._LAST_SAVED_FOR = cls.CONFIG_FILE
+        log_summary(
+            logger,
+            "Config saved",
+            path=cls.CONFIG_FILE,
+            schema=cls.CONFIG_SCHEMA_VERSION,
+            profile=cls.ACTIVE_PROFILE_ID,
+            changed="first_save" if first_save else capped(changed, cls._SAVE_DIFF_LIMIT),
+            fields=len(config_dict) if first_save else len(changed),
+        )
 
     @classmethod
     def read_active_profile_id(cls) -> str | None:
@@ -357,11 +440,22 @@ class GUIConfigManager:
                 flows done when their keys are absent from an existing config.
                 Explicit stored values are preserved.
         """
+        # Which shims actually rewrote a value, for the `Config migrated`
+        # receipt below: a file that loads "wrong" is usually a file a version
+        # shim silently rewrote, and the resulting config cannot say which one.
+        shims: list[str] = []
+
         # Convert string paths back to Path objects
         config_dict = cls._strings_to_paths(config_dict)
 
         # Migrate old field names
+        raw_anki_fields = config_dict.get("anki_fields")
+        legacy_field_keys = isinstance(raw_anki_fields, dict) and bool(
+            set(raw_anki_fields) & {"pitch_accent", "frequency_rank"}
+        )
         config_dict = cls._migrate_field_names(config_dict)
+        if legacy_field_keys:
+            shims.append("field_renames")
 
         # Backfill any anki_fields keys that are new since the config was saved
         if backfill_anki_fields:
@@ -394,12 +488,14 @@ class GUIConfigManager:
             schema_version = 0
         if seed_wordsets and schema_version < 2 and not config_dict.get("excluded_wordsets"):
             config_dict["excluded_wordsets"] = create_default_config().excluded_wordsets
+            shims.append("seed_wordsets")
 
         # P0 containment (048): pre-v3 files serialized the old default-ON
         # updater choice. Force it off once; after a v3 save, a deliberate user
         # opt-in remains true on later loads.
         if disable_legacy_ytdlp_update and schema_version < 3:
             config_dict["auto_update_ytdlp"] = False
+            shims.append("disable_legacy_ytdlp_update")
 
         # Pre-v4 files serialized the old Qt-only picker choice, which existed
         # only because the blocking native call could freeze the GUI thread
@@ -407,13 +503,18 @@ class GUIConfigManager:
         # once; after a v4 save, a deliberate user opt-out remains False.
         if enable_native_file_dialogs and schema_version < 4:
             config_dict["use_native_file_dialogs"] = True
+            shims.append("enable_native_file_dialogs")
 
         # Existing installs predate both first-run flows. Offer them only on a
         # genuinely fresh install; preserve explicit False so an interrupted or
         # deliberately re-enabled flow remains pending.
         if seed_first_run_flags:
-            config_dict.setdefault("first_run_setup_done", True)
-            config_dict.setdefault("first_run_shortcut_done", True)
+            seeded_first_run = [
+                key for key in ("first_run_setup_done", "first_run_shortcut_done") if key not in config_dict
+            ]
+            for key in seeded_first_run:
+                config_dict[key] = True
+            shims.extend(f"seed_{key}" for key in seeded_first_run)
 
         # Drop the three JSON-only marker keys — none is a dataclass field:
         #   config_schema_version (see CONFIG_SCHEMA_VERSION; a missing marker
@@ -434,8 +535,21 @@ class GUIConfigManager:
         # config to defaults.
         valid_keys = {f.name for f in fields(AnkiMinerConfig)}
         dropped = set(config_dict) - valid_keys
-        if dropped:
-            logger.debug("Dropping unknown config keys: %s", sorted(dropped))
+
+        # One receipt for the whole pipeline, and only when it did something: a
+        # current-schema file with no unknown keys is the normal case and must
+        # not log on every load. Everything else is a silent rewrite of the
+        # user's stored settings, which is exactly what "I never changed that"
+        # reports need to see.
+        if shims or dropped or schema_version < cls.CONFIG_SCHEMA_VERSION:
+            log_summary(
+                logger,
+                "Config migrated",
+                **{"from": schema_version},
+                to=cls.CONFIG_SCHEMA_VERSION,
+                shims=shims,
+                dropped_keys=capped(sorted(dropped), 20),
+            )
         return {k: v for k, v in config_dict.items() if k in valid_keys}
 
     @classmethod
@@ -569,6 +683,7 @@ class GUIConfigManager:
 
         settings = cls._paths_to_strings(cls._config_to_serializable_dict(config))
         excluded = cls.machine_specific_fields()
+        stripped = sorted(set(settings) & excluded)
         settings = {k: v for k, v in settings.items() if k not in excluded}
         payload = {
             cls._EXPORT_MARKER: 1,
@@ -579,6 +694,19 @@ class GUIConfigManager:
 
         with atomic_write_path(path) as tmp_path, tmp_path.open("w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, ensure_ascii=False)
+
+        # The export a user attaches to a report is diagnosed by what it does
+        # NOT carry: every machine-specific field is stripped, so a "my chains
+        # came back empty after importing" report is answered by the count here.
+        log_summary(
+            logger,
+            "Config exported",
+            path=path,
+            schema=cls.CONFIG_SCHEMA_VERSION,
+            app_version=__version__,
+            fields=len(settings),
+            excluded=len(stripped),
+        )
 
     @classmethod
     def import_config(cls, path: Path, current_config: AnkiMinerConfig) -> ImportConfigResult:
@@ -681,6 +809,20 @@ class GUIConfigManager:
             notices.append(cls._OLDER_YTDLP_IMPORT_NOTICE)
         if conservative_283_mapping:
             notices.append(cls._LEGACY_283_IMPORT_NOTICE)
+
+        # WARNING when the overlay dropped something: the user asked for a
+        # setting that did not arrive, which is a user-visible result change
+        # even though the dialog also reports it.
+        log_summary(
+            logger,
+            "Config imported",
+            level=logging.WARNING if invalid_fields else logging.INFO,
+            path=path,
+            source_schema=source_schema,
+            applied=len(incoming),
+            invalid=capped(sorted(invalid_fields), cls._SAVE_DIFF_LIMIT),
+            notices=len(notices),
+        )
 
         return ImportConfigResult(
             config=dataclasses.replace(current_config, **incoming),
