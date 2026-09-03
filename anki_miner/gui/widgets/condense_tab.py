@@ -41,6 +41,7 @@ from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMessageBox,
     QScrollArea,
     QSpinBox,
@@ -64,11 +65,12 @@ from anki_miner.gui.workers.condense_worker import (
     plan_condense_outputs,
 )
 from anki_miner.languages.registry import config_language, get_profile
-from anki_miner.services.audio_tagger import prefill_track_metadata
+from anki_miner.services.audio_tagger import TrackMetadata, prefill_track_metadata
 from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import list_subtitle_streams, matches_language_tag
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
-from anki_miner.utils.file_pairing import FilePairMatcher
+from anki_miner.utils.file_pairing import FilePairMatcher, resolve_output_path
+from anki_miner.utils.file_utils import bounded_output_name, safe_filename
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -228,6 +230,7 @@ class CondenseTab(_ToolTabBase):
                 self.format_combo.setCurrentIndex(idx)
             self.write_subs_checkbox.setChecked(self.config.condenser_write_subtitles)
             self.tag_outputs_checkbox.setChecked(self.config.condenser_tag_outputs)
+            self.merge_checkbox.setChecked(self.config.condenser_merge_output)
         finally:
             self._seeding = False
 
@@ -239,12 +242,13 @@ class CondenseTab(_ToolTabBase):
             or self.config.condenser_output_format != self.format_combo.currentData()
             or self.config.condenser_write_subtitles != self.write_subs_checkbox.isChecked()
             or self.config.condenser_tag_outputs != self.tag_outputs_checkbox.isChecked()
+            or self.config.condenser_merge_output != self.merge_checkbox.isChecked()
         )
 
     def _on_option_changed(self, *_: object) -> None:
         """Persist an edited run option to config so it survives restart.
 
-        Folds all five widgets into a fresh config and emits ``config_changed``
+        Folds all six widgets into a fresh config and emits ``config_changed``
         for the host to save. No-ops during programmatic seeding and when
         nothing actually changed (guards against a save/refresh feedback loop).
         """
@@ -257,6 +261,7 @@ class CondenseTab(_ToolTabBase):
             condenser_output_format=self.format_combo.currentData(),
             condenser_write_subtitles=self.write_subs_checkbox.isChecked(),
             condenser_tag_outputs=self.tag_outputs_checkbox.isChecked(),
+            condenser_merge_output=self.merge_checkbox.isChecked(),
         )
         if new_config == self.config:
             return
@@ -531,6 +536,30 @@ class CondenseTab(_ToolTabBase):
         )
         layout.addWidget(self.overwrite_checkbox)
 
+        # Folder mode only: join the whole run into one file (F5). The parts are
+        # staged in a temp folder by the worker, so only the merged file lands
+        # in the output folder.
+        self.merge_row_widget = QWidget()
+        merge_row = QHBoxLayout(self.merge_row_widget)
+        merge_row.setContentsMargins(0, 0, 0, 0)
+        merge_row.setSpacing(SPACING.xs)
+
+        self.merge_checkbox = QCheckBox(self.tr("Merge into one file"))
+        self.merge_checkbox.setToolTip(
+            self.tr("Join every condensed file in the folder into a single output, in queue order.")
+        )
+        merge_row.addWidget(self.merge_checkbox)
+
+        self.merge_name_edit = QLineEdit()
+        self.merge_name_edit.setPlaceholderText(self.tr("Output name (defaults to the folder's name)"))
+        self.merge_name_edit.setEnabled(False)
+        merge_row.addWidget(self.merge_name_edit, 1)
+
+        self.merge_checkbox.toggled.connect(self.merge_name_edit.setEnabled)
+        self.merge_checkbox.toggled.connect(self._on_option_changed)
+        self.merge_row_widget.hide()  # single-file mode is the default
+        layout.addWidget(self.merge_row_widget)
+
         group.setLayout(layout)
         return group
 
@@ -606,6 +635,7 @@ class CondenseTab(_ToolTabBase):
         self.media_folder_selector.hide()
         self.subtitle_folder_selector.hide()
         self.subtitle_folder_hint.hide()
+        self.merge_row_widget.hide()
 
     def _on_folder_mode(self) -> None:
         self.folder_mode_button.setChecked(True)
@@ -618,6 +648,7 @@ class CondenseTab(_ToolTabBase):
         self.media_folder_selector.show()
         self.subtitle_folder_selector.show()
         self.subtitle_folder_hint.show()
+        self.merge_row_widget.show()
 
     # ------------------------------------------------------------------
     # Track selection (single-file mode)
@@ -832,25 +863,63 @@ class CondenseTab(_ToolTabBase):
 
         self._collect_folder_items_async(_on_items)
 
+    def _plan_merged_output(self, items: list[CondenseItem], out_dir: Path | None, output_format: str) -> Path | None:
+        """Resolve the single output path of a merge run, or None to abort.
+
+        The name is what the user typed, else the source folder's own name; an
+        existing merged file is a run-level refusal rather than a per-file skip,
+        because a merge run that skipped its only output would report success
+        and write nothing.
+        """
+        merge_dir = out_dir if out_dir is not None else items[0].media.parent
+        folder_str = self.media_folder_selector.path_or_none()
+        default_stem = Path(folder_str).name if folder_str else items[0].media.parent.name
+        # safe_filename turns "" into "unnamed", so only sanitize a real entry.
+        typed = self.merge_name_edit.text().strip()
+        stem = Path(safe_filename(typed) if typed else safe_filename(default_stem)).stem
+        merge_into = resolve_output_path(merge_dir, bounded_output_name(stem, f".{output_format}", merge_dir))
+        if merge_into.exists() and not self.overwrite_checkbox.isChecked():
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("That merged file already exists. Rename it, or tick Overwrite."),
+                    details=str(merge_into),
+                )
+            )
+            return None
+        return merge_into
+
     def _continue_condense(self, items: list[CondenseItem]) -> None:
         """Plan outputs, validate, optionally collect metadata, then start the worker."""
         out_dir = self._custom_output_dir
         output_format = str(self.format_combo.currentData())
-        try:
-            output_paths = plan_condense_outputs(items, out_dir, output_format)
-        except CondenseOutputCollisionError as exc:
-            details = "\n".join(
-                f"{output}: {', '.join(str(source) for source in sources)}"
-                for output, sources in exc.collisions.items()
-            )
-            self.show_screen_issue(
-                ScreenIssue(
-                    summary=self.tr("Multiple media files would write to the same output file."),
-                    details=details,
+        # Single-file mode honors the per-file track picks; folder mode auto-detects.
+        single_mode = not self.media_file_selector.isHidden()
+
+        merge_into: Path | None = None
+        output_paths: list[Path] = []
+        if not single_mode and self.merge_checkbox.isChecked():
+            merge_into = self._plan_merged_output(items, out_dir, output_format)
+            if merge_into is None:
+                self.condense_button.setEnabled(True)
+                return
+            # The parts are staged by the worker in its own temp folder, so
+            # there is nothing to plan or collision-check per item here.
+        else:
+            try:
+                output_paths = plan_condense_outputs(items, out_dir, output_format)
+            except CondenseOutputCollisionError as exc:
+                details = "\n".join(
+                    f"{output}: {', '.join(str(source) for source in sources)}"
+                    for output, sources in exc.collisions.items()
                 )
-            )
-            self.condense_button.setEnabled(True)
-            return
+                self.show_screen_issue(
+                    ScreenIssue(
+                        summary=self.tr("Multiple media files would write to the same output file."),
+                        details=details,
+                    )
+                )
+                self.condense_button.setEnabled(True)
+                return
 
         # Pre-run writable check. When out_dir is None every output lands next to
         # its source media, so check the first item's parent.
@@ -862,19 +931,37 @@ class CondenseTab(_ToolTabBase):
 
         # Metadata editor (Issue #113): after every validation so the user
         # never fills the table only to hit an abort. Cancel aborts the run.
+        merge_metadata: TrackMetadata | None = None
         if self.tag_outputs_checkbox.isChecked():
-            prefill = prefill_track_metadata([item.media for item in items])
-            dialog = CondenseMetadataDialog([item.media.name for item in items], prefill, parent=self)
-            if dialog.exec() != QDialog.DialogCode.Accepted:
-                self.condense_button.setEnabled(True)
-                return
-            items = [replace(item, metadata=meta) for item, meta in zip(items, dialog.metadata(), strict=True)]
+            if merge_into is not None:
+                # One output, so one row: the merged file's own name, and no
+                # track number (a season is not track 1 of anything).
+                prefill = [
+                    replace(
+                        prefill_track_metadata([items[0].media])[0],
+                        title=merge_into.stem,
+                        track=None,
+                    )
+                ]
+                dialog = CondenseMetadataDialog([merge_into.name], prefill, parent=self)
+                if dialog.exec() != QDialog.DialogCode.Accepted:
+                    self.condense_button.setEnabled(True)
+                    return
+                merge_metadata = dialog.metadata()[0]
+            else:
+                prefill = prefill_track_metadata([item.media for item in items])
+                dialog = CondenseMetadataDialog([item.media.name for item in items], prefill, parent=self)
+                if dialog.exec() != QDialog.DialogCode.Accepted:
+                    self.condense_button.setEnabled(True)
+                    return
+                items = [replace(item, metadata=meta) for item, meta in zip(items, dialog.metadata(), strict=True)]
 
-        self._begin_tool_run(len(items))
-        self._total_files = len(items)
+        # The merge is one more step in the run, emitted by the worker as an
+        # extra queue item, so the bar counts it.
+        total_steps = len(items) + (1 if merge_into is not None else 0)
+        self._begin_tool_run(total_steps)
+        self._total_files = total_steps
 
-        # Single-file mode honors the per-file track picks; folder mode auto-detects.
-        single_mode = not self.media_file_selector.isHidden()
         audio_override = self._audio_track_override if single_mode else None
         subtitle_override = self._subtitle_track_override if single_mode else None
 
@@ -882,7 +969,7 @@ class CondenseTab(_ToolTabBase):
             self.config,
             items,
             output_dir=out_dir,
-            output_paths=output_paths,
+            output_paths=output_paths or None,
             overwrite=self.overwrite_checkbox.isChecked(),
             padding_ms=self.padding_spinbox.value(),
             offset_ms=self.offset_spinbox.value(),
@@ -892,7 +979,10 @@ class CondenseTab(_ToolTabBase):
             write_subs=self.write_subs_checkbox.isChecked(),
             audio_track_override=audio_override,
             subtitle_track_override=subtitle_override,
+            merge_into=merge_into,
+            merge_metadata=merge_metadata,
         )
+
         self.worker_thread = worker
 
         worker.file_started.connect(self._on_file_started)

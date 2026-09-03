@@ -20,6 +20,7 @@ No real ffmpeg/ffprobe runs: CondenseWorker and the availability check are patch
 from __future__ import annotations
 
 import types
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -914,6 +915,7 @@ def _config_with_defaults(tmp_path: Path, **overrides):
         "condenser_tag_outputs": True,
         "condenser_bitrate_kbps": 128,
         "condenser_filtered_chars": "XYZ",
+        "condenser_merge_output": True,
     }
     base.update(overrides)
     return types.SimpleNamespace(**base)
@@ -1212,3 +1214,176 @@ def test_rejected_dialog_aborts_run(qtbot, tmp_path):
     worker_cls.assert_not_called()
     # The run never started, so the button stays available.
     assert tab.condense_button.isEnabled()
+
+
+# ---------------------------------------------------------------------------
+# Merge into one file (F5)
+# ---------------------------------------------------------------------------
+
+
+def _merge_folder(tmp_path: Path, name: str = "Season 1", episodes: int = 1) -> Path:
+    folder = tmp_path / name
+    folder.mkdir()
+    for n in range(1, episodes + 1):
+        (folder / f"ep{n:02d}.mkv").write_bytes(b"fake")
+    return folder
+
+
+def test_merge_row_is_folder_mode_only(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.show()
+
+    assert tab.merge_row_widget.isHidden()
+    tab.folder_mode_button.click()
+    assert not tab.merge_row_widget.isHidden()
+    tab.file_mode_button.click()
+    assert tab.merge_row_widget.isHidden()
+
+
+def test_merge_name_field_follows_the_checkbox(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+
+    assert not tab.merge_name_edit.isEnabled()
+    tab.merge_checkbox.setChecked(True)
+    assert tab.merge_name_edit.isEnabled()
+
+
+def test_merge_checkbox_persists_to_config(qtbot, tmp_path):
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    changes: list = []
+    tab.config_changed.connect(changes.append)
+
+    tab.merge_checkbox.setChecked(True)
+
+    assert changes[-1].condenser_merge_output is True
+
+
+def test_merge_checkbox_seeded_from_config(qtbot, tmp_path):
+    config = replace(_make_config(tmp_path), condenser_merge_output=True)
+    tab = _make_tab(config, qtbot)
+    assert tab.merge_checkbox.isChecked()
+
+
+def test_merge_run_names_the_output_after_the_folder(qtbot, tmp_path):
+    folder = _merge_folder(tmp_path)
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(folder))
+    tab.merge_checkbox.setChecked(True)
+
+    worker_cls = _start_condense(tab, qtbot, _FakeWorker(), folder_mode=True)
+
+    assert worker_cls.call_args.kwargs["merge_into"] == folder / "Season 1.mp3"
+
+
+def test_merge_run_uses_a_typed_name(qtbot, tmp_path):
+    folder = _merge_folder(tmp_path)
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(folder))
+    tab.merge_checkbox.setChecked(True)
+    tab.merge_name_edit.setText("My/Season: two.mp3")
+
+    worker_cls = _start_condense(tab, qtbot, _FakeWorker(), folder_mode=True)
+
+    assert worker_cls.call_args.kwargs["merge_into"] == folder / "My_Season_ two.mp3"
+
+
+def test_merge_off_leaves_the_run_unmerged(qtbot, tmp_path):
+    folder = _merge_folder(tmp_path)
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(folder))
+
+    worker_cls = _start_condense(tab, qtbot, _FakeWorker(), folder_mode=True)
+
+    assert worker_cls.call_args.kwargs["merge_into"] is None
+    assert worker_cls.call_args.kwargs["output_paths"]
+
+
+def test_single_file_mode_never_merges(qtbot, tmp_path):
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"fake")
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.merge_checkbox.setChecked(True)  # stale state from a previous folder run
+    tab.media_file_selector.set_path(str(media))
+
+    worker_cls = _start_condense(tab, qtbot, _FakeWorker())
+
+    assert worker_cls.call_args.kwargs["merge_into"] is None
+
+
+def test_merge_run_refuses_when_the_merged_file_exists(qtbot, tmp_path):
+    folder = _merge_folder(tmp_path)
+    (folder / "Season 1.mp3").write_bytes(b"old")
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(folder))
+    tab.merge_checkbox.setChecked(True)
+
+    worker_cls = _start_condense(tab, qtbot, _FakeWorker())
+
+    # Folder collection is async; the refusal lands when the button comes back.
+    qtbot.waitUntil(tab.condense_button.isEnabled, timeout=3000)
+    assert worker_cls.call_count == 0
+
+
+def test_merge_run_overwrites_when_asked(qtbot, tmp_path):
+    folder = _merge_folder(tmp_path)
+    (folder / "Season 1.mp3").write_bytes(b"old")
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(folder))
+    tab.merge_checkbox.setChecked(True)
+    tab.overwrite_checkbox.setChecked(True)
+
+    worker_cls = _start_condense(tab, qtbot, _FakeWorker(), folder_mode=True)
+
+    assert worker_cls.call_args.kwargs["merge_into"] == folder / "Season 1.mp3"
+
+
+def test_merge_run_asks_for_one_metadata_row(qtbot, tmp_path, monkeypatch):
+    from PyQt6.QtWidgets import QDialog
+
+    folder = _merge_folder(tmp_path, episodes=2)
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(folder))
+    tab.merge_checkbox.setChecked(True)
+    tab.tag_outputs_checkbox.setChecked(True)
+    seen: dict = {}
+
+    class _Dialog:
+        def __init__(self, files, prefill, parent=None):
+            seen["files"] = files
+            seen["prefill"] = prefill
+
+        def exec(self):
+            return QDialog.DialogCode.Accepted
+
+        def metadata(self):
+            return seen["prefill"]
+
+    monkeypatch.setattr("anki_miner.gui.widgets.condense_tab.CondenseMetadataDialog", _Dialog)
+    worker_cls = _start_condense(tab, qtbot, _FakeWorker(), folder_mode=True)
+
+    assert seen["files"] == ["Season 1.mp3"]
+    assert len(seen["prefill"]) == 1
+    assert seen["prefill"][0].title == "Season 1"
+    assert seen["prefill"][0].track is None
+    assert worker_cls.call_args.kwargs["merge_metadata"] == seen["prefill"][0]
+    # Per-item metadata stays unset: there is one output to tag.
+    assert all(item.metadata is None for item in worker_cls.call_args.args[1])
+
+
+def test_merge_run_counts_the_merge_as_one_more_step(qtbot, tmp_path):
+    folder = _merge_folder(tmp_path, episodes=2)
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(folder))
+    tab.merge_checkbox.setChecked(True)
+
+    _start_condense(tab, qtbot, _FakeWorker(), folder_mode=True)
+
+    assert tab._item_total() == 3
