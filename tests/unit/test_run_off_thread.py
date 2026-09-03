@@ -355,3 +355,169 @@ def test_run_off_thread_registers_in_global_set(qtbot):
 
     qtbot.waitUntil(lambda: bool(received), timeout=3000)
     qtbot.waitUntil(lambda: worker not in rot._LIVE_OFF_THREAD_WORKERS, timeout=3000)
+
+
+# ===========================================================================
+# Dispatch identity + laggard diagnostics
+# ===========================================================================
+
+
+class _Host(QObject):
+    """A named parent so the dispatch identity string is predictable."""
+
+
+def test_describe_work_prefixes_parent_type():
+    def load_decks():
+        return None
+
+    assert rot.describe_work(load_decks, _Host()) == "_Host.load_decks"
+
+
+def test_describe_work_unwraps_partial_and_keeps_lambda_name():
+    import functools
+
+    def load_decks(a, b):
+        return None
+
+    bound = functools.partial(functools.partial(load_decks, 1), 2)
+    assert rot.describe_work(bound, _Host()) == "_Host.load_decks"
+    assert rot.describe_work(lambda: None, _Host()) == "_Host.<lambda>"
+
+
+def test_describe_work_falls_back_to_type_name_for_callable_object():
+    class _Job:
+        def __call__(self):
+            return None
+
+    assert rot.describe_work(_Job(), _Host()) == "_Host._Job"
+
+
+def test_worker_context_prefers_context_then_type_name():
+    class _W:
+        _context = "Host.load_decks"
+
+    class _Bare:
+        pass
+
+    assert rot.worker_context(_W()) == "Host.load_decks"
+    assert rot.worker_context(_Bare()) == "_Bare"
+
+
+def test_run_off_thread_names_the_dispatch_in_the_start_receipt(qtbot, caplog):
+    """The worker's start receipt names parent + work, not ``SingleCallWorker``."""
+    parent = _Host()
+    received: list = []
+
+    def load_decks():
+        return 1
+
+    with caplog.at_level(logging.INFO, logger="anki_miner.gui.workers.base_worker"):
+        run_off_thread(parent, load_decks, received.append)
+        qtbot.waitUntil(lambda: bool(received), timeout=3000)
+        qtbot.waitUntil(lambda: not parent._off_thread_workers, timeout=3000)
+
+    starts = [r.getMessage() for r in caplog.records if "started" in r.getMessage()]
+    assert starts == ["_Host.load_decks started:"]
+
+
+def test_run_off_thread_rejected_dispatch_warns_with_identity(qtbot, caplog):
+    """A dispatch after shutdown is a WARNING naming the parent and the work."""
+    parent = _Host()
+    rot.close_off_thread_dispatch(parent)
+
+    with caplog.at_level(logging.DEBUG, logger="anki_miner.gui.utils.run_off_thread"):
+        worker = run_off_thread(parent, lambda: None, lambda _v: None)
+
+    assert worker.is_cancelled
+    records = [r for r in caplog.records if "dispatch rejected" in r.getMessage()]
+    assert len(records) == 1
+    assert records[0].levelno == logging.WARNING
+    assert records[0].getMessage() == ("Off-thread dispatch rejected during shutdown: parent=_Host work=<lambda>")
+
+
+def test_run_off_thread_no_handler_debug_carries_the_context(qtbot, caplog):
+    parent = _Host()
+
+    def load_decks():
+        raise ValueError("nope")
+
+    with caplog.at_level(logging.DEBUG, logger="anki_miner.gui.utils.run_off_thread"):
+        run_off_thread(parent, load_decks, lambda _v: None)
+        qtbot.waitUntil(lambda: not parent._off_thread_workers, timeout=3000)
+
+    messages = [r.getMessage() for r in caplog.records if "no handler" in r.getMessage()]
+    assert len(messages) == 1
+    assert "_Host.load_decks" in messages[0]
+    assert "nope" in messages[0]
+
+
+def test_join_all_off_thread_workers_warns_once_about_laggards(qtbot, caplog):
+    """Laggards produce exactly one WARNING naming the count and the workers."""
+    parent = _Host()
+    laggard = _SleepWorker(5.0, respect_cancel=False, parent=parent)
+    laggard._context = "_Host.load_decks"
+    rot._LIVE_OFF_THREAD_WORKERS.add(laggard)
+    laggard.start()
+    qtbot.waitUntil(lambda: laggard.isRunning(), timeout=2000)
+
+    try:
+        with caplog.at_level(logging.DEBUG, logger="anki_miner.gui.utils.run_off_thread"):
+            assert join_all_off_thread_workers(timeout_ms=0) == [laggard]
+        records = [r for r in caplog.records if "still running" in r.getMessage()]
+        assert len(records) == 1
+        assert records[0].levelno == logging.WARNING
+        assert "count=1" in records[0].getMessage()
+        assert "_Host.load_decks" in records[0].getMessage()
+    finally:
+        assert laggard.wait(7000)
+        rot._LIVE_OFF_THREAD_WORKERS.discard(laggard)
+
+
+def test_join_all_off_thread_workers_no_laggards_writes_no_warning(qtbot, caplog):
+    with caplog.at_level(logging.DEBUG, logger="anki_miner.gui.utils.run_off_thread"):
+        assert join_all_off_thread_workers(timeout_ms=50) == []
+    assert [r for r in caplog.records if "still running" in r.getMessage()] == []
+
+
+def test_join_tracked_workers_warns_once_about_laggards(qtbot, caplog):
+    parent = _Host()
+    laggard = _SleepWorker(5.0, respect_cancel=False, parent=parent)
+    parent._off_thread_workers = {laggard}
+    laggard.start()
+    qtbot.waitUntil(lambda: laggard.isRunning(), timeout=2000)
+
+    try:
+        with caplog.at_level(logging.DEBUG, logger="anki_miner.gui.utils.run_off_thread"):
+            assert join_tracked_workers(parent, timeout_ms=0) == [laggard]
+        records = [r for r in caplog.records if "still running" in r.getMessage()]
+        assert len(records) == 1
+        assert records[0].levelno == logging.WARNING
+        assert "count=1" in records[0].getMessage()
+        assert "_SleepWorker" in records[0].getMessage()
+    finally:
+        assert laggard.wait(7000)
+
+
+def test_deleted_worker_discard_logs_at_debug(caplog):
+    """A RuntimeError-raising wrapper is dropped with a DEBUG breadcrumb."""
+
+    class _Dead:
+        _context = "_Host.load_decks"
+
+        def isRunning(self):  # noqa: N802 — Qt API name
+            raise RuntimeError("wrapped C/C++ object has been deleted")
+
+    dead = _Dead()
+    parent = _Host()
+    parent._off_thread_workers = {dead}
+    rot._LIVE_OFF_THREAD_WORKERS.add(dead)
+
+    with caplog.at_level(logging.DEBUG, logger="anki_miner.gui.utils.run_off_thread"):
+        assert join_tracked_workers(parent, timeout_ms=0) == []
+        assert join_all_off_thread_workers(timeout_ms=0) == []
+
+    messages = [r.getMessage() for r in caplog.records if "already deleted" in r.getMessage()]
+    assert messages == [
+        "Off-thread worker already deleted: context=_Host.load_decks",
+        "Off-thread worker already deleted: context=_Host.load_decks",
+    ]
