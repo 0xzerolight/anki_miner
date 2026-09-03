@@ -458,6 +458,14 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
             self.error.emit(stale_msg)
             self.queue_finished.emit()
             return
+        # Same shape, one queue-level capability further out: refuse a run whose
+        # items need local transcription before the first download rather than
+        # after paying for it.
+        asr_msg = self._asr_preflight_message()
+        if asr_msg is not None:
+            self.error.emit(asr_msg)
+            self.queue_finished.emit()
+            return
         # Build the processor on the worker thread when a factory was supplied,
         # keeping the GUI thread free of the slow registry/sqlite/CSV work during
         # EpisodeProcessor construction. A factory failure ends the whole run:
@@ -624,6 +632,15 @@ class SequentialQueueWorker(RunBoundaryControls, ProcessorOwningWorker, Generic[
     # ------------------------------------------------------------------
     # Subclass hooks
     # ------------------------------------------------------------------
+
+    def _asr_preflight_message(self) -> str | None:
+        """Return an abort message when the queue needs ASR it cannot run.
+
+        Defaults to None rather than raising like :meth:`_stale_reimport_message`:
+        only the YouTube worker can queue a transcription, and the other four
+        queues must stay untouched.
+        """
+        return None
 
     def _stale_reimport_message(self) -> str | None:
         """Return the schema-staleness abort message, or None to proceed.

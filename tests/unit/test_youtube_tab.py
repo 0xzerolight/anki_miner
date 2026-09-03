@@ -1998,3 +1998,63 @@ class TestPerRunSubtitleControls:
 
         assert tab.subtitle_source_combo.isEnabled() is True
         assert tab.align_captions_checkbox.isEnabled() is True
+
+
+class TestTranscriptionPreflight:
+    """A run that needs local transcription is refused before any download."""
+
+    _GATE = "anki_miner.gui.widgets.youtube_tab.usable_model_installed"
+
+    def _transcribe_row(self, tab):
+        tab._add_flow.set_subtitle_source("transcribe")
+        return _add_ready_item(tab, "https://youtu.be/v1")
+
+    def test_mine_refuses_a_transcription_run_with_no_model(self, tab):
+        self._transcribe_row(tab)
+
+        with patch(self._GATE, return_value=False):
+            tab._on_mine_clicked()
+
+        issue = tab.issue_banner().current_issue()
+        assert issue is not None
+        assert "not installed" in issue.summary
+        assert tab._queue_worker_cls.call_count == 0
+
+    def test_the_refusal_offers_the_settings_route(self, tab):
+        self._transcribe_row(tab)
+
+        with patch(self._GATE, return_value=False):
+            tab._on_mine_clicked()
+
+        issue = tab.issue_banner().current_issue()
+        assert issue.action_id == "settings.subtitles"
+        assert issue.action_text
+
+    def test_mine_runs_when_the_model_is_installed(self, tab):
+        self._transcribe_row(tab)
+
+        with patch(self._GATE, return_value=True):
+            tab._on_mine_clicked()
+
+        assert tab._queue_worker_cls.call_count == 1
+        assert tab.issue_banner().current_issue() is None
+
+    def test_a_caption_run_is_never_gated_on_a_model(self, tab):
+        """Captions need no ASR, so a missing model must not block them."""
+        _add_ready_item(tab, "https://youtu.be/v1")
+
+        with patch(self._GATE, return_value=False):
+            tab._on_mine_clicked()
+
+        assert tab._queue_worker_cls.call_count == 1
+
+    def test_a_stale_refusal_is_cleared_on_the_next_run(self, tab):
+        self._transcribe_row(tab)
+        with patch(self._GATE, return_value=False):
+            tab._on_mine_clicked()
+        assert tab.issue_banner().current_issue() is not None
+
+        with patch(self._GATE, return_value=True):
+            tab._on_mine_clicked()
+
+        assert tab.issue_banner().current_issue() is None

@@ -74,6 +74,7 @@ from anki_miner.gui.workers._queue_worker_base import AttemptOutcome, Sequential
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
+from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.utils.i18n import tr_format
 
@@ -128,6 +129,27 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
 
     def _stale_reimport_message(self) -> str | None:
         return stale_resource_reimport_error(self._config)
+
+    def _asr_preflight_message(self) -> str | None:
+        """Refuse a transcription run when no usable ASR model is installed.
+
+        Gated on the queue actually containing a "transcribe" row: a captions
+        run needs no model, and blocking it would regress every existing run.
+        The tab shows the same refusal as a banner before the worker is even
+        built; this is the backstop that covers every other entry point.
+        """
+        if not any(item.resolved_sub_mode == "transcribe" for item in self._items):
+            return None
+        if usable_model_installed(self._config):
+            return None
+        return tr_format(
+            QCoreApplication.translate(
+                "YouTubeQueueWorker",
+                "This run needs local transcription, but the model %1 is not installed. "
+                "Install it in Settings -> Transcription & Alignment, or set Subtitles to Captions only.",
+            ),
+            self._config.asr_model,
+        )
 
     def _run_item(self, idx: int, item: YouTubeQueueItem) -> bool:
         """Fetch + mine one item under the shared bounded-retry cycle.

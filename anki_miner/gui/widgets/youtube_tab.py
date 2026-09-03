@@ -55,7 +55,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import queue_state_store
-from anki_miner.gui.utils.qt_helpers import urls_from_event
+from anki_miner.gui.utils.qt_helpers import reveal_settings, urls_from_event
 from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
 from anki_miner.gui.utils.service_factory import create_episode_processor, create_youtube_fetcher
 from anki_miner.gui.widgets._queue_mining_tab_base import (
@@ -63,7 +63,12 @@ from anki_miner.gui.widgets._queue_mining_tab_base import (
     _QueueListStrings,
     _QueueRunStrings,
 )
-from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, page_filler
+from anki_miner.gui.widgets.base import (
+    PageWidth,
+    ScreenIssue,
+    configure_card_layout,
+    page_filler,
+)
 from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -75,7 +80,9 @@ from anki_miner.gui.workers.youtube_queue_worker import YouTubeQueueWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueue, YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
+from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
+from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.youtube_url import classify_youtube_url
 
@@ -369,6 +376,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
             log=self.log_widget,
         )
         self.setLayout(main_layout)
+        self.install_issue_banner(main_layout)
 
     # ------------------------------------------------------------------
     # Add flow (delegated to PlaylistAddController)
@@ -556,6 +564,33 @@ class YouTubeTab(_ListQueueMiningTabBase):
             processor_factory=processor_factory,
             align_captions=self.align_captions_checkbox.isChecked(),
         )
+
+    def _start_run(self, items: list[Any] | None = None) -> None:
+        """Refuse a transcription run with no model, then launch as usual.
+
+        Overrides the base at its single choke point, so Mine, Retry selected
+        and Reset-and-run all pass through here. The alternative is a full
+        download per row followed by a raw ctranslate2 exception.
+        """
+        self.clear_screen_issue()
+        candidates = items if items is not None else self._queue.all_items()
+        if any(i.resolved_sub_mode == "transcribe" for i in candidates) and not usable_model_installed(self.config):
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=tr_format(
+                        self.tr(
+                            "This run needs local transcription, but the model %1 is not installed. "
+                            "Install it in Settings, or set Subtitles to Captions only."
+                        ),
+                        self.config.asr_model,
+                    ),
+                    action_id="settings.subtitles",
+                    action_text=self.tr("Open Transcription Settings"),
+                ),
+                action=lambda: reveal_settings(self, "subtitles"),
+            )
+            return
+        super()._start_run(items)
 
     def _on_subtitle_source_changed(self) -> None:
         """Adopt the picker's value and re-decide the rows already probed."""
