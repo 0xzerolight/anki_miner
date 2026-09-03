@@ -79,6 +79,18 @@ class WordListService:
         """
         return word in self._whitelist
 
+    def whitelist_entries(self) -> frozenset[str]:
+        """Every whitelist entry as written in the file (NFC, stripped).
+
+        The run-end coverage report diffs this against what got mined; it is
+        the only reason the set is exposed rather than queried one word at a
+        time.
+
+        Returns:
+            The loaded whitelist, empty when none was configured.
+        """
+        return frozenset(self._whitelist)
+
     @staticmethod
     def _read_word_file(path: Path) -> set[str]:
         """Read a word list file.

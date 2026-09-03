@@ -13,6 +13,8 @@ from anki_miner.services.word_filter import (
     WordFilterService,
     find_cue_index,
     merge_cue_window,
+    whitelist_hits,
+    whitelisted_keys,
 )
 from anki_miner.services.word_list_service import WordListService
 
@@ -501,6 +503,46 @@ class TestWordFilterService:
 
             assert forced == [word]
             assert rest == []
+
+    class TestWhitelistHits:
+        """The entry strings a word matches, under the same OR alias policy
+        partition_whitelisted uses."""
+
+        def _wls(self, tmp_path, *entries):
+            wl = tmp_path / "wl.txt"
+            wl.write_text("\n".join(entries) + "\n", encoding="utf-8")
+            wls = WordListService(whitelist_path=wl)
+            wls.load()
+            return wls
+
+        def test_keys_are_the_front_and_the_lemma_that_the_list_holds(self, tmp_path):
+            wls = self._wls(tmp_path, "賭ける", "掛ける")
+            assert whitelisted_keys("賭ける", "掛ける", wls) == ("賭ける", "掛ける")
+            assert whitelisted_keys("賭ける", "食べる", wls) == ("賭ける",)
+            assert whitelisted_keys("飲む", "飲む", wls) == ()
+
+        def test_hits_name_the_entries_any_pair_matched(self, tmp_path):
+            wls = self._wls(tmp_path, "食べる", "走る")
+            assert whitelist_hits([("食べる", "食べる"), ("飲む", "飲む")], wls) == {"食べる"}
+
+        def test_partition_and_hits_agree_on_the_card_front_alias(self, test_config, tmp_path):
+            """Whitelisting the card front 賭ける (lemma 掛ける) forces it AND reports it."""
+            wls = self._wls(tmp_path, "賭ける")
+            kakeru_bet = TokenizedWord(
+                surface="賭ける",
+                lemma="掛ける",
+                reading="かける",
+                sentence="Test",
+                start_time=0.0,
+                end_time=1.0,
+                duration=1.0,
+                orth_base="賭ける",
+                pos="動詞",
+            )
+            words = [kakeru_bet, create_word("飲む")]
+            forced, _rest = WordFilterService(test_config).partition_whitelisted(words, wls)
+            assert forced == [kakeru_bet]
+            assert whitelist_hits([(w.mined_form, w.lemma) for w in words], wls) == {"賭ける"}
 
     class TestFilterByScriptType:
         """Tests for filter_by_script_type method (Issue #57)."""
