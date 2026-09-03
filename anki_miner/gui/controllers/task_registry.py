@@ -25,21 +25,65 @@ previously re-invented and got a different answer:
   keeps moving through a silent phase. ``no_update_age_s`` states the silence that
   was actually observed. Neither asserts the worker is alive: a ticking clock
   proves only that the *interface's* event loop is running.
+
+The ``Task ...`` log lines emitted here are the *progress-ownership* contract:
+who started a run, which token owns it, when the registry stopped hearing from
+it, and how it ended. They say nothing about mining. The ``Run ...`` lines a
+mining tab emits carry the mining semantics. Comparing the two is the
+diagnosis: a ``Run end`` with no ``Task end`` is a surface that never released
+the progress it owned, while ``Task stalled`` repeating under a live ``Run``
+means the work is alive but silent, not hung.
 """
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, replace
 from enum import Enum
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
 
 from anki_miner.gui.capabilities import CapabilityTarget
+from anki_miner.utils.logging_ext import capped, log_summary
+
+logger = logging.getLogger(__name__)
 
 #: How often the registry re-publishes running tasks so elapsed time advances
 #: during producer silence. One second is the coarsest cadence at which a clock
 #: still reads as live.
 TICK_INTERVAL_MS = 1000
+
+#: Silence after which a running task is worth one WARNING. Chosen well above
+#: any legitimate gap between producer updates, so the line means "nothing has
+#: reported for a minute", not "this phase is slow". The warning fires once per
+#: crossing, never once per tick: a run that hangs for ten hours must not write
+#: 36,000 identical lines over the evidence of how it got there.
+STALL_WARN_S = 60.0
+
+
+def _secs(value: float) -> str:
+    """Render a duration for a log field: one decimal, whole seconds bare.
+
+    ``61.0`` reads as ``61`` and ``0.4`` stays ``0.4``. A stall is measured in
+    seconds, so trailing zeros are noise, while a sub-second task end would be
+    unreadable rounded to an integer.
+    """
+    return f"{round(value, 1):g}"
+
+
+def _owner_field(owner: CapabilityTarget) -> str:
+    """Render an owner as ``main_tab/subtab``, or just the main tab."""
+    return f"{owner.main_tab}/{owner.subtab}" if owner.subtab else owner.main_tab
+
+
+def _stage_field(snapshot: TaskSnapshot) -> str:
+    """Render the stage position and name as one field, empty when unset."""
+    parts = []
+    if snapshot.stage_index is not None and snapshot.stage_total is not None:
+        parts.append(f"{snapshot.stage_index}/{snapshot.stage_total}")
+    if snapshot.stage_name:
+        parts.append(snapshot.stage_name)
+    return " ".join(parts)
 
 
 class TaskOutcome(Enum):
@@ -164,6 +208,13 @@ class TaskRegistry(QObject):
         self._started_at: dict[str, float] = {}
         self._last_move_at: dict[str, float] = {}
         self._cancelling_at: dict[str, float] = {}
+        #: Task ids currently past STALL_WARN_S. Membership is what makes the
+        #: stall WARNING fire once per crossing rather than once per tick.
+        self._stalled: set[str] = set()
+        #: Run tokens whose rejected write has already been reported. Tokens are
+        #: unique across the registry, so one set covers every task id and a
+        #: worker emitting a hundred trailing signals still costs one line.
+        self._dropped_tokens: set[int] = set()
         self._next_token = 0
         self._timer = QTimer(self)
         self._timer.setInterval(TICK_INTERVAL_MS)
@@ -194,6 +245,10 @@ class TaskRegistry(QObject):
             no_update_age_s=0.0,
             cancelling_age_s=0.0,
         )
+        # Before the clocks are re-based: the silence being cleared belongs to
+        # the run this start supersedes, and is only measurable against its
+        # last movement.
+        self._clear_stall(spec.task_id, moment)
         self._started_at[spec.task_id] = moment
         self._last_move_at[spec.task_id] = moment
         self._cancelling_at.pop(spec.task_id, None)
@@ -203,6 +258,15 @@ class TaskRegistry(QObject):
         if not self._timer.isActive():
             self._timer.start()
 
+        log_summary(
+            logger,
+            "Task start",
+            id=spec.task_id,
+            title=spec.title,
+            owner=_owner_field(spec.owner),
+            token=token,
+            cancellable=spec.cancellable,
+        )
         self.snapshot_changed.emit(spec.task_id)
         return TaskHandle(self, spec.task_id, token)
 
@@ -225,16 +289,50 @@ class TaskRegistry(QObject):
         set it here would paint every surface as cancelling even when nothing
         was listening.
 
-        Silently ignores a run that is unknown, already finished, or declared
+        Ignores a run that is unknown, already finished, or declared
         non-cancellable, so a stale window cannot ask to stop work that is not
-        there or was never the user's to stop.
+        there or was never the user's to stop. Each refusal names its reason at
+        WARNING: "Cancel does nothing" is indistinguishable from "Cancel was
+        never relayed" without one, and a relayed request that is never
+        followed by ``Task cancelling`` locates the fault in the owning screen
+        rather than here.
 
         Args:
             task_id: The run to ask about.
         """
         snapshot = self._snapshots.get(task_id)
-        if snapshot is None or not snapshot.is_running or not snapshot.cancellable:
+        if snapshot is None:
+            log_summary(logger, "Task cancel ignored", level=logging.WARNING, id=task_id, reason="unknown")
             return
+        if not snapshot.is_running:
+            log_summary(
+                logger,
+                "Task cancel ignored",
+                level=logging.WARNING,
+                id=task_id,
+                reason="not_running",
+                token=snapshot.run_token,
+                outcome=None if snapshot.outcome is None else snapshot.outcome.value,
+            )
+            return
+        if not snapshot.cancellable:
+            log_summary(
+                logger,
+                "Task cancel ignored",
+                level=logging.WARNING,
+                id=task_id,
+                reason="not_cancellable",
+                token=snapshot.run_token,
+            )
+            return
+        log_summary(
+            logger,
+            "Task cancel requested",
+            id=task_id,
+            token=snapshot.run_token,
+            owner=_owner_field(snapshot.owner),
+            already_cancelling=snapshot.cancelling,
+        )
         self.cancel_requested.emit(task_id)
 
     def request_reveal(self, task_id: str) -> None:
@@ -256,12 +354,30 @@ class TaskRegistry(QObject):
             if not snap.is_running:
                 continue
             cancelling_at = self._cancelling_at.get(task_id)
-            self._snapshots[task_id] = replace(
+            updated = replace(
                 snap,
                 elapsed_s=moment - self._started_at[task_id],
                 no_update_age_s=moment - self._last_move_at[task_id],
                 cancelling_age_s=0.0 if cancelling_at is None else moment - cancelling_at,
             )
+            self._snapshots[task_id] = updated
+            if updated.no_update_age_s >= STALL_WARN_S and task_id not in self._stalled:
+                self._stalled.add(task_id)
+                log_summary(
+                    logger,
+                    "Task stalled",
+                    level=logging.WARNING,
+                    id=task_id,
+                    token=updated.run_token,
+                    owner=_owner_field(updated.owner),
+                    no_update_s=_secs(updated.no_update_age_s),
+                    elapsed_s=_secs(updated.elapsed_s),
+                    stage=_stage_field(updated),
+                    current=updated.current,
+                    total=updated.total,
+                    cancelling=updated.cancelling,
+                    detail=updated.detail,
+                )
             self.snapshot_changed.emit(task_id)
 
         if not any(s.is_running for s in self._snapshots.values()):
@@ -269,6 +385,14 @@ class TaskRegistry(QObject):
 
     def shutdown(self) -> None:
         """Stop the tick. The registry holds nothing else that needs releasing."""
+        # Whatever is still running here never reached a terminal outcome, so
+        # this line is the only record that those runs outlived the window.
+        log_summary(
+            logger,
+            "Task registry shutdown",
+            level=logging.DEBUG,
+            running=capped(s.task_id for s in self.running()),
+        )
         self._timer.stop()
 
     #: Position fields dropped once a cancel is in flight. Everything else --
@@ -283,21 +407,39 @@ class TaskRegistry(QObject):
         moment = self._now(now)
         # Pressing Cancel again republishes the wait; it does not restart it.
         started = self._cancelling_at.setdefault(handle.task_id, moment)
-        self._snapshots[handle.task_id] = replace(
+        updated = replace(
             snap,
             cancelling=True,
             elapsed_s=moment - self._started_at[handle.task_id],
             cancelling_age_s=moment - started,
+        )
+        self._snapshots[handle.task_id] = updated
+        log_summary(
+            logger,
+            "Task cancelling",
+            id=handle.task_id,
+            token=handle.run_token,
+            elapsed_s=_secs(updated.elapsed_s),
+            waiting_s=_secs(updated.cancelling_age_s),
+            stage=_stage_field(updated),
+            current=updated.current,
+            total=updated.total,
         )
         self.snapshot_changed.emit(handle.task_id)
 
     def _write(self, handle: TaskHandle, now: float | None, *, moved: bool, **fields) -> None:
         snap = self._snapshots.get(handle.task_id)
         if snap is None or snap.run_token != handle.run_token or not snap.is_running:
-            return  # Superseded or already terminal: a late signal writes nothing.
+            # Superseded or already terminal: a late signal writes nothing. It
+            # is still worth one line, because a producer that keeps writing to
+            # a dead token is a leaked worker, and the silent drop is exactly
+            # why that leak used to be invisible.
+            self._log_dropped_write(handle, snap, fields)
+            return
 
         moment = self._now(now)
         if moved:
+            self._clear_stall(handle.task_id, moment)
             self._last_move_at[handle.task_id] = moment
 
         if snap.cancelling:
@@ -319,18 +461,73 @@ class TaskRegistry(QObject):
             return
 
         moment = self._now(now)
+        self._clear_stall(handle.task_id, moment)
         # Counts are deliberately retained: a cancelled run still needs to be able
         # to say what it managed to do before it stopped.
-        self._snapshots[handle.task_id] = replace(
+        updated = replace(
             snap,
             is_running=False,
             outcome=outcome,
             elapsed_s=moment - self._started_at[handle.task_id],
         )
+        self._snapshots[handle.task_id] = updated
+        log_summary(
+            logger,
+            "Task end",
+            id=handle.task_id,
+            token=handle.run_token,
+            owner=_owner_field(updated.owner),
+            outcome=outcome.value,
+            elapsed_s=_secs(updated.elapsed_s),
+            current=updated.current,
+            total=updated.total,
+            stage=_stage_field(updated),
+            cancelling=updated.cancelling,
+            detail=updated.detail,
+        )
         self.snapshot_changed.emit(handle.task_id)
 
         if not any(s.is_running for s in self._snapshots.values()):
             self._timer.stop()
+
+    def _clear_stall(self, task_id: str, moment: float) -> None:
+        """Retire a stall record, naming the silence the update finally ended.
+
+        ``after_s`` is the observed gap, not how long the WARNING stood: it is
+        the number that says whether the run was slow or genuinely wedged.
+        """
+        if task_id not in self._stalled:
+            return
+        self._stalled.discard(task_id)
+        log_summary(
+            logger,
+            "Task unstalled",
+            level=logging.DEBUG,
+            id=task_id,
+            after_s=_secs(moment - self._last_move_at[task_id]),
+        )
+
+    def _log_dropped_write(self, handle: TaskHandle, snap: TaskSnapshot | None, fields: dict[str, object]) -> None:
+        """Report a rejected write once per stale run token."""
+        if handle.run_token in self._dropped_tokens:
+            return
+        self._dropped_tokens.add(handle.run_token)
+        if snap is None:
+            reason = "unknown"
+        elif snap.run_token != handle.run_token:
+            reason = "superseded"
+        else:
+            reason = "finished"
+        log_summary(
+            logger,
+            "Task write dropped",
+            level=logging.DEBUG,
+            id=handle.task_id,
+            token=handle.run_token,
+            live_token=None if snap is None else snap.run_token,
+            reason=reason,
+            fields=capped(fields),
+        )
 
     @staticmethod
     def _now(now: float | None) -> float:
