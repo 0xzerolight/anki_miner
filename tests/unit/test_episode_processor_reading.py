@@ -20,7 +20,7 @@ import requests
 from PIL import Image, UnidentifiedImageError
 
 from anki_miner.exceptions import AnkiConnectionError, AnkiMinerException, SetupError
-from anki_miner.models import AnkiWriteState, TokenizedWord
+from anki_miner.models import AnkiWriteState, LineLemmas, TokenizedWord
 from anki_miner.models.reading import ImageRef, ReadingDocument, ReadingUnit
 from anki_miner.orchestration.episode_processor import EpisodeProcessor, _format_timestamp
 from anki_miner.presenters import NullPresenter
@@ -511,6 +511,43 @@ def test_occurrence_counts_attached_for_curation(test_config):
 
     proc.process_reading(_document([_unit(0), _unit(1)]), curation_callback=curate)
     assert seen == {"犬": 5, "猫": 2}
+
+
+def test_line_unknown_counts_attached_for_curation(test_config):
+    """The curator sees the i+1 signal for every word it is offered."""
+    words = [_word("犬", 0), _word("猫", 1)]
+    line_index = [
+        LineLemmas(
+            line_text="犬の文",
+            lemmas=frozenset({"犬", "猫"}),
+            start_time=0.0,
+            end_time=0.0,
+            duration=0.0,
+        ),
+        LineLemmas(
+            line_text="猫の文",
+            lemmas=frozenset({"猫"}),
+            start_time=1.0,
+            end_time=1.0,
+            duration=0.0,
+        ),
+    ]
+    counts = collections.Counter({"犬": 1, "猫": 1})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, line_index, counts)
+    proc = _make_processor(test_config, subtitle_parser=sp)
+
+    seen = {}
+
+    def curate(curated_words):
+        for w in curated_words:
+            seen[w.lemma] = w.line_unknown_count
+        return curated_words
+
+    proc.process_reading(_document([_unit(0), _unit(1)]), curation_callback=curate)
+
+    # 犬's line carries both unknowns; 猫's line carries only 猫 — an i+1 line.
+    assert seen == {"犬": 2, "猫": 1}
 
 
 def test_reading_curation_warns_on_dropped_line_expansion(test_config, caplog):
