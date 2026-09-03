@@ -6861,4 +6861,5 @@ class TestSecondarySubtitles:
         result, _parser, _second = self._run(test_config, mock_services, tmp_path, second_raises=True)
         assert result.success is False
         assert any("bad translation track" in e for e in result.errors)
+        assert any("ep01.en.srt" in e for e in result.errors)
         mock_services["anki_service"].create_cards_batch.assert_not_called()

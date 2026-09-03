@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.exceptions import AnkiMinerException, SetupError
+from anki_miner.exceptions import AnkiMinerException, SetupError, SubtitleParseError
 from anki_miner.exceptions.youtube import (
     TranscriptionFailedError,
     TranscriptionProducedNothingError,
@@ -2042,7 +2042,11 @@ class EpisodeProcessor:
         """
         if secondary_subtitle_file is None:
             return None
-        entries = self.subtitle_parser.parse_raw_entries(secondary_subtitle_file, 0.0)
+        try:
+            entries = self.subtitle_parser.parse_raw_entries(secondary_subtitle_file, 0.0)
+        except SubtitleParseError as exc:
+            # Two subtitle files are in play; the decoder's message names neither.
+            raise SubtitleParseError(f"Secondary subtitle file {secondary_subtitle_file.name}: {exc}") from exc
         logger.info("secondary subtitle: %d cue(s) from %s", len(entries), secondary_subtitle_file.name)
         return entries
 
