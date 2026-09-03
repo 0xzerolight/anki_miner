@@ -61,8 +61,9 @@ from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.services.word_filter import enabled_script_options, script_options_kwarg, whitelist_hits
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
-from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.logging_ext import capped, log_summary, suppressed
 from anki_miner.utils.timing import timed_phase
+from anki_miner.utils.youtube_url import redact_youtube_url_for_log
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,38 @@ logger = logging.getLogger(__name__)
 #: position knowable in advance -- their relative durations are not, which is
 #: why no stage weight lives anywhere in this module any more.
 PIPELINE_STAGE_COUNT = 5
+
+
+def _log_reading_image_failure(ref: ImageRef, exc: BaseException) -> None:
+    """Record which archive member failed to materialize, and why.
+
+    The three handlers that call this each raise one translated presenter
+    warning naming only ``ref.source.name`` or ``ref.entry``. Neither says where
+    the archive lives nor what the failure actually was, which is the pair a
+    "my manga cards have no images" report needs. Fires once per failing
+    archive/ref, on the same memoized path as the warning it accompanies.
+    """
+    log_summary(
+        logger,
+        "Reading image failed",
+        level=logging.WARNING,
+        archive=ref.source,
+        ref=ref.entry,
+        exc=f"{type(exc).__name__}: {exc}",
+    )
+
+
+def _pipeline_outcome(result: ProcessingResult) -> str:
+    """Classify a finished run for its ``Pipeline end`` receipt.
+
+    Cancellation is checked FIRST: a cancelled result carries
+    ``CANCELLED_ERROR`` in ``errors``, so ``success`` is already False for it
+    and the two would otherwise be indistinguishable in the log — which is
+    exactly the distinction a "0 cards" report needs.
+    """
+    if CANCELLED_ERROR in result.errors:
+        return "cancelled"
+    return "success" if result.success else "failed"
 
 
 if TYPE_CHECKING:
@@ -180,6 +213,16 @@ class _EpisodeContext:
     # None on the video path (process_episode, where phase5 keeps the HH:MM:SS
     # timestamp format); set by process_reading for manga/novels/subtitles.
     unit_labels: dict[int, str] | None = None
+
+    #: Which entry point started this run ("episode" / "reading" / "youtube").
+    #: Rendered on both halves of the run's ``Pipeline start``/``Pipeline end``
+    #: receipt so a phase count can be tied back to the run that produced it.
+    kind: str = "episode"
+    #: Ordered ``Pipeline start`` fields, or ``None`` when an OUTER entry point
+    #: (``process_youtube_url``) already logged this run's receipt and owns the
+    #: matching ``Pipeline end``. ``None`` is what keeps a delegated run from
+    #: stamping a second receipt.
+    receipt: dict[str, Any] | None = None
 
     # Accumulator fields populated as phases progress.
     errors: list[str] = field(default_factory=list)
@@ -470,7 +513,7 @@ class EpisodeProcessor:
         if self.expression_audio_fetcher is not None:
             close = getattr(self.expression_audio_fetcher, "close", None)
             if callable(close):
-                with contextlib.suppress(Exception):
+                with suppressed(logger, "expression audio fetcher close"):
                     close()
         if not self.owns_lookup_services:
             return
@@ -507,12 +550,12 @@ class EpisodeProcessor:
         if self.expression_audio_fetcher is not None:
             close = getattr(self.expression_audio_fetcher, "close", None)
             if callable(close):
-                with contextlib.suppress(Exception):
+                with suppressed(logger, "expression audio fetcher close"):
                     close()
         if self.sentence_audio_fetcher is not None:
             close = getattr(self.sentence_audio_fetcher, "close", None)
             if callable(close):
-                with contextlib.suppress(Exception):
+                with suppressed(logger, "sentence audio fetcher close"):
                     close()
         logger.debug("closed processor resources")
 
@@ -1020,6 +1063,18 @@ class EpisodeProcessor:
             unknown_words = kept_words
             no_definition_rejects = len(dropped)
             if dropped:
+                # The presenter names ten; the log names fifty. Which words the
+                # offline probe rejected is the whole diagnosis when a dictionary
+                # is installed but indexed under the wrong spellings, and ten is
+                # too few to see the pattern.
+                log_summary(
+                    logger,
+                    "Definitions missing",
+                    level=logging.DEBUG,
+                    phase=2,
+                    count=len(dropped),
+                    words=capped(dropped),
+                )
                 preview = ", ".join(dropped[:10])
                 more = f" (+{len(dropped) - 10} more)" if len(dropped) > 10 else ""
                 self.presenter.show_warning(
@@ -1080,6 +1135,19 @@ class EpisodeProcessor:
             # Band configured but no frequency source is loaded: skip it (it
             # would drop every word) and tell the user it is inert, so they add a
             # source instead of silently getting zero cards.
+            #
+            # ``sources`` is the half the user-facing text cannot carry: a chain
+            # that loaded only a CATEGORICAL source reaches here too, and
+            # "no frequency source is loaded" reads as a lie to someone looking
+            # at their configured JLPT list.
+            log_summary(
+                logger,
+                "Frequency cutoff ignored",
+                level=logging.WARNING,
+                low=freq_low,
+                high=freq_high,
+                sources=self._loaded_frequency_source_names(),
+            )
             self.presenter.show_warning(
                 QCoreApplication.translate(
                     "EpisodeProcessor",
@@ -1771,6 +1839,14 @@ class EpisodeProcessor:
             word.mined_form for (word, _), definition in zip(media_results, definitions, strict=True) if not definition
         ]
         if skipped_words:
+            log_summary(
+                logger,
+                "Definitions missing",
+                level=logging.DEBUG,
+                phase=5,
+                count=len(skipped_words),
+                words=capped(skipped_words),
+            )
             preview = ", ".join(skipped_words[:10])
             more = f" (+{len(skipped_words) - 10} more)" if len(skipped_words) > 10 else ""
             self.presenter.show_warning(
@@ -1864,6 +1940,93 @@ class EpisodeProcessor:
         )
         return cards_created, created_note_ids, mined_forms_for_undo
 
+    def _loaded_frequency_source_names(self) -> list[str]:
+        """Names of the frequency providers this run actually loaded.
+
+        Reads the service's private provider list defensively: the orchestration
+        tests stand the frequency service up as a bare ``MagicMock``, whose every
+        attribute is another mock, so the ``list`` check is what keeps a receipt
+        field from rendering a mock repr. No public accessor exists, and the
+        alternative — reporting only a boolean — cannot answer the one question
+        an ignored cutoff raises ("which sources DID load, then?").
+        """
+        service = self.frequency_service
+        if service is None:
+            return []
+        providers = getattr(service, "_providers", None)
+        if not isinstance(providers, list):
+            return []
+        return capped([getattr(provider, "name", "?") for provider in providers])
+
+    def _active_filter_names(self) -> list[str]:
+        """Name the optional filters this run will apply, in phase-2 order.
+
+        The receipt records the CONFIGURED intent, not the outcome: the per-filter
+        reject counts already ride ``Phase 2 filter``, and what a zero there cannot
+        say is whether the filter ran at all. ``bypass_optional_filters`` collapses
+        to a single ``bypass`` token because it disables every entry below it.
+        """
+        config = self.config
+        if config.bypass_optional_filters:
+            return ["bypass"]
+        names: list[str] = []
+        if config.use_known_words_db:
+            names.append("known-db")
+        if config.min_frequency_rank > 0 or config.max_frequency_rank > 0:
+            names.append("frequency")
+        if self.word_list_service is not None:
+            names.append("word-list")
+        # The script-type filter is deliberately absent: naming it would mean
+        # calling ``enabled_script_options`` (and through it the profile's
+        # ``ScriptSupport.filter_options``) a second time per run, and
+        # ``test_phase2_probe_dispatch`` counts that call to prove phase 2 reads
+        # the HELD profile. ``Phase 2 filter``'s ``script_rejects`` already
+        # reports whether it fired.
+        if self.wordset_service is not None:
+            names.append("wordsets")
+        if config.deduplicate_sentences and not config.use_i_plus_one_filter:
+            names.append("dedup")
+        if config.use_i_plus_one_filter:
+            names.append("i+1")
+        if config.use_sentence_length_filter:
+            names.append("sentence-length")
+        return names
+
+    def _run_receipt_fields(
+        self,
+        *,
+        kind: str,
+        episode: str,
+        series: str,
+        video: str,
+        subtitle: str,
+        secondary: str,
+        offset: object,
+        curation: bool,
+    ) -> dict[str, Any]:
+        """Ordered ``Pipeline start`` fields shared by every entry point.
+
+        The five-stage phase summaries carry counts but no run identity, so a
+        "0 cards" report could never say which files, deck, note type, language,
+        offset or filter set produced them. Everything here is known before the
+        first phase runs, which is what lets the receipt survive a run that dies
+        in stage one.
+        """
+        return {
+            "kind": kind,
+            "episode": episode,
+            "series": series,
+            "video": video,
+            "subtitle": subtitle,
+            "secondary": secondary,
+            "deck": self.config.anki_deck_name,
+            "note_type": self.config.anki_note_type,
+            "language": config_language(self.config),
+            "offset": offset,
+            "curation": curation,
+            "filters": self._active_filter_names(),
+        }
+
     def _reset_run_write_state(self) -> None:
         """Clear Anki write provenance before any preflight for a new run."""
         self.anki_service.last_created_note_ids = []
@@ -1876,6 +2039,46 @@ class EpisodeProcessor:
         self.anki_service.last_created_lemmas = []
 
     def _run_pipeline(
+        self,
+        ctx: _EpisodeContext,
+        cancel_event: threading.Event | None,
+        body: Callable[[Path], ProcessingResult],
+    ) -> ProcessingResult:
+        """Stamp the run receipt around :meth:`_run_pipeline_body`.
+
+        The receipt is a matched pair and this is the only place that emits it
+        for an episode or reading run: ``Pipeline start`` before the pre-flight
+        gates (so a run that dies in ``check_resource_staleness`` still has an
+        identity), ``Pipeline end`` in a ``finally`` (so a propagating
+        ``SetupError`` closes the pair instead of leaving a dangling start).
+
+        ``ctx.receipt is None`` means an OUTER entry point — only
+        ``process_youtube_url`` — already logged the receipt for this run and
+        owns the matching end, so this call emits neither half. That is what
+        keeps a YouTube run at exactly one receipt rather than nesting a second
+        ``kind=episode`` one inside it.
+        """
+        if ctx.receipt is None:
+            return self._run_pipeline_body(ctx, cancel_event, body)
+        log_summary(logger, "Pipeline start", **ctx.receipt)
+        outcome = "failed"
+        cards = 0
+        try:
+            result = self._run_pipeline_body(ctx, cancel_event, body)
+            outcome = _pipeline_outcome(result)
+            cards = result.cards_created
+            return result
+        finally:
+            log_summary(
+                logger,
+                "Pipeline end",
+                kind=ctx.kind,
+                outcome=outcome,
+                cards=cards,
+                elapsed=f"{time.time() - ctx.start_time:.2f}",
+            )
+
+    def _run_pipeline_body(
         self,
         ctx: _EpisodeContext,
         cancel_event: threading.Event | None,
@@ -1955,7 +2158,19 @@ class EpisodeProcessor:
                 self._record_difficulty(ctx)
             return self._stamp_whitelist_coverage(ctx, self._stamp_write_provenance(result))
         except AnkiMinerException as e:
-            logger.warning("%s: %s", "EpisodeProcessor", e)
+            # No traceback: a typed AnkiMinerException is a diagnosed, expected
+            # terminal outcome (bad field mapping, unreachable AnkiConnect), and
+            # its stack says nothing the type and message do not. What the old
+            # bare "EpisodeProcessor: <msg>" lacked was the run it belonged to,
+            # which is why the identity fields are here.
+            log_summary(
+                logger,
+                "EpisodeProcessor run failed",
+                level=logging.WARNING,
+                kind=ctx.kind,
+                episode=ctx.episode_name,
+                exc=f"{type(e).__name__}: {e}",
+            )
             ctx.errors.append(str(e))
             partial_ids = list(self.anki_service.last_created_note_ids)
             self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
@@ -2137,6 +2352,7 @@ class EpisodeProcessor:
         subtitle_offset: float | None = None,
         secondary_subtitle_file: Path | None = None,
         secondary_subtitle_offset: float = 0.0,
+        _outer_kind: str | None = None,
     ) -> ProcessingResult:
         """Process a single episode and create Anki cards.
 
@@ -2194,6 +2410,12 @@ class EpisodeProcessor:
             secondary_subtitle_offset: Seconds to shift that track by, applied
                 at match time so the curator, which holds the same zero-offset
                 cues, can move the offset without a re-parse.
+            _outer_kind: Private seam for ``process_youtube_url``: the run's
+                ``Pipeline start``/``Pipeline end`` receipt was already stamped
+                by that outer entry point (which owns the fetch stage this call
+                cannot see), so this call stamps none and only inherits the
+                ``kind`` for the terminal failure line. ``None`` — every other
+                caller — makes this call the receipt owner.
 
         Returns:
             ProcessingResult with statistics.
@@ -2212,6 +2434,21 @@ class EpisodeProcessor:
             episode_name=episode_name,
             series_name=series_name,
             source_label=source_label_override or sanitize_source_label(f"{series_name} — {episode_name}"),
+            kind=_outer_kind or "episode",
+            receipt=(
+                None
+                if _outer_kind is not None
+                else self._run_receipt_fields(
+                    kind="episode",
+                    episode=episode_name,
+                    series=series_name,
+                    video=str(video_file),
+                    subtitle=str(subtitle_file),
+                    secondary=str(secondary_subtitle_file) if secondary_subtitle_file is not None else "",
+                    offset=self.config.subtitle_offset if subtitle_offset is None else subtitle_offset,
+                    curation=curation_callback is not None,
+                )
+            ),
         )
 
         def _body(run_temp_folder: Path) -> ProcessingResult:
@@ -2499,11 +2736,12 @@ class EpisodeProcessor:
                     if image_path is None:
                         try:
                             image_path = prepare_card_image(ref, images_dir, archive_handles)
-                        except SetupError:
+                        except SetupError as exc:
                             # Appending to document.warnings here would be lost (the
                             # up-front drain already ran) — surface directly, once
                             # per archive.
                             failed_archives.add(ref.source)
+                            _log_reading_image_failure(ref, exc)
                             self.presenter.show_warning(
                                 tr_format(
                                     QCoreApplication.translate(
@@ -2514,8 +2752,9 @@ class EpisodeProcessor:
                                 )
                             )
                             image_path = None
-                        except ReadingImageArchiveError:
+                        except ReadingImageArchiveError as exc:
                             failed_archives.add(ref.source)
+                            _log_reading_image_failure(ref, exc)
                             self.presenter.show_warning(
                                 tr_format(
                                     QCoreApplication.translate(
@@ -2543,6 +2782,7 @@ class EpisodeProcessor:
                             # OSError (undecodable page, missing codec in a frozen
                             # bundle) is per-ref → warn once naming the page, drop this
                             # word's image, leave the rest of the archive readable.
+                            _log_reading_image_failure(ref, exc)
                             if ref.entry is not None and isinstance(exc, zipfile.BadZipFile):
                                 failed_archives.add(ref.source)
                                 self.presenter.show_warning(
@@ -2652,12 +2892,41 @@ class EpisodeProcessor:
             series_name=document.series,
             source_label=source_label,
             unit_labels={unit.index: unit.location_label for unit in document.units},
+            kind="reading",
+            receipt={
+                # A reading run has neither file, so both slots render "-"; the
+                # document identity rides the two trailing fields instead.
+                **self._run_receipt_fields(
+                    kind="reading",
+                    episode=document.episode,
+                    series=document.series,
+                    video="",
+                    subtitle="",
+                    secondary="",
+                    offset=None,
+                    curation=curation_callback is not None,
+                ),
+                "title": document.title,
+                "doc_kind": document.kind,
+                "units": len(document.units),
+            },
         )
 
         # Surface load-time degradations before anything else (the loaders hand
         # plain strings; emit them verbatim).
         for warning in document.warnings:
             self.presenter.show_warning(warning)
+        if document.warnings:
+            # The presenter text above reaches a surface the user may have
+            # closed; the log is where a support report reads them back. Capped
+            # because an unmatched-page warning fires per page.
+            log_summary(
+                logger,
+                "Reading document warnings",
+                level=logging.WARNING,
+                count=len(document.warnings),
+                warnings=capped(document.warnings),
+            )
 
         def _body(run_temp_folder: Path) -> ProcessingResult:
             # D4: fuse the two triggers for building the line index. The episode
@@ -3025,80 +3294,132 @@ class EpisodeProcessor:
         """
         if self._youtube_fetcher is None:
             raise RuntimeError("YouTubeFetcherService not injected — check service_factory")
+        # Bound to a local because the guard above cannot narrow the attribute
+        # inside the nested fetch closure below.
+        fetcher = self._youtube_fetcher
 
         self._reset_run_write_state()
         start_time = time.time()
-        if cancel_event.is_set():
-            return self._make_cancelled_result(start_time)
+        receipt = self._run_receipt_fields(
+            kind="youtube",
+            episode=f"YT:{video_id}",
+            series="YouTube",
+            video="",
+            subtitle="",
+            secondary="",
+            offset=self.config.subtitle_offset,
+            curation=curation_callback is not None,
+        )
+        # The fetch stage runs BEFORE process_episode, so the receipt is stamped
+        # here rather than inside it: a run that dies downloading (or in
+        # transcription, or on a cancel between the two) leaves an identified
+        # start/end pair instead of nothing at all. The delegated
+        # process_episode is told not to stamp a second one.
+        receipt.update(
+            url=redact_youtube_url_for_log(url),
+            video_id=video_id,
+            sub_mode=sub_mode,
+            workspace=workspace,
+            align_captions=align_captions,
+        )
 
-        # Deliberate early check: fail before the video download rather than
-        # after.  process_episode re-runs the same pre-flight post-fetch;
-        # that double-check is intentional — cheap idempotent localhost calls.
-        # The staleness backstop is likewise cheap and fails before the
-        # download when an enabled index needs reimport.
-        self.check_resource_staleness()
-        self._preflight_card_target()
-        self.check_offline_dictionary()
+        def _fetch_and_mine() -> ProcessingResult:
+            """Fetch stage plus the delegated mining run.
 
-        # The fetch stage consults cancel_event directly (fetch_video gets it
-        # verbatim and the post-fetch check below polls it); the mining stage
-        # gets it via process_episode's cancel_event keyword, which installs
-        # and removes the per-run self._external_cancel bridge itself.
-        with timed_phase("youtube-fetch", logger):
-            fetched = self._youtube_fetcher.fetch_video(
-                url,
-                video_id,
-                workspace,
-                sub_mode,
-                progress_cb=fetch_progress_cb,
+            A function, not an inline block, so every cancellation early-return
+            below funnels through one call site and the receipt's ``outcome``
+            can be classified from the result each of them produces.
+            """
+            if cancel_event.is_set():
+                return self._make_cancelled_result(start_time)
+
+            # Deliberate early check: fail before the video download rather than
+            # after.  process_episode re-runs the same pre-flight post-fetch;
+            # that double-check is intentional — cheap idempotent localhost calls.
+            # The staleness backstop is likewise cheap and fails before the
+            # download when an enabled index needs reimport.
+            self.check_resource_staleness()
+            self._preflight_card_target()
+            self.check_offline_dictionary()
+
+            # The fetch stage consults cancel_event directly (fetch_video gets it
+            # verbatim and the post-fetch check below polls it); the mining stage
+            # gets it via process_episode's cancel_event keyword, which installs
+            # and removes the per-run self._external_cancel bridge itself.
+            with timed_phase("youtube-fetch", logger):
+                fetched = fetcher.fetch_video(
+                    url,
+                    video_id,
+                    workspace,
+                    sub_mode,
+                    progress_cb=fetch_progress_cb,
+                    cancel_event=cancel_event,
+                    fallback_allowed=fallback_allowed,
+                )
+
+            # Transcribe mode fetched no captions: fill the hole from local ASR
+            # before anything downstream (the curator preview included) sees the
+            # media. This is the stage that collapses the user's old three-step
+            # Download -> Generate -> Video/Single workaround into one run.
+            if fetched.subtitle_file is None:
+                if cancel_event.is_set():
+                    return self._make_cancelled_result(start_time)
+                with timed_phase("youtube-transcribe", logger):
+                    fetched = self._transcribe_fetched(fetched, workspace, cancel_event, fetch_progress_cb)
+                if fetched.subtitle_file is None:
+                    # Cancelled mid-transcription. A result, not a raise: the queue
+                    # worker's post-fetch contract expects item_finished to fire.
+                    return self._make_cancelled_result(start_time)
+            elif align_captions:
+                # elif, not if: a locally transcribed track already came from this
+                # audio, so retiming it against the same audio is pointless work.
+                if cancel_event.is_set():
+                    return self._make_cancelled_result(start_time)
+                with timed_phase("youtube-align", logger):
+                    aligned = self._align_fetched(fetched, workspace, cancel_event, fetch_progress_cb)
+                if aligned is None:
+                    return self._make_cancelled_result(start_time)
+                fetched = aligned
+
+            # Both branches above guarantee it: a caption fetch resolves one, and a
+            # transcribe fetch either fills it or returned a cancelled result.
+            subtitle_file = fetched.subtitle_file
+            assert subtitle_file is not None
+
+            if on_fetched is not None:
+                on_fetched(fetched)
+
+            if cancel_event.is_set():
+                # Cancel landed as the fetch completed (the fetcher only
+                # raises for cancels it observed itself): stop before parsing.
+                return self._make_cancelled_result(start_time)
+
+            return self.process_episode(
+                fetched.video_file,
+                subtitle_file,
+                progress_callback=progress_callback,
+                curation_callback=curation_callback,
+                episode_name_override=f"YT:{video_id}",
+                series_name_override="YouTube",
+                source_label_override=source_label,
                 cancel_event=cancel_event,
-                fallback_allowed=fallback_allowed,
+                _outer_kind="youtube",
             )
 
-        # Transcribe mode fetched no captions: fill the hole from local ASR
-        # before anything downstream (the curator preview included) sees the
-        # media. This is the stage that collapses the user's old three-step
-        # Download -> Generate -> Video/Single workaround into one run.
-        if fetched.subtitle_file is None:
-            if cancel_event.is_set():
-                return self._make_cancelled_result(start_time)
-            with timed_phase("youtube-transcribe", logger):
-                fetched = self._transcribe_fetched(fetched, workspace, cancel_event, fetch_progress_cb)
-            if fetched.subtitle_file is None:
-                # Cancelled mid-transcription. A result, not a raise: the queue
-                # worker's post-fetch contract expects item_finished to fire.
-                return self._make_cancelled_result(start_time)
-        elif align_captions:
-            # elif, not if: a locally transcribed track already came from this
-            # audio, so retiming it against the same audio is pointless work.
-            if cancel_event.is_set():
-                return self._make_cancelled_result(start_time)
-            with timed_phase("youtube-align", logger):
-                aligned = self._align_fetched(fetched, workspace, cancel_event, fetch_progress_cb)
-            if aligned is None:
-                return self._make_cancelled_result(start_time)
-            fetched = aligned
-
-        # Both branches above guarantee it: a caption fetch resolves one, and a
-        # transcribe fetch either fills it or returned a cancelled result.
-        subtitle_file = fetched.subtitle_file
-        assert subtitle_file is not None
-
-        if on_fetched is not None:
-            on_fetched(fetched)
-
-        if cancel_event.is_set():
-            # Cancel landed as the fetch completed (the fetcher only
-            # raises for cancels it observed itself): stop before parsing.
-            return self._make_cancelled_result(start_time)
-
-        return self.process_episode(
-            fetched.video_file,
-            subtitle_file,
-            progress_callback=progress_callback,
-            curation_callback=curation_callback,
-            episode_name_override=f"YT:{video_id}",
-            series_name_override="YouTube",
-            source_label_override=source_label,
-            cancel_event=cancel_event,
-        )
+        log_summary(logger, "Pipeline start", **receipt)
+        outcome = "failed"
+        cards = 0
+        try:
+            result = _fetch_and_mine()
+            outcome = _pipeline_outcome(result)
+            cards = result.cards_created
+            return result
+        finally:
+            log_summary(
+                logger,
+                "Pipeline end",
+                kind="youtube",
+                outcome=outcome,
+                cards=cards,
+                elapsed=f"{time.time() - start_time:.2f}",
+            )
