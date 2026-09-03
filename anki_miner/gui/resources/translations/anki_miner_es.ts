@@ -9378,6 +9378,10 @@ El selector «Frases» ofrece una opción por línea de subtítulos, así que su
         <translation>S incluir/excluir · K marcar como conocida · Ctrl+A incluir visibles · Ctrl+D excluir visibles · Ctrl+Intro confirmar</translation>
     </message>
     <message>
+        <source>Reset columns</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>+ Previous line</source>
         <translation>+ Línea anterior</translation>
     </message>

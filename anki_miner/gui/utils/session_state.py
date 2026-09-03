@@ -41,6 +41,8 @@ _GEOMETRY_KEY = "window/geometry"
 _CURATOR_GEOMETRY_KEY = "curator/geometry"
 _CURATOR_SPLIT_KEY = "curator/split_main"
 _CURATOR_SIDE_GROUP = "curator/split_side"
+_CURATOR_COLUMNS_KEY = "curator/columns"
+_CURATOR_COLUMN_COUNT_KEY = "curator/column_count"
 _MAIN_TAB_KEY = "navigation/main_tab"
 _SUBTAB_GROUP = "navigation/subtab"
 _DIRECTORY_GROUP = "directories"
@@ -186,6 +188,41 @@ def save_curator_layout(
         _commit(settings)
     except Exception:
         logger.warning("Could not save the word curator layout", exc_info=True)
+
+
+def load_curator_columns_for(column_count: int) -> QByteArray | None:
+    """The curator's saved header state, or ``None`` when another build wrote it.
+
+    ``QHeaderView.restoreState`` does not refuse a blob whose section count no
+    longer matches -- it applies what it can and leaves columns hidden or
+    misordered, which reads as a lost column rather than as stale state. The
+    count is the version, exactly as ``side_key`` is for the side splitter, and
+    a mismatch means "compute the default".
+    """
+    settings = _open()
+    if settings is None:
+        return None
+    try:
+        saved = settings.value(_CURATOR_COLUMN_COUNT_KEY)
+        if saved is None or int(saved) != column_count:
+            return None
+    except Exception:
+        logger.debug("Unreadable curator column count in the UI session state", exc_info=True)
+        return None
+    return _read_blob(settings, _CURATOR_COLUMNS_KEY, "curator columns")
+
+
+def save_curator_columns(state: QByteArray, column_count: int) -> None:
+    """Store the curator's ``QHeaderView.saveState()`` blob and its column count."""
+    settings = _open(for_write=True)
+    if settings is None:
+        return
+    try:
+        settings.setValue(_CURATOR_COLUMNS_KEY, state)
+        settings.setValue(_CURATOR_COLUMN_COUNT_KEY, int(column_count))
+        _commit(settings)
+    except Exception:
+        logger.warning("Could not save the word curator columns", exc_info=True)
 
 
 # ---------------------------------------------------------------------------

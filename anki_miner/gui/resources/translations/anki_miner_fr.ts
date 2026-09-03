@@ -9378,6 +9378,10 @@ Le sélecteur « Phrases » propose une option par ligne de sous-titres et en li
         <translation>S inclure/exclure · K marquer comme connu · Ctrl+A inclure les éléments visibles · Ctrl+D exclure les éléments visibles · Ctrl+Entrée confirmer</translation>
     </message>
     <message>
+        <source>Reset columns</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>+ Previous line</source>
         <translation>+ Ligne précédente</translation>
     </message>
