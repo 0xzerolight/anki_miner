@@ -45,6 +45,7 @@ from anki_miner.gui.utils.profile_store import Profile, ProfileStore
 from anki_miner.gui.widgets.base import ScreenIssue, report_screen_issue
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
 
 if TYPE_CHECKING:
     from anki_miner.gui.main_window import MainWindow
@@ -611,6 +612,17 @@ class ProfileController:
         # The switch is durable from here on, even if the refresh half failed;
         # the pointer stays where it is.
         self._active_name = incoming_name
+        # Logged HERE, not at the return: every settings value the session logs
+        # from now on belongs to the incoming profile, and a report that reads
+        # "I only changed one thing" is usually a switch nobody remembers.
+        # `from` is a Python keyword, so the field can only be passed unpacked;
+        # mypy then measures the whole mapping against the kw-only `level: int`
+        # as well, which no field of this call is.
+        log_summary(
+            logger,
+            "Profile switched",
+            **{"from": outgoing_id, "to": profile_id, "name": incoming_name},  # type: ignore[arg-type]
+        )
         # Before apply_to_app, so the freshly rebuilt panels are covered by that
         # single repolish rather than needing a second one.
         refresh_error = commit_error or self._repaint_settings()
