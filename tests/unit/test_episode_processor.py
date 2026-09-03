@@ -1,5 +1,6 @@
 """Tests for episode_processor module."""
 
+import dataclasses
 import inspect
 import re
 import sqlite3
@@ -6765,3 +6766,99 @@ class TestPerCallSubtitleOffset:
         sp = mock_services["subtitle_parser"]
         assert sp.parse_subtitle_file.call_args[0][1] is None
         assert sp.parse_raw_entries.call_args[0][1] is None
+
+
+class TestSecondarySubtitles:
+    """F7: the second track is parsed once at a zero offset and attached after curation."""
+
+    SECOND = [(0.5, 2.5, "I eat."), (2.9, 5.0, "You run.")]  # the second cue touches 1.0-3.0 by 0.1 s only
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda words: words
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": MagicMock(),
+            "definition_service": MagicMock(),
+            "anki_service": MagicMock(),
+        }
+
+    def _run(
+        self,
+        test_config,
+        mock_services,
+        tmp_path,
+        *,
+        curation_callback=None,
+        secondary=True,
+        offset=0.0,
+        second_raises=False,
+    ):
+        video, sub, second = tmp_path / "ep01.mkv", tmp_path / "ep01.ass", tmp_path / "ep01.en.srt"
+        words = [_make_word("食べる", start_time=1.0)]  # 1.0-3.0
+        parser = mock_services["subtitle_parser"]
+        parser.parse_subtitle_file.return_value = words
+        parser.parse_subtitle_file_with_index.return_value = (words, [])
+
+        def _raw(path, offset=None):
+            if path == second:
+                if second_raises:
+                    raise SubtitleParseError("bad translation track")
+                return list(self.SECOND)
+            return [(1.0, 3.0, "食べるのテスト")]
+
+        parser.parse_raw_entries.side_effect = _raw
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.side_effect = lambda _v, ws, *a, **k: [
+            (w, _make_media("w")) for w in ws
+        ]
+        mock_services["definition_service"].get_definitions_batch.side_effect = lambda ws, *a, **k: ["def"] * len(ws)
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+        processor = build_processor(config=test_config, **mock_services, presenter=NullPresenter())
+        result = processor.process_episode(
+            video,
+            sub,
+            curation_callback=curation_callback,
+            secondary_subtitle_file=second if secondary else None,
+            secondary_subtitle_offset=offset,
+        )
+        return result, parser, second
+
+    @staticmethod
+    def _extracted(mock_services):
+        """The words handed to phase 3 — the attach has run by then."""
+        return mock_services["media_extractor"].extract_media_batch.call_args.args[1]
+
+    def test_translation_is_attached_from_the_secondary_track(self, test_config, mock_services, tmp_path):
+        _result, parser, second = self._run(test_config, mock_services, tmp_path)
+        assert self._extracted(mock_services)[0].sentence_translation == "I eat."
+        parser.parse_raw_entries.assert_any_call(second, 0.0)
+
+    def test_the_offset_is_applied_at_match_time_not_parse_time(self, test_config, mock_services, tmp_path):
+        _result, parser, second = self._run(test_config, mock_services, tmp_path, offset=-2.0)
+        # "You run." 2.9-5.0 shifted to 0.9-3.0 now covers the word; "I eat." moved out.
+        assert self._extracted(mock_services)[0].sentence_translation == "You run."
+        parser.parse_raw_entries.assert_any_call(second, 0.0)
+
+    def test_no_second_track_leaves_the_field_empty(self, test_config, mock_services, tmp_path):
+        _result, parser, second = self._run(test_config, mock_services, tmp_path, secondary=False)
+        assert self._extracted(mock_services)[0].sentence_translation == ""
+        assert all(call.args[0] != second for call in parser.parse_raw_entries.call_args_list)
+
+    def test_attach_runs_after_the_curator_moved_the_window(self, test_config, mock_services, tmp_path):
+        def _pick(words):
+            return [dataclasses.replace(words[0], start_time=2.9, end_time=5.0, duration=2.1)]
+
+        self._run(test_config, mock_services, tmp_path, curation_callback=_pick)
+        assert self._extracted(mock_services)[0].sentence_translation == "You run."
+
+    def test_an_unparseable_second_track_fails_the_run(self, test_config, mock_services, tmp_path):
+        """The user picked the file deliberately: fail like a primary would, before any card."""
+        result, _parser, _second = self._run(test_config, mock_services, tmp_path, second_raises=True)
+        assert result.success is False
+        assert any("bad translation track" in e for e in result.errors)
+        mock_services["anki_service"].create_cards_batch.assert_not_called()
