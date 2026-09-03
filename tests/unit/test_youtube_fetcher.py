@@ -5,6 +5,7 @@ from __future__ import annotations
 import collections
 import io
 import json
+import logging
 import os
 import signal
 import subprocess
@@ -2941,3 +2942,150 @@ class TestGenerationLockScope:
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
         assert _lock_acquirable_from_another_thread()
+
+
+# ---------------------------------------------------------------------------
+# Evidence: argv, the URL a run was about, and the output tail
+# ---------------------------------------------------------------------------
+
+_FETCHER_LOGGER = "anki_miner.services.youtube_fetcher"
+
+
+def _fetcher_records(caplog: pytest.LogCaptureFixture, level: int) -> list[str]:
+    return [r.getMessage() for r in caplog.records if r.name == _FETCHER_LOGGER and r.levelno == level]
+
+
+class TestYtdlpEvidenceLogging:
+    """A yt-dlp report is only actionable when the log carries the command.
+
+    The motivating report had a failing fetch, a log naming the tool and
+    nothing else, and no way to tell which video, which format selector or
+    which cookie source produced it.
+    """
+
+    def test_fetch_start_logs_argv_url_and_sub_mode(
+        self,
+        yt_config: AnkiMinerConfig,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        cookies = tmp_path / "cookies.txt"
+        cookies.write_text("# netscape", encoding="utf-8")
+        service = YouTubeFetcherService(replace(yt_config, youtube_cookies_file=cookies))
+        _make_happy_outputs(tmp_path)
+        with (
+            caplog.at_level(logging.INFO, logger=_FETCHER_LOGGER),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
+        ):
+            service.fetch_video(
+                "https://www.youtube.com/watch?v=abc12345678&si=PRIVATE",
+                "abc123",
+                tmp_path,
+                "manual_only",
+            )
+
+        info = _fetcher_records(caplog, logging.INFO)
+        start = next(line for line in info if line.startswith("youtube fetch starting:"))
+        assert "url=https://www.youtube.com/watch?v=abc12345678" in start
+        # The start line answers "which video" without carrying the tracking
+        # parameter that ties the pasted URL to the person who copied it.
+        assert "PRIVATE" not in start
+        assert "sub_mode=manual_only" in start
+
+        argv = next(line for line in info if line.startswith("yt-dlp fetch: argv="))
+        assert "--format" in argv
+        # The cookie file PATH is evidence, not a secret (locked decision).
+        assert str(cookies) in argv
+
+    def test_probe_logs_its_argv(
+        self,
+        service: YouTubeFetcherService,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        payload = _make_metadata()
+        with (
+            caplog.at_level(logging.INFO, logger=_FETCHER_LOGGER),
+            patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, json.dumps(payload))),
+        ):
+            service.probe_metadata("https://youtu.be/abc123")
+        assert "yt-dlp probe: argv=" in "\n".join(_fetcher_records(caplog, logging.INFO))
+        assert "--dump-single-json" in caplog.text
+
+    def test_success_reports_one_warning_out_of_sixty_progress_lines(
+        self,
+        service: YouTubeFetcherService,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Progress must not evict the one line worth reading on a success."""
+        _make_happy_outputs(tmp_path)
+        lines = [f"[ankimine_dl] {n} 6000" for n in range(60)]
+        lines.insert(30, "WARNING: Falling back to generic n function search")
+        with (
+            caplog.at_level(logging.DEBUG, logger=_FETCHER_LOGGER),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+        warnings = _fetcher_records(caplog, logging.WARNING)
+        assert len(warnings) == 1
+        assert "Falling back to generic n function search" in warnings[0]
+
+    def test_clean_success_counts_the_tail_at_debug(
+        self,
+        service: YouTubeFetcherService,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        _make_happy_outputs(tmp_path)
+        lines = ["[download] Destination: abc123.mp4", "[Merger] Merging formats into 'abc123.mp4'"]
+        with (
+            caplog.at_level(logging.DEBUG, logger=_FETCHER_LOGGER),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+        assert not _fetcher_records(caplog, logging.WARNING)
+        assert "yt-dlp output lines: count=2" in "\n".join(_fetcher_records(caplog, logging.DEBUG))
+
+    def test_failure_logs_the_classification_and_the_tail(
+        self,
+        service: YouTubeFetcherService,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        lines = [f"[ankimine_dl] {n} 6000" for n in range(60)]
+        lines.append("ERROR: [youtube] abc123: Sign in to confirm you are not a bot")
+        with (
+            caplog.at_level(logging.INFO, logger=_FETCHER_LOGGER),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=1)),
+            pytest.raises(BotDetectionError),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+        assert "yt-dlp classify: tag=bot" in "\n".join(_fetcher_records(caplog, logging.INFO))
+        warnings = "\n".join(_fetcher_records(caplog, logging.WARNING))
+        assert "Sign in to confirm you are not a bot" in warnings
+        # The 20-line cap holds and progress never reaches the tail.
+        assert "[ankimine_dl]" not in warnings
+
+    def test_unclassified_failure_still_logs_the_tail(
+        self,
+        service: YouTubeFetcherService,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        with (
+            caplog.at_level(logging.INFO, logger=_FETCHER_LOGGER),
+            patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
+            patch("subprocess.Popen", return_value=_FakePopen(["ERROR: Video unavailable"], returncode=1)),
+            pytest.raises(YouTubeFetchError),
+        ):
+            service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
+
+        assert "yt-dlp classify: tag=-" in "\n".join(_fetcher_records(caplog, logging.INFO))
+        assert "Video unavailable" in "\n".join(_fetcher_records(caplog, logging.WARNING))

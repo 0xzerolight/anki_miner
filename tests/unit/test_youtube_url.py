@@ -2,7 +2,11 @@
 
 import pytest
 
-from anki_miner.utils.youtube_url import YouTubeUrlInfo, classify_youtube_url
+from anki_miner.utils.youtube_url import (
+    YouTubeUrlInfo,
+    classify_youtube_url,
+    redact_youtube_url_for_log,
+)
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -249,3 +253,46 @@ class TestEmptyAndGarbage:
 
     def test_none_like_string(self):
         assert classify_youtube_url("None") == _UNKNOWN
+
+
+# ---------------------------------------------------------------------------
+# redact_youtube_url_for_log
+# ---------------------------------------------------------------------------
+
+
+class TestRedactYouTubeUrlForLog:
+    """The redacted URL must still name the video the run was about.
+
+    Dropping the whole query string turned every yt-dlp log line into
+    "https://www.youtube.com/watch", which cannot answer "which video".
+    """
+
+    def test_keeps_video_id_and_drops_tracking(self):
+        assert (
+            redact_youtube_url_for_log("https://www.youtube.com/watch?v=abc12345678&si=XYZ")
+            == "https://www.youtube.com/watch?v=abc12345678"
+        )
+
+    def test_keeps_playlist_index_and_timestamp(self):
+        url = f"https://www.youtube.com/watch?v={VID}&list={PL}&index=4&t=90&pp=SECRET"
+        redacted = redact_youtube_url_for_log(url)
+        assert f"v={VID}" in redacted
+        assert f"list={PL}" in redacted
+        assert "index=4" in redacted
+        assert "t=90" in redacted
+        assert "SECRET" not in redacted
+
+    def test_drops_fragment(self):
+        assert redact_youtube_url_for_log(f"https://youtu.be/{VID}#PRIVATE") == f"https://youtu.be/{VID}"
+
+    def test_keeps_port(self):
+        assert redact_youtube_url_for_log("http://localhost:8080/watch?v=x") == "http://localhost:8080/watch?v=x"
+
+    def test_userinfo_fails_closed(self):
+        assert redact_youtube_url_for_log(f"https://user:pw@youtube.com/watch?v={VID}") == "<redacted-url>"
+
+    def test_scheme_less_fails_closed(self):
+        assert redact_youtube_url_for_log(f"www.youtube.com/watch?v={VID}") == "<redacted-url>"
+
+    def test_garbage_fails_closed(self):
+        assert redact_youtube_url_for_log("not-a-url-at-all") == "<redacted-url>"

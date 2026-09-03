@@ -192,6 +192,10 @@ class MediaDownloaderService:
                 line_callback=handle_line,
                 combine_stderr=True,
                 retain_output=False,
+                op="yt-dlp download",
+                # Without this the supervisor's failure tail is 20 progress ticks
+                # and the yt-dlp error that caused the failure is evicted.
+                noise_filter=ytdlp_invocation.is_progress_only,
             )
 
         if isinstance(result.error, FileNotFoundError):

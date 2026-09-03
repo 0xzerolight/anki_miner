@@ -16,12 +16,21 @@ tracker instead of the remedy this app already knows.
 
 from __future__ import annotations
 
+import logging
+import subprocess
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 import pytest
 
+from anki_miner.config import AnkiMinerConfig
 from anki_miner.services.ytdlp_invocation import (
     COOKIE_TAGS,
     classify_error_tail,
+    cookie_args,
     cookie_failure_message,
+    ytdlp_supports_js_runtimes,
+    ytdlp_supports_remote_components,
 )
 
 # ---------------------------------------------------------------------------
@@ -152,3 +161,82 @@ class TestCookieFailureMessage:
         msg = cookie_failure_message("cookie_missing", "chrome", CHROME_DB_NOT_FOUND.lower(), platform="linux")
         assert "Flatpak or Snap" not in msg
         assert "Firefox" not in msg
+
+
+# ---------------------------------------------------------------------------
+# Capability probes and cookie source: the evidence a yt-dlp report needs
+# ---------------------------------------------------------------------------
+
+
+class TestCapabilityProbeLogging:
+    """A swallowed capability probe must leave a record.
+
+    ``--js-runtimes`` and ``--remote-components`` are dropped silently when the
+    probe fails, and the user then sees "n challenge solving failed" with no
+    hint that the flag that would have fixed it was never passed.
+    """
+
+    def test_missing_binary_logs_a_warning(self, caplog: pytest.LogCaptureFixture) -> None:
+        ytdlp_supports_js_runtimes.cache_clear()
+        try:
+            with (
+                caplog.at_level(logging.WARNING, logger="anki_miner.services.ytdlp_invocation"),
+                patch("subprocess.run", side_effect=FileNotFoundError("no such file: yt-dlp")),
+            ):
+                assert ytdlp_supports_js_runtimes("/nowhere/yt-dlp") is False
+        finally:
+            ytdlp_supports_js_runtimes.cache_clear()
+        assert "yt-dlp capability probe failed" in caplog.text
+        assert "flag=--js-runtimes" in caplog.text
+        assert "path=/nowhere/yt-dlp" in caplog.text
+        assert "FileNotFoundError" in caplog.text
+        assert "no such file" in caplog.text
+
+    def test_timeout_logs_a_warning_for_its_own_flag(self, caplog: pytest.LogCaptureFixture) -> None:
+        ytdlp_supports_remote_components.cache_clear()
+        try:
+            with (
+                caplog.at_level(logging.WARNING, logger="anki_miner.services.ytdlp_invocation"),
+                patch("subprocess.run", side_effect=subprocess.TimeoutExpired(cmd="yt-dlp", timeout=30)),
+            ):
+                assert ytdlp_supports_remote_components("/slow/yt-dlp") is False
+        finally:
+            ytdlp_supports_remote_components.cache_clear()
+        assert "flag=--remote-components" in caplog.text
+        assert "TimeoutExpired" in caplog.text
+
+    def test_success_records_both_capabilities(self, caplog: pytest.LogCaptureFixture) -> None:
+        help_text = MagicMock(returncode=0, stdout="--js-runtimes RUNTIMES\n--paths TYPES\n", stderr="")
+        ytdlp_supports_js_runtimes.cache_clear()
+        try:
+            with (
+                caplog.at_level(logging.DEBUG, logger="anki_miner.services.ytdlp_invocation"),
+                patch("subprocess.run", return_value=help_text),
+            ):
+                assert ytdlp_supports_js_runtimes("/opt/yt-dlp") is True
+        finally:
+            ytdlp_supports_js_runtimes.cache_clear()
+        assert "yt-dlp capability: js_runtimes=True remote_components=False path=/opt/yt-dlp" in caplog.text
+
+
+class TestCookieSourceLogging:
+    """Which cookie source a run used is the first question of a cookie bug."""
+
+    def test_file_source(self, caplog: pytest.LogCaptureFixture, tmp_path: Path) -> None:
+        cookies = tmp_path / "cookies.txt"
+        config = AnkiMinerConfig(youtube_cookies_file=cookies)
+        with caplog.at_level(logging.INFO, logger="anki_miner.services.ytdlp_invocation"):
+            assert cookie_args(config) == ["--cookies", str(cookies)]
+        # The cookie FILE PATH is a path, not a secret (locked decision).
+        assert f"yt-dlp cookie source: source=file value={cookies}" in caplog.text
+
+    def test_browser_source(self, caplog: pytest.LogCaptureFixture) -> None:
+        config = AnkiMinerConfig(youtube_cookies_from_browser="firefox")
+        with caplog.at_level(logging.INFO, logger="anki_miner.services.ytdlp_invocation"):
+            assert cookie_args(config) == ["--cookies-from-browser", "firefox"]
+        assert "yt-dlp cookie source: source=browser value=firefox" in caplog.text
+
+    def test_no_source(self, caplog: pytest.LogCaptureFixture) -> None:
+        with caplog.at_level(logging.INFO, logger="anki_miner.services.ytdlp_invocation"):
+            assert cookie_args(AnkiMinerConfig()) == []
+        assert "yt-dlp cookie source: source=none value=-" in caplog.text
