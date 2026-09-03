@@ -553,7 +553,7 @@ class YouTubeFetcherService:
         logger.info(
             "youtube fetch complete: video=%s subs=%s",
             result.video_file.name,
-            result.subtitle_file.name,
+            result.subtitle_file.name if result.subtitle_file is not None else "(transcribe)",
         )
         return result
 

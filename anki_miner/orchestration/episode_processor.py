@@ -2820,6 +2820,10 @@ class EpisodeProcessor:
                 fallback_allowed=fallback_allowed,
             )
 
+        # A subtitle-less fetch is only possible in transcribe mode, which fills
+        # it from local ASR before this point (see _transcribe_fetched).
+        assert fetched.subtitle_file is not None
+
         if on_fetched is not None:
             on_fetched(fetched)
 

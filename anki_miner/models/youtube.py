@@ -6,7 +6,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-SubMode = Literal["manual_only", "auto_only", "auto_dub"]
+SubMode = Literal["manual_only", "auto_only", "auto_dub", "transcribe"]
+"""How one video's subtitle is obtained. ``transcribe`` skips YouTube's
+captions entirely and generates the track locally from the download."""
+
+SubtitleSource = Literal["auto", "transcribe", "captions"]
+"""What the user asked the run to do about subtitles.
+
+Deliberately distinct from :data:`SubMode`: this is intent over the whole
+queue, ``SubMode`` is the route one video resolved to. ``auto`` prefers
+captions and falls through to transcription; ``captions`` refuses a video
+that has none."""
 
 
 @dataclass(frozen=True)
@@ -40,14 +50,17 @@ class FetchedMedia:
     """
 
     video_file: Path
-    subtitle_file: Path
-    sub_source: Literal["manual", "auto"]
+    subtitle_file: Path | None
+    """None only in ``transcribe`` mode, where no caption track was asked for.
+    ``EpisodeProcessor.process_youtube_url`` fills it from local ASR before
+    anything downstream sees the media."""
+    sub_source: Literal["manual", "auto", "generated"]
 
     def __post_init__(self) -> None:
         """Convert string paths to Path objects if needed."""
         if isinstance(self.video_file, str):
             object.__setattr__(self, "video_file", Path(self.video_file))
-        if isinstance(self.subtitle_file, str):
+        if self.subtitle_file is not None and isinstance(self.subtitle_file, str):
             object.__setattr__(self, "subtitle_file", Path(self.subtitle_file))
 
 
