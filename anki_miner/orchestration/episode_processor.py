@@ -2036,14 +2036,16 @@ class EpisodeProcessor:
         The same ``parse_raw_entries`` the curator context uses, so both see
         identical cues; the track's own offset is applied by
         ``attach_translations`` (and by the curator's column), never baked into
-        the times here. Goes through the mining language's decode ladder and
-        the user's subtitle regex filter like the primary -- a track the
-        ladder cannot decode raises ``SubtitleParseError`` and fails the run.
+        the times here. The second track skips the mining language's decode
+        ladder -- it's not in that language -- and goes through BOM detection
+        then charset detection instead; the user's subtitle regex filter still
+        runs like the primary. A track that cannot be decoded raises
+        ``SubtitleParseError`` and fails the run.
         """
         if secondary_subtitle_file is None:
             return None
         try:
-            entries = self.subtitle_parser.parse_raw_entries(secondary_subtitle_file, 0.0)
+            entries = self.subtitle_parser.parse_raw_entries(secondary_subtitle_file, 0.0, encodings=())
         except SubtitleParseError as exc:
             # Two subtitle files are in play; the decoder's message names neither.
             raise SubtitleParseError(f"Secondary subtitle file {secondary_subtitle_file.name}: {exc}") from exc

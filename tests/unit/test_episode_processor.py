@@ -6803,7 +6803,7 @@ class TestSecondarySubtitles:
         parser.parse_subtitle_file.return_value = words
         parser.parse_subtitle_file_with_index.return_value = (words, [])
 
-        def _raw(path, offset=None):
+        def _raw(path, offset=None, *, encodings=None):
             if path == second:
                 if second_raises:
                     raise SubtitleParseError("bad translation track")
@@ -6836,13 +6836,13 @@ class TestSecondarySubtitles:
     def test_translation_is_attached_from_the_secondary_track(self, test_config, mock_services, tmp_path):
         _result, parser, second = self._run(test_config, mock_services, tmp_path)
         assert self._extracted(mock_services)[0].sentence_translation == "I eat."
-        parser.parse_raw_entries.assert_any_call(second, 0.0)
+        parser.parse_raw_entries.assert_any_call(second, 0.0, encodings=())
 
     def test_the_offset_is_applied_at_match_time_not_parse_time(self, test_config, mock_services, tmp_path):
         _result, parser, second = self._run(test_config, mock_services, tmp_path, offset=-2.0)
         # "You run." 2.9-5.0 shifted to 0.9-3.0 now covers the word; "I eat." moved out.
         assert self._extracted(mock_services)[0].sentence_translation == "You run."
-        parser.parse_raw_entries.assert_any_call(second, 0.0)
+        parser.parse_raw_entries.assert_any_call(second, 0.0, encodings=())
 
     def test_no_second_track_leaves_the_field_empty(self, test_config, mock_services, tmp_path):
         _result, parser, second = self._run(test_config, mock_services, tmp_path, secondary=False)

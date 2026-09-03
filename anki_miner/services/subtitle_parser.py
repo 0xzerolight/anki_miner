@@ -810,7 +810,7 @@ class SubtitleParserService:
         cleaned = clean_subtitle_text(raw_text)
         return self._apply_text_filter(cleaned)
 
-    def _load_subs(self, subtitle_file: Path):
+    def _load_subs(self, subtitle_file: Path, *, encodings: tuple[str, ...] | None = None):
         """Load a subtitle file via pysubs2 with normalized error wrapping.
 
         Shared by every public parse_* method so error wrapping stays
@@ -819,7 +819,10 @@ class SubtitleParserService:
         shared fallback (see utils/subtitle_encoding.py) dispatches on a
         UTF-16/32 BOM first, then walks the mining language's own ladder, so
         both UTF-16 and Shift-JIS subtitles parse instead of aborting the
-        episode.
+        episode. When *encodings* is not None it is passed straight through
+        instead of the profile's ladder; a caller whose file is not in the
+        mining language passes ``encodings=()`` to skip the ladder and rely on
+        the BOM and the detector.
         """
         # Function-local: languages.profile pulls in services.resource_catalog,
         # whose package __init__ imports definition_service -> this module, so a
@@ -833,7 +836,9 @@ class SubtitleParserService:
                 return load_with_fallback_encoding(
                     subtitle_file,
                     utf8_error,
-                    encodings=get_profile(config_language(self.config)).import_encodings,
+                    encodings=(
+                        get_profile(config_language(self.config)).import_encodings if encodings is None else encodings
+                    ),
                 )
         except FileNotFoundError as e:
             raise SubtitleParseError(f"Subtitle file not found: {subtitle_file}") from e
@@ -1509,7 +1514,11 @@ class SubtitleParserService:
         return line_words, line_lemmas_entry
 
     def parse_raw_entries(
-        self, subtitle_file: Path, subtitle_offset: float | None = None
+        self,
+        subtitle_file: Path,
+        subtitle_offset: float | None = None,
+        *,
+        encodings: tuple[str, ...] | None = None,
     ) -> list[tuple[float, float, str]]:
         """Parse subtitle file and return raw timing entries without tokenization.
 
@@ -1519,6 +1528,10 @@ class SubtitleParserService:
                 (default) uses ``config.subtitle_offset``. Callers that pair
                 these entries with mined words (line expansion) must pass the
                 offset that parse used, or the two land on different timelines.
+            encodings: Forwarded to ``_load_subs``. ``None`` (default) uses the
+                mining language's own ladder; a caller whose file is not in
+                that language passes ``encodings=()`` to skip the ladder and
+                rely on the BOM and charset detection instead.
 
         Returns:
             List of (start_seconds, end_seconds, text) tuples
@@ -1527,7 +1540,7 @@ class SubtitleParserService:
             SubtitleParseError: If subtitle file cannot be parsed
         """
         offset = self._resolve_offset(subtitle_offset)
-        subs = self._load_subs(subtitle_file)
+        subs = self._load_subs(subtitle_file, encodings=encodings)
 
         entries = []
         for line in subs:
