@@ -28,6 +28,7 @@ from anki_miner.models.processing import (
     MiningOutcome,
     ProcessingResult,
     TerminalOutcome,
+    WhitelistCoverage,
     classify_result,
     classify_terminal_outcome,
 )
@@ -56,6 +57,9 @@ class RunReceipt:
     #: Per-item results, when the screen's worker produced any. The Batch queue
     #: worker reports counts only, so this is legitimately empty there.
     results: tuple[ProcessingResult, ...] = ()
+    #: What the run's whitelist reached, folded over every item that reported
+    #: one; None when no whitelist was in effect.
+    whitelist: WhitelistCoverage | None = None
 
     @property
     def has_details(self) -> bool:
@@ -120,6 +124,7 @@ class RunReceiptAccumulator:
         self._notes = 0
         self._note_ids: list[int] = []
         self._results: list[ProcessingResult] = []
+        self._whitelist: WhitelistCoverage | None = None
         self._cancel_requested = False
         self._fatal = False
 
@@ -132,6 +137,7 @@ class RunReceiptAccumulator:
         ``error`` is a worker exception, and a cancelled item carries the
         cancellation marker inside an otherwise ordinary result.
         """
+        self.record_whitelist(getattr(result, "whitelist_coverage", None))
         outcome = MiningOutcome.FAILED if error is not None else classify_result(result)
         processing_result = result if isinstance(result, ProcessingResult) else None
         if processing_result is not None:
@@ -163,6 +169,19 @@ class RunReceiptAccumulator:
             self._failed += 1
             return
         self._completed += 1
+
+    def record_whitelist(self, coverage: object) -> None:
+        """Fold one item's whitelist coverage into the run's.
+
+        Every ``ProcessingResult`` carries one and :meth:`record_result` folds
+        it itself; the Batch queue worker, which reports counts, folds its own
+        over its pairs and hands the result over once at queue end. Anything
+        that is not a :class:`WhitelistCoverage` (a mock, a duck-typed result)
+        is ignored rather than trusted.
+        """
+        if not isinstance(coverage, WhitelistCoverage):
+            return
+        self._whitelist = coverage if self._whitelist is None else self._whitelist.merged(coverage)
 
     def mark_cancel_requested(self) -> None:
         """Note that the user asked to stop. Outranks every other outcome."""
@@ -198,4 +217,5 @@ class RunReceiptAccumulator:
                 wall_now=wall_now,
             ),
             results=tuple(self._results),
+            whitelist=self._whitelist,
         )
