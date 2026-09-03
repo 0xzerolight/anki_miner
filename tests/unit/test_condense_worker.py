@@ -26,6 +26,7 @@ from anki_miner.gui.workers.condense_worker import (
     CondenseItem,
     CondenseOutputCollisionError,
     CondenseWorker,
+    plan_merge_part_paths,
 )
 from anki_miner.services.audio_condenser import (
     EncoderUnavailableError,
@@ -1149,3 +1150,203 @@ def test_sidecar_and_tag_errors_both_surfaced(qapp, tmp_path, monkeypatch):
     assert err is None
     final_msg = [p for p in cap["progress"] if p[0] == 0][-1][2]
     assert "disk full" in final_msg and "no header" in final_msg
+
+
+# ---------------------------------------------------------------------------
+# Merge mode: one output for the whole folder (F5)
+# ---------------------------------------------------------------------------
+
+
+def _merge_items(tmp_path: Path, count: int = 2) -> list[CondenseItem]:
+    items = []
+    for n in range(1, count + 1):
+        media = tmp_path / f"ep{n:02d}.mkv"
+        media.write_bytes(b"")
+        sub = _write_srt(tmp_path / f"ep{n:02d}.srt", [(1000, 2000, f"line {n}")])
+        items.append(CondenseItem(media, sub))
+    return items
+
+
+def test_plan_merge_part_paths_are_index_keyed(tmp_path):
+    assert plan_merge_part_paths(2, tmp_path, "mp3") == [
+        tmp_path / "0000_condensed.mp3",
+        tmp_path / "0001_condensed.mp3",
+    ]
+
+
+def test_merge_mode_stages_parts_and_merges_them(qapp, tmp_path):
+    config = _make_config(tmp_path)
+    items = _merge_items(tmp_path)
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    final = out_dir / "season.mp3"
+
+    service = _FakeService()
+    worker = _make_worker(items, config, service=service, merge_into=final)
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    # Parts were condensed into a staging folder, never the output folder.
+    staged = [call["out_audio"] for call in service.condense_calls]
+    assert len(staged) == 2
+    assert all(part.parent != out_dir for part in staged), staged
+    assert all(call["uniform_layout"] is True for call in service.condense_calls)
+    # One concat, over both parts, in queue order.
+    assert len(service.concat_calls) == 1
+    assert service.concat_calls[0]["parts"] == staged
+    assert service.concat_calls[0]["out_audio"] == final
+    # The merge is emitted as one more queue item.
+    assert cap["started"] == [0, 1, 2]
+    assert cap["finished"][-1] == (2, final, None)
+    # Per-file rows name the source file, not the staging path.
+    assert [row[1] for row in cap["finished"][:2]] == [items[0].media, items[1].media]
+    # Staging folder is gone.
+    assert not staged[0].parent.exists()
+    assert list(config.media_temp_folder.glob("condense_merge_*")) == []
+
+
+def test_merge_mode_reports_progress_for_the_merge_step(qapp, tmp_path):
+    config = _make_config(tmp_path)
+    items = _merge_items(tmp_path, count=1)
+    final = tmp_path / "season.mp3"
+
+    worker = _make_worker(items, config, service=_FakeService(), merge_into=final)
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    merge_progress = [row for row in cap["progress"] if row[0] == 1]
+    assert merge_progress, cap["progress"]
+    assert merge_progress[-1][1] == 100
+
+
+def test_merge_mode_merges_what_succeeded(qapp, tmp_path, monkeypatch):
+    """One episode without a subtitle must not cost the user the season."""
+    config = _make_config(tmp_path)
+    _no_streams(monkeypatch)  # the subtitle-less item resolves to NO_SOURCE
+    items = _merge_items(tmp_path, count=1)
+    bad = tmp_path / "ep02.mkv"
+    bad.write_bytes(b"")
+    items.append(CondenseItem(bad, None))
+    final = tmp_path / "season.mp3"
+
+    service = _FakeService()
+    worker = _make_worker(items, config, service=service, merge_into=final)
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    assert len(service.concat_calls[0]["parts"]) == 1
+    assert cap["finished"][1][2], "the failed episode still reports its own error"
+    assert cap["finished"][-1] == (2, final, None)
+
+
+def test_merge_mode_with_every_item_failed_does_not_run_ffmpeg(qapp, tmp_path, monkeypatch):
+    config = _make_config(tmp_path)
+    _no_streams(monkeypatch)
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    final = tmp_path / "season.mp3"
+
+    service = _FakeService()
+    worker = _make_worker([CondenseItem(media, None)], config, service=service, merge_into=final)
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    assert service.concat_calls == []
+    idx, out, err = cap["finished"][-1]
+    assert (idx, out) == (1, None)
+    assert err  # a translated "nothing to merge" line
+    assert list(config.media_temp_folder.glob("condense_merge_*")) == []
+
+
+def test_merge_mode_cancel_skips_the_merge_and_cleans_up(qapp, tmp_path):
+    config = _make_config(tmp_path)
+    items = _merge_items(tmp_path, count=1)
+    final = tmp_path / "season.mp3"
+
+    service = _FakeService()
+    worker = _make_worker(items, config, service=service, merge_into=final)
+    worker.cancel()
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    assert service.concat_calls == []
+    assert cap["started"] == []
+    assert not final.exists()
+    assert list(config.media_temp_folder.glob("condense_merge_*")) == []
+
+
+def test_merge_mode_stops_after_a_fatal_encoder_error(qapp, tmp_path):
+    config = _make_config(tmp_path)
+    items = _merge_items(tmp_path)
+    final = tmp_path / "season.mp3"
+
+    service = _FakeService(encoder_error=True)
+    worker = _make_worker(items, config, service=service, merge_into=final)
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    assert service.concat_calls == []
+    assert cap["started"] == [0]  # queue stopped, and no merge step
+    assert list(config.media_temp_folder.glob("condense_merge_*")) == []
+
+
+def test_merge_mode_failure_reports_the_ffmpeg_reason(qapp, tmp_path):
+    config = _make_config(tmp_path)
+    items = _merge_items(tmp_path, count=1)
+    final = tmp_path / "season.mp3"
+
+    service = _FakeService(concat_result=False, concat_failure=FfmpegStepFailure(1, False, "boom"))
+    worker = _make_worker(items, config, service=service, merge_into=final)
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    idx, out, err = cap["finished"][-1]
+    assert (idx, out) == (1, None)
+    assert "boom" in err
+
+
+def test_merge_mode_forwards_write_subs_and_metadata(qapp, tmp_path, monkeypatch):
+    config = _make_config(tmp_path)
+    items = _merge_items(tmp_path, count=1)
+    final = tmp_path / "season.mp3"
+    meta = TrackMetadata(title="Season 1")
+    seen: dict = {}
+
+    real_merge = ac.merge_condensed
+
+    def _spy(service, cfg, parts, out_audio, **kwargs):
+        seen["parts"] = list(parts)
+        seen["kwargs"] = kwargs
+        return real_merge(service, cfg, parts, out_audio, **kwargs)
+
+    monkeypatch.setattr("anki_miner.gui.workers.condense_worker.merge_condensed", _spy)
+    worker = _make_worker(items, config, service=_FakeService(), merge_into=final, merge_metadata=meta, write_subs=True)
+    worker.run()
+    worker.wait(2000)
+
+    assert seen["kwargs"]["write_subs"] is True
+    assert seen["kwargs"]["metadata"] == meta
+    assert seen["parts"][0].duration_ms == 2000  # (500, 2500) after padding
+
+
+def test_non_merge_run_is_unaffected(qapp, tmp_path):
+    """The default path must not stage, pin the layout, or concat."""
+    config = _make_config(tmp_path)
+    items = _merge_items(tmp_path, count=1)
+
+    service = _FakeService()
+    worker = _make_worker(items, config, service=service)
+    cap = _capture(worker)
+    worker.run()
+    worker.wait(2000)
+
+    assert service.concat_calls == []
+    assert service.condense_calls[0]["uniform_layout"] is False
+    assert cap["finished"] == [(0, tmp_path / "ep01_condensed.mp3", None)]

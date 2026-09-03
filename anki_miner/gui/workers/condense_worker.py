@@ -14,21 +14,25 @@ back to translated messages. ``EncoderUnavailableError`` and
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+import tempfile
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 from anki_miner.services.audio_condenser import (
+    CondensedPart,
     CondenseResult,
     CondenseStatus,
     EncoderUnavailableError,
     FilterUnavailableError,
     condense_one,
+    merge_condensed,
 )
 from anki_miner.services.audio_tagger import TrackMetadata
 from anki_miner.utils.file_pairing import output_path_identity, resolve_output_paths
 from anki_miner.utils.file_utils import bounded_output_name
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.robust_fs import robust_rmtree
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +103,16 @@ def validate_condense_outputs(items: list[CondenseItem], output_paths: list[Path
     return paths
 
 
+def plan_merge_part_paths(count: int, staging_dir: Path, output_format: str) -> list[Path]:
+    """Name the staged parts of a merge run.
+
+    Index-keyed, so two inputs sharing a stem cannot collide and no directory
+    scan or collision check is needed: the staging folder is fresh and private
+    to this run, and the names carry the queue order the concat list needs.
+    """
+    return [staging_dir / f"{index:04d}{_CONDENSED_SUFFIX}.{output_format}" for index in range(count)]
+
+
 class CondenseWorker(FileQueueWorker):
     """Condense a list of media files down to their dialogue audio.
 
@@ -144,6 +158,13 @@ class CondenseWorker(FileQueueWorker):
         audio_track_override: Audio-stream index to condense; None auto-detects.
         subtitle_track_override: Embedded subtitle ``sub_index`` to extract; None
             picks the first Japanese-tagged text track, else the first text track.
+        merge_into: When given (folder mode), every file is condensed into a
+            private staging folder and the parts are joined into this one
+            output; the parts are working files and are deleted with the
+            staging folder. The merge is emitted as one more queue item, at
+            index ``len(items)``.
+        merge_metadata: Tags for the merged output (merge mode's counterpart to
+            per-item ``CondenseItem.metadata``, since there is one output).
         service: Optional :class:`~anki_miner.services.audio_condenser.AudioCondenserService`;
             one is built from *config* if omitted (injected by tests).
         parent: Optional parent QObject.
@@ -169,6 +190,8 @@ class CondenseWorker(FileQueueWorker):
         write_subs: bool = False,
         audio_track_override: int | None = None,
         subtitle_track_override: int | None = None,
+        merge_into: Path | None = None,
+        merge_metadata: TrackMetadata | None = None,
         service=None,
         parent=None,
     ) -> None:
@@ -177,12 +200,22 @@ class CondenseWorker(FileQueueWorker):
         self._config = config
         self._items = list(items)
         self._output_dir = output_dir
-        planned_outputs = (
-            plan_condense_outputs(self._items, output_dir, output_format)
-            if output_paths is None
-            else list(output_paths)
-        )
-        self._output_paths = validate_condense_outputs(self._items, planned_outputs)
+        self._merge_into = merge_into
+        self._merge_metadata = merge_metadata
+        self._output_format = output_format
+        self._staging_dir: Path | None = None
+        self._parts: list[CondensedPart] = []
+        if merge_into is None:
+            planned_outputs = (
+                plan_condense_outputs(self._items, output_dir, output_format)
+                if output_paths is None
+                else list(output_paths)
+            )
+            self._output_paths = validate_condense_outputs(self._items, planned_outputs)
+        else:
+            # Planned in _process_queue, once the run's staging folder exists on
+            # the worker thread.
+            self._output_paths = []
         self._overwrite = overwrite
         self._padding_ms = padding_ms
         self._offset_ms = offset_ms
@@ -198,6 +231,57 @@ class CondenseWorker(FileQueueWorker):
             self._service = AudioCondenserService(config)
         else:
             self._service = service
+
+    def _process_queue(self) -> None:
+        """Run the queue, then — in merge mode — the merge step.
+
+        The staging folder holds every part of the run and is removed on every
+        exit path (success, per-file failure, cancel, fatal ffmpeg error): the
+        user asked for one file, so the parts are working files, not output.
+        """
+        if self._merge_into is None:
+            super()._process_queue()
+            return
+
+        self._config.media_temp_folder.mkdir(parents=True, exist_ok=True)
+        self._staging_dir = Path(tempfile.mkdtemp(prefix="condense_merge_", dir=str(self._config.media_temp_folder)))
+        try:
+            self._output_paths = plan_merge_part_paths(len(self._items), self._staging_dir, self._output_format)
+            super()._process_queue()
+            self._merge_parts()
+        finally:
+            robust_rmtree(self._staging_dir)
+            self._staging_dir = None
+
+    def _merge_parts(self) -> None:
+        """Emit the merge as one more queue item (index ``len(items)``).
+
+        Reusing the per-file signals is what keeps the tab, the progress bar and
+        the terminal-outcome counters working with no new signal contract; the
+        tab only counts one extra item for the run.
+        """
+        assert self._merge_into is not None
+        if self.is_cancelled or self._stop_queue:
+            return
+
+        idx = len(self._items)
+        self.file_started.emit(idx)
+        if not self._parts:
+            self.file_finished.emit(idx, None, self.tr("Nothing to merge: no file was condensed."))
+            return
+
+        self.file_progress.emit(idx, 0, tr_format(self.tr("Merging %1 files into one…"), str(len(self._parts))))
+        result = merge_condensed(
+            self._service,
+            self._config,
+            self._parts,
+            self._merge_into,
+            write_subs=self._write_subs,
+            metadata=self._merge_metadata,
+            progress_cb=lambda pct: self.file_progress.emit(idx, pct, tr_format(self.tr("Merging: %1%"), pct)),
+            cancel_event=self._cancel_event,
+        )
+        self._emit_result(idx, CondenseItem(self._merge_into), result)
 
     def _queue_items(self) -> list[CondenseItem]:
         return self._items
@@ -242,6 +326,8 @@ class CondenseWorker(FileQueueWorker):
                 audio_track_override=self._audio_track_override,
                 subtitle_track_override=self._subtitle_track_override,
                 write_subs=self._write_subs,
+                uniform_layout=self._merge_into is not None,
+                collect_events=self._merge_into is not None,
                 metadata=item.metadata,
                 progress_cb=_progress_cb,
                 cancel_event=self._cancel_event,
@@ -256,6 +342,13 @@ class CondenseWorker(FileQueueWorker):
             if not self.is_cancelled:
                 self.file_finished.emit(idx, None, str(exc))
             return
+
+        if self._merge_into is not None:
+            if result.status is CondenseStatus.SUCCESS:
+                self._parts.append(CondensedPart(out_audio, result.condensed_events, result.condensed_duration_ms))
+            # Report the source file: the staged part is a temp name the user
+            # never asked for and will never see again.
+            result = replace(result, out_audio=item.media)
 
         self._emit_result(idx, item, result)
 
