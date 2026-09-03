@@ -26,12 +26,13 @@ from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDragMoveEvent
-from PyQt6.QtWidgets import QAbstractButton, QBoxLayout, QDialog, QScrollArea, QWidget
+from PyQt6.QtWidgets import QAbstractButton, QBoxLayout, QCheckBox, QDialog, QScrollArea, QWidget
 
 from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.presenters import GUIProgressCallback
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.run_off_thread import join_or_retain, run_off_thread
+from anki_miner.gui.utils.run_options import RunOptionsMixin
 from anki_miner.gui.widgets.base import (
     PageWidth,
     ScreenIssueHost,
@@ -69,7 +70,7 @@ _WORKER_JOIN_TIMEOUT_MS = 5000
 _LEAKED_RUN_CLOSE_JOIN_MS = 2000
 
 
-class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
+class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidget):
     """Common scaffolding for the four mining tabs (``SingleEpisodeTab``, ``BatchProcessingTab``, ``DeckBuilderTab``, ``YouTubeTab``).
 
     Subclasses own their layout, their progress widgets, and the bodies of the
@@ -92,11 +93,24 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     # and YouTubeTab; DeckBuilderTab builds its own batch curation callback).
     _curation_requested = pyqtSignal(list)
 
+    # Inline run options edited on this screen (the curation checkbox, Deck
+    # Builder's selection mode). Connected once, by discovery, in
+    # compose_main_window -- never per tab.
+    run_options_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
+
     # Active frozen config. Every mining-tab subclass assigns this in its
     # __init__ (public attribute unified across the whole family, ARC-018);
     # declared here so base methods (e.g. _commit_known_words) can read it without a
     # per-call type: ignore. Bare annotation only — no runtime class attribute.
     config: AnkiMinerConfig
+
+    # The curation opt-in, built by the seven mining screens that offer it
+    # (BatchProcessingTab plus the six _QueueMiningTabBase ones, which restate
+    # this declaration). SingleEpisodeTab always curates and DeckBuilderTab
+    # never does, so neither builds one — which is why
+    # _seed_review_words_checkbox reaches it through getattr. Bare annotation
+    # only — no runtime class attribute.
+    review_words_checkbox: QCheckBox
 
     # ------------------------------------------------------------------
     # Progress callback wiring
@@ -572,6 +586,38 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
     # ------------------------------------------------------------------
     # Word curation bridge (Issue #60)
     # ------------------------------------------------------------------
+
+    def _bind_review_words_checkbox(self) -> None:
+        """Seed the curation checkbox from config and persist a user edit.
+
+        Call once, immediately after the subclass builds the checkbox. The
+        preference is deliberately shared by all seven mining screens: whether
+        you want to approve words before cards are made is one decision, so
+        ticking it here ticks it everywhere at the next seed.
+
+        Lives on ``MiningTabBase`` rather than ``_QueueMiningTabBase`` because
+        ``BatchProcessingTab`` -- the screen this was reported against -- is a
+        direct ``MiningTabBase`` subclass and would otherwise miss out.
+        """
+        with self.seeding():
+            self.review_words_checkbox.setChecked(self.config.review_words_before_mining)
+        self.review_words_checkbox.toggled.connect(self._on_review_words_toggled)
+
+    def _on_review_words_toggled(self, checked: bool) -> None:
+        """Persist a user tick of the curation checkbox."""
+        self.persist_run_options(review_words_before_mining=checked)
+
+    def _seed_review_words_checkbox(self) -> None:
+        """Re-seed the checkbox from ``self.config``; call from update_config.
+
+        ``getattr``-guarded: ``DeckBuilderTab`` and ``SingleEpisodeTab`` are
+        also ``MiningTabBase`` subclasses and own no such checkbox.
+        """
+        checkbox = getattr(self, "review_words_checkbox", None)
+        if checkbox is None:
+            return
+        with self.seeding():
+            checkbox.setChecked(self.config.review_words_before_mining)
 
     def _init_curation_bridge(self) -> None:
         """Set up the worker→GUI curation bridge. Call once from subclass ``__init__``."""
