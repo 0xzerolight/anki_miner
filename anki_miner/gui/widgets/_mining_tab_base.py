@@ -28,6 +28,7 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDragMoveEvent
 from PyQt6.QtWidgets import QAbstractButton, QBoxLayout, QCheckBox, QDialog, QScrollArea, QWidget
 
+from anki_miner.exceptions import AnkiMinerException
 from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.presenters import GUIProgressCallback
 from anki_miner.gui.utils import result_copy
@@ -456,7 +457,12 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             try:
                 show(aggregate)
             except Exception as exc:  # noqa: BLE001 — bucket A: requested details stay unavailable.
-                logger.warning("Run details unavailable: error=%s", type(exc).__name__)
+                logger.warning(
+                    "Run details unavailable: error=%s detail=%s",
+                    type(exc).__name__,
+                    exc,
+                    exc_info=None if isinstance(exc, AnkiMinerException) else exc,
+                )
 
     @staticmethod
     def _receipt_now() -> tuple[float, float]:
@@ -762,6 +768,10 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         # item that is live now.
         self._curation_dialog_seq = 0
         self._curation_pending_dialog = 0
+        # How many words the live presentation offered. Recorded at show time so
+        # `Curator decision` can report selected-out-of-offered; the resolver is
+        # a signal handler and never sees the word list itself.
+        self._curation_offered = 0
         self._curation_requested.connect(self._on_curation_requested)
 
     def _curation_bridge(self, words: list) -> list | None:
@@ -883,7 +893,13 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                 try:
                     secondary_entries = parser.parse_raw_entries(secondary_subtitle, encodings=())
                 except Exception as exc:  # noqa: BLE001 — bucket A: the preview loses only the second track.
-                    logger.warning("Secondary subtitle unavailable for curation: error=%s", type(exc).__name__)
+                    logger.warning(
+                        "Secondary subtitle unavailable for curation: file=%s error=%s detail=%s",
+                        secondary_subtitle,
+                        type(exc).__name__,
+                        exc,
+                        exc_info=None if isinstance(exc, AnkiMinerException) else exc,
+                    )
             return CurationMediaContext(
                 video_file=video,
                 subtitle_entries=entries,
@@ -896,7 +912,14 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                 secondary_offset=secondary_offset,
             )
         except Exception as exc:  # noqa: BLE001 — bucket A: curation loses its media player.
-            logger.warning("Curation media unavailable: error=%s", type(exc).__name__)
+            logger.warning(
+                "Curation media unavailable: video=%s subtitle=%s error=%s detail=%s",
+                video,
+                subtitle,
+                type(exc).__name__,
+                exc,
+                exc_info=None if isinstance(exc, AnkiMinerException) else exc,
+            )
             return None
 
     def _on_curation_requested(self, words: list) -> None:
@@ -932,6 +955,11 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             # Cancel/shutdown landed before this slot ran; release the worker
             # as cancelled (None) instead of popping a dialog the user must
             # dismiss (or popping one over a dying app).
+            self._log_curator_skipped(
+                "gate_poisoned" if self._curation_gate_poisoned else "cancelled",
+                stage="dispatch",
+                words=len(words),
+            )
             self._curation_result = None
             self._curation_event.set()
             return
@@ -988,9 +1016,15 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         (a direct call with no originating build) skips the check.
         """
         if token is not None and token != self._curation_live_token:
+            self._log_curator_skipped("stale_token", stage="present", words=len(words), token=token)
             return
         if self._curation_cancelled or self._curation_gate_poisoned:
             # Cancel/shutdown arrived during the off-thread parse window.
+            self._log_curator_skipped(
+                "gate_poisoned" if self._curation_gate_poisoned else "cancelled",
+                stage="present",
+                words=len(words),
+            )
             self._curation_result = None
             self._curation_event.set()
             return
@@ -1021,6 +1055,20 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             dialog.show()
             dialog.raise_()
             dialog.activateWindow()
+            self._curation_offered = len(words)
+            # The single receipt that the curator actually reached the user, and
+            # with what: a report of "it opened blank" is unreadable without
+            # knowing whether the media context and the offline lookup survived
+            # the off-thread build (both degrade silently to table-only).
+            log_summary(
+                logger,
+                "Curator shown",
+                screen=self._run_log_id(),
+                words=len(words),
+                media=media_context is not None,
+                lookup=lookup_fn is not None,
+                presentation=presentation,
+            )
         except Exception:  # noqa: BLE001 — bucket C: cleanup then unchanged failure reaches its owner.
             self._curation_pending_dialog = 0
             self._active_curation_dialog = None
@@ -1060,6 +1108,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
           because ``_curation_bridge`` reads it the moment ``wait()`` returns.
         """
         if presentation != self._curation_pending_dialog:
+            self._log_curator_skipped("already_resolved", stage="resolve", presentation=presentation)
             return
         self._curation_pending_dialog = 0
         self._active_curation_dialog = None
@@ -1071,7 +1120,12 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             try:
                 selection = dialog.get_selected_words()
             except Exception as exc:  # noqa: BLE001 — bucket A: the selection is discarded and run cancelled.
-                logger.warning("Curation selection unavailable: error=%s", type(exc).__name__)
+                logger.warning(
+                    "Curation selection unavailable: error=%s detail=%s",
+                    type(exc).__name__,
+                    exc,
+                    exc_info=None if isinstance(exc, AnkiMinerException) else exc,
+                )
         if selection is None:
             # Rejected (dialog Cancel / window-X / Esc, a programmatic reject
             # from the tab Cancel button / teardown / shutdown, or a destroyed
@@ -1099,6 +1153,23 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                     worker.cancel()
         self._curation_result = selection
         self._curation_event.set()
+        offered = self._curation_offered
+        self._curation_offered = 0
+        # The one line that separates the two verbs a user cannot tell apart
+        # from the outside: rejecting cancels the WHOLE run, while confirming
+        # with nothing selected skips only this item and the queue continues.
+        # "Review words was on and the run stopped after item 1" is exactly this
+        # distinction, and nothing else in the log records which one happened.
+        log_summary(
+            logger,
+            "Curator decision",
+            screen=self._run_log_id(),
+            action="accept" if selection is not None else "reject",
+            selected=len(selection) if selection is not None else None,
+            offered=offered,
+            cancels_run=selection is None,
+            presentation=presentation,
+        )
         if dialog is not None:
             # Schedule the window for deletion so its Qt widget tree (table,
             # QTextBrowser, embedded SubtitlePlayerWidget + mpv core) is freed
@@ -1107,6 +1178,23 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             # bucket C: deleteLater is best-effort after the curation decision.
             with contextlib.suppress(RuntimeError):
                 dialog.deleteLater()
+
+    def _log_curator_skipped(self, reason: str, **fields: object) -> None:
+        """Record a curator presentation or resolution that never reached a decision.
+
+        DEBUG, not WARNING: every one of these is a designed no-op (a cancel that
+        won a race, a superseded off-thread build, the ``destroyed`` that follows
+        every normal accept). They matter only when reconstructing why a run had
+        no curator, so they belong in the log without colouring it.
+        """
+        log_summary(
+            logger,
+            "Curator skipped",
+            level=logging.DEBUG,
+            screen=self._run_log_id(),
+            reason=reason,
+            **fields,
+        )
 
     def _on_curation_dialog_destroyed(self, presentation: int, _obj: object = None) -> None:
         """Guarded fallback for a curator destroyed without a decision.
