@@ -2694,6 +2694,18 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Jika tidak dicentang, berkas yang audio padatnya sudah ada akan dilewati, bukan ditimpa.</translation>
     </message>
     <message>
+        <source>Merge into one file</source>
+        <translation>Gabungkan menjadi satu berkas</translation>
+    </message>
+    <message>
+        <source>Join every condensed file in the folder into a single output, in queue order.</source>
+        <translation>Gabungkan setiap berkas padat dalam folder menjadi satu keluaran, sesuai urutan antrean.</translation>
+    </message>
+    <message>
+        <source>Output name (defaults to the folder's name)</source>
+        <translation>Nama keluaran (default nama folder sumber)</translation>
+    </message>
+    <message>
         <source>Condense Audio</source>
         <translation>Padatkan Audio</translation>
     </message>
@@ -2736,6 +2748,10 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
     <message>
         <source>Subtitle tracks could not be read.</source>
         <translation>Trek subtitel tidak dapat dibaca.</translation>
+    </message>
+    <message>
+        <source>That merged file already exists. Rename it, or tick Overwrite.</source>
+        <translation>Berkas gabungan itu sudah ada. Ganti namanya, atau centang Timpa.</translation>
     </message>
     <message>
         <source>Multiple media files would write to the same output file.</source>
@@ -2791,6 +2807,18 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
     </message>
 </context><context>
     <name>CondenseWorker</name>
+    <message>
+        <source>Nothing to merge: no file was condensed.</source>
+        <translation>Tidak ada yang digabungkan: tidak ada berkas yang dipadatkan.</translation>
+    </message>
+    <message>
+        <source>Merging %1 files into one…</source>
+        <translation>Menggabungkan %1 berkas menjadi satu…</translation>
+    </message>
+    <message>
+        <source>Merging: %1%</source>
+        <translation>Menggabungkan: %1%</translation>
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation>Dilewati, sudah ada</translation>
@@ -4013,7 +4041,7 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     </message>
     <message>
         <source>Subtitles contain no %1 text</source>
-        <translation type="unfinished" />
+        <translation>Subtitel tidak memiliki teks %1</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>

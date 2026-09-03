@@ -2696,6 +2696,18 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
         <translation>Quando desmarcado, arquivos cujo áudio condensado já existe são ignorados, não sobrescritos.</translation>
     </message>
     <message>
+        <source>Merge into one file</source>
+        <translation>Mesclar em um único arquivo</translation>
+    </message>
+    <message>
+        <source>Join every condensed file in the folder into a single output, in queue order.</source>
+        <translation>Junte todos os arquivos condensados da pasta em uma única saída, na ordem da fila.</translation>
+    </message>
+    <message>
+        <source>Output name (defaults to the folder's name)</source>
+        <translation>Nome da saída (padrão: nome da pasta)</translation>
+    </message>
+    <message>
         <source>Condense Audio</source>
         <translation>Condensar Áudio</translation>
     </message>
@@ -2738,6 +2750,10 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
     <message>
         <source>Subtitle tracks could not be read.</source>
         <translation>Não foi possível ler as faixas de legenda.</translation>
+    </message>
+    <message>
+        <source>That merged file already exists. Rename it, or tick Overwrite.</source>
+        <translation>Esse arquivo mesclado já existe. Renomeie-o ou marque Sobrescrever.</translation>
     </message>
     <message>
         <source>Multiple media files would write to the same output file.</source>
@@ -2793,6 +2809,18 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
     </message>
 </context><context>
     <name>CondenseWorker</name>
+    <message>
+        <source>Nothing to merge: no file was condensed.</source>
+        <translation>Nada para mesclar: nenhum arquivo foi condensado.</translation>
+    </message>
+    <message>
+        <source>Merging %1 files into one…</source>
+        <translation>Mesclando %1 arquivos em um só…</translation>
+    </message>
+    <message>
+        <source>Merging: %1%</source>
+        <translation>Mesclando: %1%</translation>
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation>Ignorado, já existe</translation>
@@ -4015,7 +4043,7 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
     </message>
     <message>
         <source>Subtitles contain no %1 text</source>
-        <translation type="unfinished" />
+        <translation>As legendas não contêm texto em %1</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>

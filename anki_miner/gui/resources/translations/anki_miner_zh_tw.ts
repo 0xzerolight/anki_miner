@@ -2694,6 +2694,18 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>取消勾選時，已存在濃縮音訊的檔案會被略過而非覆寫。</translation>
     </message>
     <message>
+        <source>Merge into one file</source>
+        <translation>合併成單一檔案</translation>
+    </message>
+    <message>
+        <source>Join every condensed file in the folder into a single output, in queue order.</source>
+        <translation>依佇列順序，將資料夾中的每個濃縮檔案合併成單一輸出檔案。</translation>
+    </message>
+    <message>
+        <source>Output name (defaults to the folder's name)</source>
+        <translation>輸出名稱（預設為資料夾名稱）</translation>
+    </message>
+    <message>
         <source>Condense Audio</source>
         <translation>濃縮音訊</translation>
     </message>
@@ -2736,6 +2748,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Subtitle tracks could not be read.</source>
         <translation>無法讀取字幕軌。</translation>
+    </message>
+    <message>
+        <source>That merged file already exists. Rename it, or tick Overwrite.</source>
+        <translation>該合併檔案已存在。請重新命名，或勾選「覆寫現有的濃縮檔案」。</translation>
     </message>
     <message>
         <source>Multiple media files would write to the same output file.</source>
@@ -2791,6 +2807,18 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
 </context><context>
     <name>CondenseWorker</name>
+    <message>
+        <source>Nothing to merge: no file was condensed.</source>
+        <translation>沒有可合併的內容：未濃縮任何檔案。</translation>
+    </message>
+    <message>
+        <source>Merging %1 files into one…</source>
+        <translation>正在將 %1 個檔案合併成一個…</translation>
+    </message>
+    <message>
+        <source>Merging: %1%</source>
+        <translation>正在合併：%1%</translation>
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation>已略過，已存在</translation>
@@ -4013,7 +4041,7 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Subtitles contain no %1 text</source>
-        <translation type="unfinished" />
+        <translation>字幕中不含 %1 文字</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>

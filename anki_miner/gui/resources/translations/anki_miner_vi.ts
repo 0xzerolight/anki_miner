@@ -2694,6 +2694,18 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Khi bỏ chọn, các tệp đã có âm thanh cô đọng sẽ bị bỏ qua, không ghi đè.</translation>
     </message>
     <message>
+        <source>Merge into one file</source>
+        <translation>Hợp nhất thành một tệp</translation>
+    </message>
+    <message>
+        <source>Join every condensed file in the folder into a single output, in queue order.</source>
+        <translation>Hợp nhất mọi tệp cô đọng trong thư mục thành một đầu ra duy nhất, theo thứ tự hàng đợi.</translation>
+    </message>
+    <message>
+        <source>Output name (defaults to the folder's name)</source>
+        <translation>Tên đầu ra (mặc định là tên thư mục)</translation>
+    </message>
+    <message>
         <source>Condense Audio</source>
         <translation>Cô đọng âm thanh</translation>
     </message>
@@ -2736,6 +2748,10 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     <message>
         <source>Subtitle tracks could not be read.</source>
         <translation>Không thể đọc các bản phụ đề.</translation>
+    </message>
+    <message>
+        <source>That merged file already exists. Rename it, or tick Overwrite.</source>
+        <translation>Tệp đã hợp nhất đó đã tồn tại. Đổi tên tệp, hoặc bật Ghi đè.</translation>
     </message>
     <message>
         <source>Multiple media files would write to the same output file.</source>
@@ -2791,6 +2807,18 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     </message>
 </context><context>
     <name>CondenseWorker</name>
+    <message>
+        <source>Nothing to merge: no file was condensed.</source>
+        <translation>Không có gì để hợp nhất: chưa tệp nào được cô đọng.</translation>
+    </message>
+    <message>
+        <source>Merging %1 files into one…</source>
+        <translation>Đang hợp nhất %1 tệp thành một…</translation>
+    </message>
+    <message>
+        <source>Merging: %1%</source>
+        <translation>Đang hợp nhất: %1%</translation>
+    </message>
     <message>
         <source>Skipped, exists</source>
         <translation>Đã bỏ qua, đã tồn tại</translation>
@@ -4013,7 +4041,7 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     </message>
     <message>
         <source>Subtitles contain no %1 text</source>
-        <translation type="unfinished" />
+        <translation>Phụ đề không chứa văn bản %1</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>
