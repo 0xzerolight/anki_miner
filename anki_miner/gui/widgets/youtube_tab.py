@@ -180,6 +180,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
                 refresh_row=self._refresh_row,
                 recompute_buttons=self._recompute_buttons,
                 clear_url_input=self.url_edit.clear,
+                run_active=lambda: self.worker_thread is not None,
                 log_info=self.log_widget.append_info,
                 log_warning=self.log_widget.append_warning,
                 log_error=self.log_widget.append_error,

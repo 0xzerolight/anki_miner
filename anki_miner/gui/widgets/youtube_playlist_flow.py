@@ -180,6 +180,9 @@ class PlaylistAddCallbacks:
     clear_url_input: Callable[[], None]
     """Clear the URL line edit after an accepted Add."""
 
+    run_active: Callable[[], bool]
+    """Whether a mining run owns the queue right now — freezes the sweep."""
+
     log_info: Callable[[str], None]
     log_warning: Callable[[str], None]
     log_error: Callable[[str], None]
@@ -240,6 +243,9 @@ class PlaylistAddController:
         # ignored instead of popping a dialog over an emptied queue.
         self._playlist_generation = 0
         self._shutdown_started = False
+        # The run's requested subtitle source. Session-only, like the tab's
+        # review-words checkbox: it is a per-run choice, not a setting.
+        self._subtitle_source: SubtitleSource = "auto"
 
     # ------------------------------------------------------------------
     # Tab-facing API
@@ -420,20 +426,54 @@ class PlaylistAddController:
         if not isinstance(info, VideoInfo):  # pragma: no cover - signal guard
             self._mark_probe_error(item, "Invalid probe result.")
             return
+        self._apply_classification(item, info)
 
-        mineable, error, sub_mode = _classify_probe_result(info, self._config, "captions")
+    def _apply_classification(self, item: YouTubeQueueItem, info: VideoInfo) -> None:
+        """Resolve one probed item against the current subtitle source.
+
+        Safe to re-run offline: every input is already on the item, so flipping
+        the picker re-decides a row without a second probe. Both fields below are
+        written on the reject path too — ``video_id`` because a later promotion
+        would otherwise trip YouTubeQueueWorker._mine_one's completeness guard,
+        and ``resolved_sub_mode`` because a stale mode outlives the row's READY
+        state and is read again by the tab's retry path.
+        """
+        item.video_info = info
+        item.video_id = info.video_id
+        mineable, error, sub_mode = _classify_probe_result(info, self._config, self._subtitle_source)
         if not mineable:
-            item.video_info = info
+            item.resolved_sub_mode = None
             self._mark_probe_error(item, error or "Probe rejected.")
             return
 
-        item.video_info = info
-        item.video_id = info.video_id
         item.resolved_sub_mode = sub_mode
         item.error_message = None
         item.status = YouTubeItemStatus.READY
         self._callbacks.refresh_row(item)
         self._callbacks.recompute_buttons()
+
+    def set_subtitle_source(self, source: SubtitleSource) -> None:
+        """Adopt a new subtitle source and re-decide every already-probed row.
+
+        Refused mid-run: the worker thread reads ``resolved_sub_mode`` off
+        unclaimed READY rows, so mutating them under it is a race. The tab also
+        disables the picker while a run is active; this guard is the one that
+        actually holds.
+
+        Rows with no ``video_info`` are skipped — those never probed, or the
+        probe itself failed, and no subtitle source can fix a failed probe.
+        """
+        if source == self._subtitle_source:
+            return
+        self._subtitle_source = source
+        if self._callbacks.run_active():
+            return
+        for item in self._callbacks.queued_items():
+            if item.video_info is None:
+                continue
+            if item.status not in (YouTubeItemStatus.READY, YouTubeItemStatus.PROBE_ERROR):
+                continue
+            self._apply_classification(item, item.video_info)
 
     def _on_probe_error(self, item: YouTubeQueueItem, message: str) -> None:
         """Probe failed — the item is unmineable."""

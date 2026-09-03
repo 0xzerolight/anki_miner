@@ -367,6 +367,7 @@ class TestProbeOutcomes:
 
     def test_probe_done_no_subs_still_rejected(self, tab):
         """All three flags False keeps the original rejection message."""
+        tab._add_flow.set_subtitle_source("captions")
         tab.url_edit.setText("https://youtu.be/abc")
         tab._on_add_clicked()
         item = tab._queue.all_items()[-1]
@@ -412,7 +413,19 @@ class TestProbeOutcomes:
         assert item.status == YouTubeItemStatus.PROBE_ERROR
         assert "age" in (item.error_message or "").lower()
 
-    def test_probe_done_no_subs_marks_probe_error(self, tab):
+    def test_probe_done_no_subs_transcribes_under_the_default_source(self, tab):
+        """Auto is the default: a caption-less video is mined by transcribing it."""
+        tab.url_edit.setText("https://youtu.be/abc")
+        tab._on_add_clicked()
+        item = tab._queue.all_items()[-1]
+
+        tab._add_flow._on_probe_done(item, _make_video_info(has_manual_ja_subs=False, has_auto_ja_subs=False))
+
+        assert item.status == YouTubeItemStatus.READY
+        assert item.resolved_sub_mode == "transcribe"
+
+    def test_probe_done_no_subs_marks_probe_error_under_captions_only(self, tab):
+        tab._add_flow.set_subtitle_source("captions")
         tab.url_edit.setText("https://youtu.be/abc")
         tab._on_add_clicked()
         item = tab._queue.all_items()[-1]
@@ -1649,8 +1662,19 @@ class TestPlaylistEntryProbes:
         assert items[0].resolved_sub_mode == "manual_only"
         assert tab.mine_button.isEnabled()
 
-    def test_entry_probed_no_ja_subs_marks_probe_error(self, tab):
+    def test_entry_probed_no_ja_subs_transcribes_under_auto(self, tab):
+        """Auto is the default source, so a caption-less entry is still mineable."""
         items = self._expand(tab)
+
+        info = _make_video_info(has_manual_ja_subs=False, has_auto_ja_subs=False)
+        tab._add_flow._on_playlist_entry_probed(1, info)
+
+        assert items[1].status == YouTubeItemStatus.READY
+        assert items[1].resolved_sub_mode == "transcribe"
+
+    def test_entry_probed_no_ja_subs_marks_probe_error_under_captions_only(self, tab):
+        items = self._expand(tab)
+        tab._add_flow.set_subtitle_source("captions")
 
         info = _make_video_info(has_manual_ja_subs=False, has_auto_ja_subs=False)
         tab._add_flow._on_playlist_entry_probed(1, info)
@@ -1827,3 +1851,101 @@ class TestUpdateConfigClosesDiscardedProcessor:
             patch("anki_miner.gui.widgets.youtube_tab.create_episode_processor", return_value=MagicMock()),
         ):
             tab.update_config(new_cfg)  # must not raise
+
+
+class TestSubtitleSourceSweep:
+    """Flipping the picker re-decides rows that were already probed.
+
+    Probes run at Add time and the picker is a run-time control, so a row
+    refused for having no captions must be able to recover without another
+    network round trip. The reject path already stored its VideoInfo, which is
+    what makes the sweep offline.
+    """
+
+    def _refused_item(self, tab, url: str = "https://youtu.be/nosubs"):
+        """A caption-less row probed while the source was Captions only."""
+        tab._add_flow.set_subtitle_source("captions")
+        item = tab._queue.add(url)
+        tab._render_new_item(item)
+        tab._add_flow._on_probe_done(item, _make_video_info(has_manual_ja_subs=False, has_auto_ja_subs=False))
+        return item
+
+    def test_switching_to_transcribe_promotes_a_refused_row(self, tab):
+        item = self._refused_item(tab)
+        assert item.status == YouTubeItemStatus.PROBE_ERROR
+
+        tab._add_flow.set_subtitle_source("transcribe")
+
+        assert item.status == YouTubeItemStatus.READY
+        assert item.resolved_sub_mode == "transcribe"
+        assert item.video_id == item.video_info.video_id
+        assert item.error_message is None
+
+    def test_switching_back_to_captions_refuses_it_again(self, tab):
+        item = self._refused_item(tab)
+        tab._add_flow.set_subtitle_source("transcribe")
+        assert item.status == YouTubeItemStatus.READY
+        assert item.resolved_sub_mode == "transcribe"
+
+        tab._add_flow.set_subtitle_source("captions")
+
+        assert item.status == YouTubeItemStatus.PROBE_ERROR
+        assert item.resolved_sub_mode is None
+        assert item.error_message == "No Japanese subtitles available for this video."
+
+    def test_a_captioned_row_switches_route_without_re_probing(self, tab):
+        item = _add_ready_item(tab, "https://youtu.be/manual")
+        assert item.resolved_sub_mode == "manual_only"
+
+        tab._add_flow.set_subtitle_source("transcribe")
+
+        assert item.status == YouTubeItemStatus.READY
+        assert item.resolved_sub_mode == "transcribe"
+
+    def test_the_sweep_leaves_unprobed_and_finished_rows_alone(self, tab):
+        pending = tab._queue.add("https://youtu.be/pending")
+        tab._render_new_item(pending)
+        done = self._refused_item(tab, "https://youtu.be/done")
+        done.status = YouTubeItemStatus.COMPLETED
+
+        tab._add_flow.set_subtitle_source("transcribe")
+
+        assert pending.status == YouTubeItemStatus.PENDING
+        assert done.status == YouTubeItemStatus.COMPLETED
+
+    def test_a_hard_gate_survives_the_sweep(self, tab):
+        tab._add_flow.set_subtitle_source("captions")
+        item = tab._queue.add("https://youtu.be/live")
+        tab._render_new_item(item)
+        tab._add_flow._on_probe_done(item, _make_video_info(is_live=True))
+
+        tab._add_flow.set_subtitle_source("transcribe")
+
+        assert item.status == YouTubeItemStatus.PROBE_ERROR
+        assert item.error_message == "Live streams are not supported."
+
+    def test_a_failed_probe_is_not_resurrected(self, tab):
+        """No VideoInfo means yt-dlp itself failed; ASR cannot fix that."""
+        tab._add_flow.set_subtitle_source("captions")
+        item = tab._queue.add("https://youtu.be/broken")
+        tab._render_new_item(item)
+        tab._add_flow._on_probe_error(item, "Probe failed: network unreachable")
+
+        tab._add_flow.set_subtitle_source("transcribe")
+
+        assert item.status == YouTubeItemStatus.PROBE_ERROR
+        assert item.error_message == "Probe failed: network unreachable"
+
+    def test_the_sweep_is_refused_while_a_run_is_active(self, tab):
+        """The worker thread reads resolved_sub_mode off unclaimed READY rows."""
+        item = self._refused_item(tab)
+        tab.worker_thread = object()
+
+        tab._add_flow.set_subtitle_source("transcribe")
+
+        assert item.status == YouTubeItemStatus.PROBE_ERROR
+
+    def test_a_new_probe_honours_the_current_source(self, tab):
+        tab._add_flow.set_subtitle_source("transcribe")
+        item = _add_ready_item(tab, "https://youtu.be/later")
+        assert item.resolved_sub_mode == "transcribe"
