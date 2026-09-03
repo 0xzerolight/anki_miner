@@ -1949,3 +1949,52 @@ class TestSubtitleSourceSweep:
         tab._add_flow.set_subtitle_source("transcribe")
         item = _add_ready_item(tab, "https://youtu.be/later")
         assert item.resolved_sub_mode == "transcribe"
+
+
+class TestPerRunSubtitleControls:
+    """The picker and the align checkbox: session-only, read on the GUI thread."""
+
+    def test_defaults(self, tab):
+        assert tab.subtitle_source_combo.currentData() == "auto"
+        assert tab.align_captions_checkbox.isChecked() is False
+
+    def test_every_source_is_offered(self, tab):
+        data = [tab.subtitle_source_combo.itemData(i) for i in range(tab.subtitle_source_combo.count())]
+        assert data == ["auto", "transcribe", "captions"]
+
+    def test_picker_change_reaches_the_add_flow(self, tab):
+        tab.subtitle_source_combo.setCurrentIndex(tab.subtitle_source_combo.findData("transcribe"))
+        assert tab._add_flow._subtitle_source == "transcribe"
+
+    def test_align_checkbox_reaches_the_worker(self, tab):
+        queue_cls = tab._queue_worker_cls
+        _add_ready_item(tab, "https://youtu.be/v1")
+        tab.align_captions_checkbox.setChecked(True)
+
+        tab._on_mine_clicked()
+
+        assert queue_cls.call_args.kwargs["align_captions"] is True
+
+    def test_align_defaults_off_at_the_worker(self, tab):
+        queue_cls = tab._queue_worker_cls
+        _add_ready_item(tab, "https://youtu.be/v1")
+
+        tab._on_mine_clicked()
+
+        assert queue_cls.call_args.kwargs["align_captions"] is False
+
+    def test_controls_are_frozen_during_a_run(self, tab):
+        _add_ready_item(tab, "https://youtu.be/v1")
+        tab._on_mine_clicked()
+
+        assert tab.subtitle_source_combo.isEnabled() is False
+        assert tab.align_captions_checkbox.isEnabled() is False
+
+    def test_controls_are_live_again_when_the_run_ends(self, tab):
+        _add_ready_item(tab, "https://youtu.be/v1")
+        tab._on_mine_clicked()
+        tab.worker_thread = None
+        tab._recompute_buttons()
+
+        assert tab.subtitle_source_combo.isEnabled() is True
+        assert tab.align_captions_checkbox.isEnabled() is True

@@ -39,6 +39,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -180,7 +181,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
                 refresh_row=self._refresh_row,
                 recompute_buttons=self._recompute_buttons,
                 clear_url_input=self.url_edit.clear,
-                run_active=lambda: self.worker_thread is not None,
+                run_active=self._queue_locked,
                 log_info=self.log_widget.append_info,
                 log_warning=self.log_widget.append_warning,
                 log_error=self.log_widget.append_error,
@@ -271,6 +272,39 @@ class YouTubeTab(_ListQueueMiningTabBase):
             self.tr("Show the word-selection popup for each video before creating cards.")
         )
         queue_layout.addWidget(self.review_words_checkbox)
+
+        # Per-run subtitle source. Session-only like the checkbox above: it is a
+        # choice about this run, not a setting. Changing it re-decides every
+        # already-probed row (PlaylistAddController.set_subtitle_source).
+        source_row = QHBoxLayout()
+        source_row.setSpacing(SPACING.xs)
+        self.subtitle_source_label = QLabel(self.tr("Subtitles:"))
+        source_row.addWidget(self.subtitle_source_label)
+        self.subtitle_source_combo = QComboBox()
+        self.subtitle_source_combo.addItem(self.tr("Auto"), "auto")
+        self.subtitle_source_combo.addItem(self.tr("Always transcribe"), "transcribe")
+        self.subtitle_source_combo.addItem(self.tr("Captions only"), "captions")
+        self.subtitle_source_combo.setToolTip(
+            self.tr(
+                "Auto uses YouTube's captions when they exist and transcribes the video "
+                "when they do not. Always transcribe ignores YouTube's captions. "
+                "Captions only skips a video that has none."
+            )
+        )
+        self.subtitle_source_combo.currentIndexChanged.connect(self._on_subtitle_source_changed)
+        source_row.addWidget(self.subtitle_source_combo)
+        source_row.addStretch(1)
+        queue_layout.addLayout(source_row)
+
+        self.align_captions_checkbox = QCheckBox(self.tr("Align captions to audio"))
+        self.align_captions_checkbox.setChecked(False)
+        self.align_captions_checkbox.setToolTip(
+            self.tr(
+                "Retime YouTube's captions against the video's audio before mining. "
+                "Ignored when the subtitle was transcribed locally."
+            )
+        )
+        queue_layout.addWidget(self.align_captions_checkbox)
 
         # Action buttons
         button_row = QHBoxLayout()
@@ -509,14 +543,35 @@ class YouTubeTab(_ListQueueMiningTabBase):
         curation_callback: Callable[[list], list | None] | None,
         processor_factory: Callable[[], EpisodeProcessor] | None,
     ) -> SequentialQueueWorker[Any]:
-        """Construct the YouTube queue worker (name resolves here for tests)."""
+        """Construct the YouTube queue worker (name resolves here for tests).
+
+        The align choice is read here, on the GUI thread, and handed over as a
+        plain bool — a worker thread must never touch a QWidget.
+        """
         return YouTubeQueueWorker(
             processor=self._processor,
             config=self.config,
             items=items,
             curation_callback=curation_callback,
             processor_factory=processor_factory,
+            align_captions=self.align_captions_checkbox.isChecked(),
         )
+
+    def _on_subtitle_source_changed(self) -> None:
+        """Adopt the picker's value and re-decide the rows already probed."""
+        self._add_flow.set_subtitle_source(self.subtitle_source_combo.currentData())
+
+    def _recompute_buttons(self) -> None:
+        """Freeze the per-run subtitle controls while a run owns the queue.
+
+        The worker reads ``resolved_sub_mode`` off unclaimed READY rows, and the
+        sweep behind the picker rewrites exactly that field.
+        """
+        super()._recompute_buttons()
+        idle = not self._queue_locked()
+        self.subtitle_source_combo.setEnabled(idle)
+        self.subtitle_source_label.setEnabled(idle)
+        self.align_captions_checkbox.setEnabled(idle)
 
     def _create_processor(self, presenter: PresenterProtocol) -> EpisodeProcessor:
         """Build a fresh processor (``create_episode_processor`` resolves here for tests)."""

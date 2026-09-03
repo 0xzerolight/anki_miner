@@ -99,12 +99,16 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
         parent=None,
         *,
         processor_factory: Callable[[], EpisodeProcessor] | None = None,
+        align_captions: bool = False,
     ) -> None:
         """Initialize the queue worker (see :class:`SequentialQueueWorker`).
 
         ``config.media_temp_folder`` is the workspace root. Each item must
         already have ``video_id`` and ``resolved_sub_mode`` populated (the probe
         step handles that before items reach this worker).
+
+        ``align_captions`` is the tab's per-run checkbox, already read on the
+        GUI thread — this worker never touches the widget itself.
         """
         super().__init__(
             processor,
@@ -120,6 +124,7 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
         self._curation_offset: float = config.subtitle_offset
+        self._align_captions = align_captions
 
     def _stale_reimport_message(self) -> str | None:
         return stale_resource_reimport_error(self._config)
@@ -218,6 +223,9 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
             # auto-captions. Passing it lets the fetch fall back to them when a
             # listed manual track turns out to be unavailable, without ever falling
             # back to a machine translation.
+            align_captions=self._align_captions,
+            # Meaningless in transcribe mode (the fetcher only honours it for
+            # manual_only), harmless to pass.
             fallback_allowed=item.video_info.has_auto_ja_subs,
         )
 

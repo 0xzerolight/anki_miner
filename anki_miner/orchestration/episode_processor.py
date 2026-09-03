@@ -2728,6 +2728,7 @@ class EpisodeProcessor:
         on_fetched: Callable[[FetchedMedia], None] | None = None,
         source_label: str | None = None,
         fallback_allowed: bool = False,
+        align_captions: bool = False,
     ) -> ProcessingResult:
         """Fetch a YouTube video + subs then run the standard mining pipeline.
 
@@ -2745,10 +2746,12 @@ class EpisodeProcessor:
                 write file names with (the worker takes it from probe_metadata).
             workspace: Pre-created, caller-owned directory that yt-dlp writes
                 the video and subtitle files into.
-            sub_mode: "manual_only", "auto_only" or "auto_dub" — resolved from
-                what probe_metadata reported as available ("auto_dub" pairs the
+            sub_mode: "manual_only", "auto_only", "auto_dub" or "transcribe" —
+                resolved from what probe_metadata reported as available and what
+                subtitle source the run asked for ("auto_dub" pairs the
                 machine-translated ja captions with the Japanese auto-dub audio
-                track).
+                track; "transcribe" downloads no captions and generates the
+                subtitle locally from the video's audio).
             fallback_allowed: Forwarded to the fetcher. When True (the worker
                 passes ``VideoInfo.has_auto_ja_subs``), a ``manual_only`` fetch may
                 fall back to the video's *native* auto-captions if the listed manual
@@ -2771,6 +2774,10 @@ class EpisodeProcessor:
             on_fetched: Optional callback invoked with the ``FetchedMedia``
                 result after download completes, before the mining pipeline
                 starts. Called on the calling thread (the worker thread).
+            align_captions: Retime *fetched* captions against the video's audio
+                before mining (the tab's per-run checkbox). Ignored in
+                "transcribe" mode, where the subtitle already came from that
+                audio. Best-effort: a failed alignment keeps the original file.
             source_label: Optional origin string for the card "source" field
                 (typically the YouTube video title). Forwarded to
                 ``process_episode`` as ``source_label_override``. The stats/dedup
