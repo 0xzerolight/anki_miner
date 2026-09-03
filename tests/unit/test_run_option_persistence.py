@@ -273,3 +273,33 @@ def test_toggling_one_group_does_not_erase_a_masked_one(wired_window):
     tab.field_checkboxes["frequency"].setChecked(True)
 
     assert set(tab.config.backfill_field_groups) == {"definition", "frequency"}
+
+
+_TRANSIENT_OVERWRITE_SCREENS = (
+    "CondenseTab",
+    "SubtitleCreationTab",
+    "SubtitleRetimeTab",
+    "CardBackfillTab",
+)
+
+
+@pytest.mark.parametrize("class_name", _TRANSIENT_OVERWRITE_SCREENS)
+def test_overwrite_is_never_persisted(class_name, wired_window):
+    """A destructive default must not survive a restart.
+
+    Off-by-default each launch is the safety property: ticking overwrite for one
+    job in March must not still be ticked in June, with no reminder attached.
+    Condense persists six sibling run options and pointedly not this one; that
+    is deliberate, not an oversight for a later sweep to "fix". Anyone adding an
+    overwrite field to AnkiMinerConfig has to revisit that decision here first.
+    """
+    from anki_miner.config import AnkiMinerConfig
+
+    window, _titles, _tabs = wired_window
+    tab = _screen(window, class_name)
+    before = window.config
+
+    tab.overwrite_checkbox.setChecked(True)
+
+    assert window.config == before
+    assert [f for f in AnkiMinerConfig.__dataclass_fields__ if "overwrite" in f] == []

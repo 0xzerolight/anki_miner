@@ -207,6 +207,11 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
             (self.field_checkboxes[group], capability) for group, capability in _GROUP_CAPABILITIES.items()
         )
 
+        # Deliberately NOT persisted, unlike the field groups above. Off-by-default
+        # each launch is the safety property: overwriting values on notes you
+        # mined months ago is not something a remembered tick should arrange
+        # silently. Pinned by
+        # tests/unit/test_run_option_persistence.py::test_overwrite_is_never_persisted.
         self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing values"))
         layout.addWidget(self.overwrite_checkbox)
 

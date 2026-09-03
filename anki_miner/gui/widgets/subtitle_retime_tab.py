@@ -412,6 +412,9 @@ class SubtitleRetimeTab(_ToolTabBase):
         layout.addLayout(out_row)
 
         # Overwrite checkbox
+        # Deliberately NOT persisted. Off-by-default each launch is the safety
+        # property: a remembered destructive default carries no reminder. Pinned
+        # by tests/unit/test_run_option_persistence.py::test_overwrite_is_never_persisted.
         self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing subtitle files"))
         self.overwrite_checkbox.setToolTip(
             self.tr("When unchecked, pairs whose output subtitle already exists are skipped, not overwritten.")
