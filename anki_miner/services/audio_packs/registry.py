@@ -14,6 +14,8 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages.registry import config_language
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
+    log_resource_inventory,
+    meta_int,
     meta_language,
     read_ownership_marker,
     scan_index_root,
@@ -95,6 +97,13 @@ class AudioPackRegistry:
             exception_types=(sqlite3.Error, OSError),
             warn_label="audio pack",
         )
+        log_resource_inventory(
+            logger,
+            "audio",
+            self._root,
+            sorted(self._packs),
+            sorted(pack_id for pack_id, meta in self._packs.items() if not meta.schema_ok),
+        )
 
     @staticmethod
     def _is_candidate(child: Path) -> bool:
@@ -105,10 +114,7 @@ class AudioPackRegistry:
 
     def _parse_meta(self, child: Path, db: Path, meta: dict[str, str]) -> AudioPackMeta:
         # Schema version check — mismatch means the pack needs re-import.
-        try:
-            version = int(meta.get("schema_version", "0"))
-        except ValueError:
-            version = 0
+        version = meta_int(logger, child, meta, "schema_version")
         if version != SCHEMA_VERSION:
             logger.warning(
                 "Audio pack '%s' has schema_version=%s, expected %s — needs re-import",
@@ -117,10 +123,7 @@ class AudioPackRegistry:
                 SCHEMA_VERSION,
             )
 
-        try:
-            count = int(meta.get("entry_count", "0"))
-        except ValueError:
-            count = 0
+        count = meta_int(logger, child, meta, "entry_count")
 
         pack_dir_str = meta.get("pack_dir", "")
         pack_dir = Path(pack_dir_str) if pack_dir_str else child
