@@ -105,3 +105,49 @@ def test_a_batch_tab_built_from_an_on_config_opens_ticked(qtbot, test_config):
     )
     qtbot.addWidget(tab)
     assert tab.review_words_checkbox.isChecked() is True
+
+
+def test_the_youtube_caption_controls_reopen_where_they_were(wired_window):
+    window, _titles, _tabs = wired_window
+    tab = _screen(window, "YouTubeTab")
+
+    tab.align_captions_checkbox.setChecked(True)
+    tab.subtitle_source_combo.setCurrentIndex(tab.subtitle_source_combo.findData("captions"))
+
+    assert window.config.youtube_align_captions is True
+    assert window.config.youtube_subtitle_source == "captions"
+
+    tab.update_config(window.config)
+    assert tab.align_captions_checkbox.isChecked() is True
+    assert tab.subtitle_source_combo.currentData() == "captions"
+
+
+def test_the_source_combo_still_tells_the_add_flow(wired_window):
+    """Persisting must not displace the existing handler's real job."""
+    window, _titles, _tabs = wired_window
+    tab = _screen(window, "YouTubeTab")
+
+    tab.subtitle_source_combo.setCurrentIndex(tab.subtitle_source_combo.findData("transcribe"))
+
+    # youtube_tab.py pushes through set_subtitle_source, which stores it on the
+    # flow as _subtitle_source (youtube_playlist_flow.py:248, :468).
+    assert tab._add_flow._subtitle_source == "transcribe"
+
+
+def test_a_remembered_source_reaches_the_add_flow_at_construction(qtbot, test_config, patch_heavy_init):
+    """set_subtitle_source early-returns on an unchanged value, and the flow's
+    own default is "auto" — so a seeded non-default has to be pushed."""
+    from dataclasses import replace
+
+    from anki_miner.gui.app import compose_main_window
+
+    config = replace(test_config, youtube_subtitle_source="captions")
+    patch_heavy_init(config)
+    window = compose_main_window(config).window
+    qtbot.addWidget(window)
+    try:
+        tab = _screen(window, "YouTubeTab")
+        assert tab.subtitle_source_combo.currentData() == "captions"
+        assert tab._add_flow._subtitle_source == "captions"
+    finally:
+        window.deleteLater()
