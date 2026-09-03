@@ -18,6 +18,10 @@ The invariants, and why each is load-bearing:
 * Session state restores after every tab is registered — the saved route is
   addressed by stable key — and before the first paint, so the window is never
   drawn at one size and then jumped to another (D7).
+* The process log hooks and the Qt message bridge install before
+  ``QApplication``, because platform-plugin, OpenGL and GL-context failures are
+  emitted *during* its construction and are exactly what a "black window"
+  report otherwise arrives without.
 * First-run setup is offered before any optional startup job, because boot used
   to start the JMdict migration and cancel it two lines later (D26).
 * Session state saves once at the top of ``closeEvent``, before anything can
@@ -34,6 +38,8 @@ import pytest
 # Ordered steps of the application entry point. Each is a source fragment that
 # occurs exactly once in ``app.main``; the test compares their positions.
 MAIN_BOOT_STEPS = (
+    "install_process_log_hooks()",
+    "install_qt_message_handler()",
     "QApplication(sys.argv)",
     "initialize_application_fonts(app)",
     "install_translators(app",

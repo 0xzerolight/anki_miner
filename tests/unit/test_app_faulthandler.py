@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import faulthandler
 import logging
+import signal
 
 import pytest
 
@@ -25,6 +26,10 @@ def _restore_faulthandler():
     yield
     stream = app_module._crash_stream
     faulthandler.disable()
+    # The SIGUSR1 handler holds this same stream. Left armed, a stray signal
+    # after the close below would write into a recycled descriptor.
+    if hasattr(faulthandler, "unregister") and hasattr(signal, "SIGUSR1"):
+        faulthandler.unregister(signal.SIGUSR1)
     if stream is not None and stream is not previous:
         stream.close()
     app_module._crash_stream = previous
@@ -49,11 +54,58 @@ class TestEnable:
         assert app_module.crash_stream() is first
         assert not (tmp_path / "other.crash").exists()
 
-    def test_unwritable_path_does_not_block_startup(self, tmp_path):
+    def test_unwritable_path_does_not_block_startup(self, tmp_path, caplog):
         blocked = tmp_path / "afile"
         blocked.write_text("not a directory", encoding="utf-8")
-        app_module._enable_faulthandler(blocked / "nested" / "x.crash")
+        with caplog.at_level(logging.WARNING, logger=app_module.logger.name):
+            app_module._enable_faulthandler(blocked / "nested" / "x.crash")
         assert app_module.crash_stream() is None
+        # WARNING, not DEBUG: at the root's default level a DEBUG line is
+        # invisible, so losing the native-crash sink was a silent loss.
+        assert any(
+            record.levelno == logging.WARNING and "Could not enable faulthandler" in record.getMessage()
+            for record in caplog.records
+        )
+
+
+class TestOnDemandStackDump:
+    """``kill -USR1 <pid>`` is the only way to see what a wedged app is doing."""
+
+    @pytest.mark.skipif(not hasattr(signal, "SIGUSR1"), reason="POSIX-only signal")
+    def test_sigusr1_dumps_every_thread_into_the_crash_file(self, tmp_path, monkeypatch):
+        calls: list[tuple] = []
+        monkeypatch.setattr(faulthandler, "register", lambda *args, **kwargs: calls.append((args, kwargs)))
+
+        app_module._enable_faulthandler(tmp_path / app_module.CRASH_LOG_NAME)
+
+        assert len(calls) == 1
+        args, kwargs = calls[0]
+        assert args[0] == signal.SIGUSR1
+        assert kwargs["file"] is app_module.crash_stream()
+        assert kwargs["all_threads"] is True
+        # chain=False: nothing else wants SIGUSR1, and Python's default action
+        # terminates the process the dump was requested to diagnose.
+        assert kwargs["chain"] is False
+
+    def test_a_platform_without_the_signal_still_gets_the_crash_sink(self, tmp_path, monkeypatch):
+        monkeypatch.delattr(faulthandler, "register", raising=False)
+
+        app_module._enable_faulthandler(tmp_path / app_module.CRASH_LOG_NAME)
+
+        assert app_module.crash_stream() is not None
+        assert faulthandler.is_enabled()
+
+    def test_a_refused_registration_does_not_cost_the_crash_sink(self, tmp_path, monkeypatch, caplog):
+        def _refuse(*args, **kwargs):
+            raise RuntimeError("signal handling unavailable")
+
+        monkeypatch.setattr(faulthandler, "register", _refuse)
+
+        with caplog.at_level(logging.DEBUG, logger=app_module.logger.name):
+            app_module._enable_faulthandler(tmp_path / app_module.CRASH_LOG_NAME)
+
+        assert app_module.crash_stream() is not None
+        assert any("SIGUSR1 stack dump registration" in record.getMessage() for record in caplog.records)
 
 
 class TestFoldPreviousCrash:

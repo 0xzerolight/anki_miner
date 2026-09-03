@@ -15,6 +15,7 @@ import locale
 import logging
 import os
 import platform
+import signal
 import sys
 import threading
 import uuid
@@ -52,6 +53,7 @@ from anki_miner.gui.launch import _LOG_DATE_FORMAT, _LOG_FORMAT
 from anki_miner.gui.launch import get_effective_log_path as _get_effective_log_path
 from anki_miner.gui.main_window import MainWindow, open_log_folder
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
+from anki_miner.gui.qt_log_bridge import install_qt_message_handler
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
 from anki_miner.gui.utils import file_dialogs
@@ -79,6 +81,8 @@ from anki_miner.utils import alass_resolver
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.file_utils import ensure_directory
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.log_hooks import install_process_log_hooks
+from anki_miner.utils.logging_ext import suppressed
 
 logger = logging.getLogger(__name__)
 
@@ -432,6 +436,14 @@ def _enable_faulthandler(crash_path: Path) -> None:
     Any previous contents are folded into the normal log first (see
     :func:`_fold_previous_crash`), so a user who sends only ``anki_miner.log``
     still ships the native stack.
+
+    On POSIX the same stream is armed for ``SIGUSR1``: ``kill -USR1 <pid>``
+    dumps every thread's stack into ``anki_miner.crash`` without touching the
+    process otherwise. That is the only way to see what a wedged app is doing
+    when the GUI thread is blocked and the stall watchdog's own report has
+    already scrolled past — the user runs one command and sends the file.
+    ``chain=False``: nothing else wants SIGUSR1 here, and chaining Python's
+    default (terminate) would kill the app the dump was requested to diagnose.
     """
     global _crash_stream
     if _crash_stream is not None:
@@ -444,9 +456,28 @@ def _enable_faulthandler(crash_path: Path) -> None:
         # leave the handler writing into a recycled descriptor.
         _crash_stream = open(crash_path, "a", buffering=1, encoding="utf-8", errors="replace")  # noqa: SIM115
         faulthandler.enable(file=_crash_stream, all_threads=True)
+        _register_stack_dump_signal(_crash_stream)
     except Exception:  # noqa: BLE001 — bucket A: boot continues without native-crash capture.
         _crash_stream = None
-        logger.debug("could not enable faulthandler", exc_info=True)
+        # WARNING, not DEBUG: without this sink a later native crash leaves no
+        # trace at all, and the DEBUG line was invisible at the root's default
+        # level — the loss was silent exactly when it mattered.
+        logger.warning("Could not enable faulthandler; native crashes will not be captured", exc_info=True)
+
+
+def _register_stack_dump_signal(stream: Any) -> None:
+    """Arm ``SIGUSR1`` for an on-demand all-thread stack dump, where supported.
+
+    Absent on Windows (no ``SIGUSR1``, no ``faulthandler.register``), which is
+    why this is a probe rather than a call: a missing signal must not cost the
+    native-crash sink that was just opened successfully.
+    """
+    register = getattr(faulthandler, "register", None)
+    sigusr1 = getattr(signal, "SIGUSR1", None)
+    if register is None or sigusr1 is None:
+        return
+    with suppressed(logger, "SIGUSR1 stack dump registration"):
+        register(sigusr1, file=stream, all_threads=True, chain=False)
 
 
 def _fold_previous_crash(crash_path: Path) -> None:
@@ -1170,6 +1201,25 @@ def _warn_if_active_language_unavailable(window: MainWindow) -> None:
 _in_excepthook = False
 
 
+def _active_window_name() -> str:
+    """Class name of the window that had focus when an exception escaped.
+
+    A bare "Unhandled exception" says nothing about which screen the user was
+    on; the window class narrows a report to one tab or dialog immediately.
+    Best-effort: this runs inside the crash net itself, so a Qt object already
+    torn down must not turn a logged failure into an unlogged one.
+    """
+    try:
+        # QApplication.instance() is typed as returning QCoreApplication, which
+        # has no activeWindow; the running instance is always the QApplication
+        # constructed in main().
+        instance = QApplication.instance()
+        active = instance.activeWindow() if isinstance(instance, QApplication) else None
+    except Exception:  # noqa: BLE001 — bucket A: window identity is diagnostic only.
+        return "unknown"
+    return type(active).__name__ if active is not None else "none"
+
+
 def _install_excepthook(app: QApplication, *, fail_fast: bool = False) -> None:
     """Route unhandled GUI-thread exceptions to the log + a dialog instead of abort().
 
@@ -1189,6 +1239,11 @@ def _install_excepthook(app: QApplication, *, fail_fast: bool = False) -> None:
       behavior; worker ``QThread.run`` bodies already wrap themselves, so any
       exception reaching here off-thread is logged only;
     * live app — after ``QApplication`` teardown, constructing a dialog faults.
+
+    This hook REPLACES the early-startup hook ``gui.launch`` installed and does
+    not chain it: it writes its own CRITICAL record with the same information
+    plus the active window, so chaining would put every unhandled exception in
+    the log twice.
     """
 
     def _hook(exc_type, exc_value, exc_tb):
@@ -1196,7 +1251,13 @@ def _install_excepthook(app: QApplication, *, fail_fast: bool = False) -> None:
         if issubclass(exc_type, (KeyboardInterrupt, SystemExit)):
             sys.__excepthook__(exc_type, exc_value, exc_tb)
             return
-        logger.critical("Unhandled exception", exc_info=(exc_type, exc_value, exc_tb))
+        logger.critical(
+            "Unhandled exception: %s: %s (window=%s)",
+            exc_type.__name__,
+            exc_value,
+            _active_window_name(),
+            exc_info=(exc_type, exc_value, exc_tb),
+        )
         if fail_fast:
             app.exit(1)
             return
@@ -1851,6 +1912,15 @@ def main():
             logger.exception("Failed to configure custom log path; keeping startup logger")
 
     _log_session_boundary()
+
+    # Everything the interpreter reports out of band — a thread that died on an
+    # exception, an unraisable __del__ failure, warnings.warn — plus Qt's own
+    # message stream. Installed here, after the final sink is chosen so the
+    # records land in the real log, and BEFORE QApplication: platform-plugin,
+    # OpenGL and GL-context failures are emitted during its construction, and
+    # they are the whole reason a "black window" report carries no evidence.
+    install_process_log_hooks()
+    install_qt_message_handler()
 
     # Clean-install nicety: make the default dicts_root exist before any
     # settings UI validates it (Issue #100 red-border state).
