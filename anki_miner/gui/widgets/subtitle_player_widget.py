@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any
 
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -42,13 +43,14 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils import video_preview
 from anki_miner.gui.utils.content_text import apply_content_font
 from anki_miner.gui.utils.fonts import (
     JAPANESE_FEATURE,
     apply_japanese_block_format,
     japanese_line_spacing,
+    make_scaled_font,
 )
 from anki_miner.gui.widgets.mpv_video_widget import MpvVideoWidget
 from anki_miner.languages.profile import ContentTextStyle
@@ -119,6 +121,8 @@ class SubtitlePlayerWidget(QWidget):
         # Will be populated by set_source
         self.subtitle_entries: list[tuple[float, float, str]] = []
         self._offset: float = 0.0
+        self.secondary_entries: list[tuple[float, float, str]] = []
+        self._secondary_offset: float = 0.0
         self._audio_track_override: int | None = None
         # Mining-language audio-track codes for auto-selection. Set by the
         # owner (SubtitleViewer / WordCurationDialog) when it holds a config;
@@ -236,6 +240,32 @@ class SubtitlePlayerWidget(QWidget):
         self._set_cue_text("")
         layout.addWidget(self.subtitle_strip)
 
+        # Secondary-language strip (F7). Same D45-B contract as the strip
+        # above: text is cleared between cues, never hidden per cue. Whether
+        # it is there at all is decided ONCE per source, in set_source, from
+        # whether a second track was loaded, so the video moves at most when
+        # the source changes and never during playback. Application font, not
+        # the mining language's content face: this line is in the viewer's
+        # own language, whatever that is.
+        self.secondary_strip = QTextEdit()
+        self.secondary_strip.setObjectName("secondary-subtitle-strip")
+        self.secondary_strip.setReadOnly(True)
+        self.secondary_strip.setFrameShape(QFrame.Shape.NoFrame)
+        self.secondary_strip.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.secondary_strip.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        self.secondary_strip.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.secondary_strip.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.secondary_strip.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        self.secondary_strip.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # The app sheet's generic QTextEdit rule sets font-size-body-sm, and a
+        # stylesheet size beats setFont; size the two reserved lines from the
+        # same metric so the reservation matches what is drawn.
+        secondary_font = make_scaled_font(FONT_SIZES.body_sm)
+        self.secondary_strip.setFont(secondary_font)
+        self.secondary_strip.setFixedHeight(2 * QFontMetrics(secondary_font).lineSpacing() + 2 * _STRIP_PADDING_Y)
+        self.secondary_strip.setVisible(False)
+        layout.addWidget(self.secondary_strip)
+
         # Position slider and time display
         position_layout = QHBoxLayout()
         self.position_slider = QSlider(Qt.Orientation.Horizontal)
@@ -267,6 +297,8 @@ class SubtitlePlayerWidget(QWidget):
         offset: float = 0.0,
         *,
         audio_track_override: int | None = None,
+        secondary_entries: list[tuple[float, float, str]] | None = None,
+        secondary_offset: float = 0.0,
     ) -> None:
         """Load a video source and configure subtitle playback.
 
@@ -284,10 +316,18 @@ class SubtitlePlayerWidget(QWidget):
                 within the audio-only track list, as produced by
                 ``list_audio_streams``) to force instead of auto-detecting
                 Japanese. None preserves auto-detect via mpv track metadata.
+            secondary_entries: Cues of a second-language track, zero-offset
+                like subtitle_entries; None/empty = no second strip.
+            secondary_offset: That track's own offset, applied at display time.
         """
         self.subtitle_entries = subtitle_entries
         self._offset = offset
         self._audio_track_override = audio_track_override
+        self.secondary_entries = list(secondary_entries or [])
+        self._secondary_offset = secondary_offset
+        self._set_secondary_cue_text("")
+        # Decided once per source (D45-B): present only when a second track exists.
+        self.secondary_strip.setVisible(bool(self.secondary_entries))
 
         # New source: nothing loaded yet, previous pendings are void.
         self._file_loaded = False
@@ -749,20 +789,30 @@ class SubtitlePlayerWidget(QWidget):
         self.seek_seconds(position / 1000.0)
 
     def _update_subtitle(self, current_seconds: float) -> None:
-        """Update the subtitle label based on current playback position.
+        """Update the subtitle label(s) based on current playback position.
 
         Args:
             current_seconds: Current playback position in seconds.
         """
-        for start, end, text in self.subtitle_entries:
-            adjusted_start = start + self._offset
-            adjusted_end = end + self._offset
-            if adjusted_start <= current_seconds <= adjusted_end:
-                self._set_cue_text(text)
-                return
+        self._set_cue_text(self._cue_at(self.subtitle_entries, self._offset, current_seconds))
+        if self.secondary_entries:
+            self._set_secondary_cue_text(self._cue_at(self.secondary_entries, self._secondary_offset, current_seconds))
 
+    @staticmethod
+    def _cue_at(entries: list[tuple[float, float, str]], offset: float, current_seconds: float) -> str:
+        """First cue covering ``current_seconds`` after ``offset``, else "" (cleared, never hidden)."""
+        for start, end, text in entries:
+            if start + offset <= current_seconds <= end + offset:
+                return text
         # Cleared, never hidden: hiding the strip would move the video.
-        self._set_cue_text("")
+        return ""
+
+    def _set_secondary_cue_text(self, text: str) -> None:
+        """Secondary strip twin of _set_cue_text: plain text, no Japanese leading."""
+        if self.secondary_strip.toPlainText() == text:
+            return
+        self.secondary_strip.setPlainText(text)
+        self.secondary_strip.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def _set_cue_text(self, text: str) -> None:
         """Put one cue in the strip, plain text, with the Japanese leading.

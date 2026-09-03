@@ -755,6 +755,57 @@ class TestSubtitleStrip:
         assert block.blockFormat().lineHeight() == TYPOGRAPHY.japanese_leading_percent
 
 
+class TestSecondaryStrip:
+    """F7: a second, always-allocated strip under the primary (D45-B rules apply)."""
+
+    def test_hidden_until_a_second_track_is_loaded(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        assert not widget.secondary_strip.isVisibleTo(widget)
+        widget.set_source(VIDEO, ENTRIES, secondary_entries=[(0.0, 2.0, "Hello.")])
+        assert widget.secondary_strip.isVisibleTo(widget)
+
+    def test_shows_the_secondary_cue_on_its_own_offset(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, secondary_entries=[(0.0, 2.0, "Hello.")], secondary_offset=1.0)
+        widget._on_duration(60.0)
+        widget._on_time_pos(2.5)  # primary こんにちは (1.0-2.5); secondary shifted to 1.0-3.0
+        assert widget.subtitle_strip.toPlainText() == "こんにちは"
+        assert widget.secondary_strip.toPlainText() == "Hello."
+
+    def test_text_clears_between_cues_but_the_strip_stays(self, qtbot, fake_mpv):
+        from unittest.mock import patch
+
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, secondary_entries=[(0.0, 2.0, "Hello.")], secondary_offset=1.0)
+        widget._on_duration(60.0)
+        # D45-B: a cue tick never toggles visibility, only text.
+        with patch.object(widget.secondary_strip, "setVisible") as set_visible:
+            widget._on_time_pos(2.5)
+            widget._on_time_pos(0.5)  # before the shifted cue
+        set_visible.assert_not_called()
+        assert widget.secondary_strip.toPlainText() == ""
+        assert widget.secondary_strip.isVisibleTo(widget)
+
+    def test_a_new_source_without_a_second_track_hides_it_again(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, secondary_entries=[(0.0, 2.0, "Hello.")])
+        widget.set_source(VIDEO, ENTRIES)
+        assert not widget.secondary_strip.isVisibleTo(widget)
+        assert widget.secondary_strip.toPlainText() == ""
+
+    def test_the_second_strip_takes_the_strip_rules_not_the_text_edit_frame(self, qtbot, qapp, fake_mpv):
+        from anki_miner.gui.resources.styles.theme import Theme
+
+        Theme.apply_to_app(qapp)
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES, secondary_entries=[(0.0, 2.0, "Hello.")])
+        # contentsMargins reflect the sheet's border + padding once polished.
+        primary = widget.subtitle_strip.contentsMargins()
+        secondary = widget.secondary_strip.contentsMargins()
+        assert (secondary.top(), secondary.bottom()) == (primary.top(), primary.bottom())
+
+
 class TestPreviewSuppressed:
     """The preview turned off by ``ANKI_MINER_NO_VIDEO_PREVIEW``.
 
