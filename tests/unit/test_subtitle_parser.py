@@ -153,6 +153,22 @@ class TestParseSubtitleFile:
         assert records[0].exc_info is not None
         assert f"file={bad_file}" in records[0].getMessage()
 
+    def test_utf8_subtitle_leaves_a_decode_receipt(self, test_config, tmp_path, caplog):
+        """A file that decodes as UTF-8 on the first try still records the decision."""
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            service = SubtitleParserService(test_config)
+        sub_file = tmp_path / "plain.srt"
+        sub_file.write_text("1\n00:00:01,000 --> 00:00:02,000\n本を読む\n", encoding="utf-8")
+        logger_name = "anki_miner.utils.subtitle_encoding"
+
+        with caplog.at_level("DEBUG", logger=logger_name):
+            service._load_subs(sub_file)
+
+        records = [r for r in caplog.records if r.name == logger_name and "Subtitle decode:" in r.getMessage()]
+        assert len(records) == 1
+        assert f"file={sub_file}" in records[0].getMessage()
+        assert "chosen=utf-8" in records[0].getMessage()
+
     def test_parses_cp932_shift_jis_encoded_subtitle(self, test_config, tmp_path):
         """A cp932/Shift-JIS-encoded subtitle loads via the encoding fallback (Bug J5).
 
