@@ -74,12 +74,12 @@ def _source_case(
         path = private_dir / "novel.txt"
         path.write_text(_PRIVATE_TEXT, encoding="utf-8")
         ref = ReadingSourceRef(kind="txt", path=path, title=path.stem)
-        return aozora_source.load, ref, "Aozora parse:", aozora_source.__name__, path.name
+        return aozora_source.load, ref, "Aozora parse:", aozora_source.__name__, str(path)
     if format_ == "epub":
         path = private_dir / "novel.epub"
         _write_epub(path)
         ref = ReadingSourceRef(kind="epub", path=path, title=path.stem)
-        return epub_source.load, ref, "EPUB parse:", epub_source.__name__, path.name
+        return epub_source.load, ref, "EPUB parse:", epub_source.__name__, str(path)
     if format_ == "mokuro":
         path = private_dir / "volume.mokuro"
         path.write_text(
@@ -97,12 +97,12 @@ def _source_case(
             encoding="utf-8",
         )
         ref = ReadingSourceRef(kind="mokuro", path=path, title="試験漫画", volume="1")
-        return mokuro_source.load, ref, "Mokuro parse:", mokuro_source.__name__, path.name
+        return mokuro_source.load, ref, "Mokuro parse:", mokuro_source.__name__, str(path)
     if format_ == "subtitle":
         path = private_dir / "episode.srt"
         path.write_text(f"1\n00:00:01,000 --> 00:00:03,000\n{_PRIVATE_TEXT}\n", encoding="utf-8")
         ref = ReadingSourceRef(kind="subtitle", path=path, title=path.stem)
-        return subtitle_source.load, ref, "Subtitle parse:", subtitle_source.__name__, path.name
+        return subtitle_source.load, ref, "Subtitle parse:", subtitle_source.__name__, str(path)
 
     ref = ReadingSourceRef(kind="text", title="Text", text=_PRIVATE_TEXT)
     return text_source.load, ref, "Text parse:", text_source.__name__, "Text"
@@ -124,17 +124,21 @@ def test_each_source_parser_logs_summary(format_: str, tmp_path: Path, caplog: p
 
 
 @pytest.mark.parametrize("format_", ["aozora", "epub", "mokuro", "subtitle", "text"])
-def test_source_summary_hides_parent_and_text(format_: str, tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+def test_source_summary_logs_the_whole_path_but_never_the_text(
+    format_: str, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """The path is the diagnosis; the book's own words are never a receipt field."""
     private_dir = tmp_path / "private-parent"
     private_dir.mkdir()
-    load, ref, prefix, _module_name, file_name = _source_case(private_dir, format_)
+    load, ref, prefix, _module_name, file_field = _source_case(private_dir, format_)
 
     with caplog.at_level(logging.INFO, logger="anki_miner.services.reading"):
         load(ref)
 
     record = next(record for record in caplog.records if record.getMessage().startswith(prefix))
-    assert f"file={file_name}" in record.getMessage()
-    assert all(str(private_dir) not in item.getMessage() for item in caplog.records)
+    assert f"file={file_field}" in record.getMessage()
+    if ref.path is not None:
+        assert str(private_dir) in record.getMessage()
     assert all(_PRIVATE_TEXT not in item.getMessage() for item in caplog.records)
 
 
