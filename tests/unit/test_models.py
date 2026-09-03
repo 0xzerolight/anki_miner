@@ -5,7 +5,12 @@ from dataclasses import FrozenInstanceError
 import pytest
 
 from anki_miner.models.media import MediaData
-from anki_miner.models.processing import ProcessingResult, ValidationIssue, ValidationResult
+from anki_miner.models.processing import (
+    ProcessingResult,
+    ValidationIssue,
+    ValidationResult,
+    WhitelistCoverage,
+)
 from anki_miner.models.word import (
     LineLemmas,
     TokenizedWord,
@@ -664,3 +669,30 @@ class TestValidationResult:
             field_mapping_ok=True,
         )
         assert "FAILED" in str(result)
+
+
+class TestWhitelistCoverage:
+    """Tests for WhitelistCoverage (the run-end whitelist report's model)."""
+
+    def test_missing_is_what_was_neither_mined_nor_known(self):
+        coverage = WhitelistCoverage(frozenset({"a", "b", "c", "d"}), mined=frozenset({"a"}), known=frozenset({"b"}))
+        assert coverage.missing == {"c", "d"}
+
+    def test_merging_unions_and_lets_mined_outrank_known(self):
+        # Episode 1 mined "a"; by episode 2 it is in Anki, so it reads as known there.
+        first = WhitelistCoverage(frozenset({"a", "b"}), mined=frozenset({"a"}))
+        second = WhitelistCoverage(frozenset({"a", "b"}), mined=frozenset({"b"}), known=frozenset({"a"}))
+
+        merged = first.merged(second)
+
+        assert merged.mined == {"a", "b"}
+        assert merged.known == frozenset()
+        assert merged.missing == frozenset()
+
+    def test_it_is_immutable(self):
+        coverage = WhitelistCoverage(frozenset({"a"}))
+        with pytest.raises(FrozenInstanceError):
+            coverage.mined = frozenset({"a"})  # type: ignore[misc]
+
+    def test_a_processing_result_defaults_to_no_coverage(self):
+        assert ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0).whitelist_coverage is None
