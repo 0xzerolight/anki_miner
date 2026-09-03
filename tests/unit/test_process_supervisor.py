@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import queue
 import signal
@@ -294,3 +295,96 @@ def test_supervised_success_reaps_descendant_within_total_bound(tmp_path: Path) 
     finally:
         if _pid_is_live(child_pid):
             os.kill(child_pid, signal.SIGKILL)
+
+
+_SUPERVISOR_LOGGER = "anki_miner.utils.process_supervisor"
+
+
+class _FakeSplitProcess(_FakeProcess):
+    """Fake process with a separate stderr pipe (``combine_stderr=False``)."""
+
+    def __init__(self, stdout: list[bytes], stderr: list[bytes], returncode: int | None) -> None:
+        super().__init__(stdout, returncode)
+        self.stderr = _FakePipe(stderr)
+
+
+def _supervisor_records(caplog: pytest.LogCaptureFixture) -> list[logging.LogRecord]:
+    return [record for record in caplog.records if record.name == _SUPERVISOR_LOGGER]
+
+
+def test_supervised_logs_argv_and_spawn_failure(caplog: pytest.LogCaptureFixture) -> None:
+    with (
+        patch(
+            "anki_miner.utils.process_supervisor.subprocess.Popen",
+            side_effect=FileNotFoundError(2, "No such file"),
+        ),
+        caplog.at_level(logging.DEBUG, logger=_SUPERVISOR_LOGGER),
+    ):
+        result = run_supervised(["/opt/bin/yt-dlp", "URL"], timeout_s=0.1)
+
+    assert result.state is SupervisedState.FAILED
+    warnings = [record for record in _supervisor_records(caplog) if record.levelno == logging.WARNING]
+    text = "\n".join(record.getMessage() for record in warnings)
+    assert "yt-dlp spawn failed" in text
+    assert "FileNotFoundError" in text
+    assert "No such file" in text
+    assert "yt-dlp: argv=" in text
+
+
+def test_supervised_failure_logs_bounded_stderr_tail(caplog: pytest.LogCaptureFixture) -> None:
+    stderr = "".join(f"err {index}\n" for index in range(60)).encode()
+    proc = _FakeSplitProcess([b""], [stderr, b""], 1)
+    with (
+        patch("anki_miner.utils.process_supervisor.subprocess.Popen", return_value=proc),
+        patch("anki_miner.utils.process_supervisor.os.killpg"),
+        caplog.at_level(logging.DEBUG, logger=_SUPERVISOR_LOGGER),
+    ):
+        result = run_supervised(["fake"], timeout_s=0.5, op="yt-dlp")
+
+    assert result.state is SupervisedState.FAILED
+    failures = [
+        record
+        for record in _supervisor_records(caplog)
+        if record.levelno == logging.WARNING and "failed: state=" in record.getMessage()
+    ]
+    assert len(failures) == 1
+    message = failures[0].getMessage()
+    assert "yt-dlp failed: state=failed rc=1" in message
+    tail = message.split("\n")[1:]
+    assert len(tail) == 20
+    assert tail[0] == "  err 40"
+    assert tail[-1] == "  err 59"
+
+
+def test_supervised_failure_tail_drops_filtered_noise(caplog: pytest.LogCaptureFixture) -> None:
+    lines = "".join(f"[x] noise {index}\nreal {index}\n" for index in range(30)).encode()
+    proc = _FakeSplitProcess([b""], [lines, b""], 1)
+    with (
+        patch("anki_miner.utils.process_supervisor.subprocess.Popen", return_value=proc),
+        patch("anki_miner.utils.process_supervisor.os.killpg"),
+        caplog.at_level(logging.DEBUG, logger=_SUPERVISOR_LOGGER),
+    ):
+        run_supervised(["fake"], timeout_s=0.5, op="yt-dlp", noise_filter=lambda line: line.startswith("[x]"))
+
+    message = next(
+        record.getMessage() for record in _supervisor_records(caplog) if "failed: state=" in record.getMessage()
+    )
+    tail = message.split("\n")[1:]
+    assert len(tail) == 20
+    assert all(line.strip().startswith("real ") for line in tail)
+
+
+def test_supervised_success_logs_only_debug(caplog: pytest.LogCaptureFixture) -> None:
+    proc = _FakeProcess([b"line\n", b""], 0)
+    with (
+        patch("anki_miner.utils.process_supervisor.subprocess.Popen", return_value=proc),
+        patch("anki_miner.utils.process_supervisor.os.killpg"),
+        caplog.at_level(logging.DEBUG, logger=_SUPERVISOR_LOGGER),
+    ):
+        result = run_supervised(["fake"], timeout_s=0.5, combine_stderr=True, op="ffmpeg")
+
+    assert result.state is SupervisedState.COMPLETED
+    records = _supervisor_records(caplog)
+    assert [record.levelno for record in records] == [logging.DEBUG, logging.DEBUG]
+    assert "ffmpeg: argv=" in records[0].getMessage()
+    assert records[1].getMessage().startswith("ffmpeg ok: rc=0 elapsed=")
