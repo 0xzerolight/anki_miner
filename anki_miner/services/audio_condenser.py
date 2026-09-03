@@ -36,7 +36,7 @@ import subprocess
 import tempfile
 import threading
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
@@ -288,6 +288,14 @@ _ENCODER_SETTINGS: dict[str, tuple[str, bool, bool]] = {
 # it is not probed (a probe spawns a process; skip the cost).
 _PROBE_REQUIRED: frozenset[str] = frozenset({"libmp3lame", "libopus"})
 
+# Sample rate and channel count every part of a MERGE run is pinned to. The
+# concat demuxer stream-copies, which needs byte-identical stream parameters,
+# and the encoder args alone do not give that: sample rate and channel layout
+# follow each source (44.1k vs 48k, 5.1 vs 2.0). Off outside merge mode, so a
+# normal run still keeps its source's own rate and layout.
+_MERGE_SAMPLE_RATE = "48000"
+_MERGE_CHANNELS = "2"
+
 # A ``-progress pipe:1`` line is ``key=value`` where *key* is lowercase snake_case
 # (frame, out_time_us, progress, ...). Anything whose pre-``=`` token is not a
 # bare identifier (ffmpeg banner/error lines, e.g. ``[libopus @ 0x..] bad``) is
@@ -368,6 +376,20 @@ class FfmpegStepFailure:
         else:
             head = f"ffmpeg exited {self.returncode}"
         return f"{head}: {self.reason}" if self.reason else head
+
+
+def _concat_list(parts: Sequence[Path]) -> str:
+    """Render ffmpeg's concat-demuxer list file for *parts*.
+
+    Paths are single-quoted with the demuxer's own escape for an embedded
+    quote (``'`` -> ``'\\''``), so a folder like ``Kaguya's`` does not
+    truncate the list.
+    """
+    lines = []
+    for part in parts:
+        escaped = str(part).replace("'", "'\\''")
+        lines.append(f"file '{escaped}'")
+    return "\n".join(lines) + "\n"
 
 
 def _failure_reason(lines: Iterable[str], fallback: str = "") -> str:
@@ -520,6 +542,7 @@ class AudioCondenserService:
         *,
         audio_track_override: int | None = None,
         bitrate_kbps: int = 96,
+        uniform_layout: bool = False,
         progress_cb: Callable[[int], None] | None = None,
         cancel_event: threading.Event | None = None,
     ) -> tuple[bool, FfmpegStepFailure | None]:
@@ -536,6 +559,10 @@ class AudioCondenserService:
         ffmpeg with a select-nothing graph). Progress is reported 0–100 via
         *progress_cb* off the ``-progress`` stream; *cancel_event* kills the
         in-flight process.
+
+        *uniform_layout* pins the output to 48 kHz stereo. Only a merge run sets
+        it: :meth:`concat` stream-copies its parts, which requires identical
+        stream parameters, and those follow the source otherwise.
 
         Returns ``(ok, failure)`` — see :meth:`_run_streaming`. ``failure`` is
         None on both success and cancel.
@@ -595,6 +622,10 @@ class AudioCondenserService:
                         cmd += ["-b:a", f"{bitrate_kbps}k"]
                     if downmix:
                         cmd += ["-ac", "2"]
+                    if uniform_layout:
+                        cmd += ["-ar", _MERGE_SAMPLE_RATE]
+                        if not downmix:
+                            cmd += ["-ac", _MERGE_CHANNELS]
                     cmd.append(str(staged_audio))
 
                     total_ms = sum(end - start for start, end in periods)
@@ -620,6 +651,80 @@ class AudioCondenserService:
             # belong to the caller). Clean it on every path.
             with contextlib.suppress(OSError):
                 graph_path.unlink()
+
+    # -- Merge run: join finished parts (F5) ------------------------------
+
+    def concat(
+        self,
+        parts: Sequence[Path],
+        out_audio: Path,
+        *,
+        total_ms: int,
+        progress_cb: Callable[[int], None] | None = None,
+        cancel_event: threading.Event | None = None,
+    ) -> tuple[bool, FfmpegStepFailure | None]:
+        """Join already-condensed *parts* into *out_audio* without re-encoding.
+
+        Every part came out of :meth:`condense` in the same run with
+        ``uniform_layout=True``, so codec, bitrate, sample rate and channel
+        layout already match and the concat demuxer can stream-copy them. This
+        does not weaken D2: D2 is about condensing ONE file in a single pass,
+        and that path is untouched — this joins finished outputs.
+
+        Returns ``(ok, failure)`` on the same contract as :meth:`condense`: a
+        step failure is returned, never raised, and ``failure`` is None on both
+        success and cancel.
+        """
+        if not parts:
+            logger.warning("Concat called with no condensed parts for %s — nothing to do.", out_audio)
+            return False, FfmpegStepFailure(None, False, "no condensed parts to merge")
+
+        self.config.media_temp_folder.mkdir(parents=True, exist_ok=True)
+        list_fd, list_name = tempfile.mkstemp(
+            suffix=".txt", prefix="condense_concat_", dir=str(self.config.media_temp_folder)
+        )
+        list_path = Path(list_name)
+        try:
+            with os.fdopen(list_fd, "w", encoding="utf-8") as fh:
+                fh.write(_concat_list(parts))
+
+            try:
+                with atomic_write_path(out_audio) as staged_audio:
+                    cmd = [
+                        resolve_ffmpeg(self.config),
+                        "-y",
+                        "-hide_banner",
+                        "-nostdin",
+                        "-progress",
+                        "pipe:1",
+                        "-f",
+                        "concat",
+                        "-safe",
+                        "0",
+                        "-i",
+                        str(list_path),
+                        "-c",
+                        "copy",
+                        str(staged_audio),
+                    ]
+                    ok, failure = self._run_streaming(
+                        cmd,
+                        # A stream copy still reports out_time, so the same
+                        # percentage maths works; the floor keeps a zero-length
+                        # merge from dividing by zero.
+                        total_period_ms=max(total_ms, 1),
+                        timeout=max(600.0, total_ms / 1000 * 4),
+                        progress_cb=progress_cb,
+                        cancel_event=cancel_event,
+                    )
+                    if not ok:
+                        raise _CondenseOutputIncomplete(failure)
+            except _CondenseOutputIncomplete as incomplete:
+                return False, incomplete.failure
+            return True, None
+        finally:
+            with contextlib.suppress(OSError):
+                list_path.unlink()
 
     # -- Streaming runner (D7/D8) -----------------------------------------
 

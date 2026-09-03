@@ -25,6 +25,7 @@ from anki_miner.services.audio_condenser import (
     EncoderUnavailableError,
     FfmpegStepFailure,
     FilterUnavailableError,
+    _concat_list,
     build_aselect_graph,
     build_periods,
     condense_one,
@@ -1185,6 +1186,125 @@ def test_extract_embedded_subtitle_cleans_partial_on_failure(tmp_path):
 
     assert out is None
     assert not (tmp_path / "ep01.s0.srt").exists()
+
+
+# --- concat: merge-run stream copy (F5) ------------------------------------
+
+
+def test_condense_uniform_layout_pins_rate_and_channels(tmp_path):
+    svc = _service(tmp_path, global_index=0)
+    captured: dict = {}
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory(captured, _progress_block(0, end=True))),
+    ):
+        svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3", uniform_layout=True)
+
+    cmd = captured["cmd"]
+    assert cmd[cmd.index("-ar") + 1] == "48000"
+    assert cmd[cmd.index("-ac") + 1] == "2"
+
+
+def test_condense_uniform_layout_does_not_double_the_opus_downmix(tmp_path):
+    svc = _service(tmp_path, global_index=0)
+    captured: dict = {}
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory(captured, _progress_block(0, end=True))),
+    ):
+        svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.opus", uniform_layout=True)
+
+    assert captured["cmd"].count("-ac") == 1
+
+
+def test_condense_without_uniform_layout_is_unchanged(tmp_path):
+    """The default run must stay byte-identical to pre-merge behaviour."""
+    svc = _service(tmp_path, global_index=0)
+    captured: dict = {}
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory(captured, _progress_block(0, end=True))),
+    ):
+        svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
+
+    assert "-ar" not in captured["cmd"]
+    assert "-ac" not in captured["cmd"]
+
+
+def test_concat_uses_the_demuxer_and_stream_copy(tmp_path):
+    svc = _service(tmp_path, global_index=0)
+    captured: dict = {}
+    parts = [tmp_path / "0000_condensed.mp3", tmp_path / "0001_condensed.mp3"]
+    for part in parts:
+        part.write_bytes(b"")
+    out = tmp_path / "season.mp3"
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory(captured, _progress_block(0, end=True))),
+    ):
+        ok, failure = svc.concat(parts, out, total_ms=4000)
+
+    assert (ok, failure) == (True, None)
+    cmd = captured["cmd"]
+    assert cmd[:6] == ["ffmpeg", "-y", "-hide_banner", "-nostdin", "-progress", "pipe:1"]
+    assert cmd[cmd.index("-f") + 1] == "concat"
+    assert cmd[cmd.index("-safe") + 1] == "0"
+    assert cmd[cmd.index("-c") + 1] == "copy"
+    assert cmd[-1] != str(out), "output is staged, then os.replace'd"
+    assert out.exists()
+
+
+def test_concat_writes_a_list_file_and_removes_it(tmp_path):
+    svc = _service(tmp_path, global_index=0)
+    captured: dict = {}
+    parts = [tmp_path / "0000_condensed.mp3", tmp_path / "0001_condensed.mp3"]
+    for part in parts:
+        part.write_bytes(b"")
+
+    def _make(cmd: list[str], **kwargs: Any) -> _FakePopen:
+        captured["cmd"] = cmd
+        list_path = Path(cmd[cmd.index("-i") + 1])
+        captured["list"] = list_path.read_text(encoding="utf-8")
+        captured["list_path"] = list_path
+        return _FakePopen(_progress_block(0, end=True))
+
+    with patch(_RESOLVE, return_value="ffmpeg"), patch(_POPEN, side_effect=_make):
+        svc.concat(parts, tmp_path / "season.mp3", total_ms=4000)
+
+    assert captured["list"] == f"file '{parts[0]}'\nfile '{parts[1]}'\n"
+    assert not captured["list_path"].exists()
+
+
+def test_concat_with_no_parts_fails_without_running_ffmpeg(tmp_path):
+    svc = _service(tmp_path, global_index=0)
+    with patch(_POPEN, side_effect=AssertionError("ffmpeg must not run")):
+        ok, failure = svc.concat([], tmp_path / "season.mp3", total_ms=0)
+
+    assert ok is False
+    assert failure is not None and "no condensed parts" in failure.reason
+
+
+def test_concat_failure_leaves_no_partial_output(tmp_path):
+    svc = _service(tmp_path, global_index=0)
+    parts = [tmp_path / "0000_condensed.mp3"]
+    parts[0].write_bytes(b"")
+    out = tmp_path / "season.mp3"
+
+    def _make(cmd: list[str], **kwargs: Any) -> _FakePopen:
+        Path(cmd[-1]).write_bytes(b"PARTIAL")
+        return _FakePopen(["progress=end"], returncode=1)
+
+    with patch(_RESOLVE, return_value="ffmpeg"), patch(_POPEN, side_effect=_make):
+        ok, failure = svc.concat(parts, out, total_ms=1000)
+
+    assert ok is False
+    assert failure is not None and failure.returncode == 1
+    assert not out.exists()
+
+
+def test_concat_list_quotes_a_path_containing_an_apostrophe(tmp_path):
+    rendered = _concat_list([tmp_path / "Kaguya's ep01.mp3"])
+    assert rendered == f"file '{tmp_path}/Kaguya'\\''s ep01.mp3'\n"
 
 
 # ===========================================================================
