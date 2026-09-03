@@ -5064,6 +5064,14 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Sao chép tóm tắt</translation>
     </message>
     <message>
+        <source>Copy unmined words</source>
+        <translation>Sao chép từ chưa khai thác</translation>
+    </message>
+    <message>
+        <source>Whitelist words that got no card this run, one per line</source>
+        <translation>Các từ trong danh sách trắng chưa có thẻ trong lần chạy này, mỗi dòng một từ</translation>
+    </message>
+    <message>
         <source>Dismiss</source>
         <translation>Đóng</translation>
     </message>
@@ -7488,6 +7496,22 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     <message>
         <source>(asleep time excluded)</source>
         <translation>(không tính thời gian máy ở chế độ ngủ)</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined</source>
+        <translation>Danh sách trắng: %1/%2 đã khai thác</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined.</source>
+        <translation>Danh sách trắng: %1/%2 đã khai thác.</translation>
+    </message>
+    <message>
+        <source>Not mined: %1.</source>
+        <translation>Chưa khai thác: %1.</translation>
+    </message>
+    <message>
+        <source>Already known: %1.</source>
+        <translation>Đã biết: %1.</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>

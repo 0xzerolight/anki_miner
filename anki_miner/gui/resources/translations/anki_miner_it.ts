@@ -5077,6 +5077,14 @@ I file indice su disco non saranno modificati perché non è stato possibile ver
         <translation>Copia riepilogo</translation>
     </message>
     <message>
+        <source>Copy unmined words</source>
+        <translation>Copia parole non estratte</translation>
+    </message>
+    <message>
+        <source>Whitelist words that got no card this run, one per line</source>
+        <translation>Parole della whitelist senza carta in questa esecuzione, una per riga</translation>
+    </message>
+    <message>
         <source>Dismiss</source>
         <translation>Chiudi</translation>
     </message>
@@ -7502,6 +7510,22 @@ I file indice su disco non saranno modificati perché non è stato possibile ver
     <message>
         <source>(asleep time excluded)</source>
         <translation>(tempo di sospensione escluso)</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined</source>
+        <translation>Whitelist: %1 di %2 estratte</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined.</source>
+        <translation>Whitelist: %1 di %2 estratte.</translation>
+    </message>
+    <message>
+        <source>Not mined: %1.</source>
+        <translation>Non estratte: %1.</translation>
+    </message>
+    <message>
+        <source>Already known: %1.</source>
+        <translation>Già conosciute: %1.</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>

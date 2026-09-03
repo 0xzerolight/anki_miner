@@ -5,7 +5,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import unicodedata
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, NamedTuple, TypedDict
 
 from anki_miner.config import AnkiMinerConfig
@@ -156,6 +156,34 @@ def _normalize_sentence(text: str) -> str:
     collapse. The original sentence on each word is left untouched.
     """
     return " ".join(unicodedata.normalize("NFKC", text).split())
+
+
+def whitelisted_keys(front: str, lemma: str, word_list_service: WordListService) -> tuple[str, ...]:
+    """The whitelist entries a word matches: its card front, then its lemma.
+
+    This is the OR alias policy :meth:`WordFilterService.partition_whitelisted`
+    documents, kept in one place so the force-include split and the run-end
+    coverage report can never disagree about what "on the whitelist" means.
+    Strings rather than a ``TokenizedWord``: the processor's result funnel has
+    only Anki's confirmed ``(mined_form, lemma)`` lists to hand it. The strings
+    returned are the entries themselves (the file's own spelling), which is
+    what the report prints back.
+
+    Args:
+        front: The card-front spelling (``TokenizedWord.mined_form``).
+        lemma: The dictionary form.
+        word_list_service: Service providing whitelist lookups.
+
+    Returns:
+        The matched entries, in ``(front, lemma)`` order; empty when neither is
+        on the list.
+    """
+    return tuple(key for key in (front, lemma) if word_list_service.is_whitelisted(key))
+
+
+def whitelist_hits(pairs: Iterable[tuple[str, str]], word_list_service: WordListService) -> frozenset[str]:
+    """Every whitelist entry at least one ``(front, lemma)`` pair matches."""
+    return frozenset(key for front, lemma in pairs for key in whitelisted_keys(front, lemma, word_list_service))
 
 
 class WordFilterService:
@@ -355,7 +383,8 @@ class WordFilterService:
         (its ``lemma-siblings``), including below an occurrence floor.
         ``all_words`` is already lemma-deduped upstream
         (``SubtitleParserService``), so exactly one word per whitelisted form is
-        moved to ``forced``.
+        moved to ``forced``. The match itself lives in :func:`whitelisted_keys`,
+        shared with the run-end coverage report.
 
         Args:
             words: List of candidate words.
@@ -367,7 +396,7 @@ class WordFilterService:
         forced: list[TokenizedWord] = []
         rest: list[TokenizedWord] = []
         for word in words:
-            if word_list_service.is_whitelisted(word.mined_form) or word_list_service.is_whitelisted(word.lemma):
+            if whitelisted_keys(word.mined_form, word.lemma, word_list_service):
                 forced.append(word)
             else:
                 rest.append(word)

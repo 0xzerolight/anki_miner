@@ -119,6 +119,45 @@ def result_error_text(result: object | None, default: str = "Mining failed") -> 
     return default
 
 
+@dataclass(frozen=True)
+class WhitelistCoverage:
+    """Which whitelist entries a run reached, in the entries' own spelling.
+
+    ``entries`` is the whole whitelist. ``mined`` are the entries some created
+    card matched; ``known`` the entries whose every match was already in Anki
+    or on the user's known list. Everything else is :attr:`missing` -- never
+    seen in the material, or seen and then dropped (no dictionary entry,
+    deselected in the curator, refused by Anki as a duplicate). The report
+    calls that "not mined" and does not pretend to know which.
+
+    One item's coverage folds into a run's with :meth:`merged`: over a
+    twelve-episode batch a word is mined if any episode mined it, which is the
+    only aggregation that answers "what is still left to find".
+    """
+
+    entries: frozenset[str]
+    mined: frozenset[str] = frozenset()
+    known: frozenset[str] = frozenset()
+
+    @property
+    def missing(self) -> frozenset[str]:
+        """Entries no card was made for and nothing already knew."""
+        return self.entries - self.mined - self.known
+
+    def merged(self, other: "WhitelistCoverage") -> "WhitelistCoverage":
+        """Fold another item's coverage in.
+
+        Mined outranks known: a word mined by episode one is in Anki by
+        episode two and reads as known there.
+        """
+        mined = self.mined | other.mined
+        return WhitelistCoverage(
+            entries=self.entries | other.entries,
+            mined=mined,
+            known=(self.known | other.known) - mined,
+        )
+
+
 @dataclass
 class ProcessingResult:
     """Result of processing an episode or folder."""
@@ -142,6 +181,10 @@ class ProcessingResult:
     #: connection drop or timeout), which a later attempt may well survive. A
     #: deterministic failure re-run fails identically, so it stays False.
     failure_is_transient: bool = False
+    #: What this item's whitelist reached, when Settings -> Filtering had one
+    #: in effect; None otherwise. Stamped by ``EpisodeProcessor`` on every
+    #: result it returns and folded over a run by ``RunReceiptAccumulator``.
+    whitelist_coverage: WhitelistCoverage | None = None
 
     @property
     def success(self) -> bool:

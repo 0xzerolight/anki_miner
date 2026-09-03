@@ -5034,6 +5034,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Copy unmined words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Whitelist words that got no card this run, one per line</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Dismiss</source>
         <translation type="unfinished" />
     </message>
@@ -7441,6 +7449,22 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>(asleep time excluded)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not mined: %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Already known: %1.</source>
         <translation type="unfinished" />
     </message>
 </context><context>

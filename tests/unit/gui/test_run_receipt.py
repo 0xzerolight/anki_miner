@@ -15,7 +15,12 @@ from types import SimpleNamespace
 
 from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.utils.progress_telemetry import SUSPEND_GAP_S
-from anki_miner.models.processing import CANCELLED_ERROR, ProcessingResult, TerminalOutcome
+from anki_miner.models.processing import (
+    CANCELLED_ERROR,
+    ProcessingResult,
+    TerminalOutcome,
+    WhitelistCoverage,
+)
 
 
 def _accumulator(total: int = 3, *, start: float = 100.0) -> RunReceiptAccumulator:
@@ -235,3 +240,42 @@ class TestDetails:
 
         assert aggregate is not None
         assert aggregate.mined_forms == ["食べる"]
+
+
+class TestWhitelist:
+    def test_coverage_folds_across_items_and_mined_outranks_known(self):
+        acc = _accumulator(2)
+        first = _result(1, ids=[1])
+        first.whitelist_coverage = WhitelistCoverage(frozenset({"a", "b", "c"}), mined=frozenset({"a"}))
+        second = _result(1, ids=[2])
+        second.whitelist_coverage = WhitelistCoverage(
+            frozenset({"a", "b", "c"}), mined=frozenset({"b"}), known=frozenset({"a"})
+        )
+        acc.record_result(first)
+        acc.record_result(second)
+
+        coverage = _finish(acc).whitelist
+
+        assert coverage is not None
+        assert coverage.mined == {"a", "b"}
+        assert coverage.known == frozenset()
+        assert coverage.missing == {"c"}
+
+    def test_a_counts_only_run_can_still_report_coverage(self):
+        acc = _accumulator(1)
+        acc.record_counts(notes_added=3, failed=False)
+        acc.record_whitelist(WhitelistCoverage(frozenset({"a", "b"}), mined=frozenset({"a"})))
+
+        receipt = _finish(acc)
+
+        assert receipt.has_details is False
+        assert receipt.whitelist is not None
+        assert receipt.whitelist.missing == {"b"}
+
+    def test_a_run_without_a_whitelist_reports_none(self):
+        acc = _accumulator(2)
+        acc.record_result(_result(1, ids=[1]))
+        acc.record_result(SimpleNamespace(cards_created=1, card_ids=[2], errors=[], whitelist_coverage=object()))
+        acc.record_whitelist(None)
+
+        assert _finish(acc).whitelist is None

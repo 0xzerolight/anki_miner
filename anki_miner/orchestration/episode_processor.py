@@ -35,6 +35,7 @@ from anki_miner.models import (
     MediaData,
     ProcessingResult,
     TokenizedWord,
+    WhitelistCoverage,
 )
 from anki_miner.models.youtube import FetchedMedia, SubMode
 from anki_miner.orchestration.audio_stage import AudioStage
@@ -57,7 +58,7 @@ from anki_miner.services.reading.images import ReadingImageArchiveError, Reading
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.services.secondary_subtitles import attach_translations
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
-from anki_miner.services.word_filter import enabled_script_options, script_options_kwarg
+from anki_miner.services.word_filter import enabled_script_options, script_options_kwarg, whitelist_hits
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
@@ -197,6 +198,12 @@ class _EpisodeContext:
     # curation step reads it to count unknowns per line. Empty on any path
     # that never reached phase 2.
     unknown_lemmas: set[str] = field(default_factory=set)
+    # Which whitelist entries this item reached (Settings -> Filtering): phase
+    # 2 stamps the entries and the already-known ones; None when no whitelist
+    # is in effect. The mined ones are added at the result funnel
+    # (_stamp_whitelist_coverage), not here - a cancelled result never comes
+    # through build_result.
+    whitelist_coverage: WhitelistCoverage | None = None
 
     def build_result(self, **overrides: Any) -> ProcessingResult:
         """Construct a ProcessingResult from accumulated state.
@@ -690,6 +697,23 @@ class EpisodeProcessor:
         )
         return all_words, line_index
 
+    def _active_whitelist(self) -> WordListService | None:
+        """The whitelist service when force-include is in effect for this run.
+
+        One gate for the phase-2 partition, the coverage snapshot and the
+        funnel's mined stamp. Off under ``bypass_optional_filters`` so the Deck
+        Builder preview - which already includes everything - stays unchanged.
+        """
+        wls = self.word_list_service
+        if (
+            self.config.use_whitelist
+            and wls is not None
+            and wls.is_available()
+            and not self.config.bypass_optional_filters
+        ):
+            return wls
+        return None
+
     def _phase2_filter(
         self,
         ctx: _EpisodeContext,
@@ -870,6 +894,21 @@ class EpisodeProcessor:
         # from "removed by active filters".
         ctx.candidate_words_found = len(unknown_words)
 
+        # Whitelist coverage (the run-end "not mined" report). Taken here -
+        # after the known-vocab subtraction, BEFORE the definition-viability
+        # filter and the force-include partition below - so an entry whose
+        # every match was already known reads as known, and anything dropped
+        # from here on (no dictionary entry, curator, Anki duplicate) reads as
+        # not mined. Compared as entry strings, so object identity through the
+        # filters is irrelevant.
+        coverage_wls = self._active_whitelist()
+        if coverage_wls is not None:
+            entries = coverage_wls.whitelist_entries()
+            if entries:
+                present = whitelist_hits(((w.mined_form, w.lemma) for w in all_words), coverage_wls)
+                candidate = whitelist_hits(((w.mined_form, w.lemma) for w in unknown_words), coverage_wls)
+                ctx.whitelist_coverage = WhitelistCoverage(entries, known=present - candidate)
+
         # Comprehension percentage.
         comprehension = ((len(all_words) - len(unknown_words)) / len(all_words)) * 100 if all_words else 0.0
         self.presenter.show_info(
@@ -1004,15 +1043,9 @@ class EpisodeProcessor:
         # Gated on bypass_optional_filters so the Deck Builder preview — which
         # already includes everything — is unchanged.
         forced_include: list[TokenizedWord] = []
-        if (
-            self.config.use_whitelist
-            and self.word_list_service
-            and self.word_list_service.is_available()
-            and not self.config.bypass_optional_filters
-        ):
-            forced_include, unknown_words = self.word_filter.partition_whitelisted(
-                unknown_words, self.word_list_service
-            )
+        whitelist_service = self._active_whitelist()
+        if whitelist_service is not None:
+            forced_include, unknown_words = self.word_filter.partition_whitelisted(unknown_words, whitelist_service)
             whitelist_force_includes = len(forced_include)
 
         # Frequency rank band. Gate on an actually-loaded NUMERIC frequency
@@ -1835,6 +1868,12 @@ class EpisodeProcessor:
         """Clear Anki write provenance before any preflight for a new run."""
         self.anki_service.last_created_note_ids = []
         self.anki_service.anki_write_state = AnkiWriteState.NO_NOTE_WRITE
+        # The whitelist stamp at the run's funnel reads these. On a shared
+        # Batch AnkiService an item that never reaches phase 5 (cancelled, zero
+        # mineable words) would otherwise inherit the previous item's confirmed
+        # forms and report them as mined here.
+        self.anki_service.last_created_mined_forms = []
+        self.anki_service.last_created_lemmas = []
 
     def _run_pipeline(
         self,
@@ -1914,13 +1953,15 @@ class EpisodeProcessor:
             result = body(run_temp_folder)
             if result.success:
                 self._record_difficulty(ctx)
-            return self._stamp_write_provenance(result)
+            return self._stamp_whitelist_coverage(ctx, self._stamp_write_provenance(result))
         except AnkiMinerException as e:
             logger.warning("%s: %s", "EpisodeProcessor", e)
             ctx.errors.append(str(e))
             partial_ids = list(self.anki_service.last_created_note_ids)
             self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
-            return self._stamp_write_provenance(self._partial_failure_result(ctx, partial_ids), failure=e)
+            return self._stamp_whitelist_coverage(
+                ctx, self._stamp_write_provenance(self._partial_failure_result(ctx, partial_ids), failure=e)
+            )
         except MemoryError:
             raise
         except Exception as e:
@@ -2287,6 +2328,8 @@ class EpisodeProcessor:
         default. Automatic retry consumes these two fields; the pipeline is the
         last place that can see the live service state and the raised exception
         before both are flattened into ``errors`` strings.
+        :meth:`_stamp_whitelist_coverage` rides the same funnel, for the same
+        reason.
 
         Fail closed on the write state: a service whose ``anki_write_state`` is
         not a real :class:`AnkiWriteState` (a stub, a mock, a string) has proved
@@ -2295,6 +2338,33 @@ class EpisodeProcessor:
         state = getattr(self.anki_service, "anki_write_state", None)
         result.anki_write_state = state if isinstance(state, AnkiWriteState) else AnkiWriteState.NOTE_WRITE_UNCERTAIN
         result.failure_is_transient = failure is not None and is_transient_anki_transport_error(failure)
+        return result
+
+    def _stamp_whitelist_coverage(self, ctx: _EpisodeContext, result: ProcessingResult) -> ProcessingResult:
+        """Attach the run's whitelist coverage to whatever result leaves the pipeline.
+
+        Sits beside :meth:`_stamp_write_provenance` at the one funnel every
+        result passes - success, early phase return, cancel, partial failure -
+        so a cancelled result (built outside ``build_result``) keeps the
+        entries and known words phase 2 established, and a run that failed
+        after Anki confirmed some cards still counts them as mined. Mined is
+        read from the service's own confirmation lists, reset per run in
+        :meth:`_reset_run_write_state`, never from the payloads we sent: a
+        duplicate Anki refused or a batch cut short by a cancel is not mined.
+
+        A service whose confirmation lists are not real aligned lists (a stub,
+        a mock) contributes no mined words rather than a wrong answer.
+        """
+        coverage = ctx.whitelist_coverage
+        wls = self._active_whitelist()
+        if coverage is None or wls is None:
+            return result
+        forms = getattr(self.anki_service, "last_created_mined_forms", None)
+        lemmas = getattr(self.anki_service, "last_created_lemmas", None)
+        if not isinstance(forms, list) or not isinstance(lemmas, list) or len(forms) != len(lemmas):
+            result.whitelist_coverage = coverage
+            return result
+        result.whitelist_coverage = replace(coverage, mined=whitelist_hits(zip(forms, lemmas, strict=True), wls))
         return result
 
     def _unexpected_exception_result(self, ctx: _EpisodeContext, e: Exception) -> ProcessingResult:
@@ -2317,7 +2387,9 @@ class EpisodeProcessor:
         self.presenter.show_error(
             tr_format(QCoreApplication.translate("EpisodeProcessor", "Unexpected error: %1"), str(e))
         )
-        return self._stamp_write_provenance(self._partial_failure_result(ctx, partial_ids), failure=e)
+        return self._stamp_whitelist_coverage(
+            ctx, self._stamp_write_provenance(self._partial_failure_result(ctx, partial_ids), failure=e)
+        )
 
     def _partial_failure_result(self, ctx: _EpisodeContext, partial_ids: list[int]) -> ProcessingResult:
         """Shared except-handler tail: note any partial cards and build the failure result."""

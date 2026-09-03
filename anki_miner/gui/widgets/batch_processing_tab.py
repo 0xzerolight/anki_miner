@@ -899,7 +899,7 @@ class BatchProcessingTab(MiningTabBase):
         self.overall_progress_widget.set_composed(self._items_done, 0, self._items_total)
         self._publish_task_count(current=self._items_done, total=self._items_total or None, detail="")
 
-    def _on_queue_finished(self, total_cards: int) -> None:
+    def _on_queue_finished(self, total_cards: int, whitelist: object = None) -> None:
         """Called when entire queue finishes.
 
         The run's summary is no longer a modal box raised from here. It is the
@@ -909,7 +909,12 @@ class BatchProcessingTab(MiningTabBase):
 
         Args:
             total_cards: Total cards created during this run
+            whitelist: The worker's ``WhitelistCoverage`` folded over every
+                pair it processed, or None when no whitelist was in effect.
+                This queue's worker reports counts rather than results, so the
+                run's coverage arrives here instead of per item.
         """
+        self._record_receipt_whitelist(whitelist)
         self._restore_buttons()
 
         # Terminal end state: cancel -> failed -> success. A cancelled run keeps

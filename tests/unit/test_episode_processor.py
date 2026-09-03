@@ -2526,6 +2526,10 @@ class TestWhitelistForceInclude:
 
         assert result.new_words_found == 0
         mock_services["anki_service"].create_cards_batch.assert_not_called()
+        # Dropped before the partition, so it is neither mined nor known: the
+        # report lists it as not mined rather than misfiling it as known.
+        assert result.whitelist_coverage is not None
+        assert result.whitelist_coverage.missing == {"食べる"}
 
     def test_not_force_included_when_already_in_anki(self, test_config, mock_services, tmp_path):
         """Integrity gate: a whitelisted word already in Anki is excluded (partition
@@ -2570,6 +2574,150 @@ class TestWhitelistForceInclude:
 
         assert result.new_words_found == 0
         mock_services["anki_service"].create_cards_batch.assert_not_called()
+
+    def test_coverage_names_mined_known_and_missing_entries(self, test_config, mock_services, tmp_path):
+        """食べる gets a card, 飲む is already in Anki, 走る never appears: the
+        result says so in the whitelist's own words."""
+        config = replace(test_config, use_whitelist=True)
+        taberu = _make_word("食べる")
+        nomu = _make_word("飲む", start_time=5.0)
+
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [taberu, nomu]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = {nomu.mined_form}
+        mock_services["media_extractor"].extract_media_batch.return_value = [(taberu, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        anki = mock_services["anki_service"]
+
+        def _create(card_data, progress_callback=None):
+            # Mirror the real service: the confirmation lists are written by
+            # create_cards_batch itself (the run start resets them).
+            anki.last_created_mined_forms = [p.word.mined_form for p in card_data]
+            anki.last_created_lemmas = [p.word.lemma for p in card_data]
+            anki.last_created_note_ids = [1]
+            return [1]
+
+        anki.create_cards_batch.side_effect = _create
+
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = build_processor(
+            config=config,
+            presenter=NullPresenter(),
+            word_list_service=self._wls(tmp_path, "食べる", "飲む", "走る"),
+            **services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        coverage = result.whitelist_coverage
+        assert coverage is not None
+        assert coverage.mined == {"食べる"}
+        assert coverage.known == {"飲む"}
+        assert coverage.missing == {"走る"}
+
+    def test_coverage_survives_a_curator_that_keeps_nothing(self, test_config, mock_services, tmp_path):
+        """A zero-card curator skip still returns through build_result, so a
+        batch can fold the entries and known words this item did establish."""
+        config = replace(test_config, use_whitelist=True)
+        word = _make_word("食べる")
+
+        # A curation callback makes phase 1 take the with-index parse.
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = ([word], [])
+        mock_services["subtitle_parser"].count_lemmas.return_value = {}
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = build_processor(
+            config=config,
+            presenter=NullPresenter(),
+            word_list_service=self._wls(tmp_path, "食べる"),
+            **services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=lambda words: [])
+
+        assert result.cards_created == 0
+        assert result.whitelist_coverage is not None
+        assert result.whitelist_coverage.missing == {"食べる"}
+        mock_services["anki_service"].create_cards_batch.assert_not_called()
+
+    def test_a_cancelled_run_keeps_the_entries_and_known_words(self, test_config, mock_services, tmp_path):
+        """A curator reject returns a cancelled result built outside build_result;
+        the funnel still stamps what phase 2 established."""
+        config = replace(test_config, use_whitelist=True)
+        taberu = _make_word("食べる")
+        nomu = _make_word("飲む", start_time=5.0)
+
+        # A curation callback makes phase 1 take the with-index parse.
+        mock_services["subtitle_parser"].parse_subtitle_file_with_index.return_value = ([taberu, nomu], [])
+        mock_services["subtitle_parser"].count_lemmas.return_value = {}
+        mock_services["anki_service"].get_existing_vocabulary.return_value = {nomu.mined_form}
+
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = build_processor(
+            config=config,
+            presenter=NullPresenter(),
+            word_list_service=self._wls(tmp_path, "食べる", "飲む"),
+            **services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=lambda words: None)
+
+        assert result.success is False
+        assert result.whitelist_coverage is not None
+        assert result.whitelist_coverage.known == {"飲む"}
+        assert result.whitelist_coverage.missing == {"食べる"}
+
+    def test_a_run_that_failed_after_anki_confirmed_cards_still_counts_them_mined(
+        self, test_config, mock_services, tmp_path
+    ):
+        """Mined is read from Anki's own confirmation lists at the funnel, so a
+        connection drop after the first batch does not turn a carded word into
+        'not mined'."""
+        config = replace(test_config, use_whitelist=True)
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        anki = mock_services["anki_service"]
+
+        def _create_then_drop(card_data, progress_callback=None):
+            anki.last_created_mined_forms = ["食べる"]
+            anki.last_created_lemmas = ["食べる"]
+            anki.last_created_note_ids = [1]
+            raise AnkiConnectionError("connection dropped")
+
+        anki.create_cards_batch.side_effect = _create_then_drop
+
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = build_processor(
+            config=config,
+            presenter=NullPresenter(),
+            word_list_service=self._wls(tmp_path, "食べる", "走る"),
+            **services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.success is False
+        assert result.cards_created == 1
+        assert result.whitelist_coverage is not None
+        assert result.whitelist_coverage.mined == {"食べる"}
+        assert result.whitelist_coverage.missing == {"走る"}
+
+    def test_no_coverage_when_the_whitelist_is_off(self, test_config, mock_services, tmp_path):
+        config = replace(test_config, use_whitelist=False)
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["anki_service"].create_cards_batch.return_value = []
+
+        services = {**mock_services, "word_filter": WordFilterService(config)}
+        processor = build_processor(
+            config=config,
+            presenter=NullPresenter(),
+            word_list_service=self._wls(tmp_path, "食べる"),
+            **services,
+        )
+        result = processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        assert result.whitelist_coverage is None
 
 
 def test_process_episode_does_not_expose_dead_cross_episode_input():

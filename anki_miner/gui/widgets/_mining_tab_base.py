@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import QAbstractButton, QBoxLayout, QCheckBox, QDialog, QSc
 
 from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.presenters import GUIProgressCallback
+from anki_miner.gui.utils import result_copy
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.run_off_thread import join_or_retain, run_off_thread
 from anki_miner.gui.utils.run_options import RunOptionsMixin
@@ -54,6 +55,7 @@ if TYPE_CHECKING:
 
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.gui.controllers.task_registry import TaskRegistry
+    from anki_miner.models.processing import WhitelistCoverage
     from anki_miner.orchestration.episode_processor import EpisodeProcessor
 
 logger = logging.getLogger(__name__)
@@ -278,6 +280,11 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         if self._receipt_accumulator is not None:
             self._receipt_accumulator.record_counts(notes_added=notes_added, failed=failed)
 
+    def _record_receipt_whitelist(self, coverage: object) -> None:
+        """Fold a run-level whitelist coverage a counts-only worker reported."""
+        if self._receipt_accumulator is not None:
+            self._receipt_accumulator.record_whitelist(coverage)
+
     def _mark_receipt_failed(self) -> None:
         """Note a run-level fatal (a preflight refusal, a worker exception)."""
         if self._receipt_accumulator is not None:
@@ -330,6 +337,28 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         # produce a second receipt with a longer clock.
         self._receipt_accumulator = None
         widget.show_receipt(receipt, item_noun=self._receipt_noun)
+        if receipt.whitelist is not None:
+            self._log_whitelist_report(receipt.whitelist)
+
+    def _log_whitelist_report(self, coverage: WhitelistCoverage) -> None:
+        """Put the run-level whitelist line in this screen's Activity Log, once.
+
+        Run-level rather than per item: on a twelve-episode batch a word absent
+        from episode one is usually mined by episode five, so a per-item line
+        would report misses the run went on to fill.
+
+        Written to ``log_widget`` directly rather than through the presenter:
+        only Single and Batch wire the presenter's info/warning signals to
+        their log - the queue screens route them to the window's transient
+        status bar - and this line is the record the user comes back for. A
+        warning when words were left behind, so it is findable among the run's
+        info lines.
+        """
+        log_widget = getattr(self, "log_widget", None)
+        if log_widget is None:
+            return
+        append = log_widget.append_warning if coverage.missing else log_widget.append_info
+        append(result_copy.whitelist_report(coverage))
 
     def _open_run_details(self) -> None:
         """Open the finished run's details, because the user clicked for them.

@@ -21,7 +21,12 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
-from anki_miner.models.processing import CANCELLED_ERROR, ProcessingResult, TerminalOutcome
+from anki_miner.models.processing import (
+    CANCELLED_ERROR,
+    ProcessingResult,
+    TerminalOutcome,
+    WhitelistCoverage,
+)
 from anki_miner.models.reading import ReadingSourceRef
 
 _READING_WORKER = "anki_miner.gui.widgets._reading_mining_base.ReadingQueueWorker"
@@ -180,6 +185,24 @@ class TestListQueueReceipt:
         youtube_tab._on_item_finished(0, _result(4), None, 1)
 
         assert youtube_tab._presenter.show_run_details.called is False
+
+    def test_the_whitelist_line_lands_in_the_screen_log(self, youtube_tab, clock):
+        """The queue screens' presenters route info/warning to the window's
+        transient status bar, not to this log. The report is the record the
+        user comes back for, so it is written to the log directly."""
+        _ready_youtube_item(youtube_tab, "aaa")
+        youtube_tab._on_mine_clicked()
+        result = _result(1)
+        result.whitelist_coverage = WhitelistCoverage(frozenset({"食べる", "走る"}), mined=frozenset({"食べる"}))
+
+        youtube_tab._on_item_finished(0, result, None, 1)
+        clock["t"] += 5
+        youtube_tab._after_run_cleanup()
+
+        assert youtube_tab._receipt_widget.summary_text == (
+            "Mining complete — 1 notes added in 00m 05s · Whitelist: 1 of 2 mined"
+        )
+        assert "Whitelist: 1 of 2 mined. Not mined: 走る." in youtube_tab.log_widget.full_text()
 
     def test_view_details_forwards_the_whole_run(self, youtube_tab, clock):
         _ready_youtube_item(youtube_tab, "aaa")
@@ -396,6 +419,27 @@ def batch_tab(qtbot, test_config):
 
 
 class TestBatchReceipt:
+    def test_the_quick_path_reports_the_whitelist_once_at_run_end(self, batch_tab, clock):
+        entries = frozenset({"食べる", "走る"})
+        first = _result(2)
+        first.whitelist_coverage = WhitelistCoverage(entries, mined=frozenset({"食べる"}))
+        second = _result(1)
+        second.whitelist_coverage = WhitelistCoverage(entries, known=frozenset({"食べる"}))
+        with patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread", MagicMock()):
+            batch_tab._start_processing_with_pairs([object(), object()])
+        batch_tab._on_processing_finished([first, second])
+        clock["t"] += 30
+        batch_tab._on_run_thread_finished()
+
+        assert batch_tab._receipt_widget.summary_text == (
+            "Mining complete — 2 episodes, 3 notes added in 00m 30s · Whitelist: 1 of 2 mined"
+        )
+        line = "Whitelist: 1 of 2 mined. Not mined: 走る."
+        assert line in batch_tab.log_widget.full_text()
+        # Sealed once: a second terminal signal must not log the line again.
+        batch_tab._on_run_thread_finished()
+        assert batch_tab.log_widget.full_text().count(line) == 1
+
     def test_the_quick_path_ends_in_a_receipt_and_no_message_box(self, batch_tab, clock):
         with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox") as message_box:
             with patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread", MagicMock()):
@@ -456,6 +500,21 @@ class TestBatchReceipt:
         assert batch_tab._receipt_widget.receipt.outcome is TerminalOutcome.PARTIAL
         assert task_registry.snapshot(batch_tab.TASK_ID).outcome is TaskOutcome.FAILED
         message_box.information.assert_not_called()
+
+    def test_the_queue_path_folds_the_worker_whitelist_into_the_receipt(self, batch_tab, clock, tmp_path):
+        batch_tab.batch_queue.add_item(tmp_path, tmp_path, "Show A", 0.0)
+        coverage = WhitelistCoverage(frozenset({"食べる", "走る"}), mined=frozenset({"食べる"}))
+        with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", MagicMock()):
+            batch_tab._start_queue_worker()
+        batch_tab._on_item_completed(batch_tab.batch_queue.get_all_items()[0].id, 40)
+        clock["t"] += 65
+        batch_tab._on_queue_finished(40, coverage)
+        batch_tab._on_run_thread_finished()
+
+        receipt = batch_tab._receipt_widget
+        assert receipt.summary_text == "Mining complete — 40 notes added in 01m 05s · Whitelist: 1 of 2 mined"
+        assert receipt.copy_words_button.isVisibleTo(receipt) is True
+        assert "Whitelist: 1 of 2 mined. Not mined: 走る." in batch_tab.log_widget.full_text()
 
     def test_a_cancelled_queue_run_opens_no_dialog(self, batch_tab, clock, tmp_path):
         batch_tab.batch_queue.add_item(tmp_path, tmp_path, "Show A", 0.0)

@@ -5064,6 +5064,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>复制摘要</translation>
     </message>
     <message>
+        <source>Copy unmined words</source>
+        <translation>复制未挖取的单词</translation>
+    </message>
+    <message>
+        <source>Whitelist words that got no card this run, one per line</source>
+        <translation>本次运行中未创建卡片的白名单单词，每行一个</translation>
+    </message>
+    <message>
         <source>Dismiss</source>
         <translation>关闭</translation>
     </message>
@@ -7488,6 +7496,22 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>(asleep time excluded)</source>
         <translation>（不含休眠时间）</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined</source>
+        <translation>白名单：已挖取 %1/%2</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined.</source>
+        <translation>白名单：已挖取 %1/%2。</translation>
+    </message>
+    <message>
+        <source>Not mined: %1.</source>
+        <translation>未挖取：%1。</translation>
+    </message>
+    <message>
+        <source>Already known: %1.</source>
+        <translation>已知：%1。</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>

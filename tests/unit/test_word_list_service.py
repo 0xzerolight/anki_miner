@@ -179,3 +179,23 @@ class TestReadWordFileException:
             pytest.raises(MemoryError, match="allocation failed"),
         ):
             service.load()
+
+
+class TestWhitelistEntries:
+    """Tests for whitelist_entries (the run-end coverage report's source)."""
+
+    def test_exposes_every_loaded_entry(self, tmp_path):
+        """Should return each entry, comments and blanks skipped."""
+        wl = tmp_path / "whitelist.txt"
+        wl.write_text("新しい\n# comment\n古い\n\n", encoding="utf-8")
+        service = WordListService(whitelist_path=wl)
+        service.load()
+
+        assert service.whitelist_entries() == {"新しい", "古い"}
+
+    def test_is_empty_without_a_whitelist(self):
+        """Should be empty when no whitelist file was configured."""
+        service = WordListService()
+        service.load()
+
+        assert service.whitelist_entries() == frozenset()

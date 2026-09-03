@@ -5064,6 +5064,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>概要をコピー</translation>
     </message>
     <message>
+        <source>Copy unmined words</source>
+        <translation>マイニングされなかった単語をコピー</translation>
+    </message>
+    <message>
+        <source>Whitelist words that got no card this run, one per line</source>
+        <translation>今回の実行でカードが作成されなかったホワイトリストの単語（1 行に 1 つ）</translation>
+    </message>
+    <message>
         <source>Dismiss</source>
         <translation>閉じる</translation>
     </message>
@@ -7488,6 +7496,22 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>(asleep time excluded)</source>
         <translation>（スリープ時間を除く）</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined</source>
+        <translation>ホワイトリスト: %2 件中 %1 件マイニング済み</translation>
+    </message>
+    <message>
+        <source>Whitelist: %1 of %2 mined.</source>
+        <translation>ホワイトリスト: %2 件中 %1 件マイニング済み。</translation>
+    </message>
+    <message>
+        <source>Not mined: %1.</source>
+        <translation>マイニングされなかった単語: %1。</translation>
+    </message>
+    <message>
+        <source>Already known: %1.</source>
+        <translation>既知単語: %1。</translation>
     </message>
 </context><context>
     <name>ResultsDialog</name>

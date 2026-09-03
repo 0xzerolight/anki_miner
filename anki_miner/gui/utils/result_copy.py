@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from PyQt6.QtCore import QCoreApplication
 
-from anki_miner.models.processing import TerminalOutcome
+from anki_miner.models.processing import TerminalOutcome, WhitelistCoverage
 from anki_miner.utils.i18n import tr_format
 
 
@@ -152,3 +152,52 @@ def run_summary(
         # an honest 40 minutes and an unexplained missing hour.
         line = f"{line} {QCoreApplication.translate('ResultCopy', '(asleep time excluded)')}"
     return line
+
+
+def whitelist_summary(mined: int, total: int) -> str:
+    """The receipt's whitelist clause: ``"Whitelist: 14 of 20 mined"``.
+
+    No noun, so no plural: "1 of 1 mined" reads correctly and no catalog needs
+    a numerus pair.
+
+    Args:
+        mined: Whitelist entries this run made a card for.
+        total: Entries on the whitelist.
+    """
+    return tr_format(QCoreApplication.translate("ResultCopy", "Whitelist: %1 of %2 mined"), mined, total)
+
+
+def whitelist_report(coverage: WhitelistCoverage) -> str:
+    """The Activity Log's one run-level whitelist line.
+
+    Every entry is named, not a preview: the list is the deliverable - it is
+    what the user feeds the next run - and a whitelist is the user's own
+    hand-written file, so its length is theirs. Entries sort by code point,
+    which is at least stable between runs.
+
+    Args:
+        coverage: The run's folded whitelist coverage.
+    """
+    # A full sentence of its own, not the receipt clause with a "." bolted on:
+    # appending an ASCII stop to a translated string puts a half-width period
+    # inside CJK text, where the sibling sentences below end in a full-width
+    # one. The English renders identically either way; the catalogs do not.
+    line = tr_format(
+        QCoreApplication.translate("ResultCopy", "Whitelist: %1 of %2 mined."),
+        len(coverage.mined),
+        len(coverage.entries),
+    )
+    if coverage.missing:
+        line = f"{line} " + tr_format(
+            QCoreApplication.translate("ResultCopy", "Not mined: %1."), ", ".join(sorted(coverage.missing))
+        )
+    if coverage.known:
+        line = f"{line} " + tr_format(
+            QCoreApplication.translate("ResultCopy", "Already known: %1."), ", ".join(sorted(coverage.known))
+        )
+    return line
+
+
+def whitelist_unmined_text(coverage: WhitelistCoverage) -> str:
+    """The clipboard payload: one unmined entry per line, ready to be the next whitelist file."""
+    return "\n".join(sorted(coverage.missing))
