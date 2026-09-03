@@ -87,15 +87,20 @@ class _FakeService:
         cancel_on_condense: bool = False,
         extract_returns: bool = True,
         condense_failure: FfmpegStepFailure | None = None,
+        concat_result: bool = True,
+        concat_failure: FfmpegStepFailure | None = None,
     ) -> None:
         self._condense_result = condense_result
         self._condense_failure = condense_failure
+        self._concat_result = concat_result
+        self._concat_failure = concat_failure
         self._encoder_error = encoder_error
         self._filter_error = filter_error
         self._cancel_on_condense = cancel_on_condense
         self._extract_returns = extract_returns
         self.condense_calls: list[dict] = []
         self.extract_calls: list[dict] = []
+        self.concat_calls: list[dict] = []
 
     def extract_embedded_subtitle(self, video, stream, out_dir, cancel_event=None):
         self.extract_calls.append({"video": video, "stream": stream, "out_dir": out_dir})
@@ -113,6 +118,7 @@ class _FakeService:
         *,
         audio_track_override=None,
         bitrate_kbps=96,
+        uniform_layout=False,
         progress_cb=None,
         cancel_event=None,
     ):
@@ -123,6 +129,7 @@ class _FakeService:
                 "out_audio": out_audio,
                 "audio_track_override": audio_track_override,
                 "bitrate_kbps": bitrate_kbps,
+                "uniform_layout": uniform_layout,
             }
         )
         if self._encoder_error:
@@ -138,6 +145,15 @@ class _FakeService:
             Path(out_audio).write_bytes(b"AUDIO")
             return True, None
         return False, self._condense_failure
+
+    def concat(self, parts, out_audio, *, total_ms, progress_cb=None, cancel_event=None):
+        self.concat_calls.append({"parts": list(parts), "out_audio": out_audio, "total_ms": total_ms})
+        if progress_cb is not None:
+            progress_cb(50)
+        if self._concat_result:
+            Path(out_audio).write_bytes(b"MERGED")
+            return True, None
+        return False, self._concat_failure
 
 
 def _make_worker(items, config, *, service=None, **kwargs) -> CondenseWorker:

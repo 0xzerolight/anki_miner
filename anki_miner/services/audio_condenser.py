@@ -49,7 +49,11 @@ from anki_miner.services.asr.srt_writer import segments_to_srt
 from anki_miner.services.audio_tagger import TaggingError, TrackMetadata, tag_audio_file
 from anki_miner.services.media_extractor import MediaExtractorService
 from anki_miner.utils.atomic_io import atomic_write_path
-from anki_miner.utils.audio_track_detector import list_subtitle_streams, matches_language_tag
+from anki_miner.utils.audio_track_detector import (
+    get_media_duration_seconds,
+    list_subtitle_streams,
+    matches_language_tag,
+)
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.file_pairing import find_sibling_subtitle, resolve_output_path
 from anki_miner.utils.subprocess_utils import no_window_kwargs
@@ -924,6 +928,22 @@ class CondenseResult:
     sidecar_error: str | None = None
     failure_reason: str | None = None
     tag_error: str | None = None
+    #: This file's own condensed timeline, populated only when a caller asks
+    #: (``collect_events``) — a merge run needs it to build one season-long
+    #: sidecar. Left empty by default, so result equality is unchanged.
+    condensed_events: tuple[Event, ...] = ()
+    #: Interval-arithmetic length of that timeline in ms — the fallback offset
+    #: when the written part cannot be probed.
+    condensed_duration_ms: int = 0
+
+
+@dataclass(frozen=True)
+class CondensedPart:
+    """One finished part of a merge run: its staged audio and its own timeline."""
+
+    audio: Path
+    events: tuple[Event, ...]
+    duration_ms: int
 
 
 def condense_one(
@@ -940,6 +960,8 @@ def condense_one(
     audio_track_override: int | None = None,
     subtitle_track_override: int | None = None,
     write_subs: bool = False,
+    uniform_layout: bool = False,
+    collect_events: bool = False,
     metadata: TrackMetadata | None = None,
     progress_cb: Callable[[int], None] | None = None,
     cancel_event: threading.Event | None = None,
@@ -986,6 +1008,7 @@ def condense_one(
             out_audio,
             audio_track_override=audio_track_override,
             bitrate_kbps=bitrate_kbps,
+            uniform_layout=uniform_layout,
             progress_cb=progress_cb,
             cancel_event=cancel_event,
         )
@@ -997,10 +1020,16 @@ def condense_one(
                 failure_reason=step_failure.summary() if step_failure is not None else None,
             )
 
-        sidecar_error = _write_condensed_subs(filtered, periods, out_audio) if write_subs else None
+        condensed = map_events_to_condensed(filtered, periods)
+        sidecar_error = _write_condensed_subs(condensed, out_audio) if write_subs else None
         tag_error = _apply_tags(out_audio, metadata) if metadata is not None else None
         return CondenseResult(
-            CondenseStatus.SUCCESS, out_audio=out_audio, sidecar_error=sidecar_error, tag_error=tag_error
+            CondenseStatus.SUCCESS,
+            out_audio=out_audio,
+            sidecar_error=sidecar_error,
+            tag_error=tag_error,
+            condensed_events=tuple(condensed) if collect_events else (),
+            condensed_duration_ms=sum(end - start for start, end in periods) if collect_events else 0,
         )
     finally:
         # Delete the extracted embedded-subtitle temp file (external / sibling
@@ -1096,16 +1125,90 @@ def _pick_subtitle_stream(
     )
 
 
-def _write_condensed_subs(filtered_events: list[Event], periods: list[Period], out_audio: Path) -> str | None:
-    """Write condensed SRT + LRC sidecars beside *out_audio*.
+def _write_merged_subs(parts: Sequence[CondensedPart], out_audio: Path, config: AnkiMinerConfig) -> str | None:
+    """Write one SRT + LRC covering every part, on the merged timeline.
 
-    Consumes the **filtered, shifted** events (D4) so the sidecars show only the
-    audible dialogue. Returns None on success, or the raw exception string when a
-    writer fails — the audio is already written, so this is non-fatal (the GUI
-    worker wraps the string in a translated warning).
+    Each part's cues sit on its OWN condensed timeline, so they shift by the
+    length of everything before them. That offset is the written part's probed
+    duration, not its interval arithmetic: the encoder pads each part out to a
+    whole frame (and mp3 adds its own delay), so summing computed durations
+    drifts tens of milliseconds per episode and a season ends about a second
+    out. The computed length is the fallback when the probe cannot answer.
+
+    Same non-fatal contract as :func:`_write_condensed_subs`: the merged audio
+    is already on disk, so a failure here is returned as a string, never raised.
     """
     try:
-        condensed = map_events_to_condensed(filtered_events, periods)
+        merged: list[Event] = []
+        offset_ms = 0
+        ffprobe = resolve_ffprobe(config)
+        for part in parts:
+            merged.extend((start + offset_ms, end + offset_ms, text) for start, end, text in part.events)
+            probed = get_media_duration_seconds(part.audio, ffprobe)
+            offset_ms += int(round(probed * 1000)) if probed is not None else part.duration_ms
+        srt_path = resolve_output_path(out_audio.parent, f"{out_audio.stem}.srt")
+        lrc_path = resolve_output_path(out_audio.parent, f"{out_audio.stem}.lrc")
+        write_condensed_srt(merged, srt_path)
+        write_condensed_lrc(merged, lrc_path)
+        return None
+    except Exception as exc:  # noqa: BLE001 — a sidecar failure must never fail written audio
+        logger.warning("merge_condensed: merged subtitle write failed for %s: %s", out_audio, exc)
+        return str(exc)
+
+
+def merge_condensed(
+    service: AudioCondenserService,
+    config: AnkiMinerConfig,
+    parts: Sequence[CondensedPart],
+    out_audio: Path,
+    *,
+    write_subs: bool = False,
+    metadata: TrackMetadata | None = None,
+    progress_cb: Callable[[int], None] | None = None,
+    cancel_event: threading.Event | None = None,
+) -> CondenseResult:
+    """Join *parts* into one *out_audio*, with one merged sidecar pair.
+
+    The merge-run sibling of :func:`condense_one`, returning the same
+    :class:`CondenseResult` so the GUI worker maps both through one code path.
+    An empty *parts* list is NO_DIALOGUE: every file in the run failed, so
+    there is nothing to merge and ffmpeg is never launched.
+    """
+    if not parts:
+        return CondenseResult(CondenseStatus.NO_DIALOGUE)
+
+    total_ms = sum(part.duration_ms for part in parts)
+    ok, step_failure = service.concat(
+        [part.audio for part in parts],
+        out_audio,
+        total_ms=total_ms,
+        progress_cb=progress_cb,
+        cancel_event=cancel_event,
+    )
+    if not ok:
+        if _is_cancelled(cancel_event):
+            return CondenseResult(CondenseStatus.CANCELLED)
+        return CondenseResult(
+            CondenseStatus.CONDENSE_FAILED,
+            failure_reason=step_failure.summary() if step_failure is not None else None,
+        )
+
+    sidecar_error = _write_merged_subs(parts, out_audio, config) if write_subs else None
+    tag_error = _apply_tags(out_audio, metadata) if metadata is not None else None
+    return CondenseResult(CondenseStatus.SUCCESS, out_audio=out_audio, sidecar_error=sidecar_error, tag_error=tag_error)
+
+
+def _write_condensed_subs(condensed: list[Event], out_audio: Path) -> str | None:
+    """Write condensed SRT + LRC sidecars beside *out_audio*.
+
+    Consumes events already mapped onto the condensed timeline by
+    :func:`map_events_to_condensed` from the **filtered, shifted** events (D4),
+    so the sidecars show only the audible dialogue. Returns None on success, or
+    the raw exception string when a writer fails — the audio is already written,
+    so this is non-fatal (the GUI worker wraps the string in a translated
+    warning).
+    """
+    try:
         srt_path = resolve_output_path(out_audio.parent, f"{out_audio.stem}.srt")
         lrc_path = resolve_output_path(out_audio.parent, f"{out_audio.stem}.lrc")
         write_condensed_srt(condensed, srt_path)

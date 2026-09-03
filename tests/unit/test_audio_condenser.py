@@ -18,8 +18,10 @@ from unittest.mock import MagicMock, patch
 import pysubs2
 import pytest
 
+from anki_miner.services import audio_condenser
 from anki_miner.services.audio_condenser import (
     AudioCondenserService,
+    CondensedPart,
     CondenseResult,
     CondenseStatus,
     EncoderUnavailableError,
@@ -32,6 +34,7 @@ from anki_miner.services.audio_condenser import (
     filter_lines,
     load_subtitle_events,
     map_events_to_condensed,
+    merge_condensed,
     shift_events,
     write_condensed_lrc,
     write_condensed_srt,
@@ -1335,14 +1338,19 @@ class _StubCondenser:
         cancel_on_condense: bool = False,
         extract_returns: bool = True,
         condense_failure: FfmpegStepFailure | None = None,
+        concat_result: bool = True,
+        concat_failure: FfmpegStepFailure | None = None,
     ) -> None:
         self._condense_result = condense_result
         self._condense_failure = condense_failure
+        self._concat_result = concat_result
+        self._concat_failure = concat_failure
         self._encoder_error = encoder_error
         self._cancel_on_condense = cancel_on_condense
         self._extract_returns = extract_returns
         self.condense_calls: list[dict] = []
         self.extract_calls: list[dict] = []
+        self.concat_calls: list[dict] = []
 
     def extract_embedded_subtitle(self, video, stream, out_dir, cancel_event=None):
         self.extract_calls.append({"video": video, "stream": stream, "out_dir": out_dir})
@@ -1360,10 +1368,18 @@ class _StubCondenser:
         *,
         audio_track_override=None,
         bitrate_kbps=96,
+        uniform_layout=False,
         progress_cb=None,
         cancel_event=None,
     ):
-        self.condense_calls.append({"media": media, "periods": list(periods), "out_audio": out_audio})
+        self.condense_calls.append(
+            {
+                "media": media,
+                "periods": list(periods),
+                "out_audio": out_audio,
+                "uniform_layout": uniform_layout,
+            }
+        )
         if self._encoder_error:
             raise EncoderUnavailableError("ffmpeg encoder 'libmp3lame' is unavailable")
         if self._cancel_on_condense and cancel_event is not None:
@@ -1375,6 +1391,15 @@ class _StubCondenser:
             Path(out_audio).write_bytes(b"AUDIO")
             return True, None
         return False, self._condense_failure
+
+    def concat(self, parts, out_audio, *, total_ms, progress_cb=None, cancel_event=None):
+        self.concat_calls.append({"parts": list(parts), "out_audio": out_audio, "total_ms": total_ms})
+        if progress_cb is not None:
+            progress_cb(50)
+        if self._concat_result:
+            Path(out_audio).write_bytes(b"MERGED")
+            return True, None
+        return False, self._concat_failure
 
 
 def test_condense_one_external_sub_success(tmp_path):
@@ -1652,3 +1677,117 @@ def test_condense_one_not_tagged_on_condense_failure(tmp_path, monkeypatch):
 
     assert result.status is CondenseStatus.CONDENSE_FAILED
     tag.assert_not_called()
+
+
+# --- merge_condensed: one season-long output (F5) --------------------------
+
+
+def test_condense_one_collects_the_condensed_timeline(tmp_path):
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "ep01.srt", [(1000, 2000, "hi"), (5000, 6000, "world")])
+    svc = _StubCondenser()
+
+    result = condense_one(svc, _make_config(tmp_path), media, sub, tmp_path / "out.mp3", collect_events=True)
+
+    # periods (500, 2500) and (4500, 6500) -> 4000 ms of condensed audio.
+    assert result.condensed_duration_ms == 4000
+    assert result.condensed_events == ((500, 1500, "hi"), (2500, 3500, "world"))
+
+
+def test_condense_one_forwards_uniform_layout(tmp_path):
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "ep01.srt", [(1000, 2000, "hi")])
+    svc = _StubCondenser()
+
+    condense_one(svc, _make_config(tmp_path), media, sub, tmp_path / "out.mp3", uniform_layout=True)
+
+    assert svc.condense_calls[0]["uniform_layout"] is True
+
+
+def test_condense_one_default_result_has_no_timeline(tmp_path):
+    media = tmp_path / "ep01.mkv"
+    media.write_bytes(b"")
+    sub = _write_srt(tmp_path / "ep01.srt", [(1000, 2000, "hi")])
+    out = tmp_path / "out.mp3"
+
+    result = condense_one(_StubCondenser(), _make_config(tmp_path), media, sub, out)
+
+    assert result == CondenseResult(CondenseStatus.SUCCESS, out_audio=out)
+
+
+def test_merge_condensed_shifts_each_part_by_the_probed_duration(tmp_path, monkeypatch):
+    parts = [
+        CondensedPart(tmp_path / "0000.mp3", ((0, 1000, "a"),), 1000),
+        CondensedPart(tmp_path / "0001.mp3", ((0, 1000, "b"),), 1000),
+    ]
+    # The first part is 1050 ms on disk (encoder padding); the second cannot be probed.
+    durations = {parts[0].audio: 1.05, parts[1].audio: None}
+    monkeypatch.setattr(audio_condenser, "get_media_duration_seconds", lambda p, _c: durations[p])
+    monkeypatch.setattr(audio_condenser, "resolve_ffprobe", lambda _cfg: "ffprobe")
+    written: dict = {}
+    monkeypatch.setattr(audio_condenser, "write_condensed_srt", lambda ev, p: written.setdefault("srt", (list(ev), p)))
+    monkeypatch.setattr(audio_condenser, "write_condensed_lrc", lambda ev, p: written.setdefault("lrc", (list(ev), p)))
+    svc = _StubCondenser()
+    out = tmp_path / "season.mp3"
+
+    result = merge_condensed(svc, _make_config(tmp_path), parts, out, write_subs=True)
+
+    assert result == CondenseResult(CondenseStatus.SUCCESS, out_audio=out)
+    assert written["srt"][0] == [(0, 1000, "a"), (1050, 2050, "b")]
+    assert written["srt"][1] == tmp_path / "season.srt"
+    assert written["lrc"][1] == tmp_path / "season.lrc"
+    assert svc.concat_calls[0]["total_ms"] == 2000
+    assert svc.concat_calls[0]["parts"] == [parts[0].audio, parts[1].audio]
+
+
+def test_merge_condensed_without_write_subs_writes_no_sidecar(tmp_path):
+    parts = [CondensedPart(tmp_path / "0000.mp3", ((0, 1000, "a"),), 1000)]
+
+    merge_condensed(_StubCondenser(), _make_config(tmp_path), parts, tmp_path / "season.mp3")
+
+    assert not (tmp_path / "season.srt").exists()
+    assert not (tmp_path / "season.lrc").exists()
+
+
+def test_merge_condensed_with_no_parts_reports_no_dialogue(tmp_path):
+    svc = _StubCondenser()
+
+    result = merge_condensed(svc, _make_config(tmp_path), [], tmp_path / "season.mp3")
+
+    assert result == CondenseResult(CondenseStatus.NO_DIALOGUE)
+    assert svc.concat_calls == []
+
+
+def test_merge_condensed_cancel_reports_cancelled(tmp_path):
+    cancel = threading.Event()
+    cancel.set()
+    svc = _StubCondenser(concat_result=False)
+    parts = [CondensedPart(tmp_path / "0000.mp3", ((0, 1000, "a"),), 1000)]
+
+    result = merge_condensed(svc, _make_config(tmp_path), parts, tmp_path / "season.mp3", cancel_event=cancel)
+
+    assert result == CondenseResult(CondenseStatus.CANCELLED)
+
+
+def test_merge_condensed_failure_carries_the_ffmpeg_reason(tmp_path):
+    svc = _StubCondenser(concat_result=False, concat_failure=FfmpegStepFailure(1, False, "boom"))
+    parts = [CondensedPart(tmp_path / "0000.mp3", ((0, 1000, "a"),), 1000)]
+
+    result = merge_condensed(svc, _make_config(tmp_path), parts, tmp_path / "season.mp3")
+
+    assert result.status is CondenseStatus.CONDENSE_FAILED
+    assert "boom" in (result.failure_reason or "")
+
+
+def test_merge_condensed_tags_the_merged_file(tmp_path, monkeypatch):
+    tagged: dict = {}
+    monkeypatch.setattr(audio_condenser, "tag_audio_file", lambda path, meta: tagged.update(path=path, meta=meta))
+    parts = [CondensedPart(tmp_path / "0000.mp3", ((0, 1000, "a"),), 1000)]
+    meta = TrackMetadata(title="Season 1", album="Season 1")
+
+    result = merge_condensed(_StubCondenser(), _make_config(tmp_path), parts, tmp_path / "season.mp3", metadata=meta)
+
+    assert result.tag_error is None
+    assert tagged == {"path": tmp_path / "season.mp3", "meta": meta}
