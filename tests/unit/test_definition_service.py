@@ -2171,3 +2171,129 @@ class TestRedirectFallsThroughChain:
         finally:
             first.close()
             second.close()
+
+
+class TestDefinitionsBatchReceipt:
+    """Once-per-batch receipt plus provider-attributed failure lines.
+
+    Diagnoses the "definitions missing / 0 cards" report: the receipt names the
+    chain that was actually walked, how many words each provider resolved, and
+    which words nobody could resolve.
+    """
+
+    def _slot_provider(self, name, dict_id, db_path):
+        p = MagicMock(spec=["name", "is_online", "is_available", "lookup", "load", "close", "dict_id", "_db_path"])
+        p.name = name
+        p.is_online = False
+        p.is_available.return_value = True
+        p.load.return_value = True
+        p.lookup.return_value = None
+        p.dict_id = dict_id
+        p._db_path = db_path
+        return p
+
+    def test_batch_receipt_counts_chain_and_hits(self, test_config, caplog):
+        import logging
+
+        ok = make_provider("stubA")
+        ok.lookup.side_effect = lambda w: "hit-a" if w == "a" else None
+        boom = make_provider("stubB")
+        boom.lookup.side_effect = RuntimeError("kaboom")
+        service = DefinitionService(test_config, providers=[ok, boom])
+
+        with caplog.at_level(logging.DEBUG, logger="anki_miner.services.definition_service"):
+            results = service.get_definitions_batch([("a", None), ("b", None), ("c", None)])
+
+        assert results == ["hit-a", None, None]
+        receipts = [r for r in caplog.records if r.getMessage().startswith("Definitions batch:")]
+        assert len(receipts) == 1
+        assert receipts[0].levelno == logging.INFO
+        assert "requested=3 resolved=1 missed=2" in receipts[0].getMessage()
+        assert "chain=stubA:-:y,stubB:-:y" in receipts[0].getMessage()
+        assert "hits=stubA:1" in receipts[0].getMessage()
+
+        missed = [r for r in caplog.records if r.getMessage().startswith("Definitions missed:")]
+        assert len(missed) == 1
+        assert missed[0].levelno == logging.DEBUG
+        assert missed[0].getMessage() == "Definitions missed: words=b,c"
+
+    def test_receipt_marks_unavailable_provider_in_chain(self, test_config, caplog):
+        import logging
+
+        off = make_provider("stubOff", available=False)
+        service = DefinitionService(test_config, providers=[off])
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.services.definition_service"):
+            service.get_definitions_batch([("a", None)])
+
+        receipts = [r.getMessage() for r in caplog.records if r.getMessage().startswith("Definitions batch:")]
+        assert receipts == ["Definitions batch: requested=1 resolved=0 missed=1 chain=stubOff:-:n hits=-"]
+
+    def test_no_missed_line_when_every_word_resolves(self, test_config, caplog):
+        import logging
+
+        ok = make_provider("stubA", return_value="hit")
+        service = DefinitionService(test_config, providers=[ok])
+
+        with caplog.at_level(logging.DEBUG, logger="anki_miner.services.definition_service"):
+            service.get_definitions_batch([("a", None)])
+
+        assert not [r for r in caplog.records if r.getMessage().startswith("Definitions missed:")]
+
+    def test_raising_provider_warning_names_slot_and_keeps_traceback(self, test_config, caplog, tmp_path):
+        import logging
+
+        db = tmp_path / "jmdict-english" / "index.sqlite"
+        p = self._slot_provider("Bad", "jmdict-english", db)
+        p.lookup.side_effect = RuntimeError("kaboom")
+        service = DefinitionService(test_config, providers=[p])
+
+        with caplog.at_level(logging.WARNING, logger="anki_miner.services.definition_service"):
+            service.get_definitions_batch([("w", None)])
+
+        failures = [r for r in caplog.records if "raised during lookup" in r.getMessage()]
+        assert len(failures) == 1
+        message = failures[0].getMessage()
+        assert "Provider 'Bad'" in message
+        assert "of 'w'" in message
+        assert "dict_id=jmdict-english" in message
+        assert f"db={db}" in message
+        assert "RuntimeError: kaboom" in message
+        assert failures[0].exc_info is not None
+
+    def test_typed_exception_logs_without_traceback(self, test_config, caplog):
+        import logging
+
+        from anki_miner.exceptions import AnkiMinerException
+
+        p = make_provider("Typed")
+        p.lookup.side_effect = AnkiMinerException("no index")
+        service = DefinitionService(test_config, providers=[p])
+
+        with caplog.at_level(logging.WARNING, logger="anki_miner.services.definition_service"):
+            service.get_definitions_batch([("w", None)])
+
+        failures = [r for r in caplog.records if "raised during lookup" in r.getMessage()]
+        assert len(failures) == 1
+        assert failures[0].exc_info is None
+        assert "AnkiMinerException: no index" in failures[0].getMessage()
+        assert "dict_id=-" in failures[0].getMessage()
+
+    def test_batch_provider_failure_names_slot(self, test_config, caplog, tmp_path):
+        import logging
+
+        db = tmp_path / "slot" / "index.sqlite"
+        p = make_batch_provider("BatchBad")
+        p.dict_id = "slot"
+        p._db_path = db
+        p.lookup_many.side_effect = RuntimeError("batch boom")
+        service = DefinitionService(test_config, providers=[p])
+
+        with caplog.at_level(logging.WARNING, logger="anki_miner.services.definition_service"):
+            service.get_definitions_batch([("a", None)])
+
+        failures = [r for r in caplog.records if "raised during lookup_many" in r.getMessage()]
+        assert len(failures) == 1
+        assert "dict_id=slot" in failures[0].getMessage()
+        assert f"db={db}" in failures[0].getMessage()
+        assert "RuntimeError: batch boom" in failures[0].getMessage()

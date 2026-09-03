@@ -90,9 +90,14 @@ class JishoProvider:
                 self._misses += 1
                 if self._failures_logged < _MAX_LOGGED_FAILURES:
                     self._failures_logged += 1
-                    logger.warning(
-                        "Jisho request failed: stage=http status=%d",
-                        response.status_code,
+                    log_summary(
+                        logger,
+                        "Jisho request failed",
+                        level=logging.WARNING,
+                        stage="http",
+                        word=word,
+                        url=self._api_url,
+                        status=response.status_code,
                     )
                 return None
 
@@ -141,22 +146,34 @@ class JishoProvider:
 
         except requests.exceptions.Timeout as exc:
             self._misses += 1
-            if self._failures_logged < _MAX_LOGGED_FAILURES:
-                self._failures_logged += 1
-                logger.warning(
-                    "Jisho request failed: stage=request exc=%s",
-                    type(exc).__name__,
-                )
+            self._log_failure("timeout", word, exc)
             return None
         except (requests.RequestException, ValueError, KeyError) as exc:
             self._misses += 1
-            if self._failures_logged < _MAX_LOGGED_FAILURES:
-                self._failures_logged += 1
-                logger.warning(
-                    "Jisho request failed: stage=request exc=%s",
-                    type(exc).__name__,
-                )
+            self._log_failure("request", word, exc)
             return None
+
+    def _log_failure(self, stage: str, word: str, exc: Exception) -> None:
+        """Name the word and the endpoint behind one capped failure line.
+
+        The exception type alone cannot separate "this one word 404s" from "the
+        endpoint is unreachable", and a mistyped/overridden ``api_url`` looks
+        identical to a network outage without the URL on the record. The
+        message text is kept verbatim: it carries the host and the OS error.
+        """
+        if self._failures_logged >= _MAX_LOGGED_FAILURES:
+            return
+        self._failures_logged += 1
+        log_summary(
+            logger,
+            "Jisho request failed",
+            level=logging.WARNING,
+            stage=stage,
+            word=word,
+            url=self._api_url,
+            exc=type(exc).__name__,
+            detail=str(exc),
+        )
 
     def close(self) -> None:
         """Emit the once-per-run online-fallback summary."""

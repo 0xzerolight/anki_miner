@@ -212,3 +212,60 @@ class TestJishoProvider:
 def test_jisho_provider_is_online():
     provider = JishoProvider()
     assert provider.is_online is True
+
+
+class TestJishoFailureLogging:
+    """A failing online fallback must name the word and the endpoint it hit."""
+
+    _LOGGER = "anki_miner.services.dictionary.providers.jisho_provider"
+
+    def test_request_exception_warning_carries_word_url_and_message(self, caplog):
+        import logging
+
+        provider = JishoProvider(delay=0)
+        with (
+            caplog.at_level(logging.WARNING, logger=self._LOGGER),
+            patch("requests.get", side_effect=requests.exceptions.Timeout("timed out")),
+        ):
+            assert provider.lookup("食べる") is None
+
+        messages = [r.getMessage() for r in caplog.records]
+        assert len(messages) == 1
+        assert "Jisho request failed:" in messages[0]
+        assert "word=食べる" in messages[0]
+        assert "url=https://jisho.org/api/v1/search/words" in messages[0]
+        assert "exc=Timeout" in messages[0]
+        assert "timed out" in messages[0]
+
+    def test_http_status_warning_carries_word_url_and_status(self, caplog):
+        import logging
+
+        mock_response = MagicMock()
+        mock_response.status_code = 503
+
+        provider = JishoProvider(delay=0)
+        with (
+            caplog.at_level(logging.WARNING, logger=self._LOGGER),
+            patch("requests.get", return_value=mock_response),
+        ):
+            assert provider.lookup("食べる") is None
+
+        messages = [r.getMessage() for r in caplog.records]
+        assert len(messages) == 1
+        assert "stage=http" in messages[0]
+        assert "word=食べる" in messages[0]
+        assert "url=https://jisho.org/api/v1/search/words" in messages[0]
+        assert "status=503" in messages[0]
+
+    def test_individual_failure_logging_stays_capped(self, caplog):
+        import logging
+
+        provider = JishoProvider(delay=0)
+        with (
+            caplog.at_level(logging.WARNING, logger=self._LOGGER),
+            patch("requests.get", side_effect=requests.exceptions.ConnectionError("down")),
+        ):
+            for word in ("a", "b", "c", "d", "e"):
+                assert provider.lookup(word) is None
+
+        assert len([r for r in caplog.records if "Jisho request failed:" in r.getMessage()]) == 3
