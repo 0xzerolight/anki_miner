@@ -9426,6 +9426,26 @@ Aufsteigend sortieren, um i+1-Zeilen zuerst anzuzeigen – jene, deren einziges 
         <translation>Den ursprünglichen einzeiligen Satz und Clipbereich dieses Wortes wiederherstellen.</translation>
     </message>
     <message>
+        <source>Use current frame</source>
+        <translation>Aktuelles Standbild verwenden</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation>Standbild zurücksetzen</translation>
+    </message>
+    <message>
+        <source>Take this word's screenshot from the frame the player is showing, instead of the configured offset from the line's start.</source>
+        <translation>Den Screenshot dieses Wortes aus dem Standbild nehmen, das der Player gerade zeigt, statt vom konfigurierten Versatz ab dem Beginn der Zeile.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame.</source>
+        <translation>Das standardmäßige Screenshot-Standbild dieses Wortes wiederherstellen.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame (now %1 s).</source>
+        <translation>Das standardmäßige Screenshot-Standbild dieses Wortes wiederherstellen (jetzt %1 s).</translation>
+    </message>
+    <message>
         <source>Sentences</source>
         <translation>Sätze</translation>
     </message>

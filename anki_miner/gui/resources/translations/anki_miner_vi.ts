@@ -9410,6 +9410,26 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên trước — những dò
         <translation>Khôi phục câu một dòng và khoảng đoạn gốc của từ này.</translation>
     </message>
     <message>
+        <source>Use current frame</source>
+        <translation>Dùng khung hình hiện tại</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation>Đặt lại khung hình</translation>
+    </message>
+    <message>
+        <source>Take this word's screenshot from the frame the player is showing, instead of the configured offset from the line's start.</source>
+        <translation>Lấy ảnh chụp màn hình của từ này từ khung hình mà trình phát đang hiển thị, thay vì độ lệch đã cấu hình tính từ đầu dòng phụ đề.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame.</source>
+        <translation>Khôi phục khung hình mặc định cho ảnh chụp màn hình của từ này.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame (now %1 s).</source>
+        <translation>Khôi phục khung hình mặc định cho ảnh chụp màn hình của từ này (hiện tại %1 giây).</translation>
+    </message>
+    <message>
         <source>Sentences</source>
         <translation>Câu</translation>
     </message>

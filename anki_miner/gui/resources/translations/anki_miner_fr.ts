@@ -9426,6 +9426,26 @@ Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le 
         <translation>Restaure la phrase d’origine sur une seule ligne et la plage du clip de ce mot.</translation>
     </message>
     <message>
+        <source>Use current frame</source>
+        <translation>Utiliser l'image actuelle</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation>Réinitialiser l'image</translation>
+    </message>
+    <message>
+        <source>Take this word's screenshot from the frame the player is showing, instead of the configured offset from the line's start.</source>
+        <translation>Prend la capture d'écran de ce mot à partir de l'image affichée par le lecteur, au lieu du décalage configuré depuis le début de la ligne.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame.</source>
+        <translation>Restaure l'image de capture d'écran par défaut de ce mot.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame (now %1 s).</source>
+        <translation>Restaure l'image de capture d'écran par défaut de ce mot (actuellement %1 s).</translation>
+    </message>
+    <message>
         <source>Sentences</source>
         <translation>Phrases</translation>
     </message>

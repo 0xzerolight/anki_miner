@@ -9426,6 +9426,26 @@ Ordene ascendente para poner primero las líneas i+1 — aquellas cuya única pa
         <translation>Restaura la frase de una sola línea y el intervalo del clip originales de esta palabra.</translation>
     </message>
     <message>
+        <source>Use current frame</source>
+        <translation>Usar fotograma actual</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation>Restablecer fotograma</translation>
+    </message>
+    <message>
+        <source>Take this word's screenshot from the frame the player is showing, instead of the configured offset from the line's start.</source>
+        <translation>Toma la captura de pantalla de esta palabra desde el fotograma que muestra el reproductor, en lugar del desfase configurado desde el inicio de la línea.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame.</source>
+        <translation>Restaura el fotograma predeterminado de la captura de pantalla de esta palabra.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame (now %1 s).</source>
+        <translation>Restaura el fotograma predeterminado de la captura de pantalla de esta palabra (ahora %1 s).</translation>
+    </message>
+    <message>
         <source>Sentences</source>
         <translation>Frases</translation>
     </message>

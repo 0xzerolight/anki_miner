@@ -9442,6 +9442,26 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation>Вернуть исходное однострочное предложение и границы клипа для этого слова.</translation>
     </message>
     <message>
+        <source>Use current frame</source>
+        <translation>Использовать текущий кадр</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation>Сбросить кадр</translation>
+    </message>
+    <message>
+        <source>Take this word's screenshot from the frame the player is showing, instead of the configured offset from the line's start.</source>
+        <translation>Сделать скриншот этого слова из кадра, который сейчас показан в плеере, вместо настроенного смещения от начала строки.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame.</source>
+        <translation>Вернуть кадр по умолчанию для скриншота этого слова.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame (now %1 s).</source>
+        <translation>Вернуть кадр по умолчанию для скриншота этого слова (сейчас %1 с).</translation>
+    </message>
+    <message>
         <source>Sentences</source>
         <translation>Предложения</translation>
     </message>

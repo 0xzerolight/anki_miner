@@ -9426,6 +9426,26 @@ Ordene de forma crescente para colocar primeiro as linhas i+1 — aquelas cuja �
         <translation>Restaura a frase original de uma única linha e a janela do clipe desta palavra.</translation>
     </message>
     <message>
+        <source>Use current frame</source>
+        <translation>Usar quadro atual</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation>Redefinir quadro</translation>
+    </message>
+    <message>
+        <source>Take this word's screenshot from the frame the player is showing, instead of the configured offset from the line's start.</source>
+        <translation>Tira a captura de tela desta palavra do quadro que o reprodutor está exibindo, em vez do deslocamento configurado a partir do início da linha.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame.</source>
+        <translation>Restaura o quadro padrão da captura de tela desta palavra.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame (now %1 s).</source>
+        <translation>Restaura o quadro padrão da captura de tela desta palavra (agora %1 s).</translation>
+    </message>
+    <message>
         <source>Sentences</source>
         <translation>Frases</translation>
     </message>

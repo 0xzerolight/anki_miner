@@ -9410,6 +9410,26 @@ Urutkan menaik untuk menampilkan baris i+1 lebih dulu — baris yang satu-satuny
         <translation>Kembalikan kalimat satu baris dan rentang klip asli kata ini.</translation>
     </message>
     <message>
+        <source>Use current frame</source>
+        <translation>Gunakan bingkai saat ini</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation>Setel ulang bingkai</translation>
+    </message>
+    <message>
+        <source>Take this word's screenshot from the frame the player is showing, instead of the configured offset from the line's start.</source>
+        <translation>Ambil tangkapan layar kata ini dari bingkai yang sedang ditampilkan pemutar, alih-alih offset yang dikonfigurasi dari awal baris subtitel.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame.</source>
+        <translation>Kembalikan bingkai tangkapan layar kata ini ke default.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame (now %1 s).</source>
+        <translation>Kembalikan bingkai tangkapan layar kata ini ke default (sekarang %1 detik).</translation>
+    </message>
+    <message>
         <source>Sentences</source>
         <translation>Kalimat</translation>
     </message>
