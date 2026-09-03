@@ -37,6 +37,7 @@ from anki_miner.services.download_resume import (
     parse_content_range,
     strong_validator,
 )
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -225,11 +226,12 @@ def download_to_temp(
         state = ResumeState(default_resume_root() if resume_root is None else resume_root, resume_key)
 
     last_exc: Exception | None = None
+    started_at = time.monotonic()
     for attempt in range(1, _MAX_ATTEMPTS + 1):
         if cancelled_check is not None and cancelled_check():
             raise OperationCancelled("Download cancelled")
         try:
-            return _download_once(
+            part = _download_once(
                 url,
                 dest_dir=dest_dir,
                 progress=progress,
@@ -238,6 +240,20 @@ def download_to_temp(
                 timeout=timeout,
                 state=state,
             )
+            # The receipt a support thread needs: which URL actually
+            # answered, where the bytes landed, how big they were, and how many
+            # attempts it took. A silent success left the retry lines from a
+            # flaky transfer as the last word on the download.
+            log_summary(
+                logger,
+                "Resource download done",
+                url=url,
+                dest=part,
+                bytes=_part_size(part),
+                elapsed=f"{time.monotonic() - started_at:.2f}s",
+                attempts=attempt,
+            )
+            return part
         except OperationCancelled:
             # Never retried, and the partial stays: the user asked for a pause,
             # so the next launch offers to resume the bytes on disk.
@@ -252,17 +268,32 @@ def download_to_temp(
             if attempt < _MAX_ATTEMPTS and _is_retryable(exc):
                 last_exc = exc
                 logger.debug(
-                    "resource download attempt %d/%d failed for %s: %s",
+                    "resource download attempt %d/%d failed for %s: %s: %s",
                     attempt,
                     _MAX_ATTEMPTS,
                     url,
+                    type(exc).__name__,
                     exc,
                 )
                 if progress is not None:
                     progress(0, 0, f"Retrying download (attempt {attempt + 1}/{_MAX_ATTEMPTS})")
                 _sleep_with_cancel(_BACKOFF_SECONDS[attempt - 1], cancelled_check)
                 continue
-            logger.debug("resource download failed for %s: %s", url, exc)
+            # WARNING, not DEBUG: this is the terminal arm. Every caller
+            # reports "download failed" and the log was the only place the URL,
+            # the exception and the attempt count could still be recovered --
+            # at a level nobody has enabled when the report arrives.
+            log_summary(
+                logger,
+                "Resource download failed",
+                level=logging.WARNING,
+                url=url,
+                dest=dest_dir,
+                attempts=attempt,
+                elapsed=f"{time.monotonic() - started_at:.2f}s",
+                exc=type(exc).__name__,
+                detail=str(exc),
+            )
             # A transport failure we have run out of attempts for still leaves
             # trustworthy bytes behind: the next launch offers to resume them.
             # A permanent HTTP failure does not.
@@ -277,6 +308,14 @@ def download_to_temp(
 
     # Unreachable: the final attempt either returned or raised above.
     raise DownloadFailed(f"Failed to download {url}: {last_exc}")
+
+
+def _part_size(part: Path) -> int:
+    """Bytes on disk for the staged part file, or ``-1`` when it cannot be read."""
+    try:
+        return part.stat().st_size
+    except OSError:
+        return -1
 
 
 def _sleep_with_cancel(seconds: float, cancelled_check: CancelledCheck | None) -> None:

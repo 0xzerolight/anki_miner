@@ -27,12 +27,27 @@ import os
 import subprocess
 import sys
 import threading
+import time
 from enum import Enum, auto
 from pathlib import Path
 
+from anki_miner.utils.subprocess_log import log_command, log_command_result, tail_for_log
 from anki_miner.utils.subprocess_utils import no_window_kwargs
 
 logger = logging.getLogger(__name__)
+
+#: Operation label for the out-of-process Vulkan device-count probe.
+_VULKAN_PROBE_OP = "ASR Vulkan probe"
+
+
+def _captured_stderr(exc: BaseException) -> str:
+    """Return whatever stderr a failed ``subprocess.run`` managed to capture."""
+    # TimeoutExpired and CalledProcessError both carry the partial output;
+    # a spawn OSError carries none, and str/bytes both occur.
+    raw = getattr(exc, "stderr", None)
+    if isinstance(raw, bytes):
+        return raw.decode("utf-8", "replace")
+    return raw if isinstance(raw, str) else ""
 
 
 def available() -> bool:
@@ -133,7 +148,7 @@ def cuda_device_count() -> int:
         raise  # never degrade a real allocation failure to "no GPU" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001 — any failure means "no usable GPU"
         # Bucket B: an absent optional CUDA accelerator is a normal fallback.
-        logger.debug("ASR CUDA probe: devices=0 exc=%s", type(exc).__name__)
+        logger.debug("ASR CUDA probe: devices=0 exc=%s: %s", type(exc).__name__, exc)
         return 0
 
 
@@ -201,7 +216,7 @@ def _ggml_lib_search_dirs() -> list[Path]:
         raise  # never degrade a real allocation failure to "no dirs" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001 — a missing/odd install means "no dirs"
         # Bucket B: an uninspectable optional install means no backend dirs.
-        logger.debug("ASR backend library search: backend=ggml dirs=0 exc=%s", type(exc).__name__)
+        logger.debug("ASR backend library search: backend=ggml dirs=0 exc=%s: %s", type(exc).__name__, exc)
         return []
 
 
@@ -234,8 +249,9 @@ def _find_ggml_vulkan_lib() -> Path | None:
     except Exception as exc:  # noqa: BLE001 — a missing/odd install means "no Vulkan lib"
         # Bucket B: an uninspectable optional install means Vulkan is absent.
         logger.debug(
-            "ASR backend library search: backend=ggml-vulkan result=absent exc=%s",
+            "ASR backend library search: backend=ggml-vulkan result=absent exc=%s: %s",
             type(exc).__name__,
+            exc,
         )
         return None
 
@@ -323,10 +339,14 @@ def ensure_ggml_backends_loaded() -> None:
                 raise  # never degrade a real allocation failure to "try next loader" (service_factory.py policy)
             except Exception as exc:  # noqa: BLE001 — try the next backend loader
                 # Bucket A: loader failure silently degrades all later work to CPU.
+                # The message is the whole diagnosis here: a ctypes load
+                # failure names the DLL/so that could not be resolved, and
+                # "OSError" on its own names nothing.
                 logger.warning(
-                    "ASR backend load: backend=%s result=failed exc=%s",
+                    "ASR backend load: backend=%s result=failed exc=%s: %s",
                     name,
                     type(exc).__name__,
+                    exc,
                 )
                 _GGML_BACKEND_STATES[name] = _BackendState.FAILED
                 continue
@@ -340,8 +360,9 @@ def ensure_ggml_backends_loaded() -> None:
             if state is _BackendState.UNTRIED:
                 _GGML_BACKEND_STATES[name] = _BackendState.FAILED
         logger.warning(
-            "ASR backend load: backend=ggml-vulkan result=failed exc=%s",
+            "ASR backend load: backend=ggml-vulkan result=failed exc=%s: %s",
             type(exc).__name__,
+            exc,
         )
         return
 
@@ -365,8 +386,9 @@ def whisper_cpp_available() -> bool:
     except Exception as exc:  # noqa: BLE001 — any failure means "not available"
         # Bucket B: an absent optional whisper.cpp backend is a normal fallback.
         logger.debug(
-            "ASR backend probe: backend=whisper.cpp available=false exc=%s",
+            "ASR backend probe: backend=whisper.cpp available=false exc=%s: %s",
             type(exc).__name__,
+            exc,
         )
         return False
 
@@ -420,6 +442,8 @@ def _probe_vulkan_device_count() -> int:
         else:
             argv = [sys.executable, "-m", "anki_miner.services.asr._vulkan_probe"]
             env = None
+        log_command(logger, _VULKAN_PROBE_OP, argv, timeout_s=15)
+        started_at = time.monotonic()
         proc = subprocess.run(
             argv,
             stdin=subprocess.DEVNULL,
@@ -430,7 +454,17 @@ def _probe_vulkan_device_count() -> int:
             **no_window_kwargs(),
         )
         if proc.returncode != 0:
-            logger.debug("ASR Vulkan probe: devices=0 returncode=%d", proc.returncode)
+            # The child's stderr is the only place the missing loader, the
+            # refused device or the driver version is ever named; "devices=0"
+            # made every one of those read as "this machine has no GPU".
+            log_command_result(
+                logger,
+                _VULKAN_PROBE_OP,
+                argv,
+                returncode=proc.returncode,
+                stderr_tail=tail_for_log(proc.stderr or ""),
+                elapsed_s=time.monotonic() - started_at,
+            )
             return 0
         count = int(proc.stdout.strip())
         logger.debug("ASR Vulkan probe: devices=%d", count)
@@ -439,5 +473,16 @@ def _probe_vulkan_device_count() -> int:
         raise  # never degrade a real allocation failure to "0 devices" (service_factory.py policy)
     except Exception as exc:  # noqa: BLE001 — timeout / spawn / parse failure all mean 0
         # Bucket B: an absent optional Vulkan accelerator is a normal fallback.
-        logger.debug("ASR Vulkan probe: devices=0 exc=%s", type(exc).__name__)
+        # The tail rides along: a TimeoutExpired carries whatever the child had
+        # already written, which is where a driver abort message lands.
+        log_command_result(
+            logger,
+            _VULKAN_PROBE_OP,
+            argv,
+            returncode=None,
+            state=type(exc).__name__,
+            stderr_tail=tail_for_log(_captured_stderr(exc)),
+            elapsed_s=0.0,
+        )
+        logger.debug("ASR Vulkan probe: devices=0 exc=%s: %s", type(exc).__name__, exc)
         return 0

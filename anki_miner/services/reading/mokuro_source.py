@@ -247,7 +247,15 @@ def _block_box(block: dict) -> tuple[int, int, int, int] | None:
         return None
     try:
         xmin, ymin, xmax, ymax = (int(v) for v in raw)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as exc:
+        # DEBUG: a block with no usable box just loses its crop; the raw value
+        # is what says whether mokuro emitted floats, nulls, or a new schema.
+        logger.debug(
+            "Ignored failure during mokuro block box parse of %r: %s: %s",
+            raw,
+            type(exc).__name__,
+            exc,
+        )
         return None
     return (xmin, ymin, xmax, ymax)
 

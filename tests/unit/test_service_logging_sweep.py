@@ -14,10 +14,15 @@ from anki_miner.services.known_word_db import KnownWordDB
 
 _SWEPT_MODULES = (
     "anki_miner/services/alass_installer.py",
+    "anki_miner/services/asr/_engine.py",
     "anki_miner/services/asr/cuda_pack_installer.py",
     "anki_miner/services/asr/ggml_model_installer.py",
+    "anki_miner/services/asr/model_availability.py",
     "anki_miner/services/asr/model_manager.py",
     "anki_miner/services/asr/onnx_pack_installer.py",
+    "anki_miner/services/asr/transcriber.py",
+    "anki_miner/services/card_backfiller.py",
+    "anki_miner/services/deck_filter.py",
     "anki_miner/services/dictionary/importers/jmdict_importer.py",
     "anki_miner/services/dictionary/providers/jisho_provider.py",
     "anki_miner/services/download_resume.py",
@@ -27,6 +32,13 @@ _SWEPT_MODULES = (
     "anki_miner/services/known_word_db.py",
     "anki_miner/services/pitch_accent/multi_pitch_service.py",
     "anki_miner/services/pitch_accent_service.py",
+    "anki_miner/services/reading/epub_source.py",
+    "anki_miner/services/reading/images.py",
+    "anki_miner/services/reading/mokuro_source.py",
+    "anki_miner/services/resource_downloader.py",
+    "anki_miner/services/stats_service.py",
+    "anki_miner/services/update_checker.py",
+    "anki_miner/services/wordset_service.py",
     "anki_miner/services/yomitan_meta_bank.py",
 )
 

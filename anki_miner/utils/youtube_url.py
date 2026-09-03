@@ -35,10 +35,13 @@ existing single-video probe path without any behaviour change for current users.
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from typing import Literal
 from urllib.parse import parse_qs, parse_qsl, unquote, urlencode, urlparse, urlsplit, urlunsplit
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Compiled patterns
@@ -182,7 +185,15 @@ def classify_youtube_url(url: str) -> YouTubeUrlInfo:
 
     try:
         parsed = urlparse(normalised)
-    except Exception:
+    except Exception as exc:  # noqa: BLE001 - bucket B: an unparseable URL is "unknown", never a crash
+        # DEBUG: the caller reports "not a YouTube URL", which is right; the
+        # redacted URL is the only way to see it was a parse failure instead.
+        logger.debug(
+            "Ignored failure during YouTube URL classification of %s: %s: %s",
+            redact_youtube_url_for_log(url),
+            type(exc).__name__,
+            exc,
+        )
         return _UNKNOWN
 
     host = (parsed.hostname or "").lower()

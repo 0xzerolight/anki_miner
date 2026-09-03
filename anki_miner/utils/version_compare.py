@@ -5,7 +5,11 @@ and the yt-dlp updater (:mod:`anki_miner.services.ytdlp_updater`) compare versio
 with identical semantics.
 """
 
+import logging
+
 from packaging.version import InvalidVersion, Version
+
+logger = logging.getLogger(__name__)
 
 __all__ = ["is_newer"]
 
@@ -30,5 +34,15 @@ def is_newer(candidate: str, current: str) -> bool:
     """
     try:
         return Version(candidate) > Version(current)
-    except (InvalidVersion, TypeError):
+    except (InvalidVersion, TypeError) as exc:
+        # DEBUG: "no update offered" is the correct outcome either way, but a
+        # tag the release feed changed the shape of looks identical to being
+        # up to date, and nothing else records which string failed to parse.
+        logger.debug(
+            "Ignored failure during version compare of %r against %r: %s: %s",
+            candidate,
+            current,
+            type(exc).__name__,
+            exc,
+        )
         return False

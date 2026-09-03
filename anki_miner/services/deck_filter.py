@@ -45,10 +45,12 @@ from typing import TYPE_CHECKING, Any
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import TokenizedWord
 from anki_miner.services.card_backfiller import (
+    TaggerFailures,
     _chunks,
     _escape_anki_search,
     _field_value,
     _strip_for_dedup,
+    log_tagger_failures,
 )
 from anki_miner.services.frequency.multi_frequency_service import harmonic_rank, min_rank
 from anki_miner.services.morphology import extract_lemma
@@ -193,6 +195,7 @@ def _synthesize_word(
     fields: dict,
     options: DeckFilterOptions,
     tagger: Any,
+    failures: TaggerFailures | None = None,
 ) -> TokenizedWord:
     """Build the TokenizedWord the filters run on.
 
@@ -211,8 +214,10 @@ def _synthesize_word(
     if not reading and tagger is not None:
         try:
             reading = katakana_to_hiragana(generate_reading(expression, tagger))
-        except Exception:  # pragma: no cover - tagger failure is environmental
+        except Exception as exc:  # noqa: BLE001 - bucket A: counted, reported once at scan end
             reading = ""
+            if failures is not None:
+                failures.record("reading", expression, exc)
 
     lemma = expression
     if tagger is not None:
@@ -220,8 +225,9 @@ def _synthesize_word(
             tokens = list(tagger(expression))
             if len(tokens) == 1:
                 lemma = extract_lemma(tokens[0]) or expression
-        except Exception:  # pragma: no cover - tagger failure is environmental
-            pass
+        except Exception as exc:  # noqa: BLE001 - bucket A: counted, reported once at scan end
+            if failures is not None:
+                failures.record("lemma", expression, exc)
 
     sentence_value = _field_value(fields, options.sentence_field)
     sentence = _strip_for_dedup(sentence_value) if sentence_value else ""
@@ -327,6 +333,7 @@ def scan_deck_filter(
     seen_expressions: set[str] = set()
     scanned = 0
     tagger = getattr(services, "tagger", None)
+    tagger_failures = TaggerFailures()
     script = get_profile(config_language(config)).script
 
     for chunk in _chunks(note_ids, _NOTES_CHUNK):
@@ -358,7 +365,7 @@ def scan_deck_filter(
                 drops["duplicate_in_source"] += 1
                 continue
             seen_expressions.add(expression)
-            word = _synthesize_word(expression, fields, options, tagger)
+            word = _synthesize_word(expression, fields, options, tagger, tagger_failures)
             words.append(word)
             candidates[id(word)] = _Candidate(
                 note_id=note_id,
@@ -368,6 +375,8 @@ def scan_deck_filter(
             )
         if progress:
             progress(min(scanned, len(note_ids)), len(note_ids))
+
+    log_tagger_failures(logger, tagger_failures)
 
     word_filter = services.word_filter
 

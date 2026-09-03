@@ -172,6 +172,15 @@ class StatsService:
                 except sqlite3.OperationalError as exc:
                     if "duplicate column name" not in str(exc):
                         raise
+                    # DEBUG: the losing side of a two-instance migration race.
+                    # Benign, but it is also what a genuinely half-migrated
+                    # table looks like from the outside, so record which one.
+                    logger.debug(
+                        "Ignored failure during stats language-column migration of %s: %s: %s",
+                        table,
+                        type(exc).__name__,
+                        exc,
+                    )
         conn.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
 
     # === Feature 1: Mining Session Recording ===

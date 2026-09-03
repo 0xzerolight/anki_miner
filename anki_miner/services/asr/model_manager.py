@@ -78,8 +78,16 @@ def is_downloaded(name: str, models_root: Path) -> bool:
         try:
             if candidate.stat().st_size == 0:
                 continue
-        except OSError:
+        except OSError as exc:
             # Dangling symlink (incomplete download) — treat as not present.
+            # DEBUG: the app then offers to download a model the user believes
+            # is already there, and the path is what says which file is broken.
+            logger.debug(
+                "Ignored failure during ASR model integrity stat of %s: %s: %s",
+                candidate,
+                type(exc).__name__,
+                exc,
+            )
             continue
         if not (candidate.parent / _REQUIRED_SIBLING).is_file():
             continue

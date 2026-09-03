@@ -282,13 +282,25 @@ def load(
                 raw = _read_member_cancellable(zf, entry, epub_path, cancel_check)
             except OperationCancelled:
                 raise
-            except SetupError:
+            except SetupError as exc:
                 # Mine-what-you-can: one oversized chapter degrades to a
                 # warning, unlike the structural members (container/OPF/
                 # encryption) whose oversize aborts like the DRM gate.
+                logger.debug(
+                    "Ignored failure during spine document read of %s: %s: %s",
+                    entry,
+                    type(exc).__name__,
+                    exc,
+                )
                 _warn_once(doc.warnings, f"Skipped oversized spine document '{entry}'.")
                 continue
-            except _OPTIONAL_MEMBER_ERRORS:
+            except _OPTIONAL_MEMBER_ERRORS as exc:
+                logger.debug(
+                    "Ignored failure during spine document read of %s: %s: %s",
+                    entry,
+                    type(exc).__name__,
+                    exc,
+                )
                 _warn_once(doc.warnings, f"Skipped damaged spine document '{entry}'.")
                 continue
             account_member(raw)
@@ -346,7 +358,15 @@ def _parse_xml(data: bytes):
     parser = etree.XMLParser(recover=True, resolve_entities=False, load_dtd=False, no_network=True)
     try:
         return etree.fromstring(data, parser)
-    except etree.XMLSyntaxError:
+    except etree.XMLSyntaxError as exc:
+        # DEBUG: a recovering parser that still gives up means the member is
+        # not XML at all, and the caller only reports "no usable body".
+        logger.debug(
+            "Ignored failure during EPUB XML parse of %d bytes: %s: %s",
+            len(data),
+            type(exc).__name__,
+            exc,
+        )
         return None
 
 
@@ -437,7 +457,15 @@ def _is_manifest_font(
 ) -> bool:
     try:
         parsed = urlsplit(uri)
-    except ValueError:
+    except ValueError as exc:
+        # DEBUG: an unsplittable @font-face URI is simply not a manifest font;
+        # the URI itself is what says whether the stylesheet is malformed.
+        logger.debug(
+            "Ignored failure during font URI split of %r: %s: %s",
+            uri,
+            type(exc).__name__,
+            exc,
+        )
         return False
     if parsed.scheme or parsed.netloc or not parsed.path:
         return False
@@ -582,7 +610,15 @@ def _find_cover(
             with zf.open(entry) as fp:
                 header = fp.read(16)  # fixed-size peek: bomb-safe, never decoded
             _raise_if_cancelled(cancel_check)
-        except _OPTIONAL_MEMBER_ERRORS:
+        except _OPTIONAL_MEMBER_ERRORS as exc:
+            # DEBUG: the book still mines, without a cover; the caller's warning
+            # cannot say whether the member was damaged or simply not an image.
+            logger.debug(
+                "Ignored failure during cover image peek of %s: %s: %s",
+                entry,
+                type(exc).__name__,
+                exc,
+            )
             header = b""
     if _is_image_magic(header):
         return ImageRef(epub_path, entry), None
@@ -658,7 +694,15 @@ def _parse_content(raw: bytes):
     if body is None:
         try:
             root = html.document_fromstring(raw)
-        except (etree.ParserError, etree.XMLSyntaxError, ValueError):
+        except (etree.ParserError, etree.XMLSyntaxError, ValueError) as exc:
+            # DEBUG: last rung of the parse ladder, so this chapter contributes
+            # nothing; without it a book that mines zero words has no trace.
+            logger.debug(
+                "Ignored failure during EPUB HTML fallback parse of %d bytes: %s: %s",
+                len(raw),
+                type(exc).__name__,
+                exc,
+            )
             root = None
         body = _find_body(root)
     return body, _is_cover_typed(root, body)
@@ -775,7 +819,13 @@ def _parse_nav(
         raw = _read_member_cancellable(zf, nav_entry, Path(nav_entry), cancel_check)
     except OperationCancelled:
         raise
-    except (SetupError, *_OPTIONAL_MEMBER_ERRORS):
+    except (SetupError, *_OPTIONAL_MEMBER_ERRORS) as exc:
+        logger.debug(
+            "Ignored failure during navigation document read of %s: %s: %s",
+            nav_entry,
+            type(exc).__name__,
+            exc,
+        )
         _warn_once(warnings, f"Skipped damaged navigation document '{nav_entry}'.")
         return []  # oversized nav → chapter labels fall back to spine index
     account_member(raw)
@@ -820,7 +870,13 @@ def _parse_ncx(
         raw = _read_member_cancellable(zf, ncx_entry, Path(ncx_entry), cancel_check)
     except OperationCancelled:
         raise
-    except (SetupError, *_OPTIONAL_MEMBER_ERRORS):
+    except (SetupError, *_OPTIONAL_MEMBER_ERRORS) as exc:
+        logger.debug(
+            "Ignored failure during NCX document read of %s: %s: %s",
+            ncx_entry,
+            type(exc).__name__,
+            exc,
+        )
         _warn_once(warnings, f"Skipped damaged navigation document '{ncx_entry}'.")
         return []  # oversized NCX → chapter labels fall back to spine index
     account_member(raw)

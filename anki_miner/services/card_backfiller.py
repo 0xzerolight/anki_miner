@@ -35,6 +35,7 @@ from __future__ import annotations
 import html
 import logging
 import re
+from collections import Counter
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -441,8 +442,8 @@ def _scan_backfill_impl(
     audio_candidates = get_profile(language).audio.candidates
 
     scanned = skipped_no_identity = identical_skips = 0
-    guessed_reading_skips = reading_failures = lemma_failures = 0
-    first_failed_mined_form: str | None = None
+    guessed_reading_skips = 0
+    tagger_failures = TaggerFailures()
     note_plans: list[NotePlan] = []
 
     for chunk in _chunks(note_ids, _CHUNK):
@@ -462,11 +463,7 @@ def _scan_backfill_impl(
             if not mined_form:
                 skipped_no_identity += 1
                 continue
-            context = _resolve_context(note_id, fields, mined_form, anki_fields, tagger)
-            reading_failures += int(context.reading_failed)
-            lemma_failures += int(context.lemma_failed)
-            if first_failed_mined_form is None and (context.reading_failed or context.lemma_failed):
-                first_failed_mined_form = mined_form
+            context = _resolve_context(note_id, fields, mined_form, anki_fields, tagger, tagger_failures)
             contexts.append(context)
 
         definitions, glossaries = _chunk_definition_lookups(
@@ -512,15 +509,7 @@ def _scan_backfill_impl(
         if cancelled:
             break
 
-    if reading_failures or lemma_failures:
-        log_summary(
-            logger,
-            "Backfill tokenizer degraded",
-            level=logging.WARNING,
-            reading_failures=reading_failures,
-            lemma_failures=lemma_failures,
-            mined_form=first_failed_mined_form,
-        )
+    log_tagger_failures(logger, tagger_failures)
 
     plan = BackfillPlan(
         options=options,
@@ -553,8 +542,8 @@ def _scan_backfill_impl(
         skipped_no_identity=skipped_no_identity,
         identical=identical_skips,
         guessed_reading=guessed_reading_skips,
-        reading_failures=reading_failures,
-        lemma_failures=lemma_failures,
+        reading_failures=tagger_failures.counts["reading"],
+        lemma_failures=tagger_failures.counts["lemma"],
     )
     return plan
 
@@ -619,12 +608,69 @@ def _preflight(
     return tuple(sorted({anki_fields[key] for key in selected if anki_fields[key] not in actual}))
 
 
+#: How many distinct card fronts one ``Tagger failures:`` receipt names.
+TAGGER_FAILURE_SAMPLE = 5
+
+
+class TaggerFailures:
+    """Accumulate tokenizer failures over one scan for a single receipt.
+
+    An environmentally broken tagger (a missing MeCab dictionary, a language
+    pack whose engine never loaded) fails on EVERY note, so a per-note record
+    would write one line per row and bury the run that produced it. What
+    actually separates "the tagger is gone" from "these four words are odd" is
+    the count, the first exception, and a handful of the words it choked on --
+    and those fit on one line. Shared with ``deck_filter``, whose scan runs the
+    same two tagger calls over a premade deck.
+    """
+
+    __slots__ = ("counts", "first_exc", "sample_words")
+
+    def __init__(self) -> None:
+        self.counts: Counter[str] = Counter()
+        self.first_exc: str = ""
+        self.sample_words: list[str] = []
+
+    def record(self, kind: str, word: str, exc: BaseException) -> None:
+        """Account one failure of *kind* (``"reading"`` / ``"lemma"``) on *word*."""
+        self.counts[kind] += 1
+        if not self.first_exc:
+            # Type AND message: "RuntimeError" alone cannot name the dictionary
+            # path or the symbol the engine could not find.
+            self.first_exc = f"{type(exc).__name__}: {exc}"
+        if word and word not in self.sample_words and len(self.sample_words) < TAGGER_FAILURE_SAMPLE:
+            self.sample_words.append(word)
+
+    def __bool__(self) -> bool:
+        return bool(self.counts)
+
+
+def log_tagger_failures(log: logging.Logger, failures: TaggerFailures) -> None:
+    """Emit the one ``Tagger failures:`` receipt a finished scan owes.
+
+    Silent when nothing failed. WARNING because both failures change what
+    reaches the card: no reading, and a lemma that stays the surface form.
+    """
+    if not failures:
+        return
+    log_summary(
+        log,
+        "Tagger failures",
+        level=logging.WARNING,
+        reading=failures.counts["reading"],
+        lemma=failures.counts["lemma"],
+        first_exc=failures.first_exc,
+        sample_words=failures.sample_words,
+    )
+
+
 def _resolve_context(
     note_id: int,
     fields: dict,
     mined_form: str,
     anki_fields: Mapping[str, str],
     tagger: Any,
+    failures: TaggerFailures | None = None,
 ) -> _NoteContext:
     """Recover the (reading, lemma) identity the lookup recipes key on.
 
@@ -650,9 +696,11 @@ def _resolve_context(
     if not reading:
         try:
             reading = katakana_to_hiragana(generate_reading(mined_form, tagger))
-        except Exception:  # pragma: no cover - tagger failure is environmental
+        except Exception as exc:  # noqa: BLE001 - bucket A: counted, reported once at scan end
             reading = ""
             reading_failed = True
+            if failures is not None:
+                failures.record("reading", mined_form, exc)
         reading_source = "tokenizer"
 
     lemma = mined_form
@@ -661,8 +709,10 @@ def _resolve_context(
         tokens = list(tagger(mined_form))
         if len(tokens) == 1:
             lemma = extract_lemma(tokens[0]) or mined_form
-    except Exception:  # pragma: no cover - tagger failure is environmental
+    except Exception as exc:  # noqa: BLE001 - bucket A: counted, reported once at scan end
         lemma_failed = True
+        if failures is not None:
+            failures.record("lemma", mined_form, exc)
 
     return _NoteContext(
         note_id,

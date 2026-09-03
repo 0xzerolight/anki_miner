@@ -39,6 +39,7 @@ from anki_miner.services.morphology import (
     _edit_distance,
     apply_special_readings,
     attest_merged_readings,
+    drain_attribute_guard_counts,
     extract_lemma,
     extract_orth_base,
     extract_reading,
@@ -63,7 +64,7 @@ from anki_miner.utils.ja_normalize import (
     normalize_for_tokenization,
     standardize_kanji_variants,
 )
-from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.logging_ext import capped, log_summary
 from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding
 from anki_miner.utils.text_utils import (
     _format_furigana,
@@ -627,6 +628,10 @@ class SubtitleParserService:
             file=subtitle_file,
             tokenize_s=f"{self._tokenize_time_s:.4f}",
             probe_s=f"{self._probe_time_s:.4f}",
+            # Drained here, not logged per site: every `except AttributeError`
+            # in `morphology` is a normal OOV shape one at a time and a
+            # wrong-token-class disaster in bulk (see `_ATTRIBUTE_GUARDS`).
+            guards=capped(drain_attribute_guard_counts(), 10),
         )
 
     def _require_engine(self) -> None:
