@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 from PyQt6.QtCore import QByteArray, QPoint, Qt, QTimer
 from PyQt6.QtGui import (
+    QAction,
     QCloseEvent,
     QColor,
     QFont,
@@ -545,18 +546,15 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self.table.setSelectionMode(QTableWidget.SelectionMode.ExtendedSelection)
         self.table.setSortingEnabled(True)
 
+        self._apply_header_resize_modes()
         header_view = self.table.horizontalHeader()
         if header_view:
-            # The include column normally holds one check indicator and its cell
-            # padding, so it is measured from its contents rather than pinned at
-            # 40px -- the indicator grows with the platform and with the text
-            # scale. It also has to fit the "Known · pending" label a staged row
-            # puts there, which is why it is not Fixed: the column widens only
-            # while a stage exists and shrinks back when the marks are discarded.
-            header_view.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-            for column in (1, 2, 3, 5, 6):  # mined form, surface, reading, rank, count
-                header_view.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
-            header_view.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)  # sentence
+            # Columns are the user's to arrange: drag to reorder, right-click to
+            # hide the ones this learner never reads. Indices stay LOGICAL, so
+            # every item(row, N) below is untouched by either.
+            header_view.setSectionsMovable(True)
+            header_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            header_view.customContextMenuRequested.connect(self._on_header_context_menu)
 
         self._apply_data_surface()
         install_copy_rows(self.table)
@@ -758,6 +756,78 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                     side_key=self._side_key,
                 )
         super().done(a0)
+
+    def _apply_header_resize_modes(self) -> None:
+        """Pin each column's resize mode.
+
+        Called on build and again after restoring a saved header state:
+        ``QHeaderView.saveState()`` carries resize modes, so a blob written by
+        an older arrangement could otherwise pin ``Stretch`` onto the wrong
+        column. Nothing the user can set is lost by re-pinning -- both modes
+        used here ignore a drag anyway.
+        """
+        header_view = self.table.horizontalHeader()
+        if not header_view:
+            return
+        # The include column normally holds one check indicator and its cell
+        # padding, so it is measured from its contents rather than pinned at
+        # 40px -- the indicator grows with the platform and with the text
+        # scale. It also has to fit the "Known · pending" label a staged row
+        # puts there, which is why it is not Fixed: the column widens only
+        # while a stage exists and shrinks back when the marks are discarded.
+        header_view.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        for column in (1, 2, 3, 5, 6):  # mined form, surface, reading, rank, count
+            header_view.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
+        header_view.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)  # sentence
+
+    def _column_menu_actions(self) -> dict[int, QAction]:
+        """One checkable action per hideable column, keyed by LOGICAL index.
+
+        Column 0 is deliberately absent: it carries the row's check state and
+        its original-word index, so hiding it would leave the dialog with no
+        way to include or exclude a word. Factored out of the menu so the
+        behaviour is testable without exec'ing one.
+        """
+        actions: dict[int, QAction] = {}
+        for column in range(1, self.table.columnCount()):
+            header_item = self.table.horizontalHeaderItem(column)
+            action = QAction(header_item.text() if header_item is not None else str(column), self)
+            action.setCheckable(True)
+            action.setChecked(not self.table.isColumnHidden(column))
+            action.toggled.connect(partial(self._set_column_shown, column))
+            actions[column] = action
+        return actions
+
+    def _set_column_shown(self, column: int, shown: bool) -> None:
+        self.table.setColumnHidden(column, not shown)
+
+    def _on_header_context_menu(self, pos: QPoint) -> None:
+        header_view = self.table.horizontalHeader()
+        if not header_view:
+            return
+        menu = QMenu(self)
+        # The actions are parented to the dialog rather than the menu, so a
+        # toggle survives the exec that raised it.
+        for action in self._column_menu_actions().values():
+            menu.addAction(action)
+        menu.addSeparator()
+        reset = menu.addAction(self.tr("Reset columns"))
+        if reset is not None:
+            reset.triggered.connect(self._reset_columns)
+        menu.exec(header_view.mapToGlobal(pos))
+
+    def _reset_columns(self) -> None:
+        """Unhide every column and put them back in logical order.
+
+        The recovery path for an arrangement the user cannot undo by hand: a
+        hidden column has no header section left to right-click.
+        """
+        header_view = self.table.horizontalHeader()
+        for column in range(self.table.columnCount()):
+            self.table.setColumnHidden(column, False)
+            if header_view:
+                header_view.moveSection(header_view.visualIndex(column), column)
+        self._apply_header_resize_modes()
 
     def _build_right_pane(self) -> QWidget:
         """Build the right pane from whichever optional sub-panes are enabled.
