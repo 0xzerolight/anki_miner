@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
 
 class InlineReceipt(QWidget):
-    """One run's durable result, with the three things a user can do about it."""
+    """One run's durable result, with the things a user can do about it."""
 
     _details_origin: ClassVar[InlineReceipt | None] = None
 
@@ -90,6 +90,8 @@ class InlineReceipt(QWidget):
         self._summary = self._render(receipt, item_noun)
         self.summary_label.setText(self._summary)
         self.details_button.setVisible(receipt.has_details)
+        whitelist = receipt.whitelist
+        self.copy_words_button.setVisible(whitelist is not None and bool(whitelist.missing))
         self.show()
 
     def clear(self) -> None:
@@ -111,7 +113,7 @@ class InlineReceipt(QWidget):
         the same run three ways (D47-B). This method stays as the seam that maps
         a ``RunReceipt``'s fields onto that pure function.
         """
-        return result_copy.run_summary(
+        line = result_copy.run_summary(
             receipt.outcome,
             items_completed=receipt.items_completed,
             items_total=receipt.items_total,
@@ -120,6 +122,13 @@ class InlineReceipt(QWidget):
             duration=format_duration_words(receipt.duration.active_s),
             suspended=receipt.duration.suspended,
         )
+        if receipt.whitelist is not None:
+            # A whitelist run is the reason the run happened, so its tally
+            # rides the same line. ElidingLabel keeps the full text in the
+            # tooltip when the line no longer fits.
+            clause = result_copy.whitelist_summary(len(receipt.whitelist.mined), len(receipt.whitelist.entries))
+            line = f"{line} · {clause}"
+        return line
 
     # ------------------------------------------------------------------
     # Actions
@@ -131,6 +140,13 @@ class InlineReceipt(QWidget):
         if clipboard is None:
             return
         clipboard.setText(self._summary)
+
+    def _on_copy_words_clicked(self) -> None:
+        """Put the unmined whitelist words on the clipboard, one per line."""
+        clipboard = QApplication.clipboard()
+        if clipboard is None or self._receipt is None or self._receipt.whitelist is None:
+            return
+        clipboard.setText(result_copy.whitelist_unmined_text(self._receipt.whitelist))
 
     def _on_details_clicked(self) -> None:
         """Emit the request while its owning receipt can be consumed."""
@@ -151,7 +167,7 @@ class InlineReceipt(QWidget):
     # ------------------------------------------------------------------
 
     def _setup_ui(self) -> None:
-        """One elided line plus three quiet actions, on a single row."""
+        """One elided line plus its quiet actions, on a single row."""
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(SPACING.sm)
@@ -169,6 +185,14 @@ class InlineReceipt(QWidget):
         self.copy_button = ModernButton(self.tr("Copy summary"), variant="secondary")
         self.copy_button.clicked.connect(self._on_copy_clicked)
         layout.addWidget(self.copy_button)
+
+        # Shown only when a whitelist left words behind: that list is what the
+        # user pastes into the next run's whitelist file.
+        self.copy_words_button = ModernButton(self.tr("Copy unmined words"), variant="secondary")
+        self.copy_words_button.setToolTip(self.tr("Whitelist words that got no card this run, one per line"))
+        self.copy_words_button.clicked.connect(self._on_copy_words_clicked)
+        self.copy_words_button.setVisible(False)
+        layout.addWidget(self.copy_words_button)
 
         self.dismiss_button = ModernButton(self.tr("Dismiss"), variant="ghost")
         self.dismiss_button.clicked.connect(self._on_dismiss_clicked)

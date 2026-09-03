@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import QApplication, QLineEdit, QVBoxLayout, QWidget
 from anki_miner.gui.controllers.run_receipt import RunReceipt
 from anki_miner.gui.utils.progress_telemetry import ActiveDuration
 from anki_miner.gui.widgets.inline_receipt import InlineReceipt
-from anki_miner.models.processing import ProcessingResult, TerminalOutcome
+from anki_miner.models.processing import ProcessingResult, TerminalOutcome, WhitelistCoverage
 
 
 def _receipt(
@@ -29,6 +29,7 @@ def _receipt(
     seconds: float = 40 * 60 + 12,
     slept: float = 0.0,
     results: tuple[ProcessingResult, ...] = (),
+    whitelist: WhitelistCoverage | None = None,
 ) -> RunReceipt:
     return RunReceipt(
         outcome=outcome,
@@ -39,6 +40,7 @@ def _receipt(
         note_ids=tuple(range(notes)),
         duration=ActiveDuration(active_s=seconds, suspended_s=slept),
         results=results,
+        whitelist=whitelist,
     )
 
 
@@ -232,3 +234,55 @@ class TestActions:
         clipboard = QApplication.clipboard()
         assert clipboard is not None
         assert clipboard.text() == "Mining complete — 12 episodes, 486 notes added in 40m 12s"
+
+
+def _coverage(*, mined=("食べる",), missing=("走る",)) -> WhitelistCoverage:
+    return WhitelistCoverage(frozenset(mined) | frozenset(missing), mined=frozenset(mined))
+
+
+class TestWhitelist:
+    """A whitelist run says how much of its list it got, and hands back the rest."""
+
+    def test_the_line_gains_a_whitelist_clause(self, qtbot):
+        widget = _widget(qtbot)
+
+        widget.show_receipt(_receipt(whitelist=_coverage()), item_noun="episodes")
+
+        assert widget.summary_text == (
+            "Mining complete — 12 episodes, 486 notes added in 40m 12s · Whitelist: 1 of 2 mined"
+        )
+
+    def test_copy_summary_copies_the_line_with_its_clause(self, qtbot):
+        widget = _widget(qtbot)
+        widget.show_receipt(_receipt(whitelist=_coverage()), item_noun="episodes")
+
+        widget.copy_button.click()
+
+        clipboard = QApplication.clipboard()
+        assert clipboard is not None
+        assert clipboard.text() == widget.summary_text
+
+    def test_the_copy_words_button_is_hidden_without_a_whitelist(self, qtbot):
+        widget = _widget(qtbot)
+
+        widget.show_receipt(_receipt(), item_noun="episodes")
+
+        assert widget.copy_words_button.isVisibleTo(widget) is False
+
+    def test_the_copy_words_button_is_hidden_when_everything_was_mined(self, qtbot):
+        widget = _widget(qtbot)
+
+        widget.show_receipt(_receipt(whitelist=_coverage(missing=())), item_noun="episodes")
+
+        assert widget.copy_words_button.isVisibleTo(widget) is False
+
+    def test_copy_unmined_words_puts_one_entry_per_line_on_the_clipboard(self, qtbot):
+        widget = _widget(qtbot)
+        widget.show_receipt(_receipt(whitelist=_coverage(missing=("走る", "飲む"))), item_noun="episodes")
+        assert widget.copy_words_button.isVisibleTo(widget) is True
+
+        widget.copy_words_button.click()
+
+        clipboard = QApplication.clipboard()
+        assert clipboard is not None
+        assert clipboard.text() == "走る\n飲む"
