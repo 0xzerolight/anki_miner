@@ -19,6 +19,7 @@ from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.models.batch_queue import BatchQueue, QueueItem, QueueItemStatus
+from anki_miner.models.processing import ProcessingResult, WhitelistCoverage
 from anki_miner.orchestration.episode_processor import EpisodeProcessor, require_usable_offline_provider
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
@@ -49,7 +50,11 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
     item_pairs_progress = pyqtSignal(str, int, int)  # item_id, pairs_done, pairs_total
     item_completed = pyqtSignal(str, int)  # item_id, run_cards_created
     item_failed = pyqtSignal(str, str, int)  # item_id, error_message, run_cards_created
-    queue_finished = pyqtSignal(int)  # run_cards_created
+    # run_cards_created, and the whitelist coverage folded over every pair this
+    # run processed (None when no whitelist was in effect). This worker reports
+    # counts rather than results, so the run's one coverage object travels here
+    # instead of per item.
+    queue_finished = pyqtSignal(int, object)
     # The run stopped at a series boundary, and later left it again (D29-A).
     run_paused = pyqtSignal()
     run_resumed = pyqtSignal()
@@ -104,6 +109,9 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
         self._curation_media_map: dict[Path, tuple[Path, float]] | None = None
         # The series this run will process, frozen at run() start.
         self._run_items: list[QueueItem] = []
+        # Folded from every process_episode result this run produced; the one
+        # per-word datum this counts-only worker hands to the receipt.
+        self.whitelist_coverage: WhitelistCoverage | None = None
         self._init_boundary_controls()
 
     @property
@@ -167,7 +175,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
             # Close the run's processor on every exit (normal, cancel, or
             # exception) so its sqlite handles / Session don't leak.
             self._close_current_processor()
-            self.queue_finished.emit(total_cards)
+            self.queue_finished.emit(total_cards, self.whitelist_coverage)
 
     def _snapshot_items(self) -> list[QueueItem]:
         """The exact series this run will process, in order.
@@ -179,6 +187,19 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
         if self._requested_items is not None:
             return list(self._requested_items)
         return [item for item in self.batch_queue.get_all_items() if item.status == QueueItemStatus.PENDING]
+
+    def _fold_whitelist(self, result: ProcessingResult) -> None:
+        """Union one pair's whitelist coverage into the run's.
+
+        Mined outranks known, so a word this run carded in episode one does not
+        come back as "already known" from episode two's own view of Anki.
+        """
+        coverage = getattr(result, "whitelist_coverage", None)
+        if not isinstance(coverage, WhitelistCoverage):
+            return
+        self.whitelist_coverage = (
+            coverage if self.whitelist_coverage is None else self.whitelist_coverage.merged(coverage)
+        )
 
     def _run_queue(self, total_cards: int) -> int:
         # Schema-staleness pre-loop gate (4.0): if any enabled indexed dict slot
@@ -340,6 +361,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                             pairs_done += 1
                             self.item_pairs_progress.emit(item.id, pairs_done, len(pending_pairs))
                             continue
+                        self._fold_whitelist(result)
                         cards_for_item += result.cards_created
                         if result.success:
                             committed_pair_keys.add(pair_key)
@@ -444,6 +466,10 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                 logger.exception("BatchQueueWorker season pre-pass pair %s failed", pair.video.name)
                 failed_pairs.append((pair.video.name, str(e)))
                 continue
+            # The pre-pass is where this season's words are seen at all, so it
+            # is where the whitelist's entries and already-known words come
+            # from; the mine pass below folds the mined ones on top.
+            self._fold_whitelist(result)
             if self.check_cancelled():
                 return cards_for_item, failed_pairs, True
             if not result.success:
@@ -518,6 +544,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                     pairs_done += 1
                     self.item_pairs_progress.emit(item.id, pairs_done, pairs_total)
                     continue
+                self._fold_whitelist(result)
                 cards_for_item += result.cards_created
                 if result.success:
                     committed_pair_keys.add(pair_key)

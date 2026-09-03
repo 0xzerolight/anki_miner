@@ -10,7 +10,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import SetupError
 from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
 from anki_miner.models.batch_queue import BatchQueue, QueueItem, QueueItemStatus
-from anki_miner.models.processing import ProcessingResult
+from anki_miner.models.processing import ProcessingResult, WhitelistCoverage
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.definition_service import DefinitionService
 
@@ -1647,3 +1647,38 @@ def test_a_reset_item_re_mines_every_pair(tmp_path):
     # The row's own count restarted at 0, so it reports only this run's cards.
     assert item.cards_created == 4
     assert results["completed"] == [(item.id, 4)]
+
+
+def test_queue_finished_carries_the_whitelist_folded_over_every_pair(tmp_path):
+    """Two pairs: 'a' mined by the first is known to the second; 'b' mined by the
+    second. The run's coverage says both were mined and nothing is missing."""
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
+    queue = BatchQueue()
+    queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
+
+    entries = frozenset({"a", "b", "c"})
+    first = _ok_result(cards=2)
+    first.whitelist_coverage = WhitelistCoverage(entries, mined=frozenset({"a"}))
+    second = _ok_result(cards=3)
+    second.whitelist_coverage = WhitelistCoverage(entries, mined=frozenset({"b"}), known=frozenset({"a"}))
+    proc = MagicMock()
+    proc.process_episode.side_effect = [first, second]
+
+    worker = _make_worker_with_queue(queue)
+    finished: list = []
+    worker.queue_finished.connect(lambda total, coverage: finished.append((total, coverage)))
+
+    with (
+        patch("anki_miner.gui.workers.batch_queue_worker.create_episode_processor", return_value=proc),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number", return_value=[pair1, pair2]
+        ),
+    ):
+        worker.run()
+
+    ((total, coverage),) = finished
+    assert total == 5
+    assert coverage.mined == {"a", "b"}
+    assert coverage.known == frozenset()
+    assert coverage.missing == {"c"}

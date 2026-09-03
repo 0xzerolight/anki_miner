@@ -501,6 +501,21 @@ class TestBatchReceipt:
         assert task_registry.snapshot(batch_tab.TASK_ID).outcome is TaskOutcome.FAILED
         message_box.information.assert_not_called()
 
+    def test_the_queue_path_folds_the_worker_whitelist_into_the_receipt(self, batch_tab, clock, tmp_path):
+        batch_tab.batch_queue.add_item(tmp_path, tmp_path, "Show A", 0.0)
+        coverage = WhitelistCoverage(frozenset({"食べる", "走る"}), mined=frozenset({"食べる"}))
+        with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", MagicMock()):
+            batch_tab._start_queue_worker()
+        batch_tab._on_item_completed(batch_tab.batch_queue.get_all_items()[0].id, 40)
+        clock["t"] += 65
+        batch_tab._on_queue_finished(40, coverage)
+        batch_tab._on_run_thread_finished()
+
+        receipt = batch_tab._receipt_widget
+        assert receipt.summary_text == "Mining complete — 40 notes added in 01m 05s · Whitelist: 1 of 2 mined"
+        assert receipt.copy_words_button.isVisibleTo(receipt) is True
+        assert "Whitelist: 1 of 2 mined. Not mined: 走る." in batch_tab.log_widget.full_text()
+
     def test_a_cancelled_queue_run_opens_no_dialog(self, batch_tab, clock, tmp_path):
         batch_tab.batch_queue.add_item(tmp_path, tmp_path, "Show A", 0.0)
         with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox") as message_box:
