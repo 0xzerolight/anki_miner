@@ -9378,6 +9378,10 @@ Die Auswahl „Sätze“ bietet eine Option pro Untertitelzeile und listet daher
         <translation>S Ein-/Ausschließen · K Als bekannt markieren · Strg+A Sichtbare einschließen · Strg+D Sichtbare ausschließen · Strg+Eingabe Bestätigen</translation>
     </message>
     <message>
+        <source>Reset columns</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>+ Previous line</source>
         <translation>+ Vorherige Zeile</translation>
     </message>

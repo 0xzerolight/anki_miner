@@ -9362,6 +9362,10 @@ Pemilih “Kalimat” menyediakan satu opsi per baris subtitel, jadi biasanya da
         <translation>S sertakan/kecualikan · K tandai sebagai dikenal · Ctrl+A sertakan yang terlihat · Ctrl+D kecualikan yang terlihat · Ctrl+Enter konfirmasi</translation>
     </message>
     <message>
+        <source>Reset columns</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>+ Previous line</source>
         <translation>+ Baris sebelumnya</translation>
     </message>

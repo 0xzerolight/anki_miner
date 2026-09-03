@@ -9378,6 +9378,10 @@ Il selettore “Frasi” offre un'opzione per ogni riga di sottotitoli, quindi d
         <translation>S includi/escludi · K segna come conosciuta · Ctrl+A includi visibili · Ctrl+D escludi visibili · Ctrl+Invio conferma</translation>
     </message>
     <message>
+        <source>Reset columns</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>+ Previous line</source>
         <translation>+ Riga precedente</translation>
     </message>

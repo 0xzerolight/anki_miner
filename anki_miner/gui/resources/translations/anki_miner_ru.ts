@@ -9394,6 +9394,10 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
         <translation>S — включить/исключить · K — отметить как известное · Ctrl+A — включить видимые · Ctrl+D — исключить видимые · Ctrl+Enter — подтвердить</translation>
     </message>
     <message>
+        <source>Reset columns</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>+ Previous line</source>
         <translation>+ Предыдущая строка</translation>
     </message>

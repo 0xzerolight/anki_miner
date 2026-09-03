@@ -9378,6 +9378,10 @@ O seletor “Frases” oferece uma opção por linha de legenda, então costuma 
         <translation>S incluir/excluir · K marcar como conhecida · Ctrl+A incluir visíveis · Ctrl+D excluir visíveis · Ctrl+Enter confirmar</translation>
     </message>
     <message>
+        <source>Reset columns</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>+ Previous line</source>
         <translation>+ Linha anterior</translation>
     </message>

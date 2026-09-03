@@ -9362,6 +9362,10 @@ Khung chọn “Câu” đưa ra một lựa chọn cho mỗi dòng phụ đề 
         <translation>S bao gồm/loại trừ · K đánh dấu đã biết · Ctrl+A bao gồm phần hiển thị · Ctrl+D loại trừ phần hiển thị · Ctrl+Enter xác nhận</translation>
     </message>
     <message>
+        <source>Reset columns</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>+ Previous line</source>
         <translation>+ Dòng trước</translation>
     </message>

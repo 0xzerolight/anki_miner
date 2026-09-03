@@ -9362,6 +9362,10 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
         <translation>S 包含/排除 · K 标记为已知 · Ctrl+A 包含可见项 · Ctrl+D 排除可见项 · Ctrl+Enter 确认</translation>
     </message>
     <message>
+        <source>Reset columns</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>+ Previous line</source>
         <translation>+ 上一行</translation>
     </message>

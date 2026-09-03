@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from PyQt6.QtCore import QByteArray
 from PyQt6.QtWidgets import QHeaderView
 
+from anki_miner.gui.utils import session_state
+from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
 from anki_miner.models import TokenizedWord
 
@@ -59,3 +62,28 @@ def test_reset_unhides_every_column_and_restores_the_order(qtbot):
     assert not dlg.table.isColumnHidden(_READING_COL)
     assert [header.logicalIndex(v) for v in range(dlg.table.columnCount())] == list(range(dlg.table.columnCount()))
     assert header.sectionResizeMode(4) == QHeaderView.ResizeMode.Stretch
+
+
+def test_the_arrangement_is_saved_on_close_and_restored_next_time(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", tmp_path / "gui_config.json")
+
+    first = WordCurationDialog([_word()])
+    qtbot.addWidget(first)
+    first.table.setColumnHidden(_READING_COL, True)
+    first.reject()
+
+    second = WordCurationDialog([_word()])
+    qtbot.addWidget(second)
+
+    assert second.table.isColumnHidden(_READING_COL)
+
+
+def test_a_state_from_a_different_column_count_is_ignored(qtbot, tmp_path, monkeypatch):
+    """The stale-arrangement guard, seen from the dialog."""
+    monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", tmp_path / "gui_config.json")
+    session_state.save_curator_columns(QByteArray(b"garbage"), 99)
+
+    dlg = WordCurationDialog([_word()])
+    qtbot.addWidget(dlg)
+
+    assert not any(dlg.table.isColumnHidden(c) for c in range(dlg.table.columnCount()))

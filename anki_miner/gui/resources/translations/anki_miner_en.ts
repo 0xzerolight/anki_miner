@@ -9304,6 +9304,10 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Reset columns</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>+ Previous line</source>
         <translation type="unfinished" />
     </message>

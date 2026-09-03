@@ -674,6 +674,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self._apply_default_geometry()
         self._main_split_restored = self._restore_split(getattr(self, "_main_splitter", None), main_split)
         self._side_split_restored = self._restore_split(getattr(self, "_side_splitter", None), side_split)
+        # Columns last, and only here: _populate_table has already run, and
+        # restoreState re-sorts, which needs real rows to sort.
+        columns = session_state.load_curator_columns_for(self.table.columnCount())
+        header_view = self.table.horizontalHeader()
+        if columns is not None and header_view and header_view.restoreState(columns):
+            self._apply_header_resize_modes()
 
     def _is_on_a_live_screen(self) -> bool:
         """True when the window's centre sits on a screen that exists."""
@@ -755,6 +761,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                     side.saveState() if side is not None else None,
                     side_key=self._side_key,
                 )
+                header_view = self.table.horizontalHeader()
+                if header_view:
+                    session_state.save_curator_columns(header_view.saveState(), self.table.columnCount())
         super().done(a0)
 
     def _apply_header_resize_modes(self) -> None:
