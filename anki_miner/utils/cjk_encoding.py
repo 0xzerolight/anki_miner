@@ -24,6 +24,10 @@ guard that only ever *adds* a leg the ladder could not otherwise reach.
 
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 #: Share of a decode's NON-ASCII characters that must land in the BMP private
 #: use area before gb18030 is treated as mojibake. The denominator excludes
 #: ASCII on purpose: a subtitle head is mostly cue numbers, timestamps and
@@ -76,4 +80,15 @@ def prefers_big5(data: bytes) -> bool:
     if gb is None or _pua_share(gb) <= _PUA_MOJIBAKE_RATIO:
         return False
     big5 = _decode_tolerating_truncation(data, "big5")
-    return big5 is not None and _pua_share(big5) <= _PUA_MOJIBAKE_RATIO
+    if big5 is None or _pua_share(big5) > _PUA_MOJIBAKE_RATIO:
+        return False
+    # DEBUG, not INFO: the caller's own decode receipt reports the encoding
+    # that won. This line only explains why a ladder skipped its gb18030 leg,
+    # and the ratios are the evidence for or against that call.
+    logger.debug(
+        "Big5 preferred over gb18030: gb18030_pua=%.2f big5_pua=%.2f bytes=%d",
+        _pua_share(gb),
+        _pua_share(big5),
+        len(data),
+    )
+    return True

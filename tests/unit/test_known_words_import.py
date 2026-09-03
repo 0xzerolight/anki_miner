@@ -290,3 +290,40 @@ class TestContract:
         result = parse_known_words_file(_write(tmp_path, "words.txt", "犬\n"))
         assert isinstance(result, KnownWordsImportResult)
         assert isinstance(result.words, frozenset)
+
+
+class TestImportReceipt:
+    """One INFO receipt per import, naming the encoding that actually decoded."""
+
+    _LOGGER = "anki_miner.services.known_words_import"
+
+    def test_a_completed_import_logs_its_counts_and_encoding(self, tmp_path, caplog):
+        path = tmp_path / "sjis.txt"
+        path.write_bytes("食べる\n犬\n犬\n".encode("cp932"))
+
+        with caplog.at_level("INFO", logger=self._LOGGER):
+            result = parse_known_words_file(path)
+
+        assert result.words == frozenset({"食べる", "犬"})
+        records = [r for r in caplog.records if r.name == self._LOGGER]
+        assert len(records) == 1
+        assert records[0].levelname == "INFO"
+        assert records[0].getMessage() == (
+            f"Known words import done: file={path} format=generic rows=3 "
+            f"imported=2 skipped_malformed=0 encoding=cp932"
+        )
+
+    def test_the_receipt_reports_skipped_malformed_rows(self, tmp_path, caplog):
+        cards = [
+            {"reviews": [{"grade": "okay", "timestamp": 1}], "spelling": "犬"},
+            {"reviews": "not-a-list", "spelling": "猫"},
+        ]
+        path = _write(tmp_path, "jpdb.json", json.dumps({"cards_vocabulary_jp_en": cards}))
+
+        with caplog.at_level("INFO", logger=self._LOGGER):
+            parse_known_words_file(path)
+
+        message = [r for r in caplog.records if r.name == self._LOGGER][0].getMessage()
+        assert "format=jpdb" in message
+        assert "skipped_malformed=1" in message
+        assert "encoding=utf-8-sig" in message

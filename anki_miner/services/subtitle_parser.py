@@ -843,7 +843,16 @@ class SubtitleParserService:
         except FileNotFoundError as e:
             raise SubtitleParseError(f"Subtitle file not found: {subtitle_file}") from e
         except Exception as e:
-            raise SubtitleParseError(f"Failed to parse subtitle file: {e}") from e
+            # The wrapped message used to carry only str(e), which for a
+            # UnicodeDecodeError names a codec and an offset but not the file —
+            # useless in a batch, where the whole question is which subtitle
+            # failed. The traceback goes with it: this is the terminal boundary
+            # for an unexpected parse failure, and the ladder's own receipt
+            # (utils/subtitle_encoding.py) has already recorded the decode.
+            logger.warning(
+                "Subtitle parse failed: file=%s exc=%s: %s", subtitle_file, type(e).__name__, e, exc_info=True
+            )
+            raise SubtitleParseError(f"Failed to parse subtitle file {subtitle_file}: {type(e).__name__}: {e}") from e
 
     def _resolve_offset(self, subtitle_offset: float | None) -> float:
         """Per-call offset, falling back to the config value when None."""

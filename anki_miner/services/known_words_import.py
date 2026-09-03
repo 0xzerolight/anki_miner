@@ -32,9 +32,14 @@ from __future__ import annotations
 
 import csv
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from anki_miner.utils.logging_ext import log_summary
+
+logger = logging.getLogger(__name__)
 
 # Stable keys the dialog maps to translated display labels; keep the dialog's
 # mapping in lockstep (a unit test asserts completeness on both sides).
@@ -98,15 +103,30 @@ def parse_known_words_file(path: Path, *, encodings: tuple[str, ...] | None = No
         raw = path.read_bytes()
     except OSError as exc:
         raise KnownWordsImportError("unreadable") from exc
-    text = _decode(raw, encodings)
+    text, encoding = _decode(raw, encodings)
 
     try:
         data = json.loads(text)
     except ValueError:
         if path.suffix.lower() == ".json":
             raise KnownWordsImportError("unrecognized") from None
-        return _parse_delimited_or_text(text)
-    return _parse_json(data)
+        result = _parse_delimited_or_text(text)
+    else:
+        result = _parse_json(data)
+    # Only the completed import gets a receipt. Every failure leaves through
+    # KnownWordsImportError, whose ``reason`` the caller already reports; a
+    # second line here would double-report the same refusal.
+    log_summary(
+        logger,
+        "Known words import done",
+        file=path,
+        format=result.format_key,
+        rows=result.total_entries,
+        imported=len(result.words),
+        skipped_malformed=result.skipped_malformed,
+        encoding=encoding,
+    )
+    return result
 
 
 def _result(format_key: str, words: set[str], total: int, skipped_malformed: int = 0) -> KnownWordsImportResult:
@@ -221,7 +241,7 @@ def _parse_generic(text: str) -> KnownWordsImportResult:
     return _result("generic", words, total)
 
 
-def _decode(raw: bytes, encodings: tuple[str, ...] | None = None) -> str:
+def _decode(raw: bytes, encodings: tuple[str, ...] | None = None) -> tuple[str, str]:
     # utf-8-sig strips a Windows/Excel BOM that would otherwise break
     # json.loads and the exact first-cell header matches; the rest of the
     # ladder is the mining language's (cp932 for Japanese Notepad/Excel
@@ -230,9 +250,13 @@ def _decode(raw: bytes, encodings: tuple[str, ...] | None = None) -> str:
     # `is None`, not truthiness: `()` is an EMPTY ladder the caller asked for,
     # not a request for the Japanese default. Truthiness would decode a
     # profile's deliberately-empty ladder as Japanese.
+    #
+    # Returns the winning encoding alongside the text: a list that imported as
+    # nonsense words is a decode fault, and the import receipt cannot name the
+    # ladder leg that produced it unless this reports which one won.
     for encoding in ("utf-8-sig", "cp932") if encodings is None else encodings:
         try:
-            return raw.decode(encoding)
+            return raw.decode(encoding), encoding
         except (UnicodeDecodeError, LookupError):
             continue
     raise KnownWordsImportError("unreadable")

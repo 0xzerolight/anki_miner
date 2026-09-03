@@ -126,6 +126,33 @@ class TestParseSubtitleFile:
         ):
             service.parse_subtitle_file(bad_file)
 
+    def test_parse_failure_names_the_file_and_the_original_exception(self, test_config, tmp_path, caplog):
+        """The wrapped message must locate the file and keep the original type."""
+        with patch("anki_miner.services.subtitle_parser.get_shared_tagger"):
+            service = SubtitleParserService(test_config)
+
+        bad_file = tmp_path / "bad.ass"
+        bad_file.write_text("not valid subtitle data!!!", encoding="utf-8")
+        logger_name = "anki_miner.services.subtitle_parser"
+
+        with (
+            patch(
+                "anki_miner.services.subtitle_parser.pysubs2.load",
+                side_effect=ValueError("parse error"),
+            ),
+            caplog.at_level("WARNING", logger=logger_name),
+            pytest.raises(SubtitleParseError) as exc_info,
+        ):
+            service.parse_subtitle_file(bad_file)
+
+        assert str(bad_file) in str(exc_info.value)
+        assert "ValueError" in str(exc_info.value)
+        records = [r for r in caplog.records if r.name == logger_name and "Subtitle parse failed" in r.getMessage()]
+        assert len(records) == 1
+        assert records[0].levelname == "WARNING"
+        assert records[0].exc_info is not None
+        assert f"file={bad_file}" in records[0].getMessage()
+
     def test_parses_cp932_shift_jis_encoded_subtitle(self, test_config, tmp_path):
         """A cp932/Shift-JIS-encoded subtitle loads via the encoding fallback (Bug J5).
 
