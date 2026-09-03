@@ -31,10 +31,19 @@ import threading
 import time
 import traceback
 from collections.abc import Iterator
+from typing import Any
 
 from PyQt6.QtCore import QObject, QTimer
 
+from anki_miner.utils.logging_ext import log_summary
+
 logger = logging.getLogger(__name__)
+
+# A paused span longer than this is worth an INFO receipt rather than a DEBUG
+# one: past a second the user saw the app freeze, and the log has to say the
+# freeze was the deliberate block (a theme repolish) and not a real stall. A
+# module constant, not a setting — nothing about it is worth a user decision.
+_PAUSE_INFO_MS = 1000
 
 # Module-global stall counter so the e2e harness (and tests) can read totals
 # without holding a handle to whichever StallWatchdog instance is live.
@@ -67,7 +76,7 @@ def _stall_detection_paused() -> bool:
 
 
 @contextlib.contextmanager
-def paused_stall_detection() -> Iterator[None]:
+def paused_stall_detection(label: str = "") -> Iterator[None]:
     """Suppress stall reporting around a deliberately-synchronous GUI-thread block.
 
     Use ONLY for work that genuinely cannot be moved off the GUI thread — the
@@ -80,10 +89,20 @@ def paused_stall_detection() -> Iterator[None]:
     and logging stalls. On exit, every live watchdog's heartbeat timestamp is
     refreshed to "now" so the just-elapsed paused span is not itself reported as
     a stall on the next monitor poll.
+
+    The exit also logs how long the block actually ran. Without it a suppressed
+    span is invisible, and "the app hangs when I change theme" cannot be told
+    apart from a real stall the watchdog never got to see: the pause is exactly
+    the window in which stall reporting is off.
+
+    Args:
+        label: What is being blocked on, e.g. ``"theme repolish"``. Appears in
+            the resume line; pass one at every call site.
     """
     global _pause_depth
     with _pause_lock:
         _pause_depth += 1
+    started_at = time.monotonic()
     try:
         yield
     finally:
@@ -96,6 +115,14 @@ def paused_stall_detection() -> Iterator[None]:
             wd._refresh_heartbeat()
         with _pause_lock:
             _pause_depth -= 1
+        elapsed_ms = (time.monotonic() - started_at) * 1000
+        level = logging.INFO if elapsed_ms > _PAUSE_INFO_MS else logging.DEBUG
+        logger.log(
+            level,
+            "stall detection resumed: %s after %.0f ms",
+            label or "(unlabelled)",
+            elapsed_ms,
+        )
 
 
 def get_global_stall_count() -> int:
@@ -115,6 +142,56 @@ def _bump_global() -> None:
     global _global_stall_count
     with _global_lock:
         _global_stall_count += 1
+
+
+def _dump_sink() -> Any:
+    """Return the file the shutdown dump writes to.
+
+    The crash file, not stderr, for the reason ``_format_main_stack`` gives: a
+    frozen build has no stderr anyone can read. Imported lazily — a module-level
+    import of ``gui.app`` would be a cycle.
+    """
+    from anki_miner.gui.app import crash_stream
+
+    return crash_stream() or sys.stderr
+
+
+def dump_stacks_later(seconds: float) -> bool:
+    """Arm a one-shot all-thread stack dump ``seconds`` from now.
+
+    Armed just before a shutdown path that is expected to finish quickly. If it
+    finishes, :func:`cancel_stack_dump` disarms the timer and nothing is
+    written; if the process wedges instead, the dump lands in the crash file and
+    names the thread that is stuck — the only evidence available for a hang
+    after the window closed, where no Python code of ours ever runs again.
+
+    Args:
+        seconds: Delay before the dump fires.
+
+    Returns:
+        True if the timer was armed, False if faulthandler refused the sink
+        (a stream with no usable file descriptor).
+    """
+    sink = _dump_sink()
+    try:
+        faulthandler.dump_traceback_later(seconds, exit=False, file=sink)
+    except Exception as exc:  # noqa: BLE001 — bucket: faulthandler refused the sink
+        log_summary(
+            logger,
+            "stall watchdog stack dump refused",
+            seconds=seconds,
+            error_type=type(exc).__name__,
+            error=str(exc),
+            level=logging.DEBUG,
+        )
+        return False
+    log_summary(logger, "stall watchdog stack dump armed", seconds=seconds, level=logging.DEBUG)
+    return True
+
+
+def cancel_stack_dump() -> None:
+    """Disarm a timer armed by :func:`dump_stacks_later`. Safe if none is armed."""
+    faulthandler.cancel_dump_traceback_later()
 
 
 class StallWatchdog:
@@ -162,6 +239,11 @@ class StallWatchdog:
         self._stall_count = 0
         self._last_stall_ms: float | None = None
 
+        # Whether a start() has happened that no stop() has answered yet. Gates
+        # the shutdown receipt so a stop-before-start or a second stop does not
+        # log a second "stopped" line for a watchdog that was never running.
+        self._started = False
+
     # --- Public API --------------------------------------------------------
 
     @property
@@ -198,11 +280,14 @@ class StallWatchdog:
 
         with _watchdogs_lock:
             _live_watchdogs.add(self)
+        self._started = True
 
     def stop(self) -> None:
         """Stop the heartbeat timer, signal the monitor to exit, and join it.
 
-        Safe to call if never started or more than once.
+        Safe to call if never started or more than once. A watchdog that ran
+        logs its episode count on the way down: a session that froze four times
+        and one that never froze otherwise look identical in the log.
         """
         self._stop_event.set()
 
@@ -218,6 +303,16 @@ class StallWatchdog:
         if monitor is not None and monitor.is_alive():
             monitor.join(timeout=max(1.0, self._poll_ms / 1000 * 4))
         self._monitor_thread = None
+
+        if self._started:
+            self._started = False
+            log_summary(
+                logger,
+                "stall watchdog stopped",
+                stalls=self._stall_count,
+                total=get_global_stall_count(),
+                last_stall_ms=None if self._last_stall_ms is None else round(self._last_stall_ms),
+            )
 
     # --- Internals ---------------------------------------------------------
 
@@ -263,10 +358,14 @@ class StallWatchdog:
         _bump_global()
 
         stack_text = self._format_main_stack()
+        # episode/total separate the one-off freeze from the repeat offender:
+        # a single 1.2 s stall is noise, the twentieth in a session is the bug.
         logger.warning(
-            "GUI thread stall detected: %.0f ms (threshold %d ms). Main-thread stack:\n%s",
+            "GUI thread stall detected: %.0f ms (threshold %d ms) episode=%d total=%d." " Main-thread stack:\n%s",
             gap_ms,
             self._threshold_ms,
+            self._stall_count,
+            get_global_stall_count(),
             stack_text,
         )
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
 
 import pytest
@@ -259,3 +260,119 @@ def test_install_helper(qtbot):
         assert wd._monitor_thread.is_alive()
     finally:
         wd.stop()
+
+
+def test_stall_record_carries_episode_and_total(qtbot, caplog):
+    """A stall line reports which episode it is and the process-wide total."""
+    wd = StallWatchdog(threshold_ms=100, poll_ms=20)
+    wd.start()
+    try:
+        _pump(qtbot, 100)
+        with caplog.at_level(logging.WARNING, logger="anki_miner.gui.utils.stall_watchdog"):
+            time.sleep(100 * 3 / 1000)
+            qtbot.waitUntil(lambda: wd.stall_count >= 1, timeout=3000)
+        messages = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert any("episode=1" in m and "total=" in m for m in messages), messages
+    finally:
+        wd.stop()
+
+
+def test_pause_logs_resume_span_at_debug(caplog):
+    """Leaving a labelled pause logs how long the deliberate block ran."""
+    with (
+        caplog.at_level(logging.DEBUG, logger="anki_miner.gui.utils.stall_watchdog"),
+        paused_stall_detection("theme repolish"),
+    ):
+        time.sleep(0.05)
+    records = [r for r in caplog.records if r.getMessage().startswith("stall detection resumed:")]
+    assert len(records) == 1
+    assert records[0].levelno == logging.DEBUG
+    message = records[0].getMessage()
+    assert "theme repolish" in message
+    assert re.search(r"after \d+ ms", message), message
+
+
+def test_long_pause_logs_resume_span_at_info(caplog, monkeypatch):
+    """A pause past the info threshold is worth an INFO receipt."""
+    import anki_miner.gui.utils.stall_watchdog as sw
+
+    monkeypatch.setattr(sw, "_PAUSE_INFO_MS", 10)
+    with (
+        caplog.at_level(logging.DEBUG, logger="anki_miner.gui.utils.stall_watchdog"),
+        paused_stall_detection("theme repolish"),
+    ):
+        time.sleep(0.05)
+    records = [r for r in caplog.records if r.getMessage().startswith("stall detection resumed:")]
+    assert len(records) == 1
+    assert records[0].levelno == logging.INFO
+
+
+def test_unlabelled_pause_still_logs(caplog):
+    with caplog.at_level(logging.DEBUG, logger="anki_miner.gui.utils.stall_watchdog"), paused_stall_detection():
+        time.sleep(0.01)
+    assert any(r.getMessage().startswith("stall detection resumed:") for r in caplog.records)
+
+
+def test_stop_logs_stall_count(qtbot, caplog):
+    wd = StallWatchdog(threshold_ms=100, poll_ms=20)
+    wd.start()
+    _pump(qtbot, 40)
+    with caplog.at_level(logging.DEBUG, logger="anki_miner.gui.utils.stall_watchdog"):
+        wd.stop()
+        # A second stop must stay silent: the watchdog is already down.
+        wd.stop()
+    records = [r for r in caplog.records if r.getMessage().startswith("stall watchdog stopped:")]
+    assert len(records) == 1
+    assert "stalls=0" in records[0].getMessage()
+
+
+def test_stop_before_start_logs_nothing(caplog):
+    wd = StallWatchdog(threshold_ms=100, poll_ms=20)
+    with caplog.at_level(logging.DEBUG, logger="anki_miner.gui.utils.stall_watchdog"):
+        wd.stop()
+    assert not [r for r in caplog.records if r.getMessage().startswith("stall watchdog stopped:")]
+
+
+def test_dump_stacks_later_is_cancellable(monkeypatch, tmp_path):
+    """An armed shutdown dump writes nothing once cancelled."""
+    import anki_miner.gui.app as app_module
+    from anki_miner.gui.utils.stall_watchdog import cancel_stack_dump, dump_stacks_later
+
+    sink_path = tmp_path / "crash.log"
+    with open(sink_path, "w", encoding="utf-8") as sink:
+        monkeypatch.setattr(app_module, "crash_stream", lambda: sink)
+        try:
+            assert dump_stacks_later(0.1) is True
+            cancel_stack_dump()
+            time.sleep(0.3)
+            sink.flush()
+        finally:
+            cancel_stack_dump()
+    assert sink_path.read_text(encoding="utf-8") == ""
+
+
+def test_dump_stacks_later_accepts_a_long_delay(monkeypatch, tmp_path):
+    import anki_miner.gui.app as app_module
+    from anki_miner.gui.utils.stall_watchdog import cancel_stack_dump, dump_stacks_later
+
+    sink_path = tmp_path / "crash.log"
+    with open(sink_path, "w", encoding="utf-8") as sink:
+        monkeypatch.setattr(app_module, "crash_stream", lambda: sink)
+        try:
+            assert dump_stacks_later(5) is True
+            time.sleep(0.2)
+            sink.flush()
+            assert sink_path.read_text(encoding="utf-8") == ""
+        finally:
+            cancel_stack_dump()
+
+
+def test_dump_stacks_later_reports_failure(monkeypatch):
+    """A sink faulthandler cannot use is reported, not raised."""
+    import anki_miner.gui.utils.stall_watchdog as sw
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("no fileno")
+
+    monkeypatch.setattr(sw.faulthandler, "dump_traceback_later", _boom)
+    assert sw.dump_stacks_later(5) is False
