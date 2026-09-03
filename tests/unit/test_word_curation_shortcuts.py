@@ -309,8 +309,17 @@ class TestKeyHints:
 
     def test_key_hint_line_is_present(self, dialog):
         text = dialog.key_hint_label.text()
-        for key in ("S", "Ctrl+A", "Ctrl+D", "Ctrl+Enter"):
+        for key in ("S", "K", "Ctrl+A", "Ctrl+D", "Ctrl+Enter"):
             assert key in text
+
+    def test_the_known_key_is_described_in_the_buttons_vocabulary(self, dialog):
+        """K IS the Add to Known Words button, so the hint borrows its noun.
+
+        "mark known" matches the row mark the key produces ("Known · pending")
+        and stays direction-neutral, which is the button's own rule: K adds on
+        a mixed selection and only removes when every target row is staged.
+        """
+        assert "K mark known" in dialog.key_hint_label.text()
 
     def test_the_bulk_keys_are_described_in_the_buttons_vocabulary(self, dialog):
         """Ctrl+A/Ctrl+D ARE the bulk buttons, so they must be named the same way.

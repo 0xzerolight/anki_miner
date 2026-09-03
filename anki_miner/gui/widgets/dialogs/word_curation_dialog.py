@@ -608,10 +608,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # catalogs in pieces. E501 is off project-wide and black leaves strings be.
         if self._show_player:
             text = self.tr(
-                "S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm"
+                "S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm"
             )
         else:
-            text = self.tr("S include/exclude · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm")
+            text = self.tr(
+                "S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm"
+            )
         self.key_hint_label = QLabel(text)
         self.key_hint_label.setObjectName("curator-key-hints")
         self.key_hint_label.setFont(self._make_font(11))
