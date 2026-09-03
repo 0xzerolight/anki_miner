@@ -14,7 +14,7 @@ pytest.importorskip("PyQt6.QtCore")
 
 
 from anki_miner.gui.utils import result_copy
-from anki_miner.models.processing import TerminalOutcome
+from anki_miner.models.processing import TerminalOutcome, WhitelistCoverage
 
 
 class TestCreatedCards:
@@ -198,3 +198,22 @@ class TestTheCallSitesUseIt:
         qtbot.addWidget(dialog)
 
         assert dialog._title_label.text() == "No cards created."
+
+
+class TestWhitelistCopy:
+    """The run-end whitelist report: a count, then the words themselves."""
+
+    def test_the_summary_clause_counts_mined_over_total(self):
+        assert result_copy.whitelist_summary(14, 20) == "Whitelist: 14 of 20 mined"
+
+    def test_the_report_names_unmined_and_known_entries(self):
+        coverage = WhitelistCoverage(frozenset({"a", "b", "c", "d"}), mined=frozenset({"a"}), known=frozenset({"d"}))
+        assert result_copy.whitelist_report(coverage) == "Whitelist: 1 of 4 mined. Not mined: b, c. Already known: d."
+
+    def test_a_fully_mined_whitelist_reports_only_the_count(self):
+        coverage = WhitelistCoverage(frozenset({"a"}), mined=frozenset({"a"}))
+        assert result_copy.whitelist_report(coverage) == "Whitelist: 1 of 1 mined."
+
+    def test_unmined_text_is_one_entry_per_line_sorted(self):
+        coverage = WhitelistCoverage(frozenset({"走る", "食べる", "飲む"}), mined=frozenset({"食べる"}))
+        assert result_copy.whitelist_unmined_text(coverage) == "走る\n飲む"
