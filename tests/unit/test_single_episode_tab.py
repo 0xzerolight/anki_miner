@@ -804,6 +804,8 @@ def test_build_curation_context_routes_through_shared_helpers(tab, facade_proces
         Path(str(fake_subs)),
         offset=2.5,
         audio_track_override=3,
+        secondary_subtitle=None,
+        secondary_offset=0.0,
     )
     assert media_context is sentinel_ctx
     # Lookup resolves through the processor facade (offline_lookup_fn).

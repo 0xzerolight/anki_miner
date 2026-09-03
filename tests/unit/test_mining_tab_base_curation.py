@@ -453,6 +453,32 @@ def test_reject_without_worker_thread_does_not_raise(qapp, qtbot):
     assert tab._curation_event.is_set()
 
 
+def test_make_curation_media_context_parses_the_second_track(test_config, tmp_path):
+    from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
+
+    video = tmp_path / "ep.mkv"
+    video.write_bytes(b"\x00")
+    sub = tmp_path / "ep.srt"
+    sub.write_text("1\n00:00:01,000 --> 00:00:03,000\n食べるのテスト\n", encoding="utf-8")
+    second = tmp_path / "ep.en.srt"
+    second.write_text("1\n00:00:01,000 --> 00:00:03,000\nA test.\n", encoding="utf-8")
+
+    ctx = MiningTabBase._make_curation_media_context(
+        test_config, video, sub, 0.0, secondary_subtitle=second, secondary_offset=0.5
+    )
+
+    assert ctx is not None
+    assert ctx.secondary_entries == [(1.0, 3.0, "A test.")]
+    assert ctx.secondary_offset == 0.5
+    without = MiningTabBase._make_curation_media_context(test_config, video, sub, 0.0)
+    assert without is not None and without.secondary_entries == []
+
+    missing = MiningTabBase._make_curation_media_context(
+        test_config, video, sub, 0.0, secondary_subtitle=tmp_path / "gone.srt", secondary_offset=0.5
+    )
+    assert missing is not None and missing.secondary_entries == []  # the preview survives
+
+
 class TestStagedKnownWordsGate:
     """D34-B — the staged Known Words write gates the whole curation result.
 

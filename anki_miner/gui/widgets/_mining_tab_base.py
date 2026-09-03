@@ -710,19 +710,30 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         subtitle: Path | None,
         offset: float,
         audio_track_override: int | None = None,
+        *,
+        secondary_subtitle: Path | None = None,
+        secondary_offset: float = 0.0,
     ) -> CurationMediaContext | None:
         """Build the dialog's embedded-player context from a video/subtitle pair.
 
         Returns ``None`` when either path is missing or subtitle parsing
         fails — the dialog then opens table-only, which is always preferable
         to blocking curation on a media problem. Entries are parsed with a
-        zero offset (the player applies ``offset`` itself).
+        zero offset (the player applies ``offset`` itself). The second track
+        is parsed the same way (zero offset) and degrades to no translations
+        on its own, so the video preview never depends on it.
         """
         if video is None or subtitle is None:
             return None
         try:
             parser = SubtitleParserService(replace(config, subtitle_offset=0.0))
             entries = parser.parse_raw_entries(subtitle)
+            secondary_entries: list[tuple[float, float, str]] = []
+            if secondary_subtitle is not None:
+                try:
+                    secondary_entries = parser.parse_raw_entries(secondary_subtitle)
+                except Exception as exc:  # noqa: BLE001 — the primary preview must survive a second-track failure.
+                    logger.warning("Secondary subtitle unavailable for curation: error=%s", type(exc).__name__)
             return CurationMediaContext(
                 video_file=video,
                 subtitle_entries=entries,
@@ -731,6 +742,8 @@ class MiningTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
                 audio_track_codes=get_profile(config_language(config)).audio_track_codes,
                 audio_padding=config.audio_padding,
                 screenshot_animated=config.screenshot_animated,
+                secondary_entries=secondary_entries,
+                secondary_offset=secondary_offset,
             )
         except Exception as exc:  # noqa: BLE001 — bucket A: curation loses its media player.
             logger.warning("Curation media unavailable: error=%s", type(exc).__name__)

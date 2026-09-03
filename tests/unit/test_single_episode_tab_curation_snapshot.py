@@ -35,7 +35,7 @@ def test_build_curation_context_reads_snapshots_not_live_widgets(tab, monkeypatc
     """The built context uses the snapshot, not values changed after start."""
     captured: dict = {}
 
-    def _fake_make(config, video, subtitle, offset, audio_track_override=None):
+    def _fake_make(config, video, subtitle, offset, audio_track_override=None, **kwargs):
         captured["video"] = video
         captured["subtitle"] = subtitle
         captured["offset"] = offset

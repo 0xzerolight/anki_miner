@@ -29,7 +29,15 @@ class RecentFilesManager:
         self._max_items = max_items
         self._file_path = ANKI_MINER_HOME / "recent_files.json"
 
-    def add_entry(self, video_path: Path, subtitle_path: Path, subtitle_offset: float = 0.0) -> None:
+    def add_entry(
+        self,
+        video_path: Path,
+        subtitle_path: Path,
+        subtitle_offset: float = 0.0,
+        *,
+        secondary_subtitle: Path | None = None,
+        secondary_offset: float = 0.0,
+    ) -> None:
         """Add a video/subtitle pair to recent files.
 
         Deduplicates by (video, subtitle) pair. If the pair already exists,
@@ -40,6 +48,12 @@ class RecentFilesManager:
             subtitle_path: Path to the subtitle file.
             subtitle_offset: Subtitle timing offset in seconds, restored when the
                 pair is re-selected. Defaults to 0.0.
+            secondary_subtitle: Path to the translation subtitle used for this
+                pair, if any. Omitted from the stored entry entirely when
+                ``None`` so an old pair with no second track round-trips byte
+                for byte.
+            secondary_offset: Timing offset for the secondary subtitle, stored
+                only alongside ``secondary_subtitle``.
         """
         entries = self._load()
 
@@ -49,15 +63,16 @@ class RecentFilesManager:
         entries = [e for e in entries if not (e["video"] == video_str and e["subtitle"] == subtitle_str)]
 
         # Prepend new entry
-        entries.insert(
-            0,
-            {
-                "video": video_str,
-                "subtitle": subtitle_str,
-                "subtitle_offset": float(subtitle_offset),
-                "timestamp": datetime.now(UTC).isoformat(),
-            },
-        )
+        entry = {
+            "video": video_str,
+            "subtitle": subtitle_str,
+            "subtitle_offset": float(subtitle_offset),
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
+        if secondary_subtitle is not None:
+            entry["secondary_subtitle"] = str(secondary_subtitle)
+            entry["secondary_offset"] = float(secondary_offset)
+        entries.insert(0, entry)
 
         # Trim to max_items
         entries = entries[: self._max_items]
@@ -68,8 +83,9 @@ class RecentFilesManager:
         """Get the list of recent file pairs.
 
         Returns:
-            List of dicts with keys: video, subtitle, subtitle_offset, timestamp.
-            Ordered most recent first.
+            List of dicts with keys: video, subtitle, subtitle_offset, timestamp,
+            and (only when a second track was used) secondary_subtitle,
+            secondary_offset. Ordered most recent first.
         """
         return self._load()
 
@@ -94,6 +110,12 @@ class RecentFilesManager:
                 "subtitle_offset" not in entry
                 or isinstance(entry["subtitle_offset"], (int, float))
                 and not isinstance(entry["subtitle_offset"], bool)
+            )
+            and ("secondary_subtitle" not in entry or isinstance(entry["secondary_subtitle"], str))
+            and (
+                "secondary_offset" not in entry
+                or isinstance(entry["secondary_offset"], (int, float))
+                and not isinstance(entry["secondary_offset"], bool)
             )
             for entry in entries
         ):
