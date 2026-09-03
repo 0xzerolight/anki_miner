@@ -14,7 +14,7 @@ import time
 import uuid
 import zipfile
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -22,6 +22,10 @@ from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException, SetupError
+from anki_miner.exceptions.youtube import (
+    TranscriptionFailedError,
+    TranscriptionProducedNothingError,
+)
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import (
@@ -2714,6 +2718,51 @@ class EpisodeProcessor:
         if message is not None:
             raise SetupError(message)
 
+    def _transcribe_fetched(
+        self,
+        fetched: FetchedMedia,
+        workspace: Path,
+        cancel_event: threading.Event,
+        fetch_progress_cb: Callable[[str, float | None], None] | None,
+    ) -> FetchedMedia:
+        """Fill a subtitle-less fetch by transcribing the downloaded video.
+
+        The SRT is written into the caller-owned workspace, so the queue
+        worker's existing rmtree still owns the cleanup. Progress rides the
+        fetch callback the worker already forwards: ASR is by far the longest
+        stage in the run and must never look hung.
+
+        Returns the media unchanged (still ``subtitle_file=None``) when the run
+        was cancelled mid-pass; the caller turns that into a cancelled result.
+        """
+        from anki_miner.services.asr.subtitle_generation import SubtitleGenStatus, generate_subtitle_one
+
+        def _report(label: str, frac: float | None) -> None:
+            if fetch_progress_cb is not None:
+                fetch_progress_cb(label, frac)
+
+        extracting = QCoreApplication.translate("EpisodeProcessor", "Extracting audio")
+        transcribing = QCoreApplication.translate("EpisodeProcessor", "Transcribing")
+        out_srt = workspace / f"{fetched.video_file.stem}.srt"
+        result = generate_subtitle_one(
+            self.config,
+            self.media_extractor,
+            fetched.video_file,
+            out_srt,
+            on_extract_start=lambda: _report(extracting, None),
+            on_transcribe_start=lambda: _report(transcribing, 0.0),
+            transcribe_progress_cb=lambda frac: _report(transcribing, frac),
+            cancel_event=cancel_event,
+            language=get_profile(config_language(self.config)).asr_language,
+        )
+        if result.status is SubtitleGenStatus.NO_SPEECH:
+            raise TranscriptionProducedNothingError("Local transcription recognised no speech in the downloaded video.")
+        if result.status is SubtitleGenStatus.EXTRACTION_FAILED:
+            raise TranscriptionFailedError("Could not extract audio from the downloaded video for transcription.")
+        if result.out_srt is None:
+            return fetched
+        return replace(fetched, subtitle_file=result.out_srt)
+
     def process_youtube_url(
         self,
         url: str,
@@ -2827,9 +2876,19 @@ class EpisodeProcessor:
                 fallback_allowed=fallback_allowed,
             )
 
-        # A subtitle-less fetch is only possible in transcribe mode, which fills
-        # it from local ASR before this point (see _transcribe_fetched).
-        assert fetched.subtitle_file is not None
+        # Transcribe mode fetched no captions: fill the hole from local ASR
+        # before anything downstream (the curator preview included) sees the
+        # media. This is the stage that collapses the user's old three-step
+        # Download -> Generate -> Video/Single workaround into one run.
+        if fetched.subtitle_file is None:
+            if cancel_event.is_set():
+                return self._make_cancelled_result(start_time)
+            with timed_phase("youtube-transcribe", logger):
+                fetched = self._transcribe_fetched(fetched, workspace, cancel_event, fetch_progress_cb)
+            if fetched.subtitle_file is None:
+                # Cancelled mid-transcription. A result, not a raise: the queue
+                # worker's post-fetch contract expects item_finished to fire.
+                return self._make_cancelled_result(start_time)
 
         if on_fetched is not None:
             on_fetched(fetched)
