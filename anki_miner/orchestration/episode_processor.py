@@ -14,7 +14,7 @@ import time
 import uuid
 import zipfile
 from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -22,6 +22,10 @@ from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException, SetupError
+from anki_miner.exceptions.youtube import (
+    TranscriptionFailedError,
+    TranscriptionProducedNothingError,
+)
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import (
@@ -2733,6 +2737,96 @@ class EpisodeProcessor:
         if message is not None:
             raise SetupError(message)
 
+    def _transcribe_fetched(
+        self,
+        fetched: FetchedMedia,
+        workspace: Path,
+        cancel_event: threading.Event,
+        fetch_progress_cb: Callable[[str, float | None], None] | None,
+    ) -> FetchedMedia:
+        """Fill a subtitle-less fetch by transcribing the downloaded video.
+
+        The SRT is written into the caller-owned workspace, so the queue
+        worker's existing rmtree still owns the cleanup. Progress rides the
+        fetch callback the worker already forwards: ASR is by far the longest
+        stage in the run and must never look hung.
+
+        Returns the media unchanged (still ``subtitle_file=None``) when the run
+        was cancelled mid-pass; the caller turns that into a cancelled result.
+        """
+        from anki_miner.services.asr.subtitle_generation import SubtitleGenStatus, generate_subtitle_one
+
+        def _report(label: str, frac: float | None) -> None:
+            if fetch_progress_cb is not None:
+                fetch_progress_cb(label, frac)
+
+        extracting = QCoreApplication.translate("EpisodeProcessor", "Extracting audio")
+        transcribing = QCoreApplication.translate("EpisodeProcessor", "Transcribing")
+        out_srt = workspace / f"{fetched.video_file.stem}.srt"
+        result = generate_subtitle_one(
+            self.config,
+            self.media_extractor,
+            fetched.video_file,
+            out_srt,
+            on_extract_start=lambda: _report(extracting, None),
+            on_transcribe_start=lambda: _report(transcribing, 0.0),
+            transcribe_progress_cb=lambda frac: _report(transcribing, frac),
+            cancel_event=cancel_event,
+            language=get_profile(config_language(self.config)).asr_language,
+        )
+        if result.status is SubtitleGenStatus.NO_SPEECH:
+            raise TranscriptionProducedNothingError("Local transcription recognised no speech in the downloaded video.")
+        if result.status is SubtitleGenStatus.EXTRACTION_FAILED:
+            raise TranscriptionFailedError("Could not extract audio from the downloaded video for transcription.")
+        if result.out_srt is None:
+            return fetched
+        return replace(fetched, subtitle_file=result.out_srt)
+
+    def _align_fetched(
+        self,
+        fetched: FetchedMedia,
+        workspace: Path,
+        cancel_event: threading.Event,
+        fetch_progress_cb: Callable[[str, float | None], None] | None,
+    ) -> FetchedMedia | None:
+        """Retime fetched captions against the video's own audio.
+
+        Returns None when the alignment was cancelled — the outcome carries that
+        fact, so the caller never has to re-read the event to learn it.
+
+        Best-effort by contract: ``retime_subtitle`` never raises for content or
+        tool reasons — every failure comes back as a falsy ``RetimeOutcome`` with
+        the original file untouched — so alignment can degrade but never fail a
+        run. YouTube's auto-captions being out of sync is why this exists.
+
+        Writes a sibling rather than overwriting: ``retime_subtitle`` keeps no
+        copy when ``out_sub`` is ``in_sub``, and a bad alignment must not destroy
+        the captions we would otherwise mine.
+        """
+        from anki_miner.services.subtitle_retimer import retime_subtitle
+
+        if fetched.subtitle_file is None:  # pragma: no cover - callers gate on this
+            return fetched
+        if fetch_progress_cb is not None:
+            fetch_progress_cb(QCoreApplication.translate("EpisodeProcessor", "Aligning subtitles"), None)
+        source = fetched.subtitle_file
+        out_sub = workspace / f"{source.stem}.retimed{source.suffix}"
+        outcome = retime_subtitle(
+            self.config,
+            fetched.video_file,
+            source,
+            out_sub,
+            cancel_event=cancel_event,
+            log_cb=logger.debug,
+        )
+        if outcome.cancelled:
+            return None
+        if not outcome:
+            logger.info("YouTube caption alignment did not apply: %s", outcome.reason)
+            return fetched
+        logger.info("YouTube captions aligned with %s", outcome.engine)
+        return replace(fetched, subtitle_file=out_sub)
+
     def process_youtube_url(
         self,
         url: str,
@@ -2747,6 +2841,7 @@ class EpisodeProcessor:
         on_fetched: Callable[[FetchedMedia], None] | None = None,
         source_label: str | None = None,
         fallback_allowed: bool = False,
+        align_captions: bool = False,
     ) -> ProcessingResult:
         """Fetch a YouTube video + subs then run the standard mining pipeline.
 
@@ -2764,10 +2859,12 @@ class EpisodeProcessor:
                 write file names with (the worker takes it from probe_metadata).
             workspace: Pre-created, caller-owned directory that yt-dlp writes
                 the video and subtitle files into.
-            sub_mode: "manual_only", "auto_only" or "auto_dub" — resolved from
-                what probe_metadata reported as available ("auto_dub" pairs the
+            sub_mode: "manual_only", "auto_only", "auto_dub" or "transcribe" —
+                resolved from what probe_metadata reported as available and what
+                subtitle source the run asked for ("auto_dub" pairs the
                 machine-translated ja captions with the Japanese auto-dub audio
-                track).
+                track; "transcribe" downloads no captions and generates the
+                subtitle locally from the video's audio).
             fallback_allowed: Forwarded to the fetcher. When True (the worker
                 passes ``VideoInfo.has_auto_ja_subs``), a ``manual_only`` fetch may
                 fall back to the video's *native* auto-captions if the listed manual
@@ -2790,6 +2887,10 @@ class EpisodeProcessor:
             on_fetched: Optional callback invoked with the ``FetchedMedia``
                 result after download completes, before the mining pipeline
                 starts. Called on the calling thread (the worker thread).
+            align_captions: Retime *fetched* captions against the video's audio
+                before mining (the tab's per-run checkbox). Ignored in
+                "transcribe" mode, where the subtitle already came from that
+                audio. Best-effort: a failed alignment keeps the original file.
             source_label: Optional origin string for the card "source" field
                 (typically the YouTube video title). Forwarded to
                 ``process_episode`` as ``source_label_override``. The stats/dedup
@@ -2839,6 +2940,35 @@ class EpisodeProcessor:
                 fallback_allowed=fallback_allowed,
             )
 
+        # Transcribe mode fetched no captions: fill the hole from local ASR
+        # before anything downstream (the curator preview included) sees the
+        # media. This is the stage that collapses the user's old three-step
+        # Download -> Generate -> Video/Single workaround into one run.
+        if fetched.subtitle_file is None:
+            if cancel_event.is_set():
+                return self._make_cancelled_result(start_time)
+            with timed_phase("youtube-transcribe", logger):
+                fetched = self._transcribe_fetched(fetched, workspace, cancel_event, fetch_progress_cb)
+            if fetched.subtitle_file is None:
+                # Cancelled mid-transcription. A result, not a raise: the queue
+                # worker's post-fetch contract expects item_finished to fire.
+                return self._make_cancelled_result(start_time)
+        elif align_captions:
+            # elif, not if: a locally transcribed track already came from this
+            # audio, so retiming it against the same audio is pointless work.
+            if cancel_event.is_set():
+                return self._make_cancelled_result(start_time)
+            with timed_phase("youtube-align", logger):
+                aligned = self._align_fetched(fetched, workspace, cancel_event, fetch_progress_cb)
+            if aligned is None:
+                return self._make_cancelled_result(start_time)
+            fetched = aligned
+
+        # Both branches above guarantee it: a caption fetch resolves one, and a
+        # transcribe fetch either fills it or returned a cancelled result.
+        subtitle_file = fetched.subtitle_file
+        assert subtitle_file is not None
+
         if on_fetched is not None:
             on_fetched(fetched)
 
@@ -2849,7 +2979,7 @@ class EpisodeProcessor:
 
         return self.process_episode(
             fetched.video_file,
-            fetched.subtitle_file,
+            subtitle_file,
             progress_callback=progress_callback,
             curation_callback=curation_callback,
             episode_name_override=f"YT:{video_id}",

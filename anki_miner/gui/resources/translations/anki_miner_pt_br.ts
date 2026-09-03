@@ -4290,6 +4290,18 @@ Os arquivos no disco não serão modificados porque não foi possível comprovar
         <source>Text: %1</source>
         <translation>Texto: %1</translation>
     </message>
+    <message>
+        <source>Extracting audio</source>
+        <translation>Extraindo áudio</translation>
+    </message>
+    <message>
+        <source>Transcribing</source>
+        <translation>Transcrevendo</translation>
+    </message>
+    <message>
+        <source>Aligning subtitles</source>
+        <translation>Alinhando legendas</translation>
+    </message>
 </context><context>
     <name>ExportDialog</name>
     <message>
@@ -9596,6 +9608,10 @@ Ordene de forma crescente para colocar primeiro as linhas i+1 — aquelas cuja �
         <translation>Legendas JA automáticas (áudio dublado)</translation>
     </message>
     <message>
+        <source>Transcribed locally</source>
+        <translation>Transcrito localmente</translation>
+    </message>
+    <message>
         <source>Checking</source>
         <translation>Verificando</translation>
     </message>
@@ -9605,6 +9621,10 @@ Ordene de forma crescente para colocar primeiro as linhas i+1 — aquelas cuja �
     </message>
 </context><context>
     <name>YouTubeQueueWorker</name>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings -&gt; Transcription &amp; Alignment, or set Subtitles to Captions only.</source>
+        <translation>Esta execução precisa de transcrição local, mas o modelo %1 não está instalado. Instale-o em Configurações -&gt; Transcrição e Alinhamento, ou defina Legendas como Somente legendas.</translation>
+    </message>
     <message>
         <source>%1 · %2%</source>
         <translation>%1 · %2%</translation>
@@ -9786,6 +9806,34 @@ Ordene de forma crescente para colocar primeiro as linhas i+1 — aquelas cuja �
         <translation>Exibe o pop-up de seleção de palavras para cada vídeo antes de criar cartões.</translation>
     </message>
     <message>
+        <source>Subtitles:</source>
+        <translation>Legendas:</translation>
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation>Automático</translation>
+    </message>
+    <message>
+        <source>Always transcribe</source>
+        <translation>Sempre transcrever</translation>
+    </message>
+    <message>
+        <source>Captions only</source>
+        <translation>Somente legendas</translation>
+    </message>
+    <message>
+        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
+        <translation>Automático usa as legendas do YouTube quando existem e transcreve o vídeo quando não existem. Sempre transcrever ignora as legendas do YouTube. Somente legendas pula um vídeo que não tenha nenhuma.</translation>
+    </message>
+    <message>
+        <source>Align captions to audio</source>
+        <translation>Alinhar legendas ao áudio</translation>
+    </message>
+    <message>
+        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>Reajusta o tempo das legendas do YouTube com base no áudio do vídeo antes de minerar. Ignorado quando a legenda foi transcrita localmente.</translation>
+    </message>
+    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>Minera para cartões do Anki cada item PRONTO na fila.</translation>
     </message>
@@ -9816,6 +9864,14 @@ Ordene de forma crescente para colocar primeiro as linhas i+1 — aquelas cuja �
     <message>
         <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
         <translation>Solte um link do YouTube aqui. Arquivos locais são minerados nas abas Vídeo e Áudio.</translation>
+    </message>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings, or set Subtitles to Captions only.</source>
+        <translation>Esta execução precisa de transcrição local, mas o modelo %1 não está instalado. Instale-o em Configurações, ou defina Legendas como Somente legendas.</translation>
+    </message>
+    <message>
+        <source>Open Transcription Settings</source>
+        <translation>Abrir Configurações de Transcrição</translation>
     </message>
 </context><context>
     <name>_AddSourceDialog</name>

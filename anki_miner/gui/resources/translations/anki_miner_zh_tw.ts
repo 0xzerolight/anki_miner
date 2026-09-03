@@ -4277,6 +4277,18 @@ Files on disk will be left untouched because the folder could not be proven to b
         <source>Text: %1</source>
         <translation>文字：%1</translation>
     </message>
+    <message>
+        <source>Extracting audio</source>
+        <translation>正在擷取音訊</translation>
+    </message>
+    <message>
+        <source>Transcribing</source>
+        <translation>正在轉錄</translation>
+    </message>
+    <message>
+        <source>Aligning subtitles</source>
+        <translation>正在對齊字幕</translation>
+    </message>
 </context><context>
     <name>ExportDialog</name>
     <message>
@@ -9580,6 +9592,10 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation>自動 JA 字幕（配音音軌）</translation>
     </message>
     <message>
+        <source>Transcribed locally</source>
+        <translation>本機轉錄</translation>
+    </message>
+    <message>
         <source>Checking</source>
         <translation>正在檢查</translation>
     </message>
@@ -9589,6 +9605,10 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
 </context><context>
     <name>YouTubeQueueWorker</name>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings -&gt; Transcription &amp; Alignment, or set Subtitles to Captions only.</source>
+        <translation>此次執行需要本機轉錄，但尚未安裝模型 %1。請於「設定 -&gt; 轉錄與對齊」中安裝，或將字幕設為「僅使用字幕」。</translation>
+    </message>
     <message>
         <source>%1 · %2%</source>
         <translation>%1 · %2%</translation>
@@ -9770,6 +9790,34 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation>為每部影片在建立卡片前顯示單字選擇彈出視窗。</translation>
     </message>
     <message>
+        <source>Subtitles:</source>
+        <translation>字幕:</translation>
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation>自動</translation>
+    </message>
+    <message>
+        <source>Always transcribe</source>
+        <translation>一律轉錄</translation>
+    </message>
+    <message>
+        <source>Captions only</source>
+        <translation>僅使用字幕</translation>
+    </message>
+    <message>
+        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
+        <translation>自動會在 YouTube 字幕存在時使用該字幕，不存在時則轉錄影片。一律轉錄會忽略 YouTube 的字幕。僅使用字幕會略過沒有字幕的影片。</translation>
+    </message>
+    <message>
+        <source>Align captions to audio</source>
+        <translation>將字幕與音訊對齊</translation>
+    </message>
+    <message>
+        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>採集前依照影片音訊重新校準 YouTube 字幕時間軸。若字幕為本機轉錄，則此設定會被忽略。</translation>
+    </message>
+    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>將佇列中每個 READY 項目採集為 Anki 卡片。</translation>
     </message>
@@ -9800,6 +9848,14 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     <message>
         <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
         <translation>將 YouTube 連結拖放至此處。本機檔案請從「影片」與「音訊」分頁採集。</translation>
+    </message>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings, or set Subtitles to Captions only.</source>
+        <translation>此次執行需要本機轉錄，但尚未安裝模型 %1。請於「設定」中安裝，或將字幕設為「僅使用字幕」。</translation>
+    </message>
+    <message>
+        <source>Open Transcription Settings</source>
+        <translation>開啟轉錄設定</translation>
     </message>
 </context><context>
     <name>_AddSourceDialog</name>

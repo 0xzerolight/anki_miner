@@ -553,7 +553,7 @@ class YouTubeFetcherService:
         logger.info(
             "youtube fetch complete: video=%s subs=%s",
             result.video_file.name,
-            result.subtitle_file.name,
+            result.subtitle_file.name if result.subtitle_file is not None else "(transcribe)",
         )
         return result
 
@@ -628,21 +628,32 @@ class YouTubeFetcherService:
                 cmd.append("--write-auto-sub")
         elif sub_mode in ("auto_only", "auto_dub"):
             cmd.append("--write-auto-sub")
+        elif sub_mode == "transcribe":
+            # The subtitle comes from local ASR on the downloaded file, so ask
+            # yt-dlp for none. Every other flag below is unchanged: the download
+            # itself is identical to a caption run.
+            pass
         else:  # pragma: no cover - exhaustiveness guard
             raise ValueError(f"Unsupported sub_mode: {sub_mode!r}")
 
+        cmd.append("--no-playlist")
+        if sub_mode != "transcribe":
+            cmd.extend(
+                [
+                    "--sub-lang",
+                    captions.primary,
+                    # YouTube serves srt among its caption formats, so ask for it
+                    # outright. The old "vtt/best" + "--convert-subs srt" pair
+                    # predates that and paid an ffmpeg postprocessor to reach the
+                    # same bytes. vtt stays as a middle tier because pysubs2 parses
+                    # it natively, so a fall-through still yields a usable subtitle.
+                    "--sub-format",
+                    "srt/vtt/best",
+                ]
+            )
+
         cmd.extend(
             [
-                "--no-playlist",
-                "--sub-lang",
-                captions.primary,
-                # YouTube serves srt among its caption formats, so ask for it
-                # outright. The old "vtt/best" + "--convert-subs srt" pair predates
-                # that and paid an ffmpeg postprocessor to reach the same bytes.
-                # vtt stays as a middle tier because pysubs2 parses it natively, so
-                # a fall-through still yields a usable subtitle.
-                "--sub-format",
-                "srt/vtt/best",
                 "--format",
                 fmt,
                 # The "home:" prefix is explicit so a Windows drive letter in the
@@ -820,6 +831,15 @@ class YouTubeFetcherService:
         video_file = video_candidates[0] if video_candidates else None
         subtitle_file = preferred[0] if preferred else None
 
+        if sub_mode == "transcribe":
+            # No caption was requested, so a missing subtitle is the expected
+            # outcome, not the deterministic failure below. The video checks
+            # still run: a truncated download must not reach the ASR pass.
+            if video_file is None:
+                raise YouTubeFetchError(f"yt-dlp exited 0 but no video file was produced (workspace={workspace})")
+            self._assert_nonempty(video_file, "video")
+            return FetchedMedia(video_file=video_file, subtitle_file=None, sub_source="generated")
+
         if video_file is not None and subtitle_file is None:
             # yt-dlp writes subtitles before the video and reports
             # "There are no subtitles for the requested languages" as an info line
@@ -835,18 +855,8 @@ class YouTubeFetcherService:
             raise YouTubeFetchError(
                 f"yt-dlp exited 0 but expected output files are missing (video={video_file}, subtitle={subtitle_file})"
             )
-        try:
-            video_size = video_file.stat().st_size
-        except OSError as e:
-            raise YouTubeFetchError(f"Video file unreadable after fetch: {video_file}") from e
-        if video_size <= 0:
-            raise YouTubeFetchError(f"yt-dlp produced a zero-byte video file: {video_file}")
-        try:
-            sub_size = subtitle_file.stat().st_size
-        except OSError as e:
-            raise YouTubeFetchError(f"Subtitle file unreadable after fetch: {subtitle_file}") from e
-        if sub_size <= 0:
-            raise YouTubeFetchError(f"yt-dlp produced a zero-byte subtitle file: {subtitle_file}")
+        self._assert_nonempty(video_file, "video")
+        self._assert_nonempty(subtitle_file, "subtitle")
 
         sub_source: Literal["manual", "auto"] = "manual" if sub_mode == "manual_only" else "auto"
         return FetchedMedia(
@@ -854,3 +864,13 @@ class YouTubeFetcherService:
             subtitle_file=subtitle_file,
             sub_source=sub_source,
         )
+
+    @staticmethod
+    def _assert_nonempty(path: Path, label: str) -> None:
+        """Reject an output yt-dlp created but never filled."""
+        try:
+            size = path.stat().st_size
+        except OSError as e:
+            raise YouTubeFetchError(f"{label.capitalize()} file unreadable after fetch: {path}") from e
+        if size <= 0:
+            raise YouTubeFetchError(f"yt-dlp produced a zero-byte {label} file: {path}")

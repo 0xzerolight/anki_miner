@@ -4253,6 +4253,18 @@ Files on disk will be left untouched because the folder could not be proven to b
         <source>Text: %1</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>Extracting audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcribing</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Aligning subtitles</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>ExportDialog</name>
     <message>
@@ -9518,6 +9530,10 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Transcribed locally</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Checking</source>
         <translation type="unfinished" />
     </message>
@@ -9527,6 +9543,10 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
 </context><context>
     <name>YouTubeQueueWorker</name>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings -&gt; Transcription &amp; Alignment, or set Subtitles to Captions only.</source>
+        <translation type="unfinished" />
+    </message>
     <message>
         <source>%1 · %2%</source>
         <translation type="unfinished" />
@@ -9708,6 +9728,34 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitles:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Always transcribe</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Captions only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Align captions to audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation type="unfinished" />
     </message>
@@ -9737,6 +9785,14 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings, or set Subtitles to Captions only.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Transcription Settings</source>
         <translation type="unfinished" />
     </message>
 </context><context>

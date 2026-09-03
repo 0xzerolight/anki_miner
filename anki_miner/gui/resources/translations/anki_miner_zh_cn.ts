@@ -4277,6 +4277,18 @@ Files on disk will be left untouched because the folder could not be proven to b
         <source>Text: %1</source>
         <translation>文本：%1</translation>
     </message>
+    <message>
+        <source>Extracting audio</source>
+        <translation>提取音频</translation>
+    </message>
+    <message>
+        <source>Transcribing</source>
+        <translation>转录中</translation>
+    </message>
+    <message>
+        <source>Aligning subtitles</source>
+        <translation>对齐字幕中</translation>
+    </message>
 </context><context>
     <name>ExportDialog</name>
     <message>
@@ -9580,6 +9592,10 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation>自动 JA 字幕（配音音轨）</translation>
     </message>
     <message>
+        <source>Transcribed locally</source>
+        <translation>本地转录</translation>
+    </message>
+    <message>
         <source>Checking</source>
         <translation>正在检查</translation>
     </message>
@@ -9589,6 +9605,10 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
 </context><context>
     <name>YouTubeQueueWorker</name>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings -&gt; Transcription &amp; Alignment, or set Subtitles to Captions only.</source>
+        <translation>此次运行需要本地转录，但未安装模型%1。请在“设置-&gt;转写和对齐”中安装，或将字幕设为“仅字幕”。</translation>
+    </message>
     <message>
         <source>%1 · %2%</source>
         <translation>%1 · %2%</translation>
@@ -9770,6 +9790,34 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation>在创建卡片前，为每个视频显示单词选择弹窗。</translation>
     </message>
     <message>
+        <source>Subtitles:</source>
+        <translation>字幕：</translation>
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation>自动</translation>
+    </message>
+    <message>
+        <source>Always transcribe</source>
+        <translation>始终转录</translation>
+    </message>
+    <message>
+        <source>Captions only</source>
+        <translation>仅字幕</translation>
+    </message>
+    <message>
+        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
+        <translation>“自动”在YouTube字幕存在时使用该字幕，不存在时转录视频。“始终转录”忽略YouTube字幕。“仅字幕”会跳过没有字幕的视频。</translation>
+    </message>
+    <message>
+        <source>Align captions to audio</source>
+        <translation>将字幕与音频对齐</translation>
+    </message>
+    <message>
+        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>挖词前根据视频音频重新校准YouTube字幕的时间。若字幕为本地转录，则忽略此设置。</translation>
+    </message>
+    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>将队列中每个 READY 项挖词为 Anki 卡片。</translation>
     </message>
@@ -9800,6 +9848,14 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     <message>
         <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
         <translation>将 YouTube 链接拖放到此处。可在“视频”和“有声书”标签页中对本地文件进行挖词。</translation>
+    </message>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings, or set Subtitles to Captions only.</source>
+        <translation>此次运行需要本地转录，但未安装模型%1。请在设置中安装，或将字幕设为“仅字幕”。</translation>
+    </message>
+    <message>
+        <source>Open Transcription Settings</source>
+        <translation>打开转录设置</translation>
     </message>
 </context><context>
     <name>_AddSourceDialog</name>

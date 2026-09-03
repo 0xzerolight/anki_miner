@@ -74,6 +74,7 @@ from anki_miner.gui.workers._queue_worker_base import AttemptOutcome, Sequential
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
+from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.utils.i18n import tr_format
 
@@ -99,12 +100,16 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
         parent=None,
         *,
         processor_factory: Callable[[], EpisodeProcessor] | None = None,
+        align_captions: bool = False,
     ) -> None:
         """Initialize the queue worker (see :class:`SequentialQueueWorker`).
 
         ``config.media_temp_folder`` is the workspace root. Each item must
         already have ``video_id`` and ``resolved_sub_mode`` populated (the probe
         step handles that before items reach this worker).
+
+        ``align_captions`` is the tab's per-run checkbox, already read on the
+        GUI thread — this worker never touches the widget itself.
         """
         super().__init__(
             processor,
@@ -120,9 +125,31 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
         self._curation_offset: float = config.subtitle_offset
+        self._align_captions = align_captions
 
     def _stale_reimport_message(self) -> str | None:
         return stale_resource_reimport_error(self._config)
+
+    def _asr_preflight_message(self) -> str | None:
+        """Refuse a transcription run when no usable ASR model is installed.
+
+        Gated on the queue actually containing a "transcribe" row: a captions
+        run needs no model, and blocking it would regress every existing run.
+        The tab shows the same refusal as a banner before the worker is even
+        built; this is the backstop that covers every other entry point.
+        """
+        if not any(item.resolved_sub_mode == "transcribe" for item in self._items):
+            return None
+        if usable_model_installed(self._config):
+            return None
+        return tr_format(
+            QCoreApplication.translate(
+                "YouTubeQueueWorker",
+                "This run needs local transcription, but the model %1 is not installed. "
+                "Install it in Settings -> Transcription & Alignment, or set Subtitles to Captions only.",
+            ),
+            self._config.asr_model,
+        )
 
     def _run_item(self, idx: int, item: YouTubeQueueItem) -> bool:
         """Fetch + mine one item under the shared bounded-retry cycle.
@@ -218,6 +245,9 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
             # auto-captions. Passing it lets the fetch fall back to them when a
             # listed manual track turns out to be unavailable, without ever falling
             # back to a machine translation.
+            align_captions=self._align_captions,
+            # Meaningless in transcribe mode (the fetcher only honours it for
+            # manual_only), harmless to pass.
             fallback_allowed=item.video_info.has_auto_ja_subs,
         )
 

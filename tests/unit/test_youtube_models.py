@@ -2,10 +2,18 @@
 
 from dataclasses import FrozenInstanceError
 from pathlib import Path
+from typing import get_args
 
 import pytest
 
-from anki_miner.models.youtube import FetchedMedia, PlaylistEntry, PlaylistInfo, VideoInfo
+from anki_miner.models.youtube import (
+    FetchedMedia,
+    PlaylistEntry,
+    PlaylistInfo,
+    SubMode,
+    SubtitleSource,
+    VideoInfo,
+)
 
 
 class TestVideoInfo:
@@ -88,6 +96,16 @@ class TestFetchedMedia:
         )
         assert isinstance(media.video_file, Path)
         assert isinstance(media.subtitle_file, Path)
+
+    def test_allows_a_missing_subtitle(self, tmp_path: Path):
+        """A transcribe-mode fetch has no subtitle yet; the processor fills it."""
+        media = FetchedMedia(
+            video_file=tmp_path / "video.mp4",
+            subtitle_file=None,
+            sub_source="generated",
+        )
+        assert media.subtitle_file is None
+        assert media.sub_source == "generated"
 
     def test_is_frozen(self, tmp_path: Path):
         """FetchedMedia is immutable; mutating any field raises FrozenInstanceError."""
@@ -203,3 +221,15 @@ class TestPlaylistInfo:
             info.title = "Changed"  # type: ignore[misc]
         with pytest.raises(FrozenInstanceError):
             info.total_count = 99  # type: ignore[misc]
+
+
+class TestSubtitleLiterals:
+    """The mode/source literals the picker and the fetcher agree on."""
+
+    def test_transcribe_is_a_sub_mode(self):
+        """Local transcription is a route a video can resolve to."""
+        assert "transcribe" in get_args(SubMode)
+
+    def test_subtitle_source_covers_the_three_picker_choices(self):
+        """SubtitleSource is user intent; SubMode is the resolved route."""
+        assert set(get_args(SubtitleSource)) == {"auto", "transcribe", "captions"}

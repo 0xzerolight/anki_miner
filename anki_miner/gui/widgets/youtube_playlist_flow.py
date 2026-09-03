@@ -46,7 +46,13 @@ from anki_miner.gui.workers.youtube_playlist_probe_worker import (
 )
 from anki_miner.gui.workers.youtube_probe_worker import YouTubeProbeWorker
 from anki_miner.languages.registry import config_language, get_profile
-from anki_miner.models.youtube import PlaylistEntry, PlaylistInfo, SubMode, VideoInfo
+from anki_miner.models.youtube import (
+    PlaylistEntry,
+    PlaylistInfo,
+    SubMode,
+    SubtitleSource,
+    VideoInfo,
+)
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 from anki_miner.utils.i18n import tr_format
@@ -92,8 +98,14 @@ def _is_acceptable_add_input(url: str) -> bool:
     return classify_youtube_url(candidate).kind != "unknown"
 
 
-def _classify_probe_result(info: VideoInfo, config: AnkiMinerConfig) -> tuple[bool, str | None, SubMode | None]:
-    """Classify a probe result.
+def _classify_probe_result(
+    info: VideoInfo, config: AnkiMinerConfig, source: SubtitleSource
+) -> tuple[bool, str | None, SubMode | None]:
+    """Classify a probe result against the run's requested subtitle source.
+
+    ``source`` is required, with no default: it decides whether a caption-less
+    video is refused or transcribed, and a default would silently reinstate the
+    refusal for callers that forgot to thread the user's choice through.
 
     Returns:
         (is_mineable, error_message, resolved_sub_mode). On success
@@ -115,6 +127,11 @@ def _classify_probe_result(info: VideoInfo, config: AnkiMinerConfig) -> tuple[bo
             "Age-restricted video. Set Cookies (Browser or File) in Settings and retry.",
             None,
         )
+    if source == "transcribe":
+        # The user asked for local transcription outright. Skip the caption
+        # cascade entirely: a badly-timed auto track must not win over the ASR
+        # pass that was explicitly requested.
+        return True, None, "transcribe"
     if info.has_manual_ja_subs:
         return True, None, "manual_only"
     if info.has_auto_ja_subs:
@@ -124,6 +141,11 @@ def _classify_probe_result(info: VideoInfo, config: AnkiMinerConfig) -> tuple[bo
         # VideoInfo.has_dub_ja_subs). Lowest priority — a real manual track or
         # native captions always describe the video better than the dub pipeline.
         return True, None, "auto_dub"
+    if source == "auto":
+        # No caption track of any kind. Auto pays for a local transcription
+        # rather than refusing the video, which is the whole point of the
+        # picker: the user's alternative was Download + Generate + Video/Single.
+        return True, None, "transcribe"
     # english_name, like the fetcher's NoSourceSubtitlesError: a zh run used
     # to be refused with "No Japanese subtitles available".
     label = get_profile(config_language(config)).english_name or "source"
@@ -157,6 +179,9 @@ class PlaylistAddCallbacks:
 
     clear_url_input: Callable[[], None]
     """Clear the URL line edit after an accepted Add."""
+
+    run_active: Callable[[], bool]
+    """Whether a mining run owns the queue right now — freezes the sweep."""
 
     log_info: Callable[[str], None]
     log_warning: Callable[[str], None]
@@ -218,6 +243,9 @@ class PlaylistAddController:
         # ignored instead of popping a dialog over an emptied queue.
         self._playlist_generation = 0
         self._shutdown_started = False
+        # The run's requested subtitle source. Session-only, like the tab's
+        # review-words checkbox: it is a per-run choice, not a setting.
+        self._subtitle_source: SubtitleSource = "auto"
 
     # ------------------------------------------------------------------
     # Tab-facing API
@@ -398,20 +426,54 @@ class PlaylistAddController:
         if not isinstance(info, VideoInfo):  # pragma: no cover - signal guard
             self._mark_probe_error(item, "Invalid probe result.")
             return
+        self._apply_classification(item, info)
 
-        mineable, error, sub_mode = _classify_probe_result(info, self._config)
+    def _apply_classification(self, item: YouTubeQueueItem, info: VideoInfo) -> None:
+        """Resolve one probed item against the current subtitle source.
+
+        Safe to re-run offline: every input is already on the item, so flipping
+        the picker re-decides a row without a second probe. Both fields below are
+        written on the reject path too — ``video_id`` because a later promotion
+        would otherwise trip YouTubeQueueWorker._mine_one's completeness guard,
+        and ``resolved_sub_mode`` because a stale mode outlives the row's READY
+        state and is read again by the tab's retry path.
+        """
+        item.video_info = info
+        item.video_id = info.video_id
+        mineable, error, sub_mode = _classify_probe_result(info, self._config, self._subtitle_source)
         if not mineable:
-            item.video_info = info
+            item.resolved_sub_mode = None
             self._mark_probe_error(item, error or "Probe rejected.")
             return
 
-        item.video_info = info
-        item.video_id = info.video_id
         item.resolved_sub_mode = sub_mode
         item.error_message = None
         item.status = YouTubeItemStatus.READY
         self._callbacks.refresh_row(item)
         self._callbacks.recompute_buttons()
+
+    def set_subtitle_source(self, source: SubtitleSource) -> None:
+        """Adopt a new subtitle source and re-decide every already-probed row.
+
+        Refused mid-run: the worker thread reads ``resolved_sub_mode`` off
+        unclaimed READY rows, so mutating them under it is a race. The tab also
+        disables the picker while a run is active; this guard is the one that
+        actually holds.
+
+        Rows with no ``video_info`` are skipped — those never probed, or the
+        probe itself failed, and no subtitle source can fix a failed probe.
+        """
+        if source == self._subtitle_source:
+            return
+        self._subtitle_source = source
+        if self._callbacks.run_active():
+            return
+        for item in self._callbacks.queued_items():
+            if item.video_info is None:
+                continue
+            if item.status not in (YouTubeItemStatus.READY, YouTubeItemStatus.PROBE_ERROR):
+                continue
+            self._apply_classification(item, item.video_info)
 
     def _on_probe_error(self, item: YouTubeQueueItem, message: str) -> None:
         """Probe failed — the item is unmineable."""

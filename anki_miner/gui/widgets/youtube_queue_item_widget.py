@@ -23,6 +23,7 @@ _SUB_MODE_LABEL: dict[str, str] = {
     "manual_only": QT_TRANSLATE_NOOP("YouTubeQueueItemWidget", "Manual JA subs"),
     "auto_only": QT_TRANSLATE_NOOP("YouTubeQueueItemWidget", "Auto JA subs"),
     "auto_dub": QT_TRANSLATE_NOOP("YouTubeQueueItemWidget", "Auto JA subs (dub audio)"),
+    "transcribe": QT_TRANSLATE_NOOP("YouTubeQueueItemWidget", "Transcribed locally"),
 }
 
 # ---------------------------------------------------------------------------

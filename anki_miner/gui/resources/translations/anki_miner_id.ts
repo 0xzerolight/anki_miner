@@ -4277,6 +4277,18 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <source>Text: %1</source>
         <translation>Teks: %1</translation>
     </message>
+    <message>
+        <source>Extracting audio</source>
+        <translation>Mengekstrak audio</translation>
+    </message>
+    <message>
+        <source>Transcribing</source>
+        <translation>Mentranskripsi</translation>
+    </message>
+    <message>
+        <source>Aligning subtitles</source>
+        <translation>Menyelaraskan subtitel</translation>
+    </message>
 </context><context>
     <name>ExportDialog</name>
     <message>
@@ -9580,6 +9592,10 @@ Urutkan menaik untuk menampilkan baris i+1 lebih dulu — baris yang satu-satuny
         <translation>Subtitel JA otomatis (audio sulih suara)</translation>
     </message>
     <message>
+        <source>Transcribed locally</source>
+        <translation>Ditranskripsi secara lokal</translation>
+    </message>
+    <message>
         <source>Checking</source>
         <translation>Memeriksa</translation>
     </message>
@@ -9589,6 +9605,10 @@ Urutkan menaik untuk menampilkan baris i+1 lebih dulu — baris yang satu-satuny
     </message>
 </context><context>
     <name>YouTubeQueueWorker</name>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings -&gt; Transcription &amp; Alignment, or set Subtitles to Captions only.</source>
+        <translation>Proses ini memerlukan transkripsi lokal, tetapi model %1 belum terpasang. Pasang di Pengaturan -&gt; Transkripsi &amp; Penyelarasan, atau atur Subtitel ke Hanya teks.</translation>
+    </message>
     <message>
         <source>%1 · %2%</source>
         <translation>%1 · %2%</translation>
@@ -9770,6 +9790,34 @@ Urutkan menaik untuk menampilkan baris i+1 lebih dulu — baris yang satu-satuny
         <translation>Tampilkan popup pemilihan kata untuk setiap video sebelum membuat kartu.</translation>
     </message>
     <message>
+        <source>Subtitles:</source>
+        <translation>Subtitel:</translation>
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation>Otomatis</translation>
+    </message>
+    <message>
+        <source>Always transcribe</source>
+        <translation>Selalu transkripsi</translation>
+    </message>
+    <message>
+        <source>Captions only</source>
+        <translation>Hanya teks</translation>
+    </message>
+    <message>
+        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
+        <translation>Otomatis menggunakan teks YouTube jika tersedia dan mentranskripsi video jika tidak. Selalu transkripsi mengabaikan teks YouTube. Hanya teks melewati video yang tidak memilikinya.</translation>
+    </message>
+    <message>
+        <source>Align captions to audio</source>
+        <translation>Selaraskan teks dengan audio</translation>
+    </message>
+    <message>
+        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>Atur ulang waktu teks YouTube berdasarkan audio video sebelum mining. Diabaikan jika subtitel ditranskripsi secara lokal.</translation>
+    </message>
+    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>Mining setiap item READY dalam antrean menjadi kartu Anki.</translation>
     </message>
@@ -9800,6 +9848,14 @@ Urutkan menaik untuk menampilkan baris i+1 lebih dulu — baris yang satu-satuny
     <message>
         <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
         <translation>Jatuhkan tautan YouTube di sini. Berkas lokal di-mining dari tab Video dan Audio.</translation>
+    </message>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings, or set Subtitles to Captions only.</source>
+        <translation>Proses ini memerlukan transkripsi lokal, tetapi model %1 belum terpasang. Pasang di Pengaturan, atau atur Subtitel ke Hanya teks.</translation>
+    </message>
+    <message>
+        <source>Open Transcription Settings</source>
+        <translation>Buka Pengaturan Transkripsi</translation>
     </message>
 </context><context>
     <name>_AddSourceDialog</name>

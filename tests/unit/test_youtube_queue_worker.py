@@ -17,6 +17,7 @@ import pytest
 
 from anki_miner.exceptions import SetupError
 from anki_miner.exceptions.youtube import NoJapaneseSubtitlesError, YouTubeFetchError
+from anki_miner.gui.workers import youtube_queue_worker
 from anki_miner.gui.workers.youtube_queue_worker import (
     YouTubeQueueWorker,
     _QueueMiningProgressAdapter,
@@ -1058,3 +1059,68 @@ def test_missing_offline_dictionary_aborts_queue_once(make_worker, mock_processo
     assert caps["started"].calls == []
     assert caps["finished"].calls == []
     assert len(caps["queue_finished"].calls) == 1
+
+
+class TestAsrPreflight:
+    """The worker-side half of the transcription gate.
+
+    Sits next to the staleness gate: it runs off the GUI thread and covers
+    every path into the worker, including a run started by a test.
+    """
+
+    def _item(self, sub_mode: str) -> YouTubeQueueItem:
+        item = YouTubeQueueItem(url="https://youtu.be/v1", status=YouTubeItemStatus.READY)
+        item.video_id = "v1"
+        item.resolved_sub_mode = sub_mode
+        item.video_info = VideoInfo(
+            video_id="v1",
+            title="t",
+            duration_s=60,
+            has_manual_ja_subs=False,
+            has_auto_ja_subs=False,
+            is_live=False,
+            is_age_restricted=False,
+        )
+        return item
+
+    def _worker(self, test_config, items):
+        return YouTubeQueueWorker(
+            processor=MagicMock(name="EpisodeProcessor"),
+            config=test_config,
+            items=items,
+            curation_callback=None,
+        )
+
+    def test_a_transcribe_queue_is_refused_without_a_model(self, test_config, monkeypatch):
+        monkeypatch.setattr(youtube_queue_worker, "usable_model_installed", lambda config: False)
+        worker = self._worker(test_config, [self._item("transcribe")])
+
+        message = worker._asr_preflight_message()
+
+        assert message is not None
+        assert "not installed" in message
+
+    def test_a_caption_queue_is_never_refused(self, test_config, monkeypatch):
+        monkeypatch.setattr(youtube_queue_worker, "usable_model_installed", lambda config: False)
+        worker = self._worker(test_config, [self._item("auto_only")])
+
+        assert worker._asr_preflight_message() is None
+
+    def test_an_installed_model_lets_a_transcribe_queue_through(self, test_config, monkeypatch):
+        monkeypatch.setattr(youtube_queue_worker, "usable_model_installed", lambda config: True)
+        worker = self._worker(test_config, [self._item("transcribe")])
+
+        assert worker._asr_preflight_message() is None
+
+    def test_one_transcribe_row_gates_a_mixed_queue(self, test_config, monkeypatch):
+        """The whole run stops: a mid-queue failure is what the gate prevents."""
+        monkeypatch.setattr(youtube_queue_worker, "usable_model_installed", lambda config: False)
+        worker = self._worker(test_config, [self._item("auto_only"), self._item("transcribe")])
+
+        assert worker._asr_preflight_message() is not None
+
+    def test_other_workers_have_no_asr_gate(self, test_config):
+        """The base hook is a no-op so the other four queues are untouched."""
+        from anki_miner.gui.workers._queue_worker_base import SequentialQueueWorker
+
+        assert SequentialQueueWorker._asr_preflight_message(object()) is None

@@ -4290,6 +4290,18 @@ I file sul disco non verranno modificati perché non è stato possibile verifica
         <source>Text: %1</source>
         <translation>Testo: %1</translation>
     </message>
+    <message>
+        <source>Extracting audio</source>
+        <translation>Estrazione audio in corso</translation>
+    </message>
+    <message>
+        <source>Transcribing</source>
+        <translation>Trascrizione in corso</translation>
+    </message>
+    <message>
+        <source>Aligning subtitles</source>
+        <translation>Allineamento sottotitoli in corso</translation>
+    </message>
 </context><context>
     <name>ExportDialog</name>
     <message>
@@ -9596,6 +9608,10 @@ Ordina in modo crescente per mettere prima le righe i+1, quelle il cui unico ele
         <translation>Sottotitoli JA automatici (audio doppiato)</translation>
     </message>
     <message>
+        <source>Transcribed locally</source>
+        <translation>Trascritto localmente</translation>
+    </message>
+    <message>
         <source>Checking</source>
         <translation>Controllo</translation>
     </message>
@@ -9605,6 +9621,10 @@ Ordina in modo crescente per mettere prima le righe i+1, quelle il cui unico ele
     </message>
 </context><context>
     <name>YouTubeQueueWorker</name>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings -&gt; Transcription &amp; Alignment, or set Subtitles to Captions only.</source>
+        <translation>Questa esecuzione richiede la trascrizione locale, ma il modello %1 non è installato. Installarlo in Impostazioni -&gt; Trascrizione e allineamento, oppure impostare Sottotitoli su Solo didascalie.</translation>
+    </message>
     <message>
         <source>%1 · %2%</source>
         <translation>%1 · %2%</translation>
@@ -9786,6 +9806,34 @@ Ordina in modo crescente per mettere prima le righe i+1, quelle il cui unico ele
         <translation>Mostra il popup di selezione delle parole per ogni video prima di creare le carte.</translation>
     </message>
     <message>
+        <source>Subtitles:</source>
+        <translation>Sottotitoli:</translation>
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation>Auto</translation>
+    </message>
+    <message>
+        <source>Always transcribe</source>
+        <translation>Trascrivi sempre</translation>
+    </message>
+    <message>
+        <source>Captions only</source>
+        <translation>Solo didascalie</translation>
+    </message>
+    <message>
+        <source>Auto uses YouTube's captions when they exist and transcribes the video when they do not. Always transcribe ignores YouTube's captions. Captions only skips a video that has none.</source>
+        <translation>Auto usa le didascalie di YouTube quando esistono e trascrive il video quando non esistono. Trascrivi sempre ignora le didascalie di YouTube. Solo didascalie salta un video che non ne ha.</translation>
+    </message>
+    <message>
+        <source>Align captions to audio</source>
+        <translation>Allinea didascalie all'audio</translation>
+    </message>
+    <message>
+        <source>Retime YouTube's captions against the video's audio before mining. Ignored when the subtitle was transcribed locally.</source>
+        <translation>Risincronizza le didascalie di YouTube con l'audio del video prima del mining. Ignorato se il sottotitolo è stato trascritto localmente.</translation>
+    </message>
+    <message>
         <source>Mine every READY item in the queue into Anki cards.</source>
         <translation>Estrae ogni elemento PRONTO della coda in carte Anki.</translation>
     </message>
@@ -9816,6 +9864,14 @@ Ordina in modo crescente per mettere prima le righe i+1, quelle il cui unico ele
     <message>
         <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
         <translation>Rilasciare qui un link YouTube. I file locali vengono estratti nelle schede Video e Audio.</translation>
+    </message>
+    <message>
+        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings, or set Subtitles to Captions only.</source>
+        <translation>Questa esecuzione richiede la trascrizione locale, ma il modello %1 non è installato. Installarlo in Impostazioni, oppure impostare Sottotitoli su Solo didascalie.</translation>
+    </message>
+    <message>
+        <source>Open Transcription Settings</source>
+        <translation>Apri impostazioni di trascrizione</translation>
     </message>
 </context><context>
     <name>_AddSourceDialog</name>

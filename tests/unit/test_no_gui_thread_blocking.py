@@ -84,6 +84,9 @@ _BLOCKING_PATTERNS: tuple[str, ...] = (
     r"find_japanese_audio_stream\(",
     r"cuda_device_count\(",
     r"is_downloaded\(",
+    # The GUI-side wrapper over is_downloaded (+ the ggml pair). Tracked by its
+    # own name because the call text callers see is this one, not is_downloaded.
+    r"usable_model_installed\(",
     r"\.rglob\(",
 )
 
@@ -187,9 +190,16 @@ ALLOWLIST: dict[str, set[str]] = {
     r"is_downloaded\(": {
         # _probe work callable (run_off_thread) — off-thread.
         "widgets/panels/subtitles_settings_panel.py",
-        # subtitle_creation_tab: a cheap on-disk existence check (model dir +
-        # marker) guarding whether ASR can start; not a network/ffprobe call.
+    },
+    # usable_model_installed — services/asr/model_availability.py, the shared
+    # pre-run guard. Cheap on-disk existence checks (model dir + marker, then
+    # the ggml pair); no network, no ffprobe, and it deliberately does NOT call
+    # vulkan_device_count(), which re-execs a probe with a 15 s timeout. Both
+    # call sites run it on the GUI thread on purpose, to refuse a run before it
+    # starts rather than after a full download.
+    r"usable_model_installed\(": {
         "widgets/subtitle_creation_tab.py",
+        "widgets/youtube_tab.py",
     },
 }
 

@@ -39,6 +39,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -54,7 +55,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import queue_state_store
-from anki_miner.gui.utils.qt_helpers import urls_from_event
+from anki_miner.gui.utils.qt_helpers import reveal_settings, urls_from_event
 from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
 from anki_miner.gui.utils.service_factory import create_episode_processor, create_youtube_fetcher
 from anki_miner.gui.widgets._queue_mining_tab_base import (
@@ -62,7 +63,12 @@ from anki_miner.gui.widgets._queue_mining_tab_base import (
     _QueueListStrings,
     _QueueRunStrings,
 )
-from anki_miner.gui.widgets.base import PageWidth, configure_card_layout, page_filler
+from anki_miner.gui.widgets.base import (
+    PageWidth,
+    ScreenIssue,
+    configure_card_layout,
+    page_filler,
+)
 from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -74,7 +80,9 @@ from anki_miner.gui.workers.youtube_queue_worker import YouTubeQueueWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueue, YouTubeQueueItem
 from anki_miner.orchestration import EpisodeProcessor
+from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
+from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.youtube_url import classify_youtube_url
 
@@ -180,6 +188,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
                 refresh_row=self._refresh_row,
                 recompute_buttons=self._recompute_buttons,
                 clear_url_input=self.url_edit.clear,
+                run_active=self._queue_locked,
                 log_info=self.log_widget.append_info,
                 log_warning=self.log_widget.append_warning,
                 log_error=self.log_widget.append_error,
@@ -271,6 +280,39 @@ class YouTubeTab(_ListQueueMiningTabBase):
         )
         queue_layout.addWidget(self.review_words_checkbox)
 
+        # Per-run subtitle source. Session-only like the checkbox above: it is a
+        # choice about this run, not a setting. Changing it re-decides every
+        # already-probed row (PlaylistAddController.set_subtitle_source).
+        source_row = QHBoxLayout()
+        source_row.setSpacing(SPACING.xs)
+        self.subtitle_source_label = QLabel(self.tr("Subtitles:"))
+        source_row.addWidget(self.subtitle_source_label)
+        self.subtitle_source_combo = QComboBox()
+        self.subtitle_source_combo.addItem(self.tr("Auto"), "auto")
+        self.subtitle_source_combo.addItem(self.tr("Always transcribe"), "transcribe")
+        self.subtitle_source_combo.addItem(self.tr("Captions only"), "captions")
+        self.subtitle_source_combo.setToolTip(
+            self.tr(
+                "Auto uses YouTube's captions when they exist and transcribes the video "
+                "when they do not. Always transcribe ignores YouTube's captions. "
+                "Captions only skips a video that has none."
+            )
+        )
+        self.subtitle_source_combo.currentIndexChanged.connect(self._on_subtitle_source_changed)
+        source_row.addWidget(self.subtitle_source_combo)
+        source_row.addStretch(1)
+        queue_layout.addLayout(source_row)
+
+        self.align_captions_checkbox = QCheckBox(self.tr("Align captions to audio"))
+        self.align_captions_checkbox.setChecked(False)
+        self.align_captions_checkbox.setToolTip(
+            self.tr(
+                "Retime YouTube's captions against the video's audio before mining. "
+                "Ignored when the subtitle was transcribed locally."
+            )
+        )
+        queue_layout.addWidget(self.align_captions_checkbox)
+
         # Action buttons
         button_row = QHBoxLayout()
         button_row.setSpacing(SPACING.xs)
@@ -334,6 +376,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
             log=self.log_widget,
         )
         self.setLayout(main_layout)
+        self.install_issue_banner(main_layout)
 
     # ------------------------------------------------------------------
     # Add flow (delegated to PlaylistAddController)
@@ -508,14 +551,62 @@ class YouTubeTab(_ListQueueMiningTabBase):
         curation_callback: Callable[[list], list | None] | None,
         processor_factory: Callable[[], EpisodeProcessor] | None,
     ) -> SequentialQueueWorker[Any]:
-        """Construct the YouTube queue worker (name resolves here for tests)."""
+        """Construct the YouTube queue worker (name resolves here for tests).
+
+        The align choice is read here, on the GUI thread, and handed over as a
+        plain bool — a worker thread must never touch a QWidget.
+        """
         return YouTubeQueueWorker(
             processor=self._processor,
             config=self.config,
             items=items,
             curation_callback=curation_callback,
             processor_factory=processor_factory,
+            align_captions=self.align_captions_checkbox.isChecked(),
         )
+
+    def _start_run(self, items: list[Any] | None = None) -> None:
+        """Refuse a transcription run with no model, then launch as usual.
+
+        Overrides the base at its single choke point, so Mine, Retry selected
+        and Reset-and-run all pass through here. The alternative is a full
+        download per row followed by a raw ctranslate2 exception.
+        """
+        self.clear_screen_issue()
+        candidates = items if items is not None else self._queue.all_items()
+        if any(i.resolved_sub_mode == "transcribe" for i in candidates) and not usable_model_installed(self.config):
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=tr_format(
+                        self.tr(
+                            "This run needs local transcription, but the model %1 is not installed. "
+                            "Install it in Settings, or set Subtitles to Captions only."
+                        ),
+                        self.config.asr_model,
+                    ),
+                    action_id="settings.subtitles",
+                    action_text=self.tr("Open Transcription Settings"),
+                ),
+                action=lambda: reveal_settings(self, "subtitles"),
+            )
+            return
+        super()._start_run(items)
+
+    def _on_subtitle_source_changed(self) -> None:
+        """Adopt the picker's value and re-decide the rows already probed."""
+        self._add_flow.set_subtitle_source(self.subtitle_source_combo.currentData())
+
+    def _recompute_buttons(self) -> None:
+        """Freeze the per-run subtitle controls while a run owns the queue.
+
+        The worker reads ``resolved_sub_mode`` off unclaimed READY rows, and the
+        sweep behind the picker rewrites exactly that field.
+        """
+        super()._recompute_buttons()
+        idle = not self._queue_locked()
+        self.subtitle_source_combo.setEnabled(idle)
+        self.subtitle_source_label.setEnabled(idle)
+        self.align_captions_checkbox.setEnabled(idle)
 
     def _create_processor(self, presenter: PresenterProtocol) -> EpisodeProcessor:
         """Build a fresh processor (``create_episode_processor`` resolves here for tests)."""

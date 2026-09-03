@@ -14,7 +14,12 @@ import requests
 
 from anki_miner.config import ChainEntry
 from anki_miner.exceptions import AnkiConnectionError, SetupError, SubtitleParseError
+from anki_miner.exceptions.youtube import (
+    TranscriptionFailedError,
+    TranscriptionProducedNothingError,
+)
 from anki_miner.models import AnkiWriteState, CardPayload, LineLemmas, MediaData, TokenizedWord
+from anki_miner.models.processing import CANCELLED_ERROR
 from anki_miner.models.reading import ReadingDocument
 from anki_miner.models.youtube import FetchedMedia
 from anki_miner.orchestration.episode_processor import (
@@ -25,6 +30,7 @@ from anki_miner.orchestration.episode_processor import (
 )
 from anki_miner.presenters import NullPresenter
 from anki_miner.services.anki_service import AnkiService
+from anki_miner.services.asr.subtitle_generation import SubtitleGenResult, SubtitleGenStatus
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.pitch_accent_service import PitchEntry
 from anki_miner.services.word_filter import WordFilterService
@@ -3539,6 +3545,447 @@ class TestProcessYoutubeUrl:
         )
 
         assert result.cards_created == 1
+
+
+class TestProcessYoutubeUrlTranscription:
+    """A subtitle-less fetch (transcribe mode) is filled by local ASR.
+
+    The stage runs before ``on_fetched`` so the curator preview receives a real
+    SRT, and it writes into the caller-owned workspace the queue worker already
+    rmtree's.
+    """
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def _pipeline(self, mock_services):
+        sp = mock_services["subtitle_parser"]
+        word = _make_word("食べる")
+        sp.parse_subtitle_file_with_index.side_effect = lambda f, offset=None: (sp.parse_subtitle_file.return_value, [])
+        sp.parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+    def _processor(self, test_config, mock_services, tmp_path):
+        video_file = tmp_path / "abc123.mp4"
+        video_file.touch()
+        fetcher = MagicMock()
+        fetcher.fetch_video.return_value = FetchedMedia(
+            video_file=video_file,
+            subtitle_file=None,
+            sub_source="generated",
+        )
+        return build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            youtube_fetcher=fetcher,
+            **mock_services,
+        )
+
+    def _patch_asr(self, monkeypatch, status, out_srt=None, on_call=None):
+        from anki_miner.services.asr import subtitle_generation
+
+        def _fake(config, extractor, video_path, srt_path, **kwargs):
+            if on_call is not None:
+                on_call(video_path, srt_path, kwargs)
+            if status is SubtitleGenStatus.SUCCESS:
+                target = out_srt if out_srt is not None else srt_path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("1\n00:00:00,000 --> 00:00:01,000\n食べる\n", encoding="utf-8")
+                return SubtitleGenResult(status=status, out_srt=target)
+            return SubtitleGenResult(status=status)
+
+        monkeypatch.setattr(subtitle_generation, "generate_subtitle_one", _fake)
+
+    def test_a_subtitle_less_fetch_is_transcribed_and_mined(self, test_config, mock_services, tmp_path, monkeypatch):
+        self._pipeline(mock_services)
+        self._patch_asr(monkeypatch, SubtitleGenStatus.SUCCESS)
+        processor = self._processor(test_config, mock_services, tmp_path)
+        seen: list[FetchedMedia] = []
+
+        result = processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="transcribe",
+            cancel_event=threading.Event(),
+            on_fetched=seen.append,
+        )
+
+        assert seen[0].subtitle_file is not None
+        assert seen[0].sub_source == "generated"
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_called_once_with(seen[0].subtitle_file, None)
+        assert result.cards_created == 1
+
+    def test_the_srt_lands_in_the_caller_owned_workspace(self, test_config, mock_services, tmp_path, monkeypatch):
+        """The worker rmtree's the workspace; anything written elsewhere leaks."""
+        self._pipeline(mock_services)
+        calls: list[tuple] = []
+        self._patch_asr(
+            monkeypatch,
+            SubtitleGenStatus.SUCCESS,
+            on_call=lambda video, srt, kw: calls.append((video, srt, kw)),
+        )
+        processor = self._processor(test_config, mock_services, tmp_path)
+
+        processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="transcribe",
+            cancel_event=threading.Event(),
+        )
+
+        video, srt, _ = calls[0]
+        assert video == tmp_path / "abc123.mp4"
+        assert srt.parent == tmp_path
+
+    def test_no_speech_raises_a_deterministic_error(self, test_config, mock_services, tmp_path, monkeypatch):
+        self._pipeline(mock_services)
+        self._patch_asr(monkeypatch, SubtitleGenStatus.NO_SPEECH)
+        processor = self._processor(test_config, mock_services, tmp_path)
+
+        with pytest.raises(TranscriptionProducedNothingError):
+            processor.process_youtube_url(
+                url="https://youtu.be/abc123",
+                video_id="abc123",
+                workspace=tmp_path,
+                sub_mode="transcribe",
+                cancel_event=threading.Event(),
+            )
+
+    def test_extraction_failure_raises_a_deterministic_error(self, test_config, mock_services, tmp_path, monkeypatch):
+        self._pipeline(mock_services)
+        self._patch_asr(monkeypatch, SubtitleGenStatus.EXTRACTION_FAILED)
+        processor = self._processor(test_config, mock_services, tmp_path)
+
+        with pytest.raises(TranscriptionFailedError):
+            processor.process_youtube_url(
+                url="https://youtu.be/abc123",
+                video_id="abc123",
+                workspace=tmp_path,
+                sub_mode="transcribe",
+                cancel_event=threading.Event(),
+            )
+
+    def test_a_cancelled_transcription_returns_a_cancelled_result(
+        self, test_config, mock_services, tmp_path, monkeypatch
+    ):
+        """Cancel is a result, not a raise: the worker still emits item_finished."""
+        self._pipeline(mock_services)
+        self._patch_asr(monkeypatch, SubtitleGenStatus.CANCELLED)
+        processor = self._processor(test_config, mock_services, tmp_path)
+
+        result = processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="transcribe",
+            cancel_event=threading.Event(),
+        )
+
+        assert CANCELLED_ERROR in result.errors
+        assert result.cards_created == 0
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_not_called()
+
+    def test_progress_and_language_reach_the_asr_call(self, test_config, mock_services, tmp_path, monkeypatch):
+        """ASR is the longest stage in the run; it must not look hung."""
+        self._pipeline(mock_services)
+        seen_kwargs: dict = {}
+
+        def _capture(video, srt, kwargs):
+            seen_kwargs.update(kwargs)
+            kwargs["on_extract_start"]()
+            kwargs["on_transcribe_start"]()
+            kwargs["transcribe_progress_cb"](0.5)
+
+        self._patch_asr(monkeypatch, SubtitleGenStatus.SUCCESS, on_call=_capture)
+        processor = self._processor(test_config, mock_services, tmp_path)
+        reported: list[tuple[str, float | None]] = []
+
+        processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="transcribe",
+            cancel_event=threading.Event(),
+            fetch_progress_cb=lambda label, frac: reported.append((label, frac)),
+        )
+
+        assert seen_kwargs["language"] == "ja"
+        labels = [label for label, _ in reported]
+        assert "Extracting audio" in labels
+        assert ("Transcribing", 0.5) in reported
+
+    def test_a_caption_run_never_transcribes(self, test_config, mock_services, tmp_path, monkeypatch):
+        self._pipeline(mock_services)
+        called: list[int] = []
+        self._patch_asr(monkeypatch, SubtitleGenStatus.SUCCESS, on_call=lambda *a: called.append(1))
+        subtitle_file = tmp_path / "abc123.ja.srt"
+        subtitle_file.touch()
+        video_file = tmp_path / "abc123.mp4"
+        video_file.touch()
+        fetcher = MagicMock()
+        fetcher.fetch_video.return_value = FetchedMedia(
+            video_file=video_file, subtitle_file=subtitle_file, sub_source="manual"
+        )
+        processor = build_processor(
+            config=test_config, presenter=NullPresenter(), youtube_fetcher=fetcher, **mock_services
+        )
+
+        processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+        )
+
+        assert called == []
+
+
+class TestProcessYoutubeUrlAlignment:
+    """The per-run "Align captions to audio" stage.
+
+    Best-effort by contract: retime_subtitle never raises for content or tool
+    reasons, so a failed alignment leaves the fetched captions in place and the
+    run continues.
+    """
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        media_extractor = MagicMock()
+        definition_service = MagicMock()
+        anki_service = MagicMock()
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": media_extractor,
+            "definition_service": definition_service,
+            "anki_service": anki_service,
+        }
+
+    def _pipeline(self, mock_services):
+        sp = mock_services["subtitle_parser"]
+        word = _make_word("食べる")
+        sp.parse_subtitle_file_with_index.side_effect = lambda f, offset=None: (sp.parse_subtitle_file.return_value, [])
+        sp.parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+    def _processor(self, test_config, mock_services, tmp_path, *, subtitle_file, sub_source="auto"):
+        video_file = tmp_path / "abc123.mp4"
+        video_file.touch()
+        fetcher = MagicMock()
+        fetcher.fetch_video.return_value = FetchedMedia(
+            video_file=video_file,
+            subtitle_file=subtitle_file,
+            sub_source=sub_source,
+        )
+        return build_processor(
+            config=test_config,
+            presenter=NullPresenter(),
+            youtube_fetcher=fetcher,
+            **mock_services,
+        )
+
+    def _captions(self, tmp_path):
+        captions = tmp_path / "abc123.ja.srt"
+        captions.write_text("1\n00:00:00,000 --> 00:00:01,000\n食べる\n", encoding="utf-8")
+        return captions
+
+    def _patch_retime(self, monkeypatch, outcome, on_call=None):
+        from anki_miner.services import subtitle_retimer
+
+        def _fake(config, video, in_sub, out_sub, **kwargs):
+            if on_call is not None:
+                on_call(video, in_sub, out_sub, kwargs)
+            if outcome.ok:
+                out_sub.write_text(in_sub.read_text(encoding="utf-8"), encoding="utf-8")
+            return outcome
+
+        monkeypatch.setattr(subtitle_retimer, "retime_subtitle", _fake)
+
+    def test_alignment_swaps_in_the_retimed_subtitle(self, test_config, mock_services, tmp_path, monkeypatch):
+        from anki_miner.services.subtitle_retimer import RetimeOutcome
+
+        self._pipeline(mock_services)
+        self._patch_retime(monkeypatch, RetimeOutcome(ok=True, engine="ffsubsync"))
+        processor = self._processor(test_config, mock_services, tmp_path, subtitle_file=self._captions(tmp_path))
+        seen: list[FetchedMedia] = []
+
+        result = processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="auto_only",
+            cancel_event=threading.Event(),
+            on_fetched=seen.append,
+            align_captions=True,
+        )
+
+        assert seen[0].subtitle_file is not None
+        assert seen[0].subtitle_file.name == "abc123.ja.retimed.srt"
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_called_once_with(seen[0].subtitle_file, None)
+        assert result.cards_created == 1
+
+    def test_a_failed_alignment_keeps_the_original_captions(self, test_config, mock_services, tmp_path, monkeypatch):
+        from anki_miner.services.subtitle_retimer import RetimeOutcome
+
+        self._pipeline(mock_services)
+        self._patch_retime(monkeypatch, RetimeOutcome(ok=False, reason="no engine available"))
+        captions = self._captions(tmp_path)
+        processor = self._processor(test_config, mock_services, tmp_path, subtitle_file=captions)
+        seen: list[FetchedMedia] = []
+
+        result = processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="auto_only",
+            cancel_event=threading.Event(),
+            on_fetched=seen.append,
+            align_captions=True,
+        )
+
+        assert seen[0].subtitle_file == captions
+        assert result.cards_created == 1
+
+    def test_alignment_writes_beside_the_original_not_over_it(self, test_config, mock_services, tmp_path, monkeypatch):
+        """retime_subtitle overwrites in place with no copy kept when told to."""
+        from anki_miner.services.subtitle_retimer import RetimeOutcome
+
+        self._pipeline(mock_services)
+        calls: list[tuple] = []
+        self._patch_retime(
+            monkeypatch,
+            RetimeOutcome(ok=True, engine="alass"),
+            on_call=lambda video, in_sub, out_sub, kw: calls.append((video, in_sub, out_sub, kw)),
+        )
+        captions = self._captions(tmp_path)
+        processor = self._processor(test_config, mock_services, tmp_path, subtitle_file=captions)
+
+        processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="auto_only",
+            cancel_event=threading.Event(),
+            align_captions=True,
+        )
+
+        video, in_sub, out_sub, kwargs = calls[0]
+        assert video == tmp_path / "abc123.mp4"
+        assert in_sub == captions
+        assert out_sub != captions
+        assert out_sub.parent == tmp_path
+        assert kwargs["cancel_event"] is not None
+
+    def test_alignment_is_skipped_for_a_transcribed_subtitle(self, test_config, mock_services, tmp_path, monkeypatch):
+        """A locally transcribed track already came from this audio."""
+        from anki_miner.services.asr import subtitle_generation
+        from anki_miner.services.subtitle_retimer import RetimeOutcome
+
+        self._pipeline(mock_services)
+        called: list[int] = []
+        self._patch_retime(monkeypatch, RetimeOutcome(ok=True), on_call=lambda *a: called.append(1))
+
+        def _fake_asr(config, extractor, video_path, srt_path, **kwargs):
+            srt_path.write_text("1\n00:00:00,000 --> 00:00:01,000\n食べる\n", encoding="utf-8")
+            return SubtitleGenResult(status=SubtitleGenStatus.SUCCESS, out_srt=srt_path)
+
+        monkeypatch.setattr(subtitle_generation, "generate_subtitle_one", _fake_asr)
+        processor = self._processor(test_config, mock_services, tmp_path, subtitle_file=None, sub_source="generated")
+
+        processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="transcribe",
+            cancel_event=threading.Event(),
+            align_captions=True,
+        )
+
+        assert called == []
+
+    def test_alignment_is_off_by_default(self, test_config, mock_services, tmp_path, monkeypatch):
+        from anki_miner.services.subtitle_retimer import RetimeOutcome
+
+        self._pipeline(mock_services)
+        called: list[int] = []
+        self._patch_retime(monkeypatch, RetimeOutcome(ok=True), on_call=lambda *a: called.append(1))
+        processor = self._processor(test_config, mock_services, tmp_path, subtitle_file=self._captions(tmp_path))
+
+        processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="auto_only",
+            cancel_event=threading.Event(),
+        )
+
+        assert called == []
+
+    def test_a_cancelled_alignment_returns_a_cancelled_result(self, test_config, mock_services, tmp_path, monkeypatch):
+        from anki_miner.services.subtitle_retimer import RetimeOutcome
+
+        self._pipeline(mock_services)
+        self._patch_retime(monkeypatch, RetimeOutcome(ok=False, cancelled=True, reason="cancelled"))
+        processor = self._processor(test_config, mock_services, tmp_path, subtitle_file=self._captions(tmp_path))
+
+        result = processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="auto_only",
+            cancel_event=threading.Event(),
+            align_captions=True,
+        )
+
+        assert CANCELLED_ERROR in result.errors
+        mock_services["subtitle_parser"].parse_subtitle_file.assert_not_called()
+
+    def test_alignment_reports_progress(self, test_config, mock_services, tmp_path, monkeypatch):
+        from anki_miner.services.subtitle_retimer import RetimeOutcome
+
+        self._pipeline(mock_services)
+        self._patch_retime(monkeypatch, RetimeOutcome(ok=True, engine="ffsubsync"))
+        processor = self._processor(test_config, mock_services, tmp_path, subtitle_file=self._captions(tmp_path))
+        reported: list[tuple[str, float | None]] = []
+
+        processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="auto_only",
+            cancel_event=threading.Event(),
+            fetch_progress_cb=lambda label, frac: reported.append((label, frac)),
+            align_captions=True,
+        )
+
+        assert ("Aligning subtitles", None) in reported
 
 
 class TestProcessYoutubeUrlCancelPropagation:

@@ -82,6 +82,32 @@ class NoJapaneseSubtitlesError(YouTubeFetchError):
 NoSourceSubtitlesError = NoJapaneseSubtitlesError
 
 
+class TranscriptionFailedError(YouTubeFetchError):
+    """Raised when local transcription could not produce a subtitle for a download.
+
+    Audio extraction or the ASR pass itself failed on this file. Deterministic:
+    a retry pays for the whole download again and fails on the same media, so it
+    joins the queue worker's non-retryable set alongside
+    :class:`NoJapaneseSubtitlesError`.
+    """
+
+    pass
+
+
+class TranscriptionProducedNothingError(YouTubeFetchError):
+    """Raised when local transcription ran but recognised no speech.
+
+    A music video or a silent clip reaches this. Deterministic for the same
+    reason as :class:`TranscriptionFailedError`.
+
+    Deliberately NOT :data:`NoSourceSubtitlesError`: that name is an alias of
+    :class:`NoJapaneseSubtitlesError`, whose message and ``type().__name__`` are
+    about yt-dlp writing no caption file, which is not what happened here.
+    """
+
+    pass
+
+
 class DubAudioUnavailableError(YouTubeFetchError):
     """Raised on the ``auto_dub`` route when no format matches the pinned JA-audio selector.
 
