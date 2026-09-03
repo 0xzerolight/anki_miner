@@ -4015,7 +4015,7 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     </message>
     <message>
         <source>Subtitles contain no %1 text</source>
-        <translation type="unfinished" />
+        <translation>Le fichier de sous-titres ne contient aucun texte en %1</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>
@@ -9363,11 +9363,11 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     </message>
     <message>
         <source>Unknowns in line</source>
-        <translation type="unfinished" />
+        <translation>Inconnus dans la ligne</translation>
     </message>
     <message>
         <source>Sentence length</source>
-        <translation type="unfinished" />
+        <translation>Longueur de la phrase</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -9381,11 +9381,13 @@ Le sélecteur « Phrases » propose une option par ligne de sous-titres et en li
         <source>How many words you do not know yet appear on this word’s own subtitle line.
 
 Sort ascending to put i+1 lines first — the ones whose only unknown word is this one. “-” means the line could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>Nombre de mots que vous ne connaissez pas encore présents sur la ligne de sous-titre de ce mot.
+
+Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le seul mot inconnu est celui-ci. « - » signifie que la ligne n'a pas pu être comptée.</translation>
     </message>
     <message>
         <source>Characters in the example sentence. Sort ascending for the shortest.</source>
-        <translation type="unfinished" />
+        <translation>Nombre de caractères de la phrase d'exemple. Triez par ordre croissant pour les plus courtes.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -9397,7 +9399,7 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Reset columns</source>
-        <translation type="unfinished" />
+        <translation>Réinitialiser les colonnes</translation>
     </message>
     <message>
         <source>+ Previous line</source>

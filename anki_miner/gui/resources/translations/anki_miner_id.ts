@@ -4013,7 +4013,7 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     </message>
     <message>
         <source>Subtitles contain no %1 text</source>
-        <translation type="unfinished" />
+        <translation>Subtitel tidak mengandung teks %1</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>
@@ -9347,11 +9347,11 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     </message>
     <message>
         <source>Unknowns in line</source>
-        <translation type="unfinished" />
+        <translation>Tak dikenal di baris</translation>
     </message>
     <message>
         <source>Sentence length</source>
-        <translation type="unfinished" />
+        <translation>Panjang kalimat</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -9365,11 +9365,13 @@ Pemilih “Kalimat” menyediakan satu opsi per baris subtitel, jadi biasanya da
         <source>How many words you do not know yet appear on this word’s own subtitle line.
 
 Sort ascending to put i+1 lines first — the ones whose only unknown word is this one. “-” means the line could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>Berapa banyak kata yang belum Anda ketahui muncul pada baris subtitel kata ini sendiri.
+
+Urutkan menaik untuk menampilkan baris i+1 lebih dulu — baris yang satu-satunya kata tak dikenalnya adalah kata ini. “-” berarti baris tidak dapat dihitung.</translation>
     </message>
     <message>
         <source>Characters in the example sentence. Sort ascending for the shortest.</source>
-        <translation type="unfinished" />
+        <translation>Jumlah karakter dalam kalimat contoh. Urutkan menaik untuk yang terpendek.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -9381,7 +9383,7 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Reset columns</source>
-        <translation type="unfinished" />
+        <translation>Atur ulang kolom</translation>
     </message>
     <message>
         <source>+ Previous line</source>

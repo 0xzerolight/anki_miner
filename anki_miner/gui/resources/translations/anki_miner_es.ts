@@ -4015,7 +4015,7 @@ Los archivos en el disco quedarán sin modificar porque no se pudo comprobar que
     </message>
     <message>
         <source>Subtitles contain no %1 text</source>
-        <translation type="unfinished" />
+        <translation>Los subtítulos no contienen texto en %1</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>
@@ -9363,11 +9363,11 @@ Sus diccionarios instalados, audio, listas de frecuencia y tema se conservan.</t
     </message>
     <message>
         <source>Unknowns in line</source>
-        <translation type="unfinished" />
+        <translation>Desconocidas en la línea</translation>
     </message>
     <message>
         <source>Sentence length</source>
-        <translation type="unfinished" />
+        <translation>Longitud de frase</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -9381,11 +9381,13 @@ El selector «Frases» ofrece una opción por línea de subtítulos, así que su
         <source>How many words you do not know yet appear on this word’s own subtitle line.
 
 Sort ascending to put i+1 lines first — the ones whose only unknown word is this one. “-” means the line could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>Cuántas palabras que aún no conoce aparecen en la línea de subtítulo de esta palabra.
+
+Ordene ascendente para poner primero las líneas i+1 — aquellas cuya única palabra desconocida es esta. «-» significa que la línea no pudo contarse.</translation>
     </message>
     <message>
         <source>Characters in the example sentence. Sort ascending for the shortest.</source>
-        <translation type="unfinished" />
+        <translation>Caracteres en la frase de ejemplo. Ordene ascendente para la más corta.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -9397,7 +9399,7 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Reset columns</source>
-        <translation type="unfinished" />
+        <translation>Restablecer columnas</translation>
     </message>
     <message>
         <source>+ Previous line</source>

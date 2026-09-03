@@ -4013,7 +4013,7 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     </message>
     <message>
         <source>Subtitles contain no %1 text</source>
-        <translation type="unfinished" />
+        <translation>Phụ đề không chứa văn bản %1</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>
@@ -9347,11 +9347,11 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>Unknowns in line</source>
-        <translation type="unfinished" />
+        <translation>Từ chưa biết trong dòng</translation>
     </message>
     <message>
         <source>Sentence length</source>
-        <translation type="unfinished" />
+        <translation>Độ dài câu</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -9365,11 +9365,13 @@ Khung chọn “Câu” đưa ra một lựa chọn cho mỗi dòng phụ đề 
         <source>How many words you do not know yet appear on this word’s own subtitle line.
 
 Sort ascending to put i+1 lines first — the ones whose only unknown word is this one. “-” means the line could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>Số từ chưa biết xuất hiện trên chính dòng phụ đề của từ này.
+
+Sắp xếp tăng dần để đưa các dòng i+1 lên trước — những dòng có từ chưa biết duy nhất là từ này. “-” nghĩa là dòng này không thể đếm được.</translation>
     </message>
     <message>
         <source>Characters in the example sentence. Sort ascending for the shortest.</source>
-        <translation type="unfinished" />
+        <translation>Số ký tự trong câu ví dụ. Sắp xếp tăng dần để xem câu ngắn nhất trước.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -9381,7 +9383,7 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Reset columns</source>
-        <translation type="unfinished" />
+        <translation>Đặt lại cột</translation>
     </message>
     <message>
         <source>+ Previous line</source>

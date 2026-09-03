@@ -4013,7 +4013,7 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Subtitles contain no %1 text</source>
-        <translation type="unfinished" />
+        <translation>字幕に%1のテキストが含まれていません</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>
@@ -9347,11 +9347,11 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Unknowns in line</source>
-        <translation type="unfinished" />
+        <translation>行内未知語数</translation>
     </message>
     <message>
         <source>Sentence length</source>
-        <translation type="unfinished" />
+        <translation>文の長さ</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -9365,11 +9365,13 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
         <source>How many words you do not know yet appear on this word’s own subtitle line.
 
 Sort ascending to put i+1 lines first — the ones whose only unknown word is this one. “-” means the line could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>この単語自身の字幕行に、まだ知らない単語がいくつ含まれているかを示します。
+
+昇順に並べ替えると、i+1の行(未知語がこの単語だけの行)が先頭に来ます。「-」はその行を数えられなかったことを意味します。</translation>
     </message>
     <message>
         <source>Characters in the example sentence. Sort ascending for the shortest.</source>
-        <translation type="unfinished" />
+        <translation>例文の文字数です。昇順に並べ替えると、最短の文が先頭に来ます。</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -9381,7 +9383,7 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Reset columns</source>
-        <translation type="unfinished" />
+        <translation>列をリセット</translation>
     </message>
     <message>
         <source>+ Previous line</source>

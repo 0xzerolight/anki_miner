@@ -4013,7 +4013,7 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Subtitles contain no %1 text</source>
-        <translation type="unfinished" />
+        <translation>字幕不含任何%1文字</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>
@@ -9347,11 +9347,11 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Unknowns in line</source>
-        <translation type="unfinished" />
+        <translation>行內未知詞</translation>
     </message>
     <message>
         <source>Sentence length</source>
-        <translation type="unfinished" />
+        <translation>句子長度</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -9365,11 +9365,13 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
         <source>How many words you do not know yet appear on this word’s own subtitle line.
 
 Sort ascending to put i+1 lines first — the ones whose only unknown word is this one. “-” means the line could not be counted.</source>
-        <translation type="unfinished" />
+        <translation>此單字所在字幕行中，你尚未學會的單字數量。
+
+遞增排序可讓 i+1 行排在最前面──也就是唯一未知單字為此單字的行。「-」代表無法計算該行。</translation>
     </message>
     <message>
         <source>Characters in the example sentence. Sort ascending for the shortest.</source>
-        <translation type="unfinished" />
+        <translation>例句的字元數。遞增排序可顯示最短的例句。</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -9381,7 +9383,7 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Reset columns</source>
-        <translation type="unfinished" />
+        <translation>重設欄位</translation>
     </message>
     <message>
         <source>+ Previous line</source>
