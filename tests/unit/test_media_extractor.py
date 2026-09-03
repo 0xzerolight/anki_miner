@@ -16,6 +16,7 @@ from anki_miner.services.media_extractor import (
     MIN_CLIP_SECONDS,
     MediaExtractorService,
     resolve_audio_window,
+    resolve_screenshot_time,
 )
 
 MODULE = "anki_miner.services.media_extractor"
@@ -185,6 +186,30 @@ class TestExtractMedia:
 
         assert mock_audio.call_args[0][1:3] == (4.0, 5.5)
 
+    def test_threads_the_chosen_frame_into_the_screenshot(self, service, video_file, make_tokenized_word):
+        """A curator frame pick must reach ffmpeg, not just the model."""
+        word = make_tokenized_word(start_time=5.0, end_time=7.0, duration=2.0)
+        word.screenshot_override = 6.25
+
+        with (
+            patch.object(service, "_extract_screenshot", return_value=True) as mock_screenshot,
+            patch.object(service, "_extract_audio", return_value=True),
+        ):
+            service.extract_media(video_file, word)
+
+        assert mock_screenshot.call_args.kwargs["screenshot_time"] == 6.25
+
+    def test_untouched_word_keeps_the_computed_frame(self, service, video_file, make_tokenized_word):
+        word = make_tokenized_word(start_time=5.0, end_time=7.0, duration=2.0)
+
+        with (
+            patch.object(service, "_extract_screenshot", return_value=True) as mock_screenshot,
+            patch.object(service, "_extract_audio", return_value=True),
+        ):
+            service.extract_media(video_file, word)
+
+        assert mock_screenshot.call_args.kwargs["screenshot_time"] == 6.0  # 5.0 + offset 1.0
+
     def test_correct_filename_generation(self, service, video_file, make_tokenized_word):
         """Should generate filenames as {safe_lemma}_{timestamp_ms}_{seq}.ext."""
         word = make_tokenized_word(lemma="食べる", start_time=1.5, duration=2.0)
@@ -266,6 +291,20 @@ class TestExtractScreenshot:
         assert "-q:v" in cmd
         assert cmd[cmd.index("-q:v") + 1] == "2"
         assert cmd[-1] == str(output_path)
+
+    def test_resolved_time_reaches_the_ss_flag(self, service, video_file, tmp_path):
+        """A time resolved by the caller replaces the computed offset."""
+        output_path = tmp_path / "output.jpg"
+        mock_proc = _popen_mock()
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
+            patch.object(Path, "exists", return_value=True),
+        ):
+            service._extract_screenshot(video_file, 5.0, 4.0, output_path, screenshot_time=6.25)
+
+        cmd = mock_popen.call_args[0][0]
+        assert cmd[cmd.index("-ss") + 1] == str(6.25)
 
     def test_screenshot_time_uses_half_duration_when_offset_larger(self, service, video_file, tmp_path):
         """When screenshot_offset > duration/2, should use duration/2."""
@@ -879,6 +918,37 @@ class TestResolveAudioWindow:
         _, duration = resolve_audio_window(word, 0.3)
 
         assert duration == MIN_CLIP_SECONDS
+
+
+class TestResolveScreenshotTime:
+    """Tests for resolve_screenshot_time — the one place the frame is decided."""
+
+    def test_default_is_the_offset_from_the_line_start(self, test_config, make_tokenized_word):
+        word = make_tokenized_word(start_time=10.0, end_time=14.0, duration=4.0)
+
+        assert resolve_screenshot_time(word, 10.0, 4.0, test_config.screenshot_offset) == 11.0
+
+    def test_offset_is_capped_by_a_short_line(self, make_tokenized_word):
+        """A 0.4s cue cannot take a frame 1.0s in — half the line is the ceiling."""
+        word = make_tokenized_word(start_time=10.0, end_time=10.4, duration=0.4)
+
+        assert resolve_screenshot_time(word, 10.0, 0.4, 1.0) == 10.2
+
+    def test_override_wins(self, make_tokenized_word):
+        word = make_tokenized_word(start_time=10.0, end_time=14.0, duration=4.0)
+        word.screenshot_override = 12.5
+
+        assert resolve_screenshot_time(word, 10.0, 4.0, 1.0) == 12.5
+
+    def test_override_is_clamped_to_zero(self, make_tokenized_word):
+        word = make_tokenized_word(start_time=0.5, end_time=2.0, duration=1.5)
+        word.screenshot_override = -3.0
+
+        assert resolve_screenshot_time(word, 0.5, 1.5, 1.0) == 0.0
+
+    def test_no_word_gets_the_computed_default(self):
+        """A caller holding no word asks for the default rather than restating it."""
+        assert resolve_screenshot_time(None, 10.0, 4.0, 1.0) == 11.0
 
 
 class TestExtractAudio:

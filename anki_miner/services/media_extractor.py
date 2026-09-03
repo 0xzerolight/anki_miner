@@ -102,6 +102,30 @@ def resolve_audio_window(word: TokenizedWord, padding: float) -> tuple[float, fl
     return start, duration
 
 
+def resolve_screenshot_time(
+    word: TokenizedWord | None, start_time: float, duration: float, screenshot_offset: float
+) -> float:
+    """Return the absolute second the static screenshot is grabbed at.
+
+    The single place the frame is decided. A word carrying a
+    ``screenshot_override`` (set by the curator's "Use current frame" button)
+    is grabbed at that instant as-is — the user looked at the frame and picked
+    it, so ``screenshot_offset`` is not applied on top. Every other word gets
+    the historical behaviour: the line's start plus the configured offset,
+    capped at half the line so a short cue cannot overshoot its own window.
+
+    Args:
+        word: The word being extracted, or ``None`` for a caller that holds no
+            word and therefore only wants the computed default.
+        start_time: The line's start, in source-video seconds.
+        duration: The line's duration, in seconds.
+        screenshot_offset: ``config.screenshot_offset``.
+    """
+    if word is not None and word.screenshot_override is not None:
+        return max(0.0, word.screenshot_override)
+    return start_time + min(screenshot_offset, duration / 2)
+
+
 def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
     """Read a mono 16-bit PCM WAV and return (samples, sample_rate, duration_s).
 
@@ -358,6 +382,9 @@ class MediaExtractorService:
         # the audio encode and the animated screenshot, so a clip that is
         # configured to match the audio still matches it after an edit.
         audio_start, audio_duration = resolve_audio_window(word, self.config.audio_padding)
+        # The static frame's instant, resolved once: a frame the user picked in
+        # the curator, or the configured offset from the line's start.
+        screenshot_time = resolve_screenshot_time(word, word.start_time, word.duration, self.config.screenshot_offset)
 
         # Extract screenshot (skipped for audiobooks — no video stream to grab).
         # When animated is configured but no encoder is available (effective_fmt
@@ -372,6 +399,7 @@ class MediaExtractorService:
                 effective_fmt,
                 proc_registry,
                 audio_window=(audio_start, audio_duration),
+                screenshot_time=screenshot_time,
             )
 
         # Extract audio
@@ -859,6 +887,7 @@ class MediaExtractorService:
         proc_registry: _FfmpegProcRegistry | None = None,
         *,
         audio_window: tuple[float, float] | None = None,
+        screenshot_time: float | None = None,
     ) -> bool:
         """Extract a screenshot, dispatching to the static or animated path.
 
@@ -871,6 +900,11 @@ class MediaExtractorService:
         clip; the animated path uses it when configured to match the audio.
         The static frame never reads it — a trim to fix cut-off dialogue must
         not silently move which frame the card shows.
+
+        ``screenshot_time`` is the resolved instant for the static frame (the
+        curator's chosen frame, or the computed default). The animated path
+        ignores it: its window comes from the clip, which ``clip_override``
+        already edits.
         """
         if animated_fmt is not None:
             return self._extract_animated_screenshot(
@@ -882,7 +916,9 @@ class MediaExtractorService:
                 fmt=animated_fmt,
                 audio_window=audio_window,
             )
-        return self._extract_static_screenshot(video_file, start_time, duration, output_path, proc_registry)
+        return self._extract_static_screenshot(
+            video_file, start_time, duration, output_path, proc_registry, screenshot_time=screenshot_time
+        )
 
     def _run_ffmpeg(
         self,
@@ -967,10 +1003,15 @@ class MediaExtractorService:
         duration: float,
         output_path: Path,
         proc_registry: _FfmpegProcRegistry | None = None,
+        *,
+        screenshot_time: float | None = None,
     ) -> bool:
         """Extract a single still frame as JPEG."""
-        # Calculate screenshot time (offset from start)
-        screenshot_time = start_time + min(self.config.screenshot_offset, duration / 2)
+        # ``extract_media`` resolves the instant (the curator's chosen frame,
+        # or the computed default). None means the caller held no word, so ask
+        # the resolver for the default rather than restating the formula here.
+        if screenshot_time is None:
+            screenshot_time = resolve_screenshot_time(None, start_time, duration, self.config.screenshot_offset)
 
         cmd = [
             resolve_ffmpeg(self.config),
