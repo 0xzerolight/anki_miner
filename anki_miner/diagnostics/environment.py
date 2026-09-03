@@ -5,10 +5,12 @@ from __future__ import annotations
 import logging
 import os
 import platform as platform_module
+import subprocess
 import sys
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime
+from importlib import metadata
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +19,7 @@ from anki_miner.config import paths
 from anki_miner.utils.alass_resolver import resolve_alass
 from anki_miner.utils.bundled_binary import frozen_state
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
+from anki_miner.utils.subprocess_utils import no_window_kwargs
 from anki_miner.utils.ytdlp_resolver import resolve_ytdlp
 
 #: Reported when no rotating sink is installed (a CLI or test context). The
@@ -62,6 +65,16 @@ class EnvironmentSnapshot:
     bundled_cxx_runtime: str = ""
     libmpv_source: str = ""
     video_preview: str = ""
+    # Installed versions, not just resolved paths. A path says a tool was found;
+    # only the version distinguishes a stale yt-dlp from a current one, a bundle
+    # missing unidic-lite from one that ships it, an ffmpeg build without the
+    # encoder the run needed, and a faster-whisper/ctranslate2 pair that cannot
+    # load each other's models.
+    packages: str = ""
+    ffmpeg_version: str = ""
+    ffprobe_version: str = ""
+    ytdlp_version: str = ""
+    alass_version: str = ""
 
 
 #: Read verbatim into ``qt_env``. Every one of them changes which GL stack Qt
@@ -74,6 +87,31 @@ _QT_ENV_VARS = (
     "__GLX_VENDOR_LIBRARY_NAME",
     "MESA_LOADER_DRIVER_OVERRIDE",
 )
+
+
+#: Reported in ``packages``. The distribution names whose absence or version
+#: has actually explained a bug report: the GUI toolkit, the mining engine, the
+#: subtitle/HTTP stack, the ASR pair, the zh/ko engines and the imaging deps.
+_PACKAGE_NAMES = (
+    "PyQt6",
+    "yt-dlp",
+    "fugashi",
+    "unidic-lite",
+    "pysubs2",
+    "requests",
+    "charset-normalizer",
+    "faster-whisper",
+    "ctranslate2",
+    "pywhispercpp",
+    "jieba",
+    "opencc",
+    "kiwipiepy",
+    "Pillow",
+    "numpy",
+)
+
+#: A ``--version`` spawn that has not answered by now is hung, not slow.
+_TOOL_VERSION_TIMEOUT_S = 5.0
 
 
 def _unavailable(exc: Exception) -> str:
@@ -211,6 +249,52 @@ def _libmpv_source() -> str:
     return " ".join(parts)
 
 
+def _package_versions() -> str:
+    """Render ``name=version`` for every name in :data:`_PACKAGE_NAMES`.
+
+    A name that is not installed renders ``<absent>`` — the interesting value in
+    a frozen bundle, where a missing dependency is the whole bug. Metadata is
+    read per name so one unreadable dist-info cannot blank the rest.
+    """
+    parts: list[str] = []
+    for name in _PACKAGE_NAMES:
+        try:
+            value = metadata.version(name)
+        except metadata.PackageNotFoundError:
+            value = "<absent>"
+        except Exception as exc:
+            value = _unavailable(exc)
+        parts.append(f"{name}={value}")
+    return " ".join(parts)
+
+
+def _tool_version(resolved: str, flag: str) -> str:
+    """Return the first non-empty output line of ``<resolved> <flag>``.
+
+    *resolved* is the value this snapshot already recorded, so nothing is
+    resolved twice. An empty path (tool not found) or an ``<unavailable: ...>``
+    marker is not a command and is never spawned. ``stderr`` is read as a
+    fallback because several of these tools print their version there.
+    """
+    if not resolved or resolved.startswith("<"):
+        return ""
+    result = subprocess.run(  # noqa: S603 — resolved by our own tool resolvers
+        [resolved, flag],
+        capture_output=True,
+        text=True,
+        errors="replace",
+        timeout=_TOOL_VERSION_TIMEOUT_S,
+        stdin=subprocess.DEVNULL,
+        check=False,
+        **no_window_kwargs(),
+    )
+    for stream in (result.stdout, result.stderr):
+        for line in (stream or "").splitlines():
+            if line.strip():
+                return line.strip()
+    return f"<no output: rc={result.returncode}>"
+
+
 def _video_preview_state() -> str:
     from anki_miner.gui.utils import video_preview  # noqa: PLC0415
 
@@ -221,10 +305,12 @@ def collect_environment(config, *, platform_name: str = "") -> EnvironmentSnapsh
     """Collect a best-effort environment snapshot without probing AnkiConnect.
 
     This function is blocking and must run off the GUI thread. Binary resolution
-    can scan a long PATH, and managed yt-dlp/alass probes may hash multi-megabyte
-    executables. Every probe is isolated: resolver, import, or filesystem failures
-    become ``<unavailable: ExceptionType>`` fields. This function never raises for
-    an environment-probe failure.
+    can scan a long PATH, managed yt-dlp/alass probes may hash multi-megabyte
+    executables, and the version fields add up to four ``--version`` spawns of
+    roughly 50 ms each (capped at ``_TOOL_VERSION_TIMEOUT_S``). Every probe is
+    isolated: resolver, import, filesystem or spawn failures become
+    ``<unavailable: ExceptionType>`` fields. This function never raises for an
+    environment-probe failure.
     """
     try:
         frozen, meipass_value = frozen_state()
@@ -232,6 +318,12 @@ def collect_environment(config, *, platform_name: str = "") -> EnvironmentSnapsh
     except Exception as exc:
         frozen = False
         meipass = _unavailable(exc)
+
+    # Resolved once, then reused for the version spawn below.
+    ffmpeg = _safe_string(lambda: resolve_ffmpeg(config))
+    ffprobe = _safe_string(lambda: resolve_ffprobe(config))
+    ytdlp = _safe_string(lambda: resolve_ytdlp(config))
+    alass = _safe_string(lambda: resolve_alass(config))
 
     return EnvironmentSnapshot(
         app_version=__version__,
@@ -244,10 +336,10 @@ def collect_environment(config, *, platform_name: str = "") -> EnvironmentSnapsh
         home=_safe_string(lambda: paths.ANKI_MINER_HOME),
         log_path=_safe_string(lambda: config.log_path),
         log_ring=_safe_string(_log_ring),
-        ffmpeg=_safe_string(lambda: resolve_ffmpeg(config)),
-        ffprobe=_safe_string(lambda: resolve_ffprobe(config)),
-        ytdlp=_safe_string(lambda: resolve_ytdlp(config)),
-        alass=_safe_string(lambda: resolve_alass(config)),
+        ffmpeg=ffmpeg,
+        ffprobe=ffprobe,
+        ytdlp=ytdlp,
+        alass=alass,
         dictionary_chain=_safe_chain(lambda: _dictionary_chain(config)),
         frequency_chain=_safe_chain(lambda: _frequency_chain(config)),
         pitch_chain=_safe_chain(lambda: _pitch_chain(config)),
@@ -265,6 +357,11 @@ def collect_environment(config, *, platform_name: str = "") -> EnvironmentSnapsh
         bundled_cxx_runtime=_safe_string(_bundled_cxx_runtime),
         libmpv_source=_safe_string(_libmpv_source),
         video_preview=_safe_string(_video_preview_state),
+        packages=_safe_string(_package_versions),
+        ffmpeg_version=_safe_string(lambda: _tool_version(ffmpeg, "-version")),
+        ffprobe_version=_safe_string(lambda: _tool_version(ffprobe, "-version")),
+        ytdlp_version=_safe_string(lambda: _tool_version(ytdlp, "--version")),
+        alass_version=_safe_string(lambda: _tool_version(alass, "--version")),
     )
 
 
