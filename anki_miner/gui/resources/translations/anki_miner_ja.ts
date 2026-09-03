@@ -9438,6 +9438,26 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation>この単語の元の 1 行の文とクリップ範囲に戻します。</translation>
     </message>
     <message>
+        <source>Use current frame</source>
+        <translation>現在のフレームを使用</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation>フレームをリセット</translation>
+    </message>
+    <message>
+        <source>Take this word's screenshot from the frame the player is showing, instead of the configured offset from the line's start.</source>
+        <translation>この単語のスクリーンショットを、字幕行の開始からの設定済みのオフセットではなく、プレーヤーに表示されている現在のフレームから取得します。</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame.</source>
+        <translation>この単語の既定のスクリーンショットのフレームに戻します。</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame (now %1 s).</source>
+        <translation>この単語の既定のスクリーンショットのフレームに戻します（現在 %1 秒）。</translation>
+    </message>
+    <message>
         <source>Sentences</source>
         <translation>文</translation>
     </message>

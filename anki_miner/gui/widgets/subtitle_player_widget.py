@@ -477,6 +477,17 @@ class SubtitlePlayerWidget(QWidget):
         """
         return self.video_widget is not None
 
+    @property
+    def current_seconds(self) -> float:
+        """The position the viewer is currently looking at, in seconds.
+
+        Read off the slider rather than mpv's ``time_pos`` on purpose: the
+        slider is what the user sees, and while the handle is held down it
+        holds the drag target that mpv is still catching up to. Zero until the
+        first position tick lands.
+        """
+        return self.position_slider.value() / 1000.0
+
     def seek_seconds(self, seconds: float) -> None:
         """Seek to an absolute position.
 

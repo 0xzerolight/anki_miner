@@ -9454,6 +9454,26 @@ Ordina in modo crescente per mettere prima le righe i+1, quelle il cui unico ele
         <translation>Ripristina la frase originale su una sola riga e l'intervallo della clip di questa parola.</translation>
     </message>
     <message>
+        <source>Use current frame</source>
+        <translation>Usa fotogramma attuale</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation>Reimposta fotogramma</translation>
+    </message>
+    <message>
+        <source>Take this word's screenshot from the frame the player is showing, instead of the configured offset from the line's start.</source>
+        <translation>Prende la schermata di questa parola dal fotogramma mostrato dal lettore, invece dell'offset configurato dall'inizio della riga.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame.</source>
+        <translation>Ripristina il fotogramma predefinito per la schermata di questa parola.</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame (now %1 s).</source>
+        <translation>Ripristina il fotogramma predefinito per la schermata di questa parola (ora %1 s).</translation>
+    </message>
+    <message>
         <source>Sentences</source>
         <translation>Frasi</translation>
     </message>

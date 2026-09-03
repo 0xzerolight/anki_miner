@@ -202,6 +202,15 @@ class TokenizedWord:
     # WordFilterService.expand_word_lines before phase 3 — the dialog stores
     # intent, the processor rebuilds text/spans/furigana.
     line_expansion: tuple[int, int] = (0, 0)
+    # User-chosen screenshot frame: absolute seconds on the source video's own
+    # timeline, stamped by the word curator's "Use current frame" button. None
+    # (the default, and every non-interactive path) means the computed default
+    # — start_time + min(screenshot_offset, duration / 2) — so an untouched
+    # word extracts exactly as it did before this field existed. Consumed by
+    # media_extractor.resolve_screenshot_time, the only place it is read.
+    # Static screenshots only: an animated screenshot's window comes from the
+    # audio clip, which clip_override already edits.
+    screenshot_override: float | None = None
     # The parser's resolved card front, set at the emit site. Non-empty means
     # "already decided" — the profile's MinedFormPolicy answered, and for a
     # non-ja token select_mined_form's JA POS table would answer wrongly

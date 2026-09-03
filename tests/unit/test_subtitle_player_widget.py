@@ -489,6 +489,30 @@ class TestObserverSlots:
         assert not widget.video_widget.isVisibleTo(widget)
 
 
+class TestCurrentSeconds:
+    """The position a caller grabs a frame at — the curator's frame pick."""
+
+    def test_follows_playback(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget._on_duration(60.0)
+        widget._on_time_pos(12.5)
+        assert widget.current_seconds == 12.5
+
+    def test_is_zero_before_the_first_tick(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        assert widget.current_seconds == 0.0
+
+    def test_follows_a_drag(self, qtbot, fake_mpv):
+        """Mid-drag the slider IS the user's position — that is the frame they see."""
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget._on_duration(60.0)
+        widget.position_slider.setValue(30_000)
+        assert widget.current_seconds == 30.0
+
+
 class TestLifecycleSignals:
     """The public seam consumers build a loading/failed state on (D35)."""
 

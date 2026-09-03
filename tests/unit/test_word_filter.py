@@ -1861,3 +1861,10 @@ class TestExpandWordLines:
         word = _expansion_word(clip_override=(4.0, 8.0))
         result = service.expand_word_lines(word, EXPANSION_ENTRIES)
         assert result.clip_override == (4.0, 8.0)
+
+    def test_screenshot_override_preserved(self, test_config):
+        """A merged line is the same scene extended, so the picked frame survives."""
+        service = WordFilterService(test_config)
+        word = _expansion_word(screenshot_override=6.25)
+        result = service.expand_word_lines(word, EXPANSION_ENTRIES)
+        assert result.screenshot_override == 6.25

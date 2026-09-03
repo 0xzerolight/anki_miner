@@ -9378,6 +9378,26 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Use current frame</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Take this word's screenshot from the frame the player is showing, instead of the configured offset from the line's start.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame (now %1 s).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Sentences</source>
         <translation type="unfinished" />
     </message>

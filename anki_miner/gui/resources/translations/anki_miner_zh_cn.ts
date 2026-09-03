@@ -9438,6 +9438,26 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation>恢复该单词原本的单行例句和片段范围。</translation>
     </message>
     <message>
+        <source>Use current frame</source>
+        <translation>使用当前帧</translation>
+    </message>
+    <message>
+        <source>Reset frame</source>
+        <translation>重置帧</translation>
+    </message>
+    <message>
+        <source>Take this word's screenshot from the frame the player is showing, instead of the configured offset from the line's start.</source>
+        <translation>该单词的截图取自播放器当前显示的帧，而不是从字幕行起点按设定的偏移量截取。</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame.</source>
+        <translation>恢复该单词的默认截图帧。</translation>
+    </message>
+    <message>
+        <source>Restore this word's default screenshot frame (now %1 s).</source>
+        <translation>恢复该单词的默认截图帧（当前 %1 秒）。</translation>
+    </message>
+    <message>
         <source>Sentences</source>
         <translation>句子</translation>
     </message>
