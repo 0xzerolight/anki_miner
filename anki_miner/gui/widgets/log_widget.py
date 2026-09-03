@@ -21,6 +21,7 @@ Two deliberate properties:
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -52,6 +53,19 @@ LEVEL_INFO = "INFO"
 LEVEL_SUCCESS = "SUCCESS"
 LEVEL_WARNING = "WARNING"
 LEVEL_ERROR = "ERROR"
+
+# Every line the Activity panel shows is mirrored here, so a support report
+# (which arrives as ``anki_miner.log``, never as a screenshot of the panel)
+# still carries what the user read on screen.
+ACTIVITY_LOGGER_NAME = "anki_miner.gui.activity"
+_ACTIVITY_LOG = logging.getLogger(ACTIVITY_LOGGER_NAME)
+
+_MIRROR_LEVELS: dict[str, int] = {
+    LEVEL_INFO: logging.INFO,
+    LEVEL_SUCCESS: logging.INFO,
+    LEVEL_WARNING: logging.WARNING,
+    LEVEL_ERROR: logging.ERROR,
+}
 
 # Level chips. ``None`` means "no restriction"; Info deliberately includes
 # SUCCESS so the chip means "everything that went to plan".
@@ -95,14 +109,18 @@ class LogWidget(QWidget):
     MAX_LINES = LOG_MAX_LINES
     KEEP_LINES = LOG_ROTATION_THRESHOLD
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, source: str = ""):
         """Initialize the log widget.
 
         Args:
             parent: Optional parent widget
+            source: Short tag identifying the screen this console belongs to
+                (usually its ``TASK_ID``). It prefixes every mirrored line so
+                one file log stays readable with several panels writing to it.
         """
         super().__init__(parent)
         self._entries: list[LogEntry] = []
+        self._log_source = source
         self._level_filter = "all"
         self._search = ""
         self._follow_paused = False
@@ -282,6 +300,10 @@ class LogWidget(QWidget):
         """
         self._append_message(message, LEVEL_ERROR)
 
+    def set_log_source(self, source: str) -> None:
+        """Set the tag prefixed onto lines mirrored into the file log."""
+        self._log_source = source
+
     def clear_log(self) -> None:
         """Clear all log messages."""
         self._entries.clear()
@@ -315,6 +337,11 @@ class LogWidget(QWidget):
             text: Message text
             level: One of ``INFO``, ``SUCCESS``, ``WARNING``, ``ERROR``
         """
+        # Mirror first, and exactly once per appended line: rotation below
+        # re-renders retained entries, which must not re-emit them.
+        body = f"[{self._log_source}] {text}" if self._log_source else text
+        _ACTIVITY_LOG.log(_MIRROR_LEVELS.get(level, logging.INFO), "%s", body)
+
         entry = LogEntry(datetime.now().strftime("%H:%M:%S"), level, text)
         self._entries.append(entry)
 
