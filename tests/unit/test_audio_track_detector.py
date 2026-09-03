@@ -1,6 +1,7 @@
 """Tests for audio_track_detector utility."""
 
 import json
+import logging
 import subprocess
 from unittest.mock import MagicMock, patch
 
@@ -12,6 +13,7 @@ from anki_miner.utils.audio_track_detector import (
     AudioStream,
     SubtitleStream,
     find_japanese_audio_stream,
+    get_media_duration_seconds,
     get_primary_video_codec,
     list_audio_streams,
     list_subtitle_streams,
@@ -657,3 +659,66 @@ class TestListSubtitleStreams:
         assert args[0] == "/custom/ffprobe"
         assert "-select_streams" in args
         assert str(video_file) in args
+
+
+class TestFfprobeCommandLogging:
+    """A failed probe is only diagnosable from its argv and its output tail."""
+
+    def test_nonzero_exit_logs_argv_and_a_bounded_stderr_tail(self, video_file, caplog):
+        stderr = "\n".join(f"ffprobe line {n}" for n in range(1, 31))
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(returncode=1, stderr=stderr)),
+            caplog.at_level(logging.DEBUG, logger=MODULE),
+        ):
+            assert list_audio_streams(video_file, ffprobe_cmd="/custom/ffprobe") == []
+
+        detail = next(m for m in (r.getMessage() for r in caplog.records) if "argv=" in m and "rc=1" in m)
+        assert "/custom/ffprobe" in detail and str(video_file) in detail
+        # Only the last STDERR_TAIL_LINES survive: line 10 is above the window.
+        assert "ffprobe line 30" in detail
+        assert "ffprobe line 11" in detail
+        assert "ffprobe line 10" not in detail
+
+    def test_malformed_json_logs_the_head_of_stdout(self, video_file, caplog):
+        stdout = "<!DOCTYPE html>" + "x" * 500
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)),
+            caplog.at_level(logging.DEBUG, logger=MODULE),
+        ):
+            assert list_audio_streams(video_file) == []
+
+        detail = next(m for m in (r.getMessage() for r in caplog.records) if "malformed JSON" in m)
+        assert "<!DOCTYPE html>" in detail
+        assert stdout not in detail  # truncated, not the whole body
+
+    def test_successful_probe_logs_a_debug_ok_receipt(self, video_file, caplog):
+        stdout = _ffprobe_json([{"index": 0, "language": "jpn"}])
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(stdout=stdout)),
+            caplog.at_level(logging.DEBUG, logger=MODULE),
+        ):
+            list_audio_streams(video_file)
+
+        assert any(r.getMessage().startswith("ffprobe ok: rc=0") for r in caplog.records)
+
+    def test_spawn_failure_logs_the_argv_at_warning(self, video_file, caplog):
+        with (
+            patch(f"{MODULE}.subprocess.run", side_effect=FileNotFoundError("ffprobe missing")),
+            caplog.at_level(logging.DEBUG, logger=MODULE),
+        ):
+            assert list_audio_streams(video_file) == []
+
+        warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+        assert any("argv=" in m for m in warnings)
+        assert any("FileNotFoundError" in m and "ffprobe missing" in m for m in warnings)
+
+    def test_duration_probe_nonzero_exit_logs_argv_and_tail(self, video_file, caplog):
+        with (
+            patch(f"{MODULE}.subprocess.run", return_value=_mock_proc(returncode=1, stderr="boom")),
+            caplog.at_level(logging.DEBUG, logger=MODULE),
+        ):
+            assert get_media_duration_seconds(video_file) is None
+
+        detail = next(m for m in (r.getMessage() for r in caplog.records) if "argv=" in m and "rc=1" in m)
+        assert "format=duration" in detail
+        assert "boom" in detail

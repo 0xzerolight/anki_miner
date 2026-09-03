@@ -3,12 +3,18 @@
 import json
 import logging
 import subprocess
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
+from anki_miner.utils.subprocess_log import log_command, log_command_result, tail_for_log
 from anki_miner.utils.subprocess_utils import no_window_kwargs
 
 logger = logging.getLogger(__name__)
+
+# A probe that returns something other than JSON returned an error page, a
+# usage banner or a shell wrapper's complaint; the head of it names which.
+_MALFORMED_STDOUT_CHARS = 200
 
 JAPANESE_LANGUAGE_CODES = frozenset({"jpn", "ja", "japanese", "jp"})
 
@@ -117,6 +123,8 @@ def _run_ffprobe_json(video_path: Path, select_streams: str, ffprobe_cmd: str) -
         str(video_path),
     ]
 
+    log_command(logger, "ffprobe", cmd, timeout_s=30)
+    started_at = time.monotonic()
     try:
         proc = subprocess.run(
             cmd,
@@ -129,18 +137,38 @@ def _run_ffprobe_json(video_path: Path, select_streams: str, ffprobe_cmd: str) -
             **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
         )
     except (subprocess.SubprocessError, OSError, ValueError) as e:
-        logger.warning("Error probing %s (select=%s): %s", video_path, select_streams, e)
+        # Nothing ran, so there is no stderr: the argv is the whole diagnosis.
+        log_command(logger, "ffprobe", cmd, timeout_s=30, level=logging.WARNING)
+        logger.warning("Error probing %s (select=%s): %s: %s", video_path, select_streams, type(e).__name__, e)
         return None
 
+    elapsed_s = time.monotonic() - started_at
     if proc.returncode != 0:
-        logger.warning("ffprobe failed for %s: %s", video_path, proc.stderr)
+        log_command_result(
+            logger,
+            "ffprobe",
+            cmd,
+            returncode=proc.returncode,
+            stderr_tail=tail_for_log(proc.stderr or ""),
+            elapsed_s=elapsed_s,
+            level=logging.WARNING,
+        )
         return None
 
     try:
         data: dict = json.loads(proc.stdout)
     except json.JSONDecodeError as e:
-        logger.warning("ffprobe returned malformed JSON for %s: %s", video_path, e)
+        # ffprobe exited 0 and still produced non-JSON: log the head of what it
+        # did produce, which names the wrapper or error page that answered.
+        logger.warning(
+            "ffprobe returned malformed JSON for %s: %s: stdout[:%d]=%r",
+            video_path,
+            e,
+            _MALFORMED_STDOUT_CHARS,
+            (proc.stdout or "")[:_MALFORMED_STDOUT_CHARS],
+        )
         return None
+    log_command_result(logger, "ffprobe", cmd, returncode=0, elapsed_s=elapsed_s)
     return data
 
 
@@ -161,6 +189,8 @@ def get_media_duration_seconds(video_path: Path, ffprobe_cmd: str = "ffprobe") -
         "format=duration",
         str(video_path),
     ]
+    log_command(logger, "ffprobe", cmd, timeout_s=30)
+    started_at = time.monotonic()
     try:
         proc = subprocess.run(
             cmd,
@@ -173,10 +203,22 @@ def get_media_duration_seconds(video_path: Path, ffprobe_cmd: str = "ffprobe") -
             **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
         )
         if proc.returncode != 0:
+            # Was a silent None: a duration probe that fails takes the caller's
+            # progress reporting down with it, so it says so now.
+            log_command_result(
+                logger,
+                "ffprobe",
+                cmd,
+                returncode=proc.returncode,
+                stderr_tail=tail_for_log(proc.stderr or ""),
+                elapsed_s=time.monotonic() - started_at,
+                level=logging.WARNING,
+            )
             return None
         duration = float(json.loads(proc.stdout)["format"]["duration"])
     except (subprocess.SubprocessError, OSError, ValueError, KeyError, TypeError) as e:
-        logger.warning("Error probing duration of %s: %s", video_path, e)
+        log_command(logger, "ffprobe", cmd, timeout_s=30, level=logging.WARNING)
+        logger.warning("Error probing duration of %s: %s: %s", video_path, type(e).__name__, e)
         return None
     return duration if duration > 0 else None
 

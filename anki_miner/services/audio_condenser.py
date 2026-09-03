@@ -56,6 +56,7 @@ from anki_miner.utils.audio_track_detector import (
 )
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.file_pairing import find_sibling_subtitle, resolve_output_path
+from anki_miner.utils.subprocess_log import log_command, log_command_result, tail_for_log
 from anki_miner.utils.subprocess_utils import no_window_kwargs
 from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding
 from anki_miner.utils.text_utils import strip_subtitle_markup
@@ -534,6 +535,7 @@ class AudioCondenserService:
             timeout=_EMBEDDED_SUBTITLE_TIMEOUT,
             progress_cb=None,
             cancel_event=cancel_event,
+            op="ffmpeg subtitle-extract",
         )
         if ok:
             return out_path
@@ -652,6 +654,7 @@ class AudioCondenserService:
                         timeout=timeout,
                         progress_cb=progress_cb,
                         cancel_event=cancel_event,
+                        op="ffmpeg condense",
                     )
                     if not ok:
                         raise _CondenseOutputIncomplete(failure)
@@ -731,6 +734,7 @@ class AudioCondenserService:
                         timeout=max(600.0, total_ms / 1000 * 4),
                         progress_cb=progress_cb,
                         cancel_event=cancel_event,
+                        op="ffmpeg concat",
                     )
                     if not ok:
                         raise _CondenseOutputIncomplete(failure)
@@ -751,6 +755,7 @@ class AudioCondenserService:
         timeout: float,
         progress_cb: Callable[[int], None] | None,
         cancel_event: threading.Event | None,
+        op: str = "ffmpeg",
     ) -> tuple[bool, FfmpegStepFailure | None]:
         """Run *cmd* streaming, parsing ``-progress`` and honouring cancel/timeout.
 
@@ -768,7 +773,12 @@ class AudioCondenserService:
         (a cancel is the user's doing, not a fault to report). The pair is
         deliberately a tuple rather than a returned object: callers test the
         result for truth, and any struct — however "empty" — is truthy.
+
+        *op* is the log anchor naming which of the three ffmpeg steps this is;
+        the argv and the output tail are recorded under it.
         """
+        log_command(logger, op, cmd, timeout_s=timeout)
+        started_at = time.monotonic()
         try:
             proc = subprocess.Popen(
                 cmd,
@@ -780,7 +790,10 @@ class AudioCondenserService:
                 **no_window_kwargs(),
             )
         except (OSError, subprocess.SubprocessError) as exc:
-            logger.error("Failed to launch ffmpeg (%s): %s", cmd[0], exc)
+            # A binary that never executed produces no output, so the argv is
+            # the only record of what was attempted.
+            log_command(logger, op, cmd, timeout_s=timeout, level=logging.WARNING)
+            logger.error("Failed to launch ffmpeg (%s): %s: %s", cmd[0], type(exc).__name__, exc)
             return False, FfmpegStepFailure(None, False, _failure_reason([], str(exc)))
 
         done_event = threading.Event()
@@ -838,9 +851,11 @@ class AudioCondenserService:
                 watcher.join()
 
             cancelled = cancel_event is not None and cancel_event.is_set()
+            elapsed_s = time.monotonic() - started_at
             if not cancelled and proc.returncode == 0:
                 if progress_cb is not None and last_pct < 100:
                     progress_cb(100)
+                log_command_result(logger, op, cmd, returncode=0, elapsed_s=elapsed_s)
                 return True, None
 
             if cancelled:
@@ -851,6 +866,18 @@ class AudioCondenserService:
                 proc.returncode,
                 ", timed out" if timed_out.is_set() else "",
                 "\n".join(tail),
+            )
+            # The FfmpegStepFailure reason is one truncated line for the UI; the
+            # log gets the argv and the bounded tail behind it.
+            log_command_result(
+                logger,
+                op,
+                cmd,
+                returncode=proc.returncode,
+                state="timed_out" if timed_out.is_set() else "completed",
+                stderr_tail=tail_for_log("\n".join(tail)),
+                elapsed_s=elapsed_s,
+                level=logging.WARNING,
             )
             return False, FfmpegStepFailure(proc.returncode, timed_out.is_set(), _failure_reason(tail))
 

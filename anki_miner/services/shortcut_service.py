@@ -5,7 +5,6 @@ file), Windows (.lnk), and macOS (informational only). Replaces the previous
 CLI-driven `create-shortcut` command with a pure service the GUI can call.
 """
 
-import contextlib
 import logging
 import os
 import shutil
@@ -16,6 +15,8 @@ from pathlib import Path
 
 from PyQt6.QtCore import QCoreApplication
 
+from anki_miner.utils.logging_ext import suppressed
+from anki_miner.utils.subprocess_log import log_command
 from anki_miner.utils.subprocess_utils import no_window_kwargs
 
 logger = logging.getLogger(__name__)
@@ -195,9 +196,14 @@ StartupWMClass=anki_miner
         result.messages.append(f"Desktop file created: {desktop_file}")
         result.paths_created.append(desktop_file)
 
-        with contextlib.suppress(FileNotFoundError, subprocess.TimeoutExpired):
+        # Best-effort, but not silent: a menu entry that never appears is the
+        # user-visible symptom of this refresh failing, and it used to leave
+        # nothing in the log at all.
+        refresh_argv = ["update-desktop-database", str(desktop_dir)]
+        log_command(logger, "update-desktop-database", refresh_argv, timeout_s=_SUBPROCESS_TIMEOUT_SECONDS)
+        with suppressed(logger, "update-desktop-database"):
             subprocess.run(
-                ["update-desktop-database", str(desktop_dir)],
+                refresh_argv,
                 capture_output=True,
                 check=False,
                 timeout=_SUBPROCESS_TIMEOUT_SECONDS,
