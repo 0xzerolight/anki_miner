@@ -12,8 +12,8 @@ documented set omits kiwi's own additions (the Z_CODA tag and the -R/-I
 regularity suffix on predicate tags, both handled in tokenizer.py).
 
 Both gate fields are live. KO_ALLOWED_POS holds two-letter Sejong CLASSES and is
-tested against pos1 (services/morphology.py:1067); KO_EXCLUDED_SUBTYPES holds
-full tags and is tested against pos2 (:1071). The split earns its keep for words
+tested against pos1 (services/morphology.py:1073); KO_EXCLUDED_SUBTYPES holds
+full tags and is tested against pos2 (:1077). The split earns its keep for words
 whose class must stay open: NNB (bound nouns 것/수/개/명 - grammar scaffolding)
 shares NN with NNG/NNP, and MAJ (conjunctive adverbs 그러나/그리고) shares MA with
 MAG. Everything else - particles, endings, punctuation, numerals, pronouns,
@@ -30,8 +30,10 @@ from anki_miner.languages.ko.tokenizer import coarse_tag
 #: KO_ALLOWED_POS, so the gate drops a copula before the parser ever asks this
 #: policy for its card front. XS is absent for a different reason - XSV/XSA are
 #: predicate-forming suffixes but share the class with the noun-forming XSN (-님,
-#: -들), and XS is not mineable anyway: 공부하고 mines 공부 as a noun and drops
-#: 하/XSV.
+#: -들), and XS is not mineable anyway: 공부하고 drops 하/XSV as a TOKEN. The
+#: nominal+suffix PAIR is merged upstream instead (languages/ko/predicate_merge.py),
+#: which is what puts 공부하다 - not 공부 - on the card when the dictionary
+#: attests it.
 PREDICATE_TAGS: frozenset[str] = frozenset({"VV", "VA", "VX"})
 
 #: Mineable content classes, sorted (the settings editor shows them in order).
