@@ -124,6 +124,11 @@ _FRONT_CACHE_CAP: int = 200_000
 # Maps each queried card front to whether any offline dictionary attests it.
 KanaAttestLookup = Callable[[list[str]], dict[str, bool]]
 
+# Language-specific token-merge pass (languages/ko/predicate_merge.py), called as
+# merge_line(text, tokens, attest). Duck-typed: services keeps no runtime import
+# of languages.
+TokenMerger = Any
+
 # POS backstop for kana recovery: only inflectional content words are recovered
 # from the pure-hiragana script gate. Deliberately EXCLUDES 名詞 — formal nouns
 # こと/もの/ため clear content_gate_ok but are grammar noise as bare kana — and
@@ -346,6 +351,7 @@ class SubtitleParserService:
         mined_form_policy: "MinedFormPolicy | None" = None,
         reading_support: "ReadingSupport | None" = None,
         script_gate: Callable[[str], bool] | None = None,
+        token_merger: "TokenMerger | None" = None,
     ):
         """Initialize the subtitle parser.
 
@@ -408,6 +414,14 @@ class SubtitleParserService:
                 katakana / loanword ladder exactly as it was; a callable
                 replaces only its last step, which is what lets a pure-hangul
                 Korean word be mined at all.
+            token_merger: Optional language-specific token-merge pass run on the
+                merged stream, right after the JA compound-suffix passes
+                (``languages.ko.predicate_merge.KoreanPredicateMerger``). Called
+                as ``merge_line(text, tokens, attest)`` with the SAME memoised
+                existence probe the compound matcher uses. ``None`` — every JA
+                and ZH path — and any config with no offline dictionary (no
+                probe to pass) skip it entirely, so output stays byte-identical.
+                Duck-typed like ``mined_form_policy``.
         """
         self.config = config
         # Perf-audit counters (Task 28): cumulative wall-clock spent in offline-
@@ -425,6 +439,10 @@ class SubtitleParserService:
         # Word-reading provider for the emit site. None ⇒ the JA derivation runs
         # verbatim (see _emit_word); the ja profile never injects one.
         self._reading_support = reading_support
+        # Language-specific merge pass for the merged stream (ko: 공부 + 하 →
+        # 공부하다). Runs only when an offline existence probe exists (see
+        # _build_line_state); None ⇒ JA/ZH behaviour verbatim.
+        self._token_merger = token_merger
         self._reading_lookup = reading_lookup
         # Shared process-wide tagger (see services/tagger.py for the single-flight
         # invariant). __init__ may block ~2-3s on the lazy build if a user triggers
@@ -957,6 +975,10 @@ class SubtitleParserService:
         raw_tokens = list(self.tagger(text))
         self._tokenize_time_s += time.perf_counter() - tokenize_start
         merged_tokens = self._merge_compound_suffixes(raw_tokens)
+        # Language-specific merge (ko: 공부 + 하 → 공부하다). Placed with the other
+        # merge passes and gated on the same probe; no probe ⇒ no merge.
+        if self._token_merger is not None and self._attest is not None:
+            merged_tokens = self._token_merger.merge_line(text, merged_tokens, self._attest)
         if self._name_matcher is not None:
             merged_tokens = self._name_matcher.merge_line(text, merged_tokens)
         if self._compound_matcher is not None:
