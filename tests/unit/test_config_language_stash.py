@@ -125,5 +125,13 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "strict_card_order",
         "condenser_merge_output",
         "secondary_subtitle_enabled",
+        "review_words_before_mining",
+        "youtube_align_captions",
+        "youtube_subtitle_source",
+        "deck_builder_mode",
+        "deck_builder_top_n",
+        "deck_builder_coverage_pct",
+        "deck_builder_skip_known",
+        "backfill_field_groups",
     }
     assert loaded.script_variant == "" and loaded.reading_tone_color is False
