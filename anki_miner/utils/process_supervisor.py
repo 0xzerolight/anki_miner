@@ -20,6 +20,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from anki_miner.utils.subprocess_log import log_command, log_command_result, tail_for_log
+
 logger = logging.getLogger(__name__)
 
 _POLL_INTERVAL_S = 0.02
@@ -268,10 +270,19 @@ def run_supervised(
     combine_stderr: bool = False,
     encoding: str = "utf-8",
     retain_output: bool = True,
+    op: str | None = None,
+    noise_filter: Callable[[str], bool] | None = None,
 ) -> SupervisedResult:
-    """Run *command* to one terminal state without unbounded pipe reads or waits."""
+    """Run *command* to one terminal state without unbounded pipe reads or waits.
+
+    ``op`` labels the operation in the log records (defaults to the executable's
+    file name); ``noise_filter`` drops lines a caller knows are noise from the
+    failure tail, e.g. yt-dlp progress ticks.
+    """
     started = time.monotonic()
     deadline = started + max(timeout_s, 0.0)
+    label = op or (Path(str(command[0])).name if command else "process")
+    log_command(logger, label, command, cwd=cwd, timeout_s=timeout_s)
     popen_kwargs: dict[str, Any] = {
         # Detach stdin: a backgrounded child reading the controlling terminal gets
         # SIGTTIN-stopped (see media_extractor.py's _run_ffmpeg for the full story).
@@ -293,6 +304,11 @@ def run_supervised(
     try:
         proc: subprocess.Popen[bytes] = subprocess.Popen(command, **popen_kwargs)
     except OSError as exc:
+        # The result carries the exception, but every caller before this turned
+        # it into a generic failure message; a spawn that never happened has no
+        # output to explain it, so the argv is re-logged at WARNING here.
+        log_command(logger, label, command, cwd=cwd, timeout_s=timeout_s, level=logging.WARNING)
+        logger.warning("%s spawn failed: %s: %s", label, type(exc).__name__, exc)
         return SupervisedResult(SupervisedState.FAILED, None, "", "", exc)
 
     job = _WindowsJob.create(proc) if sys.platform == "win32" else None
@@ -419,10 +435,16 @@ def run_supervised(
             job.close()
         except (AttributeError, OSError, TypeError, ValueError):
             logger.warning("could not close supervised Windows Job Object", exc_info=True)
-    return SupervisedResult(
-        state,
-        returncode,
-        "".join(parts["stdout"]),
-        "".join(parts["stderr"]),
-        terminal_error,
+    stdout_text = "".join(parts["stdout"])
+    stderr_text = "".join(parts["stderr"])
+    log_command_result(
+        logger,
+        label,
+        command,
+        returncode=returncode,
+        state=state.value,
+        stderr_tail=tail_for_log(stdout_text if combine_stderr else stderr_text, noise_filter=noise_filter),
+        elapsed_s=time.monotonic() - started,
+        level=(logging.WARNING if state in {SupervisedState.FAILED, SupervisedState.TIMED_OUT} else logging.DEBUG),
     )
+    return SupervisedResult(state, returncode, stdout_text, stderr_text, terminal_error)
