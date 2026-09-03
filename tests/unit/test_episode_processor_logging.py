@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import collections
 import logging
+import threading
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -13,6 +14,7 @@ import pytest
 from anki_miner.exceptions import SetupError
 from anki_miner.models import MediaData, TokenizedWord
 from anki_miner.models.reading import ImageRef, ReadingDocument, ReadingUnit
+from anki_miner.models.youtube import FetchedMedia
 from tests.conftest import build_processor
 
 _LOGGER = "anki_miner.orchestration.episode_processor"
@@ -140,7 +142,7 @@ def test_full_fake_run_emits_one_count_summary_per_phase(test_config, tmp_path, 
     assert "unique=5" in parse_record.getMessage()
 
 
-def test_typed_phase_failure_logs_one_warning_without_traceback(test_config, tmp_path, caplog):
+def test_typed_phase_failure_logs_one_run_failed_receipt(test_config, tmp_path, caplog):
     processor, subtitle_parser = _processor_for_words(test_config, [])
     subtitle_parser.parse_subtitle_file.side_effect = SetupError("test setup failed")
 
@@ -150,8 +152,11 @@ def test_typed_phase_failure_logs_one_warning_without_traceback(test_config, tmp
     warnings = [record for record in caplog.records if record.name == _LOGGER and record.levelno == logging.WARNING]
     assert result.success is False
     assert len(warnings) == 1
-    assert warnings[0].getMessage().startswith("EpisodeProcessor:")
-    assert "test setup failed" in warnings[0].getMessage()
+    message = warnings[0].getMessage()
+    assert message.startswith("EpisodeProcessor run failed:")
+    assert "kind=episode" in message
+    assert "episode=episode" in message
+    assert "SetupError: test setup failed" in message
     assert warnings[0].exc_info is None
 
 
@@ -211,3 +216,237 @@ def test_reading_run_emits_reading_parse_and_media_summaries(test_config, caplog
     assert "produced=1" in media_record.getMessage()
     assert "failures=0" in media_record.getMessage()
     assert "archive_failures=1" in media_record.getMessage()
+
+
+def _records(caplog, prefix: str):
+    return [record for record in caplog.records if record.name == _LOGGER and record.getMessage().startswith(prefix)]
+
+
+def test_episode_run_stamps_exactly_one_pipeline_receipt(test_config, tmp_path, caplog):
+    processor, _ = _processor_for_words(test_config, [_word(0)])
+
+    with caplog.at_level(logging.DEBUG, logger=_LOGGER):
+        result = _run_episode(processor, tmp_path)
+
+    starts = _records(caplog, "Pipeline start:")
+    ends = _records(caplog, "Pipeline end:")
+    assert len(starts) == 1
+    assert len(ends) == 1
+    start = starts[0].getMessage()
+    assert starts[0].levelno == logging.INFO
+    for field in (
+        "kind=episode",
+        "episode=episode",
+        f"video={tmp_path / 'episode.mkv'}",
+        f"subtitle={tmp_path / 'episode.ass'}",
+        "secondary=-",
+        "deck=test_deck",
+        "note_type=test_note_type",
+        "language=ja",
+        "offset=0.0",
+        "curation=False",
+        "filters=",
+    ):
+        assert field in start, start
+    end = ends[0].getMessage()
+    assert "kind=episode" in end
+    assert "outcome=success" in end
+    assert "cards=1" in end
+    assert "elapsed=" in end
+    assert result.cards_created == 1
+
+
+def test_cancelled_episode_reports_a_cancelled_outcome(test_config, tmp_path, caplog):
+    processor, subtitle_parser = _processor_for_words(test_config, [_word(0)])
+    cancel_event = threading.Event()
+
+    def _parse(*_args, **_kwargs):
+        cancel_event.set()
+        return [_word(0)]
+
+    subtitle_parser.parse_subtitle_file.side_effect = _parse
+
+    with caplog.at_level(logging.INFO, logger=_LOGGER):
+        processor.process_episode(
+            tmp_path / "episode.mkv",
+            tmp_path / "episode.ass",
+            cancel_event=cancel_event,
+        )
+
+    ends = _records(caplog, "Pipeline end:")
+    assert len(ends) == 1
+    assert "outcome=cancelled" in ends[0].getMessage()
+
+
+def test_youtube_run_stamps_one_receipt_with_fetch_identity(test_config, tmp_path, caplog):
+    video_file = tmp_path / "abc123.mp4"
+    subtitle_file = tmp_path / "abc123.ja.srt"
+    video_file.touch()
+    subtitle_file.touch()
+
+    processor, _ = _processor_for_words(test_config, [_word(0)])
+    fetcher = MagicMock(name="YouTubeFetcher")
+    fetcher.fetch_video.return_value = FetchedMedia(
+        video_file=video_file,
+        subtitle_file=subtitle_file,
+        sub_source="manual",
+    )
+    processor._youtube_fetcher = fetcher
+
+    with caplog.at_level(logging.INFO, logger=_LOGGER):
+        processor.process_youtube_url(
+            url="https://www.youtube.com/watch?v=abc123&si=TRACKING",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=threading.Event(),
+        )
+
+    starts = _records(caplog, "Pipeline start:")
+    ends = _records(caplog, "Pipeline end:")
+    assert len(starts) == 1
+    assert len(ends) == 1
+    start = starts[0].getMessage()
+    assert "kind=youtube" in start
+    assert "url=https://www.youtube.com/watch?v=abc123" in start
+    assert "TRACKING" not in start
+    assert "video_id=abc123" in start
+    assert "sub_mode=manual_only" in start
+    assert f"workspace={tmp_path}" in start
+    assert "align_captions=False" in start
+    assert "kind=youtube" in ends[0].getMessage()
+    assert "outcome=success" in ends[0].getMessage()
+
+
+def test_youtube_cancelled_before_fetch_still_closes_the_receipt(test_config, tmp_path, caplog):
+    processor, _ = _processor_for_words(test_config, [])
+    processor._youtube_fetcher = MagicMock(name="YouTubeFetcher")
+    cancel_event = threading.Event()
+    cancel_event.set()
+
+    with caplog.at_level(logging.INFO, logger=_LOGGER):
+        processor.process_youtube_url(
+            url="https://youtu.be/abc123",
+            video_id="abc123",
+            workspace=tmp_path,
+            sub_mode="manual_only",
+            cancel_event=cancel_event,
+        )
+
+    assert len(_records(caplog, "Pipeline start:")) == 1
+    ends = _records(caplog, "Pipeline end:")
+    assert len(ends) == 1
+    assert "outcome=cancelled" in ends[0].getMessage()
+
+
+def test_words_dropped_for_missing_definitions_are_listed_at_debug(test_config, tmp_path, caplog):
+    words = [_word(index) for index in range(60)]
+    processor, _ = _processor_for_words(test_config, words)
+    processor.definition_service.has_offline_definitions.side_effect = lambda terms: {}
+    processor.definition_service.offline_deinflection_terms_exist.return_value = set()
+
+    with caplog.at_level(logging.DEBUG, logger=_LOGGER):
+        _run_episode(processor, tmp_path)
+
+    records = _records(caplog, "Definitions missing:")
+    assert len(records) == 1
+    message = records[0].getMessage()
+    assert records[0].levelno == logging.DEBUG
+    assert "count=60" in message
+    assert "word0" in message
+    assert "+10 more" in message
+
+
+def test_inert_frequency_cutoff_logs_a_warning(test_config, tmp_path, caplog):
+    config = replace(test_config, max_frequency_rank=10000, min_frequency_rank=500)
+    processor, _ = _processor_for_words(config, [_word(0)])
+
+    with caplog.at_level(logging.INFO, logger=_LOGGER):
+        _run_episode(processor, tmp_path)
+
+    records = _records(caplog, "Frequency cutoff ignored:")
+    assert len(records) == 1
+    assert records[0].levelno == logging.WARNING
+    message = records[0].getMessage()
+    assert "low=500" in message
+    assert "high=10000" in message
+    assert "sources=-" in message
+
+
+def _reading_document(archive: Path, warnings: list[str] | None = None) -> ReadingDocument:
+    return ReadingDocument(
+        title="Volume",
+        kind="book",
+        series="Series",
+        episode="Volume 1",
+        units=[
+            ReadingUnit(
+                text="first",
+                index=0,
+                location_label="p.1",
+                image_ref=ImageRef(archive, "page1.jpg"),
+            ),
+        ],
+        warnings=list(warnings or []),
+    )
+
+
+def test_reading_archive_failure_names_the_archive_and_exception(test_config, caplog):
+    words = [_word(0)]
+    processor, subtitle_parser = _processor_for_words(test_config, words)
+    subtitle_parser.parse_text_units.return_value = (words, None, collections.Counter({words[0].lemma: 1}))
+    archive = Path("/volume.cbz")
+
+    with (
+        patch("anki_miner.orchestration.episode_processor.prepare_card_image", side_effect=SetupError("unsafe zip")),
+        caplog.at_level(logging.INFO, logger=_LOGGER),
+    ):
+        processor.process_reading(_reading_document(archive))
+
+    records = _records(caplog, "Reading image failed:")
+    assert len(records) == 1
+    assert records[0].levelno == logging.WARNING
+    message = records[0].getMessage()
+    assert "archive=/volume.cbz" in message
+    assert "ref=page1.jpg" in message
+    assert "SetupError" in message
+    assert "unsafe zip" in message
+
+
+def test_reading_document_warnings_are_logged_once(test_config, caplog):
+    words = [_word(0)]
+    processor, subtitle_parser = _processor_for_words(test_config, words)
+    subtitle_parser.parse_text_units.return_value = (words, None, collections.Counter({words[0].lemma: 1}))
+    document = _reading_document(Path("/volume.cbz"), warnings=[f"warning {i}" for i in range(60)])
+
+    with (
+        patch("anki_miner.orchestration.episode_processor.prepare_card_image", return_value=Path("/img.png")),
+        caplog.at_level(logging.INFO, logger=_LOGGER),
+    ):
+        processor.process_reading(document)
+
+    records = _records(caplog, "Reading document warnings:")
+    assert len(records) == 1
+    assert records[0].levelno == logging.WARNING
+    message = records[0].getMessage()
+    assert "count=60" in message
+    assert "+10 more" in message
+
+
+def test_reading_run_stamps_a_reading_receipt(test_config, caplog):
+    words = [_word(0)]
+    processor, subtitle_parser = _processor_for_words(test_config, words)
+    subtitle_parser.parse_text_units.return_value = (words, None, collections.Counter({words[0].lemma: 1}))
+
+    with (
+        patch("anki_miner.orchestration.episode_processor.prepare_card_image", return_value=Path("/img.png")),
+        caplog.at_level(logging.INFO, logger=_LOGGER),
+    ):
+        processor.process_reading(_reading_document(Path("/volume.cbz")))
+
+    starts = _records(caplog, "Pipeline start:")
+    ends = _records(caplog, "Pipeline end:")
+    assert len(starts) == 1
+    assert len(ends) == 1
+    assert "kind=reading" in starts[0].getMessage()
+    assert "kind=reading" in ends[0].getMessage()
