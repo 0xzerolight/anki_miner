@@ -65,7 +65,7 @@ from anki_miner.utils.ja_normalize import (
     standardize_kanji_variants,
 )
 from anki_miner.utils.logging_ext import capped, log_summary
-from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding
+from anki_miner.utils.subtitle_encoding import _log_decode, load_with_fallback_encoding
 from anki_miner.utils.text_utils import (
     _format_furigana,
     generate_furigana_from_tokens,
@@ -836,7 +836,7 @@ class SubtitleParserService:
 
         try:
             try:
-                return pysubs2.load(str(subtitle_file))
+                subs = pysubs2.load(str(subtitle_file))
             except UnicodeDecodeError as utf8_error:
                 return load_with_fallback_encoding(
                     subtitle_file,
@@ -845,6 +845,11 @@ class SubtitleParserService:
                         get_profile(config_language(self.config)).import_encodings if encodings is None else encodings
                     ),
                 )
+            # The ladder writes its own receipt only when UTF-8 failed; the
+            # common case must leave the same trail, or a mojibake report cannot
+            # tell "decoded as UTF-8" from "never decoded at all".
+            _log_decode(subtitle_file, bom="-", ladder=(), tried=("utf-8",), chosen="utf-8", level=logging.DEBUG)
+            return subs
         except FileNotFoundError as e:
             raise SubtitleParseError(f"Subtitle file not found: {subtitle_file}") from e
         except Exception as e:
