@@ -142,12 +142,26 @@ class YouTubePlaylistProbeWorker(CancellableWorker):
         ``entry_failed`` and processing continues to the next URL.
         """
         self.log_start("YouTubePlaylistProbeWorker", urls=len(self._urls))
-        for idx, url in enumerate(self._urls):
-            if self.is_cancelled:
-                return
-            try:
-                info = self._fetcher.probe_metadata(url, timeout_s=self._timeout_s)
-                self.entry_probed.emit(idx, info)
-            except Exception as exc:  # noqa: BLE001 - incl. VideoTooLongError, YouTubeFetchError
-                logger.exception("YouTubePlaylistProbeWorker entry %d failed", idx)
-                self.entry_failed.emit(idx, str(exc))
+        probed = 0
+        failed = 0
+        try:
+            for idx, url in enumerate(self._urls):
+                if self.is_cancelled:
+                    return
+                try:
+                    info = self._fetcher.probe_metadata(url, timeout_s=self._timeout_s)
+                    self.entry_probed.emit(idx, info)
+                    probed += 1
+                except Exception as exc:  # noqa: BLE001 - incl. VideoTooLongError, YouTubeFetchError
+                    failed += 1
+                    logger.exception("YouTubePlaylistProbeWorker entry %d failed", idx)
+                    self.entry_failed.emit(idx, str(exc))
+        finally:
+            # In the finally so an early cancel still closes the start line: an
+            # unclosed start must only ever mean the thread never returned.
+            self.log_end(
+                urls=len(self._urls),
+                probed=probed,
+                failed=failed,
+                cancelled=self.is_cancelled,
+            )

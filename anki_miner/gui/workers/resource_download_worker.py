@@ -44,6 +44,7 @@ from anki_miner.services.frequency.source_importer import import_frequency_sourc
 from anki_miner.services.pitch_accent.source_importer import import_pitch_source
 from anki_miner.services.resource_downloader import download_to_temp
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.slug import slugify
 
 if TYPE_CHECKING:
@@ -486,6 +487,20 @@ class ResourceDownloadWorker(CancellableWorker):
                 if self.is_cancelled:
                     summary.cancelled = True
                     break
+                # WARNING with the whole subject: the user asked for this
+                # resource and will not get it. The DEBUG traceback stays for
+                # the unexpected cases; the summary is what a support report
+                # can be read off.
+                log_summary(
+                    logger,
+                    "Resource failed",
+                    level=logging.WARNING,
+                    id=spec.id,
+                    kind=spec.kind,
+                    url=spec.url,
+                    error_type=type(exc).__name__,
+                    error=str(exc),
+                )
                 logger.debug("resource %s failed: %s", spec.id, exc, exc_info=True)
                 summary.results.append(
                     ResourceDownloadResult(
@@ -501,4 +516,10 @@ class ResourceDownloadWorker(CancellableWorker):
 
         if self.is_cancelled:
             summary.cancelled = True
+        self.log_end(
+            requested=summary.requested_count,
+            succeeded=len(summary.succeeded),
+            failed=len(summary.failed),
+            cancelled=summary.cancelled,
+        )
         self.finished_summary.emit(summary)

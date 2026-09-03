@@ -21,7 +21,9 @@ faster. It is *pure best-effort*:
   force the sqlite page cache / meta sidecars into memory, then discards it —
   cross-thread sqlite connection reuse during a live mine is needless risk.
 - A failure inside :meth:`run` (e.g. missing MeCab dict in some env) is
-  swallowed and logged, never crashing the app.
+  swallowed and logged, never crashing the app. It is logged at WARNING, not
+  DEBUG: the warm is the whole reason the first Mine is not slow, so a failure
+  here *predicts* the seconds-long freeze the user is about to report.
 
 If the user clicks Mine before this finishes, behavior is exactly today's cold
 path — there is no shared state and no synchronization with the mining path.
@@ -37,19 +39,25 @@ from __future__ import annotations
 
 import logging
 
-from PyQt6.QtCore import QThread
-
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.service_factory import ServiceLoadResult, build_definition_service
+from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.definition_service import DefinitionService
+from anki_miner.utils.logging_ext import capped, log_summary
 
 logger = logging.getLogger(__name__)
 
 
-class PrewarmWorker(QThread):
+class PrewarmWorker(CancellableWorker):
     """Warm MeCab + dictionary-chain caches off the GUI thread, then discard.
 
     Emits the built-in ``QThread.finished`` signal on every exit path.
+
+    A :class:`CancellableWorker` rather than a bare ``QThread`` purely for the
+    boundary receipts: the base class owns the thread rename plus the
+    start/end pair every other worker writes, and the start/end ratchet in
+    ``tests/unit/test_logging_conventions.py`` reaches this class only through
+    that base. Nothing cancels it — the warm is short and side-effect free.
     """
 
     def __init__(self, config: AnkiMinerConfig, parent: object = None) -> None:
@@ -60,7 +68,7 @@ class PrewarmWorker(QThread):
                 Used to locate the dictionary chain and dicts root.
             parent: Optional parent QObject.
         """
-        super().__init__(parent)  # type: ignore[arg-type]
+        super().__init__(parent)
         self._config = config
 
     def run(self) -> None:
@@ -71,7 +79,14 @@ class PrewarmWorker(QThread):
         DefinitionService are throwaway; the service is closed explicitly in
         ``finally``.
         """
+        self.log_start(
+            "PrewarmWorker",
+            language=self._config.language,
+            chain=capped(self._chain_labels(), 10),
+            dicts_root=self._config.dicts_root,
+        )
         definition_service: DefinitionService | None = None
+        warmed = False
         try:
             try:
                 from anki_miner.languages.tagger_provider import get_tagger
@@ -95,8 +110,23 @@ class PrewarmWorker(QThread):
                 # only touches sqlite when an indexed entry is enabled, so a
                 # Jisho-only chain warms nothing here, same as the real mine path.
                 definition_service = build_definition_service(self._config, ServiceLoadResult())
+                warmed = True
             finally:
                 if definition_service is not None:
                     definition_service.close()
-        except Exception:  # noqa: BLE001 - best-effort; never crash the app
-            logger.debug("Prewarm failed (best-effort, ignored)", exc_info=True)
+        except Exception as exc:  # noqa: BLE001 - best-effort; never crash the app
+            log_summary(
+                logger,
+                "Prewarm failed",
+                level=logging.WARNING,
+                language=self._config.language,
+                error_type=type(exc).__name__,
+                error=str(exc),
+            )
+            logger.debug("Prewarm failure detail (best-effort, ignored)", exc_info=True)
+        finally:
+            self.log_end(warmed=warmed)
+
+    def _chain_labels(self) -> list[str]:
+        """Enabled dictionary-chain entries, as ``kind:id`` identity strings."""
+        return [f"{entry.kind}:{entry.dict_id or '-'}" for entry in self._config.dictionary_chain if entry.enabled]

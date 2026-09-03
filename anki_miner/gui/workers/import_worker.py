@@ -462,6 +462,7 @@ class ImportWorker(CancellableWorker):
         """Run the importer and emit progress/import_finished/cancelled/failed."""
         self.log_start("ImportWorker")
         self._log_trace_input()
+        resource_id: str | None = None
         try:
             resource_id, meta = self._runner(
                 lambda cur, total, msg: self.progress.emit(cur, total, msg),
@@ -484,4 +485,14 @@ class ImportWorker(CancellableWorker):
                 # ``failed`` drives the import flow's terminal latch: swallowing
                 # a post-promotion failure would leave the UI waiting forever.
                 cancel_flag_suppresses_error=False,
+            )
+        finally:
+            # An import is the slowest thing the app does on a user's own click;
+            # the end line is where its duration lives. In the finally so a
+            # cancelled or failed import closes its own start line too.
+            self.log_end(
+                ok=resource_id is not None,
+                resource_id=resource_id,
+                source=self._source_path,
+                cancelled=self.is_cancelled,
             )
