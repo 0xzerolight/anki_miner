@@ -100,6 +100,32 @@ def test_non_blob_curator_state_reads_none(state_home: Path) -> None:
     assert main_split is None
 
 
+def test_curator_columns_round_trip(state_home: Path) -> None:
+    session_state.save_curator_columns(QByteArray(b"cols"), 7)
+
+    assert session_state.load_curator_columns_for(7) == QByteArray(b"cols")
+
+
+def test_curator_columns_discarded_when_the_column_count_changed(state_home: Path) -> None:
+    """A build that added a column must not restore a 7-column arrangement."""
+    session_state.save_curator_columns(QByteArray(b"cols"), 7)
+
+    assert session_state.load_curator_columns_for(8) is None
+
+
+def test_curator_columns_absent_reads_none(state_home: Path) -> None:
+    assert session_state.load_curator_columns_for(7) is None
+
+
+def test_a_non_numeric_column_count_reads_none(state_home: Path) -> None:
+    """A hand-edited INI must not raise out of a best-effort read."""
+    (state_home / "ui_state.ini").write_text(
+        "[curator]\ncolumns=@ByteArray(cols)\ncolumn_count=seven\n", encoding="utf-8"
+    )
+
+    assert session_state.load_curator_columns_for(7) is None
+
+
 # ---------------------------------------------------------------------------
 # Route
 # ---------------------------------------------------------------------------
@@ -131,6 +157,7 @@ def test_ini_holds_only_geometry_route_folders_and_curator(state_home: Path) -> 
     session_state.save_curator_layout(
         QByteArray(b"geo"), QByteArray(b"main"), QByteArray(b"side"), side_key="player+dict"
     )
+    session_state.save_curator_columns(QByteArray(b"cols"), 7)
 
     settings = QSettings(str(state_home / "ui_state.ini"), QSettings.Format.IniFormat)
     assert set(settings.allKeys()) == {
@@ -141,6 +168,8 @@ def test_ini_holds_only_geometry_route_folders_and_curator(state_home: Path) -> 
         "curator/geometry",
         "curator/split_main",
         "curator/split_side/player+dict",
+        "curator/columns",
+        "curator/column_count",
     }
 
 
