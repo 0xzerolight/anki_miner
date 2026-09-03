@@ -1,4 +1,22 @@
-"""GUI presenter implementation using Qt signals for thread-safe communication."""
+"""GUI presenter implementation using Qt signals for thread-safe communication.
+
+Every method also emits one ``Presenter <kind>:`` log record. This is the last
+hop before a message reaches a screen, so the pairing is the diagnosis: a
+presenter line with no matching activity line proves the signal was emitted but
+never rendered anywhere. The levels follow what the message means for the user
+-- warnings and errors change the result they get, while info, success and
+stage lines are cosmetic narration of a run the pipeline already summarizes, so
+they stay at DEBUG.
+
+Services must not repeat a presenter text as their own log line; the record
+below already carries it, and a second one only doubles the noise.
+
+``NullPresenter`` (``presenters/null_presenter.py``) stays deliberately silent:
+it is a documented test double with no production caller, so a record from it
+would attribute run diagnostics to a test.
+"""
+
+import logging
 
 from PyQt6.QtCore import QCoreApplication, QObject, pyqtSignal
 
@@ -7,6 +25,9 @@ from anki_miner.models import (
     ValidationResult,
 )
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
+
+logger = logging.getLogger(__name__)
 
 
 class GUIPresenter(QObject):
@@ -44,6 +65,7 @@ class GUIPresenter(QObject):
         Args:
             message: The informational message to display
         """
+        log_summary(logger, "Presenter info", level=logging.DEBUG, message=message)
         self.info_signal.emit(message)
 
     def show_success(self, message: str) -> None:
@@ -52,6 +74,7 @@ class GUIPresenter(QObject):
         Args:
             message: The success message to display
         """
+        log_summary(logger, "Presenter success", level=logging.DEBUG, message=message)
         self.success_signal.emit(message)
 
     def show_warning(self, message: str) -> None:
@@ -60,6 +83,7 @@ class GUIPresenter(QObject):
         Args:
             message: The warning message to display
         """
+        log_summary(logger, "Presenter warning", level=logging.WARNING, message=message)
         self.warning_signal.emit(message)
 
     def show_error(self, message: str) -> None:
@@ -68,6 +92,7 @@ class GUIPresenter(QObject):
         Args:
             message: The error message to display
         """
+        log_summary(logger, "Presenter error", level=logging.ERROR, message=message)
         self.error_signal.emit(message)
 
     def show_stage(self, index: int, total: int, name: str) -> None:
@@ -83,6 +108,17 @@ class GUIPresenter(QObject):
             total: How many stages this pipeline has
             name: The stage's own name, e.g. ``Extracting media``
         """
+        # Logged from its own anchor rather than via `show_info`: the stage's
+        # three fields stay parseable, and routing through `show_info` would
+        # emit a second `Presenter info:` record for every stage.
+        log_summary(
+            logger,
+            "Presenter stage",
+            level=logging.DEBUG,
+            index=index,
+            total=total,
+            name=name,
+        )
         self.info_signal.emit(
             tr_format(
                 QCoreApplication.translate("GUIPresenter", "Step %1 of %2 — %3"),
