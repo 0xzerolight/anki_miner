@@ -19,8 +19,13 @@ reason names the button rather than a pip line the bundled user cannot run.
 
 from __future__ import annotations
 
+import logging
 import sys
 from importlib.util import find_spec
+
+from anki_miner.utils.logging_ext import log_summary
+
+logger = logging.getLogger(__name__)
 
 #: Import names, not pip names — ``find_spec`` takes the module. The install
 #: line in the message is what the user acts on, and the extra pulls both.
@@ -39,9 +44,23 @@ KO_FROZEN_MODEL_REASON = "Korean mining needs the Korean language pack. Download
 
 
 def _installed(name: str) -> bool:
+    """Return True when *name* is importable, reporting a BROKEN install.
+
+    A clean ``None`` is an absence and says so quietly. A probe that RAISES is
+    the opposite diagnosis - the package is on disk and unimportable (a missing
+    shared library, a half-extracted pack) - and reaches the user through the
+    same "needs kiwipiepy" sentence, so the log is the only place the two differ.
+    """
     try:
         return find_spec(name) is not None
-    except (ImportError, ValueError):
+    except (ImportError, ValueError) as exc:
+        log_summary(
+            logger,
+            "Language module probe failed",
+            level=logging.WARNING,
+            module=name,
+            exc=f"{type(exc).__name__}: {exc}",
+        )
         return False
 
 

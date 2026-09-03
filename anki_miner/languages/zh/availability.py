@@ -8,8 +8,13 @@ costs nothing on a machine that has none of them.
 
 from __future__ import annotations
 
+import logging
 import sys
 from importlib.util import find_spec
+
+from anki_miner.utils.logging_ext import log_summary
+
+logger = logging.getLogger(__name__)
 
 # Hard requirements: without a tokenizer or readings there is no zh mining.
 ZH_REQUIRED_PACKAGES: tuple[str, ...] = ("jieba", "pypinyin")
@@ -30,9 +35,23 @@ ZH_PACK_DOWNLOAD_HINT = "or download the Chinese pack in Settings -> Mining Lang
 
 
 def _installed(name: str) -> bool:
+    """Return True when *name* is importable, reporting a BROKEN install.
+
+    A clean ``None`` is an absence and says so quietly. A probe that RAISES is
+    the opposite diagnosis - the package is on disk and unimportable (a missing
+    shared library, a half-extracted pack) - and reaches the user through the
+    same "needs jieba" sentence, so the log is the only place the two differ.
+    """
     try:
         return find_spec(name) is not None
-    except (ImportError, ValueError):
+    except (ImportError, ValueError) as exc:
+        log_summary(
+            logger,
+            "Language module probe failed",
+            level=logging.WARNING,
+            module=name,
+            exc=f"{type(exc).__name__}: {exc}",
+        )
         return False
 
 
