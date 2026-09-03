@@ -1500,6 +1500,21 @@ def compose_main_window(
     # This must come AFTER all addTab calls so self.tabs.count() is final.
     window.setup_tab_shortcuts()
 
+    # Inline run options (the curation checkbox, Deck Builder's mode, Card
+    # Backfill's field groups) persist by folding themselves into the config and
+    # emitting run_options_changed; route it through window.update_config so the
+    # value lands in gui_config.json and survives restart. Same contract as
+    # condense_tab/download_tab's config_changed, but discovered rather than
+    # listed: these screens sit up to three levels deep inside container tabs,
+    # and a hand-kept list would silently stop persisting a sub-tab that moved
+    # (the reasoning behind MainWindow.iter_queue_screens). SettingsTab,
+    # CondenseTab and DownloadTab emit config_changed, not this signal, so they
+    # are already wired above and cannot be connected twice.
+    for run_options_screen in window.findChildren(QWidget):
+        run_options_changed = getattr(run_options_screen, "run_options_changed", None)
+        if run_options_changed is not None:
+            run_options_changed.connect(window.update_config)
+
     # Reopen where the last session ended (D7). Also AFTER every addTab: the
     # saved route is addressed by stable key, so the tab it names has to be
     # registered before it can be resolved. Still before show(), so the window
