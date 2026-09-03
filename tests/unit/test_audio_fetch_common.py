@@ -1,12 +1,17 @@
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock
+
+import pytest
 
 from anki_miner.models import TokenizedWord
 from anki_miner.services.audio_fetch_common import (
     download_audio_to_cache,
     expression_audio_candidates,
     find_cached_by_stem,
+    log_fetch_outcome,
     new_failure_counts,
+    reset_fetch_outcome_rate_limit,
 )
 
 
@@ -117,3 +122,125 @@ def test_candidates_different_kanji_lemma_is_excluded():
 def test_candidates_blank_reading_is_dropped():
     word = _word(surface="食べる", lemma="食べる", expression_reading="")
     assert expression_audio_candidates(word) == []
+
+
+# ---------------------------------------------------------------------------
+# log_fetch_outcome (per-source HTTP outcome choke point)
+# ---------------------------------------------------------------------------
+
+_OUTCOME_LOGGER = "anki_miner.services.audio_fetch_common"
+
+
+@pytest.fixture(autouse=True)
+def _reset_fetch_outcome_counters():
+    """Rate-limit state is process-wide; isolate every test in this module."""
+    reset_fetch_outcome_rate_limit()
+    yield
+    reset_fetch_outcome_rate_limit()
+
+
+def test_first_outcome_for_a_source_warns_with_every_field(caplog):
+    log = logging.getLogger(_OUTCOME_LOGGER)
+    with caplog.at_level(logging.DEBUG, logger=_OUTCOME_LOGGER):
+        log_fetch_outcome(log, "jpod101", "猫", "ねこ", "https://a.test/x", status=404, reason="http_status")
+
+    record = caplog.records[-1]
+    assert record.levelno == logging.WARNING
+    assert record.getMessage() == (
+        "Audio fetch: source=jpod101 word=猫 reading=ねこ status=404 reason=http_status url=https://a.test/x"
+    )
+
+
+def test_second_outcome_for_the_same_source_and_reason_is_debug(caplog):
+    log = logging.getLogger(_OUTCOME_LOGGER)
+    with caplog.at_level(logging.DEBUG, logger=_OUTCOME_LOGGER):
+        log_fetch_outcome(log, "jpod101", "猫", "ねこ", "https://a.test/x", status=404, reason="http_status")
+        log_fetch_outcome(log, "jpod101", "犬", "いぬ", "https://a.test/y", status=404, reason="http_status")
+
+    assert [r.levelno for r in caplog.records] == [logging.WARNING, logging.DEBUG]
+    assert "word=犬" in caplog.records[-1].getMessage()
+
+
+def test_a_different_reason_gets_its_own_first_warning(caplog):
+    log = logging.getLogger(_OUTCOME_LOGGER)
+    with caplog.at_level(logging.DEBUG, logger=_OUTCOME_LOGGER):
+        log_fetch_outcome(log, "jpod101", "猫", "ねこ", "https://a.test/x", status=404, reason="http_status")
+        log_fetch_outcome(log, "jpod101", "猫", "ねこ", "https://a.test/x", reason="transport")
+
+    assert [r.levelno for r in caplog.records] == [logging.WARNING, logging.WARNING]
+
+
+def test_every_hundredth_outcome_warns_with_the_running_total(caplog):
+    log = logging.getLogger(_OUTCOME_LOGGER)
+    with caplog.at_level(logging.DEBUG, logger=_OUTCOME_LOGGER):
+        for _ in range(100):
+            log_fetch_outcome(log, "jpod101", "猫", "ねこ", "https://a.test/x", status=404, reason="http_status")
+
+    warnings = [r for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 2
+    assert "occurrences=100" in warnings[-1].getMessage()
+
+
+def test_custom_source_url_query_is_redacted(caplog):
+    log = logging.getLogger(_OUTCOME_LOGGER)
+    with caplog.at_level(logging.DEBUG, logger=_OUTCOME_LOGGER):
+        log_fetch_outcome(
+            log, "custom_json", "猫", "ねこ", "https://a.test/x?key=SECRET", status=500, reason="http_status"
+        )
+
+    message = caplog.records[-1].getMessage()
+    assert "url=https://a.test/x" in message
+    assert "SECRET" not in message
+
+
+def test_non_custom_source_url_is_logged_verbatim(caplog):
+    log = logging.getLogger(_OUTCOME_LOGGER)
+    with caplog.at_level(logging.DEBUG, logger=_OUTCOME_LOGGER):
+        log_fetch_outcome(log, "jpod101", "猫", "ねこ", "https://a.test/x?kanji=猫", reason="transport")
+
+    assert "url=https://a.test/x?kanji=猫" in caplog.records[-1].getMessage()
+
+
+def test_download_helper_logs_the_http_status_outcome(tmp_path, caplog):
+    response = MagicMock(status_code=503, headers={})
+    session = MagicMock()
+    session.get.return_value = response
+
+    with caplog.at_level(logging.DEBUG, logger=_OUTCOME_LOGGER):
+        result = download_audio_to_cache(
+            session, "https://example.test/audio", tmp_path, "term", source="custom", word="猫", reading="ねこ"
+        )
+
+    assert result is None
+    message = caplog.records[-1].getMessage()
+    assert "source=custom" in message
+    assert "word=猫" in message
+    assert "status=503" in message
+    assert "reason=http_status" in message
+
+
+def test_download_helper_logs_an_unknown_content_type_with_the_body_size(tmp_path, caplog):
+    response = MagicMock(status_code=200, headers={"Content-Type": "text/html"})
+    response.iter_content.side_effect = lambda chunk_size=8192: iter([b"<html>nope</html>"])
+    session = MagicMock()
+    session.get.return_value = response
+
+    with caplog.at_level(logging.DEBUG, logger=_OUTCOME_LOGGER):
+        download_audio_to_cache(session, "https://example.test/audio", tmp_path, "term", source="papago", word="stem")
+
+    message = caplog.records[-1].getMessage()
+    assert "reason=unknown_content_type" in message
+    assert "content_type=text/html" in message
+    assert "bytes=17" in message
+
+
+def test_download_helper_logs_the_transport_failure_with_type_and_message(tmp_path, caplog):
+    session = MagicMock()
+    session.get.side_effect = OSError("socket exploded")
+
+    with caplog.at_level(logging.DEBUG, logger=_OUTCOME_LOGGER):
+        download_audio_to_cache(session, "https://example.test/audio", tmp_path, "term", source="custom", word="猫")
+
+    message = caplog.records[-1].getMessage()
+    assert "reason=transport" in message
+    assert 'error="OSError: socket exploded"' in message

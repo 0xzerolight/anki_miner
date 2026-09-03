@@ -42,6 +42,8 @@ from anki_miner.services.audio_fetch_common import (
 )
 from anki_miner.services.audio_fetch_common import (
     download_audio_to_cache,
+    log_fetch_outcome,
+    scrub_url_secrets,
 )
 from anki_miner.services.audio_fetch_common import (
     find_cached_by_stem as _find_cached_by_stem,
@@ -148,6 +150,7 @@ class GoogleSentenceTtsFetcher:
             failure_counts=self._failure_counts,
             cancelled_check=cancelled_check,
             lang=self._gtts_lang,
+            source="googletts_sentence",
         )
 
     def stats(self) -> dict[str, int]:
@@ -242,18 +245,37 @@ class PapagoSentenceTtsFetcher:
             )
             if response.status_code != 200:
                 self._failure_counts["http_status"] += 1
+                log_fetch_outcome(
+                    logger,
+                    "papago",
+                    stem,
+                    "",
+                    PAPAGO_MAKE_ID_URL,
+                    status=response.status_code,
+                    reason="http_status",
+                )
                 return None
 
             # A rate-limit/HTML body or a shape drift is the same bucket the
             # other non-audio-response paths use: non_audio (not connection).
             try:
                 data = response.json()
-            except ValueError:
+            except ValueError as exc:
                 self._failure_counts["non_audio"] += 1
+                log_fetch_outcome(
+                    logger,
+                    "papago",
+                    stem,
+                    "",
+                    PAPAGO_MAKE_ID_URL,
+                    reason="not_json",
+                    error=f"{type(exc).__name__}: {scrub_url_secrets(str(exc), PAPAGO_MAKE_ID_URL, 'papago')}",
+                )
                 return None
             tts_id = data.get("id") if isinstance(data, dict) else None
             if not isinstance(tts_id, str) or not tts_id:
                 self._failure_counts["non_audio"] += 1
+                log_fetch_outcome(logger, "papago", stem, "", PAPAGO_MAKE_ID_URL, reason="no_audio_url")
                 return None
 
             if cancelled_check is not None and cancelled_check():
@@ -266,10 +288,22 @@ class PapagoSentenceTtsFetcher:
                 stem,
                 failure_counts=self._failure_counts,
                 cancelled_check=cancelled_check,
+                source="papago",
+                word=stem,
             )
         except (requests.RequestException, OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
             self._failure_counts[_classify_request_exception(exc)] += 1
-            logger.debug("papago sentence tts failed for %s: %s", stem, exc)
+            # The stem, not the sentence: it identifies the item (a content
+            # hash) without copying the reader's text into the log.
+            log_fetch_outcome(
+                logger,
+                "papago",
+                stem,
+                "",
+                PAPAGO_MAKE_ID_URL,
+                reason="transport",
+                error=f"{type(exc).__name__}: {scrub_url_secrets(str(exc), PAPAGO_MAKE_ID_URL, 'papago')}",
+            )
             return None
 
     def stats(self) -> dict[str, int]:

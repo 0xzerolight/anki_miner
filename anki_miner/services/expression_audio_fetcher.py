@@ -23,8 +23,10 @@ from anki_miner.services.audio_fetch_common import (
     find_cached_by_stem,
     first_candidate_hit,
     is_mp3,
+    log_fetch_outcome,
     new_browser_session,
     new_failure_counts,
+    scrub_url_secrets,
 )
 from anki_miner.utils.file_utils import safe_filename
 from anki_miner.utils.text_utils import is_kana_only
@@ -240,12 +242,22 @@ class JPod101AudioFetcher:
             try:
                 if response.status_code != 200:
                     self._failure_counts["http_status"] += 1
+                    log_fetch_outcome(
+                        logger,
+                        "jpod101",
+                        mined_form,
+                        reading,
+                        response.url,
+                        status=response.status_code,
+                        reason="http_status",
+                    )
                     return None
 
                 # A redirect that downgrades HTTPS → HTTP could expose audio
                 # data in transit; treat as transient so it is retried next run.
                 if not response.url.startswith("https://"):
                     self._failure_counts["connection"] += 1
+                    log_fetch_outcome(logger, "jpod101", mined_form, reading, response.url, reason="insecure_redirect")
                     return None
 
                 # Read the body in chunks, aborting if it exceeds MAX_AUDIO_BYTES.
@@ -260,6 +272,9 @@ class JPod101AudioFetcher:
                     if total > MAX_AUDIO_BYTES:
                         # Oversized — transient failure, nothing written.
                         self._failure_counts["non_audio"] += 1
+                        log_fetch_outcome(
+                            logger, "jpod101", mined_form, reading, response.url, bytes_=total, reason="oversize"
+                        )
                         return None
                     chunks.append(chunk)
                 body = b"".join(chunks)
@@ -268,6 +283,9 @@ class JPod101AudioFetcher:
                 # treat as transient failure, not a confirmed miss.
                 if not body:
                     self._failure_counts["connection"] += 1
+                    log_fetch_outcome(
+                        logger, "jpod101", mined_form, reading, response.url, bytes_=0, reason="empty_body"
+                    )
                     return None
 
                 if hashlib.sha256(body).hexdigest() == JPOD101_NOT_FOUND_SHA256:
@@ -277,6 +295,9 @@ class JPod101AudioFetcher:
                     # MISS_MARKER_TTL_SECONDS; Settings -> Audio "Retry missing
                     # expression audio" (purge_miss_markers) clears them on demand.
                     miss_path.touch()
+                    log_fetch_outcome(
+                        logger, "jpod101", mined_form, reading, response.url, reason="miss_marker_written"
+                    )
                     return None
 
                 # Reject non-audio bodies (HTML error pages, CDN text responses,
@@ -284,6 +305,16 @@ class JPod101AudioFetcher:
                 # retried on the next run once the rate-limit clears.
                 if not _is_mp3(body):
                     self._failure_counts["non_audio"] += 1
+                    log_fetch_outcome(
+                        logger,
+                        "jpod101",
+                        mined_form,
+                        reading,
+                        response.url,
+                        content_type=response.headers.get("Content-Type"),
+                        bytes_=len(body),
+                        reason="not_mp3",
+                    )
                     return None
 
                 # Write atomically: stage to a unique temp file then rename so
@@ -318,11 +349,18 @@ class JPod101AudioFetcher:
         # fetcher must own every failure mode, not just network/OS ones.
         except Exception as exc:  # noqa: BLE001 — never raise per the fetcher protocol contract
             self._failure_counts[_classify_request_exception(exc)] += 1
-            identity = hashlib.sha256(f"{mined_form}\0{reading}".encode()).hexdigest()[:12]
-            logger.debug(
-                "expression audio fetch failed identity=%s error=%s",
-                identity,
-                type(exc).__name__,
+            # The word and the exception message, not a hash of the word and a
+            # bare type name: "every expression audio fetch failed" is
+            # undiagnosable without knowing what was asked for and what the
+            # transport said. JPod101's URL carries no secret.
+            log_fetch_outcome(
+                logger,
+                "jpod101",
+                mined_form,
+                reading,
+                JPOD101_AUDIO_URL,
+                reason="transport",
+                error=f"{type(exc).__name__}: {scrub_url_secrets(str(exc), JPOD101_AUDIO_URL, 'jpod101')}",
             )
             return None
 
@@ -439,7 +477,7 @@ class ChainedExpressionAudioFetcher:
         """
         return self._budgeted(
             lambda active: self._walk(lambda f: f.fetch(mined_form, reading, cancelled_check), cancelled_check, active),
-            identity=f"{mined_form}/{reading}",
+            word=f"{mined_form}/{reading}",
         )
 
     def fetch_candidates(
@@ -463,7 +501,7 @@ class ChainedExpressionAudioFetcher:
             lambda active: self._walk(
                 lambda f: f.fetch_candidates(candidates, cancelled_check), cancelled_check, active
             ),
-            identity=candidates[0][0] if candidates else "",
+            word=candidates[0][0] if candidates else "",
         )
 
     def _walk(
@@ -488,7 +526,7 @@ class ChainedExpressionAudioFetcher:
                 return result
         return None
 
-    def _budgeted(self, walk: "Callable[[list[object]], Path | None]", identity: str) -> Path | None:
+    def _budgeted(self, walk: "Callable[[list[object]], Path | None]", word: str) -> Path | None:
         """Run *walk* under the per-word wall-clock budget; None when it expires.
 
         The walk runs on a daemon thread and is ABANDONED rather than
@@ -507,7 +545,19 @@ class ChainedExpressionAudioFetcher:
             try:
                 outcome[0] = walk(active)
             except Exception as exc:  # noqa: BLE001 — protocol contract: never raise
-                logger.debug("expression audio chain walk failed identity=%s error=%s", identity, type(exc).__name__)
+                # A member that raises has broken the never-raises contract, so
+                # it will raise for every word: routed through the rate-limited
+                # choke point (first one WARNING, the rest DEBUG) rather than a
+                # bare warning per word.
+                log_fetch_outcome(
+                    logger,
+                    "chain",
+                    word,
+                    "",
+                    "",
+                    reason="member_raised",
+                    error=f"{type(exc).__name__}: {scrub_url_secrets(str(exc), '', 'chain')}",
+                )
 
         worker = threading.Thread(target=_target, name="expression-audio-fetch", daemon=True)
         worker.start()
@@ -523,10 +573,10 @@ class ChainedExpressionAudioFetcher:
             if isinstance(pack_id, str) and pack_id:
                 self._slow_packs[pack_id] += 1
             logger.warning(
-                "expression audio exceeded the %.0fs per-word budget identity=%s member=%s; "
+                "expression audio exceeded the %.0fs per-word budget word=%s member=%s; "
                 "treating as a miss and continuing (the fetch is abandoned, not cancelled)",
                 self.PER_WORD_BUDGET_SECONDS,
-                identity,
+                word,
                 _member_label(member),
             )
             return None

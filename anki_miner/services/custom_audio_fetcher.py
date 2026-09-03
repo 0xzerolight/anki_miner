@@ -31,6 +31,8 @@ from anki_miner.services.audio_fetch_common import (
 )
 from anki_miner.services.audio_fetch_common import (
     download_audio_to_cache,
+    log_fetch_outcome,
+    scrub_url_secrets,
 )
 from anki_miner.services.audio_fetch_common import (
     find_cached_by_stem as _find_cached_by_stem,
@@ -43,9 +45,6 @@ from anki_miner.services.audio_fetch_common import (
 )
 from anki_miner.services.audio_fetch_common import (
     new_failure_counts as _new_failure_counts,
-)
-from anki_miner.services.audio_fetch_common import (
-    redact_url_for_log as _redact_url_for_log,
 )
 from anki_miner.utils.file_utils import safe_filename
 from anki_miner.utils.text_utils import is_kana_only
@@ -157,7 +156,9 @@ class CustomAudioFetcher:
             return None
 
         endpoint = _substitute_custom_url(self._url_template, mined_form, reading, self._language)
-        audio_urls = self._resolve_json_sources(endpoint) if self._kind == "custom_json" else [endpoint]
+        audio_urls = (
+            self._resolve_json_sources(endpoint, mined_form, reading) if self._kind == "custom_json" else [endpoint]
+        )
 
         for audio_url in audio_urls:
             if cancelled_check is not None and cancelled_check():
@@ -169,24 +170,38 @@ class CustomAudioFetcher:
                 stem,
                 failure_counts=self._failure_counts,
                 cancelled_check=cancelled_check,
+                source=self._kind,
+                word=mined_form,
+                reading=reading,
             )
             if result is not None:
                 return result
         return None
 
-    def _resolve_json_sources(self, url: str) -> list[str]:
+    def _resolve_json_sources(self, url: str, mined_form: str = "", reading: str = "") -> list[str]:
         """GET the custom-json endpoint and return its audio URLs (never raises).
 
         Manual shape check (no JSON-Schema engine): the document must be an
         object with ``type == "audioSourceList"`` and an ``audioSources`` list;
         each item contributes its string ``url`` (relative URLs normalized
         against the endpoint). Any malformed/failed response yields ``[]``.
+
+        *mined_form* and *reading* only label the outcome log lines.
         """
         try:
             response = self._session.get(url, timeout=10)
             try:
                 if response.status_code != 200:
                     self._failure_counts["http_status"] += 1
+                    log_fetch_outcome(
+                        logger,
+                        self._kind,
+                        mined_form,
+                        reading,
+                        url,
+                        status=response.status_code,
+                        reason="http_status",
+                    )
                     return []
                 data = response.json()
                 base = response.url
@@ -195,27 +210,35 @@ class CustomAudioFetcher:
         except ValueError as exc:
             # ValueError covers json.JSONDecodeError (non-JSON body).
             self._failure_counts["non_audio"] += 1
-            logger.debug(
-                "custom_json fetch failed (%s): %s: %s",
-                _redact_url_for_log(url),
-                type(exc).__name__,
-                _redact_url_for_log(str(exc)),
+            log_fetch_outcome(
+                logger,
+                self._kind,
+                mined_form,
+                reading,
+                url,
+                reason="not_json",
+                error=f"{type(exc).__name__}: {scrub_url_secrets(str(exc), url, self._kind)}",
             )
             return []
         except (requests.RequestException, OSError) as exc:
             self._failure_counts[_classify_request_exception(exc)] += 1
-            logger.debug(
-                "custom_json fetch failed (%s): %s: %s",
-                _redact_url_for_log(url),
-                type(exc).__name__,
-                _redact_url_for_log(str(exc)),
+            log_fetch_outcome(
+                logger,
+                self._kind,
+                mined_form,
+                reading,
+                url,
+                reason="transport",
+                error=f"{type(exc).__name__}: {scrub_url_secrets(str(exc), url, self._kind)}",
             )
             return []
 
         if not isinstance(data, dict) or data.get("type") != "audioSourceList":
+            log_fetch_outcome(logger, self._kind, mined_form, reading, url, reason="not_audio_source_list")
             return []
         sources = data.get("audioSources")
         if not isinstance(sources, list):
+            log_fetch_outcome(logger, self._kind, mined_form, reading, url, reason="not_audio_source_list")
             return []
         urls: list[str] = []
         for item in sources:
