@@ -89,6 +89,24 @@ def test_reset_columns_keeps_the_forced_hide(qtbot, tmp_path):
     assert dlg.table.isColumnHidden(TRANSLATION_COLUMN)
 
 
+def test_search_matches_the_translation_column(qtbot, tmp_path):
+    dlg = _dialog(qtbot, tmp_path)
+    dlg.search_input.setText("eating")
+    dlg._apply_search()
+    assert not dlg.table.isRowHidden(0)
+
+    dlg.search_input.setText("zzz")
+    dlg._apply_search()
+    assert dlg.table.isRowHidden(0)
+
+
+def test_search_ignores_the_translation_column_without_a_second_track(qtbot, tmp_path):
+    dlg = _dialog(qtbot, tmp_path, secondary=[])
+    dlg.search_input.setText("eating")
+    dlg._apply_search()
+    assert dlg.table.isRowHidden(0)
+
+
 def test_the_player_receives_the_second_track(qtbot, tmp_path):
     class _Stub(QWidget):
         def __init__(self, *args, **kwargs):

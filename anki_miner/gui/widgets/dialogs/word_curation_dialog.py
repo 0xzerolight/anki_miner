@@ -1746,11 +1746,14 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 self.table.setRowHidden(row, False)
                 continue
 
-            # Check surface, lemma, reading, sentence columns
+            # Check surface, lemma, reading, sentence, and (when shown) translation
+            # columns. Sentence and translation cells' visible text is truncated;
+            # COPY_ROLE holds the full text.
+            columns = (1, 2, 3, 4) + ((TRANSLATION_COLUMN,) if self._has_translations else ())
             visible = False
-            for col in (1, 2, 3, 4):
+            for col in columns:
                 cell = self.table.item(row, col)
-                value = cell.data(COPY_ROLE) if cell and col == 4 else cell.text() if cell else ""
+                value = cell.data(COPY_ROLE) if cell and col in (4, TRANSLATION_COLUMN) else cell.text() if cell else ""
                 if text_lower in str(value).lower():
                     visible = True
                     break
