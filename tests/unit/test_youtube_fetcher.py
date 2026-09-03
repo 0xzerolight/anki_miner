@@ -1186,6 +1186,42 @@ class TestBuildFetchCmdAutoDub:
             service._raise_for_error(tail, "auto_only")
 
 
+class TestTranscribeMode:
+    """``transcribe`` downloads the video and asks yt-dlp for no captions."""
+
+    def test_build_fetch_cmd_requests_no_subtitles(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        cmd = service._build_fetch_cmd("https://youtu.be/abc123", tmp_path, "transcribe")
+        assert "--write-sub" not in cmd
+        assert "--write-auto-sub" not in cmd
+        assert "--sub-lang" not in cmd
+        assert "--sub-format" not in cmd
+
+    def test_build_fetch_cmd_still_downloads_the_video(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        cmd = service._build_fetch_cmd("https://youtu.be/abc123", tmp_path, "transcribe")
+        assert "--format" in cmd
+        assert cmd[cmd.index("--format") + 1] == "bestvideo[height<=720]+bestaudio/best[height<=720]"
+
+    def test_resolve_outputs_accepts_a_missing_subtitle(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+        _touch(tmp_path / "abc123.mp4", b"video-bytes")
+        result = service._resolve_outputs(tmp_path, "abc123", "transcribe")
+        assert result.video_file == tmp_path / "abc123.mp4"
+        assert result.subtitle_file is None
+        assert result.sub_source == "generated"
+
+    def test_resolve_outputs_still_rejects_a_missing_video(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        with pytest.raises(YouTubeFetchError):
+            service._resolve_outputs(tmp_path, "abc123", "transcribe")
+
+    def test_resolve_outputs_still_rejects_a_zero_byte_video(
+        self, service: YouTubeFetcherService, tmp_path: Path
+    ) -> None:
+        (tmp_path / "abc123.mp4").write_bytes(b"")
+        with pytest.raises(YouTubeFetchError, match="zero-byte video"):
+            service._resolve_outputs(tmp_path, "abc123", "transcribe")
+
+
 class TestFetchVideoResolverFallback:
     """When ``youtube_ffmpeg_location`` is unset, the fetcher falls back to
     ``resolve_ffmpeg`` so frozen builds use the bundled binary instead of
