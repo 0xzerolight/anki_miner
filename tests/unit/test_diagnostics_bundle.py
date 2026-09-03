@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
@@ -497,8 +498,41 @@ def _seed_home(tmp_path: Path, monkeypatch) -> Path:
     (home / "runtime_state" / "queues" / "video.json").write_text('{"items": []}', encoding="utf-8")
     (home / "runtime_state" / "downloads" / "x.json").write_text('{"url": "x"}', encoding="utf-8")
     (home / "runtime_state" / "downloads" / "x.part").write_bytes(b"partial")
+    slot = home / "dicts" / "jmdict"
+    slot.mkdir(parents=True)
+    (slot / "meta.json").write_text(
+        json.dumps({"schema_version": "6", "entry_count": "1234", "language": "ja"}),
+        encoding="utf-8",
+    )
+    (slot / "index.sqlite").write_bytes(b"x" * 64)
+    _seed_known_words(home / "known_words.db")
     monkeypatch.setattr(bundle.paths, "ANKI_MINER_HOME", home)
     return home
+
+
+def _seed_known_words(path: Path) -> None:
+    conn = sqlite3.connect(path)
+    try:
+        conn.execute("CREATE TABLE known_words (lemma TEXT PRIMARY KEY, source TEXT DEFAULT 'anki')")
+        conn.executemany(
+            "INSERT INTO known_words (lemma, source) VALUES (?, ?)",
+            [("\u732b", "anki"), ("\u72ac", "anki"), ("\u9ce5", "user")],
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _seeded_config(home: Path) -> AnkiMinerConfig:
+    return AnkiMinerConfig(
+        dicts_root=home / "dicts",
+        freqs_root=home / "freqs",
+        pitch_root=home / "pitch",
+        audio_packs_root=home / "audio_packs",
+        known_words_db_path=home / "known_words.db",
+        stats_db_path=home / "stats.db",
+        log_path=home / "anki_miner.log",
+    )
 
 
 def test_bundle_ships_on_disk_config_and_runtime_state(tmp_path: Path, monkeypatch) -> None:
@@ -601,3 +635,93 @@ def test_export_logs_one_receipt(tmp_path: Path, monkeypatch, caplog) -> None:
     assert f"path={target}" in receipts[0]
     assert f"members={len(result.members)}" in receipts[0]
     assert f"zip_bytes={target.stat().st_size}" in receipts[0]
+
+
+def test_bundle_inventories_resources_stores_disk_and_screens(tmp_path: Path, monkeypatch) -> None:
+    home = _seed_home(tmp_path, monkeypatch)
+    _disable_early_crash_member(monkeypatch, tmp_path)
+    target = tmp_path / "inventory-diagnostics.zip"
+
+    write_diagnostics_bundle(
+        target,
+        config=_seeded_config(home),
+        snapshot=_snapshot(tmp_path),
+        health_lines=[],
+        ui_facts={"screen_count": "2", "theme": "midnight"},
+    )
+
+    members = _archive_members(target)
+    resources = members["resources.txt"].decode("utf-8")
+    stores = members["stores.txt"].decode("utf-8")
+    disk = members["disk.txt"].decode("utf-8")
+    screens = members["screens.txt"].decode("utf-8")
+
+    assert "dicts/jmdict:" in resources
+    assert "schema_version=6" in resources
+    assert "entry_count=1234" in resources
+    assert "language=ja" in resources
+    assert "files=2" in resources
+    assert "bytes=" in resources
+    assert "known_words.db: rows=3" in stores
+    assert "source.anki=2" in stores
+    assert "source.user=1" in stores
+    assert "free_bytes=" in disk
+    assert "filesystem_encoding=" in disk
+    assert "screen_count: 2" in screens
+    assert "theme: midnight" in screens
+
+
+def test_missing_ui_facts_render_a_placeholder(tmp_path: Path, monkeypatch) -> None:
+    home = _seed_home(tmp_path, monkeypatch)
+    _disable_early_crash_member(monkeypatch, tmp_path)
+    target = tmp_path / "no-facts-diagnostics.zip"
+
+    write_diagnostics_bundle(
+        target,
+        config=_seeded_config(home),
+        snapshot=_snapshot(tmp_path),
+        health_lines=[],
+    )
+
+    assert b"<unavailable" in _archive_members(target)["screens.txt"]
+
+
+def test_unreadable_store_is_reported_without_raising(tmp_path: Path, monkeypatch) -> None:
+    home = _seed_home(tmp_path, monkeypatch)
+    _disable_early_crash_member(monkeypatch, tmp_path)
+    target = tmp_path / "locked-diagnostics.zip"
+
+    write_diagnostics_bundle(
+        target,
+        config=_seeded_config(home),
+        snapshot=_snapshot(tmp_path),
+        health_lines=[],
+    )
+
+    stores = _archive_members(target)["stores.txt"].decode("utf-8")
+    assert "stats.db: <unavailable:" in stores
+    assert "known_words.db: rows=3" in stores
+
+
+def test_unreadable_resource_root_is_reported_without_raising(tmp_path: Path, monkeypatch) -> None:
+    home = _seed_home(tmp_path, monkeypatch)
+    _disable_early_crash_member(monkeypatch, tmp_path)
+    real_iterdir = Path.iterdir
+
+    def iterdir(path: Path):
+        if path == home / "dicts":
+            raise PermissionError("locked root")
+        return real_iterdir(path)
+
+    monkeypatch.setattr(Path, "iterdir", iterdir)
+    target = tmp_path / "locked-root-diagnostics.zip"
+
+    write_diagnostics_bundle(
+        target,
+        config=_seeded_config(home),
+        snapshot=_snapshot(tmp_path),
+        health_lines=[],
+    )
+
+    resources = _archive_members(target)["resources.txt"].decode("utf-8")
+    assert "dicts: <unavailable: PermissionError: locked root>" in resources

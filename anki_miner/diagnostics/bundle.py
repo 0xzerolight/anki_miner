@@ -4,9 +4,10 @@ The bundle intentionally preserves configured paths, media file names, deck
 names, and note-type names. Those values are often the evidence for path,
 Unicode, and integration failures. Regex redaction would destroy that evidence;
 the mitigation is an inert archive plus a clear privacy warning before upload.
-Pure personal stores (``known_words.db``, ``stats.db``, and
-``recent_files.json``) are deliberately excluded because they add no diagnostic
-value beyond the logs.
+The personal stores (``known_words.db``, ``stats.db``, ``recent_files.json``)
+are never shipped as contents: the word lists themselves add no diagnostic value
+beyond the logs. Their aggregates are, because "no words were mined" is usually
+a store that is empty, missing, or locked, and only a row count says which.
 """
 
 from __future__ import annotations
@@ -14,6 +15,10 @@ from __future__ import annotations
 import dataclasses
 import json
 import logging
+import os
+import shutil
+import sqlite3
+import sys
 import tempfile
 import zipfile
 from collections.abc import Mapping
@@ -26,6 +31,7 @@ from urllib.parse import unquote, urlsplit, urlunsplit
 from anki_miner.config import AudioSourceEntry, paths
 from anki_miner.diagnostics.environment import EnvironmentSnapshot, format_environment_lines
 from anki_miner.utils.atomic_io import atomic_write_path
+from anki_miner.utils.bounded_reader import read_json_bounded
 from anki_miner.utils.logging_ext import capped, log_summary
 
 logger = logging.getLogger(__name__)
@@ -50,6 +56,25 @@ _CHILD_LOG_NAME = "anki_miner.child.log"
 
 # gui/utils/session_state.py FILENAME. Same reason as the child log: no Qt here.
 _UI_STATE_NAME = "ui_state.ini"
+
+# The four index-backed resource families and the config field naming each root
+# (services/_sqlite_index.py owns the ``<root>/<id>/index.sqlite`` layout).
+_RESOURCE_FAMILIES = (
+    ("dicts", "dicts_root"),
+    ("freqs", "freqs_root"),
+    ("pitch", "pitch_root"),
+    ("audio_packs", "audio_packs_root"),
+)
+
+# A user with hundreds of slots turns the inventory into the bundle. Report the
+# first slots and the count of the rest.
+_MAX_RESOURCE_SLOTS = 200
+
+# A slot holds an index, a sidecar, and (for a broken import) whatever staging
+# debris survived. Stop counting rather than walk an accidentally-huge tree.
+_MAX_SLOT_FILES = 5000
+
+_META_SIDECAR_MAX_BYTES = 1 * 1024 * 1024
 
 _GITHUB_ISSUES_URL = "https://github.com/0xzerolight/anki_miner/issues"
 _PRIVACY_SENTENCE = "This bundle contains file paths and file names from your computer. Review it before uploading."
@@ -223,6 +248,147 @@ def collect_state_members() -> tuple[list[tuple[str, bytes]], list[str]]:
     return members, missing
 
 
+def _unavailable(exc: BaseException) -> str:
+    """Render one failed probe so the reader sees which failure it was."""
+    return f"<unavailable: {type(exc).__name__}: {exc}>"
+
+
+def _slot_size(root: Path) -> tuple[int, int]:
+    """Count files and bytes under one resource slot, bounded."""
+    files = 0
+    total = 0
+    for dirpath, _dirnames, filenames in os.walk(root):
+        for name in filenames:
+            if files >= _MAX_SLOT_FILES:
+                return files, total
+            files += 1
+            try:
+                total += (Path(dirpath) / name).stat().st_size
+            except OSError:
+                continue
+    return files, total
+
+
+def collect_resource_lines(config) -> list[str]:
+    """Inventory every installed dictionary, frequency, pitch, and audio slot.
+
+    "It is installed but lookups come back empty" is answered here and nowhere
+    else: a stale ``schema_version``, an ``entry_count`` of zero, or a slot whose
+    files are gone all look identical from the chain editor.
+    """
+    lines: list[str] = []
+    for family, attribute in _RESOURCE_FAMILIES:
+        root = getattr(config, attribute, None)
+        if root is None:
+            continue
+        root = Path(root)
+        try:
+            slots = sorted(child for child in root.iterdir() if child.is_dir())
+        except OSError as exc:
+            lines.append(f"{family}: {_unavailable(exc)} root={root}")
+            continue
+        if not slots:
+            lines.append(f"{family}: none root={root}")
+            continue
+        for slot in slots[:_MAX_RESOURCE_SLOTS]:
+            sidecar = slot / "meta.json"
+            raw: Any = (
+                read_json_bounded(sidecar, _META_SIDECAR_MAX_BYTES, None, "resource meta")
+                if sidecar.is_file()
+                else None
+            )
+            meta: dict[str, Any] = raw if isinstance(raw, dict) else {}
+            files, size = _slot_size(slot)
+            lines.append(
+                f"{family}/{slot.name}: "
+                f"schema_version={meta.get('schema_version', '-')} "
+                f"entry_count={meta.get('entry_count', '-')} "
+                f"language={meta.get('language', '-')} "
+                f"files={files} bytes={size}"
+            )
+        if len(slots) > _MAX_RESOURCE_SLOTS:
+            lines.append(f"{family}: +{len(slots) - _MAX_RESOURCE_SLOTS} more slots")
+    return lines or ["no resource roots configured"]
+
+
+def _grouped_counts(path: Path, query: str, prefix: str) -> str:
+    """Run one read-only GROUP BY and render it, or say why it could not run.
+
+    A read-only URI plus a one-second timeout: a store the running app holds
+    open must never turn an export into a hang, and a locked or absent file is
+    itself the diagnosis.
+    """
+    try:
+        conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=1)
+    except (sqlite3.Error, OSError) as exc:
+        return _unavailable(exc)
+    try:
+        rows = conn.execute(query).fetchall()
+    except (sqlite3.Error, OSError) as exc:
+        return _unavailable(exc)
+    finally:
+        conn.close()
+    total = sum(int(count) for _key, count in rows)
+    groups = " ".join(f"{prefix}.{key or '-'}={int(count)}" for key, count in rows)
+    return f"rows={total} {groups}".rstrip()
+
+
+def collect_store_lines(config) -> list[str]:
+    """Report row counts for the personal stores, never their rows.
+
+    ``known_words*.db`` is globbed rather than derived: the per-language sibling
+    rule lives in ``gui/utils/service_factory.py``, which imports Qt, and every
+    language's cache is evidence here.
+    """
+    lines: list[str] = []
+    known_db = Path(config.known_words_db_path)
+    try:
+        known_paths = sorted(known_db.parent.glob(f"{known_db.stem}*.db"))
+    except OSError as exc:
+        known_paths = []
+        lines.append(f"{known_db.name}: {_unavailable(exc)}")
+    if not known_paths:
+        known_paths = [known_db]
+    for path in known_paths:
+        lines.append(
+            f"{path.name}: {_grouped_counts(path, 'SELECT source, COUNT(*) FROM known_words GROUP BY source', 'source')}"
+        )
+    stats_db = Path(config.stats_db_path)
+    lines.append(
+        f"{stats_db.name}: "
+        f"{_grouped_counts(stats_db, 'SELECT language, COUNT(*) FROM mining_sessions GROUP BY language', 'language')}"
+    )
+    return lines
+
+
+def _disk_line(label: str, path: Path) -> str:
+    try:
+        usage = shutil.disk_usage(path)
+    except OSError as exc:
+        return f"{label}: {_unavailable(exc)} path={path}"
+    return f"{label}: path={path} total_bytes={usage.total} used_bytes={usage.used} free_bytes={usage.free}"
+
+
+def collect_disk_lines() -> list[str]:
+    """Report free space on the two volumes a run writes to.
+
+    A full disk surfaces as a dozen unrelated write failures; the free-byte
+    count is what turns them back into one cause.
+    """
+    return [
+        _disk_line("home", paths.ANKI_MINER_HOME),
+        _disk_line("tempdir", Path(tempfile.gettempdir())),
+        f"filesystem_encoding={sys.getfilesystemencoding()}",
+    ]
+
+
+def _ui_fact_lines(ui_facts: Mapping[str, str] | None) -> list[str]:
+    """Render the GUI-thread display facts, in the order they were collected."""
+    if not ui_facts:
+        return ["<unavailable: no GUI facts were collected for this export>"]
+    return [f"{key}: {value}" for key, value in ui_facts.items()]
+
+
 def _redact_custom_audio_url(url: str) -> str:
     """Keep a useful URL shape without credentials or parse failures."""
     try:
@@ -283,8 +449,14 @@ def write_diagnostics_bundle(
     config,
     snapshot: EnvironmentSnapshot,
     health_lines: list[str],
+    ui_facts: Mapping[str, str] | None = None,
 ) -> BundleResult:
-    """Atomically write a diagnostics ZIP and return its inventory."""
+    """Atomically write a diagnostics ZIP and return its inventory.
+
+    ``ui_facts`` is a parameter rather than something this module reads because
+    the screen and theme facts only exist on the GUI thread, and this module
+    must stay importable without Qt.
+    """
     log_members, log_missing = collect_log_members()
     state_members, state_missing = collect_state_members()
     missing = [*log_missing, *state_missing]
@@ -293,6 +465,10 @@ def write_diagnostics_bundle(
         ("environment.txt", _text_bytes(format_environment_lines(snapshot))),
         ("health.txt", _text_bytes(effective_health)),
         ("settings.json", _settings_bytes(config)),
+        ("resources.txt", _text_bytes(collect_resource_lines(config))),
+        ("stores.txt", _text_bytes(collect_store_lines(config))),
+        ("disk.txt", _text_bytes(collect_disk_lines())),
+        ("screens.txt", _text_bytes(_ui_fact_lines(ui_facts))),
     ]
     # State members arrive already capped by their collector; the logs are
     # exempt by design. Capping here would double-stamp the truncation marker.
