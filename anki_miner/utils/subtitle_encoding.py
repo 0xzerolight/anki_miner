@@ -22,11 +22,20 @@ an EMPTY ladder that silently stops every non-UTF-8 subtitle decoding.
 from __future__ import annotations
 
 import codecs
+import logging
 from pathlib import Path
 
 import pysubs2
 
 from anki_miner.utils.cjk_encoding import prefers_big5
+from anki_miner.utils.logging_ext import log_summary
+
+logger = logging.getLogger(__name__)
+
+#: One-shot latch for the charset-normalizer absence notice. The detector leg is
+#: consulted once per failed decode, so an un-latched notice would repeat for
+#: every subtitle in a batch while saying the same thing about the install.
+_DETECTOR_MISSING_LOGGED = False
 
 #: Python codec name → WHATWG encoding label, for callers that must name an
 #: encoding to a non-Python consumer. alass parses its ``--encoding-*`` values
@@ -98,6 +107,46 @@ def _read_head(path: Path) -> bytes:
         return b""
 
 
+def _error_byte(error: UnicodeDecodeError) -> str:
+    """The offending byte of *error* as ``0xNN``, or ``-`` when out of reach."""
+    data = error.object
+    if 0 <= error.start < len(data):
+        return f"0x{data[error.start]:02x}"
+    return "-"
+
+
+def _log_decode(
+    path: Path,
+    *,
+    bom: str,
+    ladder: tuple[str, ...] | list[str],
+    tried: tuple[str, ...] | list[str],
+    chosen: str | None,
+    detector: str | None = None,
+    level: int = logging.INFO,
+    **extra: object,
+) -> None:
+    """One receipt per decode, naming what won and what was walked to get there.
+
+    Mojibake reports arrive as "the text is wrong", never as an encoding name,
+    so the line has to carry the ladder, the subset actually attempted, and the
+    winner: a Chinese subtitle that lost its big5 leg and a Japanese one that
+    the detector mis-named as cp949 are indistinguishable from the text alone.
+    """
+    log_summary(
+        logger,
+        "Subtitle decode",
+        level=level,
+        file=path,
+        bom=bom,
+        ladder=tuple(ladder),
+        tried=tuple(tried),
+        chosen=chosen,
+        detector=detector,
+        **extra,
+    )
+
+
 def load_with_fallback_encoding(
     path: str | Path,
     original_error: UnicodeDecodeError,
@@ -122,11 +171,19 @@ def load_with_fallback_encoding(
     """
     path = Path(path)
     if original_error.object.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
-        return pysubs2.load(str(path), encoding="utf_32")
+        subs = pysubs2.load(str(path), encoding="utf_32")
+        _log_decode(path, bom="utf-32", ladder=(), tried=(), chosen="utf_32")
+        return subs
     if original_error.object.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)):
-        return pysubs2.load(str(path), encoding="utf_16")
+        subs = pysubs2.load(str(path), encoding="utf_16")
+        _log_decode(path, bom="utf-16", ladder=(), tried=(), chosen="utf_16")
+        return subs
 
     ladder = _DEFAULT_LOAD_LADDER if encodings is None else encodings
+    # Every candidate actually attempted, in order. It is deliberately not the
+    # ladder: the euc_jp and gb18030 gates step over candidates, and which of
+    # the two lists a mojibake report shows is the whole diagnosis.
+    tried: list[str] = []
     head: bytes | None = None
     for candidate in ladder:
         if candidate == "euc_jp":
@@ -141,7 +198,10 @@ def load_with_fallback_encoding(
             # this leg is committed: a failure past the sniffed head propagates
             # instead of falling through to the detector. Pre-ladder behaviour,
             # kept exactly.
-            return pysubs2.load(str(path), encoding=candidate)
+            tried.append(candidate)
+            subs = pysubs2.load(str(path), encoding=candidate)
+            _log_decode(path, bom="-", ladder=ladder, tried=tried, chosen=candidate)
+            return subs
         if candidate == "gb18030" and "big5" in ladder:
             if head is None:
                 head = _read_head(path)
@@ -151,19 +211,36 @@ def load_with_fallback_encoding(
             # signature; a real GB18030 file scores zero and is unaffected.
             if prefers_big5(head):
                 continue
+        tried.append(candidate)
         try:
-            return pysubs2.load(str(path), encoding=candidate)
+            subs = pysubs2.load(str(path), encoding=candidate)
         except (UnicodeDecodeError, LookupError):
             continue
+        _log_decode(path, bom="-", ladder=ladder, tried=tried, chosen=candidate)
+        return subs
 
     if head is None:
         head = _read_head(path)
     encoding = _detect_encoding(head)
     if encoding:
         try:
-            return pysubs2.load(str(path), encoding=encoding)
+            subs = pysubs2.load(str(path), encoding=encoding)
         except (UnicodeDecodeError, LookupError):
             pass
+        else:
+            _log_decode(path, bom="-", ladder=ladder, tried=tried, chosen=encoding, detector=encoding)
+            return subs
+    _log_decode(
+        path,
+        bom="-",
+        ladder=ladder,
+        tried=tried,
+        chosen=None,
+        detector=encoding,
+        level=logging.WARNING,
+        error_pos=original_error.start,
+        error_byte=_error_byte(original_error),
+    )
     raise original_error
 
 
@@ -277,9 +354,13 @@ def _detect_encoding(data: bytes) -> str | None:
     detector leg of :func:`load_with_fallback_encoding` is skipped (for
     BOM-free input, the cp932 attempt there runs first and independently).
     """
+    global _DETECTOR_MISSING_LOGGED
     try:
         from charset_normalizer import from_bytes
     except ImportError:
+        if not _DETECTOR_MISSING_LOGGED:
+            _DETECTOR_MISSING_LOGGED = True
+            logger.debug("Subtitle decode detector unavailable: charset-normalizer is not importable")
         return None
     match = from_bytes(data).best()
     return match.encoding if match is not None else None

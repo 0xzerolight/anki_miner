@@ -189,3 +189,88 @@ def test_sniff_bound_large_enough_for_normal_files(tmp_path):
     path = tmp_path / "normal.srt"
     path.write_bytes(text.encode("cp932"))
     assert detect_subtitle_encoding(path) == "shift_jis"
+
+
+# ---------------------------------------------------------------------------
+# Decode receipts — one line per decode, naming the winner (or the whole ladder)
+# ---------------------------------------------------------------------------
+
+_ENC_LOGGER = "anki_miner.utils.subtitle_encoding"
+
+
+def test_a_cp932_decode_logs_the_winning_encoding(tmp_path, caplog):
+    data = _SRT.encode("cp932")
+    path = tmp_path / "sjis.srt"
+    path.write_bytes(data)
+    with pytest.raises(UnicodeDecodeError) as exc_info:
+        data.decode("utf-8")
+
+    with caplog.at_level("INFO", logger=_ENC_LOGGER):
+        load_with_fallback_encoding(path, exc_info.value)
+
+    records = [r for r in caplog.records if r.name == _ENC_LOGGER]
+    assert len(records) == 1
+    assert records[0].levelname == "INFO"
+    assert records[0].getMessage() == (
+        f"Subtitle decode: file={path} bom=- ladder=cp932,euc_jp tried=cp932 chosen=cp932 detector=-"
+    )
+
+
+def test_a_bom_decode_names_the_bom_and_no_ladder(tmp_path, caplog):
+    data = _SRT.encode("utf-16")
+    path = tmp_path / "u16.srt"
+    path.write_bytes(data)
+    utf8_error = UnicodeDecodeError("utf-8", data, 0, 1, "invalid start byte")
+
+    with caplog.at_level("INFO", logger=_ENC_LOGGER):
+        load_with_fallback_encoding(path, utf8_error)
+
+    records = [r for r in caplog.records if r.name == _ENC_LOGGER]
+    assert len(records) == 1
+    assert "bom=utf-16" in records[0].getMessage()
+    assert "chosen=utf_16" in records[0].getMessage()
+
+
+def test_an_undecodable_file_warns_with_the_whole_ladder(tmp_path, caplog, monkeypatch):
+    # 0x81 followed by a space is valid in none of utf-8, cp932 or euc_jp.
+    data = b"1\r\n00:00:01,000 --> 00:00:03,000\r\n" + b"\x81 \r\n\r\n"
+    path = tmp_path / "broken.srt"
+    path.write_bytes(data)
+    with pytest.raises(UnicodeDecodeError) as exc_info:
+        data.decode("utf-8")
+    # Pin the detector off so the failure leg is reached deterministically.
+    monkeypatch.setattr(encoding_mod, "_detect_encoding", lambda _data: None)
+
+    with caplog.at_level("WARNING", logger=_ENC_LOGGER), pytest.raises(UnicodeDecodeError):
+        load_with_fallback_encoding(path, exc_info.value)
+
+    records = [r for r in caplog.records if r.name == _ENC_LOGGER]
+    assert len(records) == 1
+    assert records[0].levelname == "WARNING"
+    message = records[0].getMessage()
+    assert f"file={path}" in message
+    assert "ladder=cp932,euc_jp" in message  # the whole ladder, not only what was tried
+    assert "chosen=-" in message
+    assert "error_pos=34" in message
+    assert "error_byte=0x81" in message
+
+
+def test_a_missing_detector_is_reported_once(caplog, monkeypatch):
+    monkeypatch.setattr(encoding_mod, "_DETECTOR_MISSING_LOGGED", False)
+    real_import = __builtins__["__import__"] if isinstance(__builtins__, dict) else __builtins__.__import__
+
+    def _no_charset_normalizer(name, *args, **kwargs):
+        if name == "charset_normalizer":
+            raise ImportError("no charset_normalizer")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.__import__", _no_charset_normalizer)
+
+    with caplog.at_level("DEBUG", logger=_ENC_LOGGER):
+        assert encoding_mod._detect_encoding(b"\x81 ") is None
+        assert encoding_mod._detect_encoding(b"\x81 ") is None
+
+    records = [r for r in caplog.records if r.name == _ENC_LOGGER]
+    assert len(records) == 1
+    assert records[0].levelname == "DEBUG"
+    assert "charset-normalizer" in records[0].getMessage()
