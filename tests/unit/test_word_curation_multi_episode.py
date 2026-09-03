@@ -121,7 +121,12 @@ class TestLazyEpisodeSwitch:
         _focus_row(dlg, 1)
         resolver.assert_called_once_with(ep2)
         player.set_source.assert_called_once_with(
-            ep2, ep2_ctx.subtitle_entries, ep2_ctx.offset, audio_track_override=None
+            ep2,
+            ep2_ctx.subtitle_entries,
+            ep2_ctx.offset,
+            audio_track_override=None,
+            secondary_entries=[],
+            secondary_offset=0.0,
         )
         # Seek re-fired after the swap; seek_seconds self-defers until loaded.
         player.seek_seconds.assert_called_with(7.0)

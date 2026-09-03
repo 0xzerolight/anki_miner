@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import QHeaderView
 
 from anki_miner.gui.utils import session_state
 from anki_miner.gui.utils.config_manager import GUIConfigManager
-from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+from anki_miner.gui.widgets.dialogs.word_curation_dialog import TRANSLATION_COLUMN, WordCurationDialog
 from anki_miner.models import TokenizedWord
 
 _READING_COL = 3
@@ -86,4 +86,4 @@ def test_a_state_from_a_different_column_count_is_ignored(qtbot, tmp_path, monke
     dlg = WordCurationDialog([_word()])
     qtbot.addWidget(dlg)
 
-    assert not any(dlg.table.isColumnHidden(c) for c in range(dlg.table.columnCount()))
+    assert not any(dlg.table.isColumnHidden(c) for c in range(dlg.table.columnCount()) if c != TRANSLATION_COLUMN)
