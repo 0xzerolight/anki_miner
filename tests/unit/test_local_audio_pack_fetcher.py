@@ -812,3 +812,45 @@ class TestSlowSourceMediumIsBounded:
         assert elapsed < 5.0, f"copy on a slow medium was not bounded: {elapsed:.2f}s"
         assert chain.stats()["slow"] == 1
         assert chain.slowest_pack_id() == "forvo"
+
+
+class TestPackIdentity:
+    """The fields the audio stage logs to locate a stalling pack."""
+
+    def test_pack_dir_is_the_resolved_source_folder(self, tmp_path: Path):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        assert fetcher.pack_dir == pack_dir.resolve()
+
+    def test_entry_count_comes_from_the_pack_meta(self, tmp_path: Path):
+        db, pack_dir = _build_pack(
+            tmp_path,
+            [("食べる", "たべる", "taberu.mp3"), ("飲む", "のむ", "nomu.mp3")],
+        )
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        assert fetcher.entry_count == 2
+
+    def test_entry_count_is_zero_when_the_index_is_gone(self, tmp_path: Path):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+        db.unlink()
+        (db.parent / "meta.json").unlink(missing_ok=True)
+
+        assert fetcher.entry_count == 0
+
+    def test_entry_count_reads_the_meta_once(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+        reads = []
+        real_read = audio_pack_fetcher.storage.read_meta_cached
+
+        def _counting_read(path):
+            reads.append(path)
+            return real_read(path)
+
+        monkeypatch.setattr(audio_pack_fetcher.storage, "read_meta_cached", _counting_read)
+
+        assert fetcher.entry_count == fetcher.entry_count == 1
+        assert len(reads) == 1

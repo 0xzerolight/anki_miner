@@ -963,3 +963,196 @@ class TestSlowPackDiagnosis:
 
         warnings = self._run(test_config, mock_services, tmp_path, fetcher)
         assert any("responding too slowly" in w for w in warnings), warnings
+
+
+class _StubPackFetcher:
+    """Minimal LocalAudioPackFetcher stand-in: identity only, no lookups."""
+
+    def __init__(self, pack_id, pack_dir, entry_count):
+        self.pack_id = pack_id
+        self.pack_dir = pack_dir
+        self.entry_count = entry_count
+
+    def fetch_candidates(self, candidates, cancelled_check=None):
+        return None
+
+
+class _StubChain:
+    """Chain stand-in exposing its members and the slow-pack verdict."""
+
+    def __init__(self, members, slow_pack=None, counts=None):
+        self._fetchers = list(members)
+        self._slow_pack = slow_pack
+        self._counts = counts or {}
+
+    def fetch_candidates(self, candidates, cancelled_check=None):
+        return None
+
+    def slowest_pack_id(self):
+        return self._slow_pack
+
+    def stats(self):
+        return dict(self._counts)
+
+
+class TestAudioChainIdentityLogging:
+    """The stage names its chain members and the pack folder that stalls."""
+
+    @staticmethod
+    def _enabled_config(test_config, chain=None):
+        from anki_miner.config.config import AudioSourceEntry
+
+        return replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
+            expression_audio_chain=chain
+            or (
+                AudioSourceEntry(kind="pack", pack_id="packA"),
+                AudioSourceEntry(kind="jpod101"),
+                AudioSourceEntry(kind="googletts", enabled=False),
+            ),
+        )
+
+    @staticmethod
+    def _stage(config, fetcher):
+        return AudioStage(
+            config=config,
+            presenter=NullPresenter(),
+            cancelled=lambda: False,
+            expression_audio_fetcher=fetcher,
+            sentence_audio_fetcher=None,
+        )
+
+    def _run(self, test_config, fetcher, caplog, chain=None):
+        stage = self._stage(self._enabled_config(test_config, chain), fetcher)
+        with caplog.at_level(logging.INFO, logger="anki_miner.orchestration.audio_stage"):
+            stage.fetch_expression_audio([(_make_word(), _make_media())], None)
+        return [record.getMessage() for record in caplog.records]
+
+    def test_stage_line_names_chain_members_and_enabled_count(self, test_config, caplog):
+        messages = self._run(test_config, _StubChain([], counts=_counts()), caplog)
+
+        line = next(msg for msg in messages if msg.startswith("Audio stage:"))
+        assert "chain=pack:packA,jpod101,googletts(disabled)" in line
+        assert "enabled=2" in line
+
+    def test_done_line_names_the_slow_pack_and_its_folder(self, test_config, tmp_path, caplog):
+        pack_dir = tmp_path / "audio packs" / "packA"
+        chain = _StubChain(
+            [_StubPackFetcher("packA", pack_dir, 1234)],
+            slow_pack="packA",
+            counts=_counts(slow=1),
+        )
+        messages = self._run(test_config, chain, caplog)
+
+        line = next(msg for msg in messages if msg.startswith("Audio stage done:"))
+        assert "slow_pack=packA" in line
+        assert "slow_pack_dir=" in line
+        assert str(pack_dir) in line
+
+    def test_mounted_packs_line_carries_id_dir_and_entry_count(self, test_config, tmp_path, caplog):
+        pack_dir = tmp_path / "packA"
+        chain = _StubChain([_StubPackFetcher("packA", pack_dir, 1234)], counts=_counts())
+        messages = self._run(test_config, chain, caplog)
+
+        line = next(msg for msg in messages if msg.startswith("Audio packs mounted:"))
+        assert "id=packA" in line
+        assert f"dir={pack_dir}" in line
+        assert "entries=1234" in line
+
+    def test_mounted_line_is_emitted_without_local_packs(self, test_config, caplog):
+        messages = self._run(test_config, _StubChain([], counts=_counts()), caplog)
+
+        assert any(msg.startswith("Audio packs mounted:") for msg in messages)
+
+    def test_magicmock_fetcher_reports_no_packs(self, test_config, caplog):
+        """A bare MagicMock auto-stubs every attribute; none of them is a pack."""
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = None
+        fetcher.stats.return_value = _counts()
+        messages = self._run(test_config, fetcher, caplog)
+
+        line = next(msg for msg in messages if msg.startswith("Audio packs mounted:"))
+        assert "packs=-" in line
+
+    def test_run_resets_the_fetch_outcome_rate_limit(self, test_config, caplog, monkeypatch):
+        calls = []
+        monkeypatch.setattr(
+            "anki_miner.orchestration.audio_stage.reset_fetch_outcome_rate_limit",
+            lambda: calls.append(1),
+        )
+        self._run(test_config, _StubChain([], counts=_counts()), caplog)
+
+        assert calls, "each stage run must reset the per-(source, reason) rate limit"
+
+    def test_sentence_stage_line_names_its_providers(self, test_config, caplog):
+        config = replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "audio": "Audio"},
+            reading_tts_enabled=True,
+            reading_tts_google_enabled=True,
+            reading_tts_papago_enabled=False,
+        )
+        fetcher = MagicMock()
+        fetcher.fetch.return_value = None
+        fetcher.stats.return_value = {}
+        stage = AudioStage(
+            config=config,
+            presenter=NullPresenter(),
+            cancelled=lambda: False,
+            expression_audio_fetcher=None,
+            sentence_audio_fetcher=fetcher,
+        )
+        with caplog.at_level(logging.INFO, logger="anki_miner.orchestration.audio_stage"):
+            stage.fetch_sentence_audio([(_make_word(), _make_media())], None)
+
+        line = next(msg for msg in caplog.messages if msg.startswith("Audio stage:"))
+        assert "chain=google,papago(disabled)" in line
+        assert "enabled=1" in line
+
+    def test_real_chain_and_pack_fetcher_report_their_identity(self, test_config, tmp_path, caplog):
+        """Pins the stage's read of a real chain's members against the real classes."""
+        from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
+        from anki_miner.services.audio_packs.storage import (
+            SCHEMA_VERSION,
+            AudioPackRow,
+            bulk_insert,
+            create_index,
+            write_meta,
+        )
+        from anki_miner.services.expression_audio_fetcher import ChainedExpressionAudioFetcher
+
+        pack_dir = tmp_path / "packA_audio"
+        pack_dir.mkdir()
+        (pack_dir / "taberu.mp3").write_bytes(b"AUDIO")
+        db_path = tmp_path / "packA" / "index.sqlite"
+        db_path.parent.mkdir()
+        create_index(db_path)
+        bulk_insert(db_path, [AudioPackRow(expression="食べる", reading="たべる", source="t", file="taberu.mp3")])
+        write_meta(
+            db_path,
+            {
+                "pack_id": "packA",
+                "source": "t",
+                "format": "ajt",
+                "entry_count": "1",
+                "schema_version": str(SCHEMA_VERSION),
+                "pack_dir": str(pack_dir),
+            },
+        )
+        pack = LocalAudioPackFetcher(
+            db_path=db_path,
+            pack_dir=pack_dir,
+            pack_id="packA",
+            cache_dir=tmp_path / "cache",
+        )
+        chain = ChainedExpressionAudioFetcher([pack])
+        try:
+            messages = self._run(test_config, chain, caplog)
+        finally:
+            chain.close()
+
+        line = next(msg for msg in messages if msg.startswith("Audio packs mounted:"))
+        assert "id=packA" in line
+        assert f"dir={pack_dir.resolve()}" in line
+        assert "entries=1" in line
