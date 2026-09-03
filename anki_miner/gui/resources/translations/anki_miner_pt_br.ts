@@ -9370,12 +9370,12 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
 O seletor “Frases” oferece uma opção por linha de legenda, então costuma listar menos: repetições na mesma linha contam uma vez só aqui, e linhas em que a palavra assume uma forma que mudaria a “Palavra (minerada)” do cartão são ignoradas.</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S incluir/excluir · Espaço reproduzir/pausar · Ctrl+A incluir visíveis · Ctrl+D excluir visíveis · Ctrl+Enter confirmar</translation>
+        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S incluir/excluir · Espaço reproduzir/pausar · K marcar como conhecida · Ctrl+A incluir visíveis · Ctrl+D excluir visíveis · Ctrl+Enter confirmar</translation>
     </message>
     <message>
-        <source>S include/exclude · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S incluir/excluir · Ctrl+A incluir visíveis · Ctrl+D excluir visíveis · Ctrl+Enter confirmar</translation>
+        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S incluir/excluir · K marcar como conhecida · Ctrl+A incluir visíveis · Ctrl+D excluir visíveis · Ctrl+Enter confirmar</translation>
     </message>
     <message>
         <source>+ Previous line</source>

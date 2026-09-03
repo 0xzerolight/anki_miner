@@ -9354,12 +9354,12 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
 “句子”选择框每条字幕行只提供一个选项，因此列出的通常更少：同一行中的重复在这里只算一次，而单词以会改变卡片“单词（已挖词）”的形式出现的行会被跳过。</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S 包含/排除 · 空格播放/暂停 · Ctrl+A 包含可见项 · Ctrl+D 排除可见项 · Ctrl+Enter 确认</translation>
+        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S 包含/排除 · 空格播放/暂停 · K 标记为已知 · Ctrl+A 包含可见项 · Ctrl+D 排除可见项 · Ctrl+Enter 确认</translation>
     </message>
     <message>
-        <source>S include/exclude · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S 包含/排除 · Ctrl+A 包含可见项 · Ctrl+D 排除可见项 · Ctrl+Enter 确认</translation>
+        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S 包含/排除 · K 标记为已知 · Ctrl+A 包含可见项 · Ctrl+D 排除可见项 · Ctrl+Enter 确认</translation>
     </message>
     <message>
         <source>+ Previous line</source>

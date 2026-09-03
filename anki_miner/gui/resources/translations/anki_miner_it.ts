@@ -9370,12 +9370,12 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
 Il selettore “Frasi” offre un'opzione per ogni riga di sottotitoli, quindi di solito ne elenca meno: le ripetizioni sulla stessa riga contano una volta sola qui, e le righe in cui la parola assume una forma che cambierebbe la “Parola (estratta)” della carta vengono saltate.</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S includi/escludi · Spazio riproduci/metti in pausa · Ctrl+A includi visibili · Ctrl+D escludi visibili · Ctrl+Invio conferma</translation>
+        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S includi/escludi · Spazio riproduci/metti in pausa · K segna come conosciuta · Ctrl+A includi visibili · Ctrl+D escludi visibili · Ctrl+Invio conferma</translation>
     </message>
     <message>
-        <source>S include/exclude · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S includi/escludi · Ctrl+A includi visibili · Ctrl+D escludi visibili · Ctrl+Invio conferma</translation>
+        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S includi/escludi · K segna come conosciuta · Ctrl+A includi visibili · Ctrl+D escludi visibili · Ctrl+Invio conferma</translation>
     </message>
     <message>
         <source>+ Previous line</source>

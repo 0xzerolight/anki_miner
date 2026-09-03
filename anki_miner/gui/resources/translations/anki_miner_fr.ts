@@ -9370,12 +9370,12 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
 Le sélecteur « Phrases » propose une option par ligne de sous-titres et en liste donc généralement moins : les répétitions sur une même ligne ne comptent ici qu'une fois, et les lignes où le mot prend une forme qui changerait le « Mot (extrait) » de la carte sont ignorées.</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S inclure/exclure · Espace lecture/pause · Ctrl+A inclure les éléments visibles · Ctrl+D exclure les éléments visibles · Ctrl+Entrée confirmer</translation>
+        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S inclure/exclure · Espace lecture/pause · K marquer comme connu · Ctrl+A inclure les éléments visibles · Ctrl+D exclure les éléments visibles · Ctrl+Entrée confirmer</translation>
     </message>
     <message>
-        <source>S include/exclude · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S inclure/exclure · Ctrl+A inclure les éléments visibles · Ctrl+D exclure les éléments visibles · Ctrl+Entrée confirmer</translation>
+        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S inclure/exclure · K marquer comme connu · Ctrl+A inclure les éléments visibles · Ctrl+D exclure les éléments visibles · Ctrl+Entrée confirmer</translation>
     </message>
     <message>
         <source>+ Previous line</source>

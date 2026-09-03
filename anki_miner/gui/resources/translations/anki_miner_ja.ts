@@ -9354,12 +9354,12 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
 「文」の選択欄は字幕1行につき1つの候補を表示するため、通常はこれより少なくなります。同じ行での繰り返しはここでは1回として数えられ、カードの「単語（マイニング済み）」が変わってしまう形で出現する行は除外されます。</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S：含める／除外　Space：再生／一時停止　Ctrl+A：表示中を含める　Ctrl+D：表示中を除外　Ctrl+Enter：確認</translation>
+        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S：含める／除外　Space：再生／一時停止　K：既知にする　Ctrl+A：表示中を含める　Ctrl+D：表示中を除外　Ctrl+Enter：確認</translation>
     </message>
     <message>
-        <source>S include/exclude · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S：含める／除外　Ctrl+A：表示中を含める　Ctrl+D：表示中を除外　Ctrl+Enter：確認</translation>
+        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S：含める／除外　K：既知にする　Ctrl+A：表示中を含める　Ctrl+D：表示中を除外　Ctrl+Enter：確認</translation>
     </message>
     <message>
         <source>+ Previous line</source>

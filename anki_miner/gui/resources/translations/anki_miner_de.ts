@@ -9370,12 +9370,12 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
 Die Auswahl „Sätze“ bietet eine Option pro Untertitelzeile und listet daher meist weniger: Wiederholungen in derselben Zeile zählen hier nur einmal, und Zeilen, in denen das Wort in einer Form steht, die das Feld „Wort (gesammelt)“ der Karte ändern würde, werden übersprungen.</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S Ein-/Ausschließen · Leertaste Wiedergabe/Pause · Strg+A Sichtbare einschließen · Strg+D Sichtbare ausschließen · Strg+Eingabe Bestätigen</translation>
+        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S Ein-/Ausschließen · Leertaste Wiedergabe/Pause · K Als bekannt markieren · Strg+A Sichtbare einschließen · Strg+D Sichtbare ausschließen · Strg+Eingabe Bestätigen</translation>
     </message>
     <message>
-        <source>S include/exclude · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S Ein-/Ausschließen · Strg+A Sichtbare einschließen · Strg+D Sichtbare ausschließen · Strg+Eingabe Bestätigen</translation>
+        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S Ein-/Ausschließen · K Als bekannt markieren · Strg+A Sichtbare einschließen · Strg+D Sichtbare ausschließen · Strg+Eingabe Bestätigen</translation>
     </message>
     <message>
         <source>+ Previous line</source>

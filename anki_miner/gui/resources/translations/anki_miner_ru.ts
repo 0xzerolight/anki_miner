@@ -9386,12 +9386,12 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
 Список «Предложения» предлагает по одному варианту на строку субтитров, поэтому обычно их меньше: повторы в одной строке здесь считаются один раз, а строки, где слово стоит в форме, меняющей поле «Слово (намайнено)» карточки, пропускаются.</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S — включить/исключить · Пробел — воспроизведение/пауза · Ctrl+A — включить видимые · Ctrl+D — исключить видимые · Ctrl+Enter — подтвердить</translation>
+        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S — включить/исключить · Пробел — воспроизведение/пауза · K — отметить как известное · Ctrl+A — включить видимые · Ctrl+D — исключить видимые · Ctrl+Enter — подтвердить</translation>
     </message>
     <message>
-        <source>S include/exclude · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S — включить/исключить · Ctrl+A — включить видимые · Ctrl+D — исключить видимые · Ctrl+Enter — подтвердить</translation>
+        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S — включить/исключить · K — отметить как известное · Ctrl+A — включить видимые · Ctrl+D — исключить видимые · Ctrl+Enter — подтвердить</translation>
     </message>
     <message>
         <source>+ Previous line</source>

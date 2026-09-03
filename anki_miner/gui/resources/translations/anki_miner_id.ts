@@ -9354,12 +9354,12 @@ The “Sentences” picker offers one option per subtitle line, so it usually li
 Pemilih “Kalimat” menyediakan satu opsi per baris subtitel, jadi biasanya daftarnya lebih sedikit: pengulangan pada baris yang sama dihitung sekali di sini, dan baris yang membuat kata muncul dalam bentuk yang akan mengubah “Kata (di-mining)” pada kartu akan dilewati.</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S sertakan/kecualikan · Spasi putar/jeda · Ctrl+A sertakan yang terlihat · Ctrl+D kecualikan yang terlihat · Ctrl+Enter konfirmasi</translation>
+        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S sertakan/kecualikan · Spasi putar/jeda · K tandai sebagai dikenal · Ctrl+A sertakan yang terlihat · Ctrl+D kecualikan yang terlihat · Ctrl+Enter konfirmasi</translation>
     </message>
     <message>
-        <source>S include/exclude · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S sertakan/kecualikan · Ctrl+A sertakan yang terlihat · Ctrl+D kecualikan yang terlihat · Ctrl+Enter konfirmasi</translation>
+        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <translation>S sertakan/kecualikan · K tandai sebagai dikenal · Ctrl+A sertakan yang terlihat · Ctrl+D kecualikan yang terlihat · Ctrl+Enter konfirmasi</translation>
     </message>
     <message>
         <source>+ Previous line</source>
