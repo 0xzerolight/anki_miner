@@ -34,6 +34,23 @@ _CA_ENV_VARS = ("REQUESTS_CA_BUNDLE", "SSL_CERT_FILE", "CURL_CA_BUNDLE")
 _LOG_FORMAT = "%(asctime)s.%(msecs)03d %(levelname)-8s [%(threadName)s] %(name)s:%(lineno)d: %(message)s"
 _LOG_DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 
+# The supervised ffsubsync child's own file, beside the parent's log rather
+# than inside it. ``diagnostics/bundle.py`` collects this name and its ``.1``
+# backup; it duplicates the literal instead of importing this module, and a
+# test pins the two equal.
+CHILD_LOG_NAME = "anki_miner.child.log"
+
+# Thread name is useless here — every child line comes from its MainThread —
+# so the pid takes that column instead: one sync run spawns a child per
+# subtitle file and their lines interleave in this one file.
+_CHILD_LOG_FORMAT = "%(asctime)s.%(msecs)03d %(levelname)-8s [pid %(process)d] %(name)s:%(lineno)d: %(message)s"
+
+# The child writes a handful of lines per run. The ring is small because it
+# exists only so a chatty dependency (ffsubsync's VAD stack under a third-party
+# DEBUG logger) cannot fill the user's disk from a background sync.
+_CHILD_LOG_MAX_BYTES = 1024 * 1024
+_CHILD_LOG_BACKUP_COUNT = 1
+
 
 # Mirrors ``config.paths.HOME_FALLBACK_REASON``, deliberately duplicated rather
 # than imported: this module is the bootstrap and stays free of package imports
@@ -141,6 +158,58 @@ def _install_early_crash_sink() -> None:
     _EARLY_EXCEPTHOOK_INSTALLED = True
 
 
+def _install_child_log_sink() -> None:
+    """Give the supervised ffsubsync child a log sink of its own.
+
+    The child returns from ``main()`` before ``_install_early_crash_sink()``,
+    so without this it logs nowhere: a child that dies before writing its JSON
+    verdict leaves the parent reporting a sync that "did nothing" and no record
+    of why.
+
+    It gets a separate file, not the parent's. Two processes holding one
+    ``RotatingFileHandler`` lose records at rollover — each renames the file the
+    other still has open — and the child is spawned per subtitle file, so the
+    collision is the normal case rather than the exotic one. The handler is
+    deliberately not tagged ``_anki_miner_sink`` either: that flag names the
+    file ``get_effective_log_path`` and the diagnostics bundle treat as *the*
+    session log, and the child's file is evidence beside it, not a replacement.
+
+    Every failure is swallowed. The child exists to run one sync; losing its
+    log must never cost that.
+    """
+    try:
+        root = logging.getLogger()
+        if any(getattr(handler, "_anki_miner_child_sink", False) for handler in root.handlers):
+            return
+
+        # Deferred: ``logging.handlers`` drags socket/pickle/queue in, and the
+        # parent boot walks this module without ever reaching here.
+        from logging.handlers import RotatingFileHandler
+
+        home_value = os.environ.get("ANKI_MINER_HOME")
+        home = Path(home_value) if home_value else _default_anki_miner_home()
+        home.mkdir(parents=True, exist_ok=True)
+        handler = RotatingFileHandler(
+            home / CHILD_LOG_NAME,
+            maxBytes=_CHILD_LOG_MAX_BYTES,
+            backupCount=_CHILD_LOG_BACKUP_COUNT,
+            encoding="utf-8",
+            errors="backslashreplace",
+            delay=True,
+        )
+        handler.setLevel(logging.WARNING)
+        handler.setFormatter(logging.Formatter(_CHILD_LOG_FORMAT, datefmt=_LOG_DATE_FORMAT))
+        handler._anki_miner_child_sink = True  # type: ignore[attr-defined]
+        root.setLevel(logging.WARNING)
+        root.addHandler(handler)
+
+        from anki_miner.utils.log_hooks import install_process_log_hooks
+
+        install_process_log_hooks()
+    except Exception:  # noqa: BLE001 — bucket: child logging is optional, the sync it was spawned for is not
+        pass
+
+
 def _create_windows_app_mutex() -> None:
     global _APP_MUTEX_HANDLE
     if not (sys.platform == "win32" and getattr(sys, "frozen", False)):
@@ -191,6 +260,7 @@ def main() -> int:
     # spawned it and must neither boot a second GUI nor contend for the
     # parent's single-instance guards.
     if len(sys.argv) > 1 and sys.argv[1] == FFSUBSYNC_CHILD_FLAG:
+        _install_child_log_sink()
         from anki_miner.services.sync_engines._ffsubsync_child import main as ffsubsync_child_main
 
         return ffsubsync_child_main(sys.argv[2:])

@@ -583,7 +583,9 @@ class TestChildDispatch:
         # The dispatch runs before the crash sink, the app mutex and any app
         # import: no GUI, no instance-lock contention with the parent.
         assert "APP_IMPORTED=False QTWIDGETS_IMPORTED=False" in result.stderr
-        assert not (tmp_path / "home").exists()
+        # The child does create the home, for its own log sink -- what it must
+        # not do is open the parent's log, which two processes cannot share.
+        assert not (tmp_path / "home" / "anki_miner.log").exists()
 
 
 _FFS_LOGGER = "anki_miner.services.sync_engines.ffsubsync_engine"
