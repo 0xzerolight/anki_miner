@@ -772,3 +772,14 @@ def test_auto_map_still_prefers_the_singular_when_both_exist():
     mapped = auto_map_fields(["PitchPosition", "pitchPositions"])
 
     assert mapped["pitch_position"] == "PitchPosition"
+
+
+def test_sentence_translation_field_round_trips_and_auto_maps(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.get_card_fields()["sentence_translation"] == ""
+    panel.set_card_fields({"sentence_translation": "SentenceTranslation"})
+    assert panel.get_card_fields()["sentence_translation"] == "SentenceTranslation"
+    panel.populate_from_field_list(["Expression", "Sentence", "Translation"])
+    assert panel.get_card_fields()["sentence_translation"] == "Translation"
+    assert panel.get_card_fields()["sentence"] == "Sentence"

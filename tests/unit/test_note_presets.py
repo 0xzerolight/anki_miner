@@ -100,7 +100,17 @@ def test_lapis_has_no_pitch_render_or_sentence_reading_fields():
 def test_kiku_reuses_the_lapis_names():
     lapis, kiku = preset_by_id("lapis"), preset_by_id("kiku")
     assert lapis is not None and kiku is not None
-    assert dict(kiku.fields) == dict(lapis.fields)
+    # Kiku is Lapis plus SentenceTranslation; every other name is shared.
+    without = lambda fields: {k: v for k, v in fields.items() if k != "sentence_translation"}  # noqa: E731
+    assert without(kiku.fields) == without(lapis.fields)
+    assert lapis.fields["sentence_translation"] == ""  # Lapis has no such field
+    assert kiku.fields["sentence_translation"] == "SentenceTranslation"
+
+
+def test_senren_maps_its_translation_field():
+    senren = preset_by_id("senren")
+    assert senren is not None
+    assert senren.fields["sentence_translation"] == "sentenceTranslation"
 
 
 def test_senren_maps_pitch_text_and_word_audio():

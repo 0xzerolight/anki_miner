@@ -141,6 +141,9 @@ class AnkiMinerConfig:
             "frequency_sort": "",
             "source": "",
             "expression_audio": "",
+            # Secondary-language subtitle line for the sentence (F7). "" = off;
+            # the mapped name is the switch, like sentence_reading.
+            "sentence_translation": "",
         }
     )
     # JP Mining Note-style card-type marker. When card_type is non-empty, an "x"

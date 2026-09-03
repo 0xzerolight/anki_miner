@@ -96,8 +96,9 @@ _SENREN_SIGNATURE = frozenset(
     }
 )
 
-# Lapis and Kiku share every name anki_miner writes; Kiku's two extra fields
-# (RelatedExpression, SentenceTranslation) have no anki_miner counterpart.
+# Lapis and Kiku share every name anki_miner writes except Kiku's
+# SentenceTranslation (the secondary-subtitle field); Kiku's RelatedExpression
+# has no anki_miner counterpart.
 _JPMN_FIELDS: Mapping[str, str] = {
     "word": "Expression",
     "sentence": "Sentence",
@@ -122,6 +123,8 @@ _JPMN_FIELDS: Mapping[str, str] = {
     # MiscInfo is the "where did this come from" slot (Yomitan writes
     # {document-title} there); Lapis renders it at the bottom of the back.
     "source": "MiscInfo",
+    # Lapis has no translation field; Kiku overrides below.
+    "sentence_translation": "",
 }
 
 _JPMN_MARKERS: Mapping[str, str] = {
@@ -181,7 +184,7 @@ KIKU = NotePreset(
     id="kiku",
     name="Kiku",
     url="https://github.com/youyoumu/kiku",
-    fields=_JPMN_FIELDS,
+    fields={**_JPMN_FIELDS, "sentence_translation": "SentenceTranslation"},
     pitch_category_format="romaji",
     card_type_marker_fields=_JPMN_MARKERS,
     supported_card_types=_JPMN_CARD_TYPES,
@@ -217,6 +220,7 @@ SENREN = NotePreset(
         "frequency": "frequencies",
         "frequency_sort": "freqSort",
         "source": "miscInfo",
+        "sentence_translation": "sentenceTranslation",
     },
     pitch_category_format="romaji",
     card_type_marker_fields={

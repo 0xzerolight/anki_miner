@@ -234,6 +234,11 @@ def test_anki_fields_includes_source_default():
     assert cfg.anki_fields["source"] == ""
 
 
+def test_anki_fields_includes_sentence_translation_default():
+    cfg = AnkiMinerConfig()
+    assert cfg.anki_fields["sentence_translation"] == ""
+
+
 def test_secondary_subtitles_default_off():
     assert AnkiMinerConfig().secondary_subtitle_enabled is False
 
