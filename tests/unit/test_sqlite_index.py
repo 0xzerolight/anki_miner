@@ -12,6 +12,7 @@ Covers the two hardening fixes layered onto ``_sqlite_index.py``:
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 import stat as stat_module
 from pathlib import Path
@@ -381,3 +382,224 @@ class TestValidateIndexSchemaCached:
 
         assert _sqlite_index.validate_index_schema_cached(slot / "index.sqlite", "audio") is False
         assert _sqlite_index.validate_index_schema_cached(tmp_path / "absent.sqlite", "audio") is False
+
+
+# ---------------------------------------------------------------------------
+# Rejection reasons. "My dictionary disappeared" is unanswerable while every
+# refusal is a bare ``return None``: the log has to name which slot was dropped
+# and why, or the only remaining diagnosis is a hand-run sqlite3 session.
+# ---------------------------------------------------------------------------
+
+_INDEX_LOGGER = "anki_miner.services._sqlite_index"
+
+
+def _messages(caplog: pytest.LogCaptureFixture, level: int) -> list[str]:
+    return [record.getMessage() for record in caplog.records if record.levelno == level]
+
+
+class TestIndexRejectionReasons:
+    def test_a_schema_mismatch_names_the_found_and_expected_versions(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ):
+        db_path = tmp_path / "index.sqlite"
+        _build_index(
+            db_path,
+            entries=_DICTIONARY_ENTRIES,
+            tags=_DICTIONARY_TAGS,
+            meta={"schema_version": "99"},
+        )
+        expected = _current_schema_version("dictionary")
+
+        with caplog.at_level(logging.WARNING, logger=_INDEX_LOGGER):
+            assert _sqlite_index.validate_index_schema(db_path, "dictionary") is False
+
+        (message,) = _messages(caplog, logging.WARNING)
+        assert message.startswith("Index rejected: ")
+        assert "family=dictionary" in message
+        assert f"path={db_path}" in message
+        assert "reason=schema_mismatch" in message
+        assert "found=99" in message
+        assert f"expected={expected}" in message
+
+    def test_a_dropped_required_column_is_named(self, tmp_path: Path, caplog: pytest.LogCaptureFixture):
+        db_path = tmp_path / "index.sqlite"
+        _build_index(
+            db_path,
+            entries="term TEXT, reading TEXT",
+            tags=None,
+            meta={"schema_version": str(_current_schema_version("frequency"))},
+        )
+
+        with caplog.at_level(logging.WARNING, logger=_INDEX_LOGGER):
+            assert _sqlite_index.validate_index_schema(db_path, "frequency") is False
+
+        (message,) = _messages(caplog, logging.WARNING)
+        assert "reason=missing_columns" in message
+        assert "table=entries" in message
+        assert "columns=" in message
+        assert "rank" in message
+
+    def test_an_unparseable_schema_version_is_meta_unreadable(self, tmp_path: Path, caplog: pytest.LogCaptureFixture):
+        db_path = tmp_path / "index.sqlite"
+        _build_index(db_path, entries=_AUDIO_ENTRIES, tags=None, meta={"schema_version": "x"})
+
+        with caplog.at_level(logging.WARNING, logger=_INDEX_LOGGER):
+            assert _sqlite_index.validate_index_schema(db_path, "audio") is False
+
+        (message,) = _messages(caplog, logging.WARNING)
+        assert "reason=meta_unreadable" in message
+        assert "key=schema_version" in message
+        assert "value=x" in message
+
+    def test_an_absent_index_is_not_a_regular_file(self, tmp_path: Path, caplog: pytest.LogCaptureFixture):
+        with caplog.at_level(logging.WARNING, logger=_INDEX_LOGGER):
+            assert _sqlite_index.validate_index_schema(tmp_path / "gone.sqlite", "pitch") is False
+
+        (message,) = _messages(caplog, logging.WARNING)
+        assert "reason=not_regular_file" in message
+
+    def test_an_unknown_family_is_named(self, tmp_path: Path, caplog: pytest.LogCaptureFixture):
+        with caplog.at_level(logging.WARNING, logger=_INDEX_LOGGER):
+            assert _sqlite_index.validate_index_schema(tmp_path / "gone.sqlite", "nope") is False  # type: ignore[arg-type]
+
+        (message,) = _messages(caplog, logging.WARNING)
+        assert "reason=unsupported_family" in message
+
+    def test_the_sidecar_verdict_reports_the_same_reason(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture, monkeypatch: pytest.MonkeyPatch
+    ):
+        db_path = tmp_path / "index.sqlite"
+        _build_index(db_path, entries=_AUDIO_ENTRIES, tags=None, meta={"schema_version": "999"})
+        _no_sqlite(monkeypatch)
+
+        with caplog.at_level(logging.WARNING, logger=_INDEX_LOGGER):
+            assert _sqlite_index.validate_index_schema_cached(db_path, "audio") is False
+
+        (message,) = _messages(caplog, logging.WARNING)
+        assert "reason=schema_mismatch" in message
+        assert "source=sidecar" in message
+
+    def test_the_ownership_probe_stays_off_the_warning_channel(self, tmp_path: Path, caplog: pytest.LogCaptureFixture):
+        """``prove_owned_slot`` runs per settings row on every repaint, and a
+        foreign directory is its ordinary negative answer — not a user-facing
+        failure, so it must not reach the warning channel."""
+        slot = tmp_path / "foreign"
+        slot.mkdir()
+        _build_index(
+            slot / "index.sqlite",
+            entries=_AUDIO_ENTRIES,
+            tags=None,
+            meta={"schema_version": "999"},
+        )
+
+        with caplog.at_level(logging.DEBUG, logger=_INDEX_LOGGER):
+            assert _sqlite_index.prove_owned_slot(tmp_path, "foreign", "audio") is False
+
+        assert not _messages(caplog, logging.WARNING)
+        assert any("reason=schema_mismatch" in message for message in _messages(caplog, logging.DEBUG))
+
+
+class TestOwnershipMarkerReasons:
+    @staticmethod
+    def _slot(tmp_path: Path) -> Path:
+        slot = tmp_path / "slot"
+        slot.mkdir()
+        return slot
+
+    def test_a_missing_marker_is_debug_not_a_warning(self, tmp_path: Path, caplog: pytest.LogCaptureFixture):
+        slot = self._slot(tmp_path)
+
+        with caplog.at_level(logging.DEBUG, logger=_INDEX_LOGGER):
+            assert _sqlite_index.read_ownership_marker(slot) is None
+
+        assert not _messages(caplog, logging.WARNING)
+        assert any("reason=missing" in message for message in _messages(caplog, logging.DEBUG))
+
+    def test_a_symlinked_marker_is_refused_by_name(self, tmp_path: Path, caplog: pytest.LogCaptureFixture):
+        slot = self._slot(tmp_path)
+        real = tmp_path / "real.json"
+        real.write_text('{"family": "audio", "slot_id": "slot"}', encoding="utf-8")
+        (slot / _sqlite_index._OWNERSHIP_MARKER).symlink_to(real)
+
+        with caplog.at_level(logging.WARNING, logger=_INDEX_LOGGER):
+            assert _sqlite_index.read_ownership_marker(slot) is None
+
+        (message,) = _messages(caplog, logging.WARNING)
+        assert message.startswith("Ownership marker rejected: ")
+        assert "reason=symlink" in message
+
+    @pytest.mark.parametrize(
+        ("payload", "reason"),
+        [
+            ("{not json", "json_error"),
+            ('{"family": "audio"}', "bad_keys"),
+            ('{"family": "nope", "slot_id": "slot"}', "bad_family"),
+            ('{"family": "audio", "slot_id": "../escape"}', "bad_slot_id"),
+        ],
+    )
+    def test_a_malformed_marker_names_its_defect(
+        self, tmp_path: Path, caplog: pytest.LogCaptureFixture, payload: str, reason: str
+    ):
+        slot = self._slot(tmp_path)
+        (slot / _sqlite_index._OWNERSHIP_MARKER).write_text(payload, encoding="utf-8")
+
+        with caplog.at_level(logging.WARNING, logger=_INDEX_LOGGER):
+            assert _sqlite_index.read_ownership_marker(slot) is None
+
+        (message,) = _messages(caplog, logging.WARNING)
+        assert f"reason={reason}" in message
+        assert f"dir={slot}" in message
+
+
+class TestSlotLanguageDefaulted:
+    def test_a_slot_that_cannot_answer_at_all_warns(self, tmp_path: Path, caplog: pytest.LogCaptureFixture):
+        slot = tmp_path / "slot"
+        slot.mkdir()
+
+        with caplog.at_level(logging.DEBUG, logger=_INDEX_LOGGER):
+            assert _sqlite_index.read_slot_language(slot) == "ja"
+
+        (message,) = _messages(caplog, logging.WARNING)
+        assert message.startswith("Slot language defaulted: ")
+        assert f"slot={slot}" in message
+        assert "reason=sidecar_missing" in message
+        assert "language=ja" in message
+
+    def test_a_legacy_unstamped_slot_is_debug_only(self, tmp_path: Path, caplog: pytest.LogCaptureFixture):
+        """Every pre-transition Japanese slot lands here: it is the documented
+        default, not a failure, so it must not reach the warning channel."""
+        _build_index(tmp_path / "index.sqlite", entries=_AUDIO_ENTRIES, tags=None, meta={"schema_version": "2"})
+
+        with caplog.at_level(logging.DEBUG, logger=_INDEX_LOGGER):
+            assert _sqlite_index.read_slot_language(tmp_path) == "ja"
+
+        assert not _messages(caplog, logging.WARNING)
+        assert any("reason=unstamped" in message for message in _messages(caplog, logging.DEBUG))
+
+    def test_a_stamped_slot_logs_nothing(self, tmp_path: Path, caplog: pytest.LogCaptureFixture):
+        _build_index(
+            tmp_path / "index.sqlite",
+            entries=_AUDIO_ENTRIES,
+            tags=None,
+            meta={"schema_version": "2", "language": "zh"},
+        )
+
+        with caplog.at_level(logging.DEBUG, logger=_INDEX_LOGGER):
+            assert _sqlite_index.read_slot_language(tmp_path) == "zh"
+
+        assert not [m for m in _messages(caplog, logging.DEBUG) if "Slot language defaulted" in m]
+
+    def test_an_unreadable_sidecar_warns(self, tmp_path: Path, caplog: pytest.LogCaptureFixture):
+        _build_index(
+            tmp_path / "index.sqlite",
+            entries=_AUDIO_ENTRIES,
+            tags=None,
+            meta={"schema_version": "2", "language": "ko"},
+        )
+        (tmp_path / "meta.json").write_text("{not json", encoding="utf-8")
+
+        with caplog.at_level(logging.DEBUG, logger=_INDEX_LOGGER):
+            assert _sqlite_index.read_slot_language(tmp_path) == "ko"
+
+        (message,) = _messages(caplog, logging.WARNING)
+        assert "reason=sidecar_unreadable" in message

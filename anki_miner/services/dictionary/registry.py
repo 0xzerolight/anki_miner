@@ -14,6 +14,8 @@ from anki_miner.interfaces.dictionary_provider import DictionaryProvider
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
+    log_resource_inventory,
+    meta_int,
     meta_language,
     read_ownership_marker,
     scan_index_root,
@@ -59,20 +61,19 @@ class DictionaryRegistry:
             ),
             warn_label="dictionary",
         )
+        log_resource_inventory(
+            logger,
+            "dictionary",
+            self._root,
+            sorted(self._dicts),
+            sorted(dict_id for dict_id, meta in self._dicts.items() if not meta.schema_ok),
+        )
 
     def _parse_meta(self, child: Path, db: Path, meta: dict[str, str]) -> DictMeta:
         source_name = meta.get("source_name")
         format_name = meta.get("format")
-        raw_version = meta.get("schema_version")
-        raw_count = meta.get("entry_count")
-        try:
-            version = int(raw_version) if isinstance(raw_version, str) else 0
-        except (TypeError, ValueError):
-            version = 0
-        try:
-            count = int(raw_count) if isinstance(raw_count, str) else 0
-        except (TypeError, ValueError):
-            count = 0
+        version = meta_int(logger, child, meta, "schema_version")
+        count = meta_int(logger, child, meta, "entry_count")
         # schema_ok policy: dictionaries require an exact-version match — a
         # mismatch is dropped from the chain and gated for reimport.
         return DictMeta(

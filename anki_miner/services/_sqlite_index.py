@@ -40,6 +40,7 @@ from pathlib import Path, PureWindowsPath
 from typing import Callable, Literal, TypedDict, TypeVar
 
 from anki_miner.utils.atomic_io import atomic_write_path
+from anki_miner.utils.logging_ext import capped, log_summary
 from anki_miner.utils.slug import is_windows_device_basename
 
 logger = logging.getLogger(__name__)
@@ -196,43 +197,83 @@ def write_ownership_marker(directory: Path, slot_id: str, family: StoreFamily) -
 
 
 def read_ownership_marker(directory: Path) -> tuple[StoreFamily, str] | None:
-    """Read a strict ownership marker without following a marker symlink."""
+    """Read a strict ownership marker without following a marker symlink.
+
+    Every refusal names itself. An absent marker is the ordinary answer on the
+    prefilter path (it is consulted only for generated-artifact names), so it
+    stays at DEBUG; a marker that exists but does not parse or does not describe
+    a real slot is a broken file whose directory will be treated as unowned —
+    which decides whether a recovery deletes it, so it is worth a WARNING.
+    """
     marker = directory / _OWNERSHIP_MARKER
+
+    def reject(reason: str, *, level: int = logging.WARNING, **fields: object) -> None:
+        log_summary(
+            logger,
+            "Ownership marker rejected",
+            level=level,
+            dir=directory,
+            marker=marker,
+            reason=reason,
+            **fields,
+        )
+
     try:
-        if marker.is_symlink() or not marker.is_file():
+        if marker.is_symlink():
+            reject("symlink")
+            return None
+        if not marker.is_file():
+            reject("missing", level=logging.DEBUG)
             return None
         payload = json.loads(marker.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError, RecursionError):
+    except (OSError, UnicodeError, json.JSONDecodeError, RecursionError) as exc:
+        reject("json_error", error=type(exc).__name__, detail=str(exc))
         return None
     if not isinstance(payload, dict) or set(payload) != {"family", "slot_id"}:
+        reject("bad_keys", keys=capped(sorted(payload)) if isinstance(payload, dict) else type(payload).__name__)
         return None
     family = payload.get("family")
     slot_id = payload.get("slot_id")
-    if family not in ("dictionary", "frequency", "audio", "pitch") or not isinstance(slot_id, str):
+    if family not in ("dictionary", "frequency", "audio", "pitch"):
+        reject("bad_family", family=family)
+        return None
+    if not isinstance(slot_id, str):
+        reject("bad_slot_id", slot_id=type(slot_id).__name__)
         return None
     try:
         validate_store_id(slot_id)
     except ValueError:
+        reject("bad_slot_id", slot_id=slot_id)
         return None
     return family, slot_id
 
 
-def _supported_schema_version(family: StoreFamily, version: int) -> bool:
+def _family_schema_version(family: StoreFamily) -> int:
+    """The schema version this build writes for *family*.
+
+    Imported lazily per call (each storage module imports back into this one),
+    and exposed on its own so a rejection can report what it expected rather
+    than only that the version was wrong.
+    """
     if family == "dictionary":
         from anki_miner.services.dictionary.storage import SCHEMA_VERSION
 
-        return version == SCHEMA_VERSION
+        return SCHEMA_VERSION
     if family == "frequency":
         from anki_miner.services.frequency.storage import SCHEMA_VERSION
 
-        return version == SCHEMA_VERSION
+        return SCHEMA_VERSION
     if family == "pitch":
         from anki_miner.services.pitch_accent.storage import SCHEMA_VERSION
 
-        return version == SCHEMA_VERSION
+        return SCHEMA_VERSION
     from anki_miner.services.audio_packs.storage import SCHEMA_VERSION
 
-    return version == SCHEMA_VERSION
+    return SCHEMA_VERSION
+
+
+def _supported_schema_version(family: StoreFamily, version: int) -> bool:
+    return version == _family_schema_version(family)
 
 
 # Oldest dictionary index schema this app ever wrote. Ownership proof accepts
@@ -245,8 +286,6 @@ _OLDEST_OWNED_AUDIO_SCHEMA = 1
 
 def _supported_ownership_schema_version(family: StoreFamily, version: int) -> bool:
     if family == "dictionary":
-        from anki_miner.services.dictionary.storage import SCHEMA_VERSION
-
         # A RANGE, never a version pair. Ownership answers "did we write this
         # directory", which stays true for every schema we ever wrote; staleness
         # is a separate question already answered by DictMeta.schema_ok. Pinning
@@ -254,18 +293,12 @@ def _supported_ownership_schema_version(family: StoreFamily, version: int) -> bo
         # every bump — exactly the dictionaries an upgrade needs to repair — so
         # Reimport All would refuse them as missing-source and the user would
         # have to re-add every dictionary by hand.
-        return _OLDEST_OWNED_DICT_SCHEMA <= version <= SCHEMA_VERSION
+        return _OLDEST_OWNED_DICT_SCHEMA <= version <= _family_schema_version(family)
     if family == "frequency":
-        from anki_miner.services.frequency.storage import SCHEMA_VERSION
-
-        return _OLDEST_OWNED_FREQUENCY_SCHEMA <= version <= SCHEMA_VERSION
+        return _OLDEST_OWNED_FREQUENCY_SCHEMA <= version <= _family_schema_version(family)
     if family == "pitch":
-        from anki_miner.services.pitch_accent.storage import SCHEMA_VERSION
-
-        return _OLDEST_OWNED_PITCH_SCHEMA <= version <= SCHEMA_VERSION
-    from anki_miner.services.audio_packs.storage import SCHEMA_VERSION
-
-    return _OLDEST_OWNED_AUDIO_SCHEMA <= version <= SCHEMA_VERSION
+        return _OLDEST_OWNED_PITCH_SCHEMA <= version <= _family_schema_version(family)
+    return _OLDEST_OWNED_AUDIO_SCHEMA <= version <= _family_schema_version(family)
 
 
 def _is_regular_file_nofollow(path: Path) -> bool:
@@ -275,13 +308,51 @@ def _is_regular_file_nofollow(path: Path) -> bool:
         return False
 
 
+def _reject_index(
+    db_path: Path,
+    family: object,
+    reason: str,
+    *,
+    level: int = logging.WARNING,
+    **fields: object,
+) -> None:
+    """Name one refused index. The single spelling of ``Index rejected:``.
+
+    A silent ``return None`` here is what makes "my dictionary disappeared"
+    undiagnosable: the slot is simply gone from the chain, with nothing in the
+    log tying its absence to the version bump or the dropped column that caused
+    it.
+    """
+    log_summary(logger, "Index rejected", level=level, family=family, path=db_path, reason=reason, **fields)
+
+
 def _validated_index_meta_with_policy(
     db_path: Path,
     family: StoreFamily,
     supports_version: Callable[[StoreFamily, int], bool],
+    *,
+    level: int = logging.WARNING,
 ) -> dict[str, str] | None:
-    if family not in ("dictionary", "frequency", "audio", "pitch") or not _is_regular_file_nofollow(db_path):
+    """Return the meta of an index that passes *supports_version*, else ``None``.
+
+    ``level`` is how loudly a refusal is reported. The ownership probe passes
+    DEBUG: ``prove_owned_slot`` runs per settings row on every repaint and asks
+    "is this directory ours", for which "no" is the ordinary answer about a
+    foreign directory — not a user-facing failure.
+    """
+    if family not in ("dictionary", "frequency", "audio", "pitch"):
+        _reject_index(db_path, family, "unsupported_family", level=level)
         return None
+    if not _is_regular_file_nofollow(db_path):
+        _reject_index(db_path, family, "not_regular_file", level=level)
+        return None
+
+    def reject(reason: str, **fields: object) -> None:
+        _reject_index(db_path, family, reason, level=level, **fields)
+
+    def missing(table: str, required: frozenset[str], found: set[str]) -> None:
+        reject("missing_columns", table=table, columns=capped(sorted(required - found)))
+
     try:
         conn = open_readonly(db_path)
         try:
@@ -290,29 +361,41 @@ def _validated_index_meta_with_policy(
                 for key, value in conn.execute("SELECT key, value FROM meta")
                 if isinstance(key, str) and isinstance(value, str)
             }
-            version = int(meta.get("schema_version", ""))
+            raw_version = meta.get("schema_version", "")
+            try:
+                version = int(raw_version)
+            except (TypeError, ValueError):
+                reject("meta_unreadable", key="schema_version", value=raw_version)
+                return None
             if not supports_version(family, version):
+                reject("schema_mismatch", found=version, expected=_family_schema_version(family))
                 return None
             entry_columns = {row[1] for row in conn.execute("PRAGMA table_info(entries)") if isinstance(row[1], str)}
             if family == "dictionary":
                 tag_columns = {row[1] for row in conn.execute("PRAGMA table_info(tags)") if isinstance(row[1], str)}
                 if not entry_columns >= _DICTIONARY_ENTRY_COLUMNS:
+                    missing("entries", _DICTIONARY_ENTRY_COLUMNS, entry_columns)
                     return None
                 if not tag_columns >= _DICTIONARY_TAG_COLUMNS:
+                    missing("tags", _DICTIONARY_TAG_COLUMNS, tag_columns)
                     return None
             elif family == "frequency":
                 required = _FREQUENCY_V1_COLUMNS if version == 1 else _FREQUENCY_V2_COLUMNS
                 if not required <= entry_columns:
+                    missing("entries", required, entry_columns)
                     return None
             elif family == "pitch":
                 if not entry_columns >= _PITCH_ENTRY_COLUMNS:
+                    missing("entries", _PITCH_ENTRY_COLUMNS, entry_columns)
                     return None
             elif not entry_columns >= _AUDIO_ENTRY_COLUMNS:
+                missing("entries", _AUDIO_ENTRY_COLUMNS, entry_columns)
                 return None
             return meta
         finally:
             conn.close()
-    except (OSError, sqlite3.Error, TypeError, ValueError):
+    except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
+        reject("sqlite_error", error=type(exc).__name__, detail=str(exc))
         return None
 
 
@@ -321,7 +404,12 @@ def _validated_index_meta(db_path: Path, family: StoreFamily) -> dict[str, str] 
 
 
 def _validated_ownership_index_meta(db_path: Path, family: StoreFamily) -> dict[str, str] | None:
-    return _validated_index_meta_with_policy(db_path, family, _supported_ownership_schema_version)
+    return _validated_index_meta_with_policy(
+        db_path,
+        family,
+        _supported_ownership_schema_version,
+        level=logging.DEBUG,
+    )
 
 
 def validate_index_schema(db_path: Path, family: StoreFamily) -> bool:
@@ -352,7 +440,11 @@ def validate_index_schema_cached(db_path: Path, family: StoreFamily) -> bool:
     scan. The file check below stays nofollow and runs first, so a symlinked or
     absent index is refused before the sidecar is read at all.
     """
-    if family not in ("dictionary", "frequency", "audio", "pitch") or not _is_regular_file_nofollow(db_path):
+    if family not in ("dictionary", "frequency", "audio", "pitch"):
+        _reject_index(db_path, family, "unsupported_family")
+        return False
+    if not _is_regular_file_nofollow(db_path):
+        _reject_index(db_path, family, "not_regular_file")
         return False
     verdict = _sidecar_schema_verdict(db_path, family)
     if verdict is not None:
@@ -400,22 +492,34 @@ def _sidecar_schema_verdict(db_path: Path, family: StoreFamily) -> bool | None:
 
     # From here the sidecar has proven it can answer, so every exit is a verdict
     # — mirroring _validated_index_meta_with_policy, for which an unreadable
-    # schema_version is invalid rather than a reason to look elsewhere.
+    # schema_version is invalid rather than a reason to look elsewhere. Each
+    # negative verdict is reported with the same reasons the SQLite path uses,
+    # plus source=sidecar: which of the two answered decides whether repairing
+    # the index or republishing its sidecar is the fix.
+    def reject(reason: str, **fields: object) -> bool:
+        _reject_index(db_path, family, reason, level=logging.WARNING, source="sidecar", **fields)
+        return False
+
+    def check(table: str, required: frozenset[str]) -> bool:
+        found = frozenset(columns[table])
+        if required <= found:
+            return True
+        return reject("missing_columns", table=table, columns=capped(sorted(required - found)))
+
+    raw_version = payload.get("schema_version", "")
     try:
-        version = int(payload.get("schema_version", ""))
+        version = int(raw_version)
     except ValueError:
-        return False
+        return reject("meta_unreadable", key="schema_version", value=raw_version)
     if not _supported_schema_version(family, version):
-        return False
-    entry_columns = frozenset(columns["entries"])
+        return reject("schema_mismatch", found=version, expected=_family_schema_version(family))
     if family == "dictionary":
-        return entry_columns >= _DICTIONARY_ENTRY_COLUMNS and frozenset(columns["tags"]) >= _DICTIONARY_TAG_COLUMNS
+        return check("entries", _DICTIONARY_ENTRY_COLUMNS) and check("tags", _DICTIONARY_TAG_COLUMNS)
     if family == "frequency":
-        required = _FREQUENCY_V1_COLUMNS if version == 1 else _FREQUENCY_V2_COLUMNS
-        return required <= entry_columns
+        return check("entries", _FREQUENCY_V1_COLUMNS if version == 1 else _FREQUENCY_V2_COLUMNS)
     if family == "pitch":
-        return entry_columns >= _PITCH_ENTRY_COLUMNS
-    return entry_columns >= _AUDIO_ENTRY_COLUMNS
+        return check("entries", _PITCH_ENTRY_COLUMNS)
+    return check("entries", _AUDIO_ENTRY_COLUMNS)
 
 
 def _prove_owned_directory(directory: Path, slot_id: str, family: StoreFamily) -> bool:
@@ -540,29 +644,65 @@ def read_slot_language(slot_dir: Path, *, sidecar_name: str = _META_SIDECAR) -> 
     from a Chinese session. Never raises: a slot corrupt enough to need repairing
     is exactly the input this has to survive, and "ja" is the same default an
     unstamped legacy slot already gets.
+
+    Which of those two it was decides the level of the report. ``unstamped`` is
+    every pre-transition Japanese slot and stays at DEBUG; a slot that cannot
+    answer at all, or whose sidecar is corrupt, is how a repaired Chinese index
+    comes back Japanese, so it warns.
     """
+
+    def defaulted(reason: str, *, level: int = logging.WARNING, **fields: object) -> str:
+        log_summary(
+            logger,
+            "Slot language defaulted",
+            level=level,
+            slot=slot_dir,
+            reason=reason,
+            language="ja",
+            **fields,
+        )
+        return "ja"
+
+    sidecar_reason = "sidecar_missing"
     try:
         payload = json.loads((slot_dir / sidecar_name).read_text(encoding="utf-8"))
         value = payload.get("language")
         if isinstance(value, str) and value:
             return value
-    except (OSError, ValueError, AttributeError):
+        sidecar_reason = "sidecar_unstamped"
+    except FileNotFoundError:
         pass
+    except (OSError, ValueError, AttributeError) as exc:
+        # Reported even when the database below answers: a corrupt sidecar is
+        # the one case here that hides a stamp the slot actually holds, and the
+        # next reader of that sidecar gets no database to fall back on.
+        log_summary(
+            logger,
+            "Slot language defaulted",
+            level=logging.WARNING,
+            slot=slot_dir,
+            reason="sidecar_unreadable",
+            error=type(exc).__name__,
+            detail=str(exc),
+        )
+        sidecar_reason = "sidecar_unreadable"
 
     db_path = slot_dir / "index.sqlite"
     if not db_path.is_file():
-        return "ja"
+        return defaulted(sidecar_reason, db=db_path)
     try:
         conn = sqlite3.connect(readonly_sqlite_uri(db_path), uri=True)
-    except (OSError, ValueError, sqlite3.Error):
-        return "ja"
+    except (OSError, ValueError, sqlite3.Error) as exc:
+        return defaulted("db_unreadable", error=type(exc).__name__, detail=str(exc))
     try:
         row = conn.execute("SELECT value FROM meta WHERE key = 'language'").fetchone()
-    except sqlite3.Error:
-        return "ja"
+    except sqlite3.Error as exc:
+        return defaulted("db_unreadable", error=type(exc).__name__, detail=str(exc))
     finally:
         conn.close()
-    return row[0] if row and isinstance(row[0], str) and row[0] else "ja"
+    if row and isinstance(row[0], str) and row[0]:
+        return row[0]
+    return defaulted("unstamped", level=logging.DEBUG)
 
 
 class LanguageKwarg(TypedDict, total=False):
@@ -730,6 +870,50 @@ def open_readonly(db_path: Path) -> sqlite3.Connection:
         conn.close()
         raise
     return conn
+
+
+def meta_int(log: logging.Logger, slot_dir: Path, meta: dict[str, str], key: str, default: int = 0) -> int:
+    """Parse one integer meta value, naming it when it has to be defaulted.
+
+    The four registries all swallowed a malformed ``schema_version`` /
+    ``entry_count`` into ``0``, which then reads exactly like an absent key: the
+    slot drops out of its chain as schema-stale and nothing says the value was
+    there but unparseable. An absent key is the documented legacy case and stays
+    quiet; a present-but-unparseable one is reported.
+    """
+    raw = meta.get(key)
+    if raw is None:
+        return default
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        log_summary(log, "Index meta invalid", level=logging.WARNING, dir=slot_dir, key=key, value=raw)
+        return default
+
+
+def log_resource_inventory(
+    log: logging.Logger,
+    family: str,
+    root: Path,
+    ids: list[str],
+    schema_bad: list[str],
+) -> None:
+    """Report what one registry ``load()`` found. One line, per family.
+
+    ``load()`` runs at boot and again after every import, which makes this the
+    line that answers "did my pack actually appear?" — and the line that names a
+    slot present on disk but schema-stale before the chain build silently drops
+    it.
+    """
+    log_summary(
+        log,
+        "Resource inventory",
+        family=family,
+        root=root,
+        count=len(ids),
+        schema_bad=capped(schema_bad),
+        ids=capped(ids),
+    )
 
 
 def scan_index_root(

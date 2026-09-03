@@ -24,6 +24,8 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages.registry import config_language
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
+    log_resource_inventory,
+    meta_int,
     meta_language,
     read_ownership_marker,
     scan_index_root,
@@ -71,20 +73,19 @@ class PitchSourceRegistry:
             ),
             warn_label="pitch source",
         )
+        log_resource_inventory(
+            logger,
+            "pitch",
+            self._root,
+            sorted(self._sources),
+            sorted(source_id for source_id, meta in self._sources.items() if not meta.schema_ok),
+        )
 
     def _parse_meta(self, child: Path, db: Path, meta: dict[str, str]) -> PitchSourceMeta:
         source_name = meta.get("source_name")
         format_name = meta.get("format")
-        raw_version = meta.get("schema_version")
-        raw_count = meta.get("entry_count")
-        try:
-            version = int(raw_version) if isinstance(raw_version, str) else 0
-        except (TypeError, ValueError):
-            version = 0
-        try:
-            count = int(raw_count) if isinstance(raw_count, str) else 0
-        except (TypeError, ValueError):
-            count = 0
+        version = meta_int(logger, child, meta, "schema_version")
+        count = meta_int(logger, child, meta, "entry_count")
         return PitchSourceMeta(
             source_id=child.name,
             source_name=source_name if isinstance(source_name, str) else child.name,
