@@ -13,6 +13,7 @@ which commits its own config, so arming the autosave debounce here would save
 the pre-switch panel state on top of it.
 """
 
+import logging
 from dataclasses import dataclass
 
 from PyQt6.QtCore import pyqtSignal
@@ -31,6 +32,9 @@ from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.pack_spec import LanguagePack
 from anki_miner.languages.registry import config_language
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
+
+logger = logging.getLogger(__name__)
 
 
 def pack_already_importable(pack: LanguagePack) -> bool:
@@ -40,6 +44,12 @@ def pack_already_importable(pack: LanguagePack) -> bool:
     no pack at all, and offering it a download would be noise. Module-level so
     the rows can be probed (and stubbed) without importing an engine —
     ``find_spec`` answers without executing one.
+
+    A clean ``None`` is the ordinary "not installed here" answer and stays
+    silent; a *raising* probe is not. It means a half-installed or shadowed
+    package on this machine, and it is the shape behind "the language vanished
+    from the picker" — the row looks identical either way, so the log is the
+    only place the difference survives.
     """
     from importlib.util import find_spec
 
@@ -49,7 +59,15 @@ def pack_already_importable(pack: LanguagePack) -> bool:
         try:
             if find_spec(comp.import_name) is None:
                 return False
-        except (ImportError, ValueError):
+        except (ImportError, ValueError) as error:
+            log_summary(
+                logger,
+                "Language unavailable in picker",
+                level=logging.WARNING,
+                code=pack.code,
+                component=comp.import_name,
+                error=f"{type(error).__name__}: {error}",
+            )
             return False
     return True
 

@@ -8,6 +8,7 @@ not editable here — only counted for context.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from pathlib import Path
 
@@ -44,6 +45,9 @@ from anki_miner.services.known_words_import import (
     parse_known_words_file,
 )
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
+
+logger = logging.getLogger(__name__)
 
 
 class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
@@ -289,6 +293,13 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
+        log_summary(
+            logger,
+            "Confirm",
+            action="import_known_words",
+            answer="yes" if reply == QMessageBox.StandardButton.Yes else "no",
+            scope=f"{outcome.format_key} {len(outcome.words)} words",
+        )
         if reply != QMessageBox.StandardButton.Yes:
             return
         added, already = self.apply_import(outcome)
@@ -393,6 +404,13 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
+        )
+        log_summary(
+            logger,
+            "Confirm",
+            action="reset_user_known_words",
+            answer="yes" if reply == QMessageBox.StandardButton.Yes else "no",
+            scope=f"{self.word_list.count()} words",
         )
         if reply == QMessageBox.StandardButton.Yes:
             self._db.clear_user()

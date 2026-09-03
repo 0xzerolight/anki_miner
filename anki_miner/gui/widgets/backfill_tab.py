@@ -71,6 +71,7 @@ from anki_miner.services.card_backfiller import (
     BackfillPlan,
     BackfillResult,
 )
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -756,6 +757,13 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
             ).format(notes=len(plan.notes), fields=plan.total_field_changes, tag=BACKFILL_TAG),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
+        )
+        log_summary(
+            logger,
+            "Confirm",
+            action="backfill_apply",
+            answer="yes" if answer == QMessageBox.StandardButton.Yes else "no",
+            scope=f"{len(plan.notes)} notes, {plan.total_field_changes} fields",
         )
         if answer != QMessageBox.StandardButton.Yes:
             return
