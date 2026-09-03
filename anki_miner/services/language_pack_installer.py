@@ -125,9 +125,22 @@ def load_pack(code: str) -> LanguagePack | None:
     module_name = f"anki_miner.languages.{code}.pack"
     try:
         if find_spec(module_name) is None:
+            # A clean absence: this language ships no pack (ja) or the code is
+            # not one of ours. Nothing is wrong, so nothing is warned about.
+            logger.debug("Language pack manifest absent: code=%s", code)
             return None
         module = importlib.import_module(module_name)
-    except (ImportError, ValueError, TypeError):
+    except (ImportError, ValueError, TypeError) as exc:
+        # A RAISING probe is the other diagnosis: the manifest is there and
+        # unimportable, which silently downgrades an installed pack to "not
+        # installed" everywhere this None is consumed.
+        log_summary(
+            logger,
+            "Language module probe failed",
+            level=logging.WARNING,
+            module=module_name,
+            exc=f"{type(exc).__name__}: {exc}",
+        )
         return None
     pack = getattr(module, "PACK", None)
     return pack if isinstance(pack, LanguagePack) else None
@@ -658,16 +671,23 @@ def ensure_language_packs_on_syspath() -> None:
     the app from starting, so nothing here raises.
     """
     appended = False
+    # The root under consideration when something goes wrong: without it the
+    # failure names no subject, and "an installed pack is not importable" is
+    # unanswerable without knowing which folder was being injected.
+    current_root: Path | None = None
     try:
         for code in AVAILABLE_LANGUAGES:
+            current_root = None
             pack = load_pack(code)
             if pack is None or not pack_supported(code):
                 continue
             root = language_pack_root(code)
+            current_root = root
             if any(_component_complete(root, comp) for comp in pack.components):
                 appended |= _append_to_syspath(root)
 
         legacy_root = legacy_ko_model_root()
+        current_root = legacy_root
         legacy_pack = load_pack(_LEGACY_KO_CODE)
         legacy_comp = (
             next((c for c in legacy_pack.components if c.import_name == _LEGACY_KO_COMPONENT), None)
@@ -681,5 +701,14 @@ def ensure_language_packs_on_syspath() -> None:
             importlib.invalidate_caches()
     except MemoryError:
         raise  # never degrade a real allocation failure (service_factory.py policy)
-    except Exception as exc:  # noqa: BLE001  (best-effort; a path problem must not abort boot)
-        logger.debug("Language pack syspath injection skipped: exc=%s", type(exc).__name__)
+    except Exception as exc:  # noqa: BLE001 — bucket: best-effort boot; a path problem must not abort startup
+        # WARNING, not DEBUG: every downstream symptom of this is the language
+        # reporting itself uninstalled after the user installed it, and the
+        # injection is the only step between the two.
+        log_summary(
+            logger,
+            "Language pack syspath injection failed",
+            level=logging.WARNING,
+            root=current_root,
+            exc=f"{type(exc).__name__}: {exc}",
+        )

@@ -36,6 +36,7 @@ into one unanalysable NNG.
 
 from __future__ import annotations
 
+import logging
 import sys
 from collections.abc import Iterable
 from importlib.util import find_spec
@@ -44,6 +45,9 @@ from typing import Any
 from anki_miner.languages.ko.availability import KO_FROZEN_MODEL_REASON, KO_MODEL_DOWNLOAD_HINT
 from anki_miner.languages.token import LanguageToken
 from anki_miner.services.tagger import LockedTagger
+from anki_miner.utils.logging_ext import log_summary
+
+logger = logging.getLogger(__name__)
 
 #: kiwi's own synthetic coda tag - never mined, never emitted (see docstring).
 Z_CODA_TAG = "Z_CODA"
@@ -73,7 +77,17 @@ def resolve_model_path() -> str | None:
     """
     try:
         package_present = find_spec("kiwipiepy_model") is not None
-    except (ImportError, ValueError):
+    except (ImportError, ValueError) as exc:
+        # A raising probe means the model package IS installed and broken. The
+        # ladder still falls through to the pack, but the user whose pip model
+        # silently stopped counting needs the reason recorded.
+        log_summary(
+            logger,
+            "Language module probe failed",
+            level=logging.WARNING,
+            module="kiwipiepy_model",
+            exc=f"{type(exc).__name__}: {exc}",
+        )
         package_present = False
     if package_present:
         return None

@@ -8,8 +8,13 @@ always happens.
 
 from __future__ import annotations
 
+import logging
 import threading
 from typing import Any
+
+from anki_miner.utils.logging_ext import log_summary
+
+logger = logging.getLogger(__name__)
 
 _TAGGERS: dict[str, Any] = {}
 _LOCK = threading.Lock()
@@ -37,7 +42,21 @@ def _build(language: str) -> Any:
         # tells callers to write.
         return module.build_tagger()
     except ImportError as exc:
-        raise ValueError(f"No tokenizer registered for language: {language!r}") from exc
+        # Two very different installs land here: a language that ships no
+        # tokenizer at all, and one whose engine is present but unimportable (a
+        # missing shared library, a half-extracted pack). The flat sentence
+        # stays - every caller handles this ValueError - but the import failure
+        # now travels inside it, and is recorded even where a caller swallows
+        # the exception to fall back.
+        detail = f"{type(exc).__name__}: {exc}"
+        log_summary(
+            logger,
+            "Language module probe failed",
+            level=logging.WARNING,
+            module=f"anki_miner.languages.{language}.tokenizer",
+            exc=detail,
+        )
+        raise ValueError(f"No tokenizer registered for language: {language!r} ({detail})") from exc
 
 
 def get_tagger(language: str = "ja") -> Any:
