@@ -180,5 +180,92 @@ class TestDisplayAndGlFields:
         assert snapshot.gpu_drivers.startswith("<unavailable:")
 
 
+class TestVersionFields:
+    """Package + external-tool versions.
+
+    Diagnoses a stale yt-dlp, a bundle missing ``unidic-lite``, an ffmpeg build
+    without an encoder, and mismatched ASR version pairs — none of which the
+    resolved *paths* alone can distinguish.
+    """
+
+    def test_absent_packages_render_absent(self, monkeypatch):
+        from importlib.metadata import PackageNotFoundError
+
+        from anki_miner.diagnostics import environment as env_module
+
+        monkeypatch.setattr(env_module.metadata, "version", _raising(PackageNotFoundError("nope")))
+        packages = collect_environment(create_default_config()).packages
+        for name in env_module._PACKAGE_NAMES:
+            assert f"{name}=<absent>" in packages
+
+    def test_package_probe_failure_renders_unavailable(self, monkeypatch):
+        from anki_miner.diagnostics import environment as env_module
+
+        monkeypatch.setattr(env_module.metadata, "version", _raising(OSError("metadata unreadable")))
+        packages = collect_environment(create_default_config()).packages
+        assert "PyQt6=<unavailable: OSError>" in packages
+
+    def test_tool_version_timeout_is_recorded_not_raised(self, monkeypatch):
+        from anki_miner.diagnostics import environment as env_module
+
+        monkeypatch.setattr(env_module, "resolve_ffmpeg", lambda _config: "/usr/bin/ffmpeg")
+        monkeypatch.setattr(env_module, "resolve_ffprobe", lambda _config: "/usr/bin/ffprobe")
+        monkeypatch.setattr(env_module, "resolve_ytdlp", lambda _config: "/usr/bin/yt-dlp")
+        monkeypatch.setattr(env_module, "resolve_alass", lambda _config: "/usr/bin/alass")
+        monkeypatch.setattr(
+            env_module.subprocess,
+            "run",
+            _raising(subprocess.TimeoutExpired(cmd="ffmpeg", timeout=5)),
+        )
+
+        snapshot = collect_environment(create_default_config())
+
+        assert snapshot.ffmpeg_version == "<unavailable: TimeoutExpired>"
+        assert snapshot.ffprobe_version == "<unavailable: TimeoutExpired>"
+        assert snapshot.ytdlp_version == "<unavailable: TimeoutExpired>"
+        assert snapshot.alass_version == "<unavailable: TimeoutExpired>"
+
+    def test_tool_version_takes_the_first_non_empty_output_line(self, monkeypatch):
+        from anki_miner.diagnostics import environment as env_module
+
+        monkeypatch.setattr(env_module, "resolve_ffmpeg", lambda _config: "/usr/bin/ffmpeg")
+        monkeypatch.setattr(env_module, "resolve_ytdlp", lambda _config: "/usr/bin/yt-dlp")
+        calls: list[list[str]] = []
+
+        def fake_run(argv, **_kwargs):
+            calls.append(list(argv))
+            if argv[0].endswith("yt-dlp"):
+                return subprocess.CompletedProcess(argv, 0, stdout="", stderr="\n2025.09.01\n")
+            return subprocess.CompletedProcess(argv, 0, stdout="\nffmpeg version 7.1\nbuilt with gcc\n", stderr="")
+
+        monkeypatch.setattr(env_module.subprocess, "run", fake_run)
+        snapshot = collect_environment(create_default_config())
+
+        assert snapshot.ffmpeg_version == "ffmpeg version 7.1"
+        assert snapshot.ytdlp_version == "2025.09.01"
+        assert ["/usr/bin/ffmpeg", "-version"] in calls
+        assert ["/usr/bin/yt-dlp", "--version"] in calls
+
+    def test_unresolved_tool_is_never_spawned(self, monkeypatch):
+        from anki_miner.diagnostics import environment as env_module
+
+        monkeypatch.setattr(env_module, "resolve_ffmpeg", lambda _config: "")
+        monkeypatch.setattr(env_module, "resolve_ffprobe", _raising(FileNotFoundError("no ffprobe")))
+        monkeypatch.setattr(env_module, "resolve_ytdlp", lambda _config: "")
+        monkeypatch.setattr(env_module, "resolve_alass", lambda _config: "")
+        monkeypatch.setattr(env_module.subprocess, "run", _raising(AssertionError("must not spawn")))
+
+        snapshot = collect_environment(create_default_config())
+
+        assert snapshot.ffmpeg_version == ""
+        assert snapshot.ffprobe_version == ""
+
+    def test_version_fields_are_rendered(self, monkeypatch):
+        monkeypatch.setattr("anki_miner.diagnostics.environment.subprocess.run", _raising(OSError("no spawn")))
+        lines = format_environment_lines(collect_environment(create_default_config()))
+        rendered = {line.split(":", 1)[0] for line in lines}
+        assert {"packages", "ffmpeg_version", "ffprobe_version", "ytdlp_version", "alass_version"} <= rendered
+
+
 def _boom():
     raise RuntimeError("probe failed")
