@@ -207,7 +207,10 @@ def _install_child_log_sink() -> None:
 
         install_process_log_hooks()
     except Exception:  # noqa: BLE001 — bucket: child logging is optional, the sync it was spawned for is not
-        pass
+        # No sink could be attached, so this reaches ``logging.lastResort`` (stderr),
+        # which the parent's supervised stderr tail records — the one place the
+        # failure can still be seen.
+        logging.getLogger(__name__).warning("Child log sink unavailable; continuing without one", exc_info=True)
 
 
 def _create_windows_app_mutex() -> None:
