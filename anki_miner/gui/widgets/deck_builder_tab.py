@@ -196,14 +196,14 @@ class DeckBuilderTab(MiningTabBase):
 
         self.top_n_spinbox = QSpinBox()
         self.top_n_spinbox.setRange(1, 100_000)
-        self.top_n_spinbox.setValue(1000)
+        # Value seeded from config in _seed_selection_controls.
         self.top_n_spinbox.setSuffix(self.tr(" words"))
         self.top_n_spinbox.setToolTip(self.tr("Include the N most-frequent lemmas"))
         value_row.addWidget(self.top_n_spinbox)
 
         self.coverage_spinbox = QDoubleSpinBox()
         self.coverage_spinbox.setRange(1.0, 100.0)
-        self.coverage_spinbox.setValue(90.0)
+        # Value seeded from config in _seed_selection_controls.
         self.coverage_spinbox.setDecimals(1)
         self.coverage_spinbox.setSuffix(" %")
         self.coverage_spinbox.setToolTip(self.tr("Include enough words to cover this percentage of tokens"))
@@ -214,16 +214,25 @@ class DeckBuilderTab(MiningTabBase):
         layout.addLayout(value_row)
 
         self.mode_combo.currentIndexChanged.connect(self._on_mode_changed)
-        # Trigger once to set initial visibility (index 0 = ALL → hide both)
-        self._on_mode_changed(0)
 
         # Collection filter
         self.collection_filter_checkbox = QCheckBox(self.tr("Skip words already in my Anki collection"))
-        self.collection_filter_checkbox.setChecked(True)
         self.collection_filter_checkbox.setToolTip(
             self.tr("Checked: skip your known words; unchecked: mine every word.")
         )
         layout.addWidget(self.collection_filter_checkbox)
+
+        # Seed all four from the remembered config, then persist a user edit.
+        # The seed also runs _on_mode_changed, which is what sets the initial
+        # value-widget visibility (it used to be a bare _on_mode_changed(0)).
+        self._seed_selection_controls()
+        self.top_n_spinbox.valueChanged.connect(lambda value: self.persist_run_options(deck_builder_top_n=value))
+        self.coverage_spinbox.valueChanged.connect(
+            lambda value: self.persist_run_options(deck_builder_coverage_pct=value)
+        )
+        self.collection_filter_checkbox.toggled.connect(
+            lambda checked: self.persist_run_options(deck_builder_skip_known=checked)
+        )
 
         group.setLayout(layout)
         return group
@@ -319,11 +328,31 @@ class DeckBuilderTab(MiningTabBase):
     # Slot: mode combo change
     # ------------------------------------------------------------------
 
+    def _seed_selection_controls(self) -> None:
+        """Seed the four selection controls from the remembered config.
+
+        The visibility pass runs outside the guard: which value widget is shown
+        follows the mode and is not persisted state of its own, so a restored
+        Top N mode has to open with its spinbox already visible.
+        """
+        with self.seeding():
+            index = self.mode_combo.findData(DeckSelectionMode(self.config.deck_builder_mode))
+            if index >= 0:
+                self.mode_combo.setCurrentIndex(index)
+            self.top_n_spinbox.setValue(self.config.deck_builder_top_n)
+            self.coverage_spinbox.setValue(self.config.deck_builder_coverage_pct)
+            self.collection_filter_checkbox.setChecked(self.config.deck_builder_skip_known)
+        self._on_mode_changed(self.mode_combo.currentIndex())
+
     def _on_mode_changed(self, index: int) -> None:
         """Show/hide the value input appropriate for the selected mode."""
         mode = self.mode_combo.itemData(index)
         self.top_n_spinbox.setVisible(mode == DeckSelectionMode.TOP_N)
         self.coverage_spinbox.setVisible(mode == DeckSelectionMode.COVERAGE_PCT)
+        # itemData is None for an out-of-range index, which a combo can report
+        # while it is still being populated.
+        if mode is not None:
+            self.persist_run_options(deck_builder_mode=mode.value)
 
     # ------------------------------------------------------------------
     # Slot: video folder auto-fill
@@ -626,6 +655,7 @@ class DeckBuilderTab(MiningTabBase):
 
     def update_config(self, config: AnkiMinerConfig) -> None:
         self.config = config
+        self._seed_selection_controls()
 
     def release_dictionary_resources(self) -> bool:
         """Close sqlite handles cached by the most recent build (Issue #30/#32).
