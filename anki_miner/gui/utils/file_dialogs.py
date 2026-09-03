@@ -37,6 +37,12 @@ A cancelled picker deliberately does **not** invoke ``on_done``. Its
 continuations start import workers and touch panels that are already being torn
 down; there is nothing useful left to continue into. Do not "fix" this.
 
+Every picker writes one receipt when it settles, naming the caption that asked,
+the screen that owns it, the outcome, and the value. Because the result arrives
+by callback, a log otherwise records only what the continuation did with the
+file -- never which file the user chose, and never that a picker was silenced
+instead of answered.
+
 The native/non-native choice is module-level state rather than a parameter:
 many call sites (e.g. ``FileSelector``) have no config access, and the setting
 is a pure UI preference. Seeded at startup (``gui/app.py``) and re-seeded on
@@ -45,6 +51,7 @@ every config commit (``MainWindow.update_config``).
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import Any
 
@@ -52,6 +59,9 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QFileDialog, QWidget
 
 from anki_miner.gui.utils.qt_helpers import widget_alive
+from anki_miner.utils.logging_ext import capped, log_summary
+
+logger = logging.getLogger(__name__)
 
 _use_native = True
 
@@ -79,7 +89,7 @@ def _options(base: QFileDialog.Option = _NO_OPTIONS) -> QFileDialog.Option:
 class _Picker:
     """One live picker: the dialog, who owns it, and what to do with the result."""
 
-    __slots__ = ("dialog", "parent", "on_done", "empty", "silenced")
+    __slots__ = ("dialog", "parent", "on_done", "empty", "silenced", "caption")
 
     def __init__(
         self,
@@ -87,12 +97,16 @@ class _Picker:
         parent: QWidget | None,
         on_done: Callable[[Any], None],
         empty: Any,
+        caption: str = "",
     ) -> None:
         self.dialog = dialog
         self.parent = parent
         self.on_done = on_done
         self.empty = empty
         self.silenced = False
+        # Kept here rather than read back off the dialog: the receipt is written
+        # from a `finished` slot that can outlive the dialog's C++ object.
+        self.caption = caption
 
     def value(self, code: int) -> Any:
         """The picked value, or the empty value when the user cancelled."""
@@ -127,6 +141,18 @@ def _finish(entry: _Picker, code: int) -> None:
     _drop(entry)
     silenced = entry.silenced
     value = None if silenced else entry.value(code)
+    accepted = code == int(QDialog.DialogCode.Accepted)
+    # Logged before the early returns below: a silenced picker and one whose
+    # owner died are exactly the cases where nothing downstream records that a
+    # file was ever chosen.
+    log_summary(
+        logger,
+        "File picker",
+        caption=entry.caption,
+        parent=None if entry.parent is None else type(entry.parent).__name__,
+        outcome="silenced" if silenced else ("accepted" if accepted else "cancelled"),
+        value=capped(value) if isinstance(value, list) else value,
+    )
     if widget_alive(entry.dialog):
         entry.dialog.deleteLater()
     if silenced:
@@ -145,10 +171,11 @@ def _launch(
     parent: QWidget | None,
     on_done: Callable[[Any], None],
     empty: Any,
+    caption: str = "",
 ) -> QFileDialog:
     """Register, wire the lifetime signals, and show ``dialog`` non-modally."""
     dialog.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, False)
-    entry = _Picker(dialog, parent, on_done, empty)
+    entry = _Picker(dialog, parent, on_done, empty, caption)
     _live.append(entry)
     dialog.finished.connect(lambda code: _finish(entry, code))
     if parent is not None:
@@ -171,6 +198,7 @@ def cancel_all_pickers() -> None:
     outlive the main window, and its continuation would land in a
     half-torn-down application.
     """
+    logger.debug("File picker cancel_all: count=%d", len(_live))
     for entry in list(_live):
         entry.cancel()
 
@@ -187,7 +215,7 @@ def pick_open_file(
     dialog = QFileDialog(parent, caption, directory, filter)
     dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
     dialog.setOptions(_options())
-    return _launch(dialog, parent, on_done, "")
+    return _launch(dialog, parent, on_done, "", caption)
 
 
 def pick_open_files(
@@ -202,7 +230,7 @@ def pick_open_files(
     dialog = QFileDialog(parent, caption, directory, filter)
     dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
     dialog.setOptions(_options())
-    return _launch(dialog, parent, on_done, [])
+    return _launch(dialog, parent, on_done, [], caption)
 
 
 def pick_save_file(
@@ -223,7 +251,7 @@ def pick_save_file(
     dialog.setFileMode(QFileDialog.FileMode.AnyFile)
     dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
     dialog.setOptions(_options())
-    return _launch(dialog, parent, on_done, "")
+    return _launch(dialog, parent, on_done, "", caption)
 
 
 def pick_directory(
@@ -242,4 +270,4 @@ def pick_directory(
     dialog = QFileDialog(parent, caption, directory)
     dialog.setFileMode(QFileDialog.FileMode.Directory)
     dialog.setOptions(_options(QFileDialog.Option.ShowDirsOnly))
-    return _launch(dialog, parent, on_done, "")
+    return _launch(dialog, parent, on_done, "", caption)

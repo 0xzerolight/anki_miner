@@ -11,11 +11,18 @@ Two reusable primitives back the GUI-freeze-hardening effort:
 Slots connected here run on the GUI thread: the worker is parented to a
 GUI-thread :class:`QObject`, so Qt queues its cross-thread signals onto the
 receiver's (GUI) thread.
+
+Every dispatch is named. :func:`describe_work` turns the parent object and the
+blocking callable into one ``Parent.work`` identity that becomes the worker's
+log context and thread name, so its start receipt and any failure name a call
+site. Without it every dispatch logs as an anonymous ``SingleCallWorker`` -- the
+same line for the analytics refresh, an ffprobe, and a registry scan -- and "the
+button does nothing" cannot be traced back to a callable.
 """
 
 from __future__ import annotations
 
-import contextlib
+import functools
 import logging
 from collections.abc import Callable
 from typing import TypeVar
@@ -23,6 +30,7 @@ from typing import TypeVar
 from PyQt6.QtCore import QObject, QThread
 
 from anki_miner.gui.workers.base_worker import SingleCallWorker
+from anki_miner.utils.logging_ext import capped, log_summary, suppressed
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +53,58 @@ _DISPATCH_CLOSED_ATTR = "_off_thread_dispatch_closed"
 # discard is a queued slot delivered on the GUI thread. That single-thread
 # access is why the bare set needs no lock.
 _LIVE_OFF_THREAD_WORKERS: set[QThread] = set()
+
+# Depth guard for partial-unwrapping: a hand-built cycle of partials must not
+# spin forever inside a logging helper.
+_MAX_PARTIAL_DEPTH = 8
+
+
+def _callable_name(work: object) -> str:
+    """Return the most specific readable name for ``work``.
+
+    ``functools.partial`` wrappers are unwrapped to the callable they bind,
+    since a partial has no name of its own. Enclosing-scope noise is dropped
+    from a qualified name (``test_x.<locals>.load_decks`` -> ``load_decks``),
+    and a callable object with neither ``__qualname__`` nor ``__name__`` falls
+    back to its type.
+    """
+    target = work
+    for _ in range(_MAX_PARTIAL_DEPTH):
+        if not isinstance(target, functools.partial):
+            break
+        target = target.func
+    name = getattr(target, "__qualname__", None) or getattr(target, "__name__", None)
+    if not name:
+        return type(target).__name__
+    if "<locals>." in name:
+        name = name.rsplit("<locals>.", 1)[1]
+    return str(name)
+
+
+def describe_work(work: object, parent: object) -> str:
+    """Return the ``Parent.work`` identity used as a dispatch's log context.
+
+    The parent type is the prefix because the callable alone is rarely enough:
+    much of the app's off-thread work is a one-line lambda or a helper named
+    ``_scan``. A bound method whose qualified name already starts with the
+    parent's class is not prefixed twice.
+    """
+    name = _callable_name(work)
+    parent_name = type(parent).__name__
+    if name == parent_name or name.startswith(f"{parent_name}."):
+        return name
+    return f"{parent_name}.{name}"
+
+
+def worker_context(worker: object) -> str:
+    """Return a worker's log context, falling back to its class name.
+
+    Workers dispatched through :func:`run_off_thread` carry the
+    :func:`describe_work` identity in ``_context``; workers constructed
+    directly do not, and their class name is the best label available.
+    """
+    context = getattr(worker, "_context", None)
+    return str(context) if context else type(worker).__name__
 
 
 def run_off_thread(
@@ -83,16 +143,27 @@ def run_off_thread(
         cancelled worker that never started. ``on_done`` will never fire.
         Callers must treat this return value as a no-op.
     """
+    context = describe_work(work, parent)
     worker = SingleCallWorker(
         work,
         error_prefix=error_prefix,
         pass_cancel_check=pass_cancel_check,
+        context=context,
         parent=parent,
     )
 
     if _dispatch_closed(parent):
         worker.cancel()
-        logger.debug("off-thread dispatch rejected during shutdown")
+        # WARNING, not DEBUG: the continuation never runs, so whatever the user
+        # clicked silently did nothing. Naming the parent and the work is what
+        # turns that report into a call site.
+        log_summary(
+            logger,
+            "Off-thread dispatch rejected during shutdown",
+            level=logging.WARNING,
+            parent=type(parent).__name__,
+            work=_callable_name(work),
+        )
         return worker
 
     worker.result_ready.connect(on_done)
@@ -101,7 +172,7 @@ def run_off_thread(
         # type deserves; a second record here only duplicated it (and paired a
         # WARNING with a spurious traceback for a typed domain failure). Kept at
         # DEBUG so "nobody handled this" is still visible.
-        worker.error.connect(lambda msg: logger.debug("off-thread work failed, no handler: %s", msg))
+        worker.error.connect(lambda msg: logger.debug("off-thread work failed, no handler: %s: %s", context, msg))
     else:
         worker.error.connect(on_error)
     if on_finished is not None:
@@ -117,8 +188,8 @@ def run_off_thread(
         # The worker's underlying C++ object may already be destroyed (e.g. the
         # parent widget was torn down while the work was still in flight, so Qt
         # deleted the child worker before this queued slot ran). Nothing left to
-        # schedule for deletion in that case — suppress the RuntimeError.
-        with contextlib.suppress(RuntimeError):
+        # schedule for deletion in that case — record it and carry on.
+        with suppressed(logger, f"deleteLater for {context}"):
             worker.deleteLater()
 
     # finished fires after result_ready/error, so result/error and the optional
@@ -194,6 +265,46 @@ def join_worker(worker: QThread | None, timeout_ms: int = 2000) -> bool:
     return join_or_retain(worker, timeout_ms) is None
 
 
+def _wrapper_deleted(worker: QThread) -> bool:
+    """Whether ``worker``'s underlying C++ object is already gone.
+
+    Probed explicitly rather than left to the ``except RuntimeError`` arms
+    below: :func:`join_worker` swallows the RuntimeError internally and reports
+    the worker as stopped, so those arms alone would drop a deleted worker with
+    no record at all. The redundant ``except`` stays as the belt for a
+    RuntimeError raised anywhere else in the loop body.
+    """
+    try:
+        worker.isRunning()
+    except RuntimeError:
+        return True
+    return False
+
+
+def _log_deleted_worker(worker: QThread) -> None:
+    """Record that a tracked worker's wrapper was already destroyed."""
+    logger.debug("Off-thread worker already deleted: context=%s", worker_context(worker))
+
+
+def _log_laggards(laggards: list[QThread], **fields: object) -> None:
+    """Warn once per join call about the workers that outlived their timeout.
+
+    One line, not one per worker: a shutdown join can hold a dozen of them and
+    the count plus the contexts is the whole diagnosis. The contexts are what
+    make "the app took ten seconds to close" attributable.
+    """
+    if not laggards:
+        return
+    log_summary(
+        logger,
+        "Off-thread workers still running",
+        level=logging.WARNING,
+        count=len(laggards),
+        workers=capped(worker_context(worker) for worker in laggards),
+        **fields,
+    )
+
+
 def join_tracked_workers(parent: QObject, timeout_ms: int = 2000) -> list[QThread]:
     """Join all workers tracked on ``parent`` at teardown, best-effort.
 
@@ -214,14 +325,19 @@ def join_tracked_workers(parent: QObject, timeout_ms: int = 2000) -> list[QThrea
 
     for worker in list(registry):
         try:
-            if join_worker(worker, timeout_ms):
+            if _wrapper_deleted(worker):
+                registry.discard(worker)
+                _log_deleted_worker(worker)
+            elif join_worker(worker, timeout_ms):
                 registry.discard(worker)
             else:
                 laggards.append(worker)
         except RuntimeError:
             # Underlying C++ object already deleted — treat as gone.
             registry.discard(worker)
+            _log_deleted_worker(worker)
 
+    _log_laggards(laggards, parent=type(parent).__name__)
     return laggards
 
 
@@ -251,14 +367,19 @@ def join_all_off_thread_workers(timeout_ms: int = 2000) -> list[QThread]:
 
     for worker in list(_LIVE_OFF_THREAD_WORKERS):
         try:
-            if join_worker(worker, timeout_ms):
+            if _wrapper_deleted(worker):
+                _LIVE_OFF_THREAD_WORKERS.discard(worker)
+                _log_deleted_worker(worker)
+            elif join_worker(worker, timeout_ms):
                 _LIVE_OFF_THREAD_WORKERS.discard(worker)
             else:
                 laggards.append(worker)
         except RuntimeError:
             # Underlying C++ object already deleted — treat as gone.
             _LIVE_OFF_THREAD_WORKERS.discard(worker)
+            _log_deleted_worker(worker)
 
+    _log_laggards(laggards)
     return laggards
 
 
