@@ -16,6 +16,7 @@ import logging
 import os
 import platform
 import sys
+import threading
 import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
@@ -47,6 +48,7 @@ from anki_miner.gui import restart
 from anki_miner.gui.controllers import recovery_controller
 from anki_miner.gui.controllers.recovery_controller import RecoveryController
 from anki_miner.gui.i18n import install_translators
+from anki_miner.gui.launch import _LOG_DATE_FORMAT, _LOG_FORMAT
 from anki_miner.gui.launch import get_effective_log_path as _get_effective_log_path
 from anki_miner.gui.main_window import MainWindow, open_log_folder
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
@@ -473,11 +475,12 @@ def _configure_logging(log_path: Path) -> None:
 
     Called from main() so all modules that already call
     ``logging.getLogger(__name__)`` have their records captured to disk.
-    The 8 MB active file plus five backups uses at most ~48 MB. Eight MB keeps
-    one full high-coverage batch readable in the active file or active + ``.1``;
-    a 2 MB ring could overwrite the session boundary several times in one run.
-    The module name plus source line identifies the exact logging statement for
-    the version pinned in that boundary, at about 5% extra line length.
+    The 16 MiB active file plus five backups uses at most ~96 MiB. Sixteen MiB
+    keeps one full high-coverage batch readable in the active file or active +
+    ``.1``; a 2 MB ring could overwrite the session boundary several times in
+    one run. The per-record prefix — module, source line, thread name and
+    milliseconds — identifies the exact logging statement, the thread that ran
+    it and its order within a second, at about 20% extra line length.
 
     Idempotent: a handler attached by a previous call is removed and replaced,
     so calling this twice — bootstrap default-path → config-path re-point (F3),
@@ -492,19 +495,14 @@ def _configure_logging(log_path: Path) -> None:
         log_path.parent.mkdir(parents=True, exist_ok=True)
         handler = _OwnerOnlyRotatingFileHandler(
             log_path,
-            maxBytes=8 * 1024 * 1024,
+            maxBytes=16 * 1024 * 1024,
             backupCount=5,
             encoding="utf-8",
             delay=False,
         )
         handler.setLevel(logging.DEBUG)
         handler._anki_miner_sink = True  # type: ignore[attr-defined]  # sentinel for idempotent replacement
-        handler.setFormatter(
-            logging.Formatter(
-                "%(asctime)s %(levelname)-8s %(name)s:%(lineno)d: %(message)s",
-                datefmt="%Y-%m-%dT%H:%M:%S",
-            )
-        )
+        handler.setFormatter(logging.Formatter(_LOG_FORMAT, datefmt=_LOG_DATE_FORMAT))
         root.addHandler(handler)
     except Exception:  # noqa: BLE001 — bucket A: boot continues on the retained log sink.
         if handler is not None:
@@ -1824,6 +1822,9 @@ def main():
     # in the file rather than going nowhere (F3).
     # GUIConfigManager has no Qt dependency, so it can run before QApplication.
     _default_log_path = ANKI_MINER_HOME / "anki_miner.log"
+    # Named here rather than in _configure_logging: tests call that helper
+    # directly and would rename pytest's own main thread.
+    threading.main_thread().name = "main"
     try:
         _configure_logging(_default_log_path)
     except Exception:  # noqa: BLE001 — bucket A: boot continues with stderr logging.

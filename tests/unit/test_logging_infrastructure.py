@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import stat
+import threading
 import types
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -248,7 +249,7 @@ class TestConfigureLogging:
             assert "qt=" in content
             assert f"home={app_module.ANKI_MINER_HOME}" in content
             assert f"log={log_path}" in content
-            assert "maxbytes=8388608" in content
+            assert "maxbytes=16777216" in content
         finally:
             root.setLevel(root_level)
             anki_logger.setLevel(anki_level)
@@ -406,7 +407,7 @@ class TestConfigureLogging:
         assert log_path.exists()
         chmod.assert_not_called()
 
-    def test_rotation_capacity_is_eight_megabytes(self, tmp_path):
+    def test_rotation_capacity_is_sixteen_megabytes(self, tmp_path):
         """The active file can retain one large batch before rotation."""
         configure_logging = self._import_configure_logging()
         log_path = tmp_path / "app.log"
@@ -420,7 +421,7 @@ class TestConfigureLogging:
             configure_logging(log_path)
             sink = next(h for h in root.handlers if getattr(h, "_anki_miner_sink", False))
             assert isinstance(sink, logging.handlers.RotatingFileHandler)
-            assert sink.maxBytes == 8 * 1024 * 1024
+            assert sink.maxBytes == 16 * 1024 * 1024
         finally:
             root.setLevel(root_level_before)
             am_logger.setLevel(am_level_before)
@@ -466,6 +467,28 @@ class TestConfigureLogging:
             sink = next(h for h in root.handlers if getattr(h, "_anki_miner_sink", False))
             assert sink.formatter is not None
             assert "%(lineno)d" in sink.formatter._fmt
+        finally:
+            root.setLevel(root_level_before)
+            am_logger.setLevel(am_level_before)
+            for handler in list(root.handlers):
+                if handler not in handlers_before:
+                    root.removeHandler(handler)
+                    handler.close()
+
+    def test_format_carries_milliseconds_and_thread_name(self, tmp_path):
+        """Interleaved worker records are attributable and orderable inside one second."""
+        configure_logging = self._import_configure_logging()
+        root = logging.getLogger()
+        am_logger = logging.getLogger("anki_miner")
+        handlers_before = list(root.handlers)
+        root_level_before = root.level
+        am_level_before = am_logger.level
+        try:
+            configure_logging(tmp_path / "app.log")
+            sink = next(h for h in root.handlers if getattr(h, "_anki_miner_sink", False))
+            assert sink.formatter is not None
+            assert ".%(msecs)03d" in sink.formatter._fmt
+            assert "%(threadName)s" in sink.formatter._fmt
         finally:
             root.setLevel(root_level_before)
             am_logger.setLevel(am_level_before)
@@ -959,3 +982,50 @@ class TestMainUsesConfigLogPath:
         # must be the one in effect after main() (the last call).
         assert len(captured) >= 1, "_configure_logging was never called"
         assert captured[-1] == custom_log, f"Expected final _configure_logging({custom_log!r}), got {captured[-1]!r}"
+
+    def test_main_names_the_main_thread(self, tmp_path):
+        """Records from the GUI thread read ``[main]``, not ``[MainThread]``."""
+        from unittest.mock import MagicMock, patch
+
+        mock_config = MagicMock()
+        mock_config.log_path = tmp_path / "app.log"
+
+        seen: list[str] = []
+
+        def fake_configure_logging(path: Path) -> None:
+            seen.append(threading.main_thread().name)
+
+        thread_name_before = threading.main_thread().name
+        try:
+            with (
+                patch(
+                    "anki_miner.gui.app.GUIConfigManager.load_config_with_provenance",
+                    return_value=(mock_config, True),
+                ),
+                patch("anki_miner.gui.app._configure_logging", side_effect=fake_configure_logging),
+                patch("anki_miner.gui.app.QApplication"),
+                patch("anki_miner.gui.app.MainWindow"),
+                patch("anki_miner.gui.app.GUIPresenter"),
+                patch("anki_miner.gui.app.GUIProgressCallback"),
+                patch("anki_miner.gui.app.StatsService"),
+                patch("anki_miner.gui.app.Theme"),
+                patch("anki_miner.gui.app.VideoTab"),
+                patch("anki_miner.gui.app.DeckBuilderTab"),
+                patch("anki_miner.gui.app.AudiobookTab"),
+                patch("anki_miner.gui.app.AnalyticsTab"),
+                patch("anki_miner.gui.app.SettingsTab"),
+                patch("anki_miner.gui.app.create_youtube_fetcher"),
+                patch("anki_miner.gui.app._connect_settings_validation"),
+                patch("sys.exit"),
+            ):
+                try:
+                    from anki_miner.gui import app as app_module
+
+                    app_module.main()
+                except Exception:
+                    pass  # We only care that the thread was named before the sink was built
+
+            assert seen, "_configure_logging was never called"
+            assert seen[0] == "main"
+        finally:
+            threading.main_thread().name = thread_name_before
