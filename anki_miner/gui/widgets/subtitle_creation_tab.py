@@ -45,7 +45,8 @@ from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_l
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader, accepts_suffixes
 from anki_miner.gui.workers.subtitle_gen_worker import SubtitleGenWorker
 from anki_miner.languages.registry import get_profile
-from anki_miner.services.asr import _engine, ggml_model_installer, model_manager
+from anki_miner.services.asr import _engine
+from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.utils.file_pairing import FilePairMatcher
 from anki_miner.utils.i18n import tr_format
 
@@ -362,23 +363,12 @@ class SubtitleCreationTab(_ToolTabBase):
     def _any_usable_model_installed(self) -> bool:
         """True iff an installed model can serve the configured device route.
 
-        CT2 layout satisfies every route. The ggml pair (acoustic + VAD)
-        satisfies only devices that can route to whisper.cpp (vulkan/auto) and
-        only when the backend itself is present; cpu/cuda are pure CT2. Any
-        probe surprise counts as not-installed (the run would fail anyway).
+        Thin wrapper over
+        :func:`anki_miner.services.asr.model_availability.usable_model_installed`,
+        which owns the rule and its rationale. Kept as a method because the
+        YouTube pre-run gate must reach the same verdict as this tab.
         """
-        if model_manager.is_downloaded(self.config.asr_model, self.config.asr_models_root):
-            return True
-        if self.config.asr_device not in ("vulkan", "auto"):
-            return False
-        try:
-            return (
-                _engine.whisper_cpp_available()
-                and ggml_model_installer.is_ggml_downloaded(self.config.asr_model, self.config.asr_models_root)
-                and ggml_model_installer.is_vad_downloaded(self.config.asr_models_root)
-            )
-        except Exception:  # noqa: BLE001 — bucket B: fall back to the guard message.
-            return False
+        return usable_model_installed(self.config)
 
     def _on_generate(self) -> None:
         """Validate then start the SubtitleGenWorker."""
