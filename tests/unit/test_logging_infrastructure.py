@@ -665,6 +665,83 @@ class TestConfigureLogging:
 # ---------------------------------------------------------------------------
 
 
+class TestWorkerThreadNaming:
+    """A worker names its own OS thread so ``[threadName]`` identifies the run."""
+
+    def test_log_start_renames_the_worker_thread(self, qtbot):
+        """``log_start`` stamps the context onto the running QThread."""
+        from anki_miner.gui.workers.base_worker import CancellableWorker
+
+        class _NamingWorker(CancellableWorker):
+            def __init__(self):
+                super().__init__()
+                self.seen = ""
+
+            def run(self):
+                self.log_start("BackfillWorker")
+                self.seen = threading.current_thread().name
+
+        worker = _NamingWorker()
+        try:
+            worker.start()
+            qtbot.waitUntil(worker.isFinished, timeout=5000)
+        finally:
+            worker.wait(5000)
+
+        assert worker.seen == "BackfillWorker"
+
+    def test_log_start_never_renames_the_main_thread(self, qapp):
+        """A worker driven synchronously in a test must not steal the ``main`` name."""
+        from anki_miner.gui.workers.base_worker import CancellableWorker
+
+        class _InlineWorker(CancellableWorker):
+            def run(self):
+                self.log_start("InlineWorker")
+
+        before = threading.current_thread().name
+        _InlineWorker().run()
+        assert threading.current_thread().name == before
+
+    def test_log_end_reports_elapsed_time(self, qapp, caplog):
+        """``log_end`` closes the start line with the run's duration."""
+        from anki_miner.gui.workers.base_worker import CancellableWorker
+
+        class _TimedWorker(CancellableWorker):
+            def run(self):
+                self.log_start("TimedWorker")
+                self.log_end(items=2)
+
+        with caplog.at_level(logging.INFO, logger="tests.unit.test_logging_infrastructure"):
+            _TimedWorker().run()
+
+        finished = [r.getMessage() for r in caplog.records if r.getMessage().startswith("TimedWorker finished:")]
+        assert len(finished) == 1, caplog.text
+        assert "elapsed_s=" in finished[0]
+        assert "items=2" in finished[0]
+
+    def test_report_failure_carries_elapsed_time(self, qapp, caplog):
+        """A failure record says how long the run had been going."""
+        from anki_miner.exceptions import AnkiMinerException
+        from anki_miner.gui.workers.base_worker import CancellableWorker
+
+        class _FailingWorker(CancellableWorker):
+            def run(self):
+                self.log_start("FailingWorker")
+                self.report_failure(
+                    AnkiMinerException("nope"),
+                    context="FailingWorker",
+                    on_error=lambda _msg: None,
+                )
+
+        with caplog.at_level(logging.INFO, logger="tests.unit.test_logging_infrastructure"):
+            _FailingWorker().run()
+
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+        assert len(warnings) == 1, caplog.text
+        assert "nope" in warnings[0]
+        assert "elapsed_s=" in warnings[0]
+
+
 class TestWorkerExceptionLogging:
     """Worker catch-alls call logger.exception so tracebacks land in the log."""
 

@@ -77,6 +77,7 @@ from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.logging_ext import log_summary
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +131,10 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
     def _stale_reimport_message(self) -> str | None:
         return stale_resource_reimport_error(self._config)
 
+    def _item_log_label(self, item: YouTubeQueueItem) -> str:
+        """The URL, not the title: it is what a report can be re-run against."""
+        return item.url
+
     def _asr_preflight_message(self) -> str | None:
         """Refuse a transcription run when no usable ASR model is installed.
 
@@ -182,10 +187,21 @@ class YouTubeQueueWorker(SequentialQueueWorker[YouTubeQueueItem]):
                 # Mid-fetch cancellation: the fetcher's psutil kill path raises
                 # this when the cancel event fires mid-download, and retrying
                 # would only kill the freshly-spawned subprocess again.
+                # This is the ONE exit that emits neither item_finished nor
+                # queue_finished, so without this line the whole queue ends
+                # with nothing in the log to say why.
+                log_summary(
+                    logger,
+                    "YouTube fetch cancelled mid-download",
+                    level=logging.WARNING,
+                    idx=idx,
+                    url=item.url,
+                    action="aborting queue",
+                )
                 return AttemptOutcome(abort_queue=True)
             return self._classify_exception(exc)
         except Exception as exc:  # noqa: BLE001 - surface any other failure to GUI
-            logger.exception("YouTubeQueueWorker item failed")
+            logger.exception("YouTubeQueueWorker item failed: idx=%d url=%s", idx, item.url)
             return self._classify_exception(exc)
         finally:
             if workspace is not None:
