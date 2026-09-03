@@ -45,6 +45,7 @@ from anki_miner.gui.workers.youtube_playlist_probe_worker import (
     YouTubePlaylistResolveWorker,
 )
 from anki_miner.gui.workers.youtube_probe_worker import YouTubeProbeWorker
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models.youtube import PlaylistEntry, PlaylistInfo, SubMode, VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus, YouTubeQueueItem
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
@@ -123,7 +124,10 @@ def _classify_probe_result(info: VideoInfo, config: AnkiMinerConfig) -> tuple[bo
         # VideoInfo.has_dub_ja_subs). Lowest priority — a real manual track or
         # native captions always describe the video better than the dub pipeline.
         return True, None, "auto_dub"
-    return False, "No Japanese subtitles available for this video.", None
+    # english_name, like the fetcher's NoSourceSubtitlesError: a zh run used
+    # to be refused with "No Japanese subtitles available".
+    label = get_profile(config_language(config)).english_name or "source"
+    return False, f"No {label} subtitles available for this video.", None
 
 
 @dataclass(frozen=True)

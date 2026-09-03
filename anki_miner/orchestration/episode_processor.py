@@ -13,7 +13,7 @@ import threading
 import time
 import uuid
 import zipfile
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -23,7 +23,7 @@ from PyQt6.QtCore import QCoreApplication
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import AnkiMinerException, SetupError
 from anki_miner.interfaces import PresenterProtocol, ProgressCallback
-from anki_miner.languages.registry import get_profile
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import (
     CANCELLED_ERROR,
     AnkiWriteState,
@@ -566,6 +566,26 @@ class EpisodeProcessor:
         self.presenter.show_stage(index, PIPELINE_STAGE_COUNT, name)
         if progress_callback is not None:
             progress_callback.on_stage(index, PIPELINE_STAGE_COUNT, name)
+
+    def _no_words_message(self, texts: Iterable[str]) -> str:
+        """The zero-word warning, naming a wrong-language subtitle when that is the cause.
+
+        "No words found in subtitles" was the whole story of the first zh
+        YouTube report (v3.0.0): the zh-Hans track carried no Chinese, the
+        tokenizer rejected every token, and nothing said the track itself was
+        the problem. When no line carries the mining language's script, say so
+        - the one zero-word case the user can act on (another track, another
+        file) without opening the log.
+        """
+        lines = [text for text in texts if text]
+        if lines:
+            profile = get_profile(config_language(self.config))
+            if not any(profile.script.contains_target_script(text) for text in lines):
+                return tr_format(
+                    QCoreApplication.translate("EpisodeProcessor", "Subtitles contain no %1 text"),
+                    profile.display_name,
+                )
+        return QCoreApplication.translate("EpisodeProcessor", "No words found in subtitles")
 
     def _report_no_mineable_words(self, ctx: _EpisodeContext) -> None:
         """Emit the terminal message when no mineable words remain.
@@ -2120,9 +2140,8 @@ class EpisodeProcessor:
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
             if not all_words:
-                self.presenter.show_warning(
-                    QCoreApplication.translate("EpisodeProcessor", "No words found in subtitles")
-                )
+                entries = self.subtitle_parser.parse_raw_entries(subtitle_file, subtitle_offset)
+                self.presenter.show_warning(self._no_words_message(text for _start, _end, text in entries))
                 return ctx.build_result()
 
             with timed_phase("filter", logger):
@@ -2541,9 +2560,7 @@ class EpisodeProcessor:
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
             if not all_words:
-                self.presenter.show_warning(
-                    QCoreApplication.translate("EpisodeProcessor", "No words found in subtitles")
-                )
+                self.presenter.show_warning(self._no_words_message(unit.text for unit in document.units))
                 return ctx.build_result()
 
             with timed_phase("filter", logger):
