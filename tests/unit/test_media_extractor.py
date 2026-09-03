@@ -870,6 +870,56 @@ class TestRunFfmpeg:
 
         assert mock_popen.call_args.kwargs["stdin"] == subprocess.DEVNULL
 
+    def test_failure_logs_argv_and_more_than_the_last_stderr_line(self, service, caplog):
+        """ffmpeg's cause sits 3-10 lines above the last line, so the tail ships too."""
+        stderr = "\n".join(f"ffmpeg line {n}" for n in range(1, 9))
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=_popen_mock(returncode=1, stderr=stderr)),
+            caplog.at_level(logging.DEBUG, logger=MODULE),
+        ):
+            assert service._run_ffmpeg(["ffmpeg", "-i", "x", "out.mp3"], "Test op", timeout=5) is False
+
+        messages = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+        # The pre-existing one-line summary keeps its wording.
+        assert any("Test op failed: ffmpeg exit code 1: ffmpeg line 8" in m for m in messages)
+        detail = next(m for m in messages if "argv=" in m)
+        assert "ffmpeg -i x out.mp3" in detail
+        assert "ffmpeg line 1" in detail and "ffmpeg line 8" in detail
+
+    def test_success_logs_a_debug_ok_receipt(self, service, caplog):
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=_popen_mock()),
+            caplog.at_level(logging.DEBUG, logger=MODULE),
+        ):
+            assert service._run_ffmpeg(["ffmpeg", "-i", "x", "out.mp3"], "Test op", timeout=5) is True
+
+        assert any(r.getMessage().startswith("Test op ok: rc=0") for r in caplog.records)
+
+    def test_spawn_failure_logs_the_argv_at_warning(self, service, caplog):
+        """A binary that never executed is only diagnosable from its argv."""
+        with (
+            patch(f"{MODULE}.subprocess.Popen", side_effect=OSError("no such file")),
+            caplog.at_level(logging.DEBUG, logger=MODULE),
+        ):
+            assert service._run_ffmpeg(["ffmpeg", "-i", "x", "out.mp3"], "Test op", timeout=5) is False
+
+        warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+        assert any("argv=" in m and "ffmpeg -i x out.mp3" in m for m in warnings)
+        assert any("no such file" in m for m in warnings)
+
+    def test_timeout_logs_the_argv_at_warning(self, service, caplog):
+        proc = _popen_mock()
+        proc.communicate.side_effect = [subprocess.TimeoutExpired(cmd="ffmpeg", timeout=5), ("", "")]
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=proc),
+            caplog.at_level(logging.DEBUG, logger=MODULE),
+        ):
+            assert service._run_ffmpeg(["ffmpeg", "-i", "x", "out.mp3"], "Test op", timeout=5) is False
+
+        warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+        assert any("argv=" in m and "ffmpeg -i x out.mp3" in m for m in warnings)
+        assert any("timed out" in m for m in warnings)
+
 
 class TestResolveAudioWindow:
     """Tests for resolve_audio_window — the one place the clip window is decided."""

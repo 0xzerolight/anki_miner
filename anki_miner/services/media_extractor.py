@@ -30,6 +30,7 @@ from anki_miner.utils.audio_track_detector import matches_language_tag
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.subprocess_log import log_command, log_command_result, tail_for_log
 from anki_miner.utils.subprocess_utils import no_window_kwargs
 
 logger = logging.getLogger(__name__)
@@ -941,6 +942,8 @@ class MediaExtractorService:
         suffix = f" for {context}" if context else ""
         if proc_registry is not None and proc_registry.cancelled:
             return False
+        log_command(logger, op_name, cmd, timeout_s=timeout)
+        started_at = time.monotonic()
         try:
             # Decode ffmpeg's stderr as UTF-8 with replacement, not the platform
             # locale codec: ffmpeg echoes the (often non-ASCII Japanese) input
@@ -958,7 +961,10 @@ class MediaExtractorService:
                 **no_window_kwargs(),  # hide the Windows cmd.exe flash (Issue #79)
             )
         except (subprocess.SubprocessError, OSError) as e:
-            logger.warning("%s error%s: %s", op_name, suffix, e)
+            # Re-log the argv at WARNING: a binary that never executed leaves no
+            # stderr, so the command line is the entire diagnosis.
+            log_command(logger, op_name, cmd, timeout_s=timeout, level=logging.WARNING)
+            logger.warning("%s error%s: %s: %s", op_name, suffix, type(e).__name__, e)
             return False
         if proc_registry is not None and not proc_registry.register(proc):
             # Cancel raced the spawn: kill the fresh process; the context
@@ -975,18 +981,38 @@ class MediaExtractorService:
                     _kill_quietly(proc)
                     proc.communicate()  # drain pipes + reap the killed process
                     logger.warning("%s timed out%s after %ss", op_name, suffix, timeout)
+                    log_command_result(
+                        logger,
+                        op_name,
+                        cmd,
+                        returncode=proc.returncode,
+                        state="timed_out",
+                        elapsed_s=time.monotonic() - started_at,
+                        level=logging.WARNING,
+                    )
                     return False
                 except (subprocess.SubprocessError, OSError, ValueError) as e:
                     # ValueError covers UnicodeDecodeError from communicate()'s
                     # decode of non-ASCII ffmpeg stderr (defence-in-depth alongside
                     # errors="replace" on the Popen above).
                     _kill_quietly(proc)
-                    logger.warning("%s error%s: %s", op_name, suffix, e)
+                    logger.warning("%s error%s: %s: %s", op_name, suffix, type(e).__name__, e)
+                    log_command_result(
+                        logger,
+                        op_name,
+                        cmd,
+                        returncode=proc.returncode,
+                        state="communicate_failed",
+                        elapsed_s=time.monotonic() - started_at,
+                        level=logging.WARNING,
+                    )
                     return False
         finally:
             if proc_registry is not None:
                 proc_registry.unregister(proc)
+        elapsed_s = time.monotonic() - started_at
         if proc.returncode == 0:
+            log_command_result(logger, op_name, cmd, returncode=0, elapsed_s=elapsed_s)
             return True
         if proc_registry is not None and proc_registry.cancelled:
             # Killed by a batch cancel — expected, not an ffmpeg failure.
@@ -994,6 +1020,18 @@ class MediaExtractorService:
             return False
         stderr_last_line = stderr.rstrip().splitlines()[-1] if stderr.strip() else "-"
         logger.warning("%s failed%s: ffmpeg exit code %s: %s", op_name, suffix, proc.returncode, stderr_last_line)
+        # The last line is usually "Conversion failed!"; ffmpeg's actual cause
+        # ("No such file", "Invalid data found") sits 3-10 lines above it, so
+        # the bounded tail ships alongside the argv that produced it.
+        log_command_result(
+            logger,
+            op_name,
+            cmd,
+            returncode=proc.returncode,
+            stderr_tail=tail_for_log(stderr),
+            elapsed_s=elapsed_s,
+            level=logging.WARNING,
+        )
         return False
 
     def _extract_static_screenshot(

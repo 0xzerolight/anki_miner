@@ -1,5 +1,6 @@
 """Tests for ShortcutService."""
 
+import logging
 import subprocess
 import sys
 from pathlib import Path
@@ -384,6 +385,25 @@ class TestSubprocessTimeouts:
         assert result.success is True
         desktop_file = tmp_path / ".local" / "share" / "applications" / f"{APP_ID}.desktop"
         assert desktop_file.exists()
+
+    def test_linux_update_desktop_database_failure_is_logged(self, tmp_path, monkeypatch, caplog):
+        """Best-effort is not silent: the swallowed failure leaves a record."""
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        fake_exe = tmp_path / "anki_miner_gui"
+        fake_exe.touch()
+
+        module = "anki_miner.services.shortcut_service"
+        with (
+            patch.object(ShortcutService, "resolve_executable", return_value=fake_exe),
+            patch("sys.platform", "linux"),
+            patch("subprocess.run", side_effect=FileNotFoundError("update-desktop-database missing")),
+            caplog.at_level(logging.DEBUG, logger=module),
+        ):
+            assert ShortcutService.create_shortcut().success is True
+
+        messages = [r.getMessage() for r in caplog.records]
+        assert any("update-desktop-database" in m and "argv=" in m for m in messages)
+        assert any("FileNotFoundError" in m for m in messages)
 
     def test_windows_powershell_passes_timeout(self, tmp_path, monkeypatch):
         monkeypatch.setattr(Path, "home", lambda: tmp_path)

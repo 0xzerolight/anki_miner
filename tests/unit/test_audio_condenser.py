@@ -8,6 +8,7 @@ is validated later at E2E).
 
 from __future__ import annotations
 
+import logging
 import math
 import subprocess
 import threading
@@ -991,6 +992,52 @@ def test_condense_failure_reports_exit_code_and_last_ffmpeg_line(tmp_path):
     assert failure.returncode == 1
     assert failure.timed_out is False
     assert failure.summary() == "ffmpeg exited 1: Error opening output files: Cannot allocate memory"
+
+
+_CONDENSER_MODULE = "anki_miner.services.audio_condenser"
+
+
+def test_condense_failure_logs_argv_and_the_output_tail(tmp_path, caplog):
+    """The one-line reason reaches the UI; the log carries argv + the full tail."""
+    svc = _service(tmp_path, global_index=0)
+    output = [f"ffmpeg line {n}" for n in range(1, 9)]
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory({}, output, returncode=1)),
+        caplog.at_level(logging.DEBUG, logger=_CONDENSER_MODULE),
+    ):
+        svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
+
+    detail = next(m for m in (r.getMessage() for r in caplog.records) if "argv=" in m and "rc=1" in m)
+    assert detail.startswith("ffmpeg condense failed:")
+    assert "condense_graph_" in detail  # the filter-graph temp is named in the argv
+    assert "ffmpeg line 1" in detail and "ffmpeg line 8" in detail
+
+
+def test_condense_spawn_failure_logs_the_argv_at_warning(tmp_path, caplog):
+    svc = _service(tmp_path, global_index=0)
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=OSError("no such file")),
+        caplog.at_level(logging.DEBUG, logger=_CONDENSER_MODULE),
+    ):
+        ok, _failure = svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
+
+    assert ok is False
+    warnings = [r.getMessage() for r in caplog.records if r.levelno >= logging.WARNING]
+    assert any("argv=" in m for m in warnings)
+
+
+def test_condense_success_logs_a_debug_ok_receipt(tmp_path, caplog):
+    svc = _service(tmp_path, global_index=0)
+    with (
+        patch(_RESOLVE, return_value="ffmpeg"),
+        patch(_POPEN, side_effect=_factory({}, _progress_block(0, end=True))),
+        caplog.at_level(logging.DEBUG, logger=_CONDENSER_MODULE),
+    ):
+        svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
+
+    assert any(r.getMessage().startswith("ffmpeg condense ok: rc=0") for r in caplog.records)
 
 
 def test_condense_failure_reason_is_truncated(tmp_path):
