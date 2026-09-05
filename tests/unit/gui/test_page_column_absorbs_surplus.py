@@ -148,7 +148,7 @@ def test_a_tall_window_never_inflates_a_heading(page, qtbot):
     if name in {"backfill", "deckfilter"}:
         # Their first show lazily fetches deck names off a real AnkiConnect. The
         # layout does not depend on the answer, so keep it off the wire.
-        widget._decks_requested = True
+        widget._decks_loaded = True
     widget.resize(1000, 800)
     widget.show()
     qtbot.waitExposed(widget)

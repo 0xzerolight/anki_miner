@@ -1182,15 +1182,28 @@ def test_sync_buttons_refresh_the_name_lists(tab):
     assert refresh.call_count == 2
 
 
-def test_name_lists_are_fetched_once_on_first_show(tab):
-    """Patching is mandatory: an unpatched show() opens a real AnkiConnect socket."""
+def test_name_lists_are_refetched_on_show_until_they_arrive(tab):
+    """A show is only "done" once real lists came back.
+
+    Latching on the attempt meant a fetch made while Anki was closed left
+    "Could not load decks" on screen with nothing able to clear it.
+
+    Patching is mandatory: an unpatched show() opens a real AnkiConnect socket.
+    """
     from unittest.mock import patch  # noqa: PLC0415 — module convention
 
     with patch.object(tab._anki_probe, "refresh_name_lists") as refresh:
         tab.show()
         tab.hide()
         tab.show()
-    assert refresh.call_count == 1
+        assert refresh.call_count == 2
+
+        tab._anki_probe._decks_loaded = True
+        tab._anki_probe._notetypes_loaded = True
+        tab._anki_probe._names_endpoint = tab.anki_panel.get_ankiconnect_url().strip()
+        tab.hide()
+        tab.show()
+    assert refresh.call_count == 2
 
 
 def test_rebuild_known_words_does_not_block_gui_and_reenables_action(tab, tmp_path, monkeypatch, qtbot):

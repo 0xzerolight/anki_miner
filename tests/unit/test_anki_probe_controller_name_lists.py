@@ -248,6 +248,65 @@ def test_blank_endpoint_does_not_start_excluded_deck_probe(wired, monkeypatch):
     worker_factory.assert_not_called()
 
 
+def _record_starts(monkeypatch) -> list[object]:
+    """Build real probe workers but never start them (no socket, no QThread)."""
+    started: list[object] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.workers.base_worker.SingleCallWorker.start",
+        lambda self: started.append(self),
+    )
+    return started
+
+
+def test_ensure_name_lists_retries_until_the_lists_arrive(wired, monkeypatch):
+    """A fetch that failed because Anki was closed must be asked again.
+
+    The regression: the latch was set on the ATTEMPT, and an unreachable Anki
+    answers with an empty list, so the failure was remembered as "done" and
+    "Could not load decks" could never clear.
+    """
+    ctrl, _panel = wired
+    started = _record_starts(monkeypatch)
+
+    ctrl.ensure_name_lists()
+    assert len(started) == 2  # decks + note types
+
+    # Anki was closed: both answers come back empty, so nothing is latched.
+    ctrl._on_name_decks_fetched([])
+    ctrl._on_name_notetypes_fetched([])
+    ctrl.ensure_name_lists()
+    assert len(started) == 4
+
+    ctrl._on_name_decks_fetched(["Default", "JP::Mining"])
+    ctrl._on_name_notetypes_fetched(["Lapis"])
+    ctrl.ensure_name_lists()
+    assert len(started) == 4  # both lists are real now: stop asking
+
+
+def test_ensure_name_lists_refetches_after_the_endpoint_changes(wired, monkeypatch):
+    ctrl, panel = wired
+    started = _record_starts(monkeypatch)
+
+    ctrl.ensure_name_lists()
+    ctrl._on_name_decks_fetched(["Default", "JP::Mining"])
+    ctrl._on_name_notetypes_fetched(["Lapis"])
+    ctrl.ensure_name_lists()
+    assert len(started) == 2
+
+    panel.set_ankiconnect_url("http://127.0.0.1:9999")
+    ctrl.ensure_name_lists()
+    assert len(started) == 4  # different Anki, different lists
+
+
+def test_ensure_name_lists_goes_through_refresh_name_lists(wired, monkeypatch):
+    """The Refresh buttons' unconditional path stays the single fetch site."""
+    ctrl, _panel = wired
+    calls: list[int] = []
+    monkeypatch.setattr(ctrl, "refresh_name_lists", lambda: calls.append(1))
+    ctrl.ensure_name_lists()
+    assert calls == [1]
+
+
 def test_blank_endpoint_does_not_start_name_list_probes(wired, monkeypatch):
     ctrl, panel = wired
     panel.set_ankiconnect_url("")

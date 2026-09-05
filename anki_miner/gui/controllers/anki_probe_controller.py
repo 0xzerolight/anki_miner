@@ -69,6 +69,14 @@ class AnkiProbeController:
         # note-type dropdowns in the Anki panel.
         self._name_decks_worker: SingleCallWorker | None = None
         self._name_notetypes_worker: SingleCallWorker | None = None
+        # "Did real lists come back?", NOT "did we ask?". AnkiConnect returns []
+        # for an unreachable Anki as well as for an empty collection, so a latch
+        # set on the attempt remembers a failure as done and the "Could not load
+        # decks" line can never clear. Paired with the endpoint the lists came
+        # from, so editing the AnkiConnect address invalidates them.
+        self._decks_loaded = False
+        self._notetypes_loaded = False
+        self._names_endpoint = ""
 
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close (T-12).
@@ -335,6 +343,24 @@ class AnkiProbeController:
 
     # === Deck / note-type dropdown lists ===
 
+    def ensure_name_lists(self) -> None:
+        """Fetch the deck / note-type lists unless they are already loaded.
+
+        The entry point for everything that fires repeatedly — the Settings
+        ``showEvent`` and a validation sweep that has just found Anki reachable.
+        :meth:`refresh_name_lists` stays the unconditional one, because the two
+        Refresh buttons must re-ask even when the lists are good.
+
+        A validation sweep can land after the tab is torn down, so the panel is
+        guarded here rather than in the fetch below.
+        """
+        if not widget_alive(self._anki_panel):
+            return
+        endpoint = self._anki_panel.get_ankiconnect_url().strip()
+        if self._decks_loaded and self._notetypes_loaded and endpoint == self._names_endpoint:
+            return
+        self.refresh_name_lists()
+
     def refresh_name_lists(self) -> None:
         """Fill the Anki panel's deck and note-type dropdowns from AnkiConnect.
 
@@ -374,6 +400,11 @@ class AnkiProbeController:
             self._anki_panel.set_deck_status(False, message)
             self._set_notetype_status(False, message)
             return
+
+        # The endpoint these lists are about to describe. Recorded before the
+        # fetches so ensure_name_lists() compares against the address actually
+        # asked, not the one the panel happens to show when the answer lands.
+        self._names_endpoint = ankiconnect_url
 
         if not still_running(self._name_decks_worker):
             self._anki_panel.set_deck_status(
@@ -435,6 +466,7 @@ class AnkiProbeController:
                 ),
             )
             return
+        self._decks_loaded = True
         self._anki_panel.set_available_decks(names)
         selected = self._anki_panel.get_deck_name()
         if selected in names:
@@ -476,6 +508,7 @@ class AnkiProbeController:
                 ),
             )
             return
+        self._notetypes_loaded = True
         self._anki_panel.set_available_note_types(names)
         selected = self._anki_panel.get_note_type()
         if selected not in names:

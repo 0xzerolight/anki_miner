@@ -257,3 +257,58 @@ class TestSettingsValidationWiring:
             settings_tab.anki_panel.notetype_sync_requested.emit()
         assert calls == []
         assert refresh.call_count == 2
+
+
+class TestAnkiReachableRefetch:
+    """A sweep that reached Anki re-drives the three deck / note-type fetches.
+
+    Regression for the reported bug: start Anki Miner before Anki, and
+    "Could not load decks" survived System Health's "Re-check now" — the sweep
+    repainted the health rows and never told the dropdowns to ask again.
+    """
+
+    @staticmethod
+    def _wire(monkeypatch, window, settings_tab):
+        from types import SimpleNamespace  # noqa: PLC0415
+        from unittest.mock import MagicMock  # noqa: PLC0415
+
+        from anki_miner.gui import app as app_module  # noqa: PLC0415
+
+        names = MagicMock()
+        monkeypatch.setattr(settings_tab, "ensure_anki_name_lists", names)
+        subtitles_tab = SimpleNamespace(
+            deck_filter_tab=SimpleNamespace(ensure_decks=MagicMock()),
+            backfill_tab=SimpleNamespace(ensure_decks=MagicMock()),
+        )
+        app_module._connect_anki_reachable(window, settings_tab, subtitles_tab)
+        return names, subtitles_tab
+
+    def test_reachable_sweep_refetches_every_deck_list(self, controlled_validation, monkeypatch):
+        window, settings_tab, _errors, _validation_service_type = controlled_validation
+        names, subtitles_tab = self._wire(monkeypatch, window, settings_tab)
+
+        settings_tab.anki_panel.test_connection_button.click()
+        _ControlledValidationWorker.instances[-1].succeed(_passing_result())
+
+        names.assert_called_once_with()
+        subtitles_tab.deck_filter_tab.ensure_decks.assert_called_once_with()
+        subtitles_tab.backfill_tab.ensure_decks.assert_called_once_with()
+
+    def test_unreachable_sweep_refetches_nothing(self, controlled_validation, monkeypatch):
+        window, settings_tab, _errors, _validation_service_type = controlled_validation
+        names, subtitles_tab = self._wire(monkeypatch, window, settings_tab)
+
+        settings_tab.anki_panel.test_connection_button.click()
+        _ControlledValidationWorker.instances[-1].succeed(
+            ValidationResult(
+                ankiconnect_ok=False,
+                ffmpeg_ok=True,
+                deck_exists=False,
+                note_type_exists=False,
+                field_mapping_ok=False,
+            )
+        )
+
+        names.assert_not_called()
+        subtitles_tab.deck_filter_tab.ensure_decks.assert_not_called()
+        subtitles_tab.backfill_tab.ensure_decks.assert_not_called()

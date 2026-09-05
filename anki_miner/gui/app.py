@@ -1041,6 +1041,24 @@ def _connect_settings_validation(window: MainWindow, settings_tab: SettingsTab) 
     settings_tab.validation_requested.connect(run_live_validation)
 
 
+def _connect_anki_reachable(window: MainWindow, settings_tab: SettingsTab, subtitles_tab: SubtitlesTab) -> None:
+    """Re-drive the deck / note-type fetches once a sweep has reached Anki.
+
+    Three screens fetch a list from AnkiConnect when they are first shown. Start
+    Anki Miner before Anki and all three fail, and their ``showEvent`` has
+    already fired — so System Health's "Re-check now" repainted the health rows
+    while "Could not load decks" stayed on screen, with Deck Filter and Card
+    Backfill offering no refresh button at all.
+
+    Every slot no-ops when its list is already loaded, so this costs nothing on
+    a healthy session. Extracted from ``main()`` so the connections are
+    unit-testable without standing up the whole app.
+    """
+    window.anki_reachable.connect(settings_tab.ensure_anki_name_lists)
+    window.anki_reachable.connect(subtitles_tab.deck_filter_tab.ensure_decks)
+    window.anki_reachable.connect(subtitles_tab.backfill_tab.ensure_decks)
+
+
 def _start_stats_load(window: QWidget, stats_service: StatsService, analytics_tab: AnalyticsTab) -> None:
     """Initialize stats off-thread and refresh Analytics when ready."""
     generation = int(analytics_tab.property("_stats_load_generation") or 0) + 1
@@ -1650,6 +1668,10 @@ def compose_main_window(
     subtitles_tab.condense_tab.config_changed.connect(window.update_config)
     # Same pattern for the Download tab's downloader_* options.
     subtitles_tab.download_tab.config_changed.connect(window.update_config)
+
+    # A validation sweep that reached Anki re-drives the three deck / note-type
+    # fetches that failed while Anki was closed.
+    _connect_anki_reachable(window, settings_tab, subtitles_tab)
 
     # --- task-registry publication (W5) -----------------------------------
     # Until now only the two list queues published, so only they had the

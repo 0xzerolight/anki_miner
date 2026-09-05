@@ -131,7 +131,11 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         self.worker_thread: BackfillScanWorker | BackfillApplyWorker | None = None
         self._plan: BackfillPlan | None = None
         self._scan_warnings: tuple[str, ...] = ()
-        self._decks_requested = False
+        # "Did a deck list arrive?", NOT "did we ask?" — see ensure_decks.
+        self._decks_loaded = False
+        #: True while ``status_label`` carries the deck-fetch failure line, so a
+        #: later success clears that line and nothing else the label may hold.
+        self._deck_fetch_failed = False
         self._deck_worker: SingleCallWorker | None = None
         # Set by the error slot, read when the thread ends: an error arrives
         # before ``finished``, which is where the run is closed out.
@@ -512,9 +516,24 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
 
     def showEvent(self, event) -> None:  # noqa: N802 - Qt override
         super().showEvent(event)
-        if not self._decks_requested:
-            self._decks_requested = True
-            self._load_decks()
+        self.ensure_decks()
+
+    def ensure_decks(self) -> None:
+        """Fetch the deck list unless one has already arrived.
+
+        Guarded on the list ARRIVING, not on having asked. ``get_deck_names``
+        answers an unreachable Anki with an empty list, so latching on the
+        attempt left "Couldn't fetch deck names from Anki" on screen for the
+        life of the process once Anki was started after Anki Miner — this tab
+        has no Refresh button to escape with.
+
+        Also the slot for ``MainWindow.anki_reachable``: a validation sweep that
+        has just found Anki is the only thing that can retry while this tab is
+        the visible one and its ``showEvent`` will not fire again.
+        """
+        if self._decks_loaded or still_running(self._deck_worker):
+            return
+        self._load_decks()
 
     def _load_decks(self) -> None:
         try:
@@ -540,8 +559,15 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
 
     def _on_decks_fetched(self, decks: list) -> None:
         if decks:
+            # Runs at most once: ensure_decks() stops asking from here on, so
+            # the combo can never accumulate a second copy of the deck list.
+            self._decks_loaded = True
             self.deck_combo.addItems([str(d) for d in decks])
+            if self._deck_fetch_failed:
+                self._deck_fetch_failed = False
+                self.status_label.setText("")
         else:
+            self._deck_fetch_failed = True
             self.status_label.setText(self.tr("Couldn't fetch deck names from Anki — scanning all decks."))
 
     # ------------------------------------------------------------------
