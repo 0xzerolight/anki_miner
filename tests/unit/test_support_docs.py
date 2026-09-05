@@ -175,15 +175,32 @@ def test_readme_names_every_file_a_reporter_has_to_send() -> None:
     assert "queue snapshots" in troubleshooting
 
 
-def test_changelog_unreleased_records_the_logging_overhaul() -> None:
-    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = changelog.split("## [Unreleased]", maxsplit=1)[1].split("\n## [", maxsplit=1)[0]
+def _current_entry_sections() -> dict[str, str]:
+    """The changelog entry carrying this cycle's work, split by section heading.
 
-    changed = unreleased.split("### Changed", maxsplit=1)[1].split("### Removed", maxsplit=1)[0]
+    ``[Unreleased]`` while work is in flight, and the newest version entry once
+    the changelog has been rolled for a release -- rolling renames the block and
+    leaves an empty ``[Unreleased]`` behind, so pinning to that heading would
+    fail on every release commit.
+    """
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    entries = changelog.split("\n## [")
+    entry = entries[1] if "- **" in entries[1] else entries[2]
+    sections: dict[str, str] = {}
+    for chunk in entry.split("\n### ")[1:]:
+        heading, _, body = chunk.partition("\n")
+        sections[heading.strip()] = body
+    return sections
+
+
+def test_changelog_records_the_logging_overhaul() -> None:
+    sections = _current_entry_sections()
+
+    changed = sections["Changed"]
     assert "16 MiB" in changed
     assert "threadName" in changed or "thread name" in changed
     assert "bundle_format" in changed or "bundle format" in changed
 
-    fixed = unreleased.split("### Fixed", maxsplit=1)[1]
+    fixed = sections["Fixed"]
     assert "audio" in fixed.lower()
     assert "video id" in fixed.lower() or "video ids" in fixed.lower()
