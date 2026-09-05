@@ -175,17 +175,17 @@ def test_readme_names_every_file_a_reporter_has_to_send() -> None:
     assert "queue snapshots" in troubleshooting
 
 
-def _current_entry_sections() -> dict[str, str]:
-    """The changelog entry carrying this cycle's work, split by section heading.
+def _entry_sections(version: str) -> dict[str, str]:
+    """One changelog entry's sections, keyed by section heading.
 
-    ``[Unreleased]`` while work is in flight, and the newest version entry once
-    the changelog has been rolled for a release -- rolling renames the block and
-    leaves an empty ``[Unreleased]`` behind, so pinning to that heading would
-    fail on every release commit.
+    Pinned to a version rather than to "whichever entry is current". The old
+    heuristic took ``[Unreleased]`` when it held a bullet and the entry below it
+    otherwise, which read the right block only until a release rolled AND the
+    next bullet landed: from then on ``[Unreleased]`` looked current while the
+    section this file asserts on lived one entry down, empty.
     """
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    entries = changelog.split("\n## [")
-    entry = entries[1] if "- **" in entries[1] else entries[2]
+    entry = changelog.split(f"\n## [{version}]", maxsplit=1)[1].split("\n## [", maxsplit=1)[0]
     sections: dict[str, str] = {}
     for chunk in entry.split("\n### ")[1:]:
         heading, _, body = chunk.partition("\n")
@@ -194,7 +194,8 @@ def _current_entry_sections() -> dict[str, str]:
 
 
 def test_changelog_records_the_logging_overhaul() -> None:
-    sections = _current_entry_sections()
+    # The overhaul shipped in 3.1.0; that is where its entry stays.
+    sections = _entry_sections("3.1.0")
 
     changed = sections["Changed"]
     assert "16 MiB" in changed
