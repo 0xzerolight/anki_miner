@@ -78,8 +78,8 @@ _TARGET_PATTERNS: dict[str, tuple[str, ...]] = {
     "windows-frozen": ("*-Windows-x86_64-Setup.exe",),
     "linux-frozen": ("anki-miner_*_amd64.deb",),
     "appimage": ("*-x86_64.AppImage",),
-    "macos-frozen-arm64": ("AnkiMiner-*-macOS-arm64.tar.gz",),
-    "macos-frozen-x86_64": ("AnkiMiner-*-macOS-x86_64.tar.gz",),
+    "macos-frozen-arm64": ("AnkiMiner-*-macOS-arm64.dmg",),
+    "macos-frozen-x86_64": ("AnkiMiner-*-macOS-x86_64.dmg",),
 }
 
 

@@ -135,9 +135,10 @@ class TestDetectTarget:
 def _make_assets() -> list[dict]:
     """Realistic GitHub /releases/latest assets array (subset of fields).
 
-    Deliberately retains the now-dropped Windows .zip and Linux .tar.gz, plus
-    the unversioned macOS tarballs that shipped before 3.1, so matcher tests
-    prove those artifacts are *ignored* when present, not merely absent.
+    Deliberately retains the now-dropped Windows .zip and Linux .tar.gz, the
+    unversioned macOS tarballs that shipped before 3.1, and the versioned macOS
+    tarballs the .dmg replaced, so matcher tests prove those artifacts are
+    *ignored* when present, not merely absent.
     """
     base = "https://github.com/0xzerolight/anki_miner/releases/download/v2.4.0/"
     return [
@@ -161,6 +162,16 @@ def _make_assets() -> list[dict]:
             "name": "AnkiMiner-2.4.0-x86_64.AppImage",
             "browser_download_url": f"{base}AnkiMiner-2.4.0-x86_64.AppImage",
         },
+        {
+            "name": "AnkiMiner-2.4.0-macOS-arm64.dmg",
+            "browser_download_url": f"{base}AnkiMiner-2.4.0-macOS-arm64.dmg",
+        },
+        {
+            "name": "AnkiMiner-2.4.0-macOS-x86_64.dmg",
+            "browser_download_url": f"{base}AnkiMiner-2.4.0-macOS-x86_64.dmg",
+        },
+        # Retired macOS tarballs, replaced by the .dmg. Same purpose as the
+        # unversioned pair below: prove the matcher skips them.
         {
             "name": "AnkiMiner-2.4.0-macOS-arm64.tar.gz",
             "browser_download_url": f"{base}AnkiMiner-2.4.0-macOS-arm64.tar.gz",
@@ -206,15 +217,15 @@ class TestPickAsset:
         assert url is not None
         assert url.endswith(".AppImage")
 
-    def test_macos_frozen_arm64_picks_arm64_tar_gz(self):
+    def test_macos_frozen_arm64_picks_arm64_dmg(self):
         url = _pick_asset(_make_assets(), "macos-frozen-arm64")
         assert url is not None
-        assert url.endswith("AnkiMiner-2.4.0-macOS-arm64.tar.gz")
+        assert url.endswith("AnkiMiner-2.4.0-macOS-arm64.dmg")
 
-    def test_macos_frozen_x86_64_picks_x86_64_tar_gz(self):
+    def test_macos_frozen_x86_64_picks_x86_64_dmg(self):
         url = _pick_asset(_make_assets(), "macos-frozen-x86_64")
         assert url is not None
-        assert url.endswith("AnkiMiner-2.4.0-macOS-x86_64.tar.gz")
+        assert url.endswith("AnkiMiner-2.4.0-macOS-x86_64.dmg")
 
     def test_pip_target_returns_none(self):
         assert _pick_asset(_make_assets(), "pip") is None

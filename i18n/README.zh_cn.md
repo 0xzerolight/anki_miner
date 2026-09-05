@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:2694be0f35a3ecf6 -->
+<!-- i18n-source: README.md sha256:7ca8f4a43c52af6c -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -67,8 +67,8 @@ Android 上也可用 - <a href="https://github.com/0xzerolight/anki_miner_androi
 | 平台 | 下载 |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS（Apple Silicon / M1-M4） | `AnkiMiner-*-macOS-arm64.tar.gz` |
-| macOS（Intel） | `AnkiMiner-*-macOS-x86_64.tar.gz` ¹ |
+| macOS（Apple Silicon / M1-M4） | `AnkiMiner-*-macOS-arm64.dmg` |
+| macOS（Intel） | `AnkiMiner-*-macOS-x86_64.dmg` ¹ |
 | Linux（Debian/Ubuntu） | `anki-miner_*_amd64.deb` |
 | Linux（其他） | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
@@ -76,7 +76,8 @@ Android 上也可用 - <a href="https://github.com/0xzerolight/anki_miner_androi
 
 ### 首次运行说明（未签名版本）
 
-- **macOS**：Gatekeeper 会拦截本应用。请先解压，然后执行 `xattr -dr com.apple.quarantine AnkiMiner/`
+- **macOS**：打开 `.dmg`，将 **AnkiMiner** 拖到**应用程序**中，然后启动。由于应用未经公证，首次启动会被拦截：关闭对话框，再次打开应用，选择**仍要打开**（也可在**系统设置** -> **隐私与安全性**中操作）。只需一次。
+- **Linux AppImage**：运行前请先赋予可执行权限 - `chmod +x AnkiMiner-*.AppImage`，或在文件管理器中选择**属性** -> **允许执行**。
 - **Windows SmartScreen**：**更多信息** -> **仍要运行**。
 - **Windows Defender 误报**：从**保护历史记录**中恢复，或[向 Microsoft 报告](https://www.microsoft.com/en-us/wdsi/filesubmission)。
 

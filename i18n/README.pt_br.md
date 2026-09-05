@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:2694be0f35a3ecf6 -->
+<!-- i18n-source: README.md sha256:7ca8f4a43c52af6c -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -67,8 +67,8 @@ Pegue o download para sua plataforma na [versão mais recente](https://github.co
 | Plataforma | Download |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS (Apple Silicon / M1-M4) | `AnkiMiner-*-macOS-arm64.tar.gz` |
-| macOS (Intel) | `AnkiMiner-*-macOS-x86_64.tar.gz` ¹ |
+| macOS (Apple Silicon / M1-M4) | `AnkiMiner-*-macOS-arm64.dmg` |
+| macOS (Intel) | `AnkiMiner-*-macOS-x86_64.dmg` ¹ |
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (outro) | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
@@ -76,7 +76,8 @@ Pegue o download para sua plataforma na [versão mais recente](https://github.co
 
 ### Notas de primeira execução (compilações não assinadas)
 
-- **macOS**: o Gatekeeper bloqueia o aplicativo. Extraia primeiro e depois `xattr -dr com.apple.quarantine AnkiMiner/`
+- **macOS**: abra o `.dmg`, arraste o **AnkiMiner** para **Aplicativos** e abra-o. A primeira execução é bloqueada porque o aplicativo não é autenticado pela Apple: feche a caixa de diálogo, abra o aplicativo de novo e escolha **Abrir Mesmo Assim** (também em **Ajustes do Sistema** -> **Privacidade e Segurança**). Só na primeira vez.
+- **AppImage do Linux**: torne o arquivo executável antes de abri-lo - `chmod +x AnkiMiner-*.AppImage`, ou **Propriedades** -> **Permitir execução** no gerenciador de arquivos.
 - **Windows SmartScreen**: **Mais informações** -> **Executar assim mesmo**.
 - **Falso positivo do Windows Defender**: restaure pelo **Histórico de proteção** ou [reporte à Microsoft](https://www.microsoft.com/en-us/wdsi/filesubmission).
 

@@ -9386,8 +9386,8 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Unduh pemasang</translation>
     </message>
     <message>
-        <source>Download archive</source>
-        <translation>Unduh arsip</translation>
+        <source>Download disk image</source>
+        <translation>Unduh disk image</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

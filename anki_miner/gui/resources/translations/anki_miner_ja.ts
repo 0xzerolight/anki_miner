@@ -9386,8 +9386,8 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>インストーラーをダウンロード</translation>
     </message>
     <message>
-        <source>Download archive</source>
-        <translation>アーカイブをダウンロード</translation>
+        <source>Download disk image</source>
+        <translation>ディスクイメージをダウンロード</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

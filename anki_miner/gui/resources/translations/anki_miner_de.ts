@@ -9402,8 +9402,8 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
         <translation>Installationsprogramm herunterladen</translation>
     </message>
     <message>
-        <source>Download archive</source>
-        <translation>Archiv herunterladen</translation>
+        <source>Download disk image</source>
+        <translation>Image herunterladen</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

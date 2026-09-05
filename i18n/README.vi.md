@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:2694be0f35a3ecf6 -->
+<!-- i18n-source: README.md sha256:7ca8f4a43c52af6c -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -67,8 +67,8 @@ Tải bản dành cho nền tảng của bạn từ [bản phát hành mới nh�
 | Nền tảng | Tải về |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS (Apple Silicon / M1-M4) | `AnkiMiner-*-macOS-arm64.tar.gz` |
-| macOS (Intel) | `AnkiMiner-*-macOS-x86_64.tar.gz` ¹ |
+| macOS (Apple Silicon / M1-M4) | `AnkiMiner-*-macOS-arm64.dmg` |
+| macOS (Intel) | `AnkiMiner-*-macOS-x86_64.dmg` ¹ |
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (khác) | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
@@ -76,7 +76,8 @@ Tải bản dành cho nền tảng của bạn từ [bản phát hành mới nh�
 
 ### Lưu ý lần chạy đầu (bản dựng chưa ký)
 
-- **macOS**: Gatekeeper chặn ứng dụng. Hãy giải nén trước, rồi chạy `xattr -dr com.apple.quarantine AnkiMiner/`
+- **macOS**: mở tệp `.dmg`, kéo **AnkiMiner** vào **Applications**, rồi khởi chạy. Lần chạy đầu bị chặn vì ứng dụng chưa được Apple công chứng: đóng hộp thoại, mở lại ứng dụng và chọn **Open Anyway** (cũng có trong **System Settings** -> **Privacy & Security**). Chỉ cần làm một lần.
+- **AppImage Linux**: cấp quyền thực thi trước khi chạy - `chmod +x AnkiMiner-*.AppImage`, hoặc **Properties** -> **Allow executing** trong trình quản lý tệp.
 - **Windows SmartScreen**: **More info** -> **Run anyway**.
 - **Cảnh báo nhầm của Windows Defender**: khôi phục từ **Protection history** hoặc [báo cho Microsoft](https://www.microsoft.com/en-us/wdsi/filesubmission).
 

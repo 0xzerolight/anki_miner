@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # Shared bundled-smoke runner — single source of truth for release.yml AND the
-# local release_preflight.sh. Given a PyInstaller onedir (e.g. dist/AnkiMiner),
+# local release_preflight.sh. Given a PyInstaller onedir (e.g. dist/AnkiMiner)
+# or the macOS .app (dist/AnkiMiner.app),
 # run the three bundle-validation smokes the release asserts and fail closed on
 # any miss. Keep this in lock-step with the smokes documented in release.yml;
 # both call this script so they cannot drift.
 #
-# Usage: scripts/bundle_smoke.sh <dist_dir>     # e.g. dist/AnkiMiner
+# Usage: scripts/bundle_smoke.sh <dist_dir>     # e.g. dist/AnkiMiner, dist/AnkiMiner.app
 #
 # Smokes (all headless via QT_QPA_PLATFORM=offscreen; none touch the network):
 #   1. youtube   ANKI_MINER_SMOKE=youtube                  -> BUNDLED_SMOKE_PASS
@@ -25,9 +26,11 @@ if [ ! -d "$DIST" ]; then
   exit 2
 fi
 
-# Locate the app binary at the onedir root (AnkiMiner / AnkiMiner.exe).
+# Locate the app binary at the onedir root (AnkiMiner / AnkiMiner.exe), or, when
+# handed the macOS .app, inside Contents/MacOS. $DIST stays the bundle root
+# either way so the find-based probes below still sweep the whole tree.
 APP=""
-for cand in "$DIST/AnkiMiner" "$DIST/AnkiMiner.exe"; do
+for cand in "$DIST/AnkiMiner" "$DIST/AnkiMiner.exe" "$DIST/Contents/MacOS/AnkiMiner"; do
   [ -f "$cand" ] && APP="$cand" && break
 done
 if [ -z "$APP" ]; then

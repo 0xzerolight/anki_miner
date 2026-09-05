@@ -52,8 +52,37 @@ contents:
     file_info:
       mode: 0644
 
-  # Application icon
+  # AppStream metadata — what GNOME Software and KDE Discover read to show a
+  # name, description and screenshot instead of a bare package row. Rendered by
+  # packaging/render_metainfo.sh (which validates it) before nfpm runs.
+  - src: dist/anki-miner.metainfo.xml
+    dst: /usr/share/metainfo/io.github._0xzerolight.AnkiMiner.metainfo.xml
+    file_info:
+      mode: 0644
+
+  # Application icon. The bitmap sizes are not redundant with the SVG: plenty of
+  # panels, launchers and file managers never look at scalable/.
   - src: anki_miner/gui/resources/icons/anki_miner.svg
     dst: /usr/share/icons/hicolor/scalable/apps/anki-miner.svg
+    file_info:
+      mode: 0644
+
+  - src: packaging/icons/anki-miner-48.png
+    dst: /usr/share/icons/hicolor/48x48/apps/anki-miner.png
+    file_info:
+      mode: 0644
+
+  - src: packaging/icons/anki-miner-64.png
+    dst: /usr/share/icons/hicolor/64x64/apps/anki-miner.png
+    file_info:
+      mode: 0644
+
+  - src: packaging/icons/anki-miner-128.png
+    dst: /usr/share/icons/hicolor/128x128/apps/anki-miner.png
+    file_info:
+      mode: 0644
+
+  - src: packaging/icons/anki-miner-256.png
+    dst: /usr/share/icons/hicolor/256x256/apps/anki-miner.png
     file_info:
       mode: 0644

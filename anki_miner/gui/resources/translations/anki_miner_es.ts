@@ -9402,8 +9402,8 @@ Sus diccionarios instalados, audio, listas de frecuencia y tema se conservan.</t
         <translation>Descargar instalador</translation>
     </message>
     <message>
-        <source>Download archive</source>
-        <translation>Descargar archivo comprimido</translation>
+        <source>Download disk image</source>
+        <translation>Descargar imagen de disco</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

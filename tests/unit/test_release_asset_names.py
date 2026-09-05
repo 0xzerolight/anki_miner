@@ -3,8 +3,8 @@
 Five assets ship per release. Four follow one template; the .deb follows
 Debian's mandated shape. Each name is built in a different place — the
 AppImage in a shell script, the installer in an Inno Setup script, the .deb
-and the macOS tarballs in release.yml — and nothing but this test stops one
-of them drifting. The macOS tarballs shipped unversioned for the whole 2.x
+and the macOS disk images in release.yml — and nothing but this test stops one
+of them drifting. The macOS assets shipped unversioned for the whole 2.x
 line for exactly that reason.
 """
 
@@ -42,8 +42,8 @@ def render_asset_names(version: str) -> set[str]:
     return {
         f"AnkiMiner-{version}-Linux-x86_64.AppImage",
         f"AnkiMiner-{version}-Windows-x86_64-Setup.exe",
-        f"AnkiMiner-{version}-macOS-arm64.tar.gz",
-        f"AnkiMiner-{version}-macOS-x86_64.tar.gz",
+        f"AnkiMiner-{version}-macOS-arm64.dmg",
+        f"AnkiMiner-{version}-macOS-x86_64.dmg",
         DEB_NAME.format(version=version),
     }
 
@@ -75,7 +75,7 @@ def test_release_yml_builds_every_asset_path_from_the_template():
     for expected in (
         f"dist/AnkiMiner-{version}-{slug}.AppImage",
         f"dist/AnkiMiner-{version}-{slug}-Setup.exe",
-        f"dist/AnkiMiner-{version}-{slug}.tar.gz",
+        f"dist/AnkiMiner-{version}-{slug}.dmg",
         f"dist/anki-miner_{version}_amd64.deb",
     ):
         assert expected in text, f"release.yml no longer builds {expected}"
