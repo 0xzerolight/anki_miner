@@ -245,11 +245,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._loading = False
         self._committing = False
         self._settings_dirty = False
-        # One-shot lazy fetch of the deck / note-type dropdown contents. At
-        # construction it would put a 15 s-timeout AnkiConnect call on the
-        # startup path for users who never open Settings; on every show it
-        # would re-hit Anki each visit. Same pattern as BackfillTab.showEvent.
-        self._names_requested = False
         # Settings search (D11). The index is built at the END of construction,
         # not here: anchors resolve their text lazily and must be read after the
         # translators are installed, or the index is English for everyone.
@@ -1078,6 +1073,16 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         """Forward a Vulkan model download status line to the Subtitles panel."""
         self.subtitles_panel.set_vulkan_status(text)
 
+    def ensure_anki_name_lists(self) -> None:
+        """Re-fetch the deck / note-type lists if they never arrived.
+
+        The public door for ``MainWindow.anki_reachable``: the probe controller
+        is private, and a validation sweep that has just reached Anki is the one
+        event that can clear a "Could not load decks" line on a Settings tab
+        that is already open (its ``showEvent`` will not fire again).
+        """
+        self._anki_probe.ensure_name_lists()
+
     def set_ytdlp_status(self, text: str) -> None:
         """Forward a yt-dlp updater status line to the YouTube panel."""
         self.youtube_panel.set_ytdlp_status(text)
@@ -1119,21 +1124,24 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         return scroll_area
 
     def showEvent(self, a0) -> None:  # noqa: N802 - Qt override
-        """Fetch the deck / note-type lists the first time Settings is shown.
+        """Fetch the deck / note-type lists unless they are already loaded.
 
         Fires whenever the tab becomes VISIBLE — including from a tab switch on
         an already-visible window, not just an explicit ``show()``. Any test
         that makes this tab visible must stub ``refresh_name_lists`` or it will
         open a real AnkiConnect socket and trip the network guard.
+
+        The guard lives in ``ensure_name_lists``, keyed on lists actually
+        arriving rather than on having asked: a fetch that failed because Anki
+        was not running yet must be retried on the next visit, or its "Could
+        not load decks" line stays on screen for the life of the process.
         """
         super().showEvent(a0)
         # Again here, not only at construction: the rail is measured from its
         # own font metrics, and a widget built before it is polished can be
         # carrying the application default rather than the themed face.
         self._fit_navigator()
-        if not self._names_requested:
-            self._names_requested = True
-            self._anki_probe.refresh_name_lists()
+        self._anki_probe.ensure_name_lists()
 
     def _load_config(self) -> None:
         """Load current configuration into UI.

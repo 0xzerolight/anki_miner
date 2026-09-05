@@ -123,9 +123,17 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             SettingsTab, so its panels don't go stale) reconnect this to their
             update_config to pick up the new state without waiting for the user
             to edit Settings.
+        anki_reachable: emitted after a validation sweep that reached
+            AnkiConnect. Screens whose deck / note-type dropdowns are still
+            empty re-fetch on it, which is what makes System Health's
+            "Re-check now" clear a "Could not load decks" line on a screen the
+            user is already looking at (its showEvent will not fire again).
+            Consumers are all guarded, so a screen with lists already loaded
+            costs nothing.
     """
 
     config_refreshed = pyqtSignal(object)  # AnkiMinerConfig
+    anki_reachable = pyqtSignal()
 
     def __init__(self, config: AnkiMinerConfig | None = None):
         """Initialize the main window."""
@@ -1767,6 +1775,14 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # "Checking connection..." forever — set_connection_status had no
         # callers. Use the authoritative result.ankiconnect_ok flag.
         self._set_anki_connection_badge("connected" if result.ankiconnect_ok else "disconnected")
+
+        # Anki answered, so any screen still showing "could not load decks" was
+        # asking a closed Anki and can now be told to ask again. Emitted on
+        # every reachable sweep rather than on a down→up edge: the consumers are
+        # guarded on their own lists being empty, so a healthy screen no-ops and
+        # there is no edge state to keep in sync here.
+        if result.ankiconnect_ok:
+            self.anki_reachable.emit()
 
         if result.all_passed:
             self.status_bar.set_operation(self.tr("System validation passed"), "success")

@@ -264,3 +264,44 @@ class TestCloseWorkerHandles:
         finally:
             gate.set()
             assert worker.wait(2000)
+
+
+class TestDeckListRetry:
+    """A deck fetch that failed because Anki was closed must be retried.
+
+    The regression: the latch was set on the ATTEMPT, and ``get_deck_names``
+    answers an unreachable Anki with an empty list, so the failure was
+    remembered as "done". This tab has no Refresh button, so the line stayed on
+    screen for the life of the process.
+    """
+
+    def test_empty_fetch_leaves_the_tab_asking(self, tab):
+        with patch.object(tab, "_load_decks") as load:
+            tab.ensure_decks()
+            assert load.call_count == 1
+
+            tab._on_decks_fetched([])
+            assert tab.status_label.text()
+
+            tab.ensure_decks()
+            assert load.call_count == 2
+
+    def test_a_real_deck_list_stops_the_asking_and_clears_the_line(self, tab):
+        tab._on_decks_fetched([])
+        assert tab.status_label.text()
+
+        tab._on_decks_fetched(["Default", "Premade"])
+
+        assert tab.status_label.text() == ""
+        assert tab.source_combo.count() == 3  # placeholder + two decks
+        with patch.object(tab, "_load_decks") as load:
+            tab.ensure_decks()
+            load.assert_not_called()
+
+    def test_a_scan_message_survives_a_deck_fetch(self, tab):
+        """Only the fetch failure is cleared, never whatever else wrote there."""
+        tab.status_label.setText("Scanned 40 notes.")
+
+        tab._on_decks_fetched(["Default"])
+
+        assert tab.status_label.text() == "Scanned 40 notes."
