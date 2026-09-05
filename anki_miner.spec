@@ -470,7 +470,7 @@ if platform.system() == "Darwin":
         coll,
         name="AnkiMiner.app",
         icon=icon_file,
-        bundle_identifier="io.github.0xzerolight.AnkiMiner",
+        bundle_identifier="io.github._0xzerolight.AnkiMiner",
         version=app_version,
         info_plist={
             # The executable stays "AnkiMiner" (scripts key off it); the space

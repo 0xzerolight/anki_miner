@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Template. @VERSION@ and @DATE@ are substituted by packaging/render_metainfo.sh,
+  which both the AppImage build and the .deb build call — a hand-maintained
+  <release> block goes stale the release after someone forgets it.
+-->
+<component type="desktop-application">
+  <id>io.github._0xzerolight.AnkiMiner</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>Anki Miner</name>
+  <summary>Mine vocabulary from video, audio and books into Anki flashcards</summary>
+
+  <developer id="io.github._0xzerolight">
+    <name>Anki Miner Contributors</name>
+  </developer>
+
+  <description>
+    <p>
+      Anki Miner turns the media you already watch and read into Anki flashcards.
+      Point it at a video and its subtitles, a YouTube URL, a manga volume, an
+      EPUB or a plain subtitle file, and it finds the words you do not know yet.
+    </p>
+    <p>
+      Each card is built for you: the sentence the word appeared in, a screenshot
+      or animated clip of that moment, the sentence audio, a dictionary
+      definition, a frequency rank, pitch accent and word audio.
+    </p>
+    <p>
+      Words you already know are filtered out by reading your own Anki
+      collection, so a run only ever proposes something new. Japanese, Chinese
+      and Korean are supported.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">anki-miner.desktop</launchable>
+
+  <categories>
+    <category>Education</category>
+    <category>Languages</category>
+  </categories>
+
+  <keywords>
+    <keyword>Anki</keyword>
+    <keyword>flashcards</keyword>
+    <keyword>Japanese</keyword>
+    <keyword>subtitles</keyword>
+    <keyword>vocabulary</keyword>
+  </keywords>
+
+  <url type="homepage">https://github.com/0xzerolight/anki_miner</url>
+  <url type="bugtracker">https://github.com/0xzerolight/anki_miner/issues</url>
+  <url type="vcs-browser">https://github.com/0xzerolight/anki_miner</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Mining a video into Anki cards</caption>
+      <image>https://raw.githubusercontent.com/0xzerolight/anki_miner/main/gifs/anki_miner_showcase.png</image>
+    </screenshot>
+  </screenshots>
+
+  <content_rating type="oars-1.1"/>
+
+  <releases>
+    <release version="@VERSION@" date="@DATE@"/>
+  </releases>
+</component>

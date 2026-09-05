@@ -1241,10 +1241,25 @@ jobs:
             ${{ runner.temp }}/setup-downgrade-probe.log
             ${{ runner.temp }}/uninstall-upgrade.log
 
+      # Nothing validated the desktop entry before, and appimagetool refuses to
+      # build against an invalid metainfo file — so a malformed one would surface
+      # as an opaque AppImage failure rather than as the thing that is wrong.
+      # Both files are shared with the .deb, so one gate covers both artifacts.
+      - name: Validate desktop entry and AppStream metadata (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq desktop-file-utils appstream
+          desktop-file-validate packaging/appimage/anki-miner.desktop
+          desktop-file-validate packaging/deb/anki-miner.desktop
+          packaging/render_metainfo.sh ${{ steps.version.outputs.version }} \
+            "${RUNNER_TEMP}/metainfo-validate.xml"
+
       - name: Build AppImage (Linux)
         if: runner.os == 'Linux'
         run: |
-          chmod +x packaging/appimage/build-appimage.sh
+          chmod +x packaging/render_metainfo.sh packaging/appimage/build-appimage.sh
           packaging/appimage/build-appimage.sh ${{ steps.version.outputs.version }}
 
       - name: Install nfpm (Linux)
@@ -1273,6 +1288,11 @@ jobs:
           # probes reported ASR as present and the app offered a Download button
           # that could never work. Bundle-parity with the AppImage means the
           # bundled smokes above cover exactly what .deb users run.
+          set -euo pipefail
+          # nfpm reads dist/anki-miner.metainfo.xml. The AppImage build already
+          # wrote it; rendering again keeps the .deb from depending on that
+          # ordering, and it is idempotent.
+          packaging/render_metainfo.sh ${{ steps.version.outputs.version }} dist/anki-miner.metainfo.xml
           VERSION=${{ steps.version.outputs.version }} ./nfpm package \
             --config packaging/nfpm.yaml \
             --packager deb \
