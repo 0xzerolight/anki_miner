@@ -65,8 +65,8 @@ Grab the download for your platform from the [latest release](https://github.com
 | Platform | Download |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS (Apple Silicon / M1-M4) | `AnkiMiner-*-macOS-arm64.tar.gz` |
-| macOS (Intel) | `AnkiMiner-*-macOS-x86_64.tar.gz` ¹ |
+| macOS (Apple Silicon / M1-M4) | `AnkiMiner-*-macOS-arm64.dmg` |
+| macOS (Intel) | `AnkiMiner-*-macOS-x86_64.dmg` ¹ |
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (other) | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
@@ -74,7 +74,8 @@ Grab the download for your platform from the [latest release](https://github.com
 
 ### First-run notes (unsigned builds)
 
-- **macOS**: Gatekeeper blocks the app. Extract first, then `xattr -dr com.apple.quarantine AnkiMiner/`
+- **macOS**: open the `.dmg`, drag **AnkiMiner** onto **Applications**, then launch it. The first launch is blocked because the app is not notarized: dismiss the dialog, open the app again, and choose **Open Anyway** (also under **System Settings** -> **Privacy & Security**). Once only.
+- **Linux AppImage**: make it executable before running it - `chmod +x AnkiMiner-*.AppImage`, or **Properties** -> **Allow executing** in your file manager.
 - **Windows SmartScreen**: **More info** -> **Run anyway**.
 - **Windows Defender false positive**: restore from **Protection history** or [report to Microsoft](https://www.microsoft.com/en-us/wdsi/filesubmission).
 

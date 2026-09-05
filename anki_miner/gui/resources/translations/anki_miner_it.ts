@@ -9402,8 +9402,8 @@ I dizionari installati, l'audio, gli elenchi di frequenza e il tema vengono mant
         <translation>Scarica programma di installazione</translation>
     </message>
     <message>
-        <source>Download archive</source>
-        <translation>Scarica archivio</translation>
+        <source>Download disk image</source>
+        <translation>Scarica immagine disco</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

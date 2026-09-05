@@ -9418,8 +9418,8 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>Скачать установщик</translation>
     </message>
     <message>
-        <source>Download archive</source>
-        <translation>Скачать архив</translation>
+        <source>Download disk image</source>
+        <translation>Скачать образ диска</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

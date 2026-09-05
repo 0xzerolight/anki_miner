@@ -9402,8 +9402,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Télécharger l'installateur</translation>
     </message>
     <message>
-        <source>Download archive</source>
-        <translation>Télécharger l'archive</translation>
+        <source>Download disk image</source>
+        <translation>Télécharger l’image disque</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

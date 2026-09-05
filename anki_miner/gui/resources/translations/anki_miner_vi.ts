@@ -9386,8 +9386,8 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Tải trình cài đặt</translation>
     </message>
     <message>
-        <source>Download archive</source>
-        <translation>Tải kho lưu trữ</translation>
+        <source>Download disk image</source>
+        <translation>Tải ảnh đĩa</translation>
     </message>
 </context><context>
     <name>VulkanModelDownloadWorker</name>

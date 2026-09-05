@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:2694be0f35a3ecf6 -->
+<!-- i18n-source: README.md sha256:7ca8f4a43c52af6c -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -67,8 +67,8 @@ Anki Miner が役に立ったら ⭐ スターをお願いします - 他の人�
 | プラットフォーム | ダウンロード |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS（Apple Silicon / M1-M4） | `AnkiMiner-*-macOS-arm64.tar.gz` |
-| macOS（Intel） | `AnkiMiner-*-macOS-x86_64.tar.gz` ¹ |
+| macOS（Apple Silicon / M1-M4） | `AnkiMiner-*-macOS-arm64.dmg` |
+| macOS（Intel） | `AnkiMiner-*-macOS-x86_64.dmg` ¹ |
 | Linux（Debian/Ubuntu） | `anki-miner_*_amd64.deb` |
 | Linux（その他） | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
@@ -76,7 +76,8 @@ Anki Miner が役に立ったら ⭐ スターをお願いします - 他の人�
 
 ### 初回起動時の注意（未署名ビルド）
 
-- **macOS**: Gatekeeper がアプリをブロックします。先に展開してから `xattr -dr com.apple.quarantine AnkiMiner/`
+- **macOS**: `.dmg` を開き、**AnkiMiner** を**アプリケーション**にドラッグしてから起動してください。公証されていないため初回起動はブロックされます。ダイアログを閉じ、もう一度アプリを開いて**このまま開く**を選びます（**システム設定** -> **プライバシーとセキュリティ**からも可能）。初回のみです。
+- **Linux AppImage**: 実行する前に実行権限を付与してください - `chmod +x AnkiMiner-*.AppImage`、またはファイルマネージャーの**プロパティ** -> **実行を許可する**。
 - **Windows SmartScreen**: **詳細情報** -> **実行**。
 - **Windows Defender の誤検知**: **保護の履歴** から復元するか、[Microsoft に報告](https://www.microsoft.com/en-us/wdsi/filesubmission)してください。
 

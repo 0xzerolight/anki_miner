@@ -9330,7 +9330,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Download archive</source>
+        <source>Download disk image</source>
         <translation type="unfinished" />
     </message>
 </context><context>

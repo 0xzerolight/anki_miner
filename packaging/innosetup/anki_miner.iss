@@ -62,10 +62,20 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 
 [Languages]
+; The app ships 12 UI languages; Inno bundles official .isl files for seven of
+; them, and picks the user's system language automatically. id, vi, zh_cn and
+; zh_tw have no official Inno translation and fall back to English.
 Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "german"; MessagesFile: "compiler:Languages\German.isl"
+Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
+Name: "french"; MessagesFile: "compiler:Languages\French.isl"
+Name: "italian"; MessagesFile: "compiler:Languages\Italian.isl"
+Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
+Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
+Name: "russian"; MessagesFile: "compiler:Languages\Russian.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional icons:"
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [InstallDelete]
 ; Issue #10 showed why stale dist-info directories must not survive overlay
@@ -89,11 +99,11 @@ Source: "..\..\dist\AnkiMiner\*"; DestDir: "{app}"; Flags: ignoreversion recurse
 
 [Icons]
 Name: "{group}\Anki Miner"; Filename: "{app}\AnkiMiner.exe"
-Name: "{group}\Uninstall Anki Miner"; Filename: "{uninstallexe}"
+Name: "{group}\{cm:UninstallProgram,Anki Miner}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\Anki Miner"; Filename: "{app}\AnkiMiner.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\AnkiMiner.exe"; Description: "Launch Anki Miner"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\AnkiMiner.exe"; Description: "{cm:LaunchProgram,Anki Miner}"; Flags: nowait postinstall skipifsilent
 
 [Code]
 // A nonempty result blocks a downgrade at PrepareToInstall (Setup exit code 7).
