@@ -81,8 +81,8 @@ class UpdateBanner(QFrame):
             return self.tr("Download AppImage")
         if lowered.endswith("setup.exe"):
             return self.tr("Download installer")
-        if lowered.endswith(".tar.gz"):
-            return self.tr("Download archive")
+        if lowered.endswith(".dmg"):
+            return self.tr("Download disk image")
         return self.tr("View release")
 
     # ------------------------------------------------------------------ public

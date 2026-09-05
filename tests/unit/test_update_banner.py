@@ -36,10 +36,10 @@ class TestDownloadLabel:
         qtbot.addWidget(banner)
         assert banner._download_btn.text() == "Download installer"
 
-    def test_tar_gz_label(self, qtbot):
-        banner = UpdateBanner(_info(asset_url="https://example.com/AnkiMiner-3.1.0-macOS-arm64.tar.gz"))
+    def test_dmg_label(self, qtbot):
+        banner = UpdateBanner(_info(asset_url="https://example.com/AnkiMiner-3.2.0-macOS-arm64.dmg"))
         qtbot.addWidget(banner)
-        assert banner._download_btn.text() == "Download archive"
+        assert banner._download_btn.text() == "Download disk image"
 
     def test_view_release_when_no_asset(self, qtbot):
         banner = UpdateBanner(_info(asset_url=None))

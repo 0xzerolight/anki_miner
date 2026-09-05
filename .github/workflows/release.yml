@@ -963,13 +963,50 @@ jobs:
         run: |
           set -euo pipefail
           src="vendor/yt-dlp/yt-dlp"
-          dest="dist/AnkiMiner/_internal/bin"
+          # The .app is what ships; sys._MEIPASS inside it is Contents/Frameworks,
+          # so the resolver's bundled tier looks for bin/ under there.
+          dest="dist/AnkiMiner.app/Contents/Frameworks/bin"
           test -f "$src" || { echo "::error::$src missing — the vendor step did not run"; exit 1; }
+          test -d "dist/AnkiMiner.app" || { echo "::error::dist/AnkiMiner.app missing — the spec's BUNDLE() did not run"; exit 1; }
           mkdir -p "$dest"
           cp "$src" "$dest/yt-dlp"
           chmod +x "$dest/yt-dlp"
           cmp "$src" "$dest/yt-dlp" || { echo "::error::vendored yt-dlp differs from its source"; exit 1; }
           "$dest/yt-dlp" --version
+
+      # macOS only, after every file is in place and before anything reads the
+      # bundle. Ad-hoc signing needs no Apple account and is not notarization —
+      # what it buys is the difference between the two Gatekeeper outcomes for a
+      # quarantined download: a VALID signature yields "Apple could not verify",
+      # which the user clears with Open Anyway; a MISSING or BROKEN one yields
+      # "is damaged and can't be opened", which has no override at all and which
+      # `xattr -dr com.apple.quarantine` does not even repair. macOS 15 removed
+      # the old Control-click bypass, so that GUI route is the only one left.
+      #
+      # yt-dlp is deliberately NOT re-signed. yt-dlp_macos is a PyInstaller
+      # onefile whose payload is a PKG archive appended past the end of the
+      # Mach-O image; codesign writes its signature at the end of __LINKEDIT and
+      # would truncate it, reproducing the exact "Could not load PyInstaller's
+      # embedded PKG archive" failure anki_miner.spec's darwin guard exists to
+      # avoid. It arrives ad-hoc signed by yt-dlp's own CI; the outer bundle
+      # seals it by hash into CodeResources without touching its bytes.
+      - name: Ad-hoc code sign the app bundle (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          APP="dist/AnkiMiner.app"
+          # Inner-most first: codesign refuses to seal a bundle whose nested code
+          # it would have to re-sign afterwards.
+          find "$APP" -type f \( -name '*.dylib' -o -name '*.so' \) \
+            -exec codesign --force --sign - {} +
+          for b in ffmpeg ffprobe alass; do
+            p="$APP/Contents/Frameworks/bin/$b"
+            [ -f "$p" ] && codesign --force --sign - "$p"
+          done
+          codesign --force --sign - "$APP"
+          # --strict, NOT --deep --strict: deep verification walks nested code and
+          # would object to the deliberately untouched yt-dlp.
+          codesign --verify --strict --verbose=2 "$APP"
 
       # Fetch a tiny ggml acoustic model so the whispercpp smoke can do a REAL
       # construct+decode (the only assertion that catches DEFECT 1's SIGABRT and
@@ -1083,7 +1120,11 @@ jobs:
           # Mining-language tokenizer legs (opt-in in bundle_smoke.sh so the
           # local invocation-count test stays valid).
           BUNDLE_SMOKE_LANGS: zh ko
-        run: scripts/bundle_smoke.sh dist/AnkiMiner
+        # macOS smokes the SIGNED .app, not the leftover COLLECT tree: it is the
+        # artifact that ships, and running it here is what proves the codesign
+        # step above broke neither the bundled yt-dlp nor the Contents/Resources
+        # symlinks the relocated data files are reached through.
+        run: scripts/bundle_smoke.sh ${{ runner.os == 'macOS' && 'dist/AnkiMiner.app' || 'dist/AnkiMiner' }}
 
       # packaging/linux-launcher.sh became the AppImage's AppRun and the .deb's
       # /usr/bin entrypoint. The bundled smoke above execs dist/AnkiMiner
@@ -1237,11 +1278,25 @@ jobs:
             --packager deb \
             --target dist/anki-miner_${{ steps.version.outputs.version }}_amd64.deb
 
-      - name: Create archive (macOS)
+      # A .dmg, not a tarball. A tarball auto-extracts into ~/Downloads and the
+      # user runs the app from there forever — never /Applications, so no
+      # Launchpad entry — and it is two steps instead of one. The disk image
+      # mounts to the drag-onto-Applications window every Mac user recognises.
+      # No custom background: the two-icon layout is the convention and needs no
+      # design asset.
+      - name: Create disk image (macOS)
         if: runner.os == 'macOS'
         run: |
-          cd dist
-          tar -czf AnkiMiner-${{ steps.version.outputs.version }}-${{ matrix.asset_slug }}.tar.gz AnkiMiner/
+          set -euo pipefail
+          brew install create-dmg
+          create-dmg \
+            --volname "Anki Miner" \
+            --volicon anki_miner/gui/resources/icons/anki_miner.icns \
+            --window-size 600 380 \
+            --icon "AnkiMiner.app" 150 180 \
+            --app-drop-link 450 180 \
+            "dist/AnkiMiner-${{ steps.version.outputs.version }}-${{ matrix.asset_slug }}.dmg" \
+            "dist/AnkiMiner.app"
 
       # Per-OS explicit upload with if-no-files-found: error. A single catch-all
       # step with default 'warn' only fails when NOTHING matches, so a sibling
@@ -1264,7 +1319,7 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           if-no-files-found: error
-          path: dist/AnkiMiner-${{ steps.version.outputs.version }}-${{ matrix.asset_slug }}.tar.gz
+          path: dist/AnkiMiner-${{ steps.version.outputs.version }}-${{ matrix.asset_slug }}.dmg
 
       - name: Upload artifact (Windows)
         if: runner.os == 'Windows'
@@ -1295,7 +1350,7 @@ jobs:
         with:
           generate_release_notes: true
           files: |
-            artifacts/**/*.tar.gz
+            artifacts/**/*.dmg
             artifacts/**/*-Setup.exe
             artifacts/**/*.AppImage
             artifacts/**/*.deb

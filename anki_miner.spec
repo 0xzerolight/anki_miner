@@ -452,3 +452,37 @@ coll = COLLECT(
     upx_exclude=[],
     name="AnkiMiner",
 )
+
+# macOS ships the .app, never the bare COLLECT tree. Without a BUNDLE the icon=
+# on EXE() above is inert (PyInstaller only writes CFBundleIconFile from here),
+# Finder has no app to launch, and — the part that actually breaks installs —
+# Gatekeeper offers no "Open Anyway" for a quarantined loose executable, so the
+# only route left is a Terminal xattr command. See release.yml's macOS codesign
+# step: an ad-hoc signature is what turns "is damaged and can't be opened" (no
+# override at all) into "Apple could not verify" (which Open Anyway clears).
+#
+# PyInstaller still emits dist/AnkiMiner/ alongside dist/AnkiMiner.app. The .app
+# is the shipped one: data files land in Contents/Resources, shared libraries in
+# Contents/Frameworks (== sys._MEIPASS), the executable in Contents/MacOS, with
+# cross-directory symlinks holding the references together.
+if platform.system() == "Darwin":
+    app = BUNDLE(  # noqa: F821 - injected into the spec namespace by PyInstaller
+        coll,
+        name="AnkiMiner.app",
+        icon=icon_file,
+        bundle_identifier="io.github.0xzerolight.AnkiMiner",
+        version=app_version,
+        info_plist={
+            # The executable stays "AnkiMiner" (scripts key off it); the space
+            # belongs in the display name, which is what Finder, the Dock and
+            # the menu bar show.
+            "CFBundleName": "Anki Miner",
+            "CFBundleDisplayName": "Anki Miner",
+            "CFBundleShortVersionString": app_version,
+            "CFBundleVersion": app_version,
+            "NSPrincipalClass": "NSApplication",
+            "NSHighResolutionCapable": True,
+            "LSApplicationCategoryType": "public.app-category.education",
+            "NSHumanReadableCopyright": "GPL-3.0-or-later",
+        },
+    )
