@@ -204,6 +204,12 @@ class AnkiMinerConfig:
     downloader_embed_thumbnail: bool = False  # --embed-thumbnail
     downloader_embed_metadata: bool = False  # --embed-metadata
 
+    # --- Manga OCR (Utilities → Manga OCR) ---
+    # Persisted run option; unticked passes --force_cpu to mokuro. The tab's
+    # "Redo already-processed volumes" box is deliberately NOT a field here
+    # (overwrite-class options stay transient — test_overwrite_is_never_persisted).
+    mokuro_use_gpu: bool = True
+
     # --- Inline run options remembered between launches --------------------
     # Set on a workflow screen rather than in Settings, and persisted the same
     # way condenser_*/downloader_* are: the screen folds its edit into a fresh
@@ -542,6 +548,10 @@ class AnkiMinerConfig:
     # Optional explicit override for the alass executable. When unset,
     # subtitle retiming falls back to alass on PATH.
     alass_location: Path | None = None
+    # Optional explicit override for the mokuro executable. When unset,
+    # anki_miner.utils.mokuro_resolver prefers the in-app uv environment under
+    # uv_root, then mokuro on PATH.
+    mokuro_location: Path | None = None
 
     # NOTE: the three alass alignment knobs (retime_split_penalty,
     # retime_correct_framerate, retime_single_offset) were removed when the
@@ -576,6 +586,11 @@ class AnkiMinerConfig:
     # subtitle-alignment binary); derived from ANKI_MINER_HOME, never
     # user-configurable directly.
     bin_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "bin")
+
+    # Root of the in-app uv installs (Settings → Transcription & Alignment →
+    # Manga OCR): uv_root/python (managed CPython), uv_root/mokuro (the venv).
+    # The uv binary itself lives in bin_root beside alass.
+    uv_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "uv")
 
     # Theme settings (UI state — persisted via gui_config.json).
     # `theme_favorites` is the curated list that drives the top-right combo;
@@ -699,6 +714,12 @@ class AnkiMinerConfig:
                 "alass_location",
                 Path(self.alass_location) if self.alass_location else None,
             )
+        if isinstance(self.mokuro_location, str):
+            object.__setattr__(
+                self,
+                "mokuro_location",
+                Path(self.mokuro_location) if self.mokuro_location else None,
+            )
         if isinstance(self.ytdlp_location, str):
             object.__setattr__(
                 self,
@@ -715,6 +736,8 @@ class AnkiMinerConfig:
             object.__setattr__(self, "onnx_pack_root", Path(self.onnx_pack_root))
         if isinstance(self.bin_root, str):
             object.__setattr__(self, "bin_root", Path(self.bin_root))
+        if isinstance(self.uv_root, str):
+            object.__setattr__(self, "uv_root", Path(self.uv_root))
         # JSON round-trip yields a list for theme_favorites; coerce to tuple
         # so the frozen dataclass stays internally immutable.
         if isinstance(self.theme_favorites, list):
