@@ -19,9 +19,17 @@ import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
+from PyQt6.QtGui import QTextCursor
+from PyQt6.QtWidgets import QDialog
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.download_tab import DownloadTab
-from anki_miner.services.media_downloader import DownloadOptions
+from anki_miner.services.media_downloader import (
+    DownloadOptions,
+    DownloadPlaylist,
+    DownloadPlaylistEntry,
+    UrlTracks,
+)
 
 # ---------------------------------------------------------------------------
 # Patch-target constants
@@ -32,6 +40,10 @@ _COMPUTE_AVAILABLE = "anki_miner.gui.widgets.download_tab.DownloadTab._compute_y
 _OS_ACCESS = "anki_miner.gui.widgets.download_tab.os.access"
 _WORKER_CLS = "anki_miner.gui.widgets.download_tab.DownloadWorker"
 _PICK_DIRECTORY = "anki_miner.gui.widgets._tool_tab_base.file_dialogs.pick_directory"
+_PROBE_WORKER_CLS = "anki_miner.gui.widgets.download_tab.DownloadTracksProbeWorker"
+_RESOLVE_WORKER_CLS = "anki_miner.gui.widgets.download_tab.DownloadPlaylistResolveWorker"
+_PICKER_DIALOG_CLS = "anki_miner.gui.widgets.download_tab.LanguagePickerDialog"
+_PLAYLIST_DIALOG_CLS = "anki_miner.gui.widgets.download_tab.PlaylistPickerDialog"
 
 
 # ---------------------------------------------------------------------------
@@ -39,8 +51,8 @@ _PICK_DIRECTORY = "anki_miner.gui.widgets._tool_tab_base.file_dialogs.pick_direc
 # ---------------------------------------------------------------------------
 
 
-def _make_config(tmp_path: Path) -> AnkiMinerConfig:
-    return AnkiMinerConfig(media_temp_folder=tmp_path / "tmp")
+def _make_config(tmp_path: Path, **overrides) -> AnkiMinerConfig:
+    return AnkiMinerConfig(media_temp_folder=tmp_path / "tmp", **overrides)
 
 
 class _FakeWorker:
@@ -55,6 +67,10 @@ class _FakeWorker:
         self.file_skipped = MagicMock()
         self.queue_finished = MagicMock()
         self.error = MagicMock()
+        # The same fake stands in for the two probe workers.
+        self.tracks_probed = MagicMock()
+        self.playlist_resolved = MagicMock()
+        self.probe_error = MagicMock()
         self.finished = MagicMock()
         self.deleteLater = MagicMock()
         self._started = False
@@ -216,7 +232,7 @@ class TestWorkerConstruction:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         tab.url_input.setPlainText("https://example.com/v")
         tab.write_subs_checkbox.setChecked(True)
-        tab.sub_langs_edit.setText("ja,en")
+        tab._set_sub_langs("ja,en")
         tab.embed_thumbnail_checkbox.setChecked(True)
         tab.embed_metadata_checkbox.setChecked(True)
         worker_cls = _start_download(tab, _FakeWorker())
@@ -276,9 +292,9 @@ class TestOptionPersistence:
 
     def test_sub_langs_enabled_with_checkbox(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
-        assert not tab.sub_langs_edit.isEnabled()
+        assert not tab.sub_langs_button.isEnabled()
         tab.write_subs_checkbox.setChecked(True)
-        assert tab.sub_langs_edit.isEnabled()
+        assert tab.sub_langs_button.isEnabled()
 
 
 # ---------------------------------------------------------------------------
@@ -289,9 +305,8 @@ class TestOptionPersistence:
 class TestConfigLoopAndRefusal:
     def test_differ_ignores_whitespace_and_empty_langs(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
-        tab.sub_langs_edit.setText(" ja ")
-        tab._on_option_changed()  # commits the normalized "ja"
-        tab.sub_langs_edit.setText(" ja ")  # uncommitted raw text again
+        tab._set_sub_langs(" ja ")  # commits the normalized "ja"
+        assert tab._normalized_sub_langs() == "ja"
         assert tab._options_differ_from_widgets() is False
 
     def test_downloader_only_config_change_skips_probe(self, qtbot, tmp_path: Path, monkeypatch) -> None:
@@ -382,3 +397,234 @@ class TestOutputAndCancel:
         fake = _FakeWorker()
         _start_download(tab, fake)
         assert fake in list(tab.iter_close_workers())
+
+
+# ---------------------------------------------------------------------------
+# Language pickers (subtitle + audio) and track detection
+# ---------------------------------------------------------------------------
+
+
+def _put_cursor_on_line(tab: DownloadTab, line_index: int) -> None:
+    cursor = tab.url_input.textCursor()
+    cursor.movePosition(QTextCursor.MoveOperation.Start)
+    for _ in range(line_index):
+        cursor.movePosition(QTextCursor.MoveOperation.Down)
+    tab.url_input.setTextCursor(cursor)
+
+
+class TestSubtitleLanguagePicker:
+    def test_button_summarises_the_selection_with_names(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path, downloader_subtitle_langs="ja,en"), qtbot)
+        assert "Japanese" in tab.sub_langs_button.text()
+        assert "English" in tab.sub_langs_button.text()
+
+    def test_an_expression_is_shown_verbatim(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path, downloader_subtitle_langs="all,-live_chat"), qtbot)
+        assert tab.sub_langs_button.text() == "all,-live_chat"
+
+    def test_accepting_the_dialog_persists_the_new_value(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.write_subs_checkbox.setChecked(True)
+        emitted: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(emitted.append)
+        dialog = MagicMock()
+        dialog.exec.return_value = QDialog.DialogCode.Accepted
+        dialog.selected_langs.return_value = "ko,en"
+        with patch(_PICKER_DIALOG_CLS, return_value=dialog):
+            tab.sub_langs_button.click()
+        assert tab._sub_langs == "ko,en"
+        assert emitted[-1].downloader_subtitle_langs == "ko,en"
+        assert "Korean" in tab.sub_langs_button.text()
+
+    def test_rejecting_the_dialog_changes_nothing(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path, downloader_subtitle_langs="ja"), qtbot)
+        tab.write_subs_checkbox.setChecked(True)
+        dialog = MagicMock()
+        dialog.exec.return_value = QDialog.DialogCode.Rejected
+        with patch(_PICKER_DIALOG_CLS, return_value=dialog):
+            tab.sub_langs_button.click()
+        assert tab._sub_langs == "ja"
+
+    def test_detected_tracks_are_handed_to_the_dialog(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.write_subs_checkbox.setChecked(True)
+        tracks = UrlTracks("T", ("ja",), (), (), False)
+        tab._on_tracks_probed(tracks)
+        dialog = MagicMock()
+        dialog.exec.return_value = QDialog.DialogCode.Rejected
+        with patch(_PICKER_DIALOG_CLS, return_value=dialog) as dialog_cls:
+            tab.sub_langs_button.click()
+        assert dialog_cls.call_args.kwargs["detected"] is tracks
+
+
+class TestAudioLanguageWidget:
+    def test_default_is_any(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        assert tab.audio_lang_combo.currentData() == ""
+        assert tab._build_options().audio_lang == ""
+
+    def test_selection_reaches_the_options(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path, downloader_audio_lang="ja"), qtbot)
+        assert tab._build_options().audio_lang == "ja"
+
+    def test_a_custom_format_string_suppresses_the_preference(self, qtbot, tmp_path: Path) -> None:
+        """Custom format is documented raw mode: the tab must not rewrite it."""
+        config = _make_config(tmp_path, downloader_audio_lang="ja", downloader_custom_format="bv+ba")
+        tab = _make_tab(config, qtbot)
+        options = tab._build_options()
+        assert options.format_selector == "bv+ba"
+        assert options.audio_lang == ""
+
+    def test_choosing_a_language_persists_it(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        emitted: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(emitted.append)
+        tab.audio_lang_combo.setCurrentIndex(tab.audio_lang_combo.findData("ko"))
+        assert emitted[-1].downloader_audio_lang == "ko"
+
+    def test_the_combo_shows_names(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        labels = [tab.audio_lang_combo.itemText(i) for i in range(tab.audio_lang_combo.count())]
+        assert any("Japanese" in label for label in labels)
+
+
+class TestDetectTracks:
+    def test_detect_is_disabled_without_a_url(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        assert tab.detect_button.isEnabled() is False
+        tab.url_input.setPlainText("https://example.com/v")
+        assert tab.detect_button.isEnabled() is True
+
+    def test_detect_probes_the_first_url(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/a\nhttps://example.com/b")
+        with patch(_PROBE_WORKER_CLS, return_value=_FakeWorker()) as worker_cls:
+            tab.detect_button.click()
+        assert worker_cls.call_args.args[1] == "https://example.com/a"
+
+    def test_a_detected_audio_language_joins_the_combo(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab._on_tracks_probed(UrlTracks("T", ("ja",), (), ("ja", "sw"), False))
+        assert tab.audio_lang_combo.findData("sw") >= 0
+        assert tab._detected is not None
+
+    def test_a_detected_language_already_listed_is_not_duplicated(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        before = tab.audio_lang_combo.count()
+        tab._on_tracks_probed(UrlTracks("T", (), (), ("ja",), False))
+        assert tab.audio_lang_combo.count() == before
+
+    def test_detection_does_not_change_the_chosen_audio_language(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path, downloader_audio_lang="ja"), qtbot)
+        tab._on_tracks_probed(UrlTracks("T", (), (), ("sw",), False))
+        assert tab.audio_lang_combo.currentData() == "ja"
+
+    def test_a_probe_failure_raises_a_screen_issue_and_re_enables_detect(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/v")
+        tab._on_tracks_error("nope")
+        assert tab.issue_banner().current_issue() is not None
+        assert tab.detect_button.isEnabled() is True
+
+
+# ---------------------------------------------------------------------------
+# Playlist expansion
+# ---------------------------------------------------------------------------
+
+
+class TestExpandPlaylist:
+    def test_button_is_disabled_without_a_url(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        assert tab.expand_playlist_button.isEnabled() is False
+
+    def test_a_non_url_cursor_line_raises_a_screen_issue(self, qtbot, tmp_path: Path) -> None:
+        # The button is live because line 0 is a URL; the cursor is on the
+        # junk line, which is the case the guard exists for.
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/a\nnot a url")
+        _put_cursor_on_line(tab, 1)
+        tab.expand_playlist_button.click()
+        assert tab.issue_banner().current_issue() is not None
+
+    def test_the_cursor_line_is_the_one_resolved(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/a\nhttps://example.com/list")
+        _put_cursor_on_line(tab, 1)
+        with patch(_RESOLVE_WORKER_CLS, return_value=_FakeWorker()) as worker_cls:
+            tab.expand_playlist_button.click()
+        assert worker_cls.call_args.args[1] == "https://example.com/list"
+
+    def test_accepted_entries_replace_the_cursor_line(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/keep\nhttps://example.com/list")
+        tab._pending_playlist_line = 1
+        dialog = MagicMock()
+        dialog.exec.return_value = QDialog.DialogCode.Accepted
+        dialog.selected_urls.return_value = ["https://example.com/1", "https://example.com/2"]
+        with patch(_PLAYLIST_DIALOG_CLS, return_value=dialog):
+            tab._on_playlist_resolved(DownloadPlaylist("L", (), 2))
+        assert tab.url_input.toPlainText().splitlines() == [
+            "https://example.com/keep",
+            "https://example.com/1",
+            "https://example.com/2",
+        ]
+
+    def test_urls_already_in_the_box_are_not_duplicated(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/1\nhttps://example.com/list")
+        tab._pending_playlist_line = 1
+        dialog = MagicMock()
+        dialog.exec.return_value = QDialog.DialogCode.Accepted
+        dialog.selected_urls.return_value = ["https://example.com/1", "https://example.com/2"]
+        with patch(_PLAYLIST_DIALOG_CLS, return_value=dialog):
+            tab._on_playlist_resolved(DownloadPlaylist("L", (), 2))
+        assert tab.url_input.toPlainText().splitlines() == [
+            "https://example.com/1",
+            "https://example.com/2",
+        ]
+
+    def test_a_rejected_dialog_leaves_the_line_alone(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/list")
+        tab._pending_playlist_line = 0
+        dialog = MagicMock()
+        dialog.exec.return_value = QDialog.DialogCode.Rejected
+        with patch(_PLAYLIST_DIALOG_CLS, return_value=dialog):
+            tab._on_playlist_resolved(DownloadPlaylist("L", (), 2))
+        assert tab.url_input.toPlainText() == "https://example.com/list"
+
+    def test_a_truncated_playlist_is_flagged_to_the_dialog(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/list")
+        tab._pending_playlist_line = 0
+        dialog = MagicMock()
+        dialog.exec.return_value = QDialog.DialogCode.Rejected
+        entries = (DownloadPlaylistEntry(1, "V", "https://example.com/1", None),)
+        with patch(_PLAYLIST_DIALOG_CLS, return_value=dialog) as dialog_cls:
+            tab._on_playlist_resolved(DownloadPlaylist("L", entries, 900))
+        assert dialog_cls.call_args.kwargs["truncated"] is True
+
+    def test_a_complete_playlist_is_not_flagged_as_truncated(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/list")
+        tab._pending_playlist_line = 0
+        dialog = MagicMock()
+        dialog.exec.return_value = QDialog.DialogCode.Rejected
+        entries = (DownloadPlaylistEntry(1, "V", "https://example.com/1", None),)
+        with patch(_PLAYLIST_DIALOG_CLS, return_value=dialog) as dialog_cls:
+            tab._on_playlist_resolved(DownloadPlaylist("L", entries, 1))
+        assert dialog_cls.call_args.kwargs["truncated"] is False
+
+    def test_a_resolve_failure_raises_a_screen_issue_and_re_enables_the_button(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/v")
+        tab._on_playlist_error("That URL is not a playlist")
+        assert tab.issue_banner().current_issue() is not None
+        assert tab.expand_playlist_button.isEnabled() is True
+
+    def test_the_live_probe_workers_are_reported_for_close(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        worker = _FakeWorker()
+        worker.start()
+        tab._playlist_worker = worker
+        assert worker in list(tab.iter_close_workers())
