@@ -37,6 +37,7 @@ from anki_miner.models import (
     TokenizedWord,
     WhitelistCoverage,
 )
+from anki_miner.models.reading import ReadingUnit
 from anki_miner.models.youtube import FetchedMedia, SubMode
 from anki_miner.orchestration.audio_stage import AudioStage
 from anki_miner.services import (
@@ -57,6 +58,7 @@ from anki_miner.services.pitch_accent.render import (
 from anki_miner.services.reading.images import ReadingImageArchiveError, ReadingImageMemberError, prepare_card_image
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.services.secondary_subtitles import attach_translations
+from anki_miner.services.sentence_edit import resolve_sentence_edit
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.services.word_filter import enabled_script_options, script_options_kwarg, whitelist_hits
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
@@ -487,6 +489,28 @@ class EpisodeProcessor:
         """
         return self.definition_service.lookup_all_offline
 
+    @property
+    def parse_sentence_fn(self) -> Callable[[str], list[TokenizedWord]]:
+        """Per-sentence mining parse for interactive UI (the curator's sentence editor).
+
+        Bound form of :meth:`_parse_sentence`. Handed to the Word Curator the way
+        ``offline_lookup_fn`` is, and used by :meth:`_materialize_sentence_edits`
+        itself — one parser on both sides, so the words the editor offers are the
+        words the card gets.
+        """
+        return self._parse_sentence
+
+    def _parse_sentence(self, text: str) -> list[TokenizedWord]:
+        """Tokenise one sentence into mineable words through the run's parser.
+
+        ``parse_text_units`` over a single ``ReadingUnit``: the same normalisation,
+        inclusion gate and emit path as a real parse, with dummy timing (index 0)
+        that :func:`resolve_sentence_edit` overwrites from the original word.
+        """
+        units = [ReadingUnit(text=text, index=0, location_label="")]
+        words, _line_index, _counts = self.subtitle_parser.parse_text_units(units, False)
+        return words
+
     def release_dictionary_resources(self) -> None:
         """Close dictionary provider handles held by the definition service.
 
@@ -757,6 +781,77 @@ class EpisodeProcessor:
             return wls
         return None
 
+    def _attach_frequency(self, words: list[TokenizedWord]) -> int:
+        """Stamp frequency_sources / frequency_rank / frequency_harmonic_rank in place.
+
+        Returns the number of words at least one source ranked. ``0`` (and no
+        mutation) without an available frequency service. Phase 2 calls this over
+        the whole parse; ``_materialize_sentence_edits`` calls it again over the
+        rebuilt words only, since their rank belonged to the spelling the user
+        replaced.
+
+        Keyed on mined_form (the card-front spelling), NOT lemma: unidic's
+        canonical lemma collapses kanji variants (懸ける/賭ける/架ける → 掛ける),
+        so lemma-keyed lookups gave every variant the common spelling's rank.
+        Per-spelling sources (JPDB) carry distinct rows per orthography — query
+        the spelling the card actually shows. Reading-scope so homographs stop
+        inheriting each other's ranks; hiragana-normalize so a katakana subtitle
+        reading matches a hiragana-stored frequency reading. One batched
+        per-source fetch for the whole word list (an IN-clause query per source
+        instead of one query per word), then derive min + harmonic locally via
+        the pure min_rank/harmonic_rank helpers — a single lookup_all_many feeds
+        both scalars.
+        """
+        if not (self.frequency_service and self.frequency_service.is_available()):
+            return 0
+        pairs: list[tuple[str, str | None]] = [
+            (
+                word.mined_form,
+                katakana_to_hiragana(word.expression_reading or word.lemma_reading or word.reading),
+            )
+            for word in words
+        ]
+        all_sources = self.frequency_service.lookup_all_many(pairs)
+        # Whole-result miss-only lemma fallback (mirrors the JPod101
+        # audio retry ladder): fires only when NO source attests the
+        # spelling and the alternate differs by okurigana over the same
+        # kanji stem. A different-kanji UniDic lemma may be another
+        # homograph and must never supply this card's rank. Deliberately
+        # NOT per-source: a per-source cascade would re-inject the lemma
+        # rank from any source lacking the per-spelling row, and since
+        # frequency_rank = min_rank(sources) gates the top-N filter,
+        # that low lemma rank would keep a rare variant above the
+        # max_frequency_rank cutoff it should now fall past. Known edge:
+        # a spelling attested ONLY by a categorical source (JLPT band,
+        # CATEGORICAL_RANK sentinel) counts as attested and suppresses the
+        # numeric lemma fallback — accepted for breakdown uniformity;
+        # unreachable for per-spelling numeric sources.
+        fallback_indexes = [
+            i
+            for i, (word, sources) in enumerate(zip(words, all_sources, strict=True))
+            if not sources
+            and word.lemma
+            and word.lemma != word.mined_form
+            and _differs_by_okurigana_only(word.mined_form, word.lemma)
+        ]
+        if fallback_indexes:
+            fallback_pairs: list[tuple[str, str | None]] = [
+                (
+                    words[i].lemma,
+                    katakana_to_hiragana(words[i].lemma_reading or words[i].reading),
+                )
+                for i in fallback_indexes
+            ]
+            for i, sources in zip(
+                fallback_indexes, self.frequency_service.lookup_all_many(fallback_pairs), strict=True
+            ):
+                all_sources[i] = sources
+        for word, sources in zip(words, all_sources, strict=True):
+            word.frequency_sources = sources
+            word.frequency_rank = min_rank(sources)
+            word.frequency_harmonic_rank = harmonic_rank(sources)
+        return sum(1 for w in words if w.frequency_rank is not None)
+
     def _phase2_filter(
         self,
         ctx: _EpisodeContext,
@@ -792,65 +887,7 @@ class EpisodeProcessor:
         # the min rank (frequency_rank) that drives the top-N filter, and the
         # harmonic-mean rank (frequency_harmonic_rank) that drives the sort field.
         if self.frequency_service and self.frequency_service.is_available():
-            # Keyed on mined_form (the card-front spelling), NOT lemma:
-            # unidic's canonical lemma collapses kanji variants
-            # (懸ける/賭ける/架ける → 掛ける), so lemma-keyed lookups gave
-            # every variant the common spelling's rank. Per-spelling sources
-            # (JPDB) carry distinct rows per orthography — query the spelling
-            # the card actually shows. Reading-scope so homographs stop
-            # inheriting each other's ranks; hiragana-normalize so a katakana
-            # subtitle reading matches a hiragana-stored frequency reading.
-            # One batched per-source fetch for the whole word list (an
-            # IN-clause query per source instead of one query per word), then
-            # derive min + harmonic locally via the pure min_rank/harmonic_rank
-            # helpers — a single lookup_all_many feeds both scalars.
-            pairs: list[tuple[str, str | None]] = [
-                (
-                    word.mined_form,
-                    katakana_to_hiragana(word.expression_reading or word.lemma_reading or word.reading),
-                )
-                for word in all_words
-            ]
-            all_sources = self.frequency_service.lookup_all_many(pairs)
-            # Whole-result miss-only lemma fallback (mirrors the JPod101
-            # audio retry ladder): fires only when NO source attests the
-            # spelling and the alternate differs by okurigana over the same
-            # kanji stem. A different-kanji UniDic lemma may be another
-            # homograph and must never supply this card's rank. Deliberately
-            # NOT per-source: a per-source cascade would re-inject the lemma
-            # rank from any source lacking the per-spelling row, and since
-            # frequency_rank = min_rank(sources) gates the top-N filter,
-            # that low lemma rank would keep a rare variant above the
-            # max_frequency_rank cutoff it should now fall past. Known edge:
-            # a spelling attested ONLY by a categorical source (JLPT band,
-            # CATEGORICAL_RANK sentinel) counts as attested and suppresses the
-            # numeric lemma fallback — accepted for breakdown uniformity;
-            # unreachable for per-spelling numeric sources.
-            fallback_indexes = [
-                i
-                for i, (word, sources) in enumerate(zip(all_words, all_sources, strict=True))
-                if not sources
-                and word.lemma
-                and word.lemma != word.mined_form
-                and _differs_by_okurigana_only(word.mined_form, word.lemma)
-            ]
-            if fallback_indexes:
-                fallback_pairs: list[tuple[str, str | None]] = [
-                    (
-                        all_words[i].lemma,
-                        katakana_to_hiragana(all_words[i].lemma_reading or all_words[i].reading),
-                    )
-                    for i in fallback_indexes
-                ]
-                for i, sources in zip(
-                    fallback_indexes, self.frequency_service.lookup_all_many(fallback_pairs), strict=True
-                ):
-                    all_sources[i] = sources
-            for word, sources in zip(all_words, all_sources, strict=True):
-                word.frequency_sources = sources
-                word.frequency_rank = min_rank(sources)
-                word.frequency_harmonic_rank = harmonic_rank(sources)
-            ranked_count = sum(1 for w in all_words if w.frequency_rank is not None)
+            ranked_count = self._attach_frequency(all_words)
             frequency_ranked = ranked_count
             self.presenter.show_info(
                 tr_format(
@@ -2286,6 +2323,27 @@ class EpisodeProcessor:
             for word in words
         ]
 
+    def _materialize_sentence_edits(self, words: list[TokenizedWord]) -> list[TokenizedWord]:
+        """Rebuild curator-edited words through the run's own parser.
+
+        Runs after :meth:`_materialize_line_expansions` on both mining paths, so
+        the edit (seeded in the curator from the already-merged line) is the
+        last word on the sentence while the merged timing stays the media
+        window. Rebuilt words are re-ranked here because phase 2 ranked the
+        spelling the user replaced. The all-None fast path is every run where
+        nobody opened the editor.
+        """
+        if all(word.sentence_edit is None for word in words):
+            return words
+        rebuilt = [
+            resolve_sentence_edit(word, self._parse_sentence) if word.sentence_edit is not None else word
+            for word in words
+        ]
+        edited = [new for new, old in zip(rebuilt, words, strict=True) if old.sentence_edit is not None]
+        self._attach_frequency(edited)
+        logger.info("sentence edits materialised: %d word(s) rebuilt", len(edited))
+        return rebuilt
+
     def _load_secondary_entries(self, secondary_subtitle_file: Path | None) -> list[tuple[float, float, str]] | None:
         """Raw cues of the secondary-language track at a ZERO offset, or None without one.
 
@@ -2501,6 +2559,7 @@ class EpisodeProcessor:
                 if isinstance(outcome, ProcessingResult):
                     return outcome
                 unknown_words = self._materialize_line_expansions(outcome, subtitle_file, subtitle_offset)
+                unknown_words = self._materialize_sentence_edits(unknown_words)
 
             if secondary_entries is not None:
                 # After curation and expansion materialisation on purpose: a
@@ -2997,6 +3056,7 @@ class EpisodeProcessor:
                     # A nonzero count means a wiring change made them reachable
                     # without adding materialization — fail loud, not silent.
                     logger.warning("reading curation: dropping line expansion on %d word(s)", dropped)
+                unknown_words = self._materialize_sentence_edits(unknown_words)
 
             unknown_words = self._apply_strict_card_order(unknown_words, all_words)
 

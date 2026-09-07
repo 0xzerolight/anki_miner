@@ -19,7 +19,7 @@ from anki_miner.exceptions.youtube import (
     TranscriptionFailedError,
     TranscriptionProducedNothingError,
 )
-from anki_miner.models import AnkiWriteState, CardPayload, LineLemmas, MediaData, TokenizedWord
+from anki_miner.models import AnkiWriteState, CardPayload, LineLemmas, MediaData, SentenceEdit, TokenizedWord
 from anki_miner.models.processing import CANCELLED_ERROR
 from anki_miner.models.reading import ReadingDocument
 from anki_miner.models.youtube import FetchedMedia
@@ -7011,3 +7011,142 @@ class TestSecondarySubtitles:
         assert any("bad translation track" in e for e in result.errors)
         assert any("ep01.en.srt" in e for e in result.errors)
         mock_services["anki_service"].create_cards_batch.assert_not_called()
+
+
+class TestCurationSentenceEdit:
+    """A curator sentence edit is re-tokenised and rebuilt between curation and phase 3."""
+
+    @pytest.fixture
+    def mock_services(self):
+        subtitle_parser = MagicMock()
+        word_filter = MagicMock()
+        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        word_filter.expand_word_lines.side_effect = lambda word, entries: word
+        return {
+            "subtitle_parser": subtitle_parser,
+            "word_filter": word_filter,
+            "media_extractor": MagicMock(),
+            "definition_service": MagicMock(),
+            "anki_service": MagicMock(),
+        }
+
+    def _wire(self, mock_services, words, media):
+        sp = mock_services["subtitle_parser"]
+        sp.parse_subtitle_file_with_index.side_effect = lambda f, offset=None: (sp.parse_subtitle_file.return_value, [])
+        sp.parse_subtitle_file.return_value = list(words)
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = list(words)
+        mock_services["media_extractor"].extract_media_batch.return_value = [(words[0], media)]
+        mock_services["definition_service"].get_definitions_batch.side_effect = lambda ws, *a, **kw: ["1. def"] * len(
+            ws
+        )
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+    @staticmethod
+    def _parsed(text):
+        return TokenizedWord(
+            surface="持久",
+            lemma="持久",
+            reading="ジキュウ",
+            sentence=text,
+            start_time=0.0,
+            end_time=0.0,
+            duration=0.0,
+            pos="名詞",
+            surface_start=0,
+            surface_end=2,
+            expression_reading="じきゅう",
+            mined_form_override="持久",
+        )
+
+    def test_edit_is_rebuilt_through_parse_text_units_before_extraction(self, test_config, mock_services, tmp_path):
+        word = _make_word("時給", surface="時給", pos="名詞")
+        self._wire(mock_services, [word], _make_media())
+        edited = "持久系のスポーツは本当に苦手"
+        intent = replace(word, sentence_edit=SentenceEdit(text=edited, target_start=0, target_end=2))
+        sp = mock_services["subtitle_parser"]
+        sp.parse_text_units.side_effect = lambda units, want_line_index, **kw: ([self._parsed(units[0].text)], None, {})
+        proc = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=lambda ws: [intent])
+
+        units = sp.parse_text_units.call_args[0][0]
+        assert [u.text for u in units] == [edited]
+        assert sp.parse_text_units.call_args[0][1] is False  # no line index for one sentence
+        extracted = mock_services["media_extractor"].extract_media_batch.call_args[0][1]
+        assert [w.mined_form for w in extracted] == ["持久"]
+        assert extracted[0].sentence == edited
+        assert extracted[0].start_time == word.start_time  # timing is the original cue's
+        assert extracted[0].sentence_edit is None
+
+    def test_untouched_words_never_reach_the_parser(self, test_config, mock_services, tmp_path):
+        word = _make_word("食べる")
+        self._wire(mock_services, [word], _make_media())
+        proc = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=lambda ws: [word])
+
+        mock_services["subtitle_parser"].parse_text_units.assert_not_called()
+
+    def test_order_is_preserved_around_an_edit(self, test_config, mock_services, tmp_path):
+        first = _make_word("時給", surface="時給", pos="名詞", start_time=1.0)
+        second = _make_word("走る", start_time=5.0)
+        self._wire(mock_services, [first, second], _make_media())
+        intent = replace(first, sentence_edit=SentenceEdit(text="持久系", target_start=0, target_end=2))
+        sp = mock_services["subtitle_parser"]
+        sp.parse_text_units.side_effect = lambda units, want_line_index, **kw: ([self._parsed(units[0].text)], None, {})
+        proc = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=lambda ws: [intent, second])
+
+        extracted = mock_services["media_extractor"].extract_media_batch.call_args[0][1]
+        assert [w.mined_form for w in extracted] == ["持久", "走る"]
+
+    def test_edited_word_is_re_ranked(self, test_config, mock_services, tmp_path):
+        word = _make_word("時給", surface="時給", pos="名詞")
+        self._wire(mock_services, [word], _make_media())
+        intent = replace(word, sentence_edit=SentenceEdit(text="持久系", target_start=0, target_end=2))
+        sp = mock_services["subtitle_parser"]
+        sp.parse_text_units.side_effect = lambda units, want_line_index, **kw: ([self._parsed(units[0].text)], None, {})
+        frequency = MagicMock()
+        frequency.is_available.return_value = True
+        frequency.lookup_all_many.side_effect = lambda pairs: [[("jpdb", 777, None)] for _ in pairs]
+        proc = build_processor(
+            config=test_config, presenter=NullPresenter(), frequency_service=frequency, **mock_services
+        )
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=lambda ws: [intent])
+
+        # Phase 2 ranked the original spelling; materialisation ranked the edited one.
+        queried = [call.args[0] for call in frequency.lookup_all_many.call_args_list]
+        assert queried[0] == [("時給", "たべる")]  # phase 2: katakana_to_hiragana(word.reading)
+        assert queried[-1] == [("持久", "じきゅう")]
+        extracted = mock_services["media_extractor"].extract_media_batch.call_args[0][1]
+        assert extracted[0].frequency_rank == 777
+
+    def test_unresolvable_edit_keeps_the_original_word(self, test_config, mock_services, tmp_path):
+        word = _make_word("時給", surface="時給", pos="名詞")
+        self._wire(mock_services, [word], _make_media())
+        intent = replace(word, sentence_edit=SentenceEdit(text="持久系", target_start=0, target_end=2))
+        mock_services["subtitle_parser"].parse_text_units.return_value = ([], None, {})
+        proc = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=lambda ws: [intent])
+
+        extracted = mock_services["media_extractor"].extract_media_batch.call_args[0][1]
+        assert extracted[0].mined_form == "時給"
+        assert extracted[0].sentence_edit is None
+
+
+class TestParseSentenceFacade:
+    def test_parse_sentence_fn_wraps_one_reading_unit(self, test_config):
+        parser = MagicMock()
+        parser.parse_text_units.return_value = (["tok"], None, {})
+        proc = build_processor(config=test_config, subtitle_parser=parser)
+
+        assert proc.parse_sentence_fn("持久系のスポーツ") == ["tok"]
+
+        units, want_index = parser.parse_text_units.call_args[0]
+        assert len(units) == 1
+        assert (units[0].text, units[0].index) == ("持久系のスポーツ", 0)
+        assert want_index is False

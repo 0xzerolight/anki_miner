@@ -1582,8 +1582,8 @@ Los archivos de índice en el disco quedarán sin modificar porque no se pudo co
         <translation>Revisar palabras antes de minar</translation>
     </message>
     <message>
-        <source>Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.</source>
-        <translation>Apruebe o rechace cada palabra, elija su oración y escena, recorte su audio y marque palabras como conocidas — antes de crear cualquier tarjeta.</translation>
+        <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -7880,6 +7880,36 @@ Los archivos de índice en disco quedarán intactos porque no se pudo comprobar 
         <translation>Descartar</translation>
     </message>
 </context><context>
+    <name>SentenceEditDialog</name>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence</source>
+        <translation type="unfinished">Frase</translation>
+    </message>
+    <message>
+        <source>Word to mine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Type a sentence.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Finding words…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No mineable word found in this sentence.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not parse this sentence.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>SettingsSearchBox</name>
     <message>
         <source>Search settings</source>
@@ -9766,6 +9796,10 @@ Ordene ascendente para poner primero las líneas i+1 — aquellas cuya única pa
 (%2 frases de ejemplo para elegir — enfoque la fila y luego elija una en «Frases»)</translation>
     </message>
     <message>
+        <source>Frequency is looked up again for the edited word when the card is made.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Sentences (%1)</source>
         <translation>Frases (%1)</translation>
     </message>
@@ -9784,6 +9818,14 @@ Ordene ascendente para poner primero las líneas i+1 — aquellas cuya única pa
     <message>
         <source>Copy sentence</source>
         <translation>Copiar frase</translation>
+    </message>
+    <message>
+        <source>Edit word and sentence…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset word and sentence</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Your Known Words could not be saved, so no cards were created. Confirm again to retry, or Cancel to discard the pending marks.</source>

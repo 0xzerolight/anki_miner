@@ -630,3 +630,52 @@ class TestStagedKnownWordsGate:
             assert calls == [], "a stage that was never confirmed must not be written"
         finally:
             worker.wait(5000)
+
+
+# ---------------------------------------------------------------------------
+# Sentence editor parser sourcing
+# ---------------------------------------------------------------------------
+
+
+def test_curator_gets_the_workers_sentence_parser(qapp, qtbot, facade_processor):
+    """The editor parses through the SAME processor the card will be made by."""
+    tab = _Bare()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+    worker = Mock()
+    worker.curation_processor = facade_processor
+    tab.worker_thread = worker
+
+    cls, created = _fake_dialog_cls(decision="accept")
+    with patch(f"{MODULE}.WordCurationDialog", cls):
+        tab._show_curation_dialog(["w1"], None, None)
+
+    assert created[0].kwargs["parse_sentence_fn"] == facade_processor.parse_sentence_fn
+
+
+def test_curator_without_a_worker_gets_no_sentence_parser(qapp, qtbot):
+    tab = _Bare()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+
+    cls, created = _fake_dialog_cls(decision="accept")
+    with patch(f"{MODULE}.WordCurationDialog", cls):
+        tab._show_curation_dialog(["w1"], None, None)
+
+    assert created[0].kwargs["parse_sentence_fn"] is None
+
+
+def test_worker_that_owns_no_processor_yields_no_parser(qapp, qtbot):
+    """ProcessorOwningWorker.curation_processor raises NotImplementedError on the base."""
+
+    class _Owner:
+        @property
+        def curation_processor(self):
+            raise NotImplementedError
+
+    tab = _Bare()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+    tab.worker_thread = _Owner()
+
+    assert tab._curation_parse_fn() is None

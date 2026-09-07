@@ -1580,8 +1580,8 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Tinjau kata sebelum mining</translation>
     </message>
     <message>
-        <source>Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.</source>
-        <translation>Setujui atau tolak setiap kata, pilih kalimat dan adegannya, pangkas audionya, dan tandai kata sebagai dikenal -- sebelum kartu apa pun dibuat.</translation>
+        <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -7866,6 +7866,36 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Tutup</translation>
     </message>
 </context><context>
+    <name>SentenceEditDialog</name>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence</source>
+        <translation type="unfinished">Kalimat</translation>
+    </message>
+    <message>
+        <source>Word to mine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Type a sentence.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Finding words…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No mineable word found in this sentence.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not parse this sentence.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>SettingsSearchBox</name>
     <message>
         <source>Search settings</source>
@@ -9750,6 +9780,10 @@ Urutkan menaik untuk menampilkan baris i+1 lebih dulu — baris yang satu-satuny
 (%2 contoh kalimat untuk dipilih — fokuskan barisnya, lalu pilih satu di bagian “Kalimat”)</translation>
     </message>
     <message>
+        <source>Frequency is looked up again for the edited word when the card is made.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Sentences (%1)</source>
         <translation>Kalimat (%1)</translation>
     </message>
@@ -9768,6 +9802,14 @@ Urutkan menaik untuk menampilkan baris i+1 lebih dulu — baris yang satu-satuny
     <message>
         <source>Copy sentence</source>
         <translation>Salin kalimat</translation>
+    </message>
+    <message>
+        <source>Edit word and sentence…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset word and sentence</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Your Known Words could not be saved, so no cards were created. Confirm again to retry, or Cancel to discard the pending marks.</source>

@@ -1582,8 +1582,8 @@ I file di indice sul disco non verranno modificati perché non è stato possibil
         <translation>Rivedi le parole prima del mining</translation>
     </message>
     <message>
-        <source>Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.</source>
-        <translation>Approva o rifiuta ogni parola, scegli la sua frase e scena, taglia il suo audio e segna le parole come conosciute, prima che venga creata qualsiasi carta.</translation>
+        <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -7880,6 +7880,36 @@ I file indice su disco non saranno modificati perché non è stato possibile ver
         <translation>Chiudi</translation>
     </message>
 </context><context>
+    <name>SentenceEditDialog</name>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence</source>
+        <translation type="unfinished">Frase</translation>
+    </message>
+    <message>
+        <source>Word to mine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Type a sentence.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Finding words…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No mineable word found in this sentence.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not parse this sentence.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>SettingsSearchBox</name>
     <message>
         <source>Search settings</source>
@@ -9766,6 +9796,10 @@ Ordina in modo crescente per mettere prima le righe i+1, quelle il cui unico ele
 (%2 frasi di esempio tra cui scegliere — selezionare la riga, poi sceglierne una sotto “Frasi”)</translation>
     </message>
     <message>
+        <source>Frequency is looked up again for the edited word when the card is made.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Sentences (%1)</source>
         <translation>Frasi (%1)</translation>
     </message>
@@ -9784,6 +9818,14 @@ Ordina in modo crescente per mettere prima le righe i+1, quelle il cui unico ele
     <message>
         <source>Copy sentence</source>
         <translation>Copia frase</translation>
+    </message>
+    <message>
+        <source>Edit word and sentence…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset word and sentence</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Your Known Words could not be saved, so no cards were created. Confirm again to retry, or Cancel to discard the pending marks.</source>

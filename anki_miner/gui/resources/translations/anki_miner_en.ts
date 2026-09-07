@@ -1567,7 +1567,7 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Approve or reject each word, pick its sentence and scene, trim its audio, and mark words known -- before any card is created.</source>
+        <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7820,6 +7820,36 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>SentenceEditDialog</name>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Word to mine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Type a sentence.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Finding words…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No mineable word found in this sentence.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not parse this sentence.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>SettingsSearchBox</name>
     <message>
         <source>Search settings</source>
@@ -9688,6 +9718,10 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Frequency is looked up again for the edited word when the card is made.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Sentences (%1)</source>
         <translation type="unfinished" />
     </message>
@@ -9705,6 +9739,14 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Copy sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Edit word and sentence…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset word and sentence</source>
         <translation type="unfinished" />
     </message>
     <message>

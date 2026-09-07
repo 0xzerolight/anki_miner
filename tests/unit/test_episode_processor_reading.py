@@ -20,7 +20,7 @@ import requests
 from PIL import Image, UnidentifiedImageError
 
 from anki_miner.exceptions import AnkiConnectionError, AnkiMinerException, SetupError
-from anki_miner.models import AnkiWriteState, LineLemmas, TokenizedWord
+from anki_miner.models import AnkiWriteState, LineLemmas, SentenceEdit, TokenizedWord
 from anki_miner.models.reading import ImageRef, ReadingDocument, ReadingUnit
 from anki_miner.orchestration.episode_processor import EpisodeProcessor, _format_timestamp
 from anki_miner.presenters import NullPresenter
@@ -1466,3 +1466,28 @@ class TestReadingAnkiWriteProvenance:
             proc.process_reading(_document([_unit(0)]))
 
         assert anki.anki_write_state is AnkiWriteState.NO_NOTE_WRITE
+
+
+def test_reading_curation_materializes_a_sentence_edit(test_config):
+    """A manga OCR slip fixed in the curator reaches phase 3' as the rebuilt word."""
+    original = _word("時給", 0)
+    edited = "持久系のスポーツ"
+    rebuilt = replace(_word("持久", 0), sentence=edited, surface_start=0, surface_end=2, mined_form_override="持久")
+    parser = MagicMock(name="SubtitleParser")
+
+    def _parse(units, want_line_index, *, subtitle_cleanup=False):
+        if units[0].text == edited:
+            return ([rebuilt], None, collections.Counter())
+        return ([original], None, collections.Counter({"時給": 1}))
+
+    parser.parse_text_units.side_effect = _parse
+    proc = _make_processor(test_config, subtitle_parser=parser)
+    intent = replace(original, sentence_edit=SentenceEdit(text=edited, target_start=0, target_end=2))
+
+    result = proc.process_reading(_document([_unit(0)]), curation_callback=lambda ws: [intent])
+
+    assert result.cards_created == 1
+    submitted = proc.anki_service.last_card_data  # _make_anki_service records the CardPayloads
+    assert [item.word.mined_form for item in submitted] == ["持久"]
+    assert submitted[0].word.sentence == edited
+    assert submitted[0].word.start_time == 0.0
