@@ -95,6 +95,26 @@ class TestMokuroInstallWiring:
         assert refreshed == []
         mokuro_resolver._clear_cache()
 
+    def test_cache_is_cleared_before_the_panel_reprobes(self, monkeypatch, wired):
+        """Ordering, not just outcome: the panel's re-probe runs off-thread and
+        calls the resolver, so a cached pre-install miss still in place when
+        notify fires can settle the label on "Not installed" after a success."""
+        from anki_miner.utils import mokuro_resolver
+
+        _window, settings_tab, captured, _refreshed = wired
+        seen: list[dict] = []
+        monkeypatch.setattr(
+            settings_tab.subtitles_panel,
+            "notify_mokuro_install_finished",
+            lambda: seen.append(dict(mokuro_resolver._CACHE)),
+        )
+        settings_tab.mokuro_install_requested.emit()
+
+        mokuro_resolver._CACHE[(None, None)] = "mokuro"
+        captured["on_finished"](True, "ok")
+
+        assert seen == [{}]
+
     def test_panel_is_notified_on_failure_too(self, monkeypatch, wired):
         """The in-flight guard must clear whether the install worked or not."""
         _window, settings_tab, captured, _refreshed = wired

@@ -1218,9 +1218,14 @@ def _connect_mokuro_install(window: MainWindow, settings_tab: SettingsTab) -> No
     """
 
     def _tail(request_arg: object, ok: bool, message: str) -> None:
+        if ok:
+            # Cleared BEFORE the panel notify, which dispatches an off-thread
+            # re-probe that calls the resolver: a cached pre-install miss read
+            # by that probe would settle the label on "Not installed" right
+            # after a successful install.
+            mokuro_resolver._clear_cache()
         settings_tab.subtitles_panel.notify_mokuro_install_finished()
         if ok:
-            mokuro_resolver._clear_cache()
             window.config_refreshed.emit(window.get_config())
 
     def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
