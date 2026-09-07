@@ -177,12 +177,95 @@ def find_sibling_subtitle(video_path: Path, priority: Sequence[str] | None = Non
     return None
 
 
+def _sorted_subtitles(folder: Path, subtitle_exts: Collection[str], prefer_retimed: bool) -> list[Path]:
+    """Subtitle candidates in *folder*, best-match-first for episode pairing.
+
+    Run once per subtitle folder — the mining track and the secondary-language
+    track (F7) get the same format priority and the same retimed preference, so
+    the rule lives here rather than twice in the caller.
+
+    WARNING, not silent: no candidates is what the user sees, and "the folder is
+    empty" and "the folder could not be read" look identical from the batch
+    screen.
+    """
+    subtitles: list[Path] = []
+    with suppressed(logger, f"scanning {folder} for subtitles", level=logging.WARNING):
+        subtitles = [f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in subtitle_exts]
+
+    subtitle_priority = {suffix: index for index, suffix in enumerate(DEFAULT_SUBTITLE_PRIORITY)}
+    subtitles.sort(
+        key=lambda subtitle: (
+            # Ahead of the format priority: a retimed .srt is a better match
+            # for its video than the original .ass it was made from.
+            not (prefer_retimed and _is_retimed(subtitle)),
+            subtitle_priority.get(subtitle.suffix.lower(), len(DEFAULT_SUBTITLE_PRIORITY)),
+            subtitle.suffix.lower(),
+            _nfc(subtitle.name),
+            # NFC collapses canonically equivalent spellings to one key; the
+            # raw name makes the order total so iterdir() order can't decide.
+            subtitle.name,
+        )
+    )
+    return subtitles
+
+
+def _attach_secondary(
+    pairs: list["FilePair"],
+    videos: list[Path],
+    secondary_folder: Path,
+    subtitle_folder: Path,
+    subtitle_exts: Collection[str],
+    prefer_retimed: bool,
+) -> None:
+    """Fill each pair's ``secondary`` from *secondary_folder*, by episode number.
+
+    The mining track's match rule, run a second time over the same (already
+    sorted) videos. A subtitle is consumed once
+    (:meth:`EpisodeMatcher.match_by_episode_number`, Issue #39), so the two
+    folders have to be distinct: pointing both at one folder would hand every
+    card its own sentence as its translation, and that is refused here, once,
+    rather than in each of the four callers.
+
+    An episode with no match keeps ``secondary=None`` and mines with an empty
+    Translation field — a partial translation set never fails the run.
+    """
+    from anki_miner.utils.episode_matcher import EpisodeMatcher
+
+    if secondary_folder == subtitle_folder or secondary_folder.resolve() == subtitle_folder.resolve():
+        logger.warning(
+            "secondary subtitles: the translation folder is the subtitle folder (%s); no translations attached",
+            secondary_folder,
+        )
+        return
+    secondary_subs = _sorted_subtitles(secondary_folder, subtitle_exts, prefer_retimed)
+    if not secondary_subs:
+        logger.info("secondary subtitles: no candidates in %s", secondary_folder)
+        return
+
+    by_video = dict(EpisodeMatcher.match_by_episode_number(videos, secondary_subs))
+    for pair in pairs:
+        pair.secondary = by_video.get(pair.video)
+    missing = [pair.video.stem for pair in pairs if pair.secondary is None]
+    logger.info(
+        "secondary subtitles: %d/%d episodes matched from %s%s",
+        len(pairs) - len(missing),
+        len(pairs),
+        secondary_folder,
+        f"; no translation for {', '.join(missing[:5])}" if missing else "",
+    )
+
+
 @dataclass
 class FilePair:
-    """Represents a video/subtitle file pair."""
+    """Represents a video/subtitle file pair, optionally with a translation track."""
 
     video: Path
     subtitle: Path
+    #: Secondary-language subtitle for this episode (F7), matched by episode
+    #: number out of a third folder. ``None`` when no translation folder was
+    #: given, when this episode had no match inside it, or when it could not be
+    #: read — all three mine the episode with an empty Translation field.
+    secondary: Path | None = None
 
 
 class FilePairMatcher:
@@ -200,6 +283,8 @@ class FilePairMatcher:
         video_extensions: Collection[str] | None = None,
         subtitle_extensions: Collection[str] | None = None,
         prefer_retimed: bool = True,
+        *,
+        secondary_folder: Path | None = None,
     ) -> list[FilePair]:
         """Find matching pairs by episode number instead of exact name.
 
@@ -224,6 +309,12 @@ class FilePairMatcher:
                 folder that also holds the off-timed original uses the retime.
                 Utilities → Retime passes False: its own input must be the
                 original, not the output of its previous run.
+            secondary_folder: Optional folder of secondary-language subtitles
+                (F7), matched to the same videos by the same episode-number
+                rule and hung off each pair's ``secondary``.  It has to be a
+                folder of its own — a subtitle is consumed once, so two tracks
+                for one episode cannot both be matched out of one folder — and
+                an episode with no match there keeps ``secondary=None``.
 
         Returns:
             List of FilePair objects matched by episode number
@@ -242,10 +333,9 @@ class FilePairMatcher:
         # folder is empty" and "the folder could not be read" look identical
         # from the batch screen.
         videos: list[Path] = []
-        subtitles: list[Path] = []
-        with suppressed(logger, f"scanning {video_folder} and {subtitle_folder} for pairs", level=logging.WARNING):
+        with suppressed(logger, f"scanning {video_folder} for videos", level=logging.WARNING):
             videos = [f for f in video_folder.iterdir() if f.is_file() and f.suffix.lower() in video_exts]
-            subtitles = [f for f in subtitle_folder.iterdir() if f.is_file() and f.suffix.lower() in subtitle_exts]
+        subtitles = _sorted_subtitles(subtitle_folder, subtitle_exts, prefer_retimed)
         if not videos or not subtitles:
             return []
 
@@ -256,23 +346,11 @@ class FilePairMatcher:
         # episode N's subtitle with episode M's video.
         videos.sort(key=lambda video: (_nfc(video.name), video.name))
 
-        subtitle_priority = {suffix: index for index, suffix in enumerate(DEFAULT_SUBTITLE_PRIORITY)}
-        subtitles.sort(
-            key=lambda subtitle: (
-                # Ahead of the format priority: a retimed .srt is a better match
-                # for its video than the original .ass it was made from.
-                not (prefer_retimed and _is_retimed(subtitle)),
-                subtitle_priority.get(subtitle.suffix.lower(), len(DEFAULT_SUBTITLE_PRIORITY)),
-                subtitle.suffix.lower(),
-                _nfc(subtitle.name),
-                # NFC collapses canonically equivalent spellings to one key; the
-                # raw name makes the order total so iterdir() order can't decide.
-                subtitle.name,
-            )
-        )
-
         # Match by episode number
         matched_pairs = EpisodeMatcher.match_by_episode_number(videos, subtitles)
 
         # Convert to FilePair objects
-        return [FilePair(video, subtitle) for video, subtitle in matched_pairs]
+        pairs = [FilePair(video, subtitle) for video, subtitle in matched_pairs]
+        if secondary_folder is not None:
+            _attach_secondary(pairs, videos, secondary_folder, subtitle_folder, subtitle_exts, prefer_retimed)
+        return pairs

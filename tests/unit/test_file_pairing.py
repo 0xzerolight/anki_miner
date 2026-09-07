@@ -513,3 +513,78 @@ class TestRetimedPreference:
         monkeypatch.setattr(Path, "is_file", lambda _path: True)
 
         assert find_sibling_subtitle(video) is None
+
+
+class TestSecondaryFolderPairing:
+    """A third folder pairs by the same episode-number rule (batch F7)."""
+
+    @staticmethod
+    def _make(folder: Path, *names: str) -> None:
+        folder.mkdir(parents=True, exist_ok=True)
+        for name in names:
+            (folder / name).touch()
+
+    def test_no_secondary_folder_leaves_the_field_none(self, tmp_path):
+        self._make(tmp_path / "v", "EP01.mkv")
+        self._make(tmp_path / "s", "EP01.ass")
+        pairs = FilePairMatcher.find_pairs_by_episode_number(tmp_path / "v", tmp_path / "s")
+        assert [p.secondary for p in pairs] == [None]
+
+    def test_secondary_matches_by_episode_number_across_naming(self, tmp_path):
+        self._make(tmp_path / "v", "Show_01.mkv", "Show_02.mkv")
+        self._make(tmp_path / "s", "sub_ep01.ass", "sub_ep02.ass")
+        self._make(tmp_path / "t", "S01E01.en.srt", "S01E02.en.srt")
+        pairs = FilePairMatcher.find_pairs_by_episode_number(
+            tmp_path / "v", tmp_path / "s", secondary_folder=tmp_path / "t"
+        )
+        assert [p.secondary.name for p in pairs] == ["S01E01.en.srt", "S01E02.en.srt"]
+
+    def test_an_episode_with_no_translation_pairs_with_none(self, tmp_path):
+        self._make(tmp_path / "v", "EP01.mkv", "EP02.mkv")
+        self._make(tmp_path / "s", "EP01.ass", "EP02.ass")
+        self._make(tmp_path / "t", "EP01.en.srt")
+        pairs = FilePairMatcher.find_pairs_by_episode_number(
+            tmp_path / "v", tmp_path / "s", secondary_folder=tmp_path / "t"
+        )
+        assert [(p.video.stem, p.secondary.name if p.secondary else None) for p in pairs] == [
+            ("EP01", "EP01.en.srt"),
+            ("EP02", None),
+        ]
+
+    def test_an_unreadable_secondary_folder_degrades_to_no_translations(self, tmp_path):
+        self._make(tmp_path / "v", "EP01.mkv")
+        self._make(tmp_path / "s", "EP01.ass")
+        pairs = FilePairMatcher.find_pairs_by_episode_number(
+            tmp_path / "v", tmp_path / "s", secondary_folder=tmp_path / "gone"
+        )
+        assert len(pairs) == 1
+        assert pairs[0].secondary is None
+
+    def test_the_same_folder_twice_attaches_nothing(self, tmp_path):
+        """Pointing the translation folder at the mining folder would make every
+        card's translation its own sentence. Refused once, here, rather than in
+        each of the four callers."""
+        self._make(tmp_path / "v", "EP01.mkv")
+        self._make(tmp_path / "s", "EP01.ass")
+        pairs = FilePairMatcher.find_pairs_by_episode_number(
+            tmp_path / "v", tmp_path / "s", secondary_folder=tmp_path / "s"
+        )
+        assert pairs[0].secondary is None
+
+    def test_secondary_pairing_does_not_disturb_the_primary(self, tmp_path):
+        self._make(tmp_path / "v", "EP01.mkv")
+        self._make(tmp_path / "s", "EP01.srt", "EP01.ass")
+        self._make(tmp_path / "t", "EP01.en.srt")
+        pairs = FilePairMatcher.find_pairs_by_episode_number(
+            tmp_path / "v", tmp_path / "s", secondary_folder=tmp_path / "t"
+        )
+        assert pairs[0].subtitle.name == "EP01.ass"  # format priority still decides
+
+    def test_the_translation_track_also_prefers_a_retimed_file(self, tmp_path):
+        self._make(tmp_path / "v", "EP01.mkv")
+        self._make(tmp_path / "s", "EP01.ass")
+        self._make(tmp_path / "t", "EP01.srt", "EP01_retimed.srt")
+        pairs = FilePairMatcher.find_pairs_by_episode_number(
+            tmp_path / "v", tmp_path / "s", secondary_folder=tmp_path / "t"
+        )
+        assert pairs[0].secondary.name == "EP01_retimed.srt"
