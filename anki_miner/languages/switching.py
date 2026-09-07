@@ -34,6 +34,7 @@ LANGUAGE_SCOPED_FIELDS: tuple[str, ...] = (
     "use_blacklist",
     "use_whitelist",
     "downloader_subtitle_langs",
+    "downloader_audio_lang",
     "excluded_decks",
     "script_variant",
     "reading_tone_color",

@@ -14,6 +14,7 @@ cookie/JS-runtime/ffmpeg flags) are shared with ``youtube_fetcher.py`` via
 from __future__ import annotations
 
 import collections
+import json
 import logging
 import re
 import shutil
@@ -23,6 +24,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 from PyQt6.QtCore import QCoreApplication
 
@@ -42,6 +44,12 @@ from anki_miner.utils.ytdlp_resolver import resolve_ytdlp, ytdlp_generation_lock
 logger = logging.getLogger(__name__)
 
 _DOWNLOAD_TIMEOUT_S = 3 * 60 * 60
+_PROBE_TIMEOUT_S = 120.0
+
+#: How many playlist entries one probe fetches. The picker dialog shows what
+#: came back and says so when the playlist is longer; a cap keeps a 5,000-video
+#: channel from turning one button press into a multi-minute probe.
+PLAYLIST_PROBE_MAX = 500
 
 # Human-readable output name; the id suffix disambiguates same-titled videos.
 _OUTPUT_TEMPLATE = "%(title)s [%(id)s].%(ext)s"
@@ -69,6 +77,39 @@ _FILENAME_RES = (
 )
 _ALREADY_RE = re.compile(r"^\[download\] (.+) has already been downloaded")
 
+#: A language code safe to interpolate into a yt-dlp format filter. Anything
+#: else is dropped rather than escaped — the picker only ever produces codes, so
+#: a non-matching value is a bug or an injection attempt, not a preference.
+_AUDIO_LANG_RE = re.compile(r"^[A-Za-z0-9-]{1,20}$")
+
+
+def apply_audio_language(selector: str, lang: str) -> str:
+    """Return *selector* with an audio-language-preferring tier in front.
+
+    ``("bestvideo*+bestaudio/best", "ja")`` becomes
+    ``"bestvideo*+bestaudio[language~='^ja(-|$)']/bestvideo*+bestaudio/best"``:
+    a video with a Japanese audio track gets it, and one without still downloads
+    at the same quality it would have without any preference.
+
+    Only the selector's FIRST alternative is filtered. Filtering the whole
+    string would leave the original's later, better alternatives shadowed by the
+    filtered copy's muxed fallback — a video with no matching audio would then
+    land on ``best`` instead of ``bestvideo*+bestaudio``.
+
+    The regex form matches the mining fetcher's ``bestaudio[language~='^ja(-|$)']``
+    so ``ja`` selects ``ja`` and ``ja-JP`` but never ``jav``.
+    """
+    code = lang.strip()
+    if not code or not _AUDIO_LANG_RE.match(code):
+        return selector
+    preferred, _, _ = selector.partition("/")
+    if "bestaudio" not in preferred:
+        # A muxed-only or otherwise hand-written selector has no separate audio
+        # stream to filter; the user's string is left exactly as written.
+        return selector
+    filtered = preferred.replace("bestaudio", f"bestaudio[language~='^{code}(-|$)']")
+    return f"{filtered}/{selector}"
+
 
 class MediaDownloadError(AnkiMinerException):
     """A generic-site download failed (nonzero exit, timeout, bad output)."""
@@ -90,12 +131,54 @@ class DownloadOptions:
     subtitle_langs: str = "ja"
     embed_thumbnail: bool = False
     embed_metadata: bool = False
+    audio_lang: str = ""  # preferred audio-track language; "" = whatever the site serves
 
 
 @dataclass(frozen=True)
 class DownloadResult:
     status: DownloadStatus
     filepath: Path | None
+
+
+@dataclass(frozen=True)
+class UrlTracks:
+    """What a URL actually offers, as reported by one metadata probe.
+
+    Populates the Download tool's language pickers so the user chooses from the
+    site's real tags instead of guessing between ``zh-Hans``, ``zh-CN`` and
+    ``zh``. Deliberately separate from ``YouTubeFetcherService.probe_metadata``,
+    which throws these maps away and keeps only per-language booleans for the
+    mining gate.
+    """
+
+    title: str
+    manual_sub_langs: tuple[str, ...]
+    auto_sub_langs: tuple[str, ...]
+    audio_langs: tuple[str, ...]
+    has_auto_translations: bool
+
+
+@dataclass(frozen=True)
+class DownloadPlaylistEntry:
+    """One playlist entry, as seen by flat extraction.
+
+    ``index`` is the 1-based position among the *usable* entries, which is what
+    the picker's range expression selects on — dropped private/deleted entries
+    would otherwise make the numbers the user sees disagree with the ones they
+    type.
+    """
+
+    index: int
+    title: str
+    url: str
+    duration_s: int | None
+
+
+@dataclass(frozen=True)
+class DownloadPlaylist:
+    title: str
+    entries: tuple[DownloadPlaylistEntry, ...]
+    total_count: int | None
 
 
 class MediaDownloaderService:
@@ -214,6 +297,157 @@ class MediaDownloaderService:
         return DownloadResult(status, captured["filepath"])
 
     # ------------------------------------------------------------------
+    # Probes
+    # ------------------------------------------------------------------
+
+    def probe_tracks(self, url: str, timeout_s: float = _PROBE_TIMEOUT_S) -> UrlTracks:
+        """Return the subtitle and audio-track languages *url* offers.
+
+        One ``--dump-single-json`` call, no download.
+
+        Raises:
+            YtdlpNotFoundError: the yt-dlp executable cannot be located/run.
+            BotDetectionError / CookieDatabaseLockedError: well-known yt-dlp
+                failure modes detected in the output tail.
+            MediaDownloadError: timeout, non-JSON output, or any other non-zero
+                exit.
+        """
+        cmd: list[str] = [
+            self._ytdlp(),
+            "--ignore-config",
+            "--skip-download",
+            "--dump-single-json",
+            "--no-playlist",
+        ]
+        data = self._probe_json(cmd, url, timeout_s, op="yt-dlp track probe")
+
+        subtitles = data.get("subtitles") or {}
+        automatic = data.get("automatic_captions") or {}
+        manual = sorted(k for k in subtitles if isinstance(k, str) and k != "live_chat")
+
+        # YouTube publishes its one real auto track as "<lang>-orig" and then
+        # machine-translates it into ~200 more, all of which land in
+        # automatic_captions. Listing them all would bury the useful entry, so
+        # the "-orig" keys win whenever any exist; a site with no such marker
+        # (every non-YouTube extractor) has a short honest list instead.
+        orig = sorted(k[: -len("-orig")] for k in automatic if isinstance(k, str) and k.endswith("-orig"))
+        auto = tuple(orig) if orig else tuple(sorted(k for k in automatic if isinstance(k, str)))
+        has_translations = bool(orig) and len(automatic) > len(orig)
+
+        audio_langs = sorted(
+            {
+                str(fmt["language"])
+                for fmt in (data.get("formats") or [])
+                if isinstance(fmt, dict) and fmt.get("language")
+            }
+        )
+        return UrlTracks(
+            title=str(data.get("title") or ""),
+            manual_sub_langs=tuple(manual),
+            auto_sub_langs=auto,
+            audio_langs=tuple(audio_langs),
+            has_auto_translations=has_translations,
+        )
+
+    def probe_playlist(
+        self, url: str, limit: int = PLAYLIST_PROBE_MAX, timeout_s: float = _PROBE_TIMEOUT_S
+    ) -> DownloadPlaylist:
+        """List the entries of the playlist at *url*, without downloading.
+
+        Site-agnostic on purpose: unlike ``YouTubeFetcherService.probe_playlist``,
+        which requires each entry id to match an 11-char YouTube video-id regex,
+        an entry here needs only a resolvable URL — so Bilibili collections,
+        Vimeo showcases and SoundCloud sets all expand.
+
+        Raises:
+            YtdlpNotFoundError: the yt-dlp executable cannot be located/run.
+            MediaDownloadError: *url* is not a playlist, holds no usable entry,
+                or the probe itself failed.
+        """
+        cmd: list[str] = [
+            self._ytdlp(),
+            "--ignore-config",
+            "--skip-download",
+            "--flat-playlist",
+            "--dump-single-json",
+            "--playlist-items",
+            f"1:{limit}",
+        ]
+        data = self._probe_json(cmd, url, timeout_s, op="yt-dlp playlist probe")
+
+        raw_entries = data.get("entries")
+        if not isinstance(raw_entries, list):
+            raise MediaDownloadError(
+                "That URL is not a playlist (yt-dlp reported no entries). " "Paste a playlist, channel or album URL."
+            )
+
+        entries: list[DownloadPlaylistEntry] = []
+        for raw in raw_entries:
+            if not isinstance(raw, dict):
+                continue
+            entry_url = raw.get("url") or raw.get("webpage_url")
+            if not entry_url:
+                logger.debug("playlist probe: skipping entry with no URL")
+                continue
+            raw_duration = raw.get("duration")
+            entries.append(
+                DownloadPlaylistEntry(
+                    index=len(entries) + 1,
+                    title=str(raw.get("title") or entry_url),
+                    url=str(entry_url),
+                    duration_s=int(raw_duration) if isinstance(raw_duration, (int, float)) else None,
+                )
+            )
+
+        if not entries:
+            raise MediaDownloadError(
+                "The playlist has no usable entries — every one is private, deleted, or unreachable."
+            )
+
+        raw_count = data.get("playlist_count")
+        total_count = int(raw_count) if isinstance(raw_count, (int, float)) else None
+        logger.info("playlist probe ok: entries=%d total=%s", len(entries), total_count)
+        return DownloadPlaylist(
+            title=str(data.get("title") or "Playlist"),
+            entries=tuple(entries),
+            total_count=total_count,
+        )
+
+    def _probe_json(self, cmd: list[str], url: str, timeout_s: float, *, op: str) -> dict[str, Any]:
+        """Finish *cmd* with the shared flags, run it, and parse its JSON.
+
+        Shared by both probes so cookie/JS-runtime/end-of-options handling and
+        error classification cannot drift between them.
+        """
+        with ytdlp_generation_lock() as release_unless_managed:
+            cmd.extend(ytdlp_invocation.cookie_args(self._config))
+            cmd.extend(ytdlp_invocation.js_runtime_args(self._config, self._ytdlp()))
+            cmd.extend(ytdlp_invocation.remote_component_args(self._config, self._ytdlp()))
+            # End-of-options separator: a '-'-leading URL must never be parsed
+            # as a yt-dlp option. T-34.
+            cmd.append("--")
+            cmd.append(url)
+            release_unless_managed(cmd[0])
+            proc = run_supervised(cmd, timeout_s=timeout_s, op=op)
+
+        if isinstance(proc.error, FileNotFoundError):
+            raise YtdlpNotFoundError(ytdlp_invocation.YTDLP_MISSING_HINT) from proc.error
+        if proc.state is SupervisedState.TIMED_OUT:
+            raise MediaDownloadError(f"{op} timed out after {timeout_s}s")
+        if proc.state is SupervisedState.FAILED:
+            if proc.returncode is None and proc.error is not None:
+                raise MediaDownloadError(f"{op} failed: {proc.error}") from proc.error
+            self._raise_for_error(collections.deque((proc.stderr or "").splitlines(), maxlen=50))
+
+        try:
+            parsed = json.loads(proc.stdout)
+        except json.JSONDecodeError as exc:
+            raise MediaDownloadError("yt-dlp returned non-JSON output — the site or yt-dlp may have broken.") from exc
+        if not isinstance(parsed, dict):
+            raise MediaDownloadError("yt-dlp returned non-JSON output — expected an object.")
+        return parsed
+
+    # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
@@ -248,7 +482,7 @@ class MediaDownloaderService:
             "--ignore-config",
             "--no-playlist",
             "--format",
-            options.format_selector,
+            apply_audio_language(options.format_selector, options.audio_lang),
         ]
         if options.extract_audio_format:
             cmd.extend(["-x", "--audio-format", options.extract_audio_format])

@@ -25,6 +25,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import os
+from collections.abc import Iterator
 from dataclasses import replace
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -33,6 +34,7 @@ from PyQt6.QtCore import QStandardPaths, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -46,13 +48,32 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.language_names import (
+    COMMON_SUBTITLE_LANGS,
+    language_display_name,
+    parse_lang_list,
+)
 from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
+from anki_miner.gui.widgets.dialogs.language_picker_dialog import LanguagePickerDialog
+from anki_miner.gui.widgets.dialogs.playlist_picker_dialog import PlaylistPickerDialog
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
+from anki_miner.gui.workers.base_worker import CancellableWorker
+from anki_miner.gui.workers.download_probe_worker import (
+    DownloadPlaylistResolveWorker,
+    DownloadTracksProbeWorker,
+)
 from anki_miner.gui.workers.download_worker import DownloadWorker
 from anki_miner.services.audio_fetch_common import redact_url_for_log
-from anki_miner.services.media_downloader import FORMAT_PRESETS, DownloadOptions
+from anki_miner.services.media_downloader import (
+    FORMAT_PRESETS,
+    PLAYLIST_PROBE_MAX,
+    DownloadOptions,
+    DownloadPlaylist,
+    MediaDownloaderService,
+    UrlTracks,
+)
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.ytdlp_resolver import ytdlp_available
 
@@ -107,6 +128,16 @@ class DownloadTab(_ToolTabBase):
         self._total_urls: int = 0
         self._run_urls: list[str] = []
         self._cancelled: bool = False
+        # The raw --sub-langs value. Held here rather than read off a widget:
+        # the picker can return a yt-dlp expression no combo could represent.
+        self._sub_langs: str = config.downloader_subtitle_langs
+        # Last successful track probe, offered to the subtitle picker so it can
+        # show what this URL really carries. Session-only.
+        self._detected: UrlTracks | None = None
+        self._probe_worker: DownloadTracksProbeWorker | None = None
+        self._playlist_worker: DownloadPlaylistResolveWorker | None = None
+        # Which URL line the in-flight playlist resolve will replace.
+        self._pending_playlist_line: int = 0
         # yt-dlp availability is cached per-config: resolving it re-hashes the
         # managed binary, so it must not run on every read. Recomputed only
         # here and in update_config().
@@ -171,8 +202,11 @@ class DownloadTab(_ToolTabBase):
             self.preset_combo.setCurrentIndex(idx if idx >= 0 else 0)
             self.custom_format_edit.setText(self.config.downloader_custom_format)
             self.write_subs_checkbox.setChecked(self.config.downloader_write_subtitles)
-            self.sub_langs_edit.setText(self.config.downloader_subtitle_langs)
-            self.sub_langs_edit.setEnabled(self.config.downloader_write_subtitles)
+            self._sub_langs = self.config.downloader_subtitle_langs
+            self._refresh_sub_langs_button()
+            self.sub_langs_button.setEnabled(self.config.downloader_write_subtitles)
+            audio_idx = self.audio_lang_combo.findData(self.config.downloader_audio_lang)
+            self.audio_lang_combo.setCurrentIndex(audio_idx if audio_idx >= 0 else 0)
             self.embed_thumbnail_checkbox.setChecked(self.config.downloader_embed_thumbnail)
             self.embed_metadata_checkbox.setChecked(self.config.downloader_embed_metadata)
         finally:
@@ -186,10 +220,24 @@ class DownloadTab(_ToolTabBase):
             self.config.downloader_format_preset != self.preset_combo.currentData()
             or self.config.downloader_custom_format != self.custom_format_edit.text().strip()
             or self.config.downloader_write_subtitles != self.write_subs_checkbox.isChecked()
-            or self.config.downloader_subtitle_langs != (self.sub_langs_edit.text().strip() or "ja")
+            or self.config.downloader_subtitle_langs != self._normalized_sub_langs()
+            or self.config.downloader_audio_lang != self._selected_audio_lang()
             or self.config.downloader_embed_thumbnail != self.embed_thumbnail_checkbox.isChecked()
             or self.config.downloader_embed_metadata != self.embed_metadata_checkbox.isChecked()
         )
+
+    def _normalized_sub_langs(self) -> str:
+        """The committed ``--sub-langs`` value.
+
+        The single definition of the empty-selection fallback, which used to be
+        duplicated across the diff, the persist slot and the options builder.
+        ``--sub-langs ""`` is not a valid invocation, so an empty selection
+        cannot reach yt-dlp.
+        """
+        return self._sub_langs.strip() or "ja"
+
+    def _selected_audio_lang(self) -> str:
+        return str(self.audio_lang_combo.currentData() or "")
 
     def _on_option_changed(self, *_: object) -> None:
         """Persist an edited run option to config so it survives restart."""
@@ -200,7 +248,8 @@ class DownloadTab(_ToolTabBase):
             downloader_format_preset=str(self.preset_combo.currentData()),
             downloader_custom_format=self.custom_format_edit.text().strip(),
             downloader_write_subtitles=self.write_subs_checkbox.isChecked(),
-            downloader_subtitle_langs=self.sub_langs_edit.text().strip() or "ja",
+            downloader_subtitle_langs=self._normalized_sub_langs(),
+            downloader_audio_lang=self._selected_audio_lang(),
             downloader_embed_thumbnail=self.embed_thumbnail_checkbox.isChecked(),
             downloader_embed_metadata=self.embed_metadata_checkbox.isChecked(),
         )
@@ -263,9 +312,30 @@ class DownloadTab(_ToolTabBase):
         # Tab must move focus, not insert a literal tab (keyboard-only flow).
         self.url_input.setTabChangesFocus(True)
         self.url_input.setFixedHeight(self.url_input.fontMetrics().lineSpacing() * 6 + 16)
+        self.url_input.textChanged.connect(self._refresh_url_actions)
         layout.addWidget(self.url_input)
 
+        url_actions = QHBoxLayout()
+        url_actions.setSpacing(SPACING.xs)
+        self.expand_playlist_button = ModernButton(self.tr("Expand Playlist…"), variant="secondary")
+        self.expand_playlist_button.setToolTip(
+            self.tr(
+                "Replace the URL line the cursor is on with the playlist's "
+                "individual videos, so you can pick which ones to download."
+            )
+        )
+        self.expand_playlist_button.clicked.connect(self._on_expand_playlist)
+        url_actions.addWidget(self.expand_playlist_button)
+
+        self.detect_button = ModernButton(self.tr("Detect Tracks"), variant="secondary")
+        self.detect_button.setToolTip(self.tr("Ask the first URL which subtitle and audio languages it offers."))
+        self.detect_button.clicked.connect(self._on_detect_tracks)
+        url_actions.addWidget(self.detect_button)
+        url_actions.addStretch()
+        layout.addLayout(url_actions)
+
         group.setLayout(layout)
+        self._refresh_url_actions()
         return group
 
     def _create_options_section(self) -> QFrame:
@@ -317,13 +387,31 @@ class DownloadTab(_ToolTabBase):
         self.write_subs_checkbox.toggled.connect(self._on_option_changed)
         subs_row.addWidget(self.write_subs_checkbox)
         subs_row.addWidget(QLabel(self.tr("Languages:")))
-        self.sub_langs_edit = QLineEdit()
-        self.sub_langs_edit.setToolTip(self.tr("Comma-separated language codes, e.g. ja,en"))
-        self.sub_langs_edit.setEnabled(False)
-        self.sub_langs_edit.editingFinished.connect(self._on_option_changed)
-        subs_row.addWidget(self.sub_langs_edit)
+        self.sub_langs_button = ModernButton(self.tr("Choose…"), variant="secondary")
+        self.sub_langs_button.setToolTip(self.tr("Pick subtitle languages by name."))
+        self.sub_langs_button.setEnabled(False)
+        self.sub_langs_button.clicked.connect(self._on_choose_sub_langs)
+        subs_row.addWidget(self.sub_langs_button)
         subs_row.addStretch()
         layout.addLayout(subs_row)
+
+        audio_row = QHBoxLayout()
+        audio_row.setSpacing(SPACING.xs)
+        audio_row.addWidget(QLabel(self.tr("Audio language:")))
+        self.audio_lang_combo = QComboBox()
+        self.audio_lang_combo.setToolTip(
+            self.tr(
+                "Preferred audio track on videos that carry several. A video "
+                "without this language still downloads, with its default audio."
+            )
+        )
+        self.audio_lang_combo.addItem(self.tr("Any (best available)"), "")
+        for code in COMMON_SUBTITLE_LANGS:
+            self.audio_lang_combo.addItem(f"{language_display_name(code)}  ({code})", code)
+        self.audio_lang_combo.currentIndexChanged.connect(self._on_option_changed)
+        audio_row.addWidget(self.audio_lang_combo)
+        audio_row.addStretch()
+        layout.addLayout(audio_row)
 
         self.embed_thumbnail_checkbox = QCheckBox(self.tr("Embed thumbnail"))
         self.embed_thumbnail_checkbox.toggled.connect(self._on_option_changed)
@@ -337,7 +425,7 @@ class DownloadTab(_ToolTabBase):
         return group
 
     def _on_write_subs_toggled(self, checked: bool) -> None:
-        self.sub_langs_edit.setEnabled(checked)
+        self.sub_langs_button.setEnabled(checked)
 
     def _create_output_section(self) -> QFrame:
         group = QFrame()
@@ -529,10 +617,209 @@ class DownloadTab(_ToolTabBase):
             format_selector=selector,
             extract_audio_format=audio_format,
             write_subtitles=self.write_subs_checkbox.isChecked(),
-            subtitle_langs=self.sub_langs_edit.text().strip() or "ja",
+            subtitle_langs=self._normalized_sub_langs(),
+            # Raw mode owns the whole selector, audio included: composing a
+            # language filter into a string the user hand-wrote would break the
+            # contract the custom-format field advertises.
+            audio_lang="" if custom else self._selected_audio_lang(),
             embed_thumbnail=self.embed_thumbnail_checkbox.isChecked(),
             embed_metadata=self.embed_metadata_checkbox.isChecked(),
         )
+
+    # ------------------------------------------------------------------
+    # Language pickers
+    # ------------------------------------------------------------------
+
+    def _refresh_sub_langs_button(self) -> None:
+        """Show the current selection as names, or verbatim if it is raw."""
+        value = self._normalized_sub_langs()
+        codes = parse_lang_list(value)
+        if codes is None:
+            # A yt-dlp expression has no name; show what the user actually set.
+            self.sub_langs_button.setText(value)
+            return
+        self.sub_langs_button.setText(", ".join(language_display_name(code) for code in codes))
+
+    def _set_sub_langs(self, value: str) -> None:
+        """Adopt a new ``--sub-langs`` value and persist it."""
+        self._sub_langs = value
+        self._refresh_sub_langs_button()
+        self._on_option_changed()
+
+    def _on_choose_sub_langs(self) -> None:
+        """Open the language picker, seeded with the current value."""
+        dialog = LanguagePickerDialog(self._sub_langs, detected=self._detected, parent=self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self._set_sub_langs(dialog.selected_langs())
+
+    # ------------------------------------------------------------------
+    # Track detection
+    # ------------------------------------------------------------------
+
+    def _refresh_url_actions(self) -> None:
+        """Enable the two URL-scoped actions only when they can do something."""
+        has_url = bool(self._valid_urls())
+        idle = not still_running(self.worker_thread)
+        ready = self._ytdlp_ready() and has_url and idle
+        self.detect_button.setEnabled(ready and not still_running(self._probe_worker))
+        self.expand_playlist_button.setEnabled(ready and not still_running(self._playlist_worker))
+
+    def _valid_urls(self) -> list[str]:
+        """Every http(s) line in the box, without raising a screen issue."""
+        urls: list[str] = []
+        for raw_line in self.url_input.toPlainText().splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("-"):
+                continue
+            parts = urlsplit(line)
+            if parts.scheme in ("http", "https") and parts.netloc:
+                urls.append(line)
+        return urls
+
+    def _on_detect_tracks(self) -> None:
+        """Probe the first URL for the languages it actually offers."""
+        urls = self._valid_urls()
+        if not urls or still_running(self._probe_worker):
+            return
+        self.clear_screen_issue()
+        self.detect_button.setEnabled(False)
+        self.log_widget.append_info(self.tr("Checking available tracks…"))
+        worker = DownloadTracksProbeWorker(MediaDownloaderService(self.config), urls[0], parent=self)
+        worker.tracks_probed.connect(self._on_tracks_probed)
+        worker.probe_error.connect(self._on_tracks_error)
+        worker.finished.connect(self._on_probe_finished)
+        self._probe_worker = worker
+        worker.start()
+
+    def _on_tracks_probed(self, tracks: object) -> None:
+        """Adopt a probe result: remember it, and offer its audio languages."""
+        if not isinstance(tracks, UrlTracks):  # pragma: no cover - signal guard
+            return
+        self._detected = tracks
+        for code in tracks.audio_langs:
+            if self.audio_lang_combo.findData(code) < 0:
+                label = f"{language_display_name(code)}  ({code})" + self.tr("  · on this URL")
+                # Seeding guard: adding an item must not look like the user
+                # picking one, which would persist a config change.
+                self._seeding = True
+                try:
+                    self.audio_lang_combo.addItem(label, code)
+                finally:
+                    self._seeding = False
+        self.log_widget.append_success(
+            tr_format(
+                self.tr("Tracks found — subtitles: %1; audio: %2"),
+                ", ".join(tracks.manual_sub_langs + tracks.auto_sub_langs) or self.tr("none"),
+                ", ".join(tracks.audio_langs) or self.tr("none"),
+            )
+        )
+        self._refresh_url_actions()
+
+    def _on_tracks_error(self, message: str) -> None:
+        """Report a failed track probe without blocking the download."""
+        self.show_screen_issue(ScreenIssue(summary=self.tr("Could not read this URL's tracks."), details=message))
+        self._refresh_url_actions()
+
+    def _on_probe_finished(self) -> None:
+        """Drop the probe handle once its QThread emits finished."""
+        worker = self._probe_worker
+        self._probe_worker = None
+        if worker is not None:
+            worker.deleteLater()
+        self._refresh_url_actions()
+
+    # ------------------------------------------------------------------
+    # Playlist expansion
+    # ------------------------------------------------------------------
+
+    def _on_expand_playlist(self) -> None:
+        """Resolve the playlist on the cursor's line into its entries.
+
+        The cursor's line, not "the only URL": expanding one playlist fills the
+        box with its videos, and a second playlist must still be expandable
+        afterwards.
+        """
+        if still_running(self._playlist_worker):
+            return
+        line_index = self.url_input.textCursor().blockNumber()
+        lines = self.url_input.toPlainText().splitlines()
+        candidate = lines[line_index].strip() if 0 <= line_index < len(lines) else ""
+        parts = urlsplit(candidate) if candidate else None
+        if parts is None or parts.scheme not in ("http", "https") or not parts.netloc:
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("Put the cursor on the playlist URL line."),
+                    details=self.tr("Expand Playlist works on the line the text cursor is on."),
+                )
+            )
+            return
+
+        self.clear_screen_issue()
+        self._pending_playlist_line = line_index
+        self.expand_playlist_button.setEnabled(False)
+        self.log_widget.append_info(self.tr("Resolving playlist…"))
+        worker = DownloadPlaylistResolveWorker(
+            MediaDownloaderService(self.config), candidate, PLAYLIST_PROBE_MAX, parent=self
+        )
+        worker.playlist_resolved.connect(self._on_playlist_resolved)
+        worker.probe_error.connect(self._on_playlist_error)
+        worker.finished.connect(self._on_playlist_finished)
+        self._playlist_worker = worker
+        worker.start()
+
+    def _on_playlist_resolved(self, playlist: object) -> None:
+        """Let the user pick entries, then write them into the URL box."""
+        if not isinstance(playlist, DownloadPlaylist):  # pragma: no cover - signal guard
+            return
+        truncated = playlist.total_count is not None and playlist.total_count > len(playlist.entries)
+        dialog = PlaylistPickerDialog(playlist, truncated=truncated, parent=self)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            self.log_widget.append_info(self.tr("Playlist expansion cancelled."))
+            return
+        chosen = dialog.selected_urls()
+        added = self._replace_line(self._pending_playlist_line, chosen)
+        skipped = len(chosen) - added
+        self.log_widget.append_success(tr_format(self.tr("Added %1 videos from '%2'."), str(added), playlist.title))
+        if skipped:
+            self.log_widget.append_info(tr_format(self.tr("Skipped %1 already in the list."), str(skipped)))
+        self._refresh_url_actions()
+
+    def _replace_line(self, line_index: int, urls: list[str]) -> int:
+        """Swap one URL line for *urls*, dropping any already in the box.
+
+        Returns the number of lines actually inserted. Rewriting the whole text
+        rather than editing through a QTextCursor keeps the dedup rule in one
+        readable place; the box holds at most a few hundred short lines.
+        """
+        lines = self.url_input.toPlainText().splitlines()
+        if not 0 <= line_index < len(lines):
+            return 0
+        others = {line.strip() for i, line in enumerate(lines) if i != line_index and line.strip()}
+        fresh = [url for url in urls if url not in others]
+        lines[line_index : line_index + 1] = fresh
+        self.url_input.setPlainText("\n".join(line for line in lines if line.strip()))
+        return len(fresh)
+
+    def _on_playlist_error(self, message: str) -> None:
+        """Report a failed resolve — most often "that URL is not a playlist"."""
+        self.show_screen_issue(ScreenIssue(summary=self.tr("Could not expand that playlist."), details=message))
+        self._refresh_url_actions()
+
+    def _on_playlist_finished(self) -> None:
+        """Drop the resolve handle once its QThread emits finished."""
+        worker = self._playlist_worker
+        self._playlist_worker = None
+        if worker is not None:
+            worker.deleteLater()
+        self._refresh_url_actions()
+
+    def iter_close_workers(self) -> Iterator[CancellableWorker]:
+        """Yield the base's workers plus this tab's two probe threads."""
+        yield from super().iter_close_workers()
+        for worker in (self._probe_worker, self._playlist_worker):
+            if still_running(worker):
+                assert worker is not None
+                yield worker
 
     def _on_file_started(self, idx: int) -> None:
         self.progress_widget.set_status(tr_format(self.tr("Downloading %1 of %2"), str(idx + 1), str(self._total_urls)))

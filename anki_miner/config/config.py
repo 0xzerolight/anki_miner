@@ -201,6 +201,7 @@ class AnkiMinerConfig:
     downloader_custom_format: str = ""  # raw yt-dlp -f string; non-empty overrides the preset
     downloader_write_subtitles: bool = False  # --write-subs/--write-auto-subs (manual preferred)
     downloader_subtitle_langs: str = "ja"  # --sub-langs value
+    downloader_audio_lang: str = ""  # preferred audio-track language; "" = best available
     downloader_embed_thumbnail: bool = False  # --embed-thumbnail
     downloader_embed_metadata: bool = False  # --embed-metadata
 

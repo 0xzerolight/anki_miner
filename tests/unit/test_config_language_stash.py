@@ -133,5 +133,6 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "deck_builder_coverage_pct",
         "deck_builder_skip_known",
         "backfill_field_groups",
+        "downloader_audio_lang",
     }
     assert loaded.script_variant == "" and loaded.reading_tone_color is False
