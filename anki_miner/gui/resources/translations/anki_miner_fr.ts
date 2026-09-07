@@ -3884,6 +3884,22 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Une URL par ligne</translation>
     </message>
     <message>
+        <source>Expand Playlist…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Replace the URL line the cursor is on with the playlist's individual videos, so you can pick which ones to download.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Detect Tracks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Ask the first URL which subtitle and audio languages it offers.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Options</source>
         <translation>Options</translation>
     </message>
@@ -3940,8 +3956,24 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Langues :</translation>
     </message>
     <message>
-        <source>Comma-separated language codes, e.g. ja,en</source>
-        <translation>Codes de langue séparés par des virgules, par ex. ja,en</translation>
+        <source>Choose…</source>
+        <translation type="unfinished">Choisir…</translation>
+    </message>
+    <message>
+        <source>Pick subtitle languages by name.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio language:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preferred audio track on videos that carry several. A video without this language still downloads, with its default audio.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Any (best available)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Embed thumbnail</source>
@@ -3986,6 +4018,54 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     <message>
         <source>Paste at least one URL to download.</source>
         <translation>Collez au moins une URL à télécharger.</translation>
+    </message>
+    <message>
+        <source>Checking available tracks…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>  · on this URL</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Tracks found — subtitles: %1; audio: %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>none</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not read this URL's tracks.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Put the cursor on the playlist URL line.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Expand Playlist works on the line the text cursor is on.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resolving playlist…</source>
+        <translation type="unfinished">Résolution de la liste de lecture…</translation>
+    </message>
+    <message>
+        <source>Playlist expansion cancelled.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Added %1 videos from '%2'.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped %1 already in the list.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Could not expand that playlist.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Downloading %1 of %2</source>
@@ -5255,6 +5335,40 @@ Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
         <translation>Pack %1 installé avec succès.</translation>
     </message>
 </context><context>
+    <name>LanguagePickerDialog</name>
+    <message>
+        <source>Subtitle Languages</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Search languages…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This URL also offers machine-translated captions in many more languages. Type a code in Advanced to request one.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Advanced (raw yt-dlp language expression):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>e.g. en.*,-live_chat</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Available for this URL</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Common languages</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>  · automatic</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>LanguageSwitch</name>
     <message>
         <source>Switch mining language</source>
@@ -6292,6 +6406,48 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     <message>
         <source>Added %1 videos from playlist '%2'.</source>
         <translation>%1 vidéos ajoutées depuis la liste de lecture « %2 ».</translation>
+    </message>
+</context><context>
+    <name>PlaylistPickerDialog</name>
+    <message>
+        <source>Add from Playlist</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>'%1' — %2 videos</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Showing the first %1. Download these, then expand the playlist again for the rest.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Search this playlist…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>All</source>
+        <translation type="unfinished">Tous</translation>
+    </message>
+    <message>
+        <source>None</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Range, e.g. 1-20,25</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select Range</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add</source>
+        <translation type="unfinished">Ajouter</translation>
+    </message>
+    <message>
+        <source>Add %1 videos</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>ProfileController</name>
