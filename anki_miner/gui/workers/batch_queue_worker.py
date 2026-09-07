@@ -14,7 +14,7 @@ from anki_miner.gui.utils.service_factory import (
     create_episode_processor,
     create_shared_lookup_services,
 )
-from anki_miner.gui.workers._queue_worker_base import RunBoundaryControls, queue_preflight_error
+from anki_miner.gui.workers._queue_worker_base import CurationEpisode, RunBoundaryControls, queue_preflight_error
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.progress import ProgressCallback
@@ -103,10 +103,12 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
         self._curation_offset: float = 0.0
-        # Season mode: episode → (subtitle, offset) for every pre-passed pair,
+        self._curation_secondary: Path | None = None
+        self._curation_secondary_offset: float = 0.0
+        # Season mode: episode → CurationEpisode for every pre-passed pair,
         # published while the worker is parked at the curation gate so the tab
         # can build per-episode media contexts; cleared once the gate releases.
-        self._curation_media_map: dict[Path, tuple[Path, float]] | None = None
+        self._curation_media_map: dict[Path, CurationEpisode] | None = None
         # The series this run will process, frozen at run() start.
         self._run_items: list[QueueItem] = []
         # Folded from every process_episode result this run produced; the one
@@ -314,7 +316,9 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                 # Use FilePairMatcher for cross-folder pairing
                 from anki_miner.utils.file_pairing import FilePairMatcher
 
-                pairs = FilePairMatcher.find_pairs_by_episode_number(item.video_folder, item.subtitle_folder)
+                pairs = FilePairMatcher.find_pairs_by_episode_number(
+                    item.video_folder, item.subtitle_folder, secondary_folder=item.secondary_folder
+                )
 
                 if not pairs:
                     raise ValueError("No matching video/subtitle pairs found")
@@ -349,6 +353,8 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                         self._curation_video = pair.video
                         self._curation_subtitle = pair.subtitle
                         self._curation_offset = item.subtitle_offset
+                        self._curation_secondary = pair.secondary
+                        self._curation_secondary_offset = item.secondary_offset
                         try:
                             result = episode_processor.process_episode(
                                 pair.video,
@@ -356,6 +362,8 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                                 progress_callback=self.progress_callback,
                                 curation_callback=self.curation_callback,
                                 subtitle_offset=item.subtitle_offset,
+                                secondary_subtitle_file=pair.secondary,
+                                secondary_subtitle_offset=item.secondary_offset,
                             )
                         except Exception as e:  # noqa: BLE001 — preflight (Issue #52) can raise
                             # Per-pair guard: process_episode now runs the card-target
@@ -470,6 +478,8 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                     progress_callback=self.progress_callback,
                     curation_callback=capture,
                     subtitle_offset=item.subtitle_offset,
+                    secondary_subtitle_file=pair.secondary,
+                    secondary_subtitle_offset=item.secondary_offset,
                 )
             except Exception as e:  # noqa: BLE001 — preflight (Issue #52) can raise
                 logger.exception("BatchQueueWorker season pre-pass pair %s failed", pair.video.name)
@@ -501,7 +511,12 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
         self._curation_video = first_pair.video
         self._curation_subtitle = first_pair.subtitle
         self._curation_offset = item.subtitle_offset
-        self._curation_media_map = {pair.video: (pair.subtitle, item.subtitle_offset) for pair, _key in prepass_ok}
+        self._curation_secondary = first_pair.secondary
+        self._curation_secondary_offset = item.secondary_offset
+        self._curation_media_map = {
+            pair.video: CurationEpisode(pair.subtitle, item.subtitle_offset, pair.secondary, item.secondary_offset)
+            for pair, _key in prepass_ok
+        }
         try:
             assert self.curation_callback is not None  # season mode precondition
             selection = self.curation_callback(pool)
@@ -546,6 +561,8 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                         # this episode's (same offset both passes).
                         curation_callback=fixed_selection(subset),
                         subtitle_offset=item.subtitle_offset,
+                        secondary_subtitle_file=pair.secondary,
+                        secondary_subtitle_offset=item.secondary_offset,
                     )
                 except Exception as e:  # noqa: BLE001 — preflight (Issue #52) can raise
                     logger.exception("BatchQueueWorker season mine pair %s failed", pair.video.name)

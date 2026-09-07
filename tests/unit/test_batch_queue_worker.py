@@ -32,7 +32,7 @@ def test_curation_attrs_use_item_offset_at_curator_time(tmp_path):
     first pair published on the worker while the bridge is parked."""
     captured = []
 
-    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass", secondary=None)
 
     proc = MagicMock()
 
@@ -93,7 +93,7 @@ def test_curation_attrs_use_item_offset_at_curator_time(tmp_path):
 def test_season_mode_passes_the_item_offset_on_every_call(tmp_path):
     """Season mode drives the shared processor twice per pair (pre-pass, then
     mine); both calls carry the item's own offset."""
-    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass", secondary=None)
 
     proc = MagicMock()
     offsets: list = []
@@ -210,8 +210,8 @@ def _ok_result(cards: int = 3) -> ProcessingResult:
 
 def test_all_pairs_failed_emits_item_failed(tmp_path):
     """All pairs failing → item_failed emitted; item_completed not emitted; queue total 0."""
-    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
-    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"), secondary=None)
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
@@ -245,8 +245,8 @@ def test_all_pairs_failed_emits_item_failed(tmp_path):
 
 def test_partial_failure_emits_item_failed_with_partial_cards(tmp_path):
     """First pair succeeds, second fails → item_failed with partial count; queue total includes successes."""
-    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
-    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"), secondary=None)
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
@@ -282,8 +282,8 @@ def test_partial_failure_emits_item_failed_with_partial_cards(tmp_path):
 
 def test_partial_series_retry_emits_only_new_cards_after_cumulative_row_total(tmp_path):
     """Retry keeps lifetime row count while signals report only current-run cards."""
-    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
-    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"), secondary=None)
     queue = BatchQueue()
     item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
 
@@ -333,10 +333,12 @@ def test_retry_skips_only_committed_pair_path_when_episode_numbers_match(tmp_pat
     pair1 = SimpleNamespace(
         video=tmp_path / "release-a" / "ep1.mkv",
         subtitle=tmp_path / "release-a" / "ep1.ass",
+        secondary=None,
     )
     pair2 = SimpleNamespace(
         video=tmp_path / "release-b" / "ep1.mkv",
         subtitle=tmp_path / "release-b" / "ep1.ass",
+        secondary=None,
     )
     queue = BatchQueue()
     item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
@@ -368,8 +370,8 @@ def test_retry_skips_only_committed_pair_path_when_episode_numbers_match(tmp_pat
 
 def test_all_pairs_succeed_emits_item_completed(tmp_path):
     """Regression: all pairs succeed → item_completed with total cards; item_failed not emitted."""
-    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
-    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"), secondary=None)
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
@@ -421,7 +423,7 @@ def _wire_capture_only(worker: BatchQueueWorkerThread) -> dict:
 def test_item_processed_exactly_once_when_gui_status_write_delayed(tmp_path):
     """Regression: with GUI status slots delayed, the finished item must not
     be re-picked as still-PENDING and processed again."""
-    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
@@ -489,7 +491,7 @@ def test_fast_fail_item_fails_exactly_once_when_gui_status_write_delayed(tmp_pat
 def test_worker_marks_item_processing_at_pick_time(tmp_path):
     """The worker itself (not a GUI slot) moves the item PENDING -> PROCESSING
     before work starts, and to COMPLETED when it finishes."""
-    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
@@ -534,9 +536,9 @@ def test_worker_marks_item_processing_at_pick_time(tmp_path):
 def test_cancel_mid_item_does_not_emit_item_completed(tmp_path):
     """Regression: cancel between pairs (1 of 3 processed) must not fall
     through to item_completed; the partially processed item is not COMPLETED."""
-    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
-    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
-    pair3 = SimpleNamespace(video=Path("/tmp/ep3.mkv"), subtitle=Path("/tmp/ep3.ass"))
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"), secondary=None)
+    pair3 = SimpleNamespace(video=Path("/tmp/ep3.mkv"), subtitle=Path("/tmp/ep3.ass"), secondary=None)
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
@@ -575,7 +577,7 @@ def test_cancel_mid_item_does_not_emit_item_completed(tmp_path):
 
 
 def test_cancel_during_final_pair_returns_item_to_pending(tmp_path):
-    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
     queue = BatchQueue()
     item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
     proc = MagicMock()
@@ -608,7 +610,7 @@ def test_cancel_during_final_pair_returns_item_to_pending(tmp_path):
 
 
 def test_zero_commit_cancel_during_final_pair_returns_item_to_pending(tmp_path):
-    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
     queue = BatchQueue()
     item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
     proc = MagicMock()
@@ -686,7 +688,7 @@ def test_cancel_before_run_exits_at_loop_top():
 
 def test_setup_error_emits_item_failed(tmp_path):
     """process_episode raising SetupError causes item_failed to be emitted for that item."""
-    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass", secondary=None)
 
     proc = MagicMock()
     proc.process_episode.side_effect = SetupError("note type not found")
@@ -731,9 +733,9 @@ def test_mid_loop_raise_does_not_abort_remaining_pairs_or_lose_cards(tmp_path):
     except, marked the whole item ERROR, skipped the cards-counting, and never ran
     pair 3.
     """
-    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
-    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
-    pair3 = SimpleNamespace(video=Path("/tmp/ep3.mkv"), subtitle=Path("/tmp/ep3.ass"))
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"), secondary=None)
+    pair3 = SimpleNamespace(video=Path("/tmp/ep3.mkv"), subtitle=Path("/tmp/ep3.ass"), secondary=None)
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
@@ -787,7 +789,7 @@ def test_run_builds_one_processor_and_closes_it_once(tmp_path):
     now, so nothing is left to rebuild between items. The run-end close is still
     the Windows back-to-back-mining handle release.
     """
-    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
@@ -841,7 +843,7 @@ def test_one_subtitle_parser_service_for_the_whole_queue(tmp_path):
     from anki_miner.gui.utils import service_factory
     from anki_miner.orchestration.episode_processor import EpisodeProcessor
 
-    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
 
     queue = BatchQueue()
     for index in range(3):
@@ -916,7 +918,7 @@ def test_processor_closed_on_exception_exit(tmp_path):
 
 def test_close_failure_does_not_abort_queue(tmp_path):
     """A processor.close() that raises must not lose the run's result."""
-    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
@@ -954,7 +956,7 @@ def test_shared_anki_service_passed_to_the_run_processor(tmp_path):
     """A single AnkiService instance must be built once and passed via
     anki_service= to the run's create_episode_processor call, so the vocab
     cache survives across all queue items."""
-    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
@@ -997,7 +999,7 @@ def test_batch_vocab_scan_at_most_once_across_items(tmp_path):
 
     from anki_miner.services.anki_service import AnkiService
 
-    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
@@ -1174,7 +1176,7 @@ def _bundle_mock():
 def test_shared_lookup_services_passed_to_the_run_processor(tmp_path):
     """One SharedLookupServices bundle per run: built once, passed via
     shared_lookup= to the run's create_episode_processor call."""
-    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
@@ -1214,7 +1216,7 @@ def test_shared_lookup_services_passed_to_the_run_processor(tmp_path):
 
 
 def test_shared_lookup_services_closed_once_on_normal_exit(tmp_path):
-    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
@@ -1246,7 +1248,7 @@ def test_shared_lookup_services_closed_once_on_normal_exit(tmp_path):
 
 
 def test_close_failure_does_not_emit_second_summary(qtbot, tmp_path):
-    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
@@ -1336,7 +1338,7 @@ def test_shared_lookup_services_closed_on_cancel(tmp_path):
 def test_shared_load_messages_surfaced_once_per_run(tmp_path):
     """The bundle's load_result info/warnings reach the presenter exactly once
     per run (previously: once per item via each create_episode_processor)."""
-    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
+    pair = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
 
     queue = BatchQueue()
     queue.add_item(tmp_path / "video1", tmp_path / "subs1", "Show1")
@@ -1383,7 +1385,7 @@ def test_run_uses_the_supplied_order_and_ignores_later_queue_edits(tmp_path):
     so removing a row did not stop it creating that series' cards. Now the list
     is locked instead, and the worker is handed exactly what it will mine.
     """
-    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass", secondary=None)
     proc = MagicMock()
     proc.process_episode.return_value = _ok_result(cards=1)
 
@@ -1413,7 +1415,7 @@ def test_run_uses_the_supplied_order_and_ignores_later_queue_edits(tmp_path):
 
 def test_pause_lands_between_series_not_inside_one(tmp_path):
     """Requested during series one, consumed before series two is picked."""
-    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass", secondary=None)
     proc = MagicMock()
 
     queue = BatchQueue()
@@ -1456,7 +1458,7 @@ def test_pause_lands_between_series_not_inside_one(tmp_path):
 
 def test_finish_current_in_post_boundary_gap_leaves_next_series_pending(tmp_path):
     """A stop that lands after the boundary check must beat the next claim."""
-    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass", secondary=None)
     proc = MagicMock()
     proc.process_episode.return_value = _ok_result(cards=1)
 
@@ -1517,8 +1519,8 @@ def test_cancel_releases_a_worker_waiting_at_a_series_boundary():
 
 def test_item_pairs_progress_ticks_each_episode(tmp_path):
     """One (0, total) prime plus one tick per finished pair, addressed by item id."""
-    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
-    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"), secondary=None)
     queue = BatchQueue()
     item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
 
@@ -1546,8 +1548,8 @@ def test_item_pairs_progress_ticks_each_episode(tmp_path):
 
 def test_item_pairs_progress_counts_failed_attempts(tmp_path):
     """A pair that raises still concluded its attempt, so it still ticks."""
-    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
-    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"), secondary=None)
     queue = BatchQueue()
     item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
 
@@ -1584,7 +1586,7 @@ def test_a_completed_item_handed_to_the_worker_is_skipped(tmp_path):
     This is why QueuePanel.runnable_items resets a re-run row to PENDING before
     the run starts -- handing the worker a COMPLETED item mines nothing.
     """
-    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass", secondary=None)
     queue = BatchQueue()
     item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
     item.status = QueueItemStatus.COMPLETED
@@ -1613,8 +1615,8 @@ def test_a_completed_item_handed_to_the_worker_is_skipped(tmp_path):
 
 def test_a_reset_item_re_mines_every_pair(tmp_path):
     """With the receipts cleared the worker sees every pair as pending again."""
-    pair1 = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
-    pair2 = SimpleNamespace(video=tmp_path / "ep2.mkv", subtitle=tmp_path / "ep2.ass")
+    pair1 = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass", secondary=None)
+    pair2 = SimpleNamespace(video=tmp_path / "ep2.mkv", subtitle=tmp_path / "ep2.ass", secondary=None)
     queue = BatchQueue()
     item = queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
     item.status = QueueItemStatus.COMPLETED
@@ -1652,8 +1654,8 @@ def test_a_reset_item_re_mines_every_pair(tmp_path):
 def test_queue_finished_carries_the_whitelist_folded_over_every_pair(tmp_path):
     """Two pairs: 'a' mined by the first is known to the second; 'b' mined by the
     second. The run's coverage says both were mined and nothing is missing."""
-    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"))
-    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"))
+    pair1 = SimpleNamespace(video=Path("/tmp/ep1.mkv"), subtitle=Path("/tmp/ep1.ass"), secondary=None)
+    pair2 = SimpleNamespace(video=Path("/tmp/ep2.mkv"), subtitle=Path("/tmp/ep2.ass"), secondary=None)
     queue = BatchQueue()
     queue.add_item(tmp_path / "video", tmp_path / "subs", "Show")
 
@@ -1682,3 +1684,71 @@ def test_queue_finished_carries_the_whitelist_folded_over_every_pair(tmp_path):
     assert coverage.mined == {"a", "b"}
     assert coverage.known == frozenset()
     assert coverage.missing == {"c"}
+
+
+def _translation_worker(tmp_path, proc, pairs, **item_kwargs):
+    """Run one queued series over ``pairs``, returning the patched matcher."""
+    item = QueueItem(
+        video_folder=tmp_path / "video",
+        subtitle_folder=tmp_path / "subs",
+        display_name="Show",
+        id="i1",
+        **item_kwargs,
+    )
+    queue = MagicMock()
+    queue.get_all_items.return_value = [item]
+    worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(), None)
+    with (
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=proc,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=pairs,
+        ) as matcher,
+    ):
+        worker.run()
+    return matcher
+
+
+def test_matcher_receives_the_item_s_translation_folder(tmp_path):
+    """F7 in batch: the third folder is paired by the same episode-number rule."""
+    proc = MagicMock()
+    proc.process_episode.return_value = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0)
+
+    matcher = _translation_worker(tmp_path, proc, [], secondary_folder=tmp_path / "trans")
+
+    assert matcher.call_args.kwargs["secondary_folder"] == tmp_path / "trans"
+
+
+def test_an_item_without_a_translation_folder_pairs_none(tmp_path):
+    proc = MagicMock()
+    proc.process_episode.return_value = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0)
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass", secondary=None)
+
+    matcher = _translation_worker(tmp_path, proc, [pair])
+
+    assert matcher.call_args.kwargs["secondary_folder"] is None
+    assert proc.process_episode.call_args.kwargs["secondary_subtitle_file"] is None
+    assert proc.process_episode.call_args.kwargs["secondary_subtitle_offset"] == 0.0
+
+
+def test_each_pair_s_translation_track_reaches_process_episode(tmp_path):
+    """A partial translation set mines every episode: the one without a match
+    just gets an empty Translation field."""
+    proc = MagicMock()
+    proc.process_episode.return_value = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0)
+    trans = tmp_path / "trans" / "ep1.en.srt"
+    pairs = [
+        SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass", secondary=trans),
+        SimpleNamespace(video=tmp_path / "ep2.mkv", subtitle=tmp_path / "ep2.ass", secondary=None),
+    ]
+
+    _translation_worker(tmp_path, proc, pairs, secondary_folder=tmp_path / "trans", secondary_offset=-1.5)
+
+    first, second = proc.process_episode.call_args_list
+    assert first.kwargs["secondary_subtitle_file"] == trans
+    assert first.kwargs["secondary_subtitle_offset"] == -1.5
+    assert second.kwargs["secondary_subtitle_file"] is None
+    assert second.kwargs["secondary_subtitle_offset"] == -1.5
