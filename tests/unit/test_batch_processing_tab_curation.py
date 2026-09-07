@@ -8,6 +8,7 @@ import pytest
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
+from anki_miner.gui.workers._queue_worker_base import CurationEpisode
 
 
 @pytest.fixture
@@ -22,7 +23,7 @@ def test_checkbox_default_unchecked(tab):
 
 
 def test_pairs_worker_callback_follows_checkbox(tab):
-    pairs = [SimpleNamespace(video="v", subtitle="s")]
+    pairs = [SimpleNamespace(video="v", subtitle="s", secondary=None)]
     with (
         patch("anki_miner.gui.widgets.batch_processing_tab.create_episode_processor"),
         patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread") as worker_cls,
@@ -43,7 +44,7 @@ def test_pairs_worker_built_with_factory_not_prebuilt(tab):
     """The manual-pairs path defers EpisodeProcessor construction to the worker
     via a processor_factory; create_episode_processor is NOT called on the GUI
     thread (that build moved off the GUI thread to stop the freeze)."""
-    pairs = [SimpleNamespace(video="v", subtitle="s")]
+    pairs = [SimpleNamespace(video="v", subtitle="s", secondary=None)]
     with (
         patch("anki_miner.gui.widgets.batch_processing_tab.create_episode_processor") as mock_create,
         patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread") as worker_cls,
@@ -84,6 +85,8 @@ def test_build_curation_context_reads_worker_attrs(tab, facade_processor, tmp_pa
         _curation_video=tmp_path / "ep1.mkv",
         _curation_subtitle=subs,
         _curation_offset=4.0,
+        _curation_secondary=None,
+        _curation_secondary_offset=0.0,
     )
     mock_parser = MagicMock()
     mock_parser.return_value.parse_raw_entries.return_value = [(0.0, 1.0, "テスト")]
@@ -105,6 +108,8 @@ def test_build_curation_context_parse_error_returns_none_context(tab, facade_pro
         _curation_video=tmp_path / "ep1.mkv",
         _curation_subtitle=subs,
         _curation_offset=0.0,
+        _curation_secondary=None,
+        _curation_secondary_offset=0.0,
     )
     mock_parser = MagicMock()
     mock_parser.return_value.parse_raw_entries.side_effect = RuntimeError("bad subs")
@@ -141,13 +146,15 @@ def test_build_curation_context_routes_through_shared_helpers(tab, facade_proces
         _curation_video=video,
         _curation_subtitle=subs,
         _curation_offset=4.0,
+        _curation_secondary=None,
+        _curation_secondary_offset=0.0,
     )
 
     sentinel_ctx = object()
     with patch.object(BatchProcessingTab, "_make_curation_media_context", return_value=sentinel_ctx) as helper:
         media_context, lookup_fn = tab._build_curation_context()
 
-    helper.assert_called_once_with(tab.config, video, subs, offset=4.0)
+    helper.assert_called_once_with(tab.config, video, subs, offset=4.0, secondary_subtitle=None, secondary_offset=0.0)
     assert media_context is sentinel_ctx
     assert lookup_fn is facade_processor.definition_service.lookup_all_offline
 
@@ -160,15 +167,19 @@ def test_build_curation_context_season_map_adds_resolver(tab, facade_processor, 
     subs1.touch()
     subs2.touch()
     ep2 = tmp_path / "ep2.mkv"
+    trans2 = tmp_path / "ep2.en.srt"
+    trans2.touch()
     season_map = {
-        tmp_path / "ep1.mkv": (subs1, 4.0),
-        ep2: (subs2, 4.0),
+        tmp_path / "ep1.mkv": CurationEpisode(subs1, 4.0),
+        ep2: CurationEpisode(subs2, 4.0, trans2, 2.0),
     }
     tab.worker_thread = SimpleNamespace(
         curation_processor=facade_processor,
         _curation_video=tmp_path / "ep1.mkv",
         _curation_subtitle=subs1,
         _curation_offset=4.0,
+        _curation_secondary=None,
+        _curation_secondary_offset=0.0,
         _curation_media_map=season_map,
     )
     mock_parser = MagicMock()
@@ -200,6 +211,8 @@ def test_build_curation_context_no_season_map_has_no_resolver(tab, facade_proces
         _curation_video=tmp_path / "ep1.mkv",
         _curation_subtitle=subs,
         _curation_offset=0.0,
+        _curation_secondary=None,
+        _curation_secondary_offset=0.0,
     )
     mock_parser = MagicMock()
     mock_parser.return_value.parse_raw_entries.return_value = [(0.0, 1.0, "テスト")]
@@ -207,3 +220,59 @@ def test_build_curation_context_no_season_map_has_no_resolver(tab, facade_proces
         media_context, _lookup_fn = tab._build_curation_context()
     assert media_context is not None
     assert media_context.context_resolver is None
+
+
+def test_curation_context_carries_the_pair_s_translation_track(tab, facade_processor, tmp_path):
+    """F7 in batch: the Translation column and the player's second strip are
+    already built — the batch tab was the only thing never filling them."""
+    subs = tmp_path / "ep1.ass"
+    trans = tmp_path / "ep1.en.srt"
+    subs.touch()
+    trans.touch()
+    tab.worker_thread = SimpleNamespace(
+        curation_processor=facade_processor,
+        _curation_video=tmp_path / "ep1.mkv",
+        _curation_subtitle=subs,
+        _curation_offset=4.0,
+        _curation_secondary=trans,
+        _curation_secondary_offset=-1.5,
+    )
+
+    with patch.object(BatchProcessingTab, "_make_curation_media_context", return_value=object()) as helper:
+        tab._build_curation_context()
+
+    assert helper.call_args.kwargs["secondary_subtitle"] == trans
+    assert helper.call_args.kwargs["secondary_offset"] == -1.5
+
+
+def test_the_season_resolver_rebuilds_another_episode_s_translation(tab, facade_processor, tmp_path):
+    """Cross-episode word focus must reach that episode's own second track, not
+    the one the curator was opened on."""
+    subs1 = tmp_path / "ep1.ass"
+    subs2 = tmp_path / "ep2.ass"
+    trans2 = tmp_path / "ep2.en.srt"
+    for path in (subs1, subs2, trans2):
+        path.touch()
+    ep2 = tmp_path / "ep2.mkv"
+    tab.worker_thread = SimpleNamespace(
+        curation_processor=facade_processor,
+        _curation_video=tmp_path / "ep1.mkv",
+        _curation_subtitle=subs1,
+        _curation_offset=4.0,
+        _curation_secondary=None,
+        _curation_secondary_offset=0.0,
+        _curation_media_map={
+            tmp_path / "ep1.mkv": CurationEpisode(subs1, 4.0),
+            ep2: CurationEpisode(subs2, 4.0, trans2, 2.0),
+        },
+    )
+    mock_parser = MagicMock()
+    mock_parser.return_value.parse_raw_entries.return_value = [(0.0, 1.0, "テスト")]
+
+    with patch("anki_miner.gui.widgets._mining_tab_base.SubtitleParserService", mock_parser):
+        media_context, _lookup_fn = tab._build_curation_context()
+        resolved = media_context.context_resolver(ep2)
+
+    assert resolved is not None
+    assert resolved.secondary_offset == 2.0
+    assert resolved.secondary_entries == [(0.0, 1.0, "テスト")]

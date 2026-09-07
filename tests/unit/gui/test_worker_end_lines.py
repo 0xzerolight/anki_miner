@@ -301,7 +301,7 @@ def test_manual_pair_worker_end_line_reports_pair_tallies(tmp_path, qapp, caplog
     )
     processor._preflight_card_target = MagicMock()
     processor.check_offline_dictionary = MagicMock()
-    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass")
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass", secondary=None)
     worker = ManualPairWorkerThread(processor, [pair])
 
     with caplog.at_level(logging.INFO, logger=_MANUAL_LOGGER):

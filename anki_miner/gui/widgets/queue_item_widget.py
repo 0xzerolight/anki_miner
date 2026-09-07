@@ -63,6 +63,8 @@ class QueueItemWidget(QueueSelectionMixin, QFrame):
         self._episode_count = 0
         self._cards_created = 0
         self._subtitle_offset = 0.0  # Per-item subtitle offset in seconds
+        self._secondary_folder = ""  # Translation-subtitle folder (F7), "" for none
+        self._secondary_offset = 0.0  # Offset for that track, in seconds
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -166,16 +168,19 @@ class QueueItemWidget(QueueSelectionMixin, QFrame):
         self._update_paths()
         self._update_stats()
 
-    def set_folders(self, video_folder: Path, subtitle_folder: Path) -> None:
+    def set_folders(self, video_folder: Path, subtitle_folder: Path, secondary_folder: Path | None = None) -> None:
         """Set folder paths.
 
         Args:
             video_folder: Path to video folder
             subtitle_folder: Path to subtitle folder
+            secondary_folder: Optional translation-subtitle folder (F7)
         """
         self._video_folder = str(video_folder)
         self._subtitle_folder = str(subtitle_folder)
+        self._secondary_folder = str(secondary_folder) if secondary_folder else ""
         self._update_paths()
+        self._update_stats()
 
     def get_folders(self) -> tuple[Path | None, Path | None]:
         """Get current folder paths.
@@ -257,6 +262,30 @@ class QueueItemWidget(QueueSelectionMixin, QFrame):
         self._subtitle_offset = value
         self._update_stats()
 
+    @property
+    def secondary_folder(self) -> Path | None:
+        """The translation-subtitle folder (F7), or None when this row has none.
+
+        ``get_folders`` deliberately keeps its two-tuple shape: the video and
+        subtitle folders are what bind a row to a queue item, this one is
+        optional and rides beside them.
+        """
+        return Path(self._secondary_folder) if self._secondary_folder else None
+
+    @secondary_folder.setter
+    def secondary_folder(self, value: Path | None) -> None:
+        self._secondary_folder = str(value) if value else ""
+        self._update_stats()
+
+    @property
+    def secondary_offset(self) -> float:
+        """Offset applied to this row's translation subtitles, in seconds."""
+        return self._secondary_offset
+
+    @secondary_offset.setter
+    def secondary_offset(self, value: float) -> None:
+        self._secondary_offset = value
+
     def toggle_expanded(self) -> None:
         """Toggle the expanded/collapsed state."""
         self._is_expanded = not self._is_expanded
@@ -311,6 +340,10 @@ class QueueItemWidget(QueueSelectionMixin, QFrame):
         if self._subtitle_offset != 0.0:
             sign = "+" if self._subtitle_offset > 0 else ""
             offset_str = tr_format(self.tr(" • Offset: %1"), f"{sign}{self._subtitle_offset:.1f}s")
+        # Named on the row, not just in the Edit dialog: a queue of ten series
+        # is where "why is this one bilingual and that one not" gets asked.
+        if self._secondary_folder:
+            offset_str += self.tr(" • Translations")
 
         if self._status == "complete":
             stats_text = (

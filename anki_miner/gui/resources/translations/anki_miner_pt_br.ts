@@ -1367,12 +1367,24 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <translation>Deslocamento da Legenda:</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">Deslocamento da Tradução:</translation>
+    </message>
+    <message>
         <source> seconds</source>
         <translation> segundos</translation>
     </message>
     <message>
         <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
         <translation>Ajustar o tempo das legendas para todos os episódios (positivo = mais tarde, negativo = mais cedo)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">Deslocar apenas as legendas de tradução (positivo = mais tarde, negativo = mais cedo)</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -1389,6 +1401,10 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     <message>
         <source>Cancel processing</source>
         <translation>Cancelar processamento</translation>
+    </message>
+    <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -1574,8 +1590,8 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <translation>Legendas em idioma secundário</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
-        <translation>Carregue um segundo arquivo de legenda no seu próprio idioma, ao lado do idioma de mineração: a linha dele aparece abaixo da linha na prévia do Curador de Palavras e pode ser salva em um campo de Tradução. Ative essa opção em Configurações -&gt; Filtragem.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -6712,6 +6728,10 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <translation> • Deslocamento: %1</translation>
     </message>
     <message>
+        <source> • Translations</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 episodes • %2 cards created</source>
         <translation>%1 episódios • %2 cartões criados</translation>
     </message>
@@ -6788,6 +6808,14 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
         <translation>Deslocamento da Legenda:</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">Deslocamento da Tradução:</translation>
+    </message>
+    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation>Escolha pastas existentes de vídeo e legenda.</translation>
     </message>
@@ -6798,6 +6826,10 @@ Os arquivos de índice no disco não serão modificados porque não foi possíve
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>Ajustar o tempo da legenda (positivo = mais tarde, negativo = mais cedo)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">Deslocar apenas as legendas de tradução (positivo = mais tarde, negativo = mais cedo)</translation>
     </message>
     <message>
         <source>Empty Queue</source>

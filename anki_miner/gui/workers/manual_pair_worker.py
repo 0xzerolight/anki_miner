@@ -6,7 +6,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import pyqtSignal
 
-from anki_miner.gui.workers._queue_worker_base import queue_preflight_error
+from anki_miner.gui.workers._queue_worker_base import CurationEpisode, queue_preflight_error
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.progress import ProgressCallback
 from anki_miner.models.processing import ProcessingResult
@@ -55,6 +55,7 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
         parent=None,
         *,
         processor_factory: Callable[[], EpisodeProcessor] | None = None,
+        secondary_subtitle_offset: float = 0.0,
     ):
         """Initialize the manual pair worker thread.
 
@@ -69,6 +70,11 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
                 Mutually exclusive with a non-None ``episode_processor``.  When
                 supplied, the processor is constructed on the worker thread
                 inside run().
+            secondary_subtitle_offset: Offset applied to every pair's
+                secondary-language subtitle track (F7).  One value for the whole
+                run, like the primary offset the tab bakes into the processor's
+                config; the per-episode track itself rides on
+                ``FilePair.secondary``.
         """
         self._validate_processor_xor_factory(episode_processor, processor_factory, param_name="episode_processor")
         super().__init__(parent)
@@ -77,14 +83,17 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
         self.pairs = pairs
         self.progress_callback = progress_callback
         self.curation_callback = curation_callback
+        self.secondary_subtitle_offset = secondary_subtitle_offset
         # Published per-pair so the GUI bridge can build the dialog's media context.
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
         self._curation_offset: float = 0.0
-        # Season mode: episode → (subtitle, offset), published while the worker
+        self._curation_secondary: Path | None = None
+        self._curation_secondary_offset: float = 0.0
+        # Season mode: episode → CurationEpisode, published while the worker
         # is parked at the curation gate (same attribute name as
         # BatchQueueWorkerThread so the tab reads one shape for both workers).
-        self._curation_media_map: dict[Path, tuple[Path, float]] | None = None
+        self._curation_media_map: dict[Path, CurationEpisode] | None = None
 
     @property
     def curation_processor(self) -> EpisodeProcessor | None:
@@ -165,6 +174,8 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
                         self._curation_video = pair.video
                         self._curation_subtitle = pair.subtitle
                         self._curation_offset = self.episode_processor.config.subtitle_offset
+                        self._curation_secondary = pair.secondary
+                        self._curation_secondary_offset = self.secondary_subtitle_offset
                         # Pass the callback through so per-episode stages (extract ->
                         # definitions -> cards) drive the composed overall bar; the
                         # processor wraps it in a fresh StageWeightedProgress per
@@ -174,6 +185,8 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
                             pair.subtitle,
                             progress_callback=self.progress_callback,
                             curation_callback=self.curation_callback,
+                            secondary_subtitle_file=pair.secondary,
+                            secondary_subtitle_offset=self.secondary_subtitle_offset,
                         )
                         results.append(result)
 
@@ -283,6 +296,8 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
                     pair.subtitle,
                     progress_callback=self.progress_callback,
                     curation_callback=capture,
+                    secondary_subtitle_file=pair.secondary,
+                    secondary_subtitle_offset=self.secondary_subtitle_offset,
                 )
             except Exception as e:  # noqa: BLE001 — per-pair guard, run continues
                 logger.exception("ManualPairWorkerThread season pre-pass pair %s failed", pair.video.name)
@@ -303,7 +318,12 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
             self._curation_video = first.video
             self._curation_subtitle = first.subtitle
             self._curation_offset = offset
-            self._curation_media_map = {pair.video: (pair.subtitle, offset) for pair in ok_pairs}
+            self._curation_secondary = first.secondary
+            self._curation_secondary_offset = self.secondary_subtitle_offset
+            self._curation_media_map = {
+                pair.video: CurationEpisode(pair.subtitle, offset, pair.secondary, self.secondary_subtitle_offset)
+                for pair in ok_pairs
+            }
             try:
                 selection = self.curation_callback(pool)
             finally:
@@ -343,6 +363,8 @@ class ManualPairWorkerThread(ProcessorOwningWorker):
                         progress_callback=self.progress_callback,
                         # Curated objects pass through verbatim to phases 3-5.
                         curation_callback=fixed_selection(subset),
+                        secondary_subtitle_file=pair.secondary,
+                        secondary_subtitle_offset=self.secondary_subtitle_offset,
                     )
                 except Exception as e:  # noqa: BLE001 — per-pair guard, run continues
                     logger.exception("ManualPairWorkerThread season mine pair %s failed", pair.video.name)

@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.workers._queue_worker_base import CurationEpisode
 from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
 from anki_miner.models.batch_queue import BatchQueue, QueueItemStatus
 from anki_miner.models.processing import ProcessingResult
@@ -39,10 +40,11 @@ def _word(surface: str) -> TokenizedWord:
     )
 
 
-def _pairs() -> list[SimpleNamespace]:
+def _pairs(secondary1: Path | None = None, secondary2: Path | None = None) -> list[SimpleNamespace]:
+    """Stand-ins for ``FilePair``, including its optional translation track."""
     return [
-        SimpleNamespace(video=EP1, subtitle=SUB1),
-        SimpleNamespace(video=EP2, subtitle=SUB2),
+        SimpleNamespace(video=EP1, subtitle=SUB1, secondary=secondary1),
+        SimpleNamespace(video=EP2, subtitle=SUB2, secondary=secondary2),
     ]
 
 
@@ -146,7 +148,10 @@ class TestSeasonFlow:
         ):
             worker.run()
         offset = queue.get_all_items()[0].subtitle_offset
-        assert seen["map"] == {EP1: (SUB1, offset), EP2: (SUB2, offset)}
+        assert seen["map"] == {
+            EP1: CurationEpisode(SUB1, offset),
+            EP2: CurationEpisode(SUB2, offset),
+        }
         assert seen["video"] == EP1
         assert worker._curation_media_map is None
 
@@ -287,3 +292,79 @@ class TestSeasonFlow:
         assert item.status == QueueItemStatus.COMPLETED
         assert len(item.committed_pair_keys) == 2
         assert progress[-1] == (2, 2)
+
+    def test_both_season_passes_carry_each_episode_s_translation(self):
+        """The Translation column is drawn from the pre-pass and the card text
+        from the mine pass, so both have to carry the track or the two
+        disagree."""
+        words = {EP1: [_word("猫")], EP2: [_word("犬")]}
+        proc = _make_processor(words)
+        trans1 = Path("/tmp/trans/ep1.en.srt")
+
+        queue = BatchQueue()
+        queue.add_item(
+            Path("/tmp/video"),
+            Path("/tmp/subs"),
+            "Show",
+            secondary_folder=Path("/tmp/trans"),
+            secondary_offset=0.5,
+        )
+        worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(), curation_callback=lambda pool: pool)
+        with (
+            patch(
+                "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+                return_value=proc,
+            ),
+            patch(
+                "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+                return_value=_pairs(secondary1=trans1),
+            ),
+        ):
+            worker.run()
+
+        by_video: dict = {}
+        for call in proc.process_episode.call_args_list:
+            by_video.setdefault(call.args[0], []).append(call.kwargs)
+        assert len(by_video[EP1]) == 2  # pre-pass + mine pass
+        assert all(k["secondary_subtitle_file"] == trans1 for k in by_video[EP1])
+        assert all(k["secondary_subtitle_file"] is None for k in by_video[EP2])
+        assert all(k["secondary_subtitle_offset"] == 0.5 for calls in by_video.values() for k in calls)
+
+    def test_the_media_map_carries_each_episode_s_translation(self):
+        words = {EP1: [_word("猫")], EP2: [_word("犬")]}
+        proc = _make_processor(words)
+        trans2 = Path("/tmp/trans/ep2.en.srt")
+        seen: dict = {}
+
+        def bridge(pool):
+            seen["map"] = dict(worker._curation_media_map)
+            seen["secondary"] = worker._curation_secondary
+            return []
+
+        queue = BatchQueue()
+        queue.add_item(
+            Path("/tmp/video"),
+            Path("/tmp/subs"),
+            "Show",
+            secondary_folder=Path("/tmp/trans"),
+            secondary_offset=3.0,
+        )
+        worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(), curation_callback=bridge)
+        with (
+            patch(
+                "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+                return_value=proc,
+            ),
+            patch(
+                "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+                return_value=_pairs(secondary2=trans2),
+            ),
+        ):
+            worker.run()
+
+        offset = queue.get_all_items()[0].subtitle_offset
+        assert seen["map"] == {
+            EP1: CurationEpisode(SUB1, offset, None, 3.0),
+            EP2: CurationEpisode(SUB2, offset, trans2, 3.0),
+        }
+        assert seen["secondary"] is None  # the first pair had no translation

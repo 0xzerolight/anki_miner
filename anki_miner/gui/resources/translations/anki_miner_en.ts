@@ -1353,11 +1353,23 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source> seconds</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1374,6 +1386,10 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Cancel processing</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That translation subtitle folder no longer exists.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1559,7 +1575,7 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6653,6 +6669,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source> • Translations</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 episodes • %2 cards created</source>
         <translation type="unfinished" />
     </message>
@@ -6729,6 +6749,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation type="unfinished" />
     </message>
@@ -6738,6 +6766,10 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
         <translation type="unfinished" />
     </message>
     <message>

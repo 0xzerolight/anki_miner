@@ -180,7 +180,9 @@ def test_edit_rejects_a_cleared_folder_without_changing_bound_item(
 
     def clear_and_try_accept(dialog):
         selectors = dialog.findChildren(FileSelector)
-        assert len(selectors) == 2
+        # video, subtitle, translation (F7) — indices 0 and 1 stay the two
+        # required folders, which are the ones this test clears.
+        assert len(selectors) == 3
         selectors[cleared_selector].set_path("")
         buttons = dialog.findChild(QDialogButtonBox)
         assert buttons is not None
@@ -301,3 +303,84 @@ class TestListMinHeightFitsCardRows:
         collapsed = panel.list_widget.minimumHeight()
         assert collapsed < expanded
         assert collapsed >= panel._list_items[id(widget)].sizeHint().height() + self._frame(panel)
+
+
+class TestSecondarySubtitleFolder:
+    """A queued series can carry its own translation-subtitle folder (F7)."""
+
+    def test_row_defaults_to_no_translation_folder(self, qtbot):
+        widget = QueueItemWidget(display_name="Show")
+        qtbot.addWidget(widget)
+        assert widget.secondary_folder is None
+        assert widget.secondary_offset == 0.0
+
+    def test_set_folders_takes_a_translation_folder(self, qtbot, tmp_path):
+        widget = QueueItemWidget(display_name="Show")
+        qtbot.addWidget(widget)
+
+        widget.set_folders(tmp_path / "v", tmp_path / "s", tmp_path / "t")
+
+        # get_folders keeps its two-tuple shape; the third rides beside it.
+        assert widget.get_folders() == (tmp_path / "v", tmp_path / "s")
+        assert widget.secondary_folder == tmp_path / "t"
+
+    def test_a_row_with_translations_says_so(self, qtbot, tmp_path):
+        widget = QueueItemWidget(display_name="Show")
+        qtbot.addWidget(widget)
+        widget.set_folders(tmp_path / "v", tmp_path / "s")
+        assert "Translations" not in widget.stats_label.text()
+
+        widget.secondary_folder = tmp_path / "t"
+
+        assert "Translations" in widget.stats_label.text()
+
+    def test_bind_writes_the_translation_folder_onto_the_item(self, panel, tmp_path):
+        for name in ("v", "s", "t"):
+            (tmp_path / name).mkdir()
+        widget = _add_widget(panel, "Show", "id-1", video=tmp_path / "v", subtitle=tmp_path / "s")
+        widget.secondary_folder = tmp_path / "t"
+        widget.secondary_offset = -0.5
+
+        panel._bind_widget(widget)
+
+        item = panel.queue.get_all_items()[0]
+        assert item.secondary_folder == tmp_path / "t"
+        assert item.secondary_offset == -0.5
+
+    def test_changing_only_the_translation_folder_keeps_the_receipts(self, panel, tmp_path):
+        """A committed pair is already in Anki; new translations are no reason
+        to mine it again."""
+        for name in ("v", "s", "t"):
+            (tmp_path / name).mkdir()
+        widget = _add_widget(panel, "Show", "id-1", video=tmp_path / "v", subtitle=tmp_path / "s")
+        item = panel.queue.get_all_items()[0]
+        receipts = {(tmp_path / "v" / "ep1.mkv", tmp_path / "s" / "ep1.ass")}
+        item.committed_pair_keys = set(receipts)
+
+        widget.secondary_folder = tmp_path / "t"
+        panel._bind_widget(widget)
+
+        assert item.secondary_folder == tmp_path / "t"
+        assert item.committed_pair_keys == receipts
+
+    def test_restore_item_brings_back_the_translation_folder(self, panel, tmp_path):
+        for name in ("v", "s", "t"):
+            (tmp_path / name).mkdir()
+
+        item = panel.restore_item(
+            item_id="abc",
+            display_name="Show",
+            video_folder=tmp_path / "v",
+            subtitle_folder=tmp_path / "s",
+            subtitle_offset=0.0,
+            status="pending",
+            cards_created=0,
+            retry_count=0,
+            error_message="",
+            secondary_folder=tmp_path / "t",
+            secondary_offset=1.5,
+        )
+
+        assert item is not None
+        assert item.secondary_folder == tmp_path / "t"
+        assert item.secondary_offset == 1.5

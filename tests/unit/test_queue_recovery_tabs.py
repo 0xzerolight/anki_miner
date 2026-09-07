@@ -219,6 +219,47 @@ class TestBatch:
         assert [item.display_name for item in restored] == ["one", "two"]
         assert [item.subtitle_offset for item in restored] == [1.5, 1.5]
 
+    def test_a_series_keeps_its_translation_folder_across_a_restart(self, _home, batch, tmp_path):
+        video, subtitle = self._folders(tmp_path, "one")
+        translations = tmp_path / "one-trans"
+        translations.mkdir()
+        batch.batch_queue.add_item(video, subtitle, "one", 1.5, secondary_folder=translations, secondary_offset=-0.5)
+        store.save(batch.queue_snapshot())
+
+        batch.batch_queue.clear()
+        assert batch.restore_queue_snapshot(store.load(batch.QUEUE_STATE_KEY)) == 1
+        (restored,) = batch.batch_queue.get_all_items()
+        assert restored.secondary_folder == translations
+        assert restored.secondary_offset == -0.5
+
+    def test_a_series_without_translations_restores_without_them(self, _home, batch, tmp_path):
+        video, subtitle = self._folders(tmp_path, "one")
+        batch.batch_queue.add_item(video, subtitle, "one")
+        store.save(batch.queue_snapshot())
+
+        batch.batch_queue.clear()
+        batch.restore_queue_snapshot(store.load(batch.QUEUE_STATE_KEY))
+        (restored,) = batch.batch_queue.get_all_items()
+        assert restored.secondary_folder is None
+        assert restored.secondary_offset == 0.0
+
+    def test_a_moved_translation_folder_still_restores_a_runnable_row(self, _home, batch, tmp_path):
+        """It mines with empty Translation fields rather than erroring — the
+        same answer a partial translation set already gets."""
+        video, subtitle = self._folders(tmp_path, "one")
+        gone = tmp_path / "one-trans"
+        gone.mkdir()
+        batch.batch_queue.add_item(video, subtitle, "one", secondary_folder=gone)
+        store.save(batch.queue_snapshot())
+        gone.rmdir()
+
+        batch.batch_queue.clear()
+        batch.restore_queue_snapshot(store.load(batch.QUEUE_STATE_KEY))
+        (restored,) = batch.batch_queue.get_all_items()
+        assert restored.status is QueueItemStatus.PENDING
+        assert restored.error_message == ""
+        assert restored.secondary_folder == gone
+
     def test_an_interrupted_series_needs_an_explicit_retry_before_it_runs(self, _home, batch, tmp_path):
         video, subtitle = self._folders(tmp_path, "one")
         item = batch.batch_queue.add_item(video, subtitle, "one")

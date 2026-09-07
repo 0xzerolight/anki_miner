@@ -1367,12 +1367,24 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Décalage des sous-titres :</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">Décalage des sous-titres de traduction :</translation>
+    </message>
+    <message>
         <source> seconds</source>
         <translation> secondes</translation>
     </message>
     <message>
         <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
         <translation>Ajuster la synchronisation des sous-titres pour tous les épisodes (positif = plus tard, négatif = plus tôt)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">Décaler uniquement les sous-titres de traduction (positif = plus tard, négatif = plus tôt)</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -1389,6 +1401,10 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     <message>
         <source>Cancel processing</source>
         <translation>Annuler le traitement</translation>
+    </message>
+    <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -1574,8 +1590,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Sous-titres en langue secondaire</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
-        <translation>Chargez un second fichier de sous-titres dans votre propre langue à côté de celui en langue d'extraction : il s'affiche sous la ligne dans l'aperçu du Curateur de mots et peut être enregistré dans un champ Traduction. Activez-le dans Paramètres -&gt; Filtrage.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -6712,6 +6728,10 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation> • Décalage : %1</translation>
     </message>
     <message>
+        <source> • Translations</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 episodes • %2 cards created</source>
         <translation>%1 épisodes • %2 cartes créées</translation>
     </message>
@@ -6788,6 +6808,14 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Décalage des sous-titres :</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">Décalage des sous-titres de traduction :</translation>
+    </message>
+    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation>Choisissez des dossiers existants de vidéos et de sous-titres.</translation>
     </message>
@@ -6798,6 +6826,10 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>Ajuster la synchronisation des sous-titres (positif = plus tard, négatif = plus tôt)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">Décaler uniquement les sous-titres de traduction (positif = plus tard, négatif = plus tôt)</translation>
     </message>
     <message>
         <source>Empty Queue</source>
