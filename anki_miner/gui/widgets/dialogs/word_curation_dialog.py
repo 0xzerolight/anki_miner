@@ -172,6 +172,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         media_context: CurationMediaContext | None = None,
         lookup_fn: Callable[..., list[tuple[str, str]]] | None = None,
         content_style: ContentTextStyle | None = None,
+        parse_sentence_fn: Callable[[str], list[TokenizedWord]] | None = None,
     ):
         super().__init__(parent)
         self._words = words
@@ -248,6 +249,15 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # selection as TokenizedWord.screenshot_override; empty for every run
         # where nobody clicked, which is the common case.
         self._screenshot_overrides: dict[int, float] = {}
+        # Per-word "edit word and sentence" results, keyed by original word
+        # index exactly like the other overrides. The value is the parsed token
+        # the user picked in the editor (its ``sentence`` is the normalised
+        # edited text, its span the word) — the row repaints from it and
+        # get_selected_words stamps its text + span as SentenceEdit intent.
+        # Absent without a parser: the curator is unchanged for every run that
+        # cannot offer the editor.
+        self._parse_sentence_fn = parse_sentence_fn
+        self._sentence_edits: dict[int, TokenizedWord] = {}
         # Context for the candidate list while a row is focused: the focused
         # word's index + its candidate variants. Guards programmatic
         # repopulation from being mistaken for a user pick.

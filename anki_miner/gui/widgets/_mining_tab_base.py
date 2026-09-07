@@ -57,6 +57,7 @@ if TYPE_CHECKING:
 
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.gui.controllers.task_registry import TaskRegistry
+    from anki_miner.models import TokenizedWord
     from anki_miner.models.processing import WhitelistCoverage
     from anki_miner.orchestration.episode_processor import EpisodeProcessor
 
@@ -863,6 +864,24 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         """
         return None if proc is None else proc.offline_lookup_fn
 
+    def _curation_parse_fn(self) -> Callable[[str], list[TokenizedWord]] | None:
+        """The sentence editor's parser: the live worker's processor, or ``None``.
+
+        Sourced at show time on the GUI thread rather than through
+        ``_build_curation_context`` so the ``(media_context, lookup_fn)`` pair
+        every tab override returns stays as it is. Attribute access only — the
+        worker is parked in ``_curation_event.wait()`` and its processor is
+        idle, which is the same cross-thread contract ``lookup_fn`` relies on.
+        ``None`` (a tab without a worker, a worker that owns no processor)
+        leaves the curator without its editor and otherwise unchanged.
+        """
+        try:
+            worker = getattr(self, "worker_thread", None)
+            proc = None if worker is None else worker.curation_processor
+        except (AttributeError, NotImplementedError, RuntimeError):
+            return None
+        return None if proc is None else proc.parse_sentence_fn
+
     @staticmethod
     def _make_curation_media_context(
         config: AnkiMinerConfig,
@@ -1037,6 +1056,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                 media_context=media_context,
                 lookup_fn=lookup_fn,
                 content_style=get_profile(config_language(self.config)).content_style,
+                parse_sentence_fn=self._curation_parse_fn(),
             )
             self._curation_dialog_seq += 1
             presentation = self._curation_dialog_seq
@@ -1155,6 +1175,13 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         self._curation_event.set()
         offered = self._curation_offered
         self._curation_offered = 0
+        # getattr: the selection is whatever the curator returned, and test
+        # doubles hand back plain strings.
+        edited = (
+            sum(1 for w in selection if getattr(w, "sentence_edit", None) is not None)
+            if selection is not None
+            else None
+        )
         # The one line that separates the two verbs a user cannot tell apart
         # from the outside: rejecting cancels the WHOLE run, while confirming
         # with nothing selected skips only this item and the queue continues.
@@ -1166,6 +1193,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             screen=self._run_log_id(),
             action="accept" if selection is not None else "reject",
             selected=len(selection) if selection is not None else None,
+            edited=edited,
             offered=offered,
             cancels_run=selection is None,
             presentation=presentation,

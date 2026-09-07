@@ -121,6 +121,7 @@ def test_reject_logs_a_run_cancelling_decision(tab, caplog):
     assert "selected=-" in line
     assert "cancels_run=True" in line
     assert "presentation=7" in line
+    assert "edited=-" in line
 
 
 def test_accept_logs_the_selected_count_and_does_not_cancel(tab, caplog):
@@ -287,3 +288,27 @@ def test_run_details_failure_keeps_the_exception_message(tab, caplog):
     assert "RuntimeError" in record.getMessage()
     assert "receipt gone" in record.getMessage()
     assert record.exc_info is not None
+
+
+def make_word():
+    from anki_miner.models import TokenizedWord
+
+    return TokenizedWord(surface="a", lemma="a", reading="", sentence="a", start_time=0.0, end_time=0.0, duration=0.0)
+
+
+def test_accept_logs_how_many_words_were_edited(tab, caplog):
+    from dataclasses import replace
+
+    from anki_miner.models import SentenceEdit
+
+    tab.worker_thread = Mock()
+    dialog = _show(tab, words=("a", "b"))
+    edited = replace(make_word(), sentence_edit=SentenceEdit(text="x", target_start=0, target_end=1))
+    dialog.selection = [edited, make_word()]
+
+    with caplog.at_level(logging.INFO, logger=MODULE):
+        dialog.accept()
+
+    line = _one(caplog, "Curator decision:")
+    assert "selected=2" in line
+    assert "edited=1" in line
