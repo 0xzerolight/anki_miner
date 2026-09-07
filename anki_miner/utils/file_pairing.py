@@ -177,21 +177,13 @@ def find_sibling_subtitle(video_path: Path, priority: Sequence[str] | None = Non
     return None
 
 
-def _sorted_subtitles(folder: Path, subtitle_exts: Collection[str], prefer_retimed: bool) -> list[Path]:
-    """Subtitle candidates in *folder*, best-match-first for episode pairing.
+def _sort_subtitles(subtitles: list[Path], prefer_retimed: bool) -> None:
+    """Order subtitle candidates in place, best-match-first for episode pairing.
 
-    Run once per subtitle folder — the mining track and the secondary-language
-    track (F7) get the same format priority and the same retimed preference, so
-    the rule lives here rather than twice in the caller.
-
-    WARNING, not silent: no candidates is what the user sees, and "the folder is
-    empty" and "the folder could not be read" look identical from the batch
-    screen.
+    Pure ordering, no I/O: the caller owns the scan and its one warning. Applied
+    to the mining track and to the secondary-language track (F7) alike, so both
+    get the same format priority and the same retimed preference.
     """
-    subtitles: list[Path] = []
-    with suppressed(logger, f"scanning {folder} for subtitles", level=logging.WARNING):
-        subtitles = [f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in subtitle_exts]
-
     subtitle_priority = {suffix: index for index, suffix in enumerate(DEFAULT_SUBTITLE_PRIORITY)}
     subtitles.sort(
         key=lambda subtitle: (
@@ -206,7 +198,6 @@ def _sorted_subtitles(folder: Path, subtitle_exts: Collection[str], prefer_retim
             subtitle.name,
         )
     )
-    return subtitles
 
 
 def _attach_secondary(
@@ -237,7 +228,13 @@ def _attach_secondary(
             secondary_folder,
         )
         return
-    secondary_subs = _sorted_subtitles(secondary_folder, subtitle_exts, prefer_retimed)
+    # Its own scan and its own warning: a separate folder the user chose
+    # separately, so a failure to read it is a separate fact from the pairing
+    # scan's — which keeps that scan at exactly one line, as it has always been.
+    secondary_subs: list[Path] = []
+    with suppressed(logger, f"scanning {secondary_folder} for translation subtitles", level=logging.WARNING):
+        secondary_subs = [f for f in secondary_folder.iterdir() if f.is_file() and f.suffix.lower() in subtitle_exts]
+    _sort_subtitles(secondary_subs, prefer_retimed)
     if not secondary_subs:
         logger.info("secondary subtitles: no candidates in %s", secondary_folder)
         return
@@ -333,9 +330,10 @@ class FilePairMatcher:
         # folder is empty" and "the folder could not be read" look identical
         # from the batch screen.
         videos: list[Path] = []
-        with suppressed(logger, f"scanning {video_folder} for videos", level=logging.WARNING):
+        subtitles: list[Path] = []
+        with suppressed(logger, f"scanning {video_folder} and {subtitle_folder} for pairs", level=logging.WARNING):
             videos = [f for f in video_folder.iterdir() if f.is_file() and f.suffix.lower() in video_exts]
-        subtitles = _sorted_subtitles(subtitle_folder, subtitle_exts, prefer_retimed)
+            subtitles = [f for f in subtitle_folder.iterdir() if f.is_file() and f.suffix.lower() in subtitle_exts]
         if not videos or not subtitles:
             return []
 
@@ -345,6 +343,7 @@ class FilePairMatcher:
         # while the subtitle side is fully sorted — a shuffle that silently pairs
         # episode N's subtitle with episode M's video.
         videos.sort(key=lambda video: (_nfc(video.name), video.name))
+        _sort_subtitles(subtitles, prefer_retimed)
 
         # Match by episode number
         matched_pairs = EpisodeMatcher.match_by_episode_number(videos, subtitles)
