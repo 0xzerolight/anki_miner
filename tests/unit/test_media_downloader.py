@@ -7,6 +7,7 @@ yt-dlp is never spawned: ``run_supervised`` is patched at the
 
 from __future__ import annotations
 
+import json
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -748,3 +749,133 @@ class TestFfmpegPreflight:
         options = _opts(format_selector="bestvideo*+bestaudio/best")
         service.download("https://example.com/v", tmp_path, options)  # must not raise
         recorder.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Probes (track languages, playlist entries)
+# ---------------------------------------------------------------------------
+
+
+def _scripted_probe(
+    stdout: str = "",
+    stderr: str = "",
+    returncode: int = 0,
+    state: SupervisedState | None = None,
+) -> tuple[MagicMock, Callable[..., Any]]:
+    """Return (recorder, fake_run) for a probe: JSON on stdout, no line callback."""
+    recorder = MagicMock()
+
+    def fake_run(cmd: list[str], **kwargs: Any) -> Any:
+        recorder(cmd, **kwargs)
+        proc = _fake_result(returncode, state)
+        proc.stdout = stdout
+        proc.stderr = stderr
+        return proc
+
+    return recorder, fake_run
+
+
+class TestProbeTracks:
+    @staticmethod
+    def _payload(**overrides: object) -> str:
+        data: dict[str, object] = {
+            "title": "Some Video",
+            "subtitles": {
+                "ja": [{"ext": "srt"}],
+                "en": [{"ext": "vtt"}],
+                "live_chat": [{"ext": "json"}],
+            },
+            "automatic_captions": {"ja-orig": [{"ext": "vtt"}], "fr": [{"ext": "vtt"}]},
+            "formats": [
+                {"format_id": "137", "language": None},
+                {"format_id": "140", "language": "ja"},
+                {"format_id": "141", "language": "en"},
+                {"format_id": "142", "language": "ja"},
+            ],
+        }
+        data.update(overrides)
+        return json.dumps(data)
+
+    def _probe(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        service: MediaDownloaderService,
+        stdout: str,
+    ) -> tuple[MagicMock, Any]:
+        recorder, fake_run = _scripted_probe(stdout=stdout)
+        monkeypatch.setattr(md, "run_supervised", fake_run)
+        return recorder, service.probe_tracks("https://example.com/v")
+
+    def test_command_shape(self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService) -> None:
+        recorder, _ = self._probe(monkeypatch, service, self._payload())
+        cmd = _cmd(recorder)
+        assert "--dump-single-json" in cmd
+        assert "--skip-download" in cmd
+        assert "--no-playlist" in cmd
+        assert cmd[-2:] == ["--", "https://example.com/v"]
+
+    def test_manual_langs_exclude_live_chat(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        _, tracks = self._probe(monkeypatch, service, self._payload())
+        assert tracks.manual_sub_langs == ("en", "ja")
+
+    def test_native_auto_captions_win_over_machine_translations(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        """A '-orig' key marks YouTube's real auto track; every other
+        automatic_captions entry is a machine translation of it and must not
+        flood the picker."""
+        _, tracks = self._probe(monkeypatch, service, self._payload())
+        assert tracks.auto_sub_langs == ("ja",)
+        assert tracks.has_auto_translations is True
+
+    def test_without_orig_keys_all_auto_langs_are_kept(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        payload = self._payload(automatic_captions={"de": [{}], "cs": [{}]})
+        _, tracks = self._probe(monkeypatch, service, payload)
+        assert tracks.auto_sub_langs == ("cs", "de")
+        assert tracks.has_auto_translations is False
+
+    def test_audio_langs_are_unique_and_sorted(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        _, tracks = self._probe(monkeypatch, service, self._payload())
+        assert tracks.audio_langs == ("en", "ja")
+
+    def test_title_is_carried(self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService) -> None:
+        _, tracks = self._probe(monkeypatch, service, self._payload())
+        assert tracks.title == "Some Video"
+
+    def test_missing_keys_are_tolerated(self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService) -> None:
+        _, tracks = self._probe(monkeypatch, service, json.dumps({}))
+        assert tracks == md.UrlTracks("", (), (), (), False)
+
+    def test_non_json_output_raises(self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService) -> None:
+        with pytest.raises(MediaDownloadError, match="non-JSON"):
+            self._probe(monkeypatch, service, "not json")
+
+    def test_ytdlp_missing_is_reported_as_such(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        monkeypatch.setattr(
+            md,
+            "run_supervised",
+            lambda cmd, **kw: _fake_result(1, SupervisedState.FAILED, FileNotFoundError("no yt-dlp")),
+        )
+        with pytest.raises(YtdlpNotFoundError):
+            service.probe_tracks("https://example.com/v")
+
+    def test_a_failed_probe_is_classified_like_a_failed_download(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        """Probes share _raise_for_error, so a login wall reads the same here."""
+        recorder, fake_run = _scripted_probe(
+            stderr="ERROR: Sign in to confirm you're not a bot",
+            returncode=1,
+            state=SupervisedState.FAILED,
+        )
+        monkeypatch.setattr(md, "run_supervised", fake_run)
+        with pytest.raises(BotDetectionError):
+            service.probe_tracks("https://example.com/v")

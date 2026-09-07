@@ -14,6 +14,7 @@ cookie/JS-runtime/ffmpeg flags) are shared with ``youtube_fetcher.py`` via
 from __future__ import annotations
 
 import collections
+import json
 import logging
 import re
 import shutil
@@ -23,6 +24,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 from PyQt6.QtCore import QCoreApplication
 
@@ -42,6 +44,7 @@ from anki_miner.utils.ytdlp_resolver import resolve_ytdlp, ytdlp_generation_lock
 logger = logging.getLogger(__name__)
 
 _DOWNLOAD_TIMEOUT_S = 3 * 60 * 60
+_PROBE_TIMEOUT_S = 120.0
 
 # Human-readable output name; the id suffix disambiguates same-titled videos.
 _OUTPUT_TEMPLATE = "%(title)s [%(id)s].%(ext)s"
@@ -96,6 +99,24 @@ class DownloadOptions:
 class DownloadResult:
     status: DownloadStatus
     filepath: Path | None
+
+
+@dataclass(frozen=True)
+class UrlTracks:
+    """What a URL actually offers, as reported by one metadata probe.
+
+    Populates the Download tool's language pickers so the user chooses from the
+    site's real tags instead of guessing between ``zh-Hans``, ``zh-CN`` and
+    ``zh``. Deliberately separate from ``YouTubeFetcherService.probe_metadata``,
+    which throws these maps away and keeps only per-language booleans for the
+    mining gate.
+    """
+
+    title: str
+    manual_sub_langs: tuple[str, ...]
+    auto_sub_langs: tuple[str, ...]
+    audio_langs: tuple[str, ...]
+    has_auto_translations: bool
 
 
 class MediaDownloaderService:
@@ -212,6 +233,93 @@ class MediaDownloaderService:
         status = DownloadStatus.ALREADY_DOWNLOADED if already["seen"] else DownloadStatus.DONE
         logger.info("media download complete: status=%s file=%s", status.value, captured["filepath"])
         return DownloadResult(status, captured["filepath"])
+
+    # ------------------------------------------------------------------
+    # Probes
+    # ------------------------------------------------------------------
+
+    def probe_tracks(self, url: str, timeout_s: float = _PROBE_TIMEOUT_S) -> UrlTracks:
+        """Return the subtitle and audio-track languages *url* offers.
+
+        One ``--dump-single-json`` call, no download.
+
+        Raises:
+            YtdlpNotFoundError: the yt-dlp executable cannot be located/run.
+            BotDetectionError / CookieDatabaseLockedError: well-known yt-dlp
+                failure modes detected in the output tail.
+            MediaDownloadError: timeout, non-JSON output, or any other non-zero
+                exit.
+        """
+        cmd: list[str] = [
+            self._ytdlp(),
+            "--ignore-config",
+            "--skip-download",
+            "--dump-single-json",
+            "--no-playlist",
+        ]
+        data = self._probe_json(cmd, url, timeout_s, op="yt-dlp track probe")
+
+        subtitles = data.get("subtitles") or {}
+        automatic = data.get("automatic_captions") or {}
+        manual = sorted(k for k in subtitles if isinstance(k, str) and k != "live_chat")
+
+        # YouTube publishes its one real auto track as "<lang>-orig" and then
+        # machine-translates it into ~200 more, all of which land in
+        # automatic_captions. Listing them all would bury the useful entry, so
+        # the "-orig" keys win whenever any exist; a site with no such marker
+        # (every non-YouTube extractor) has a short honest list instead.
+        orig = sorted(k[: -len("-orig")] for k in automatic if isinstance(k, str) and k.endswith("-orig"))
+        auto = tuple(orig) if orig else tuple(sorted(k for k in automatic if isinstance(k, str)))
+        has_translations = bool(orig) and len(automatic) > len(orig)
+
+        audio_langs = sorted(
+            {
+                str(fmt["language"])
+                for fmt in (data.get("formats") or [])
+                if isinstance(fmt, dict) and fmt.get("language")
+            }
+        )
+        return UrlTracks(
+            title=str(data.get("title") or ""),
+            manual_sub_langs=tuple(manual),
+            auto_sub_langs=auto,
+            audio_langs=tuple(audio_langs),
+            has_auto_translations=has_translations,
+        )
+
+    def _probe_json(self, cmd: list[str], url: str, timeout_s: float, *, op: str) -> dict[str, Any]:
+        """Finish *cmd* with the shared flags, run it, and parse its JSON.
+
+        Shared by both probes so cookie/JS-runtime/end-of-options handling and
+        error classification cannot drift between them.
+        """
+        with ytdlp_generation_lock() as release_unless_managed:
+            cmd.extend(ytdlp_invocation.cookie_args(self._config))
+            cmd.extend(ytdlp_invocation.js_runtime_args(self._config, self._ytdlp()))
+            cmd.extend(ytdlp_invocation.remote_component_args(self._config, self._ytdlp()))
+            # End-of-options separator: a '-'-leading URL must never be parsed
+            # as a yt-dlp option. T-34.
+            cmd.append("--")
+            cmd.append(url)
+            release_unless_managed(cmd[0])
+            proc = run_supervised(cmd, timeout_s=timeout_s, op=op)
+
+        if isinstance(proc.error, FileNotFoundError):
+            raise YtdlpNotFoundError(ytdlp_invocation.YTDLP_MISSING_HINT) from proc.error
+        if proc.state is SupervisedState.TIMED_OUT:
+            raise MediaDownloadError(f"{op} timed out after {timeout_s}s")
+        if proc.state is SupervisedState.FAILED:
+            if proc.returncode is None and proc.error is not None:
+                raise MediaDownloadError(f"{op} failed: {proc.error}") from proc.error
+            self._raise_for_error(collections.deque((proc.stderr or "").splitlines(), maxlen=50))
+
+        try:
+            parsed = json.loads(proc.stdout)
+        except json.JSONDecodeError as exc:
+            raise MediaDownloadError("yt-dlp returned non-JSON output — the site or yt-dlp may have broken.") from exc
+        if not isinstance(parsed, dict):
+            raise MediaDownloadError("yt-dlp returned non-JSON output — expected an object.")
+        return parsed
 
     # ------------------------------------------------------------------
     # Internal helpers
