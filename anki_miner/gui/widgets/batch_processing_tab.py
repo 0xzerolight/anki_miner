@@ -689,7 +689,12 @@ class BatchProcessingTab(MiningTabBase):
         if w is None:
             return None, None
         media_context = self._make_curation_media_context(
-            self.config, w._curation_video, w._curation_subtitle, offset=w._curation_offset
+            self.config,
+            w._curation_video,
+            w._curation_subtitle,
+            offset=w._curation_offset,
+            secondary_subtitle=w._curation_secondary,
+            secondary_offset=w._curation_secondary_offset,
         )
         season_map = getattr(w, "_curation_media_map", None)
         if media_context is not None and season_map:
@@ -702,11 +707,17 @@ class BatchProcessingTab(MiningTabBase):
             config = self.config
 
             def _resolve(video: Path) -> CurationMediaContext | None:
-                entry = snapshot.get(video)
-                if entry is None:
+                episode = snapshot.get(video)
+                if episode is None:
                     return None
-                subtitle, offset = entry
-                return MiningTabBase._make_curation_media_context(config, video, subtitle, offset=offset)
+                return MiningTabBase._make_curation_media_context(
+                    config,
+                    video,
+                    episode.subtitle,
+                    offset=episode.offset,
+                    secondary_subtitle=episode.secondary,
+                    secondary_offset=episode.secondary_offset,
+                )
 
             media_context = replace(media_context, context_resolver=_resolve)
         return media_context, self._lookup_fn_from_processor(w.curation_processor)
