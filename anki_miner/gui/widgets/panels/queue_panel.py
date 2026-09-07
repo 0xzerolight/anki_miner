@@ -107,6 +107,11 @@ class QueuePanel(QFrame):
         self._search = ""
         self._locked = False
         self._suppress_row_sync = False
+        #: Whether the Edit dialog offers a translation-subtitle folder (F7).
+        #: The panel holds no config, and one bool set by the tab from
+        #: ``config.secondary_subtitle_enabled`` is a smaller coupling than
+        #: threading a whole config through for one row's visibility.
+        self.secondary_subtitle_enabled = False
         self._setup_ui()
 
     # ------------------------------------------------------------------

@@ -154,6 +154,7 @@ class BatchProcessingTab(MiningTabBase):
         # THIS queue, so removal, reorder and edits mutate one model rather than
         # the panel keeping a second, divergent copy (D28).
         self.queue_panel = QueuePanel(queue=self.batch_queue)
+        self.queue_panel.secondary_subtitle_enabled = self.config.secondary_subtitle_enabled
         self.queue_panel.process_requested.connect(self._process_queue)
         self.queue_panel.queue_controls.pause_requested.connect(self._on_pause_requested)
         self.queue_panel.queue_controls.resume_requested.connect(self._on_resume_requested)
@@ -273,6 +274,8 @@ class BatchProcessingTab(MiningTabBase):
             self.tr("Video Folder:"),
             self.tr("Subtitle Folder:"),
             self.tr("Subtitle Offset:"),
+            self.tr("Translation Folder:"),
+            self.tr("Translation Offset:"),
         )
 
         # Video folder selector
@@ -294,6 +297,19 @@ class BatchProcessingTab(MiningTabBase):
             history_key="video.batch.inputs",
         )
         layout.addWidget(self.subtitle_folder_selector)
+
+        # Secondary-language subtitles (F7), gated on the Settings toggle. Its
+        # own folder, not a language suffix inside the subtitle folder:
+        # episode-number pairing consumes each subtitle once (Issue #39), so two
+        # tracks for one episode cannot both be matched out of one folder.
+        self.secondary_folder_selector = FileSelector(
+            label=self.tr("Translation Folder:"),
+            file_mode=False,
+            file_filter="",
+            label_width=label_w,
+            history_key="video.batch.inputs",
+        )
+        layout.addWidget(self.secondary_folder_selector)
 
         # Constant subtitle offset applied to every episode pair in the folder
         # (mirrors the Single Episode tab; per-session, seeded from config).
@@ -318,6 +334,35 @@ class BatchProcessingTab(MiningTabBase):
         offset_layout.addWidget(self.offset_spinbox)
         offset_layout.addStretch()
         layout.addLayout(offset_layout)
+
+        # Wrapped in a QWidget so the gate can hide the whole row: a bare
+        # QHBoxLayout has nothing to setVisible().
+        self.secondary_offset_row = QWidget()
+        secondary_offset_layout = QHBoxLayout(self.secondary_offset_row)
+        secondary_offset_layout.setContentsMargins(0, 0, 0, 0)
+        secondary_offset_layout.setSpacing(SPACING.xs)
+
+        secondary_offset_label = QLabel(self.tr("Translation Offset:"))
+        secondary_offset_label.setObjectName("field-label")
+        secondary_offset_label.setMinimumWidth(label_w)
+        make_label_fit_text(secondary_offset_label)
+
+        self.secondary_offset_spinbox = QDoubleSpinBox()
+        self.secondary_offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
+        self.secondary_offset_spinbox.setSingleStep(0.5)
+        self.secondary_offset_spinbox.setValue(0.0)
+        self.secondary_offset_spinbox.setSuffix(self.tr(" seconds"))
+        self.secondary_offset_spinbox.setToolTip(
+            self.tr("Shift the translation subtitles only (positive = later, negative = earlier)")
+        )
+        secondary_offset_label.setBuddy(self.secondary_offset_spinbox)
+
+        secondary_offset_layout.addWidget(secondary_offset_label)
+        secondary_offset_layout.addWidget(self.secondary_offset_spinbox)
+        secondary_offset_layout.addStretch()
+        layout.addWidget(self.secondary_offset_row)
+
+        self._apply_secondary_gate()
 
         # Action buttons
         button_layout = QHBoxLayout()
@@ -363,19 +408,63 @@ class BatchProcessingTab(MiningTabBase):
 
         return Path(video_path), Path(subtitle_path)
 
-    def _find_episode_pairs(self, video_folder: Path, subtitle_folder: Path) -> list:
+    def _apply_secondary_gate(self) -> None:
+        """Show the translation folder and its offset only when the setting is on."""
+        enabled = self.config.secondary_subtitle_enabled
+        self.secondary_folder_selector.setVisible(enabled)
+        self.secondary_offset_row.setVisible(enabled)
+
+    def _validated_secondary_folder(self) -> tuple[bool, Path | None]:
+        """The quick path's translation folder as ``(ok, folder)``.
+
+        Kept apart from :meth:`_get_validated_folders` because the two answer
+        different questions: the video/subtitle pair is required, this one is
+        optional and may simply be absent. ``ok`` is False only when the picker
+        holds a path that has since gone — silently mining without the
+        translations the user chose is worse than saying so.
+        """
+        if not self.config.secondary_subtitle_enabled:
+            return True, None
+        secondary_path = self.secondary_folder_selector.path_or_none()
+        if secondary_path is None:
+            return True, None
+        if not self.secondary_folder_selector.is_valid():
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("That translation subtitle folder no longer exists."),
+                    details=secondary_path,
+                )
+            )
+            return False, None
+        return True, Path(secondary_path)
+
+    def _secondary_offset(self) -> float:
+        """The quick path's translation offset, or 0.0 without a chosen folder."""
+        if not self.config.secondary_subtitle_enabled:
+            return 0.0
+        if self.secondary_folder_selector.path_or_none() is None:
+            return 0.0
+        return self.secondary_offset_spinbox.value()
+
+    def _find_episode_pairs(
+        self, video_folder: Path, subtitle_folder: Path, secondary_folder: Path | None = None
+    ) -> list:
         """Find matching video/subtitle pairs in folders.
 
         Args:
             video_folder: Path to video folder
             subtitle_folder: Path to subtitle folder
+            secondary_folder: Optional folder of translation subtitles (F7),
+                matched to the same videos by episode number
 
         Returns:
             List of FilePair objects
         """
         from anki_miner.utils.file_pairing import FilePairMatcher
 
-        return FilePairMatcher.find_pairs_by_episode_number(video_folder, subtitle_folder)
+        return FilePairMatcher.find_pairs_by_episode_number(
+            video_folder, subtitle_folder, secondary_folder=secondary_folder
+        )
 
     def _process_pairs(self) -> None:
         """Process all discovered pairs from quick processing section."""
@@ -390,7 +479,10 @@ class BatchProcessingTab(MiningTabBase):
             return
 
         video_folder, subtitle_folder = folders
-        pairs = self._find_episode_pairs(video_folder, subtitle_folder)
+        ok, secondary_folder = self._validated_secondary_folder()
+        if not ok:
+            return
+        pairs = self._find_episode_pairs(video_folder, subtitle_folder, secondary_folder)
 
         if not pairs:
             self.show_screen_issue(
@@ -413,6 +505,14 @@ class BatchProcessingTab(MiningTabBase):
             "first": [self._pair_stem(pair) for pair in pairs[:5]],
             "video_folder": self.video_folder_selector.path_or_none(),
             "subtitle_folder": self.subtitle_folder_selector.path_or_none(),
+            # F7: how many of the matched episodes actually got a translation.
+            # A partial set is normal and never fails the run, so the count is
+            # the only record that some cards will have an empty field.
+            "secondary_folder": (
+                self.secondary_folder_selector.path_or_none() if self.config.secondary_subtitle_enabled else None
+            ),
+            "secondary_offset": self._secondary_offset(),
+            "translations": sum(1 for pair in pairs if getattr(pair, "secondary", None) is not None),
         }
 
     @staticmethod
@@ -470,6 +570,7 @@ class BatchProcessingTab(MiningTabBase):
             self.progress_callback,
             curation_callback=curation_cb,
             processor_factory=_processor_factory,
+            secondary_subtitle_offset=self._secondary_offset(),
         )
 
         # Pair-level signals set the counters/labels; the per-episode stage
@@ -1219,6 +1320,8 @@ class BatchProcessingTab(MiningTabBase):
         if config.subtitle_offset != self.config.subtitle_offset:
             self.offset_spinbox.setValue(config.subtitle_offset)
         self.config = config
+        self._apply_secondary_gate()
+        self.queue_panel.secondary_subtitle_enabled = config.secondary_subtitle_enabled
         # Not a _QueueMiningTabBase, so the shared re-seed in its update_config
         # never reaches here — the curation checkbox has to be re-seeded itself.
         self._seed_review_words_checkbox()
