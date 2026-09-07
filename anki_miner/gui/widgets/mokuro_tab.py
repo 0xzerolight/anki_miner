@@ -272,9 +272,14 @@ class MokuroTab(_ToolTabBase):
         self._run_availability_scan(lambda: self._compute_mokuro_available(config), self._apply_probe_result, _on_error)
 
     def _apply_probe_result(self, result: object) -> None:
+        # A probe scheduled before a run started can land after it did. The run
+        # owns the button for its whole duration — including the folder scan
+        # that precedes the worker, when worker_thread is still None.
         self._mokuro_is_available = bool(result)
         self.engine_notice_label.setVisible(not self._mokuro_is_available)
-        self.run_button.setEnabled(self._mokuro_is_available and not still_running(self.worker_thread))
+        self.run_button.setEnabled(
+            self._mokuro_is_available and not still_running(self.worker_thread) and not self._scan_pending_run
+        )
 
     def _mokuro_ready(self) -> bool:
         return self._mokuro_is_available
@@ -327,7 +332,12 @@ class MokuroTab(_ToolTabBase):
             return
         if self.worker_thread is not None and self.worker_thread.isRunning():
             return
-        if still_running(self._scan_worker) and self._scan_pending_run:
+        # Not conjoined with still_running(self._scan_worker): a click delivered
+        # after the scan thread stopped but before its queued result_ready ran
+        # would pass both and start a second scan — two workers over the same
+        # volumes, the first orphaned. The flag alone spans that window; it is
+        # cleared by both scan continuations.
+        if self._scan_pending_run:
             return
         self.clear_screen_issue()
         self.log_widget.clear_log()
@@ -382,9 +392,11 @@ class MokuroTab(_ToolTabBase):
         self._scan_worker = run_off_thread(self, lambda: scan_volumes(folder), _on_scanned, _on_error)
 
     def _start_worker(self, volumes: list[MokuroVolume]) -> None:
-        self._begin_tool_run(len(volumes))
+        # Totals first: _begin_tool_run publishes the run, and the registry's
+        # first read of _item_total() must already be this run's count.
         self._total_volumes = len(volumes)
         self._run_volumes = volumes
+        self._begin_tool_run(len(volumes))
         for volume in volumes:
             note = self.tr(" (already processed)") if volume.already_processed else ""
             self.log_widget.append_info(f"{volume.source.name}{note}")

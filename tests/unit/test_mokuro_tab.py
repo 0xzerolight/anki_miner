@@ -17,6 +17,7 @@ _AVAILABLE = "anki_miner.gui.widgets.mokuro_tab.MokuroTab._mokuro_ready"
 _COMPUTE_AVAILABLE = "anki_miner.gui.widgets.mokuro_tab.MokuroTab._compute_mokuro_available"
 _OS_ACCESS = "anki_miner.gui.widgets.mokuro_tab.os.access"
 _WORKER_CLS = "anki_miner.gui.widgets.mokuro_tab.MokuroWorker"
+_RUN_OFF_THREAD = "anki_miner.gui.widgets.mokuro_tab.run_off_thread"
 
 
 class _FakeWorker:
@@ -160,6 +161,23 @@ class TestRun:
         cls.assert_not_called()
         assert "not writable" in issues[0].summary.lower()
 
+    def test_probe_landing_during_run_scan_keeps_run_disabled(self, qtbot, tmp_path):
+        tab = _make_tab(_config(tmp_path), qtbot)
+        tab._scan_pending_run = True
+        tab._apply_probe_result(True)
+        assert not tab.run_button.isEnabled()
+
+    def test_pending_run_scan_blocks_a_second_scan(self, qtbot, tmp_path):
+        tab = _make_tab(_config(tmp_path), qtbot)
+        tab.folder_selector.set_path(str(_series(tmp_path)))
+        # The scan thread has stopped but its result_ready has not run yet: the
+        # flag alone must hold the gate.
+        tab._scan_worker = None
+        tab._scan_pending_run = True
+        with patch(_AVAILABLE, return_value=True), patch(_RUN_OFF_THREAD) as dispatch:
+            tab._on_run()
+        dispatch.assert_not_called()
+
     def test_reentrancy_guard(self, qtbot, tmp_path):
         tab = _make_tab(_config(tmp_path), qtbot)
         tab.folder_selector.set_path(str(_series(tmp_path)))
@@ -175,8 +193,8 @@ class TestPreviewAndPersistence:
         tab = _make_tab(_config(tmp_path), qtbot)
         series = _series(tmp_path)
         (tmp_path / "series" / "vol1.mokuro").write_text("{}")
-        # FileSelector.set_path only sets the line edit; drive the slot the
-        # path_changed signal is wired to, so the test is signal-agnostic.
+        # Drive the slot path_changed is wired to directly, so the test stays
+        # signal-agnostic (set_path would reach it via textChanged).
         tab._on_folder_changed(str(series))
         qtbot.waitUntil(lambda: "2" in tab.volumes_label.text(), timeout=3000)
         assert "1" in tab.volumes_label.text()  # already processed count
