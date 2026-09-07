@@ -27,6 +27,16 @@ class QueueItem:
     cards_created: int = 0
     error_message: str = ""
     subtitle_offset: float = 0.0  # Per-item subtitle offset in seconds
+    #: Folder of secondary-language subtitles for this series (F7), paired to
+    #: the videos by the same episode-number rule as the mining track. It has
+    #: to be a folder of its own — a subtitle is consumed once, so two tracks
+    #: for one episode cannot both be matched out of one folder. ``None``, or
+    #: an episode with no match inside it, mines with an empty Translation
+    #: field rather than failing the run.
+    secondary_folder: Path | None = None
+    #: Offset for that track, in seconds. Per series and never persisted to
+    #: config, like ``subtitle_offset``.
+    secondary_offset: float = 0.0
     retry_count: int = 0
     max_retries: int = 2
     committed_pair_keys: set[tuple[Path, Path]] = field(default_factory=set)
@@ -45,6 +55,9 @@ class BatchQueue:
         subtitle_folder: Path,
         display_name: str | None = None,
         subtitle_offset: float = 0.0,
+        *,
+        secondary_folder: Path | None = None,
+        secondary_offset: float = 0.0,
     ) -> QueueItem:
         """Add a folder pair to the queue.
 
@@ -53,6 +66,9 @@ class BatchQueue:
             subtitle_folder: Path to subtitle folder
             display_name: Optional custom name for this item
             subtitle_offset: Subtitle timing offset in seconds
+            secondary_folder: Optional folder of secondary-language subtitles
+                (F7) for this series
+            secondary_offset: Timing offset for that track, in seconds
 
         Returns:
             The created QueueItem
@@ -65,6 +81,8 @@ class BatchQueue:
             subtitle_folder=subtitle_folder,
             display_name=display_name,
             subtitle_offset=subtitle_offset,
+            secondary_folder=secondary_folder,
+            secondary_offset=secondary_offset,
         )
         self._items.append(item)
         return item

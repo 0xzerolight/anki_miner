@@ -237,3 +237,46 @@ class TestResetRunHistory:
         assert item.error_message == ""
         assert item.retry_count == 0
         assert item.committed_pair_keys == set()
+
+
+class TestSecondarySubtitleFolder:
+    """A queued series can name its own translation-subtitle folder (F7)."""
+
+    def test_item_defaults_to_no_translation_folder(self, tmp_path):
+        item = QueueItem(
+            video_folder=tmp_path / "video",
+            subtitle_folder=tmp_path / "subs",
+            display_name="Show",
+        )
+        assert item.secondary_folder is None
+        assert item.secondary_offset == 0.0
+
+    def test_add_item_stores_the_translation_folder(self, tmp_path):
+        queue = BatchQueue()
+        item = queue.add_item(
+            tmp_path / "v",
+            tmp_path / "s",
+            "Show",
+            1.0,
+            secondary_folder=tmp_path / "t",
+            secondary_offset=-0.5,
+        )
+        assert item.secondary_folder == tmp_path / "t"
+        assert item.secondary_offset == -0.5
+
+    def test_add_item_without_one_leaves_it_unset(self, tmp_path):
+        queue = BatchQueue()
+        item = queue.add_item(tmp_path / "v", tmp_path / "s", "Show")
+        assert item.secondary_folder is None
+        assert item.secondary_offset == 0.0
+
+    def test_reset_run_history_keeps_the_translation_folder(self, tmp_path):
+        """It is an input, not a run outcome."""
+        queue = BatchQueue()
+        item = queue.add_item(tmp_path / "v", tmp_path / "s", "Show", secondary_folder=tmp_path / "t")
+        item.cards_created = 9
+
+        BatchQueue.reset_run_history(item)
+
+        assert item.secondary_folder == tmp_path / "t"
+        assert item.cards_created == 0
