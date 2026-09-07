@@ -163,3 +163,49 @@ class TestResolveSentenceEdit:
         resolve_sentence_edit(word, lambda text: PARSED)
         assert word.sentence_edit is not None
         assert word.sentence == "時給系のスポーツは本当に苦手"
+
+
+# ---------------------------------------------------------------------------
+# Real parser round trip
+# ---------------------------------------------------------------------------
+
+
+def _fugashi_available() -> bool:
+    try:
+        import fugashi  # noqa: F401
+        import unidic_lite  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+def test_real_parser_round_trip_rebuilds_the_corrected_word(tmp_path):
+    """The user's own example: 時給系 mistranscribed for 持久系. The processor's
+    parse_sentence_fn and the resolver, over the real ja parser."""
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.services.subtitle_parser import SubtitleParserService
+    from tests.conftest import build_processor
+
+    config = AnkiMinerConfig(media_temp_folder=tmp_path / "media", bold_target_in_sentence=True)
+    proc = build_processor(config, subtitle_parser=SubtitleParserService(config))
+    edited = "持久系のスポーツは本当に苦手"
+
+    tokens = proc.parse_sentence_fn(edited)
+
+    target = next(t for t in tokens if t.mined_form.startswith("持久"))
+    assert target.sentence == edited
+    assert target.sentence[target.surface_start : target.surface_end] == target.surface
+    assert target.expression_reading.startswith("じきゅう")
+
+    original = _word()
+    intent = dataclasses.replace(
+        original,
+        sentence_edit=SentenceEdit(text=edited, target_start=target.surface_start, target_end=target.surface_end),
+    )
+    rebuilt = resolve_sentence_edit(intent, proc.parse_sentence_fn)
+
+    assert rebuilt.mined_form == target.mined_form
+    assert rebuilt.sentence == edited
+    assert (rebuilt.start_time, rebuilt.end_time) == (5.0, 7.0)
+    assert "<b>" in rebuilt.sentence_bolded  # bold precompute is config-gated; enabled above
