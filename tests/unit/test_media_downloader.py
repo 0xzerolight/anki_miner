@@ -985,3 +985,75 @@ class TestProbePlaylist:
         recorder, _ = self._probe(monkeypatch, service, self._payload())
         cmd = _cmd(recorder)
         assert cmd[cmd.index("--playlist-items") + 1] == f"1:{md.PLAYLIST_PROBE_MAX}"
+
+
+# ---------------------------------------------------------------------------
+# Audio-track language preference
+# ---------------------------------------------------------------------------
+
+
+class TestAudioLanguage:
+    @pytest.mark.parametrize(
+        ("selector", "expected"),
+        [
+            (
+                "bestvideo*+bestaudio/best",
+                "bestvideo*+bestaudio[language~='^ja(-|$)']/bestvideo*+bestaudio/best",
+            ),
+            (
+                "bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+                "bestvideo[height<=1080]+bestaudio[language~='^ja(-|$)']"
+                "/bestvideo[height<=1080]+bestaudio/best[height<=1080]",
+            ),
+            ("bestaudio/best", "bestaudio[language~='^ja(-|$)']/bestaudio/best"),
+        ],
+    )
+    def test_preferred_tier_is_prepended_and_the_original_is_the_fallback(self, selector: str, expected: str) -> None:
+        assert md.apply_audio_language(selector, "ja") == expected
+
+    def test_only_the_first_alternative_is_filtered(self) -> None:
+        """The fallback must stay byte-identical to the unfiltered selector, or
+        a video with no matching audio silently drops to a worse format than it
+        would have got with no preference at all."""
+        selector = "bestvideo*+bestaudio/best"
+        assert md.apply_audio_language(selector, "ja").endswith(f"/{selector}")
+
+    @pytest.mark.parametrize("lang", ["", "   "])
+    def test_blank_language_leaves_the_selector_alone(self, lang: str) -> None:
+        assert md.apply_audio_language("bestvideo*+bestaudio/best", lang) == "bestvideo*+bestaudio/best"
+
+    def test_a_selector_without_bestaudio_is_left_alone(self) -> None:
+        assert md.apply_audio_language("best", "ja") == "best"
+
+    @pytest.mark.parametrize("lang", ["ja'] or bestaudio[x=", "ja ja", "../etc", "j" * 21, "ja,en"])
+    def test_a_code_that_could_escape_the_filter_is_refused(self, lang: str) -> None:
+        assert md.apply_audio_language("bestvideo*+bestaudio/best", lang) == "bestvideo*+bestaudio/best"
+
+    def test_a_region_suffixed_code_is_accepted(self) -> None:
+        assert md.apply_audio_language("bestaudio/best", "pt-BR") == (
+            "bestaudio[language~='^pt-BR(-|$)']/bestaudio/best"
+        )
+
+    def test_build_cmd_uses_the_composed_selector(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        recorder, _ = _run_download(
+            monkeypatch,
+            service,
+            tmp_path,
+            _opts(format_selector="bestvideo*+bestaudio/best", audio_lang="ko"),
+        )
+        cmd = _cmd(recorder)
+        assert cmd[cmd.index("--format") + 1] == (
+            "bestvideo*+bestaudio[language~='^ko(-|$)']/bestvideo*+bestaudio/best"
+        )
+
+    def test_default_options_are_byte_identical_to_the_pre_change_command(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        recorder, _ = _run_download(monkeypatch, service, tmp_path, _opts(format_selector="bestvideo*+bestaudio/best"))
+        cmd = _cmd(recorder)
+        assert cmd[cmd.index("--format") + 1] == "bestvideo*+bestaudio/best"
+
+    def test_the_option_defaults_to_empty(self) -> None:
+        assert _opts().audio_lang == ""

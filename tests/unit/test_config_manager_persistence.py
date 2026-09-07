@@ -710,11 +710,12 @@ class TestRoundTripImmutabilityAndPaths:
         assert cfg.downloader_custom_format == ""
         assert cfg.downloader_write_subtitles is False
         assert cfg.downloader_subtitle_langs == "ja"
+        assert cfg.downloader_audio_lang == ""
         assert cfg.downloader_embed_thumbnail is False
         assert cfg.downloader_embed_metadata is False
 
     def test_downloader_fields_round_trip(self, tmp_config: Path):
-        """All six downloader_* fields must survive save→load into gui_config.json."""
+        """All seven downloader_* fields must survive save→load into gui_config.json."""
         import json
 
         cfg = replace(
@@ -723,6 +724,7 @@ class TestRoundTripImmutabilityAndPaths:
             downloader_custom_format="bestaudio[ext=m4a]",
             downloader_write_subtitles=True,
             downloader_subtitle_langs="ja,en",
+            downloader_audio_lang="ja",
             downloader_embed_thumbnail=True,
             downloader_embed_metadata=True,
         )
@@ -734,6 +736,7 @@ class TestRoundTripImmutabilityAndPaths:
         assert on_disk["downloader_custom_format"] == "bestaudio[ext=m4a]"
         assert on_disk["downloader_write_subtitles"] is True
         assert on_disk["downloader_subtitle_langs"] == "ja,en"
+        assert on_disk["downloader_audio_lang"] == "ja"
         assert on_disk["downloader_embed_thumbnail"] is True
         assert on_disk["downloader_embed_metadata"] is True
 

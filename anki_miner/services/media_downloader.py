@@ -77,6 +77,39 @@ _FILENAME_RES = (
 )
 _ALREADY_RE = re.compile(r"^\[download\] (.+) has already been downloaded")
 
+#: A language code safe to interpolate into a yt-dlp format filter. Anything
+#: else is dropped rather than escaped — the picker only ever produces codes, so
+#: a non-matching value is a bug or an injection attempt, not a preference.
+_AUDIO_LANG_RE = re.compile(r"^[A-Za-z0-9-]{1,20}$")
+
+
+def apply_audio_language(selector: str, lang: str) -> str:
+    """Return *selector* with an audio-language-preferring tier in front.
+
+    ``("bestvideo*+bestaudio/best", "ja")`` becomes
+    ``"bestvideo*+bestaudio[language~='^ja(-|$)']/bestvideo*+bestaudio/best"``:
+    a video with a Japanese audio track gets it, and one without still downloads
+    at the same quality it would have without any preference.
+
+    Only the selector's FIRST alternative is filtered. Filtering the whole
+    string would leave the original's later, better alternatives shadowed by the
+    filtered copy's muxed fallback — a video with no matching audio would then
+    land on ``best`` instead of ``bestvideo*+bestaudio``.
+
+    The regex form matches the mining fetcher's ``bestaudio[language~='^ja(-|$)']``
+    so ``ja`` selects ``ja`` and ``ja-JP`` but never ``jav``.
+    """
+    code = lang.strip()
+    if not code or not _AUDIO_LANG_RE.match(code):
+        return selector
+    preferred, _, _ = selector.partition("/")
+    if "bestaudio" not in preferred:
+        # A muxed-only or otherwise hand-written selector has no separate audio
+        # stream to filter; the user's string is left exactly as written.
+        return selector
+    filtered = preferred.replace("bestaudio", f"bestaudio[language~='^{code}(-|$)']")
+    return f"{filtered}/{selector}"
+
 
 class MediaDownloadError(AnkiMinerException):
     """A generic-site download failed (nonzero exit, timeout, bad output)."""
@@ -98,6 +131,7 @@ class DownloadOptions:
     subtitle_langs: str = "ja"
     embed_thumbnail: bool = False
     embed_metadata: bool = False
+    audio_lang: str = ""  # preferred audio-track language; "" = whatever the site serves
 
 
 @dataclass(frozen=True)
@@ -448,7 +482,7 @@ class MediaDownloaderService:
             "--ignore-config",
             "--no-playlist",
             "--format",
-            options.format_selector,
+            apply_audio_language(options.format_selector, options.audio_lang),
         ]
         if options.extract_audio_format:
             cmd.extend(["-x", "--audio-format", options.extract_audio_format])
