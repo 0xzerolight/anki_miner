@@ -12,15 +12,15 @@ Download tool accepts any site yt-dlp supports.
 
 from __future__ import annotations
 
-import logging
-
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.audio_fetch_common import redact_url_for_log
 from anki_miner.services.media_downloader import MediaDownloaderService
 
-logger = logging.getLogger(__name__)
+# No module logger: every line this module emits comes from the base class's
+# log_start / log_end / report_failure, and an unused logger is gated by
+# tests/unit/test_logging_conventions.py.
 
 _PROBE_TIMEOUT_S = 120.0
 
