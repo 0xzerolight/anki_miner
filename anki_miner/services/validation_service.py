@@ -24,6 +24,7 @@ from anki_miner.utils import ensure_directory
 from anki_miner.utils.alass_resolver import resolve_alass
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.logging_ext import capped, log_summary
+from anki_miner.utils.mokuro_resolver import mokuro_available, resolve_mokuro
 from anki_miner.utils.subprocess_log import log_command, mask_argv
 from anki_miner.utils.subprocess_utils import no_window_kwargs
 from anki_miner.utils.ytdlp_resolver import managed_ytdlp_lock, resolve_ytdlp
@@ -243,6 +244,12 @@ class ValidationService:
                         message=stale_msg,
                     )
                 )
+
+        # Check mokuro (optional — Utilities → Manga OCR only; absent is non-fatal).
+        mokuro_ok, mokuro_msg = self._check_mokuro()
+        tool_versions["mokuro"] = mokuro_msg if mokuro_ok else ""
+        if not mokuro_ok:
+            issues.append(ValidationIssue(component="mokuro", severity="WARNING", message=mokuro_msg))
 
         # Check deck exists (only if AnkiConnect is working)
         deck_ok = False
@@ -631,6 +638,22 @@ class ValidationService:
                     "use Settings → YouTube → Update yt-dlp now to install it"
                 ),
             )
+
+    def _check_mokuro(self) -> tuple[bool, str]:
+        """Check mokuro is reachable (optional/non-fatal) — without spawning it.
+
+        ``mokuro --version`` imports torch (seconds, ~1 GB), which every startup
+        sweep would pay; the resolver's executable check is the whole probe.
+        """
+        if not mokuro_available(self.config.mokuro_location, self.config.uv_root):
+            return _record(
+                "mokuro",
+                False,
+                "mokuro not found — Utilities → Manga OCR is unavailable; install it in "
+                "Settings → Transcription & Alignment → Manga OCR or set its path there",
+            )
+        resolved = resolve_mokuro(self.config)
+        return _record("mokuro", True, f"mokuro {_classify_resolved('mokuro', resolved)}", path=resolved)
 
     def _ytdlp_staleness_warning(self, version_message: str) -> str | None:
         """Nudge opted-out users whose yt-dlp has aged out, else None.
