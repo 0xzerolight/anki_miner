@@ -1110,7 +1110,11 @@ class BatchProcessingTab(MiningTabBase):
                 QueueItemSnapshot(
                     item_id=item.id,
                     source=queue_state_store.folder_pair_source(
-                        item.video_folder, item.subtitle_folder, offset=item.subtitle_offset
+                        item.video_folder,
+                        item.subtitle_folder,
+                        offset=item.subtitle_offset,
+                        secondary=item.secondary_folder,
+                        secondary_offset=item.secondary_offset,
                     ),
                     title=item.display_name,
                     status=queue_state_store.status_from_run_state(item.status.value),
@@ -1136,6 +1140,11 @@ class BatchProcessingTab(MiningTabBase):
             source = row.source
             video = Path(str(source["video"]))
             subtitle = Path(str(source["subtitle"]))
+            # Optional and unvalidated on purpose: a translation folder that has
+            # since moved restores as a runnable row that mines without it,
+            # never as an error (see folder_pair_source).
+            secondary_raw = source.get("secondary")
+            secondary = Path(str(secondary_raw)) if isinstance(secondary_raw, str) and secondary_raw else None
             status = QueueItemStatus.PENDING.value
             error = ""
             missing = row.missing_paths()
@@ -1160,6 +1169,8 @@ class BatchProcessingTab(MiningTabBase):
                 cards_created=row.result_count,
                 retry_count=row.retry_count,
                 error_message=error,
+                secondary_folder=secondary,
+                secondary_offset=float(source.get("secondary_offset", 0.0) or 0.0),
             )
             restored += 1
         self.queue_panel.update_stats()

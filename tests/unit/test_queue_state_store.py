@@ -330,3 +330,33 @@ class TestDiscard:
         (root / "notes.txt").write_text("x")
         (root / "sub").mkdir()
         assert store.stored_keys() == (KEY,)
+
+
+class TestSecondarySubtitleFolder:
+    """The Batch descriptor carries an optional translation folder (F7)."""
+
+    def test_an_absent_translation_folder_writes_no_keys(self, tmp_path):
+        source = store.folder_pair_source(tmp_path / "v", tmp_path / "s", offset=1.0)
+        assert "secondary" not in source
+        assert "secondary_offset" not in source
+
+    def test_a_translation_folder_round_trips(self, tmp_path):
+        source = store.folder_pair_source(
+            tmp_path / "v", tmp_path / "s", offset=1.0, secondary=tmp_path / "t", secondary_offset=-0.5
+        )
+        assert source["secondary"] == str(tmp_path / "t")
+        assert source["secondary_offset"] == -0.5
+        assert json.loads(json.dumps(source)) == source
+
+    def test_a_moved_translation_folder_is_not_a_missing_input(self, tmp_path):
+        """It restores as a runnable row that mines without translations —
+        never as an error row, which is what a missing video folder gets."""
+        row = QueueItemSnapshot(
+            item_id="a",
+            source=store.folder_pair_source(tmp_path / "v", tmp_path / "s", secondary=tmp_path / "definitely-gone"),
+        )
+        (tmp_path / "v").mkdir()
+        (tmp_path / "s").mkdir()
+
+        assert tmp_path / "definitely-gone" not in row.input_paths()
+        assert row.missing_paths() == ()

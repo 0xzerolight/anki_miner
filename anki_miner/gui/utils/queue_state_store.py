@@ -121,9 +121,32 @@ _UNREADABLE = object()
 # ---------------------------------------------------------------------------
 
 
-def folder_pair_source(video: Path, subtitle: Path, *, offset: float = 0.0) -> dict[str, Any]:
-    """Descriptor for a Batch video/subtitle folder pair."""
-    return {"kind": SOURCE_FOLDER_PAIR, "video": str(video), "subtitle": str(subtitle), "offset": float(offset)}
+def folder_pair_source(
+    video: Path,
+    subtitle: Path,
+    *,
+    offset: float = 0.0,
+    secondary: Path | None = None,
+    secondary_offset: float = 0.0,
+) -> dict[str, Any]:
+    """Descriptor for a Batch video/subtitle folder pair.
+
+    The translation folder (F7) is written only when the row has one, and is
+    deliberately absent from :data:`_PATH_KEYS`: a row whose translations moved
+    comes back as a runnable row that mines without them, which is what every
+    other missing-translation case does. An older snapshot simply lacks both
+    keys, so no schema bump is needed.
+    """
+    source: dict[str, Any] = {
+        "kind": SOURCE_FOLDER_PAIR,
+        "video": str(video),
+        "subtitle": str(subtitle),
+        "offset": float(offset),
+    }
+    if secondary is not None:
+        source["secondary"] = str(secondary)
+        source["secondary_offset"] = float(secondary_offset)
+    return source
 
 
 def file_pair_source(audio: Path, subtitle: Path) -> dict[str, Any]:
