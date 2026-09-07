@@ -390,6 +390,7 @@ class TestBackgroundTasksShutdownDuckTyped:
         ctrl.jmdict_migration_worker = None
         ctrl.asr_model_download_worker = None
         ctrl.alass_install_worker = None
+        ctrl.mokuro_install_worker = None
         ctrl.cuda_pack_download_worker = None
         ctrl.onnx_pack_download_worker = None
         ctrl.vulkan_model_download_worker = None

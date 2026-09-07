@@ -215,6 +215,7 @@ class TestShutdownJoinsOffThreadWorkers:
             "jmdict_migration_worker",
             "asr_model_download_worker",
             "alass_install_worker",
+            "mokuro_install_worker",
             "cuda_pack_download_worker",
             "onnx_pack_download_worker",
             "vulkan_model_download_worker",
@@ -672,6 +673,58 @@ class TestStartAlassDownload:
         worker.emit_finished()
 
         assert controller.alass_install_worker is None
+        worker.deleteLater.assert_called_once()
+
+
+class TestStartMokuroInstall:
+    """start_mokuro_install: guard, status/finished routing, handle release."""
+
+    def test_starts_and_routes_status(self, controller, qtbot, monkeypatch, tmp_path):
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
+
+        status_received: list[str] = []
+        controller.start_mokuro_install(tmp_path / "bin", tmp_path / "uv", status_received.append, lambda ok, msg: None)
+
+        assert controller.mokuro_install_worker is worker
+
+        worker.status.emit("Resolved 46 packages")
+        assert status_received == ["Resolved 46 packages"]
+
+    def test_routes_result(self, controller, qtbot, monkeypatch, tmp_path):
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
+
+        finished_calls: list[tuple] = []
+        controller.start_mokuro_install(
+            tmp_path / "bin",
+            tmp_path / "uv",
+            lambda msg: None,
+            lambda ok, msg: finished_calls.append((ok, msg)),
+        )
+
+        worker.emit_result(True, "mokuro installed successfully.")
+        assert finished_calls == [(True, "mokuro installed successfully.")]
+
+    def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
+        worker_a = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker_a)
+        controller.start_mokuro_install(tmp_path / "bin", tmp_path / "uv", lambda m: None, lambda ok, m: None)
+        assert controller.mokuro_install_worker is worker_a
+
+        worker_b = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker_b)
+        controller.start_mokuro_install(tmp_path / "bin", tmp_path / "uv", lambda m: None, lambda ok, m: None)
+        assert controller.mokuro_install_worker is worker_a
+
+    def test_handle_released_on_finished(self, controller, qtbot, monkeypatch, tmp_path):
+        worker = _FakeInstallWorker()
+        _patch_install_worker(monkeypatch, worker)
+        controller.start_mokuro_install(tmp_path / "bin", tmp_path / "uv", lambda m: None, lambda ok, m: None)
+
+        worker.emit_finished()
+
+        assert controller.mokuro_install_worker is None
         worker.deleteLater.assert_called_once()
 
 

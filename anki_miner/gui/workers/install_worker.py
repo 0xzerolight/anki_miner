@@ -1,4 +1,4 @@
-"""One parametrized install/download worker + the six per-resource tasks.
+"""One parametrized install/download worker + the seven per-resource tasks.
 
 Collapses the ex-quintuplet of near-identical worker modules (alass install,
 ASR model download, CUDA pack, onnxruntime/VAD pack, Vulkan ggml model) into a
@@ -141,6 +141,8 @@ def _progress_template(context: str) -> str:
         return QCoreApplication.translate("OnnxPackDownloadWorker", "%1 (%2%)")
     if context == "VulkanModelDownloadWorker":
         return QCoreApplication.translate("VulkanModelDownloadWorker", "%1 (%2%)")
+    if context == "MokuroInstallWorker":
+        return QCoreApplication.translate("MokuroInstallWorker", "%1 (%2%)")
     return QCoreApplication.translate("CudaPackDownloadWorker", "%1 (%2%)")
 
 
@@ -153,6 +155,26 @@ def alass_install_task(bin_root: Path) -> InstallTask:
         worker.status.emit(QCoreApplication.translate("AlassInstallWorker", "Downloading alass…"))
         install_alass(bin_root, cancel_event=worker.cancel_event)
         return QCoreApplication.translate("AlassInstallWorker", "alass installed successfully.")
+
+    return _task
+
+
+def mokuro_install_task(bin_root: Path, uv_root: Path) -> InstallTask:
+    """Task: uv download (byte progress) + uv venv + uv pip install (status lines)."""
+
+    def _task(worker: InstallWorker) -> str:
+        from anki_miner.services.mokuro_installer import install_mokuro
+
+        worker._progress_ctx = "MokuroInstallWorker"
+        worker.status.emit(QCoreApplication.translate("MokuroInstallWorker", "Installing mokuro…"))
+        install_mokuro(
+            bin_root,
+            uv_root,
+            status=worker.status.emit,
+            progress=worker._on_progress,
+            cancel_event=worker.cancel_event,
+        )
+        return QCoreApplication.translate("MokuroInstallWorker", "mokuro installed successfully.")
 
     return _task
 

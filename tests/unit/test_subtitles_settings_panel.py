@@ -1313,3 +1313,78 @@ def test_cuda_guidance_shares_row_with_label(qtbot):
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     assert panel._cuda_guidance_label.parent() is panel.download_cuda_button.parent()
+
+
+# ---------------------------------------------------------------------------
+# Manga OCR (mokuro) section
+# ---------------------------------------------------------------------------
+
+
+def test_panel_has_mokuro_section(qtbot):
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.mokuro_selector is not None
+    assert panel.install_mokuro_button.text() == "Install mokuro"
+
+
+def test_contribute_round_trips_mokuro_location(qtbot, tmp_path):
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    exe = tmp_path / "mokuro"
+    exe.write_text("")
+    panel.mokuro_selector.set_path(str(exe))
+    cfg = panel.contribute(AnkiMinerConfig())
+    assert cfg.mokuro_location == exe
+    panel.mokuro_selector.set_path("")
+    assert panel.contribute(cfg).mokuro_location is None
+
+
+def test_install_mokuro_button_emits_and_disables(qtbot):
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    fired: list = []
+    panel.mokuro_install_requested.connect(lambda: fired.append(True))
+    panel.install_mokuro_button.setEnabled(True)
+    panel.install_mokuro_button.click()
+    assert fired and not panel.install_mokuro_button.isEnabled()
+
+
+def test_mokuro_status_reflects_resolver(qtbot, tmp_path, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_resolver.mokuro_available", lambda loc, root: True)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(uv_root=tmp_path / "uv"))
+    _wait_state_settled(qtbot, panel)
+    assert panel.mokuro_status_label.text() == "Installed"
+    assert panel.install_mokuro_button.text() == "Reinstall mokuro"
+
+
+def test_notify_mokuro_install_finished_reprobes(qtbot, tmp_path, monkeypatch):
+    """The in-flight guard clears and the label follows the new on-disk state."""
+    state = {"installed": False}
+    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_resolver.mokuro_available", lambda loc, root: state["installed"])
+    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_installer.mokuro_install_supported", lambda: True)
+
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(uv_root=tmp_path / "uv"))
+    _wait_state_settled(qtbot, panel)
+    assert panel.mokuro_status_label.text() == "Not installed"
+
+    panel.install_mokuro_button.click()
+    assert panel._mokuro_install_active
+    state["installed"] = True
+    panel.notify_mokuro_install_finished()
+    _wait_state_settled(qtbot, panel)
+
+    assert not panel._mokuro_install_active
+    assert panel.mokuro_status_label.text() == "Installed"
+    assert panel.install_mokuro_button.isEnabled()
+
+
+def test_mokuro_button_disabled_when_platform_unsupported(qtbot, monkeypatch):
+    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_installer.mokuro_install_supported", lambda: False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    assert not panel.install_mokuro_button.isEnabled()
+    assert panel.mokuro_status_label.text() == "Not available on this platform"
