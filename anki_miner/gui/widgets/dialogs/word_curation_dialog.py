@@ -67,12 +67,13 @@ from anki_miner.gui.widgets.audio_clip_editor import MAX_CLIP_SECONDS, AudioClip
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost
 from anki_miner.gui.widgets.base.eliding_label import ElidingLabel
 from anki_miner.gui.widgets.base.sizing import metric_row_height
+from anki_miner.gui.widgets.dialogs.sentence_edit_dialog import SentenceEditDialog
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.page_image_view import PageImageView, load_page_qimage
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.languages.profile import ContentTextStyle
 from anki_miner.languages.registry import get_profile
-from anki_miner.models import TokenizedWord
+from anki_miner.models import SentenceEdit, TokenizedWord
 from anki_miner.services.dictionary.preview_html import PREVIEW_CSS, to_preview_html
 from anki_miner.services.secondary_subtitles import match_secondary_line
 from anki_miner.services.word_filter import MergedLineWindow, find_cue_index, merge_cue_window
@@ -258,6 +259,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # cannot offer the editor.
         self._parse_sentence_fn = parse_sentence_fn
         self._sentence_edits: dict[int, TokenizedWord] = {}
+        self._sentence_editor: SentenceEditDialog | None = None
         # Context for the candidate list while a row is focused: the focused
         # word's index + its candidate variants. Guards programmatic
         # repopulation from being mistaken for a user pick.
@@ -648,6 +650,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # Right-click context menu (always present; useful for #43)
         self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self._on_table_context_menu)
+        # Double-click opens the sentence editor for that row (no-op without a
+        # parser); the checkbox column is excluded, see _on_cell_double_clicked.
+        self.table.cellDoubleClicked.connect(self._on_cell_double_clicked)
 
         # Nothing between the table and the hint line. A detail strip used to sit
         # here restating the focused row's mined form, reading and sentence
@@ -1287,6 +1292,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         reseed the strip, repaint the sentence cell, refresh button states,
         and optionally snap the preview to the (new) start."""
         self._clip_overrides.pop(idx, None)
+        # The shown text changes under a sentence edit; +line is disabled while
+        # one exists (see _refresh_expansion_buttons), so this is the Reset path.
+        self._sentence_edits.pop(idx, None)
         self._seed_clip_editor(chosen, idx)
         window = self._expanded_window(chosen, idx)
         display = chosen if window is None else dataclasses.replace(chosen, sentence=window.text)
@@ -1328,6 +1336,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                     if cue + next_count + 1 < len(entries):
                         window = merge_cue_window(entries, cue, prev_count, next_count + 1)
                         next_ok = (window.end - window.start) + 2 * padding <= MAX_CLIP_SECONDS
+        if idx is not None and idx in self._sentence_edits:
+            # An edit is written against the shown text; merging a neighbour
+            # would leave the card saying one thing and the clip another.
+            prev_ok = next_ok = False
         self.expand_prev_button.setEnabled(prev_ok)
         self.expand_next_button.setEnabled(next_ok)
         self.expand_reset_button.setEnabled(reset_ok)
@@ -1501,6 +1513,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # Search.
         scoped_shortcut(self.table, QKeySequence(Qt.Key.Key_K), self._on_add_to_known)
 
+        # F2: Qt's edit key — open the sentence editor for the focused word.
+        # Table-scoped like the rest, so it cannot fire from Search.
+        scoped_shortcut(self.table, QKeySequence(Qt.Key.Key_F2), self._edit_focused_word)
+
         # Ctrl+Return (and the keypad's Ctrl+Enter): confirm the selection.
         # A bare Return can NOT be used here: this dialog owns a Search field, and
         # a Japanese input method commits a composition with Return — the old
@@ -1561,18 +1577,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                     self._make_readonly_item(text, tooltip=tooltip, copy_text=copy_text, japanese=True),
                 )
 
-            # Frequency Rank — sort numerically, not lexically (issue #6).
-            # An unranked word carries inf so it stays last ascending.
-            rank = word.frequency_rank
-            self.table.setItem(
-                row,
-                5,
-                self._make_readonly_item(
-                    "-" if rank is None else str(rank),
-                    role=CellRole.NUMBER,
-                    sort_value=float("inf") if rank is None else float(rank),
-                ),
-            )
+            for column, text, sort_value in self._rank_cell_values(word):
+                self.table.setItem(
+                    row, column, self._make_readonly_item(text, role=CellRole.NUMBER, sort_value=sort_value)
+                )
 
             # Occurrences — times the word appears in this episode; sort
             # numerically so 15 ranks above 2 (Issue #88).
@@ -1625,6 +1633,16 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         if japanese:
             item.setFont(content_cell_font(self._content_style))
         return item
+
+    @staticmethod
+    def _rank_cell_values(chosen: TokenizedWord) -> tuple[tuple[int, str, float], ...]:
+        """``(column, text, sort_value)`` for Freq. Rank (issue #6: numeric sort;
+        unranked carries inf so it stays last ascending). One spec for
+        :meth:`_populate_table` and :meth:`_apply_pick_to_row`, so an edited row
+        — whose parsed token carries no rank until the processor re-ranks it —
+        prints "-" the way every unranked word does."""
+        rank = chosen.frequency_rank
+        return ((5, "-" if rank is None else str(rank), float("inf") if rank is None else float(rank)),)
 
     def _signal_cell_values(self, chosen: TokenizedWord) -> tuple[tuple[int, str, float], ...]:
         """``(column, text, sort_value)`` for the two sentence-signal columns.
@@ -1818,6 +1836,111 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             return None, None
         return self._words[original_index], original_index
 
+    # ------------------------------------------------------------------
+    # Edit word and sentence
+    # ------------------------------------------------------------------
+
+    @property
+    def _can_edit_sentences(self) -> bool:
+        return self._parse_sentence_fn is not None and not self._closing
+
+    def _index_for_row(self, row: int) -> int | None:
+        """The original word index behind a visual row, or ``None``."""
+        if row < 0:
+            return None
+        check_item = self.table.item(row, 0)
+        if check_item is None:
+            return None
+        original_index = check_item.data(Qt.ItemDataRole.UserRole)
+        if original_index is None or not (0 <= original_index < len(self._words)):
+            return None
+        return int(original_index)
+
+    def _shown_word(self, idx: int) -> TokenizedWord:
+        """What the row prints: the edit, else the sentence pick, else the word."""
+        edit = self._sentence_edits.get(idx)
+        return edit if edit is not None else self._chosen.get(idx, self._words[idx])
+
+    def _shown_line(self, idx: int) -> TokenizedWord:
+        """The pick widened by any active line expansion — the editor's seed.
+
+        Offsets shift by the merged prefix so the editor's nearest-start
+        preselection lands on the same word; the card front match usually
+        wins first anyway.
+        """
+        chosen = self._chosen.get(idx, self._words[idx])
+        window = self._expanded_window(chosen, idx)
+        if window is None:
+            return chosen
+        shift = window.prefix_len
+        return dataclasses.replace(
+            chosen,
+            sentence=window.text,
+            surface_start=chosen.surface_start + shift if chosen.surface_start >= 0 else -1,
+            surface_end=chosen.surface_end + shift if chosen.surface_end >= 0 else -1,
+            highlight_end=chosen.highlight_end + shift if chosen.highlight_end >= 0 else -1,
+        )
+
+    def _edit_focused_word(self) -> None:
+        _word, idx = self._focused_word()
+        if idx is not None:
+            self._edit_word(idx)
+
+    def _on_cell_double_clicked(self, row: int, column: int) -> None:
+        # Column 0 is the checkbox: its first click already toggled the row, and
+        # a second toggle is what the user asked for, not an editor.
+        if column == 0:
+            return
+        idx = self._index_for_row(row)
+        if idx is not None:
+            self._edit_word(idx)
+
+    def _edit_word(self, idx: int) -> None:
+        """Open the sentence editor for ``idx`` (one at a time; window-modal)."""
+        if not self._can_edit_sentences or self._sentence_editor is not None:
+            return
+        assert self._parse_sentence_fn is not None  # _can_edit_sentences
+        seed = self._sentence_edits.get(idx)
+        if seed is None:
+            seed = self._shown_line(idx)
+        editor = SentenceEditDialog(
+            seed, parse_fn=self._parse_sentence_fn, content_style=self._content_style, parent=self
+        )
+        self._sentence_editor = editor
+        editor.finished.connect(partial(self._on_sentence_editor_finished, idx, editor))
+        editor.open()
+
+    def _on_sentence_editor_finished(self, idx: int, editor: SentenceEditDialog, code: int) -> None:
+        if self._sentence_editor is editor:
+            self._sentence_editor = None
+        token = editor.result_word() if code == QDialog.DialogCode.Accepted else None
+        editor.deleteLater()
+        if token is None or self._closing:
+            return
+        self._apply_sentence_edit(idx, token)
+
+    def _apply_sentence_edit(self, idx: int, token: TokenizedWord) -> None:
+        self._sentence_edits[idx] = token
+        self._apply_pick_to_row(idx, token)
+        row = self._visual_row_for_index(idx)
+        if row is not None:
+            rank_cell = self.table.item(row, 5)
+            if rank_cell is not None:
+                rank_cell.setToolTip(self.tr("Frequency is looked up again for the edited word when the card is made."))
+        self._refresh_definition(token)
+        self._refresh_expansion_buttons()
+        logger.info(
+            "curator: sentence edit staged for word %d: %r -> %r", idx, self._words[idx].mined_form, token.mined_form
+        )
+
+    def _reset_sentence_edit(self, idx: int) -> None:
+        """Drop the edit and repaint the row from the pick (widened by any expansion)."""
+        if self._sentence_edits.pop(idx, None) is None:
+            return
+        self._apply_pick_to_row(idx, self._shown_line(idx))
+        self._refresh_definition(self._chosen.get(idx, self._words[idx]))
+        self._refresh_expansion_buttons()
+
     def _on_focus_timer_fired(self) -> None:
         """Debounced handler: refresh sentence picker, seek player, look up definition."""
         word = self._pending_word
@@ -1852,7 +1975,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # Dictionary pane: the CHOSEN variant, not the primary — for surface-mined
         # POS (nouns) the pick moves mined_form, so a word-keyed pane showed the
         # first occurrence's entry after the user picked another (Issue #108).
-        self._refresh_definition(chosen)
+        # An edited row shows the edited word's entry, for the same reason.
+        self._refresh_definition(self._sentence_edits.get(idx, chosen))
 
         # Line-expansion and frame-pick buttons follow the focused word.
         self._refresh_expansion_buttons()
@@ -2103,6 +2227,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         self._clip_overrides.pop(idx, None)
         self._line_expansions.pop(idx, None)
         self._screenshot_overrides.pop(idx, None)
+        # And a sentence edit, written against the old line's text.
+        self._sentence_edits.pop(idx, None)
         self._seed_clip_editor(chosen, idx)
 
         # Everything that describes the occurrence follows the pick, not just the
@@ -2171,6 +2297,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 item = self.table.item(row, column)
                 if item is not None:
                     update_table_item(item, text, tooltip=tooltip, copy_text=copy_text)
+            # A candidate variant inherits the primary's rank, so this is a
+            # no-op for a sentence pick; an edited row's token has none yet.
+            for column, text, sort_value in self._rank_cell_values(chosen):
+                item = self.table.item(row, column)
+                if item is not None:
+                    update_table_item(item, text, sort_value=sort_value)
         finally:
             if sorting:
                 self.table.setSortingEnabled(True)
@@ -2378,6 +2510,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         tracked worker at all just drains an empty set.
         """
         self._closing = True
+        editor = self._sentence_editor
+        if editor is not None:
+            # Window-modal child; it must not outlive the curator it edits for.
+            self._sentence_editor = None
+            editor.reject()
         self._focus_timer.stop()
         self._search_debounce_timer.stop()
         # Late results are dropped before touching any widget: every callback
@@ -2404,46 +2541,59 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
     def _on_table_context_menu(self, pos: QPoint) -> None:
         """Show a context menu with copy actions for the focused row."""
-        row = self.table.rowAt(pos.y())
-        if row < 0:
+        original_index = self._index_for_row(self.table.rowAt(pos.y()))
+        if original_index is None:
             return
 
-        check_item = self.table.item(row, 0)
-        if check_item is None:
-            return
-        original_index = check_item.data(Qt.ItemDataRole.UserRole)
-        if original_index is None or not (0 <= original_index < len(self._words)):
-            return
-
-        word = self._words[original_index]
         menu = QMenu(self)
-
+        # Copy verbs stay first: their positions are a contract the picker
+        # tests drive the menu by. The edit verbs follow a separator.
         copy_word_action = menu.addAction(self.tr("Copy word"))
         copy_sentence_action = menu.addAction(self.tr("Copy sentence"))
+        menu.addSeparator()
+        edit_action = menu.addAction(self.tr("Edit word and sentence…"))
+        if edit_action is not None:
+            # Display-only shortcut hint: the table's own F2 binding does the
+            # work, and a live QAction shortcut would be a second F2 in the
+            # same chain.
+            edit_action.setShortcut(QKeySequence(Qt.Key.Key_F2))
+            edit_action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
+            edit_action.setEnabled(self._can_edit_sentences)
+        reset_action = menu.addAction(self.tr("Reset word and sentence"))
+        if reset_action is not None:
+            reset_action.setEnabled(original_index in self._sentence_edits)
 
         vp = self.table.viewport()
         if vp is None:
             return
         action = menu.exec(vp.mapToGlobal(pos))
+        if action is None:
+            return
+        if action == edit_action:
+            self._edit_word(original_index)
+            return
+        if action == reset_action:
+            self._reset_sentence_edit(original_index)
+            return
         clipboard = QApplication.clipboard()
         if clipboard is None:
             return
-        # BOTH actions read the user's sentence pick, else the default — the same
-        # "chosen, else original" pattern as get_selected_words. Resolving it for
-        # the sentence alone is what left the menu handing back the primary
-        # occurrence's word (Issue #95 on the sentence, then the same leak on the
-        # word): for surface-mined POS (nouns) _swap_word_to_line rebuilds surface
-        # per candidate line, and mined_form IS the surface, so the pick moves
-        # column 1 too — see _pick_cell_values.
-        chosen = self._chosen.get(original_index, word)
+        # BOTH copies read what the row shows: the edit, else the user's sentence
+        # pick, else the default — the same resolution as get_selected_words.
+        # Resolving it for the sentence alone is what left the menu handing back
+        # the primary occurrence's word (Issue #95 on the sentence, then the same
+        # leak on the word): for surface-mined POS (nouns) _swap_word_to_line
+        # rebuilds surface per candidate line, and mined_form IS the surface, so
+        # the pick moves column 1 too — see _pick_cell_values.
+        shown = self._shown_word(original_index)
         if action == copy_word_action:
             # mined_form, not lemma: it is what column 1 shows and what becomes
             # the card front. unidic's lemma collapses kanji variants (想う→思う,
             # こと→事), so copying it handed back a different word than the one
             # being mined (Issue #107).
-            clipboard.setText(chosen.mined_form)
+            clipboard.setText(shown.mined_form)
         elif action == copy_sentence_action:
-            clipboard.setText(chosen.sentence)
+            clipboard.setText(shown.sentence)
 
     # ------------------------------------------------------------------
     # Bulk-action helpers
@@ -2887,12 +3037,20 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                     override = self._clip_overrides.get(original_index)
                     expansion = self._line_expansions.get(original_index, (0, 0))
                     frame = self._screenshot_overrides.get(original_index)
-                    if override is not None or expansion != (0, 0) or frame is not None:
+                    edited = self._sentence_edits.get(original_index)
+                    if override is not None or expansion != (0, 0) or frame is not None or edited is not None:
                         word = dataclasses.replace(
                             word,
                             clip_override=override if override is not None else word.clip_override,
                             line_expansion=expansion,
                             screenshot_override=frame if frame is not None else word.screenshot_override,
+                            # Intent, not the token: the processor re-tokenises the
+                            # text after line expansions and re-ranks the result.
+                            sentence_edit=(
+                                SentenceEdit(edited.sentence, edited.surface_start, edited.surface_end)
+                                if edited is not None
+                                else word.sentence_edit
+                            ),
                         )
                     selected.append(word)
         return selected
