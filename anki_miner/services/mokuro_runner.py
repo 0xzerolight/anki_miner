@@ -110,6 +110,8 @@ class MokuroRunnerService:
         def handle_line(line: str) -> None:
             if not line.strip():
                 return
+            if not is_progress_only(line):
+                tail.append(line)
             pages = _PAGES_RE.search(line)
             if pages is not None:
                 if progress_cb is not None:
@@ -119,7 +121,6 @@ class MokuroRunnerService:
                         (done / total) if total else None,
                     )
                 return
-            tail.append(line)
             if _MODEL_DOWNLOAD_RE.search(line):
                 if progress_cb is not None:
                     progress_cb(
@@ -163,6 +164,8 @@ class MokuroRunnerService:
         if result.state is SupervisedState.TIMED_OUT:
             raise MokuroError(f"mokuro timed out after {_VOLUME_TIMEOUT_S}s on {volume.source.name}")
         if result.state is SupervisedState.FAILED:
+            if result.returncode is None and result.error is not None:
+                raise MokuroError(f"mokuro process failed: {result.error}") from result.error
             raise MokuroError(self._failure_message(volume, tail, result.returncode))
         # Exit 0 is not success: mokuro returns 0 after logging its own errors.
         processed = seen["processed"]

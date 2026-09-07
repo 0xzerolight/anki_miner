@@ -159,6 +159,21 @@ def test_timeout_and_nonzero_exit_raise(monkeypatch, tmp_path, config, state):
         mr.MokuroRunnerService(config).process_volume(vol, mr.MokuroOptions())
 
 
+def test_nonzero_exit_failure_message_includes_the_tail(monkeypatch, tmp_path, config):
+    vol = _volume(tmp_path)
+    monkeypatch.setattr(mr, "run_supervised", _fake_run(["Traceback: boom"], SupervisedState.FAILED, 1))
+    with pytest.raises(MokuroError, match="boom"):
+        mr.MokuroRunnerService(config).process_volume(vol, mr.MokuroOptions())
+
+
+def test_spawn_oserror_without_returncode_is_a_failure(monkeypatch, tmp_path, config):
+    vol = _volume(tmp_path)
+    error = OSError(8, "Exec format error")
+    monkeypatch.setattr(mr, "run_supervised", _fake_run([], SupervisedState.FAILED, None, error))
+    with pytest.raises(MokuroError, match="Exec format error"):
+        mr.MokuroRunnerService(config).process_volume(vol, mr.MokuroOptions())
+
+
 def test_progress_only_filter():
     assert mr.is_progress_only("Processing pages...:  12%|█▏        | 3/25 [00:05<00:40]")
     assert not mr.is_progress_only("2026 | INFO | mokuro.run:run:128 - Processing 1/1: /m")
