@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Manga OCR tool (Utilities → Manga OCR).** Runs mokuro on a volume folder or a series folder and writes the `.mokuro` files Reading → Manga mines; mokuro installs in-app from Settings → Transcription & Alignment (a pinned uv binary creates a managed Python 3.12 environment under `~/.anki_miner/uv/` and installs `mokuro==0.2.5` with uv's automatic CUDA/CPU torch selection). Exit code 0 from mokuro is not trusted — success is its own "Processed successfully" receipt plus the sidecar on disk. System Health gains a mokuro row.
 
 ### Changed
 
