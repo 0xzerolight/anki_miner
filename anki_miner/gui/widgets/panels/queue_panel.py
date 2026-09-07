@@ -36,6 +36,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QSizePolicy,
     QVBoxLayout,
+    QWidget,
 )
 
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
@@ -301,13 +302,23 @@ class QueuePanel(QFrame):
 
         item = self._items.get(id(widget))
         if item is None:
-            item = self.queue.add_item(video, subtitle, widget.display_name, widget.subtitle_offset)
+            item = self.queue.add_item(
+                video,
+                subtitle,
+                widget.display_name,
+                widget.subtitle_offset,
+                secondary_folder=widget.secondary_folder,
+                secondary_offset=widget.secondary_offset,
+            )
             self._items[id(widget)] = item
             widget.item_id = item.id
             return item
 
         # Edited: same identity, new inputs. The receipts describe episodes that
         # are no longer this row's, so they go with the folders that produced them.
+        # The translation folder is deliberately NOT part of that test: a
+        # committed pair is already in Anki, and swapping the translations is no
+        # reason to mine it again.
         if (item.video_folder, item.subtitle_folder) != (video, subtitle):
             item.video_folder = video
             item.subtitle_folder = subtitle
@@ -315,6 +326,8 @@ class QueuePanel(QFrame):
             widget.set_status("pending")
         item.display_name = widget.display_name
         item.subtitle_offset = widget.subtitle_offset
+        item.secondary_folder = widget.secondary_folder
+        item.secondary_offset = widget.secondary_offset
         return item
 
     def _remove_item(self, widget: QueueItemWidget) -> None:
@@ -356,7 +369,13 @@ class QueuePanel(QFrame):
         layout = QVBoxLayout()
 
         # Shared label-column width so every labeled row lines up.
-        label_w = field_label_width(self.tr("Video Folder:"), self.tr("Subtitle Folder:"), self.tr("Subtitle Offset:"))
+        label_w = field_label_width(
+            self.tr("Video Folder:"),
+            self.tr("Subtitle Folder:"),
+            self.tr("Subtitle Offset:"),
+            self.tr("Translation Folder:"),
+            self.tr("Translation Offset:"),
+        )
 
         video_selector = FileSelector(
             label=self.tr("Video Folder:"),
@@ -379,6 +398,20 @@ class QueuePanel(QFrame):
             subtitle_selector.set_path(str(current_subtitle))
         layout.addWidget(subtitle_selector)
 
+        # Secondary-language subtitles (F7). Its own folder: episode-number
+        # pairing consumes each subtitle once, so the mining track and the
+        # translation track cannot share one folder.
+        secondary_selector = FileSelector(
+            label=self.tr("Translation Folder:"),
+            file_mode=False,
+            label_width=label_w,
+            history_key="video.batch.inputs",
+        )
+        if widget.secondary_folder:
+            secondary_selector.set_path(str(widget.secondary_folder))
+        secondary_selector.setVisible(self.secondary_subtitle_enabled)
+        layout.addWidget(secondary_selector)
+
         folder_error = QLabel(self.tr("Choose existing video and subtitle folders."))
         folder_error.setWordWrap(True)
         folder_error.hide()
@@ -398,6 +431,27 @@ class QueuePanel(QFrame):
         offset_layout.addWidget(offset_spinbox)
         offset_layout.addStretch()
         layout.addLayout(offset_layout)
+
+        # Wrapped so the gate hides label and spin together.
+        secondary_offset_row = QWidget()
+        secondary_offset_layout = QHBoxLayout(secondary_offset_row)
+        secondary_offset_layout.setContentsMargins(0, 0, 0, 0)
+        secondary_offset_label = QLabel(self.tr("Translation Offset:"))
+        secondary_offset_label.setObjectName("field-label")
+        secondary_offset_label.setFixedWidth(label_w)
+        secondary_offset_spinbox = QDoubleSpinBox()
+        secondary_offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
+        secondary_offset_spinbox.setSingleStep(0.5)
+        secondary_offset_spinbox.setValue(widget.secondary_offset)
+        secondary_offset_spinbox.setSuffix(self.tr(" seconds"))
+        secondary_offset_spinbox.setToolTip(
+            self.tr("Shift the translation subtitles only (positive = later, negative = earlier)")
+        )
+        secondary_offset_layout.addWidget(secondary_offset_label)
+        secondary_offset_layout.addWidget(secondary_offset_spinbox)
+        secondary_offset_layout.addStretch()
+        secondary_offset_row.setVisible(self.secondary_subtitle_enabled)
+        layout.addWidget(secondary_offset_row)
 
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
 
@@ -435,18 +489,29 @@ class QueuePanel(QFrame):
             if folders is None:
                 return
             video_folder, subtitle_folder = folders
+            # Optional, so it never blocks OK: a folder that has since gone is
+            # dropped rather than refused, and the series mines with empty
+            # Translation fields — what every other missing-translation case does.
+            secondary_folder = None
+            if self.secondary_subtitle_enabled:
+                secondary_path = secondary_selector.path_or_none()
+                if secondary_path is not None and secondary_selector.is_valid():
+                    secondary_folder = Path(secondary_path)
 
-            widget.set_folders(video_folder, subtitle_folder)
+            widget.set_folders(video_folder, subtitle_folder, secondary_folder)
 
             from anki_miner.utils.file_pairing import FilePairMatcher
 
             try:
-                pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, subtitle_folder)
+                pairs = FilePairMatcher.find_pairs_by_episode_number(
+                    video_folder, subtitle_folder, secondary_folder=secondary_folder
+                )
                 widget.set_episode_count(len(pairs))
             except Exception as e:
                 logger.warning("Failed to count episodes for %s: %s", widget.display_name, e)
 
             widget.subtitle_offset = offset_spinbox.value()
+            widget.secondary_offset = secondary_offset_spinbox.value() if secondary_folder else 0.0
             self._bind_widget(widget)
             self._apply_view()
             self._update_stats()
@@ -748,6 +813,8 @@ class QueuePanel(QFrame):
         cards_created: int,
         retry_count: int,
         error_message: str,
+        secondary_folder: Path | None = None,
+        secondary_offset: float = 0.0,
     ) -> QueueItem | None:
         """Re-add one row from a recovery snapshot, keeping its identity (D16-C).
 
@@ -763,8 +830,9 @@ class QueuePanel(QFrame):
         widget = QueueItemWidget(display_name=display_name, parent=self.list_widget)
         widget.removed.connect(lambda: self._remove_item(widget))
         widget.edited.connect(lambda: self._edit_item(widget))
-        widget.set_folders(video_folder, subtitle_folder)
+        widget.set_folders(video_folder, subtitle_folder, secondary_folder)
         widget.subtitle_offset = subtitle_offset
+        widget.secondary_offset = secondary_offset
         self.register_widget(widget)
 
         item = self._items.get(id(widget))
