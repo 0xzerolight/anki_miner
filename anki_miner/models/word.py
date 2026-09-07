@@ -101,6 +101,26 @@ def select_mined_form(
     return surface
 
 
+@dataclass(frozen=True)
+class SentenceEdit:
+    """The Word Curator's "edit word and sentence" intent.
+
+    ``text`` is the sentence as the user rewrote it (already normalised by the
+    mining parser, because the editor's preview came out of it); ``target_start``
+    / ``target_end`` are the character span, inside ``text``, of the surface of
+    the word the user chose to mine. Stamped by the curator, materialised by
+    ``services.sentence_edit.resolve_sentence_edit`` — the only reader — which
+    re-tokenises ``text`` through the same parser and rebuilds the word from the
+    token at that span. Offsets rather than the word string: two tokens can share
+    a surface on one line, and the parser's own span is the one identity that
+    cannot be misread.
+    """
+
+    text: str
+    target_start: int
+    target_end: int
+
+
 @dataclass
 class TokenizedWord:
     """A word extracted from subtitles with timing information."""
@@ -220,6 +240,16 @@ class TokenizedWord:
     # +line expansion has already moved the window it is matched against.
     # Read by anki_note_builder.build_note only (the sentence_translation field).
     sentence_translation: str = ""
+    # Curator "edit word and sentence" intent (a mistranscribed line, a mokuro
+    # OCR slip). None = untouched (every non-interactive path). Stamped by the
+    # Word Curator via get_selected_words, materialised by EpisodeProcessor
+    # through services.sentence_edit.resolve_sentence_edit AFTER line-expansion
+    # materialisation — the edit's text was seeded from the already-merged line,
+    # so it is the last word on the sentence while the merged timing stays the
+    # media window. Absorbed on materialisation (the rebuilt word carries None),
+    # so a second pass cannot double-apply it. The dialog stores intent; the
+    # processor re-tokenises and rebuilds spans/furigana/readings.
+    sentence_edit: SentenceEdit | None = None
     # The parser's resolved card front, set at the emit site. Non-empty means
     # "already decided" — the profile's MinedFormPolicy answered, and for a
     # non-ja token select_mined_form's JA POS table would answer wrongly
