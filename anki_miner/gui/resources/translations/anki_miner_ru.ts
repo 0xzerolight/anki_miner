@@ -1368,12 +1368,24 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Смещение субтитров:</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">Смещение перевода:</translation>
+    </message>
+    <message>
         <source> seconds</source>
         <translation> секунд</translation>
     </message>
     <message>
         <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
         <translation>Настройте тайминг субтитров для всех эпизодов (положительное значение = позже, отрицательное = раньше)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">Сдвинуть только субтитры перевода (положительное = позже, отрицательное = раньше)</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -1390,6 +1402,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Cancel processing</source>
         <translation>Отменить обработку</translation>
+    </message>
+    <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -1576,8 +1592,8 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Субтитры перевода</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
-        <translation>Загрузите второй файл субтитров на вашем языке рядом с файлом на языке майнинга: его строка отображается под строкой в предпросмотре Куратора слов и может быть сохранена в поле перевода. Включите эту функцию в разделе Настройки -&gt; Фильтрация.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -6570,6 +6586,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation> • Смещение: %1</translation>
     </message>
     <message>
+        <source> • Translations</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 episodes • %2 cards created</source>
         <translation>%1 эпизодов • создано карточек: %2</translation>
     </message>
@@ -6646,6 +6666,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>Смещение субтитров:</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">Смещение перевода:</translation>
+    </message>
+    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation>Выберите существующие папки с видео и субтитрами.</translation>
     </message>
@@ -6656,6 +6684,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>Скорректировать тайминг субтитров (положительное = позже, отрицательное = раньше)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">Сдвинуть только субтитры перевода (положительное = позже, отрицательное = раньше)</translation>
     </message>
     <message>
         <source>Empty Queue</source>

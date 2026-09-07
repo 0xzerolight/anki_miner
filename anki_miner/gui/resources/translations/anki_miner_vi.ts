@@ -1366,12 +1366,24 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Độ lệch phụ đề:</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">Độ lệch phụ đề dịch:</translation>
+    </message>
+    <message>
         <source> seconds</source>
         <translation> giây</translation>
     </message>
     <message>
         <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
         <translation>Điều chỉnh thời gian phụ đề cho tất cả các tập (dương = trễ hơn, âm = sớm hơn)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">Chỉ dời thời gian phụ đề dịch (dương = trễ hơn, âm = sớm hơn)</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -1388,6 +1400,10 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     <message>
         <source>Cancel processing</source>
         <translation>Hủy xử lý</translation>
+    </message>
+    <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -1572,8 +1588,8 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Phụ đề ngôn ngữ thứ hai</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
-        <translation>Tải tệp phụ đề thứ hai bằng ngôn ngữ của bạn, đặt bên cạnh tệp bằng ngôn ngữ khai thác: dòng của nó hiển thị dưới dòng kia trong bản xem trước Word Curator và có thể được lưu vào trường Bản dịch. Bật trong Cài đặt -&gt; Lọc.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -6542,6 +6558,10 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation> • Độ lệch: %1</translation>
     </message>
     <message>
+        <source> • Translations</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 episodes • %2 cards created</source>
         <translation>%1 tập • đã tạo %2 thẻ</translation>
     </message>
@@ -6618,6 +6638,14 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
         <translation>Độ lệch phụ đề:</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">Độ lệch phụ đề dịch:</translation>
+    </message>
+    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation>Chọn các thư mục video và phụ đề hiện có.</translation>
     </message>
@@ -6628,6 +6656,10 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>Điều chỉnh thời điểm phụ đề (dương = muộn hơn, âm = sớm hơn)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">Chỉ dời thời gian phụ đề dịch (dương = trễ hơn, âm = sớm hơn)</translation>
     </message>
     <message>
         <source>Empty Queue</source>

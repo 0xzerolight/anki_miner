@@ -1366,12 +1366,24 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>字幕オフセット:</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">翻訳字幕オフセット:</translation>
+    </message>
+    <message>
         <source> seconds</source>
         <translation> 秒</translation>
     </message>
     <message>
         <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
         <translation>すべてのエピソードの字幕タイミングを調整します（正 = 遅く、負 = 早く）</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">翻訳字幕のみのタイミングを調整します（正の値 = 遅く、負の値 = 早く）</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -1388,6 +1400,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Cancel processing</source>
         <translation>処理をキャンセル</translation>
+    </message>
+    <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -1572,8 +1588,8 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>翻訳字幕</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
-        <translation>マイニング言語の字幕と並べて、自分の言語の字幕ファイルをもう1つ読み込めます。単語キュレーターのプレビューではマイニング言語の行の下に表示され、翻訳フィールドに保存できます。設定 -&gt; フィルタリングで有効にしてください。</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -6542,6 +6558,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation> • オフセット: %1</translation>
     </message>
     <message>
+        <source> • Translations</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 episodes • %2 cards created</source>
         <translation>%1 エピソード • %2 枚のカード作成済み</translation>
     </message>
@@ -6618,6 +6638,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>字幕オフセット:</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">翻訳字幕オフセット:</translation>
+    </message>
+    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation>既存の動画フォルダと字幕フォルダを選択してください。</translation>
     </message>
@@ -6628,6 +6656,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>字幕のタイミングを調整します（正の値 = 遅く、負の値 = 早く）</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">翻訳字幕のみのタイミングを調整します（正の値 = 遅く、負の値 = 早く）</translation>
     </message>
     <message>
         <source>Empty Queue</source>

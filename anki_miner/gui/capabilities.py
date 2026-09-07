@@ -145,11 +145,21 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Capabilities",
             "Load a second subtitle file in your own language beside the mining-language one: it shows under "
             "the line in the Word Curator preview and can be saved to a Translation field. "
-            "Turn it on under Settings -> Filtering.",
+            "On Video -> Batch, point it at a folder of translation subtitles instead and they pair to the "
+            "videos by episode number. Turn it on under Settings -> Filtering.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("video", "single"),
-        keywords=("translation", "bilingual", "english subtitles", "second subtitle", "secondary", "dual subtitles"),
+        keywords=(
+            "translation",
+            "bilingual",
+            "english subtitles",
+            "second subtitle",
+            "secondary",
+            "dual subtitles",
+            "batch",
+            "folder",
+        ),
     ),
     Capability(
         id="deck-builder",

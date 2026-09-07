@@ -1366,12 +1366,24 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Offset Subtitel:</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">Offset Subtitel Terjemahan:</translation>
+    </message>
+    <message>
         <source> seconds</source>
         <translation> detik</translation>
     </message>
     <message>
         <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
         <translation>Sesuaikan waktu subtitel untuk semua episode (positif = lebih lambat, negatif = lebih awal)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">Geser subtitel terjemahan saja (positif = lebih lambat, negatif = lebih awal)</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -1388,6 +1400,10 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     <message>
         <source>Cancel processing</source>
         <translation>Batalkan pemrosesan</translation>
+    </message>
+    <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -1572,8 +1588,8 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Subtitel bahasa sekunder</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
-        <translation>Muat berkas subtitel kedua dalam bahasa Anda sendiri, di samping subtitel bahasa mining: barisnya muncul di bawah baris tersebut pada pratinjau Word Curator dan dapat disimpan ke bidang Terjemahan. Aktifkan di Pengaturan -&gt; Penyaringan.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -6542,6 +6558,10 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation> • Offset: %1</translation>
     </message>
     <message>
+        <source> • Translations</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 episodes • %2 cards created</source>
         <translation>%1 episode • %2 kartu dibuat</translation>
     </message>
@@ -6618,6 +6638,14 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Offset Subtitel:</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">Offset Subtitel Terjemahan:</translation>
+    </message>
+    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation>Pilih folder video dan subtitel yang sudah ada.</translation>
     </message>
@@ -6628,6 +6656,10 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>Sesuaikan pengaturan waktu subtitel (positif = lebih lambat, negatif = lebih awal)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">Geser subtitel terjemahan saja (positif = lebih lambat, negatif = lebih awal)</translation>
     </message>
     <message>
         <source>Empty Queue</source>

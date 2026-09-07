@@ -1366,12 +1366,24 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>字幕偏移：</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">翻译偏移：</translation>
+    </message>
+    <message>
         <source> seconds</source>
         <translation> 秒</translation>
     </message>
     <message>
         <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
         <translation>调整所有剧集的字幕时间（正值 = 延后，负值 = 提前）</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">仅偏移翻译字幕（正值 = 延后，负值 = 提前）</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -1388,6 +1400,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Cancel processing</source>
         <translation>取消处理</translation>
+    </message>
+    <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -1572,8 +1588,8 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>第二语言字幕</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
-        <translation>在挖词语言字幕旁加载一份你自己语言的第二字幕文件：其内容会显示在单词整理器预览中挖词语言行的下方，并可保存到翻译字段。在设置 -&gt; 过滤中开启此功能。</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -6542,6 +6558,10 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation> • 偏移：%1</translation>
     </message>
     <message>
+        <source> • Translations</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 episodes • %2 cards created</source>
         <translation>%1 集 • 已创建 %2 张卡片</translation>
     </message>
@@ -6618,6 +6638,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation>字幕偏移：</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">翻译偏移：</translation>
+    </message>
+    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation>选择已有的视频和字幕文件夹。</translation>
     </message>
@@ -6628,6 +6656,10 @@ Index files on disk will be left untouched because the folder could not be prove
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>调整字幕时间（正值 = 延后，负值 = 提前）</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">仅偏移翻译字幕（正值 = 延后，负值 = 提前）</translation>
     </message>
     <message>
         <source>Empty Queue</source>

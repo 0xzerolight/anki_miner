@@ -1367,12 +1367,24 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
         <translation>Untertitel-Versatz:</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">Übersetzungs-Versatz:</translation>
+    </message>
+    <message>
         <source> seconds</source>
         <translation> Sekunden</translation>
     </message>
     <message>
         <source>Adjust subtitle timing for all episodes (positive = later, negative = earlier)</source>
         <translation>Untertitel-Timing für alle Folgen anpassen (positiv = später, negativ = früher)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">Nur die Übersetzungs-Untertitel verschieben (positiv = später, negativ = früher)</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -1389,6 +1401,10 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
     <message>
         <source>Cancel processing</source>
         <translation>Verarbeitung abbrechen</translation>
+    </message>
+    <message>
+        <source>That translation subtitle folder no longer exists.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -1574,8 +1590,8 @@ Indexdateien auf der Festplatte werden unverändert gelassen, da nicht nachgewie
         <translation>Zweitsprachige Untertitel</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. Turn it on under Settings -&gt; Filtering.</source>
-        <translation>Eine zweite Untertiteldatei in Ihrer eigenen Sprache neben der in der Mining-Sprache laden: sie erscheint in der Vorschau des Wort-Kurators unter der Zeile in der Mining-Sprache und lässt sich in einem Übersetzungsfeld speichern. Unter Einstellungen -&gt; Filterung aktivieren.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -6556,6 +6572,10 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
         <translation> • Versatz: %1</translation>
     </message>
     <message>
+        <source> • Translations</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 episodes • %2 cards created</source>
         <translation>%1 Folgen • %2 Karten erstellt</translation>
     </message>
@@ -6632,6 +6652,14 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
         <translation>Untertitel-Versatz:</translation>
     </message>
     <message>
+        <source>Translation Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Translation Offset:</source>
+        <translation type="unfinished">Übersetzungs-Versatz:</translation>
+    </message>
+    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation>Wählen Sie vorhandene Video- und Untertitelordner.</translation>
     </message>
@@ -6642,6 +6670,10 @@ Indexdateien auf der Festplatte bleiben unangetastet, da der Ordner nicht nachwe
     <message>
         <source>Adjust subtitle timing (positive = later, negative = earlier)</source>
         <translation>Untertitel-Timing anpassen (positiv = später, negativ = früher)</translation>
+    </message>
+    <message>
+        <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished">Nur die Übersetzungs-Untertitel verschieben (positiv = später, negativ = früher)</translation>
     </message>
     <message>
         <source>Empty Queue</source>
