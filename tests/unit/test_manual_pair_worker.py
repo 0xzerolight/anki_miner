@@ -6,16 +6,18 @@ from unittest.mock import MagicMock
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.gui.workers._queue_worker_base import CurationEpisode
 from anki_miner.gui.workers.manual_pair_worker import ManualPairWorkerThread
 from anki_miner.models.processing import ProcessingResult
 
 
-def _pair(tmp_path, n):
+def _pair(tmp_path, n, secondary=None):
+    """Stand-in for a ``FilePair`` — including its optional translation track."""
     v = tmp_path / f"ep{n}.mkv"
     s = tmp_path / f"ep{n}.ass"
     v.touch()
     s.touch()
-    return SimpleNamespace(video=v, subtitle=s)
+    return SimpleNamespace(video=v, subtitle=s, secondary=secondary)
 
 
 def _season_word(surface="食べる"):
@@ -87,7 +89,10 @@ def test_curation_attrs_published_at_curator_time(tmp_path, qapp):
     assert captured["subtitle"] == p1.subtitle
     assert captured["offset"] == 2.5
     assert captured["processor"] is proc
-    assert captured["map"] == {p1.video: (p1.subtitle, 2.5), p2.video: (p2.subtitle, 2.5)}
+    assert captured["map"] == {
+        p1.video: CurationEpisode(p1.subtitle, 2.5),
+        p2.video: CurationEpisode(p2.subtitle, 2.5),
+    }
     assert worker._curation_media_map is None
 
 
@@ -602,3 +607,95 @@ def test_neither_processor_nor_factory_raises(tmp_path, qapp):
     """Supplying neither episode_processor nor processor_factory raises ValueError."""
     with pytest.raises(ValueError, match="Either episode_processor or processor_factory"):
         ManualPairWorkerThread(None, [_pair(tmp_path, 1)])
+
+
+def test_worker_passes_each_pair_s_translation_track(tmp_path, qapp):
+    """F7 in batch: the per-episode track rides on FilePair.secondary, while the
+    offset is one value for the whole quick run."""
+    proc = _ok_processor()
+    trans = tmp_path / "ep1.en.srt"
+    trans.touch()
+    pairs = [_pair(tmp_path, 1, secondary=trans), _pair(tmp_path, 2)]
+
+    worker = ManualPairWorkerThread(proc, pairs, secondary_subtitle_offset=-1.5)
+    worker.run()
+
+    first, second = proc.process_episode.call_args_list
+    assert first.kwargs["secondary_subtitle_file"] == trans
+    assert first.kwargs["secondary_subtitle_offset"] == -1.5
+    assert second.kwargs["secondary_subtitle_file"] is None
+    assert second.kwargs["secondary_subtitle_offset"] == -1.5
+
+
+def test_worker_defaults_to_no_translation_track(tmp_path, qapp):
+    proc = _ok_processor()
+    worker = ManualPairWorkerThread(proc, [_pair(tmp_path, 1)])
+    worker.run()
+
+    kwargs = proc.process_episode.call_args.kwargs
+    assert kwargs["secondary_subtitle_file"] is None
+    assert kwargs["secondary_subtitle_offset"] == 0.0
+
+
+def test_curation_attrs_publish_the_pair_s_translation_track(tmp_path, qapp):
+    """The GUI bridge reads these while the worker is parked in the curator."""
+    proc = MagicMock()
+    proc.config = SimpleNamespace(subtitle_offset=0.0)
+    seen = {}
+
+    def _capture(*_a, **_k):
+        seen["secondary"] = worker._curation_secondary
+        seen["offset"] = worker._curation_secondary_offset
+        return SimpleNamespace(cards_created=0)
+
+    proc.process_episode.side_effect = _capture
+    trans = tmp_path / "ep1.en.srt"
+    trans.touch()
+
+    worker = ManualPairWorkerThread(proc, [_pair(tmp_path, 1, secondary=trans)], secondary_subtitle_offset=2.0)
+    worker.run()
+
+    assert seen == {"secondary": trans, "offset": 2.0}
+
+
+def test_season_passes_both_carry_the_translation_track(tmp_path, qapp):
+    """Pre-pass AND mine pass: the curator's Translation column is drawn from
+    the pre-pass and the card text from the mine pass, so both have to carry
+    the track or the two disagree."""
+    proc = _season_processor()
+    trans = tmp_path / "ep1.en.srt"
+    trans.touch()
+    p1 = _pair(tmp_path, 1, secondary=trans)
+    p2 = _pair(tmp_path, 2)
+
+    worker = ManualPairWorkerThread(proc, [p1, p2], curation_callback=lambda pool: pool, secondary_subtitle_offset=0.5)
+    worker.run()
+
+    by_video: dict = {}
+    for call in proc.process_episode.call_args_list:
+        by_video.setdefault(call.args[0], []).append(call.kwargs)
+    assert len(by_video[p1.video]) == 2  # pre-pass + mine pass
+    assert all(k["secondary_subtitle_file"] == trans for k in by_video[p1.video])
+    assert all(k["secondary_subtitle_file"] is None for k in by_video[p2.video])
+    assert all(k["secondary_subtitle_offset"] == 0.5 for calls in by_video.values() for k in calls)
+
+
+def test_season_media_map_carries_each_episode_s_translation(tmp_path, qapp):
+    proc = _season_processor()
+    trans = tmp_path / "ep2.en.srt"
+    trans.touch()
+    p1 = _pair(tmp_path, 1)
+    p2 = _pair(tmp_path, 2, secondary=trans)
+    captured = {}
+
+    def cb(pool):
+        captured["map"] = dict(worker._curation_media_map)
+        return []
+
+    worker = ManualPairWorkerThread(proc, [p1, p2], curation_callback=cb, secondary_subtitle_offset=3.0)
+    worker.run()
+
+    assert captured["map"] == {
+        p1.video: CurationEpisode(p1.subtitle, 2.5, None, 3.0),
+        p2.video: CurationEpisode(p2.subtitle, 2.5, trans, 3.0),
+    }

@@ -54,6 +54,7 @@ import logging
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from PyQt6.QtCore import Qt, pyqtSignal
@@ -98,6 +99,25 @@ RETRY_DELAY_S = 8.0
 #: How often a paused run re-checks its gate. It is asleep either way; the poll
 #: only bounds how long a cancel can take to be noticed.
 _PAUSE_POLL_S = 0.1
+
+
+@dataclass(frozen=True)
+class CurationEpisode:
+    """One episode's media inputs, as published to the curator's season map.
+
+    Both batch workers (``ManualPairWorkerThread``, ``BatchQueueWorkerThread``)
+    park in the curator holding a snapshot of every episode in the run, so
+    cross-episode word focus can rebuild the player's context without touching
+    the worker after it unparks. Frozen, and read off the GUI thread — never a
+    live worker attribute.
+    """
+
+    subtitle: Path
+    offset: float
+    #: Secondary-language subtitle for this episode (F7), or None.
+    secondary: Path | None = None
+    secondary_offset: float = 0.0
+
 
 # The progress adapter is constructed inside each concrete worker's item body,
 # while the warning signal lives here. Run context bridges those existing call
