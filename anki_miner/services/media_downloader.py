@@ -46,6 +46,11 @@ logger = logging.getLogger(__name__)
 _DOWNLOAD_TIMEOUT_S = 3 * 60 * 60
 _PROBE_TIMEOUT_S = 120.0
 
+#: How many playlist entries one probe fetches. The picker dialog shows what
+#: came back and says so when the playlist is longer; a cap keeps a 5,000-video
+#: channel from turning one button press into a multi-minute probe.
+PLAYLIST_PROBE_MAX = 500
+
 # Human-readable output name; the id suffix disambiguates same-titled videos.
 _OUTPUT_TEMPLATE = "%(title)s [%(id)s].%(ext)s"
 
@@ -117,6 +122,29 @@ class UrlTracks:
     auto_sub_langs: tuple[str, ...]
     audio_langs: tuple[str, ...]
     has_auto_translations: bool
+
+
+@dataclass(frozen=True)
+class DownloadPlaylistEntry:
+    """One playlist entry, as seen by flat extraction.
+
+    ``index`` is the 1-based position among the *usable* entries, which is what
+    the picker's range expression selects on — dropped private/deleted entries
+    would otherwise make the numbers the user sees disagree with the ones they
+    type.
+    """
+
+    index: int
+    title: str
+    url: str
+    duration_s: int | None
+
+
+@dataclass(frozen=True)
+class DownloadPlaylist:
+    title: str
+    entries: tuple[DownloadPlaylistEntry, ...]
+    total_count: int | None
 
 
 class MediaDownloaderService:
@@ -285,6 +313,70 @@ class MediaDownloaderService:
             auto_sub_langs=auto,
             audio_langs=tuple(audio_langs),
             has_auto_translations=has_translations,
+        )
+
+    def probe_playlist(
+        self, url: str, limit: int = PLAYLIST_PROBE_MAX, timeout_s: float = _PROBE_TIMEOUT_S
+    ) -> DownloadPlaylist:
+        """List the entries of the playlist at *url*, without downloading.
+
+        Site-agnostic on purpose: unlike ``YouTubeFetcherService.probe_playlist``,
+        which requires each entry id to match an 11-char YouTube video-id regex,
+        an entry here needs only a resolvable URL — so Bilibili collections,
+        Vimeo showcases and SoundCloud sets all expand.
+
+        Raises:
+            YtdlpNotFoundError: the yt-dlp executable cannot be located/run.
+            MediaDownloadError: *url* is not a playlist, holds no usable entry,
+                or the probe itself failed.
+        """
+        cmd: list[str] = [
+            self._ytdlp(),
+            "--ignore-config",
+            "--skip-download",
+            "--flat-playlist",
+            "--dump-single-json",
+            "--playlist-items",
+            f"1:{limit}",
+        ]
+        data = self._probe_json(cmd, url, timeout_s, op="yt-dlp playlist probe")
+
+        raw_entries = data.get("entries")
+        if not isinstance(raw_entries, list):
+            raise MediaDownloadError(
+                "That URL is not a playlist (yt-dlp reported no entries). " "Paste a playlist, channel or album URL."
+            )
+
+        entries: list[DownloadPlaylistEntry] = []
+        for raw in raw_entries:
+            if not isinstance(raw, dict):
+                continue
+            entry_url = raw.get("url") or raw.get("webpage_url")
+            if not entry_url:
+                logger.debug("playlist probe: skipping entry with no URL")
+                continue
+            raw_duration = raw.get("duration")
+            entries.append(
+                DownloadPlaylistEntry(
+                    index=len(entries) + 1,
+                    title=str(raw.get("title") or entry_url),
+                    url=str(entry_url),
+                    duration_s=int(raw_duration) if isinstance(raw_duration, (int, float)) else None,
+                )
+            )
+
+        if not entries:
+            raise MediaDownloadError(
+                "The playlist has no usable entries — every one is private, deleted, or unreachable."
+            )
+
+        raw_count = data.get("playlist_count")
+        total_count = int(raw_count) if isinstance(raw_count, (int, float)) else None
+        logger.info("playlist probe ok: entries=%d total=%s", len(entries), total_count)
+        return DownloadPlaylist(
+            title=str(data.get("title") or "Playlist"),
+            entries=tuple(entries),
+            total_count=total_count,
         )
 
     def _probe_json(self, cmd: list[str], url: str, timeout_s: float, *, op: str) -> dict[str, Any]:

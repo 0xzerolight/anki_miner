@@ -879,3 +879,109 @@ class TestProbeTracks:
         monkeypatch.setattr(md, "run_supervised", fake_run)
         with pytest.raises(BotDetectionError):
             service.probe_tracks("https://example.com/v")
+
+
+class TestProbePlaylist:
+    @staticmethod
+    def _payload(entries: list[object] | None = None, **overrides: object) -> str:
+        data: dict[str, object] = {
+            "title": "My List",
+            "playlist_count": 3,
+            "entries": (
+                entries
+                if entries is not None
+                else [
+                    {"title": "One", "url": "https://example.com/1", "duration": 61},
+                    {"title": "Two", "url": "https://example.com/2", "duration": 62.5},
+                    {"title": "Three", "url": "https://example.com/3", "duration": None},
+                ]
+            ),
+        }
+        data.update(overrides)
+        return json.dumps(data)
+
+    def _probe(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        service: MediaDownloaderService,
+        stdout: str,
+        **kwargs: Any,
+    ) -> tuple[MagicMock, Any]:
+        recorder, fake_run = _scripted_probe(stdout=stdout)
+        monkeypatch.setattr(md, "run_supervised", fake_run)
+        return recorder, service.probe_playlist("https://example.com/list", **kwargs)
+
+    def test_command_shape(self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService) -> None:
+        recorder, _ = self._probe(monkeypatch, service, self._payload(), limit=50)
+        cmd = _cmd(recorder)
+        assert "--flat-playlist" in cmd
+        assert "--dump-single-json" in cmd
+        assert "--no-playlist" not in cmd
+        assert cmd[cmd.index("--playlist-items") + 1] == "1:50"
+        assert cmd[-2:] == ["--", "https://example.com/list"]
+
+    def test_entries_are_numbered_from_one(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        _, pl = self._probe(monkeypatch, service, self._payload())
+        assert [e.index for e in pl.entries] == [1, 2, 3]
+        assert pl.entries[0] == md.DownloadPlaylistEntry(1, "One", "https://example.com/1", 61)
+        assert pl.entries[1].duration_s == 62
+        assert pl.entries[2].duration_s is None
+        assert pl.title == "My List"
+        assert pl.total_count == 3
+
+    def test_unusable_entries_are_dropped_without_shifting_the_rest(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        payload = self._payload(
+            entries=[
+                None,
+                {"title": "Kept", "url": "https://example.com/k"},
+                {"title": "No URL"},
+            ]
+        )
+        _, pl = self._probe(monkeypatch, service, payload)
+        assert [(e.index, e.url) for e in pl.entries] == [(1, "https://example.com/k")]
+
+    def test_webpage_url_is_the_fallback_url_key(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        payload = self._payload(entries=[{"title": "W", "webpage_url": "https://example.com/w"}])
+        _, pl = self._probe(monkeypatch, service, payload)
+        assert pl.entries[0].url == "https://example.com/w"
+
+    def test_untitled_entry_falls_back_to_its_url(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        payload = self._payload(entries=[{"url": "https://example.com/u"}])
+        _, pl = self._probe(monkeypatch, service, payload)
+        assert pl.entries[0].title == "https://example.com/u"
+
+    def test_a_single_video_url_is_refused(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        with pytest.raises(MediaDownloadError, match="not a playlist"):
+            self._probe(monkeypatch, service, json.dumps({"title": "V"}))
+
+    def test_a_playlist_of_only_unusable_entries_is_refused(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        with pytest.raises(MediaDownloadError, match="no usable"):
+            self._probe(monkeypatch, service, self._payload(entries=[None, {}]))
+
+    def test_a_missing_playlist_count_is_none_not_zero(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        """total_count drives the picker's truncation notice; 0 would claim an
+        empty playlist for one whose size the extractor simply did not report."""
+        payload = json.dumps({"title": "L", "entries": [{"title": "One", "url": "https://example.com/1"}]})
+        _, pl = self._probe(monkeypatch, service, payload)
+        assert pl.total_count is None
+
+    def test_the_default_limit_is_the_module_cap(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        recorder, _ = self._probe(monkeypatch, service, self._payload())
+        cmd = _cmd(recorder)
+        assert cmd[cmd.index("--playlist-items") + 1] == f"1:{md.PLAYLIST_PROBE_MAX}"
