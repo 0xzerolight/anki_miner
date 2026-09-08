@@ -3,7 +3,7 @@ arch: amd64
 platform: linux
 version: "${VERSION}"
 maintainer: "Anki Miner Contributors <noreply@github.com>"
-description: "Japanese vocabulary mining from media with Anki integration"
+description: "Mine vocabulary from video, audio and books into Anki flashcards"
 vendor: "Anki Miner Contributors"
 homepage: "https://github.com/0xzerolight/anki_miner"
 license: "GPL-3.0-or-later"

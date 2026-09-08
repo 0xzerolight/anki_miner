@@ -4,7 +4,7 @@
 #
 # Dispatches .github/workflows/release.yml against the CURRENT branch, which
 # builds the REAL release matrix (PyInstaller + from-source Vulkan wheel +
-# Inno/AppImage/deb/tar) and runs the bundle smokes — but by construction creates
+# Inno/AppImage/deb/dmg) and runs the bundle smokes — but by construction creates
 # NO tag, NO GitHub Release, and NO PyPI upload (only a v* TAG push does that).
 # After a green build it PROVES those negatives (release/ci-gate jobs skipped, no
 # Release object, Vulkan smoke actually executed). Exits nonzero on any red.
