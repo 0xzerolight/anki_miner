@@ -748,6 +748,17 @@ class TestRoundTripImmutabilityAndPaths:
         assert loaded.downloader_embed_thumbnail is True
         assert loaded.downloader_embed_metadata is True
 
+    def test_mokuro_use_gpu_round_trips(self, tmp_config: Path):
+        """The one persisted AND portable Manga OCR option (the two roots are Path
+        fields, stripped from exports) must survive save→load; default is True,
+        so False is the value that proves the field was written."""
+        GUIConfigManager.save_config(replace(create_default_config(), mokuro_use_gpu=False))
+
+        on_disk = json.loads(tmp_config.read_text(encoding="utf-8"))
+        assert on_disk["mokuro_use_gpu"] is False
+
+        assert GUIConfigManager.load_config().mokuro_use_gpu is False
+
     def test_condenser_defaults_round_trip(self, tmp_config: Path):
         """A default config round-trips with the documented condenser defaults."""
         GUIConfigManager.save_config(create_default_config())
