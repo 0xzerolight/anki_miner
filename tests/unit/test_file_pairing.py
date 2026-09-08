@@ -1,5 +1,6 @@
 """Tests for file_pairing module."""
 
+import logging
 import subprocess
 import sys
 import unicodedata
@@ -559,6 +560,34 @@ class TestSecondaryFolderPairing:
         )
         assert len(pairs) == 1
         assert pairs[0].secondary is None
+
+    def test_an_unreadable_secondary_folder_logs_exactly_once(self, tmp_path, caplog):
+        self._make(tmp_path / "v", "EP01.mkv")
+        self._make(tmp_path / "s", "EP01.ass")
+        with caplog.at_level(logging.INFO, logger="anki_miner.utils.file_pairing"):
+            FilePairMatcher.find_pairs_by_episode_number(
+                tmp_path / "v", tmp_path / "s", secondary_folder=tmp_path / "gone"
+            )
+        warned = [
+            r for r in caplog.records if r.name == "anki_miner.utils.file_pairing" and r.levelno >= logging.WARNING
+        ]
+        assert len(warned) == 1
+        assert "translation subtitles" in warned[0].getMessage()
+        assert not any(r.getMessage().startswith("secondary subtitles") for r in caplog.records)
+
+    def test_an_empty_secondary_folder_still_logs_its_one_info_line(self, tmp_path, caplog):
+        """The guard must only silence the line after a FAILED scan; a readable,
+        empty folder keeps its existing INFO line (unchanged behaviour)."""
+        self._make(tmp_path / "v", "EP01.mkv")
+        self._make(tmp_path / "s", "EP01.ass")
+        (tmp_path / "t").mkdir()
+        with caplog.at_level(logging.INFO, logger="anki_miner.utils.file_pairing"):
+            pairs = FilePairMatcher.find_pairs_by_episode_number(
+                tmp_path / "v", tmp_path / "s", secondary_folder=tmp_path / "t"
+            )
+        assert pairs[0].secondary is None
+        secondary = [r for r in caplog.records if r.getMessage().startswith("secondary subtitles")]
+        assert [r.levelno for r in secondary] == [logging.INFO]
 
     def test_the_same_folder_twice_attaches_nothing(self, tmp_path):
         """Pointing the translation folder at the mining folder would make every

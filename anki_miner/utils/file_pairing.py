@@ -232,11 +232,16 @@ def _attach_secondary(
     # separately, so a failure to read it is a separate fact from the pairing
     # scan's — which keeps that scan at exactly one line, as it has always been.
     secondary_subs: list[Path] = []
+    scanned = False
     with suppressed(logger, f"scanning {secondary_folder} for translation subtitles", level=logging.WARNING):
         secondary_subs = [f for f in secondary_folder.iterdir() if f.is_file() and f.suffix.lower() in subtitle_exts]
+        scanned = True
     _sort_subtitles(secondary_subs, prefer_retimed)
     if not secondary_subs:
-        logger.info("secondary subtitles: no candidates in %s", secondary_folder)
+        # A failed scan already has its WARNING above — this line is for a
+        # readable folder with nothing usable in it.
+        if scanned:
+            logger.info("secondary subtitles: no candidates in %s", secondary_folder)
         return
 
     by_video = dict(EpisodeMatcher.match_by_episode_number(videos, secondary_subs))
