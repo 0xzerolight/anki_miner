@@ -55,8 +55,16 @@ def test_playlist_resolve_passes_the_limit_through(qtbot: Any) -> None:
     worker = DownloadPlaylistResolveWorker(service, "https://example.com/l", limit=50)
     assert _run(worker, qtbot, worker.playlist_resolved) == [_PLAYLIST]
     service.probe_playlist.assert_called_once_with(
-        "https://example.com/l", limit=50, timeout_s=120.0, cancel_event=worker._cancel_event
+        "https://example.com/l", limit=50, timeout_s=120.0, start=1, cancel_event=worker._cancel_event
     )
+
+
+def test_playlist_resolve_passes_start_through(qtbot: Any) -> None:
+    service = MagicMock()
+    service.probe_playlist.return_value = _PLAYLIST
+    worker = DownloadPlaylistResolveWorker(service, "https://example.com/l", limit=50, start=51)
+    _run(worker, qtbot, worker.playlist_resolved)
+    assert service.probe_playlist.call_args.kwargs["start"] == 51
 
 
 def test_playlist_resolve_reports_a_failure(qtbot: Any) -> None:

@@ -37,3 +37,11 @@ def test_invalid_expressions_raise(spec: str) -> None:
 def test_the_message_names_the_offending_part() -> None:
     with pytest.raises(ValueError, match="abc"):
         parse_index_selection("1,abc", total=10)
+
+
+def test_a_later_page_selects_by_the_numbers_shown() -> None:
+    assert parse_index_selection("502-503,505", total=5, first=501) == {502, 503, 505}
+    assert parse_index_selection("504-", total=5, first=501) == {504, 505}
+    assert parse_index_selection("-502", total=5, first=501) == {501, 502}
+    with pytest.raises(ValueError):
+        parse_index_selection("3", total=5, first=501)

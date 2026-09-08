@@ -15,17 +15,20 @@ import re
 _PART_RE = re.compile(r"^(\d*)(-?)(\d*)$")
 
 
-def parse_index_selection(spec: str, total: int) -> set[int]:
-    """Return the 1-based indices *spec* names, within ``1..total``.
+def parse_index_selection(spec: str, total: int, *, first: int = 1) -> set[int]:
+    """Return the indices *spec* names, within ``first..first + total - 1``.
 
-    ``"1-3,7"`` -> ``{1, 2, 3, 7}``. An open end takes the boundary: ``"8-"``
-    runs to *total*, ``"-3"`` starts at 1. A reversed range is normalised, and a
-    range end past *total* is clamped. A blank *spec* selects nothing.
+    ``"1-3,7"`` -> ``{1, 2, 3, 7}``. *first* is the number printed on the first
+    row, so a later playlist page (501…) is selected with the numbers the user
+    sees. An open end takes the boundary: ``"8-"`` runs to the last index,
+    ``"-3"`` starts at *first*. A reversed range is normalised, and a range end
+    outside the page is clamped. A blank *spec* selects nothing.
 
     Raises:
         ValueError: a part is not a number or a range, names index 0, or names a
-            single index past *total*.
+            single index outside the page.
     """
+    last = first + total - 1
     selected: set[int] = set()
     for raw_part in spec.split(","):
         part = raw_part.strip().replace(" ", "")
@@ -39,17 +42,17 @@ def parse_index_selection(spec: str, total: int) -> set[int]:
             if not start_text:
                 raise ValueError(f"Not a number or a range: {raw_part.strip()}")
             index = int(start_text)
-            if not 1 <= index <= total:
+            if not first <= index <= last:
                 raise ValueError(f"There is no video {index}.")
             selected.add(index)
             continue
         if not start_text and not end_text:
             raise ValueError("A range needs at least one end.")
-        start = int(start_text) if start_text else 1
-        end = int(end_text) if end_text else total
+        start = int(start_text) if start_text else first
+        end = int(end_text) if end_text else last
         if start == 0 or end == 0:
             raise ValueError("Videos are numbered from 1.")
         if start > end:
             start, end = end, start
-        selected.update(range(max(start, 1), min(end, total) + 1))
+        selected.update(range(max(start, first), min(end, last) + 1))
     return selected

@@ -66,15 +66,35 @@ class PlaylistPickerDialog(QDialog):
 
         layout = QVBoxLayout(self)
 
-        total = playlist.total_count if playlist.total_count is not None else len(playlist.entries)
-        self.header_label = QLabel(tr_format(self.tr("'%1' — %2 videos"), playlist.title, str(total)))
+        entries = playlist.entries
+        self._first_index = entries[0].index if entries else 1
+        last = entries[-1].index if entries else 0
+        total = playlist.total_count
+        if total is None and not truncated:
+            total = last
+        if total is not None:
+            header = tr_format(
+                self.tr("'%1' — showing videos %2-%3 of %4"),
+                playlist.title,
+                str(self._first_index),
+                str(last),
+                str(total),
+            )
+        else:
+            header = tr_format(
+                self.tr("'%1' — showing videos %2-%3 of at least %3"),
+                playlist.title,
+                str(self._first_index),
+                str(last),
+            )
+        self.header_label = QLabel(header)
         self.header_label.setWordWrap(True)
         layout.addWidget(self.header_label)
 
         self.truncation_label = QLabel(
-            tr_format(
-                self.tr("Showing the first %1. Download these, then expand the playlist " "again for the rest."),
-                str(len(playlist.entries)),
+            self.tr(
+                "This playlist has more videos. Paste its URL again and expand it "
+                "for the next batch — it continues where this one stops."
             )
         )
         self.truncation_label.setObjectName("helper-text")
@@ -170,7 +190,7 @@ class PlaylistPickerDialog(QDialog):
         gesture. A malformed expression reports and changes nothing.
         """
         try:
-            wanted = parse_index_selection(self.range_edit.text(), len(self._playlist.entries))
+            wanted = parse_index_selection(self.range_edit.text(), len(self._playlist.entries), first=self._first_index)
         except ValueError as exc:
             self.range_error_label.setText(str(exc))
             self.range_error_label.setHidden(False)
@@ -181,7 +201,7 @@ class PlaylistPickerDialog(QDialog):
             for row in range(self.entry_list.count()):
                 item = self.entry_list.item(row)
                 assert item is not None
-                state = Qt.CheckState.Checked if (row + 1) in wanted else Qt.CheckState.Unchecked
+                state = Qt.CheckState.Checked if (self._first_index + row) in wanted else Qt.CheckState.Unchecked
                 item.setCheckState(state)
         finally:
             self.entry_list.blockSignals(False)

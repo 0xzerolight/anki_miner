@@ -101,15 +101,21 @@ class DownloadPlaylistResolveWorker(_DownloadProbeThread):
         url: str,
         limit: int,
         *,
+        start: int = 1,
         timeout_s: float = PROBE_TIMEOUT_S,
         parent: object = None,
     ) -> None:
         super().__init__(service, url, timeout_s=timeout_s, parent=parent)
         self._limit = limit
+        self._start = start
 
     def _do_call(self) -> object:
         return self._service.probe_playlist(
-            self._url, limit=self._limit, timeout_s=self._timeout_s, cancel_event=self._cancel_event
+            self._url,
+            limit=self._limit,
+            timeout_s=self._timeout_s,
+            start=self._start,
+            cancel_event=self._cancel_event,
         )
 
     def _emit_result(self, result: object) -> None:

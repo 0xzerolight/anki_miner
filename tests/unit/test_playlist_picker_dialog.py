@@ -121,3 +121,32 @@ def test_search_hides_non_matching_rows_without_dropping_them(qtbot: Any) -> Non
     dialog.search_edit.setText("Video 2")
     assert [r for r in range(5) if not dialog.entry_list.item(r).isHidden()] == [1]
     assert len(dialog.selected_urls()) == 5
+
+
+def _page(first: int, n: int) -> tuple[DownloadPlaylistEntry, ...]:
+    return tuple(
+        DownloadPlaylistEntry(i, f"Video {i}", f"https://example.com/{i}", None) for i in range(first, first + n)
+    )
+
+
+def test_the_header_names_the_page_and_the_total(qtbot: Any) -> None:
+    dialog = _make(qtbot, DownloadPlaylist("My List", _page(501, 20), 900, truncated=True), truncated=True)
+    assert "501-520" in dialog.header_label.text()
+    assert "900" in dialog.header_label.text()
+
+
+def test_an_unknown_total_reads_at_least(qtbot: Any) -> None:
+    dialog = _make(qtbot, DownloadPlaylist("My List", _page(1, 3), None, truncated=True), truncated=True)
+    assert "at least 3" in dialog.header_label.text()
+
+
+def test_a_range_on_a_later_page_uses_the_numbers_shown(qtbot: Any) -> None:
+    dialog = _make(qtbot, DownloadPlaylist("L", _page(501, 5), None))
+    dialog.range_edit.setText("502-503")
+    dialog.apply_range_button.click()
+    assert dialog.selected_urls() == ["https://example.com/502", "https://example.com/503"]
+
+
+def test_the_truncation_notice_says_how_to_continue(qtbot: Any) -> None:
+    dialog = _make(qtbot, _playlist(3, total=900), truncated=True)
+    assert "Paste its URL again" in dialog.truncation_label.text()

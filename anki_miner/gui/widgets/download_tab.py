@@ -138,6 +138,10 @@ class DownloadTab(_ToolTabBase):
         self._playlist_worker: DownloadPlaylistResolveWorker | None = None
         # Which URL line the in-flight playlist resolve will replace.
         self._pending_playlist_line: int = 0
+        self._pending_playlist_url: str = ""
+        # Playlist URL -> next entry position to fetch. A URL is present only
+        # while its last batch was truncated; session-only.
+        self._playlist_cursor: dict[str, int] = {}
         # yt-dlp availability is cached per-config: resolving it re-hashes the
         # managed binary, so it must not run on every read. Recomputed only
         # here and in update_config().
@@ -756,10 +760,15 @@ class DownloadTab(_ToolTabBase):
 
         self.clear_screen_issue()
         self._pending_playlist_line = line_index
+        self._pending_playlist_url = candidate
         self.expand_playlist_button.setEnabled(False)
         self.log_widget.append_info(self.tr("Resolving playlist…"))
         worker = DownloadPlaylistResolveWorker(
-            MediaDownloaderService(self.config), candidate, PLAYLIST_PROBE_MAX, parent=self
+            MediaDownloaderService(self.config),
+            candidate,
+            PLAYLIST_PROBE_MAX,
+            start=self._playlist_cursor.get(candidate, 1),
+            parent=self,
         )
         worker.playlist_resolved.connect(self._on_playlist_resolved)
         worker.probe_error.connect(self._on_playlist_error)
@@ -768,20 +777,38 @@ class DownloadTab(_ToolTabBase):
         worker.start()
 
     def _on_playlist_resolved(self, playlist: object) -> None:
-        """Let the user pick entries, then write them into the URL box."""
+        """Let the user pick entries, then write them into the URL box.
+
+        A truncated batch remembers where the next one starts, keyed by the
+        playlist URL: pasting the URL again and expanding it continues instead
+        of showing the same first page. The line itself is replaced as always —
+        a bare playlist URL left in the box would download the whole playlist
+        (``--no-playlist`` only applies to a URL that names a video AND a list).
+        """
         if not isinstance(playlist, DownloadPlaylist):  # pragma: no cover - signal guard
             return
-        truncated = playlist.total_count is not None and playlist.total_count > len(playlist.entries)
-        dialog = PlaylistPickerDialog(playlist, truncated=truncated, parent=self)
+        dialog = PlaylistPickerDialog(playlist, truncated=playlist.truncated, parent=self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             self.log_widget.append_info(self.tr("Playlist expansion cancelled."))
             return
         chosen = dialog.selected_urls()
+        url = self._pending_playlist_url
         added = self._replace_line(self._pending_playlist_line, chosen)
         skipped = len(chosen) - added
         self.log_widget.append_success(tr_format(self.tr("Added %1 videos from '%2'."), str(added), playlist.title))
         if skipped:
             self.log_widget.append_info(tr_format(self.tr("Skipped %1 already in the list."), str(skipped)))
+        if playlist.truncated:
+            # Advance by the RAW window the probe asked for (limit positions),
+            # not by the usable count: a private entry inside the window must
+            # not make the next page re-fetch positions already seen.
+            next_start = self._playlist_cursor.get(url, 1) + PLAYLIST_PROBE_MAX
+            self._playlist_cursor[url] = next_start
+            self.log_widget.append_info(
+                tr_format(self.tr("Paste the playlist URL again and expand it for videos %1 onward."), str(next_start))
+            )
+        else:
+            self._playlist_cursor.pop(url, None)
         self._refresh_url_actions()
 
     def _replace_line(self, line_index: int, urls: list[str]) -> int:
@@ -802,6 +829,9 @@ class DownloadTab(_ToolTabBase):
 
     def _on_playlist_error(self, message: str) -> None:
         """Report a failed resolve — most often "that URL is not a playlist"."""
+        # A page past the end ("The playlist is empty.") or any other failure
+        # forgets the cursor, so the next expansion of this URL starts over.
+        self._playlist_cursor.pop(self._pending_playlist_url, None)
         self.show_screen_issue(ScreenIssue(summary=self.tr("Could not expand that playlist."), details=message))
         self._refresh_url_actions()
 

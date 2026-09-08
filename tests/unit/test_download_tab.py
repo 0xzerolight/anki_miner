@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import QDialog
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.services.media_downloader import (
+    PLAYLIST_PROBE_MAX,
     DownloadOptions,
     DownloadPlaylist,
     DownloadPlaylistEntry,
@@ -412,6 +413,20 @@ def _put_cursor_on_line(tab: DownloadTab, line_index: int) -> None:
     tab.url_input.setTextCursor(cursor)
 
 
+def _expand(tab: DownloadTab) -> MagicMock:
+    """Click Expand Playlist with the resolve worker faked; return the class mock."""
+    with patch(_RESOLVE_WORKER_CLS, return_value=_FakeWorker()) as worker_cls:
+        tab.expand_playlist_button.click()
+    return worker_cls
+
+
+def _accepting_dialog(urls: list[str]) -> MagicMock:
+    dialog = MagicMock()
+    dialog.exec.return_value = QDialog.DialogCode.Accepted
+    dialog.selected_urls.return_value = urls
+    return dialog
+
+
 class TestSubtitleLanguagePicker:
     def test_button_summarises_the_selection_with_names(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path, downloader_subtitle_langs="ja,en"), qtbot)
@@ -601,7 +616,7 @@ class TestExpandPlaylist:
         dialog.exec.return_value = QDialog.DialogCode.Rejected
         entries = (DownloadPlaylistEntry(1, "V", "https://example.com/1", None),)
         with patch(_PLAYLIST_DIALOG_CLS, return_value=dialog) as dialog_cls:
-            tab._on_playlist_resolved(DownloadPlaylist("L", entries, 900))
+            tab._on_playlist_resolved(DownloadPlaylist("L", entries, 900, truncated=True))
         assert dialog_cls.call_args.kwargs["truncated"] is True
 
     def test_a_complete_playlist_is_not_flagged_as_truncated(self, qtbot, tmp_path: Path) -> None:
@@ -628,3 +643,44 @@ class TestExpandPlaylist:
         worker.start()
         tab._playlist_worker = worker
         assert worker in list(tab.iter_close_workers())
+
+    def test_a_truncated_batch_advances_the_cursor_for_the_next_paste(self, qtbot, tmp_path: Path) -> None:
+        """The playlist line is replaced as always (a bare playlist URL left in the
+        box would download the whole playlist); pasting it again continues."""
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/keep\nhttps://example.com/list")
+        _put_cursor_on_line(tab, 1)
+        assert _expand(tab).call_args.kwargs["start"] == 1
+        entries = tuple(DownloadPlaylistEntry(i, f"V{i}", f"https://example.com/{i}", None) for i in (1, 2))
+        with patch(_PLAYLIST_DIALOG_CLS, return_value=_accepting_dialog([e.url for e in entries])):
+            tab._on_playlist_resolved(DownloadPlaylist("L", entries, None, truncated=True))
+        assert tab.url_input.toPlainText().splitlines() == [
+            "https://example.com/keep",
+            "https://example.com/1",
+            "https://example.com/2",
+        ]
+        # Advances by the raw window (PLAYLIST_PROBE_MAX), not by the two usable entries.
+        assert tab._playlist_cursor == {"https://example.com/list": 1 + PLAYLIST_PROBE_MAX}
+        tab._on_playlist_finished()
+        tab.url_input.appendPlainText("https://example.com/list")
+        _put_cursor_on_line(tab, 3)
+        assert _expand(tab).call_args.kwargs["start"] == 1 + PLAYLIST_PROBE_MAX
+
+    def test_a_failed_page_forgets_the_cursor(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/list")
+        tab._playlist_cursor["https://example.com/list"] = 501
+        _expand(tab)
+        tab._on_playlist_error("The playlist is empty.")
+        assert tab._playlist_cursor == {}
+
+    def test_a_complete_batch_replaces_the_line_and_clears_the_cursor(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/list")
+        tab._playlist_cursor["https://example.com/list"] = 3
+        assert _expand(tab).call_args.kwargs["start"] == 3
+        entries = (DownloadPlaylistEntry(3, "V3", "https://example.com/3", None),)
+        with patch(_PLAYLIST_DIALOG_CLS, return_value=_accepting_dialog(["https://example.com/3"])):
+            tab._on_playlist_resolved(DownloadPlaylist("L", entries, 3))
+        assert tab.url_input.toPlainText().splitlines() == ["https://example.com/3"]
+        assert tab._playlist_cursor == {}

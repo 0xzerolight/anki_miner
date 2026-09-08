@@ -953,7 +953,7 @@ class TestProbePlaylist:
         assert "--flat-playlist" in cmd
         assert "--dump-single-json" in cmd
         assert "--no-playlist" not in cmd
-        assert cmd[cmd.index("--playlist-items") + 1] == "1:50"
+        assert cmd[cmd.index("--playlist-items") + 1] == "1:51"
         assert cmd[-2:] == ["--", "https://example.com/list"]
 
     def test_entries_are_numbered_from_one(
@@ -1020,7 +1020,7 @@ class TestProbePlaylist:
     ) -> None:
         recorder, _ = self._probe(monkeypatch, service, self._payload())
         cmd = _cmd(recorder)
-        assert cmd[cmd.index("--playlist-items") + 1] == f"1:{md.PLAYLIST_PROBE_MAX}"
+        assert cmd[cmd.index("--playlist-items") + 1] == f"1:{md.PLAYLIST_PROBE_MAX + 1}"
 
     def test_the_cancel_event_reaches_run_supervised(
         self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
@@ -1028,6 +1028,58 @@ class TestProbePlaylist:
         event = threading.Event()
         recorder, _ = self._probe(monkeypatch, service, self._payload(), cancel_event=event)
         assert recorder.call_args.kwargs["cancel"] is event
+
+    @staticmethod
+    def _n_entries(n: int) -> list[object]:
+        return [{"title": f"V{i}", "url": f"https://example.com/{i}"} for i in range(n)]
+
+    def test_start_shifts_the_window_and_the_numbering(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        recorder, pl = self._probe(monkeypatch, service, self._payload(playlist_count=None), limit=500, start=501)
+        cmd = _cmd(recorder)
+        assert cmd[cmd.index("--playlist-items") + 1] == "501:1001"
+        assert [e.index for e in pl.entries] == [501, 502, 503]
+        assert pl.truncated is False
+
+    def test_limit_plus_one_entries_means_truncated_and_only_limit_are_kept(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        payload = self._payload(entries=self._n_entries(501), playlist_count=None)
+        _, pl = self._probe(monkeypatch, service, payload, limit=500)
+        assert pl.truncated is True
+        assert len(pl.entries) == 500
+        assert pl.entries[-1].index == 500
+
+    def test_an_unusable_entry_inside_a_full_window_does_not_hide_the_rest(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        """Truncation is judged on the raw window: one private video among 501
+        must not read as 'exactly 500 usable, nothing more'."""
+        raw = self._n_entries(501)
+        raw[10] = {"title": "private", "url": None}
+        _, pl = self._probe(monkeypatch, service, self._payload(entries=raw, playlist_count=None), limit=500)
+        assert pl.truncated is True
+        assert len(pl.entries) == 499  # the 501st raw entry is outside the window, the private one dropped
+        assert [e.index for e in pl.entries[:3]] == [1, 2, 3]  # usable-contiguous numbering
+
+    def test_a_count_past_the_window_means_truncated(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        _, pl = self._probe(monkeypatch, service, self._payload(playlist_count=900), limit=3)
+        assert pl.truncated is True
+
+    def test_a_short_playlist_is_not_truncated(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        payload = self._payload(entries=self._n_entries(20), playlist_count=None)
+        _, pl = self._probe(monkeypatch, service, payload, limit=500)
+        assert pl.truncated is False
+        assert len(pl.entries) == 20
+
+    def test_an_empty_playlist_says_so(self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService) -> None:
+        with pytest.raises(MediaDownloadError, match="is empty"):
+            self._probe(monkeypatch, service, self._payload(entries=[]))
 
 
 # ---------------------------------------------------------------------------
