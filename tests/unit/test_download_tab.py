@@ -541,6 +541,21 @@ class TestDetectTracks:
         assert tab.issue_banner().current_issue() is not None
         assert tab.detect_button.isEnabled() is True
 
+    def test_a_result_for_a_url_that_left_the_box_is_dropped(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/a")
+        fake = _FakeWorker()
+        with patch(_PROBE_WORKER_CLS, return_value=fake):
+            tab.detect_button.click()
+        deliver = fake.tracks_probed.connect.call_args.args[0]
+        tab.url_input.setPlainText("https://example.com/b")
+        deliver(UrlTracks("T", ("ja",), (), ("sw",), False))
+        assert tab._detected is None
+        assert tab.audio_lang_combo.findData("sw") < 0
+        tab.url_input.setPlainText("https://example.com/a\nhttps://example.com/b")
+        deliver(UrlTracks("T", ("ja",), (), ("sw",), False))
+        assert tab._detected is not None
+
 
 # ---------------------------------------------------------------------------
 # Playlist expansion
@@ -572,7 +587,7 @@ class TestExpandPlaylist:
     def test_accepted_entries_replace_the_cursor_line(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         tab.url_input.setPlainText("https://example.com/keep\nhttps://example.com/list")
-        tab._pending_playlist_line = 1
+        tab._pending_playlist_url = "https://example.com/list"
         dialog = MagicMock()
         dialog.exec.return_value = QDialog.DialogCode.Accepted
         dialog.selected_urls.return_value = ["https://example.com/1", "https://example.com/2"]
@@ -587,7 +602,7 @@ class TestExpandPlaylist:
     def test_urls_already_in_the_box_are_not_duplicated(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         tab.url_input.setPlainText("https://example.com/1\nhttps://example.com/list")
-        tab._pending_playlist_line = 1
+        tab._pending_playlist_url = "https://example.com/list"
         dialog = MagicMock()
         dialog.exec.return_value = QDialog.DialogCode.Accepted
         dialog.selected_urls.return_value = ["https://example.com/1", "https://example.com/2"]
@@ -601,7 +616,7 @@ class TestExpandPlaylist:
     def test_a_rejected_dialog_leaves_the_line_alone(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         tab.url_input.setPlainText("https://example.com/list")
-        tab._pending_playlist_line = 0
+        tab._pending_playlist_url = "https://example.com/list"
         dialog = MagicMock()
         dialog.exec.return_value = QDialog.DialogCode.Rejected
         with patch(_PLAYLIST_DIALOG_CLS, return_value=dialog):
@@ -611,7 +626,7 @@ class TestExpandPlaylist:
     def test_a_truncated_playlist_is_flagged_to_the_dialog(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         tab.url_input.setPlainText("https://example.com/list")
-        tab._pending_playlist_line = 0
+        tab._pending_playlist_url = "https://example.com/list"
         dialog = MagicMock()
         dialog.exec.return_value = QDialog.DialogCode.Rejected
         entries = (DownloadPlaylistEntry(1, "V", "https://example.com/1", None),)
@@ -622,7 +637,7 @@ class TestExpandPlaylist:
     def test_a_complete_playlist_is_not_flagged_as_truncated(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         tab.url_input.setPlainText("https://example.com/list")
-        tab._pending_playlist_line = 0
+        tab._pending_playlist_url = "https://example.com/list"
         dialog = MagicMock()
         dialog.exec.return_value = QDialog.DialogCode.Rejected
         entries = (DownloadPlaylistEntry(1, "V", "https://example.com/1", None),)
@@ -684,3 +699,27 @@ class TestExpandPlaylist:
             tab._on_playlist_resolved(DownloadPlaylist("L", entries, 3))
         assert tab.url_input.toPlainText().splitlines() == ["https://example.com/3"]
         assert tab._playlist_cursor == {}
+
+    def test_a_moved_playlist_line_is_still_the_one_replaced(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/list\nhttps://example.com/keep")
+        _put_cursor_on_line(tab, 0)
+        _expand(tab)
+        tab.url_input.setPlainText("https://example.com/new\nhttps://example.com/keep\nhttps://example.com/list")
+        with patch(_PLAYLIST_DIALOG_CLS, return_value=_accepting_dialog(["https://example.com/1"])):
+            tab._on_playlist_resolved(DownloadPlaylist("L", (), 1))
+        assert tab.url_input.toPlainText().splitlines() == [
+            "https://example.com/new",
+            "https://example.com/keep",
+            "https://example.com/1",
+        ]
+
+    def test_a_removed_playlist_line_adds_nothing(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/list")
+        _expand(tab)
+        tab.url_input.setPlainText("https://example.com/other")
+        with patch(_PLAYLIST_DIALOG_CLS, return_value=_accepting_dialog(["https://example.com/1"])) as dialog_cls:
+            tab._on_playlist_resolved(DownloadPlaylist("L", (), 1))
+        dialog_cls.assert_not_called()
+        assert tab.url_input.toPlainText() == "https://example.com/other"

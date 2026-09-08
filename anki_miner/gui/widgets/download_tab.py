@@ -136,8 +136,8 @@ class DownloadTab(_ToolTabBase):
         self._detected: UrlTracks | None = None
         self._probe_worker: DownloadTracksProbeWorker | None = None
         self._playlist_worker: DownloadPlaylistResolveWorker | None = None
-        # Which URL line the in-flight playlist resolve will replace.
-        self._pending_playlist_line: int = 0
+        # The URL text of the line the in-flight resolve will replace. Text,
+        # not an index: the user can edit the box while the probe runs.
         self._pending_playlist_url: str = ""
         # Playlist URL -> next entry position to fetch. A URL is present only
         # while its last batch was truncated; session-only.
@@ -689,11 +689,23 @@ class DownloadTab(_ToolTabBase):
         self.detect_button.setEnabled(False)
         self.log_widget.append_info(self.tr("Checking available tracks…"))
         worker = DownloadTracksProbeWorker(MediaDownloaderService(self.config), urls[0], parent=self)
-        worker.tracks_probed.connect(self._on_tracks_probed)
+        # The URL rides along so a result for a line edited away mid-probe is dropped.
+        worker.tracks_probed.connect(lambda tracks, url=urls[0]: self._on_tracks_probed_for(url, tracks))
         worker.probe_error.connect(self._on_tracks_error)
         worker.finished.connect(self._on_probe_finished)
         self._probe_worker = worker
         worker.start()
+
+    def _on_tracks_probed_for(self, url: str, tracks: object) -> None:
+        """Adopt a probe result only while its URL is still in the box."""
+        if url not in self._valid_urls():
+            logger.info("track probe result dropped: its URL is no longer in the box")
+            self.log_widget.append_info(
+                self.tr("The URL that was checked is no longer in the list; its tracks were ignored.")
+            )
+            self._refresh_url_actions()
+            return
+        self._on_tracks_probed(tracks)
 
     def _on_tracks_probed(self, tracks: object) -> None:
         """Adopt a probe result: remember it, and offer its audio languages."""
@@ -759,7 +771,6 @@ class DownloadTab(_ToolTabBase):
             return
 
         self.clear_screen_issue()
-        self._pending_playlist_line = line_index
         self._pending_playlist_url = candidate
         self.expand_playlist_button.setEnabled(False)
         self.log_widget.append_info(self.tr("Resolving playlist…"))
@@ -787,13 +798,20 @@ class DownloadTab(_ToolTabBase):
         """
         if not isinstance(playlist, DownloadPlaylist):  # pragma: no cover - signal guard
             return
+        url = self._pending_playlist_url
+        lines = [line.strip() for line in self.url_input.toPlainText().splitlines()]
+        if url not in lines:
+            logger.info("playlist line was removed during the resolve; nothing added")
+            self.log_widget.append_info(self.tr("Playlist line was removed; nothing added."))
+            self._refresh_url_actions()
+            return
+        line_index = lines.index(url)
         dialog = PlaylistPickerDialog(playlist, truncated=playlist.truncated, parent=self)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             self.log_widget.append_info(self.tr("Playlist expansion cancelled."))
             return
         chosen = dialog.selected_urls()
-        url = self._pending_playlist_url
-        added = self._replace_line(self._pending_playlist_line, chosen)
+        added = self._replace_line(line_index, chosen)
         skipped = len(chosen) - added
         self.log_widget.append_success(tr_format(self.tr("Added %1 videos from '%2'."), str(added), playlist.title))
         if skipped:
