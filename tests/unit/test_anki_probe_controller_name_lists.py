@@ -298,6 +298,31 @@ def test_ensure_name_lists_refetches_after_the_endpoint_changes(wired, monkeypat
     assert len(started) == 4  # different Anki, different lists
 
 
+def test_ensure_name_lists_keeps_asking_a_new_endpoint_that_answers_empty(wired, monkeypatch):
+    """Latches earned against endpoint A must not survive a switch to B.
+
+    The regression: B answered empty (Anki closed, wrong port), both flags
+    stayed True from A, the stamp already said B — so the ensure guard held
+    for B forever and "Could not load decks" could never clear.
+    """
+    ctrl, panel = wired
+    started = _record_starts(monkeypatch)
+
+    ctrl.ensure_name_lists()
+    ctrl._on_name_decks_fetched(["Default", "JP::Mining"])
+    ctrl._on_name_notetypes_fetched(["Lapis"])
+    assert len(started) == 2
+
+    panel.set_ankiconnect_url("http://127.0.0.1:9999")
+    ctrl.ensure_name_lists()
+    assert len(started) == 4
+    ctrl._on_name_decks_fetched([])
+    ctrl._on_name_notetypes_fetched([])
+
+    ctrl.ensure_name_lists()
+    assert len(started) == 6  # nothing is latched for the new Anki yet
+
+
 def test_ensure_name_lists_goes_through_refresh_name_lists(wired, monkeypatch):
     """The Refresh buttons' unconditional path stays the single fetch site."""
     ctrl, _panel = wired
