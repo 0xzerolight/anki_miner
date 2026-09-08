@@ -17,7 +17,7 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 
-from PyQt6.QtCore import QLocale
+from PyQt6.QtCore import QCoreApplication, QLocale
 
 #: A bare language subtag or a code with one script/region subtag. Anything
 #: else (a yt-dlp regex, an exclusion, "all") is an *expression*, not a list.
@@ -65,11 +65,17 @@ COMMON_SUBTITLE_LANGS: tuple[str, ...] = (
 )
 
 
+#: YouTube's marker for the one auto caption made from the audio itself
+#: (``ja-orig``); every other automatic_captions key is a machine translation.
+_ORIG_SUFFIX = "-orig"
+
+
 def language_display_name(code: str) -> str:
     """Return a human name for *code*, or *code* itself when unresolvable.
 
     ``"ja"`` -> ``"Japanese"``; ``"zh-Hans"`` -> ``"Chinese (Simplified Han)"``;
-    ``"pt-BR"`` -> ``"Portuguese (Brazil)"``; ``"live_chat"`` -> ``"live_chat"``.
+    ``"pt-BR"`` -> ``"Portuguese (Brazil)"``; ``"live_chat"`` -> ``"live_chat"``;
+    ``"ja-orig"`` -> ``"Japanese (original)"``.
 
     The qualifier is appended only when the code actually carries a subtag, so
     bare ``"zh"`` stays ``"Chinese"`` rather than gaining the territory QLocale
@@ -78,11 +84,17 @@ def language_display_name(code: str) -> str:
     cleaned = code.strip()
     if not cleaned:
         return ""
+    # Stripped first: "orig" is four letters, which the script rule below would
+    # otherwise read as a script subtag and render "Japanese (Japanese)".
+    original = cleaned.lower().endswith(_ORIG_SUFFIX) and len(cleaned) > len(_ORIG_SUFFIX)
+    if original:
+        cleaned = cleaned[: -len(_ORIG_SUFFIX)]
     locale = QLocale(cleaned.replace("-", "_"))
     if locale.language() == QLocale.Language.C:
         # QLocale's "no idea" answer; languageToString would render it "C".
-        return cleaned
+        return code.strip()
     name = QLocale.languageToString(locale.language())
+    qualifiers: list[str] = []
     subtags = cleaned.replace("_", "-").split("-")[1:]
     if subtags:
         # A four-letter subtag is a script (Hans/Hant/Latn); anything else is a
@@ -93,7 +105,11 @@ def language_display_name(code: str) -> str:
             else QLocale.territoryToString(locale.territory())
         )
         if qualifier:
-            name = f"{name} ({qualifier})"
+            qualifiers.append(qualifier)
+    if original:
+        qualifiers.append(QCoreApplication.translate("LanguageNames", "original"))
+    if qualifiers:
+        name = f"{name} ({', '.join(qualifiers)})"
     return name
 
 

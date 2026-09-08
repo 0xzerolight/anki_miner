@@ -25,6 +25,8 @@ class TestDisplayName:
             ("zh-Hant", "Chinese (Traditional Han)"),
             ("pt-BR", "Portuguese (Brazil)"),
             ("zh", "Chinese"),
+            ("ja-orig", "Japanese (original)"),
+            ("zh-Hans-orig", "Chinese (Simplified Han, original)"),
         ],
     )
     def test_known_codes(self, code, expected):

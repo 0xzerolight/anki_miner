@@ -88,6 +88,7 @@ class TestDetected:
         # "visible", so isVisible() would pass for both cases and prove nothing.
         shown = _make(qtbot, "ja", detected=UrlTracks("T", (), ("ja",), (), True))
         assert shown.translations_note.isHidden() is False
+        assert "fetched as a machine translation" in shown.translations_note.text()
         absent = _make(qtbot, "ja", detected=UrlTracks("T", (), ("ja",), (), False))
         assert absent.translations_note.isHidden() is True
 
