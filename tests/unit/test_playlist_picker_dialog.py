@@ -91,6 +91,23 @@ def test_a_valid_range_clears_a_previous_error(qtbot: Any) -> None:
     assert dialog.range_error_label.isHidden() is True
 
 
+def test_a_colon_range_is_accepted(qtbot: Any) -> None:
+    dialog = _make(qtbot, _playlist(5))
+    dialog.range_edit.setText("1:2")
+    dialog.apply_range_button.click()
+    assert dialog.selected_urls() == ["https://example.com/1", "https://example.com/2"]
+
+
+def test_a_bad_expression_is_reported_in_a_full_sentence(qtbot: Any) -> None:
+    dialog = _make(qtbot, _playlist(5))
+    dialog.range_edit.setText("1-a")
+    dialog.apply_range_button.click()
+    assert dialog.range_error_label.text() == "Not a number or a range: 1-a"
+    dialog.range_edit.setText("9")
+    dialog.apply_range_button.click()
+    assert dialog.range_error_label.text() == "There is no video 9."
+
+
 def test_accept_button_is_disabled_with_nothing_selected(qtbot: Any) -> None:
     dialog = _make(qtbot)
     dialog.select_none_button.click()

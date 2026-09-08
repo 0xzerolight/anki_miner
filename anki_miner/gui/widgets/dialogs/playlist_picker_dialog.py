@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.gui.utils.playlist_selection import parse_index_selection
+from anki_miner.gui.utils.playlist_selection import SelectionError, parse_index_selection
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.services.media_downloader import DownloadPlaylist
 from anki_miner.utils.i18n import tr_format
@@ -191,8 +191,8 @@ class PlaylistPickerDialog(QDialog):
         """
         try:
             wanted = parse_index_selection(self.range_edit.text(), len(self._playlist.entries), first=self._first_index)
-        except ValueError as exc:
-            self.range_error_label.setText(str(exc))
+        except SelectionError as exc:
+            self.range_error_label.setText(self._range_error_text(exc))
             self.range_error_label.setHidden(False)
             return
         self.range_error_label.setHidden(True)
@@ -206,6 +206,16 @@ class PlaylistPickerDialog(QDialog):
         finally:
             self.entry_list.blockSignals(False)
         self._refresh_add_button()
+
+    def _range_error_text(self, exc: SelectionError) -> str:
+        """The translated sentence for a malformed range part."""
+        messages = {
+            "not_a_range": self.tr("Not a number or a range: %1"),
+            "no_such_video": self.tr("There is no video %1."),
+            "open_range": self.tr("A range needs at least one end."),
+            "from_one": self.tr("Videos are numbered from 1."),
+        }
+        return tr_format(messages.get(exc.kind, messages["not_a_range"]), exc.value)
 
     def _refresh_add_button(self, *_: object) -> None:
         """Name the count on the button, and disable it at zero."""
