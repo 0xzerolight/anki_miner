@@ -467,6 +467,17 @@ class QueuePanel(QFrame):
                 return None
             return Path(video_path), Path(subtitle_path)
 
+        def selected_secondary() -> Path | None:
+            """The translation folder OK binds: the picker's while the setting is
+            on; the row's own while it is off, since a hidden picker is no
+            place to lose a folder the user chose earlier."""
+            if not self.secondary_subtitle_enabled:
+                return widget.secondary_folder
+            secondary_path = secondary_selector.path_or_none()
+            if secondary_path is not None and secondary_selector.is_valid():
+                return Path(secondary_path)
+            return None
+
         def accept_if_valid() -> None:
             if selected_folders() is None:
                 folder_error.show()
@@ -492,26 +503,22 @@ class QueuePanel(QFrame):
             # Optional, so it never blocks OK: a folder that has since gone is
             # dropped rather than refused, and the series mines with empty
             # Translation fields — what every other missing-translation case does.
-            secondary_folder = None
-            if self.secondary_subtitle_enabled:
-                secondary_path = secondary_selector.path_or_none()
-                if secondary_path is not None and secondary_selector.is_valid():
-                    secondary_folder = Path(secondary_path)
-
+            secondary_folder = selected_secondary()
             widget.set_folders(video_folder, subtitle_folder, secondary_folder)
 
             from anki_miner.utils.file_pairing import FilePairMatcher
 
             try:
-                pairs = FilePairMatcher.find_pairs_by_episode_number(
-                    video_folder, subtitle_folder, secondary_folder=secondary_folder
-                )
+                # The count is the video/subtitle pairing's alone; the
+                # translation folder never changes it and is scanned at run time.
+                pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, subtitle_folder)
                 widget.set_episode_count(len(pairs))
             except Exception as e:
                 logger.warning("Failed to count episodes for %s: %s", widget.display_name, e)
 
             widget.subtitle_offset = offset_spinbox.value()
-            widget.secondary_offset = secondary_offset_spinbox.value() if secondary_folder else 0.0
+            if self.secondary_subtitle_enabled:
+                widget.secondary_offset = secondary_offset_spinbox.value() if secondary_folder else 0.0
             self._bind_widget(widget)
             self._apply_view()
             self._update_stats()
