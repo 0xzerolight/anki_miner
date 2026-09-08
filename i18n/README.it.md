@@ -120,7 +120,7 @@ Per la configurazione completa dell'ambiente di sviluppo, consulta [CONTRIBUTING
 - **Audiolibri** - estrai audiolibri, podcast, radio, canzoni (coppie audio + sottotitoli/trascrizione).
 - **Lettura** - estrai manga (mokuro), romanzi (`.epub`, `.txt`; un singolo libro o un'intera cartella), file di sottotitoli autonomi o testo incollato.
 - **Analisi** - cronologia del mining, classifiche di difficoltà, traguardi.
-- **Utilità** - genera sottotitoli (Whisper locale), risincronizza sottotitoli (ffsubsync/alass), condensa i contenuti multimediali in audio con solo dialoghi, scarica video/audio/sottotitoli da qualsiasi sito supportato da yt-dlp, copia la parte che vale la pena imparare di un mazzo predefinito in uno nuovo e completa retroattivamente i campi delle carte esistenti.
+- **Utilità** - genera sottotitoli (Whisper locale), risincronizza sottotitoli (ffsubsync/alass), condensa i contenuti multimediali in audio con solo dialoghi, scarica video/audio/sottotitoli da qualsiasi sito supportato da yt-dlp, copia la parte che vale la pena imparare di un mazzo predefinito in uno nuovo, completa retroattivamente i campi delle carte esistenti ed esegui l'OCR delle immagini delle pagine manga in file .mokuro (mokuro, installabile dalle Impostazioni).
 - **Impostazioni** - tutto ciò che è configurabile.
 
 ## Altre funzionalità

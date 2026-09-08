@@ -120,7 +120,7 @@ Para a configuração completa de desenvolvimento, veja [CONTRIBUTING.md](../CON
 - **Audiolivros** - minere audiolivros, podcasts, rádio, músicas (pares de áudio + legenda/transcrição).
 - **Leitura** - minere mangás (mokuro), romances (`.epub`, `.txt`; um livro único ou uma pasta inteira), arquivos de legenda avulsos ou texto colado.
 - **Análises** - histórico de mineração, classificações de dificuldade, marcos.
-- **Utilitários** - gerar legendas (Whisper local), reajustar o tempo de legendas (ffsubsync/alass), condensar mídia em áudio só com diálogos, baixar vídeo/áudio/legendas de qualquer site compatível com yt-dlp, copiar a parte que vale a pena aprender de um baralho pronto para um novo, e preencher retroativamente campos em cartões existentes.
+- **Utilitários** - gerar legendas (Whisper local), reajustar o tempo de legendas (ffsubsync/alass), condensar mídia em áudio só com diálogos, baixar vídeo/áudio/legendas de qualquer site compatível com yt-dlp, copiar a parte que vale a pena aprender de um baralho pronto para um novo, preencher retroativamente campos em cartões existentes, e aplicar OCR em imagens de páginas de mangá gerando arquivos .mokuro (mokuro, instalável em Configurações).
 - **Configurações** - tudo que é configurável.
 
 ## Outros Recursos

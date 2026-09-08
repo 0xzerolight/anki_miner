@@ -1367,11 +1367,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Translation Folder:</source>
-        <translation type="unfinished" />
+        <translation>翻訳字幕フォルダ:</translation>
     </message>
     <message>
         <source>Translation Offset:</source>
-        <translation type="unfinished">翻訳字幕オフセット:</translation>
+        <translation>翻訳字幕オフセット:</translation>
     </message>
     <message>
         <source> seconds</source>
@@ -1383,7 +1383,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
-        <translation type="unfinished">翻訳字幕のみのタイミングを調整します（正の値 = 遅く、負の値 = 早く）</translation>
+        <translation>翻訳字幕のみのタイミングを調整します（正の値 = 遅く、負の値 = 早く）</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -1403,7 +1403,15 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>That translation subtitle folder no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>その翻訳字幕フォルダは存在しなくなっています。</translation>
+    </message>
+    <message>
+        <source>The translation folder is the subtitle folder.</source>
+        <translation>翻訳字幕フォルダが字幕フォルダと同じです。</translation>
+    </message>
+    <message>
+        <source>Pick a separate folder for the translation subtitles.</source>
+        <translation>翻訳字幕には別のフォルダを選んでください。</translation>
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -1581,7 +1589,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created.</source>
-        <translation type="unfinished" />
+        <translation>各単語を承認または却下し、文とシーンを選び、音声をトリムし、単語を既知としてマークし、誤って文字起こしされた文を修正したりマイニングする単語を差し替えたりできます — カードが作成される前に。</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -1589,7 +1597,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
-        <translation type="unfinished" />
+        <translation>マイニング言語の字幕と並べて、自分の言語の字幕ファイルをもう一つ読み込みます。その行は単語キュレーターのプレビューで例文の下に表示され、翻訳フィールドに保存できます。動画 -&gt; バッチでは、代わりに翻訳字幕のフォルダを指定すると、エピソード番号で動画とペアリングされます。設定 -&gt; フィルタリングで有効にしてください。</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2153,11 +2161,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Create .mokuro files from manga images</source>
-        <translation type="unfinished" />
+        <translation>マンガ画像から .mokuro ファイルを作成</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation type="unfinished" />
+        <translation>巻フォルダまたはシリーズ全体に対して mokuro の OCR を実行すると、読み -&gt; マンガでマイニングできるようになります。mokuro は設定 -&gt; 文字起こしとアラインメントからインストールしてください。</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -3891,19 +3899,19 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Expand Playlist…</source>
-        <translation type="unfinished" />
+        <translation>プレイリストを展開…</translation>
     </message>
     <message>
         <source>Replace the URL line the cursor is on with the playlist's individual videos, so you can pick which ones to download.</source>
-        <translation type="unfinished" />
+        <translation>カーソルがある行の URL を、そのプレイリストの各動画の URL に置き換え、ダウンロードする動画を選べるようにします。</translation>
     </message>
     <message>
         <source>Detect Tracks</source>
-        <translation type="unfinished" />
+        <translation>トラックを検出</translation>
     </message>
     <message>
         <source>Ask the first URL which subtitle and audio languages it offers.</source>
-        <translation type="unfinished" />
+        <translation>最初の URL に問い合わせて、提供されている字幕・音声の言語を確認します。</translation>
     </message>
     <message>
         <source>Options</source>
@@ -3963,23 +3971,23 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Choose…</source>
-        <translation type="unfinished">選択…</translation>
+        <translation>選択…</translation>
     </message>
     <message>
         <source>Pick subtitle languages by name.</source>
-        <translation type="unfinished" />
+        <translation>字幕の言語を名前で選択します。</translation>
     </message>
     <message>
         <source>Audio language:</source>
-        <translation type="unfinished" />
+        <translation>音声言語:</translation>
     </message>
     <message>
         <source>Preferred audio track on videos that carry several. A video without this language still downloads, with its default audio.</source>
-        <translation type="unfinished" />
+        <translation>複数の音声トラックを持つ動画で優先する言語です。この言語がない動画も、既定の音声でそのままダウンロードされます。</translation>
     </message>
     <message>
         <source>Any (best available)</source>
-        <translation type="unfinished" />
+        <translation>指定なし（利用可能な最良のもの）</translation>
     </message>
     <message>
         <source>Embed thumbnail</source>
@@ -4027,51 +4035,63 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Checking available tracks…</source>
-        <translation type="unfinished" />
+        <translation>利用可能なトラックを確認中…</translation>
+    </message>
+    <message>
+        <source>The URL that was checked is no longer in the list; its tracks were ignored.</source>
+        <translation>確認済みの URL がリストになくなったため、そのトラック情報は無視されました。</translation>
     </message>
     <message>
         <source>  · on this URL</source>
-        <translation type="unfinished" />
+        <translation>  · この URL で利用可能</translation>
     </message>
     <message>
         <source>Tracks found — subtitles: %1; audio: %2</source>
-        <translation type="unfinished" />
+        <translation>検出されたトラック — 字幕: %1、音声: %2</translation>
     </message>
     <message>
         <source>none</source>
-        <translation type="unfinished" />
+        <translation>なし</translation>
     </message>
     <message>
         <source>Could not read this URL's tracks.</source>
-        <translation type="unfinished" />
+        <translation>この URL のトラックを読み取れませんでした。</translation>
     </message>
     <message>
         <source>Put the cursor on the playlist URL line.</source>
-        <translation type="unfinished" />
+        <translation>プレイリストの URL 行にカーソルを置いてください。</translation>
     </message>
     <message>
         <source>Expand Playlist works on the line the text cursor is on.</source>
-        <translation type="unfinished" />
+        <translation>「プレイリストを展開」はテキストカーソルがある行に対して動作します。</translation>
     </message>
     <message>
         <source>Resolving playlist…</source>
-        <translation type="unfinished">プレイリストを取得中…</translation>
+        <translation>プレイリストを取得中…</translation>
+    </message>
+    <message>
+        <source>Playlist line was removed; nothing added.</source>
+        <translation>プレイリストの行が削除されたため、何も追加されませんでした。</translation>
     </message>
     <message>
         <source>Playlist expansion cancelled.</source>
-        <translation type="unfinished" />
+        <translation>プレイリストの展開をキャンセルしました。</translation>
     </message>
     <message>
         <source>Added %1 videos from '%2'.</source>
-        <translation type="unfinished" />
+        <translation>「%2」から %1 本の動画を追加しました。</translation>
     </message>
     <message>
         <source>Skipped %1 already in the list.</source>
-        <translation type="unfinished" />
+        <translation>すでにリストにある %1 本をスキップしました。</translation>
+    </message>
+    <message>
+        <source>Paste the playlist URL again and expand it for videos %1 onward.</source>
+        <translation>プレイリストの URL をもう一度貼り付けて、動画 %1 以降を展開してください。</translation>
     </message>
     <message>
         <source>Could not expand that playlist.</source>
-        <translation type="unfinished" />
+        <translation>そのプレイリストを展開できませんでした。</translation>
     </message>
     <message>
         <source>Downloading %1 of %2</source>
@@ -5320,6 +5340,12 @@ Add %3 word(s) to your known list?</source>
         <translation>ローカルの既知単語リストに追加したすべての単語を削除しますか？この操作は元に戻せません。Anki と同期されたキャッシュには影響しません。</translation>
     </message>
 </context><context>
+    <name>LanguageNames</name>
+    <message>
+        <source>original</source>
+        <translation>オリジナル</translation>
+    </message>
+</context><context>
     <name>LanguagePackDownloadWorker</name>
     <message>
         <source>Downloading the %1 pack…</source>
@@ -5333,35 +5359,35 @@ Add %3 word(s) to your known list?</source>
     <name>LanguagePickerDialog</name>
     <message>
         <source>Subtitle Languages</source>
-        <translation type="unfinished" />
+        <translation>字幕の言語</translation>
     </message>
     <message>
         <source>Search languages…</source>
-        <translation type="unfinished" />
+        <translation>言語を検索…</translation>
     </message>
     <message>
-        <source>This URL also offers machine-translated captions in many more languages. Type a code in Advanced to request one.</source>
-        <translation type="unfinished" />
+        <source>This URL also offers machine-translated captions. A ticked language that is not listed for this URL is fetched as a machine translation.</source>
+        <translation>この URL では機械翻訳字幕も提供されています。チェックした言語がこの URL に一覧されていない場合、機械翻訳として取得されます。</translation>
     </message>
     <message>
         <source>Advanced (raw yt-dlp language expression):</source>
-        <translation type="unfinished" />
+        <translation>詳細設定（yt-dlp の言語表現をそのまま指定）:</translation>
     </message>
     <message>
         <source>e.g. en.*,-live_chat</source>
-        <translation type="unfinished" />
+        <translation>例：en.*,-live_chat</translation>
     </message>
     <message>
         <source>Available for this URL</source>
-        <translation type="unfinished" />
+        <translation>この URL で利用可能</translation>
     </message>
     <message>
         <source>Common languages</source>
-        <translation type="unfinished" />
+        <translation>よく使う言語</translation>
     </message>
     <message>
         <source>  · automatic</source>
-        <translation type="unfinished" />
+        <translation>  · 自動</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5893,7 +5919,7 @@ Continue?</source>
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation type="unfinished" />
+        <translation>マンガ OCR</translation>
     </message>
     <message>
         <source>Single</source>
@@ -6137,201 +6163,217 @@ Continue?</source>
     <name>MokuroInstallWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation type="unfinished">%1 (%2%)</translation>
+        <translation>%1 (%2%)</translation>
+    </message>
+    <message>
+        <source>Downloading uv…</source>
+        <translation>uv をダウンロード中…</translation>
+    </message>
+    <message>
+        <source>Preparing Python %1…</source>
+        <translation>Python %1 を準備中…</translation>
+    </message>
+    <message>
+        <source>Installing %1…</source>
+        <translation>%1 をインストール中…</translation>
+    </message>
+    <message>
+        <source>Downloading packages — torch is large, this can take a while…</source>
+        <translation>パッケージをダウンロード中 — torch は容量が大きいため、時間がかかることがあります…</translation>
     </message>
     <message>
         <source>Installing mokuro…</source>
-        <translation type="unfinished" />
+        <translation>mokuro をインストール中…</translation>
     </message>
     <message>
         <source>mokuro installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>mokuro のインストールが完了しました。</translation>
     </message>
 </context><context>
     <name>MokuroRunner</name>
     <message>
         <source>Page %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>%2 ページ中 %1 ページ目</translation>
     </message>
     <message>
         <source>Downloading OCR models (first run only)</source>
-        <translation type="unfinished" />
+        <translation>OCR モデルをダウンロード中（初回のみ）</translation>
     </message>
     <message>
         <source>Loading models (%1)</source>
-        <translation type="unfinished" />
+        <translation>モデルを読み込み中（%1）</translation>
     </message>
 </context><context>
     <name>MokuroTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">進捗</translation>
+        <translation>進捗</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">完了</translation>
+        <translation>完了</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">完了: </translation>
+        <translation>完了: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">スキップ</translation>
+        <translation>スキップ</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">スキップ: </translation>
+        <translation>スキップ: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">キャンセル</translation>
+        <translation>キャンセル</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">キャンセル中…</translation>
+        <translation>キャンセル中…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">キャンセルされました</translation>
+        <translation>キャンセルされました</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">失敗しました — ログを確認してください</translation>
+        <translation>失敗しました — ログを確認してください</translation>
     </message>
     <message>
         <source>Some volumes could not be processed.</source>
-        <translation type="unfinished" />
+        <translation>一部の巻を処理できませんでした。</translation>
     </message>
     <message>
         <source>Complete — %1 volume(s) processed</source>
-        <translation type="unfinished" />
+        <translation>完了 — %1 巻を処理しました</translation>
     </message>
     <message>
         <source>Complete — %1 processed, %2 already had a .mokuro file</source>
-        <translation type="unfinished" />
+        <translation>完了 — %1 巻を処理、%2 巻はすでに .mokuro ファイルあり</translation>
     </message>
     <message>
         <source>Nothing processed — all %1 already have a .mokuro file. Tick Redo to run OCR again.</source>
-        <translation type="unfinished" />
+        <translation>処理なし — %1 巻はすべて .mokuro ファイルがあります。「やり直す」にチェックを入れると、再度 OCR を実行します。</translation>
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation type="unfinished" />
+        <translation>マンガ OCR</translation>
     </message>
     <message>
         <source>Manga</source>
-        <translation type="unfinished">マンガ</translation>
+        <translation>マンガ</translation>
     </message>
     <message>
         <source>mokuro not found. Install it in Settings → Transcription &amp; Alignment → Manga OCR, or set its path there.</source>
-        <translation type="unfinished" />
+        <translation>mokuro が見つかりません。設定 → 文字起こしとアラインメント → マンガ OCR でインストールするか、そこでパスを設定してください。</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
-        <translation type="unfinished" />
+        <translation>ページ画像のフォルダ、または巻が入ったシリーズフォルダに対して mokuro の OCR を実行します。各巻には、読み → マンガ用の .mokuro ファイルがその隣に作成されます。</translation>
     </message>
     <message>
         <source>Folder:</source>
-        <translation type="unfinished">フォルダ:</translation>
+        <translation>フォルダ:</translation>
     </message>
     <message>
         <source>A folder of page images (one volume), or a folder whose subfolders and .cbz/.zip files are volumes.</source>
-        <translation type="unfinished" />
+        <translation>ページ画像のフォルダ（1巻分）、またはサブフォルダや .cbz/.zip ファイルがそれぞれ1巻となっているフォルダ。</translation>
     </message>
     <message>
         <source>Options</source>
-        <translation type="unfinished">オプション</translation>
+        <translation>オプション</translation>
     </message>
     <message>
         <source>Use GPU when available</source>
-        <translation type="unfinished" />
+        <translation>利用可能な場合は GPU を使用</translation>
     </message>
     <message>
         <source>Untick to force CPU even when mokuro's torch build can use a GPU.</source>
-        <translation type="unfinished" />
+        <translation>チェックを外すと、mokuro の torch ビルドが GPU を使用できる場合でも、CPU を強制的に使用します。</translation>
     </message>
     <message>
         <source>Redo volumes that already have a .mokuro file</source>
-        <translation type="unfinished" />
+        <translation>すでに .mokuro ファイルがある巻もやり直す</translation>
     </message>
     <message>
         <source>Runs OCR again from scratch, ignoring mokuro's cached page results. Off each launch.</source>
-        <translation type="unfinished" />
+        <translation>mokuro のキャッシュされたページ結果を無視して、OCR を最初からやり直します。起動のたびにオフに戻ります。</translation>
     </message>
     <message>
         <source>Run OCR</source>
-        <translation type="unfinished" />
+        <translation>OCR を実行</translation>
     </message>
     <message>
         <source>No manga volumes found in this folder.</source>
-        <translation type="unfinished" />
+        <translation>このフォルダにマンガの巻が見つかりません。</translation>
     </message>
     <message>
         <source>%1 volume(s) found, %2 already processed.</source>
-        <translation type="unfinished" />
+        <translation>%1 巻が見つかりました（%2 巻は処理済み）。</translation>
     </message>
     <message>
         <source>%1 volume(s) found.</source>
-        <translation type="unfinished" />
+        <translation>%1 巻が見つかりました。</translation>
     </message>
     <message>
         <source>This folder could not be read.</source>
-        <translation type="unfinished" />
+        <translation>このフォルダを読み取れませんでした。</translation>
     </message>
     <message>
         <source>Choose a manga folder before running OCR.</source>
-        <translation type="unfinished" />
+        <translation>OCR を実行する前に、マンガフォルダを選択してください。</translation>
     </message>
     <message>
         <source>That folder no longer exists.</source>
-        <translation type="unfinished">そのフォルダは存在しなくなっています。</translation>
+        <translation>そのフォルダは存在しなくなっています。</translation>
     </message>
     <message>
         <source>Manga folder is not writable.</source>
-        <translation type="unfinished" />
+        <translation>マンガフォルダに書き込めません。</translation>
     </message>
     <message>
         <source>mokuro writes its .mokuro files beside the volumes; check permissions for %1.</source>
-        <translation type="unfinished" />
+        <translation>mokuro は .mokuro ファイルを各巻の隣に書き込みます。%1 の権限を確認してください。</translation>
     </message>
     <message>
         <source>No manga volumes found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>そのフォルダにマンガの巻が見つかりません。</translation>
     </message>
     <message>
         <source>A volume is a folder of page images (.jpg, .png, .webp, .avif) or a .cbz/.zip archive. A series folder holds one of those per volume.</source>
-        <translation type="unfinished" />
+        <translation>巻とは、ページ画像（.jpg、.png、.webp、.avif）のフォルダ、または .cbz/.zip アーカイブのことです。シリーズフォルダには、巻ごとにこれらのいずれかが入っています。</translation>
     </message>
     <message>
         <source>That folder could not be read.</source>
-        <translation type="unfinished">そのフォルダーを読み取れませんでした。</translation>
+        <translation>そのフォルダを読み取れませんでした。</translation>
     </message>
     <message>
         <source> (already processed)</source>
-        <translation type="unfinished" />
+        <translation> （処理済み）</translation>
     </message>
     <message>
         <source>Volume %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>%2 巻中 %1 巻目</translation>
     </message>
 </context><context>
     <name>MokuroWorker</name>
     <message>
         <source>Already processed — tick Redo to run OCR again</source>
-        <translation type="unfinished" />
+        <translation>処理済み — 「やり直す」にチェックを入れると再度 OCR を実行します</translation>
     </message>
     <message>
         <source>%1: %2%</source>
-        <translation type="unfinished">%1: %2%</translation>
+        <translation>%1: %2%</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">完了</translation>
+        <translation>完了</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">キャンセルされました</translation>
+        <translation>キャンセルされました</translation>
     </message>
 </context><context>
     <name>NoteTypePage</name>
@@ -6609,43 +6651,63 @@ Index files on disk will be left untouched because the folder could not be prove
     <name>PlaylistPickerDialog</name>
     <message>
         <source>Add from Playlist</source>
-        <translation type="unfinished" />
+        <translation>プレイリストから追加</translation>
     </message>
     <message>
-        <source>'%1' — %2 videos</source>
-        <translation type="unfinished" />
+        <source>'%1' — showing videos %2-%3 of %4</source>
+        <translation>「%1」 — %2〜%3 本目の動画を表示（全 %4 本中）</translation>
     </message>
     <message>
-        <source>Showing the first %1. Download these, then expand the playlist again for the rest.</source>
-        <translation type="unfinished" />
+        <source>'%1' — showing videos %2-%3 of at least %3</source>
+        <translation>「%1」 — %2〜%3 本目の動画を表示（少なくとも %3 本中）</translation>
+    </message>
+    <message>
+        <source>This playlist has more videos. Paste its URL again and expand it for the next batch — it continues where this one stops.</source>
+        <translation>このプレイリストにはさらに動画があります。URL をもう一度貼り付けて展開すると、次のバッチを取得できます — 前回の続きから表示されます。</translation>
     </message>
     <message>
         <source>Search this playlist…</source>
-        <translation type="unfinished" />
+        <translation>このプレイリストを検索…</translation>
     </message>
     <message>
         <source>All</source>
-        <translation type="unfinished">すべて</translation>
+        <translation>すべて</translation>
     </message>
     <message>
         <source>None</source>
-        <translation type="unfinished" />
+        <translation>なし</translation>
     </message>
     <message>
         <source>Range, e.g. 1-20,25</source>
-        <translation type="unfinished" />
+        <translation>範囲（例：1-20,25）</translation>
     </message>
     <message>
         <source>Select Range</source>
-        <translation type="unfinished" />
+        <translation>範囲を選択</translation>
     </message>
     <message>
         <source>Add</source>
-        <translation type="unfinished">追加</translation>
+        <translation>追加</translation>
+    </message>
+    <message>
+        <source>Not a number or a range: %1</source>
+        <translation>数値でも範囲でもありません: %1</translation>
+    </message>
+    <message>
+        <source>There is no video %1.</source>
+        <translation>動画 %1 は存在しません。</translation>
+    </message>
+    <message>
+        <source>A range needs at least one end.</source>
+        <translation>範囲には少なくとも一方の端が必要です。</translation>
+    </message>
+    <message>
+        <source>Videos are numbered from 1.</source>
+        <translation>動画は 1 から番号が振られています。</translation>
     </message>
     <message>
         <source>Add %1 videos</source>
-        <translation type="unfinished" />
+        <translation>%1 本の動画を追加</translation>
     </message>
 </context><context>
     <name>ProfileController</name>
@@ -6927,7 +6989,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source> • Translations</source>
-        <translation type="unfinished" />
+        <translation> • 翻訳</translation>
     </message>
     <message>
         <source>%1 episodes • %2 cards created</source>
@@ -7007,11 +7069,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Translation Folder:</source>
-        <translation type="unfinished" />
+        <translation>翻訳字幕フォルダ:</translation>
     </message>
     <message>
         <source>Translation Offset:</source>
-        <translation type="unfinished">翻訳字幕オフセット:</translation>
+        <translation>翻訳字幕オフセット:</translation>
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -7027,7 +7089,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
-        <translation type="unfinished">翻訳字幕のみのタイミングを調整します（正の値 = 遅く、負の値 = 早く）</translation>
+        <translation>翻訳字幕のみのタイミングを調整します（正の値 = 遅く、負の値 = 早く）</translation>
+    </message>
+    <message>
+        <source>The translation folder is the subtitle folder. Pick a separate folder for the translation subtitles.</source>
+        <translation>翻訳字幕フォルダが字幕フォルダと同じです。翻訳字幕には別のフォルダを選んでください。</translation>
     </message>
     <message>
         <source>Empty Queue</source>
@@ -8081,31 +8147,31 @@ Index files on disk will be left untouched because the folder could not be prove
     <name>SentenceEditDialog</name>
     <message>
         <source>Edit word and sentence</source>
-        <translation type="unfinished" />
+        <translation>単語と例文を編集</translation>
     </message>
     <message>
         <source>Sentence</source>
-        <translation type="unfinished">例文</translation>
+        <translation>例文</translation>
     </message>
     <message>
         <source>Word to mine</source>
-        <translation type="unfinished" />
+        <translation>マイニングする単語</translation>
     </message>
     <message>
         <source>Type a sentence.</source>
-        <translation type="unfinished" />
+        <translation>例文を入力してください。</translation>
     </message>
     <message>
         <source>Finding words…</source>
-        <translation type="unfinished" />
+        <translation>単語を検索中…</translation>
     </message>
     <message>
         <source>No mineable word found in this sentence.</source>
-        <translation type="unfinished" />
+        <translation>この例文にマイニング可能な単語が見つかりません。</translation>
     </message>
     <message>
         <source>Could not parse this sentence.</source>
-        <translation type="unfinished" />
+        <translation>この例文を解析できませんでした。</translation>
     </message>
 </context><context>
     <name>SettingsSearchBox</name>
@@ -8285,7 +8351,7 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
     </message>
     <message>
         <source>Installing…</source>
-        <translation type="unfinished" />
+        <translation>インストール中…</translation>
     </message>
     <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
@@ -9485,35 +9551,35 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation type="unfinished" />
+        <translation>マンガ OCR</translation>
     </message>
     <message>
         <source>Optional: path to the mokuro executable</source>
-        <translation type="unfinished" />
+        <translation>省略可能: mokuro 実行ファイルのパス</translation>
     </message>
     <message>
         <source>mokuro executable</source>
-        <translation type="unfinished" />
+        <translation>mokuro 実行ファイル</translation>
     </message>
     <message>
         <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
-        <translation type="unfinished" />
+        <translation>任意：ご自身の mokuro（pip/pipx）。空欄のままにすると、下記のアプリ内インストールまたは PATH 上の mokuro が使用されます。</translation>
     </message>
     <message>
         <source>Install mokuro</source>
-        <translation type="unfinished" />
+        <translation>mokuro をインストール</translation>
     </message>
     <message>
         <source>Download mokuro and its OCR engine into Anki Miner's folder (about 1 GB, up to 4 GB with NVIDIA GPU support). Needed for Utilities → Manga OCR unless mokuro is already installed.</source>
-        <translation type="unfinished" />
+        <translation>mokuro とその OCR エンジンを Anki Miner のフォルダにダウンロードします（約 1 GB、NVIDIA GPU 対応時は最大 4 GB）。mokuro が既にインストールされている場合を除き、ユーティリティ → マンガ OCR に必要です。</translation>
     </message>
     <message>
         <source>mokuro install</source>
-        <translation type="unfinished" />
+        <translation>mokuro のインストール</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
-        <translation type="unfinished" />
+        <translation>このプラットフォームでは非対応</translation>
     </message>
     <message>
         <source>Subtitle generation needs the faster-whisper engine. This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, or run the command below and then launch the separate pipx-installed Anki Miner:</source>
@@ -9537,7 +9603,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Reinstall mokuro</source>
-        <translation type="unfinished" />
+        <translation>mokuro を再インストール</translation>
     </message>
     <message>
         <source>GPU acceleration is not available on this platform.</source>
@@ -9667,7 +9733,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>mokuro (manga OCR)</source>
-        <translation type="unfinished" />
+        <translation>mokuro（マンガ OCR）</translation>
     </message>
     <message>
         <source>Anki Miner updates</source>
@@ -10037,7 +10103,7 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Frequency is looked up again for the edited word when the card is made.</source>
-        <translation type="unfinished" />
+        <translation>編集した単語の頻度は、カード作成時に再度検索されます。</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -10061,11 +10127,11 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Edit word and sentence…</source>
-        <translation type="unfinished" />
+        <translation>単語と例文を編集…</translation>
     </message>
     <message>
         <source>Reset word and sentence</source>
-        <translation type="unfinished" />
+        <translation>単語と例文をリセット</translation>
     </message>
     <message>
         <source>Your Known Words could not be saved, so no cards were created. Confirm again to retry, or Cancel to discard the pending marks.</source>

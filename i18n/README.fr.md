@@ -120,7 +120,7 @@ Pour une configuration de développement complète, consultez [CONTRIBUTING.md](
 - **Livres audio** - extraire des livres audio, podcasts, radio, chansons (paires audio + sous-titres/transcription).
 - **Lecture** - extraire des mangas (mokuro), des romans (`.epub`, `.txt` ; un seul livre ou un dossier entier), des fichiers de sous-titres autonomes, ou du texte collé.
 - **Statistiques** - historique d'extraction, classements de difficulté, jalons.
-- **Utilitaires** - générer des sous-titres (Whisper local), re-synchroniser les sous-titres (ffsubsync/alass), condenser les médias en audio dialogue uniquement, télécharger vidéo/audio/sous-titres depuis tout site pris en charge par yt-dlp, copier la partie utile d'un paquet préfait dans un nouveau, et compléter les champs des cartes existantes.
+- **Utilitaires** - générer des sous-titres (Whisper local), re-synchroniser les sous-titres (ffsubsync/alass), condenser les médias en audio dialogue uniquement, télécharger vidéo/audio/sous-titres depuis tout site pris en charge par yt-dlp, copier la partie utile d'un paquet préfait dans un nouveau, compléter les champs des cartes existantes, et appliquer l'OCR aux images de pages de manga pour créer des fichiers .mokuro (mokuro, installable depuis les Paramètres).
 - **Paramètres** - tout ce qui est configurable.
 
 ## Autres fonctionnalités

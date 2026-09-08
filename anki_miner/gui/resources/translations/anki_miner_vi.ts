@@ -1367,11 +1367,11 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Translation Folder:</source>
-        <translation type="unfinished" />
+        <translation>Thư mục phụ đề dịch:</translation>
     </message>
     <message>
         <source>Translation Offset:</source>
-        <translation type="unfinished">Độ lệch phụ đề dịch:</translation>
+        <translation>Độ lệch phụ đề dịch:</translation>
     </message>
     <message>
         <source> seconds</source>
@@ -1383,7 +1383,7 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
-        <translation type="unfinished">Chỉ dời thời gian phụ đề dịch (dương = trễ hơn, âm = sớm hơn)</translation>
+        <translation>Chỉ dời thời gian phụ đề dịch (dương = trễ hơn, âm = sớm hơn)</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -1403,7 +1403,15 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>That translation subtitle folder no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Thư mục phụ đề dịch đó không còn tồn tại.</translation>
+    </message>
+    <message>
+        <source>The translation folder is the subtitle folder.</source>
+        <translation>Thư mục phụ đề dịch chính là thư mục phụ đề.</translation>
+    </message>
+    <message>
+        <source>Pick a separate folder for the translation subtitles.</source>
+        <translation>Hãy chọn một thư mục khác cho phụ đề dịch.</translation>
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -1581,7 +1589,7 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created.</source>
-        <translation type="unfinished" />
+        <translation>Chấp nhận hoặc từ chối từng từ, chọn câu và cảnh của từ đó, cắt âm thanh của từ, đánh dấu từ đã biết, và sửa câu bị phiên âm sai hoặc đổi từ cần khai thác -- trước khi bất kỳ thẻ nào được tạo.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -1589,7 +1597,7 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
-        <translation type="unfinished" />
+        <translation>Tải một tệp phụ đề thứ hai bằng ngôn ngữ của riêng bạn bên cạnh tệp phụ đề ngôn ngữ khai thác: tệp đó hiển thị bên dưới dòng chữ trong bản xem trước của Word Curator và có thể được lưu vào trường Bản dịch. Trên Video -&gt; Hàng loạt, hãy trỏ nó đến một thư mục phụ đề dịch thay vào đó, và chúng sẽ được ghép với video theo số tập. Bật tính năng này trong Cài đặt -&gt; Lọc.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2153,11 +2161,11 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Create .mokuro files from manga images</source>
-        <translation type="unfinished" />
+        <translation>Tạo tệp .mokuro từ ảnh manga</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation type="unfinished" />
+        <translation>Chạy OCR của mokuro trên một thư mục tập hoặc cả bộ để Đọc -&gt; Manga có thể khai thác. Cài đặt mokuro từ Cài đặt -&gt; Phiên âm &amp; Căn chỉnh.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -3891,19 +3899,19 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     </message>
     <message>
         <source>Expand Playlist…</source>
-        <translation type="unfinished" />
+        <translation>Mở rộng danh sách phát…</translation>
     </message>
     <message>
         <source>Replace the URL line the cursor is on with the playlist's individual videos, so you can pick which ones to download.</source>
-        <translation type="unfinished" />
+        <translation>Thay dòng URL nơi con trỏ đang đặt bằng các video riêng lẻ của danh sách phát, để bạn có thể chọn video muốn tải.</translation>
     </message>
     <message>
         <source>Detect Tracks</source>
-        <translation type="unfinished" />
+        <translation>Phát hiện rãnh</translation>
     </message>
     <message>
         <source>Ask the first URL which subtitle and audio languages it offers.</source>
-        <translation type="unfinished" />
+        <translation>Hỏi URL đầu tiên xem nó cung cấp ngôn ngữ phụ đề và âm thanh nào.</translation>
     </message>
     <message>
         <source>Options</source>
@@ -3963,23 +3971,23 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     </message>
     <message>
         <source>Choose…</source>
-        <translation type="unfinished">Chọn…</translation>
+        <translation>Chọn…</translation>
     </message>
     <message>
         <source>Pick subtitle languages by name.</source>
-        <translation type="unfinished" />
+        <translation>Chọn ngôn ngữ phụ đề theo tên.</translation>
     </message>
     <message>
         <source>Audio language:</source>
-        <translation type="unfinished" />
+        <translation>Ngôn ngữ âm thanh:</translation>
     </message>
     <message>
         <source>Preferred audio track on videos that carry several. A video without this language still downloads, with its default audio.</source>
-        <translation type="unfinished" />
+        <translation>Rãnh âm thanh được ưu tiên trên các video có nhiều rãnh âm thanh. Video không có ngôn ngữ này vẫn được tải, với âm thanh mặc định của video đó.</translation>
     </message>
     <message>
         <source>Any (best available)</source>
-        <translation type="unfinished" />
+        <translation>Bất kỳ (tốt nhất có sẵn)</translation>
     </message>
     <message>
         <source>Embed thumbnail</source>
@@ -4027,51 +4035,63 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     </message>
     <message>
         <source>Checking available tracks…</source>
-        <translation type="unfinished" />
+        <translation>Đang kiểm tra các rãnh có sẵn…</translation>
+    </message>
+    <message>
+        <source>The URL that was checked is no longer in the list; its tracks were ignored.</source>
+        <translation>URL đã được kiểm tra không còn trong danh sách; các rãnh của nó đã bị bỏ qua.</translation>
     </message>
     <message>
         <source>  · on this URL</source>
-        <translation type="unfinished" />
+        <translation>  · trên URL này</translation>
     </message>
     <message>
         <source>Tracks found — subtitles: %1; audio: %2</source>
-        <translation type="unfinished" />
+        <translation>Đã tìm thấy rãnh — phụ đề: %1; âm thanh: %2</translation>
     </message>
     <message>
         <source>none</source>
-        <translation type="unfinished" />
+        <translation>không có</translation>
     </message>
     <message>
         <source>Could not read this URL's tracks.</source>
-        <translation type="unfinished" />
+        <translation>Không thể đọc các rãnh của URL này.</translation>
     </message>
     <message>
         <source>Put the cursor on the playlist URL line.</source>
-        <translation type="unfinished" />
+        <translation>Đặt con trỏ vào dòng URL danh sách phát.</translation>
     </message>
     <message>
         <source>Expand Playlist works on the line the text cursor is on.</source>
-        <translation type="unfinished" />
+        <translation>Mở rộng danh sách phát hoạt động trên dòng mà con trỏ văn bản đang đặt.</translation>
     </message>
     <message>
         <source>Resolving playlist…</source>
-        <translation type="unfinished">Đang phân giải danh sách phát…</translation>
+        <translation>Đang phân giải danh sách phát…</translation>
+    </message>
+    <message>
+        <source>Playlist line was removed; nothing added.</source>
+        <translation>Dòng danh sách phát đã bị xóa; không có gì được thêm vào.</translation>
     </message>
     <message>
         <source>Playlist expansion cancelled.</source>
-        <translation type="unfinished" />
+        <translation>Đã hủy việc mở rộng danh sách phát.</translation>
     </message>
     <message>
         <source>Added %1 videos from '%2'.</source>
-        <translation type="unfinished" />
+        <translation>Đã thêm %1 video từ '%2'.</translation>
     </message>
     <message>
         <source>Skipped %1 already in the list.</source>
-        <translation type="unfinished" />
+        <translation>Đã bỏ qua %1 đã có trong danh sách.</translation>
+    </message>
+    <message>
+        <source>Paste the playlist URL again and expand it for videos %1 onward.</source>
+        <translation>Dán lại URL danh sách phát và mở rộng nó cho các video từ %1 trở đi.</translation>
     </message>
     <message>
         <source>Could not expand that playlist.</source>
-        <translation type="unfinished" />
+        <translation>Không thể mở rộng danh sách phát đó.</translation>
     </message>
     <message>
         <source>Downloading %1 of %2</source>
@@ -5320,6 +5340,12 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
         <translation>Gỡ bỏ TẤT CẢ các từ bạn đã thêm vào danh sách từ đã biết cục bộ? Không thể hoàn tác. Bộ nhớ đệm đồng bộ với Anki không bị ảnh hưởng.</translation>
     </message>
 </context><context>
+    <name>LanguageNames</name>
+    <message>
+        <source>original</source>
+        <translation>gốc</translation>
+    </message>
+</context><context>
     <name>LanguagePackDownloadWorker</name>
     <message>
         <source>Downloading the %1 pack…</source>
@@ -5333,35 +5359,35 @@ Thêm %3 từ vào danh sách từ đã biết?</translation>
     <name>LanguagePickerDialog</name>
     <message>
         <source>Subtitle Languages</source>
-        <translation type="unfinished" />
+        <translation>Ngôn ngữ phụ đề</translation>
     </message>
     <message>
         <source>Search languages…</source>
-        <translation type="unfinished" />
+        <translation>Tìm kiếm ngôn ngữ…</translation>
     </message>
     <message>
-        <source>This URL also offers machine-translated captions in many more languages. Type a code in Advanced to request one.</source>
-        <translation type="unfinished" />
+        <source>This URL also offers machine-translated captions. A ticked language that is not listed for this URL is fetched as a machine translation.</source>
+        <translation>URL này cũng cung cấp phụ đề dịch máy. Ngôn ngữ đã chọn nhưng không có trong danh sách của URL này sẽ được lấy dưới dạng bản dịch máy.</translation>
     </message>
     <message>
         <source>Advanced (raw yt-dlp language expression):</source>
-        <translation type="unfinished" />
+        <translation>Nâng cao (biểu thức ngôn ngữ yt-dlp thô):</translation>
     </message>
     <message>
         <source>e.g. en.*,-live_chat</source>
-        <translation type="unfinished" />
+        <translation>ví dụ en.*,-live_chat</translation>
     </message>
     <message>
         <source>Available for this URL</source>
-        <translation type="unfinished" />
+        <translation>Có sẵn cho URL này</translation>
     </message>
     <message>
         <source>Common languages</source>
-        <translation type="unfinished" />
+        <translation>Ngôn ngữ phổ biến</translation>
     </message>
     <message>
         <source>  · automatic</source>
-        <translation type="unfinished" />
+        <translation>  · tự động</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5893,7 +5919,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation type="unfinished" />
+        <translation>Manga OCR</translation>
     </message>
     <message>
         <source>Single</source>
@@ -6137,201 +6163,217 @@ Tiếp tục?</translation>
     <name>MokuroInstallWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation type="unfinished">%1 (%2%)</translation>
+        <translation>%1 (%2%)</translation>
+    </message>
+    <message>
+        <source>Downloading uv…</source>
+        <translation>Đang tải uv…</translation>
+    </message>
+    <message>
+        <source>Preparing Python %1…</source>
+        <translation>Đang chuẩn bị Python %1…</translation>
+    </message>
+    <message>
+        <source>Installing %1…</source>
+        <translation>Đang cài đặt %1…</translation>
+    </message>
+    <message>
+        <source>Downloading packages — torch is large, this can take a while…</source>
+        <translation>Đang tải các gói — torch khá lớn, việc này có thể mất một lúc…</translation>
     </message>
     <message>
         <source>Installing mokuro…</source>
-        <translation type="unfinished" />
+        <translation>Đang cài đặt mokuro…</translation>
     </message>
     <message>
         <source>mokuro installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>Đã cài đặt mokuro thành công.</translation>
     </message>
 </context><context>
     <name>MokuroRunner</name>
     <message>
         <source>Page %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Trang %1 trên %2</translation>
     </message>
     <message>
         <source>Downloading OCR models (first run only)</source>
-        <translation type="unfinished" />
+        <translation>Đang tải mô hình OCR (chỉ lần chạy đầu)</translation>
     </message>
     <message>
         <source>Loading models (%1)</source>
-        <translation type="unfinished" />
+        <translation>Đang tải mô hình (%1)</translation>
     </message>
 </context><context>
     <name>MokuroTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Tiến độ</translation>
+        <translation>Tiến độ</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Xong</translation>
+        <translation>Xong</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Xong: </translation>
+        <translation>Xong: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Đã bỏ qua</translation>
+        <translation>Đã bỏ qua</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Đã bỏ qua: </translation>
+        <translation>Đã bỏ qua: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Hủy</translation>
+        <translation>Hủy</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Đang hủy…</translation>
+        <translation>Đang hủy…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Đã hủy</translation>
+        <translation>Đã hủy</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Thất bại — xem nhật ký</translation>
+        <translation>Thất bại — xem nhật ký</translation>
     </message>
     <message>
         <source>Some volumes could not be processed.</source>
-        <translation type="unfinished" />
+        <translation>Một số tập không thể xử lý được.</translation>
     </message>
     <message>
         <source>Complete — %1 volume(s) processed</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — đã xử lý %1 tập</translation>
     </message>
     <message>
         <source>Complete — %1 processed, %2 already had a .mokuro file</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — đã xử lý %1, %2 đã có tệp .mokuro</translation>
     </message>
     <message>
         <source>Nothing processed — all %1 already have a .mokuro file. Tick Redo to run OCR again.</source>
-        <translation type="unfinished" />
+        <translation>Không có gì được xử lý — cả %1 đều đã có tệp .mokuro. Đánh dấu Làm lại để chạy OCR lần nữa.</translation>
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation type="unfinished" />
+        <translation>Manga OCR</translation>
     </message>
     <message>
         <source>Manga</source>
-        <translation type="unfinished">Manga</translation>
+        <translation>Manga</translation>
     </message>
     <message>
         <source>mokuro not found. Install it in Settings → Transcription &amp; Alignment → Manga OCR, or set its path there.</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy mokuro. Cài đặt trong Cài đặt → Phiên âm &amp; Căn chỉnh → Manga OCR, hoặc đặt đường dẫn của nó tại đó.</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
-        <translation type="unfinished" />
+        <translation>Chạy OCR của mokuro trên một thư mục ảnh trang, hoặc một thư mục bộ chứa nhiều tập. Mỗi tập sẽ có một tệp .mokuro bên cạnh nó để dùng cho Đọc → Manga.</translation>
     </message>
     <message>
         <source>Folder:</source>
-        <translation type="unfinished">Thư mục:</translation>
+        <translation>Thư mục:</translation>
     </message>
     <message>
         <source>A folder of page images (one volume), or a folder whose subfolders and .cbz/.zip files are volumes.</source>
-        <translation type="unfinished" />
+        <translation>Một thư mục ảnh trang (một tập), hoặc một thư mục có các thư mục con và tệp .cbz/.zip là các tập.</translation>
     </message>
     <message>
         <source>Options</source>
-        <translation type="unfinished">Tùy chọn</translation>
+        <translation>Tùy chọn</translation>
     </message>
     <message>
         <source>Use GPU when available</source>
-        <translation type="unfinished" />
+        <translation>Dùng GPU khi có sẵn</translation>
     </message>
     <message>
         <source>Untick to force CPU even when mokuro's torch build can use a GPU.</source>
-        <translation type="unfinished" />
+        <translation>Bỏ đánh dấu để buộc dùng CPU ngay cả khi bản dựng torch của mokuro có thể dùng GPU.</translation>
     </message>
     <message>
         <source>Redo volumes that already have a .mokuro file</source>
-        <translation type="unfinished" />
+        <translation>Làm lại các tập đã có tệp .mokuro</translation>
     </message>
     <message>
         <source>Runs OCR again from scratch, ignoring mokuro's cached page results. Off each launch.</source>
-        <translation type="unfinished" />
+        <translation>Chạy lại OCR từ đầu, bỏ qua kết quả trang đã lưu trong bộ nhớ đệm của mokuro. Tắt sau mỗi lần khởi chạy.</translation>
     </message>
     <message>
         <source>Run OCR</source>
-        <translation type="unfinished" />
+        <translation>Chạy OCR</translation>
     </message>
     <message>
         <source>No manga volumes found in this folder.</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy tập manga nào trong thư mục này.</translation>
     </message>
     <message>
         <source>%1 volume(s) found, %2 already processed.</source>
-        <translation type="unfinished" />
+        <translation>Đã tìm thấy %1 tập, %2 đã xử lý.</translation>
     </message>
     <message>
         <source>%1 volume(s) found.</source>
-        <translation type="unfinished" />
+        <translation>Đã tìm thấy %1 tập.</translation>
     </message>
     <message>
         <source>This folder could not be read.</source>
-        <translation type="unfinished" />
+        <translation>Không thể đọc thư mục này.</translation>
     </message>
     <message>
         <source>Choose a manga folder before running OCR.</source>
-        <translation type="unfinished" />
+        <translation>Chọn thư mục manga trước khi chạy OCR.</translation>
     </message>
     <message>
         <source>That folder no longer exists.</source>
-        <translation type="unfinished">Thư mục đó không còn tồn tại.</translation>
+        <translation>Thư mục đó không còn tồn tại.</translation>
     </message>
     <message>
         <source>Manga folder is not writable.</source>
-        <translation type="unfinished" />
+        <translation>Thư mục manga không ghi được.</translation>
     </message>
     <message>
         <source>mokuro writes its .mokuro files beside the volumes; check permissions for %1.</source>
-        <translation type="unfinished" />
+        <translation>mokuro ghi các tệp .mokuro bên cạnh các tập; hãy kiểm tra quyền truy cập cho %1.</translation>
     </message>
     <message>
         <source>No manga volumes found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy tập manga nào trong thư mục đó.</translation>
     </message>
     <message>
         <source>A volume is a folder of page images (.jpg, .png, .webp, .avif) or a .cbz/.zip archive. A series folder holds one of those per volume.</source>
-        <translation type="unfinished" />
+        <translation>Một tập là một thư mục ảnh trang (.jpg, .png, .webp, .avif) hoặc một kho lưu trữ .cbz/.zip. Một thư mục bộ chứa một trong số đó cho mỗi tập.</translation>
     </message>
     <message>
         <source>That folder could not be read.</source>
-        <translation type="unfinished">Không thể đọc thư mục đó.</translation>
+        <translation>Không thể đọc thư mục đó.</translation>
     </message>
     <message>
         <source> (already processed)</source>
-        <translation type="unfinished" />
+        <translation> (đã xử lý)</translation>
     </message>
     <message>
         <source>Volume %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Tập %1 trên %2</translation>
     </message>
 </context><context>
     <name>MokuroWorker</name>
     <message>
         <source>Already processed — tick Redo to run OCR again</source>
-        <translation type="unfinished" />
+        <translation>Đã xử lý — đánh dấu Làm lại để chạy OCR lần nữa</translation>
     </message>
     <message>
         <source>%1: %2%</source>
-        <translation type="unfinished">%1: %2%</translation>
+        <translation>%1: %2%</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Xong</translation>
+        <translation>Xong</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Đã hủy</translation>
+        <translation>Đã hủy</translation>
     </message>
 </context><context>
     <name>NoteTypePage</name>
@@ -6609,43 +6651,63 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     <name>PlaylistPickerDialog</name>
     <message>
         <source>Add from Playlist</source>
-        <translation type="unfinished" />
+        <translation>Thêm từ danh sách phát</translation>
     </message>
     <message>
-        <source>'%1' — %2 videos</source>
-        <translation type="unfinished" />
+        <source>'%1' — showing videos %2-%3 of %4</source>
+        <translation>'%1' — đang hiển thị video %2-%3 trên %4</translation>
     </message>
     <message>
-        <source>Showing the first %1. Download these, then expand the playlist again for the rest.</source>
-        <translation type="unfinished" />
+        <source>'%1' — showing videos %2-%3 of at least %3</source>
+        <translation>'%1' — đang hiển thị video %2-%3 trên ít nhất %3</translation>
+    </message>
+    <message>
+        <source>This playlist has more videos. Paste its URL again and expand it for the next batch — it continues where this one stops.</source>
+        <translation>Danh sách phát này còn nhiều video hơn. Hãy dán lại URL của nó và mở rộng để lấy lô tiếp theo — lô đó tiếp tục từ nơi lô này dừng lại.</translation>
     </message>
     <message>
         <source>Search this playlist…</source>
-        <translation type="unfinished" />
+        <translation>Tìm kiếm trong danh sách phát này…</translation>
     </message>
     <message>
         <source>All</source>
-        <translation type="unfinished">Tất cả</translation>
+        <translation>Tất cả</translation>
     </message>
     <message>
         <source>None</source>
-        <translation type="unfinished" />
+        <translation>Không có</translation>
     </message>
     <message>
         <source>Range, e.g. 1-20,25</source>
-        <translation type="unfinished" />
+        <translation>Khoảng, ví dụ 1-20,25</translation>
     </message>
     <message>
         <source>Select Range</source>
-        <translation type="unfinished" />
+        <translation>Chọn khoảng</translation>
     </message>
     <message>
         <source>Add</source>
-        <translation type="unfinished">Thêm</translation>
+        <translation>Thêm</translation>
+    </message>
+    <message>
+        <source>Not a number or a range: %1</source>
+        <translation>Không phải số hoặc khoảng: %1</translation>
+    </message>
+    <message>
+        <source>There is no video %1.</source>
+        <translation>Không có video %1.</translation>
+    </message>
+    <message>
+        <source>A range needs at least one end.</source>
+        <translation>Khoảng cần có ít nhất một đầu.</translation>
+    </message>
+    <message>
+        <source>Videos are numbered from 1.</source>
+        <translation>Video được đánh số từ 1.</translation>
     </message>
     <message>
         <source>Add %1 videos</source>
-        <translation type="unfinished" />
+        <translation>Thêm %1 video</translation>
     </message>
 </context><context>
     <name>ProfileController</name>
@@ -6927,7 +6989,7 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source> • Translations</source>
-        <translation type="unfinished" />
+        <translation> • Bản dịch</translation>
     </message>
     <message>
         <source>%1 episodes • %2 cards created</source>
@@ -7007,11 +7069,11 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Translation Folder:</source>
-        <translation type="unfinished" />
+        <translation>Thư mục phụ đề dịch:</translation>
     </message>
     <message>
         <source>Translation Offset:</source>
-        <translation type="unfinished">Độ lệch phụ đề dịch:</translation>
+        <translation>Độ lệch phụ đề dịch:</translation>
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -7027,7 +7089,11 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     </message>
     <message>
         <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
-        <translation type="unfinished">Chỉ dời thời gian phụ đề dịch (dương = trễ hơn, âm = sớm hơn)</translation>
+        <translation>Chỉ dời thời gian phụ đề dịch (dương = trễ hơn, âm = sớm hơn)</translation>
+    </message>
+    <message>
+        <source>The translation folder is the subtitle folder. Pick a separate folder for the translation subtitles.</source>
+        <translation>Thư mục phụ đề dịch chính là thư mục phụ đề. Hãy chọn một thư mục khác cho phụ đề dịch.</translation>
     </message>
     <message>
         <source>Empty Queue</source>
@@ -8081,31 +8147,31 @@ Các tệp chỉ mục trên đĩa sẽ được giữ nguyên vì không thể 
     <name>SentenceEditDialog</name>
     <message>
         <source>Edit word and sentence</source>
-        <translation type="unfinished" />
+        <translation>Chỉnh sửa từ và câu</translation>
     </message>
     <message>
         <source>Sentence</source>
-        <translation type="unfinished">Câu</translation>
+        <translation>Câu</translation>
     </message>
     <message>
         <source>Word to mine</source>
-        <translation type="unfinished" />
+        <translation>Từ cần khai thác</translation>
     </message>
     <message>
         <source>Type a sentence.</source>
-        <translation type="unfinished" />
+        <translation>Nhập một câu.</translation>
     </message>
     <message>
         <source>Finding words…</source>
-        <translation type="unfinished" />
+        <translation>Đang tìm từ…</translation>
     </message>
     <message>
         <source>No mineable word found in this sentence.</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy từ có thể khai thác nào trong câu này.</translation>
     </message>
     <message>
         <source>Could not parse this sentence.</source>
-        <translation type="unfinished" />
+        <translation>Không thể phân tích câu này.</translation>
     </message>
 </context><context>
     <name>SettingsSearchBox</name>
@@ -8285,7 +8351,7 @@ Nguồn không còn hoạt động sau khi ứng dụng nâng cấp được s�
     </message>
     <message>
         <source>Installing…</source>
-        <translation type="unfinished" />
+        <translation>Đang cài đặt…</translation>
     </message>
     <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
@@ -9485,35 +9551,35 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation type="unfinished" />
+        <translation>Manga OCR</translation>
     </message>
     <message>
         <source>Optional: path to the mokuro executable</source>
-        <translation type="unfinished" />
+        <translation>Tùy chọn: đường dẫn đến tệp thực thi mokuro</translation>
     </message>
     <message>
         <source>mokuro executable</source>
-        <translation type="unfinished" />
+        <translation>tệp thực thi mokuro</translation>
     </message>
     <message>
         <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
-        <translation type="unfinished" />
+        <translation>Tùy chọn: mokuro của riêng bạn (pip/pipx). Để trống để dùng bản cài đặt trong ứng dụng bên dưới hoặc mokuro trên PATH của bạn.</translation>
     </message>
     <message>
         <source>Install mokuro</source>
-        <translation type="unfinished" />
+        <translation>Cài đặt mokuro</translation>
     </message>
     <message>
         <source>Download mokuro and its OCR engine into Anki Miner's folder (about 1 GB, up to 4 GB with NVIDIA GPU support). Needed for Utilities → Manga OCR unless mokuro is already installed.</source>
-        <translation type="unfinished" />
+        <translation>Tải mokuro và bộ máy OCR của nó vào thư mục của Anki Miner (khoảng 1 GB, lên đến 4 GB nếu hỗ trợ GPU NVIDIA). Cần thiết cho Tiện ích → Manga OCR trừ khi mokuro đã được cài đặt.</translation>
     </message>
     <message>
         <source>mokuro install</source>
-        <translation type="unfinished" />
+        <translation>Cài đặt mokuro</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
-        <translation type="unfinished" />
+        <translation>Không khả dụng trên nền tảng này</translation>
     </message>
     <message>
         <source>Subtitle generation needs the faster-whisper engine. This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, or run the command below and then launch the separate pipx-installed Anki Miner:</source>
@@ -9537,7 +9603,7 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>Reinstall mokuro</source>
-        <translation type="unfinished" />
+        <translation>Cài đặt lại mokuro</translation>
     </message>
     <message>
         <source>GPU acceleration is not available on this platform.</source>
@@ -9667,7 +9733,7 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>mokuro (manga OCR)</source>
-        <translation type="unfinished" />
+        <translation>mokuro (OCR manga)</translation>
     </message>
     <message>
         <source>Anki Miner updates</source>
@@ -10037,7 +10103,7 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên trước — những dò
     </message>
     <message>
         <source>Frequency is looked up again for the edited word when the card is made.</source>
-        <translation type="unfinished" />
+        <translation>Tần suất sẽ được tra cứu lại cho từ đã chỉnh sửa khi thẻ được tạo.</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -10061,11 +10127,11 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên trước — những dò
     </message>
     <message>
         <source>Edit word and sentence…</source>
-        <translation type="unfinished" />
+        <translation>Chỉnh sửa từ và câu…</translation>
     </message>
     <message>
         <source>Reset word and sentence</source>
-        <translation type="unfinished" />
+        <translation>Đặt lại từ và câu</translation>
     </message>
     <message>
         <source>Your Known Words could not be saved, so no cards were created. Confirm again to retry, or Cancel to discard the pending marks.</source>

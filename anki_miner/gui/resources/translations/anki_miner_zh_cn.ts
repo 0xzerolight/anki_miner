@@ -1367,11 +1367,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Translation Folder:</source>
-        <translation type="unfinished" />
+        <translation>翻译文件夹：</translation>
     </message>
     <message>
         <source>Translation Offset:</source>
-        <translation type="unfinished">翻译偏移：</translation>
+        <translation>翻译偏移：</translation>
     </message>
     <message>
         <source> seconds</source>
@@ -1383,7 +1383,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
-        <translation type="unfinished">仅偏移翻译字幕（正值 = 延后，负值 = 提前）</translation>
+        <translation>仅偏移翻译字幕（正值 = 延后，负值 = 提前）</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -1403,7 +1403,15 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>That translation subtitle folder no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>该翻译字幕文件夹已不存在。</translation>
+    </message>
+    <message>
+        <source>The translation folder is the subtitle folder.</source>
+        <translation>翻译文件夹与字幕文件夹相同。</translation>
+    </message>
+    <message>
+        <source>Pick a separate folder for the translation subtitles.</source>
+        <translation>为翻译字幕选择一个单独的文件夹。</translation>
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -1581,7 +1589,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created.</source>
-        <translation type="unfinished" />
+        <translation>在创建卡片前，批准或拒绝每个单词，选择其例句和场景，裁剪音频，将单词标记为已知，并修正转录错误的句子或更换要挖取的单词。</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -1589,7 +1597,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
-        <translation type="unfinished" />
+        <translation>在挖词语言字幕旁加载一个你自己语言的第二个字幕文件：它会显示在单词整理器预览中该行的下方，并可保存到“翻译”字段。在视频 -&gt; 批量中，可改为指向一个翻译字幕文件夹，按剧集编号与视频配对。在设置 -&gt; 过滤中开启此功能。</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2153,11 +2161,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Create .mokuro files from manga images</source>
-        <translation type="unfinished" />
+        <translation>从漫画图像创建 .mokuro 文件</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation type="unfinished" />
+        <translation>对卷文件夹或整个系列运行 mokuro 的 OCR，以便阅读 -&gt; 漫画可以挖词。从设置 -&gt; 转写和对齐安装 mokuro。</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -3891,19 +3899,19 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Expand Playlist…</source>
-        <translation type="unfinished" />
+        <translation>展开播放列表…</translation>
     </message>
     <message>
         <source>Replace the URL line the cursor is on with the playlist's individual videos, so you can pick which ones to download.</source>
-        <translation type="unfinished" />
+        <translation>将光标所在的链接行替换为该播放列表中的各个视频，以便你选择要下载的视频。</translation>
     </message>
     <message>
         <source>Detect Tracks</source>
-        <translation type="unfinished" />
+        <translation>检测轨道</translation>
     </message>
     <message>
         <source>Ask the first URL which subtitle and audio languages it offers.</source>
-        <translation type="unfinished" />
+        <translation>查询第一个链接提供哪些字幕和音频语言。</translation>
     </message>
     <message>
         <source>Options</source>
@@ -3963,23 +3971,23 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Choose…</source>
-        <translation type="unfinished">选择…</translation>
+        <translation>选择…</translation>
     </message>
     <message>
         <source>Pick subtitle languages by name.</source>
-        <translation type="unfinished" />
+        <translation>按名称选择字幕语言。</translation>
     </message>
     <message>
         <source>Audio language:</source>
-        <translation type="unfinished" />
+        <translation>音频语言：</translation>
     </message>
     <message>
         <source>Preferred audio track on videos that carry several. A video without this language still downloads, with its default audio.</source>
-        <translation type="unfinished" />
+        <translation>视频含多条音轨时优先使用的音频。不含此语言的视频仍会下载，使用其默认音频。</translation>
     </message>
     <message>
         <source>Any (best available)</source>
-        <translation type="unfinished" />
+        <translation>任意（最佳可用）</translation>
     </message>
     <message>
         <source>Embed thumbnail</source>
@@ -4027,51 +4035,63 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Checking available tracks…</source>
-        <translation type="unfinished" />
+        <translation>正在检查可用轨道…</translation>
+    </message>
+    <message>
+        <source>The URL that was checked is no longer in the list; its tracks were ignored.</source>
+        <translation>已检查的链接不再位于列表中；其轨道信息已被忽略。</translation>
     </message>
     <message>
         <source>  · on this URL</source>
-        <translation type="unfinished" />
+        <translation>  · 此链接可用</translation>
     </message>
     <message>
         <source>Tracks found — subtitles: %1; audio: %2</source>
-        <translation type="unfinished" />
+        <translation>已找到轨道——字幕：%1；音频：%2</translation>
     </message>
     <message>
         <source>none</source>
-        <translation type="unfinished" />
+        <translation>无</translation>
     </message>
     <message>
         <source>Could not read this URL's tracks.</source>
-        <translation type="unfinished" />
+        <translation>无法读取此链接的轨道。</translation>
     </message>
     <message>
         <source>Put the cursor on the playlist URL line.</source>
-        <translation type="unfinished" />
+        <translation>将光标放在播放列表链接行上。</translation>
     </message>
     <message>
         <source>Expand Playlist works on the line the text cursor is on.</source>
-        <translation type="unfinished" />
+        <translation>展开播放列表仅对光标所在的行生效。</translation>
     </message>
     <message>
         <source>Resolving playlist…</source>
-        <translation type="unfinished">正在解析播放列表…</translation>
+        <translation>正在解析播放列表…</translation>
+    </message>
+    <message>
+        <source>Playlist line was removed; nothing added.</source>
+        <translation>播放列表所在行已被移除；未添加任何内容。</translation>
     </message>
     <message>
         <source>Playlist expansion cancelled.</source>
-        <translation type="unfinished" />
+        <translation>播放列表展开已取消。</translation>
     </message>
     <message>
         <source>Added %1 videos from '%2'.</source>
-        <translation type="unfinished" />
+        <translation>已从“%2”添加 %1 个视频。</translation>
     </message>
     <message>
         <source>Skipped %1 already in the list.</source>
-        <translation type="unfinished" />
+        <translation>已跳过 %1 个已在列表中的视频。</translation>
+    </message>
+    <message>
+        <source>Paste the playlist URL again and expand it for videos %1 onward.</source>
+        <translation>重新粘贴播放列表链接并展开，以获取第 %1 个及之后的视频。</translation>
     </message>
     <message>
         <source>Could not expand that playlist.</source>
-        <translation type="unfinished" />
+        <translation>无法展开该播放列表。</translation>
     </message>
     <message>
         <source>Downloading %1 of %2</source>
@@ -5320,6 +5340,12 @@ Add %3 word(s) to your known list?</source>
         <translation>移除你添加到本地已知单词列表中的所有单词？此操作无法撤销。不会影响从 Anki 同步的缓存。</translation>
     </message>
 </context><context>
+    <name>LanguageNames</name>
+    <message>
+        <source>original</source>
+        <translation>原始</translation>
+    </message>
+</context><context>
     <name>LanguagePackDownloadWorker</name>
     <message>
         <source>Downloading the %1 pack…</source>
@@ -5333,35 +5359,35 @@ Add %3 word(s) to your known list?</source>
     <name>LanguagePickerDialog</name>
     <message>
         <source>Subtitle Languages</source>
-        <translation type="unfinished" />
+        <translation>字幕语言</translation>
     </message>
     <message>
         <source>Search languages…</source>
-        <translation type="unfinished" />
+        <translation>搜索语言…</translation>
     </message>
     <message>
-        <source>This URL also offers machine-translated captions in many more languages. Type a code in Advanced to request one.</source>
-        <translation type="unfinished" />
+        <source>This URL also offers machine-translated captions. A ticked language that is not listed for this URL is fetched as a machine translation.</source>
+        <translation>此链接还提供机器翻译字幕。勾选了但未在此链接中列出的语言将作为机器翻译获取。</translation>
     </message>
     <message>
         <source>Advanced (raw yt-dlp language expression):</source>
-        <translation type="unfinished" />
+        <translation>高级（原始 yt-dlp 语言表达式）：</translation>
     </message>
     <message>
         <source>e.g. en.*,-live_chat</source>
-        <translation type="unfinished" />
+        <translation>例如 en.*,-live_chat</translation>
     </message>
     <message>
         <source>Available for this URL</source>
-        <translation type="unfinished" />
+        <translation>此链接可用</translation>
     </message>
     <message>
         <source>Common languages</source>
-        <translation type="unfinished" />
+        <translation>常用语言</translation>
     </message>
     <message>
         <source>  · automatic</source>
-        <translation type="unfinished" />
+        <translation>  · 自动生成</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5893,7 +5919,7 @@ Continue?</source>
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation type="unfinished" />
+        <translation>漫画 OCR</translation>
     </message>
     <message>
         <source>Single</source>
@@ -6137,201 +6163,217 @@ Continue?</source>
     <name>MokuroInstallWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation type="unfinished">%1（%2%）</translation>
+        <translation>%1（%2%）</translation>
+    </message>
+    <message>
+        <source>Downloading uv…</source>
+        <translation>正在下载 uv…</translation>
+    </message>
+    <message>
+        <source>Preparing Python %1…</source>
+        <translation>正在准备 Python %1…</translation>
+    </message>
+    <message>
+        <source>Installing %1…</source>
+        <translation>正在安装 %1…</translation>
+    </message>
+    <message>
+        <source>Downloading packages — torch is large, this can take a while…</source>
+        <translation>正在下载安装包——torch 较大，可能需要一些时间…</translation>
     </message>
     <message>
         <source>Installing mokuro…</source>
-        <translation type="unfinished" />
+        <translation>正在安装 mokuro…</translation>
     </message>
     <message>
         <source>mokuro installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>mokuro 安装成功。</translation>
     </message>
 </context><context>
     <name>MokuroRunner</name>
     <message>
         <source>Page %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>第 %1 页，共 %2 页</translation>
     </message>
     <message>
         <source>Downloading OCR models (first run only)</source>
-        <translation type="unfinished" />
+        <translation>正在下载 OCR 模型（仅首次运行）</translation>
     </message>
     <message>
         <source>Loading models (%1)</source>
-        <translation type="unfinished" />
+        <translation>正在加载模型（%1）</translation>
     </message>
 </context><context>
     <name>MokuroTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">进度</translation>
+        <translation>进度</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">完成</translation>
+        <translation>完成</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">完成：</translation>
+        <translation>完成：</translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">已跳过</translation>
+        <translation>已跳过</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">已跳过：</translation>
+        <translation>已跳过：</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">取消</translation>
+        <translation>取消</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">正在取消…</translation>
+        <translation>正在取消…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">已取消</translation>
+        <translation>已取消</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">失败——请查看日志</translation>
+        <translation>失败——请查看日志</translation>
     </message>
     <message>
         <source>Some volumes could not be processed.</source>
-        <translation type="unfinished" />
+        <translation>部分卷处理失败。</translation>
     </message>
     <message>
         <source>Complete — %1 volume(s) processed</source>
-        <translation type="unfinished" />
+        <translation>完成——已处理 %1 卷</translation>
     </message>
     <message>
         <source>Complete — %1 processed, %2 already had a .mokuro file</source>
-        <translation type="unfinished" />
+        <translation>完成——已处理 %1 卷，%2 卷已有 .mokuro 文件</translation>
     </message>
     <message>
         <source>Nothing processed — all %1 already have a .mokuro file. Tick Redo to run OCR again.</source>
-        <translation type="unfinished" />
+        <translation>未处理任何内容——这 %1 卷都已有 .mokuro 文件。勾选“重做”以再次运行 OCR。</translation>
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation type="unfinished" />
+        <translation>漫画 OCR</translation>
     </message>
     <message>
         <source>Manga</source>
-        <translation type="unfinished">漫画</translation>
+        <translation>漫画</translation>
     </message>
     <message>
         <source>mokuro not found. Install it in Settings → Transcription &amp; Alignment → Manga OCR, or set its path there.</source>
-        <translation type="unfinished" />
+        <translation>未找到 mokuro。请在“设置 → 转写和对齐 → 漫画 OCR”中安装，或在那里设置其路径。</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
-        <translation type="unfinished" />
+        <translation>对包含页面图像的文件夹或卷的系列文件夹运行 mokuro 的 OCR。每卷都会在旁边生成一个 .mokuro 文件，供“阅读 → 漫画”使用。</translation>
     </message>
     <message>
         <source>Folder:</source>
-        <translation type="unfinished">文件夹：</translation>
+        <translation>文件夹：</translation>
     </message>
     <message>
         <source>A folder of page images (one volume), or a folder whose subfolders and .cbz/.zip files are volumes.</source>
-        <translation type="unfinished" />
+        <translation>包含页面图像的文件夹（即一卷），或其子文件夹和 .cbz/.zip 文件均为卷的文件夹。</translation>
     </message>
     <message>
         <source>Options</source>
-        <translation type="unfinished">选项</translation>
+        <translation>选项</translation>
     </message>
     <message>
         <source>Use GPU when available</source>
-        <translation type="unfinished" />
+        <translation>可用时使用 GPU</translation>
     </message>
     <message>
         <source>Untick to force CPU even when mokuro's torch build can use a GPU.</source>
-        <translation type="unfinished" />
+        <translation>取消勾选可强制使用 CPU，即使 mokuro 的 torch 版本支持 GPU。</translation>
     </message>
     <message>
         <source>Redo volumes that already have a .mokuro file</source>
-        <translation type="unfinished" />
+        <translation>重做已有 .mokuro 文件的卷</translation>
     </message>
     <message>
         <source>Runs OCR again from scratch, ignoring mokuro's cached page results. Off each launch.</source>
-        <translation type="unfinished" />
+        <translation>从头重新运行 OCR，忽略 mokuro 缓存的页面结果。每次启动时关闭。</translation>
     </message>
     <message>
         <source>Run OCR</source>
-        <translation type="unfinished" />
+        <translation>运行 OCR</translation>
     </message>
     <message>
         <source>No manga volumes found in this folder.</source>
-        <translation type="unfinished" />
+        <translation>此文件夹中未找到漫画卷。</translation>
     </message>
     <message>
         <source>%1 volume(s) found, %2 already processed.</source>
-        <translation type="unfinished" />
+        <translation>找到 %1 卷，其中 %2 卷已处理。</translation>
     </message>
     <message>
         <source>%1 volume(s) found.</source>
-        <translation type="unfinished" />
+        <translation>找到 %1 卷。</translation>
     </message>
     <message>
         <source>This folder could not be read.</source>
-        <translation type="unfinished" />
+        <translation>此文件夹无法读取。</translation>
     </message>
     <message>
         <source>Choose a manga folder before running OCR.</source>
-        <translation type="unfinished" />
+        <translation>请在运行 OCR 前选择漫画文件夹。</translation>
     </message>
     <message>
         <source>That folder no longer exists.</source>
-        <translation type="unfinished">该文件夹已不存在。</translation>
+        <translation>该文件夹已不存在。</translation>
     </message>
     <message>
         <source>Manga folder is not writable.</source>
-        <translation type="unfinished" />
+        <translation>漫画文件夹不可写。</translation>
     </message>
     <message>
         <source>mokuro writes its .mokuro files beside the volumes; check permissions for %1.</source>
-        <translation type="unfinished" />
+        <translation>mokuro 会将其 .mokuro 文件写在卷旁边；请检查 %1 的权限。</translation>
     </message>
     <message>
         <source>No manga volumes found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>该文件夹中未找到漫画卷。</translation>
     </message>
     <message>
         <source>A volume is a folder of page images (.jpg, .png, .webp, .avif) or a .cbz/.zip archive. A series folder holds one of those per volume.</source>
-        <translation type="unfinished" />
+        <translation>卷是指一个包含页面图像（.jpg、.png、.webp、.avif）的文件夹，或一个 .cbz/.zip 压缩包。系列文件夹则为每卷存放一个这样的文件夹或压缩包。</translation>
     </message>
     <message>
         <source>That folder could not be read.</source>
-        <translation type="unfinished">该文件夹无法读取。</translation>
+        <translation>该文件夹无法读取。</translation>
     </message>
     <message>
         <source> (already processed)</source>
-        <translation type="unfinished" />
+        <translation> （已处理）</translation>
     </message>
     <message>
         <source>Volume %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>第 %1 卷，共 %2 卷</translation>
     </message>
 </context><context>
     <name>MokuroWorker</name>
     <message>
         <source>Already processed — tick Redo to run OCR again</source>
-        <translation type="unfinished" />
+        <translation>已处理——勾选“重做”以再次运行 OCR</translation>
     </message>
     <message>
         <source>%1: %2%</source>
-        <translation type="unfinished">%1: %2%</translation>
+        <translation>%1: %2%</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">完成</translation>
+        <translation>完成</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">已取消</translation>
+        <translation>已取消</translation>
     </message>
 </context><context>
     <name>NoteTypePage</name>
@@ -6609,43 +6651,63 @@ Index files on disk will be left untouched because the folder could not be prove
     <name>PlaylistPickerDialog</name>
     <message>
         <source>Add from Playlist</source>
-        <translation type="unfinished" />
+        <translation>从播放列表添加</translation>
     </message>
     <message>
-        <source>'%1' — %2 videos</source>
-        <translation type="unfinished" />
+        <source>'%1' — showing videos %2-%3 of %4</source>
+        <translation>“%1”——显示第 %2-%3 个视频（共 %4 个）</translation>
     </message>
     <message>
-        <source>Showing the first %1. Download these, then expand the playlist again for the rest.</source>
-        <translation type="unfinished" />
+        <source>'%1' — showing videos %2-%3 of at least %3</source>
+        <translation>“%1”——显示第 %2-%3 个视频（至少 %3 个）</translation>
+    </message>
+    <message>
+        <source>This playlist has more videos. Paste its URL again and expand it for the next batch — it continues where this one stops.</source>
+        <translation>该播放列表还有更多视频。重新粘贴其链接并展开以获取下一批——将从本次结束处继续。</translation>
     </message>
     <message>
         <source>Search this playlist…</source>
-        <translation type="unfinished" />
+        <translation>搜索此播放列表…</translation>
     </message>
     <message>
         <source>All</source>
-        <translation type="unfinished">全部</translation>
+        <translation>全部</translation>
     </message>
     <message>
         <source>None</source>
-        <translation type="unfinished" />
+        <translation>无</translation>
     </message>
     <message>
         <source>Range, e.g. 1-20,25</source>
-        <translation type="unfinished" />
+        <translation>范围，例如 1-20,25</translation>
     </message>
     <message>
         <source>Select Range</source>
-        <translation type="unfinished" />
+        <translation>选择范围</translation>
     </message>
     <message>
         <source>Add</source>
-        <translation type="unfinished">添加</translation>
+        <translation>添加</translation>
+    </message>
+    <message>
+        <source>Not a number or a range: %1</source>
+        <translation>不是数字或范围：%1</translation>
+    </message>
+    <message>
+        <source>There is no video %1.</source>
+        <translation>没有第 %1 个视频。</translation>
+    </message>
+    <message>
+        <source>A range needs at least one end.</source>
+        <translation>范围至少需要一个端点。</translation>
+    </message>
+    <message>
+        <source>Videos are numbered from 1.</source>
+        <translation>视频编号从 1 开始。</translation>
     </message>
     <message>
         <source>Add %1 videos</source>
-        <translation type="unfinished" />
+        <translation>添加 %1 个视频</translation>
     </message>
 </context><context>
     <name>ProfileController</name>
@@ -6927,7 +6989,7 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source> • Translations</source>
-        <translation type="unfinished" />
+        <translation> • 翻译</translation>
     </message>
     <message>
         <source>%1 episodes • %2 cards created</source>
@@ -7007,11 +7069,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Translation Folder:</source>
-        <translation type="unfinished" />
+        <translation>翻译文件夹：</translation>
     </message>
     <message>
         <source>Translation Offset:</source>
-        <translation type="unfinished">翻译偏移：</translation>
+        <translation>翻译偏移：</translation>
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -7027,7 +7089,11 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
-        <translation type="unfinished">仅偏移翻译字幕（正值 = 延后，负值 = 提前）</translation>
+        <translation>仅偏移翻译字幕（正值 = 延后，负值 = 提前）</translation>
+    </message>
+    <message>
+        <source>The translation folder is the subtitle folder. Pick a separate folder for the translation subtitles.</source>
+        <translation>翻译文件夹与字幕文件夹相同。为翻译字幕选择一个单独的文件夹。</translation>
     </message>
     <message>
         <source>Empty Queue</source>
@@ -8081,31 +8147,31 @@ Index files on disk will be left untouched because the folder could not be prove
     <name>SentenceEditDialog</name>
     <message>
         <source>Edit word and sentence</source>
-        <translation type="unfinished" />
+        <translation>编辑单词和句子</translation>
     </message>
     <message>
         <source>Sentence</source>
-        <translation type="unfinished">句子</translation>
+        <translation>句子</translation>
     </message>
     <message>
         <source>Word to mine</source>
-        <translation type="unfinished" />
+        <translation>待挖单词</translation>
     </message>
     <message>
         <source>Type a sentence.</source>
-        <translation type="unfinished" />
+        <translation>输入一个句子。</translation>
     </message>
     <message>
         <source>Finding words…</source>
-        <translation type="unfinished" />
+        <translation>正在查找单词…</translation>
     </message>
     <message>
         <source>No mineable word found in this sentence.</source>
-        <translation type="unfinished" />
+        <translation>此句子中未找到可挖取的单词。</translation>
     </message>
     <message>
         <source>Could not parse this sentence.</source>
-        <translation type="unfinished" />
+        <translation>无法解析此句子。</translation>
     </message>
 </context><context>
     <name>SettingsSearchBox</name>
@@ -8285,7 +8351,7 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
     </message>
     <message>
         <source>Installing…</source>
-        <translation type="unfinished" />
+        <translation>正在安装…</translation>
     </message>
     <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
@@ -9485,35 +9551,35 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation type="unfinished" />
+        <translation>漫画 OCR</translation>
     </message>
     <message>
         <source>Optional: path to the mokuro executable</source>
-        <translation type="unfinished" />
+        <translation>可选：mokuro 可执行文件的路径</translation>
     </message>
     <message>
         <source>mokuro executable</source>
-        <translation type="unfinished" />
+        <translation>mokuro 可执行文件</translation>
     </message>
     <message>
         <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
-        <translation type="unfinished" />
+        <translation>可选：使用你自己的 mokuro（pip/pipx）。留空则使用下方的应用内安装，或 PATH 中的 mokuro。</translation>
     </message>
     <message>
         <source>Install mokuro</source>
-        <translation type="unfinished" />
+        <translation>安装 mokuro</translation>
     </message>
     <message>
         <source>Download mokuro and its OCR engine into Anki Miner's folder (about 1 GB, up to 4 GB with NVIDIA GPU support). Needed for Utilities → Manga OCR unless mokuro is already installed.</source>
-        <translation type="unfinished" />
+        <translation>将 mokuro 及其 OCR 引擎下载到 Anki Miner 的文件夹（约 1 GB，启用 NVIDIA GPU 支持时最多 4 GB）。除非已安装 mokuro，否则工具 → 漫画 OCR 需要它。</translation>
     </message>
     <message>
         <source>mokuro install</source>
-        <translation type="unfinished" />
+        <translation>mokuro 安装</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
-        <translation type="unfinished" />
+        <translation>此平台不可用</translation>
     </message>
     <message>
         <source>Subtitle generation needs the faster-whisper engine. This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, or run the command below and then launch the separate pipx-installed Anki Miner:</source>
@@ -9537,7 +9603,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Reinstall mokuro</source>
-        <translation type="unfinished" />
+        <translation>重新安装 mokuro</translation>
     </message>
     <message>
         <source>GPU acceleration is not available on this platform.</source>
@@ -9667,7 +9733,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>mokuro (manga OCR)</source>
-        <translation type="unfinished" />
+        <translation>mokuro（漫画 OCR）</translation>
     </message>
     <message>
         <source>Anki Miner updates</source>
@@ -10037,7 +10103,7 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Frequency is looked up again for the edited word when the card is made.</source>
-        <translation type="unfinished" />
+        <translation>创建卡片时会重新查询已编辑单词的词频。</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -10061,11 +10127,11 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Edit word and sentence…</source>
-        <translation type="unfinished" />
+        <translation>编辑单词和句子…</translation>
     </message>
     <message>
         <source>Reset word and sentence</source>
-        <translation type="unfinished" />
+        <translation>重置单词和句子</translation>
     </message>
     <message>
         <source>Your Known Words could not be saved, so no cards were created. Confirm again to retry, or Cancel to discard the pending marks.</source>
