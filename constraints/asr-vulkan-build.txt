@@ -85,7 +85,7 @@
 #   Windows: delvewheel repair --exclude vulkan-1.dll ...
 # Excluding the loader is the whole point: ggml-vulkan must bind the system's
 # Vulkan loader (the user's GPU driver), not a copy frozen at build time.
-auditwheel==6.8.1
+auditwheel==6.8.2
 # `patchelf` — Linux only: auditwheel shells out to it, and 6.8.1 raised its
 # floor to >= 0.14.5 while ubuntu-22.04's apt ships 0.14.3, so the repair step
 # aborts with "patchelf 0.14.3 found". This PyPI package is a wheel carrying a
