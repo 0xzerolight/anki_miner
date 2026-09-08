@@ -198,6 +198,23 @@ class DownloadTab(_ToolTabBase):
         if masked != config:
             self._refresh_engine_state()
 
+    def _ensure_audio_lang_item(self, code: str, suffix: str = "") -> None:
+        """Add *code* to the audio combo if it is missing, without persisting.
+
+        Shared by the config seed (a detected-only code saved last session is
+        not in the curated list) and the track probe. The seeding flag is
+        restored rather than cleared: the config seed calls this from inside
+        its own seeding block.
+        """
+        if not code or self.audio_lang_combo.findData(code) >= 0:
+            return
+        was_seeding = self._seeding
+        self._seeding = True
+        try:
+            self.audio_lang_combo.addItem(f"{language_display_name(code)}  ({code}){suffix}", code)
+        finally:
+            self._seeding = was_seeding
+
     def _apply_config_defaults(self) -> None:
         """Seed the option widgets from the current config's persisted defaults."""
         self._seeding = True
@@ -209,6 +226,7 @@ class DownloadTab(_ToolTabBase):
             self._sub_langs = self.config.downloader_subtitle_langs
             self._refresh_sub_langs_button()
             self.sub_langs_button.setEnabled(self.config.downloader_write_subtitles)
+            self._ensure_audio_lang_item(self.config.downloader_audio_lang)
             audio_idx = self.audio_lang_combo.findData(self.config.downloader_audio_lang)
             self.audio_lang_combo.setCurrentIndex(audio_idx if audio_idx >= 0 else 0)
             self.embed_thumbnail_checkbox.setChecked(self.config.downloader_embed_thumbnail)
@@ -713,15 +731,7 @@ class DownloadTab(_ToolTabBase):
             return
         self._detected = tracks
         for code in tracks.audio_langs:
-            if self.audio_lang_combo.findData(code) < 0:
-                label = f"{language_display_name(code)}  ({code})" + self.tr("  · on this URL")
-                # Seeding guard: adding an item must not look like the user
-                # picking one, which would persist a config change.
-                self._seeding = True
-                try:
-                    self.audio_lang_combo.addItem(label, code)
-                finally:
-                    self._seeding = False
+            self._ensure_audio_lang_item(code, self.tr("  · on this URL"))
         self.log_widget.append_success(
             tr_format(
                 self.tr("Tracks found — subtitles: %1; audio: %2"),

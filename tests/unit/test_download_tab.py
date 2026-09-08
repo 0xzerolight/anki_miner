@@ -502,6 +502,21 @@ class TestAudioLanguageWidget:
         labels = [tab.audio_lang_combo.itemText(i) for i in range(tab.audio_lang_combo.count())]
         assert any("Japanese" in label for label in labels)
 
+    def test_a_saved_language_outside_the_curated_list_survives_restart(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path, downloader_audio_lang="sw"), qtbot)
+        assert tab.audio_lang_combo.currentData() == "sw"
+        assert "Swahili" in tab.audio_lang_combo.currentText()
+
+    def test_reseeding_a_detected_only_language_does_not_persist(self, qtbot, tmp_path: Path) -> None:
+        """The nested seeding guard must restore, not clear, the outer one."""
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+        tab.config = replace(tab.config, downloader_audio_lang="sw")
+        tab._apply_config_defaults()
+        assert received == []
+        assert tab.audio_lang_combo.currentData() == "sw"
+
 
 class TestDetectTracks:
     def test_detect_is_disabled_without_a_url(self, qtbot, tmp_path: Path) -> None:
