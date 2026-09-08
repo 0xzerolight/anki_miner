@@ -1699,6 +1699,8 @@ def compose_main_window(
     subtitles_tab.condense_tab.config_changed.connect(window.update_config)
     # Same pattern for the Download tab's downloader_* options.
     subtitles_tab.download_tab.config_changed.connect(window.update_config)
+    # Same pattern for the Manga OCR tab's mokuro_use_gpu option.
+    subtitles_tab.mokuro_tab.config_changed.connect(window.update_config)
 
     # A validation sweep that reached Anki re-drives the three deck / note-type
     # fetches that failed while Anki was closed.
@@ -1724,6 +1726,7 @@ def compose_main_window(
         subtitles_tab.backfill_tab,
         subtitles_tab.deck_filter_tab,
         subtitles_tab.download_tab,
+        subtitles_tab.mokuro_tab,
     ):
         screen.bind_task_registry(window.task_registry)
     # --- end task-registry publication ------------------------------------

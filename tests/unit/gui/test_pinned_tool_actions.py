@@ -16,6 +16,7 @@ from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.widgets.base import WorkflowActionBar
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
+from anki_miner.gui.widgets.mokuro_tab import MokuroTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.services.card_backfiller import BackfillOptions, BackfillPlan, FieldChange, NotePlan
@@ -25,6 +26,7 @@ _TOOLS = {
     "retime": (SubtitleRetimeTab, "retime_button"),
     "condense": (CondenseTab, "condense_button"),
     "download": (DownloadTab, "download_button"),
+    "mokuro": (MokuroTab, "run_button"),
 }
 
 

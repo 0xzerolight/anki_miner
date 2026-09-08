@@ -55,7 +55,7 @@ SUBTAB_KEYS: dict[str, frozenset[str]] = {
     "settings": SETTINGS_SUBTABS,
     "video": frozenset({"single", "batch", "youtube"}),
     "reading": frozenset({"manga", "novels", "subtitles", "text"}),
-    "subtitles": frozenset({"generate", "retime", "condense", "backfill", "deckfilter", "download"}),
+    "subtitles": frozenset({"generate", "retime", "condense", "backfill", "deckfilter", "download", "mokuro"}),
 }
 
 # Display categories (deduped; translated at display time).
@@ -952,6 +952,18 @@ CAPABILITIES: tuple[Capability, ...] = (
             "audio only",
             "url",
         ),
+    ),
+    Capability(
+        id="manga-ocr",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Create .mokuro files from manga images"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Run mokuro's OCR on a volume folder or a whole series so Reading -> Manga can mine it. "
+            "Install mokuro from Settings -> Transcription & Alignment.",
+        ),
+        category=_CAT_TOOLS,
+        target=CapabilityTarget("subtitles", "mokuro"),
+        keywords=("mokuro", "manga", "ocr", "cbz", "page images", "text detection", "manga-ocr"),
     ),
     Capability(
         id="restyle-mined-cards",
