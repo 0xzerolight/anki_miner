@@ -177,3 +177,17 @@ def test_spawn_oserror_without_returncode_is_a_failure(monkeypatch, tmp_path, co
 def test_progress_only_filter():
     assert mr.is_progress_only("Processing pages...:  12%|█▏        | 3/25 [00:05<00:40]")
     assert not mr.is_progress_only("2026 | INFO | mokuro.run:run:128 - Processing 1/1: /m")
+
+
+_HOST_PYTHON_VARS = ("VIRTUAL_ENV", "CONDA_PREFIX", "PYTHONHOME", "PYTHONPATH")
+
+
+def test_child_env_drops_the_host_python_selection(monkeypatch):
+    """PYTHONHOME/PYTHONPATH from the launching shell re-point the venv's mokuro
+    at the host's site-packages; the installer already scrubs them for uv."""
+    for name in _HOST_PYTHON_VARS:
+        monkeypatch.setenv(name, "/host")
+    env = mr.MokuroRunnerService._child_env()
+    assert not set(_HOST_PYTHON_VARS) & env.keys()
+    assert env["PYTHONUTF8"] == "1" and env["PYTHONIOENCODING"] == "utf-8"
+    assert env["PYTHONUNBUFFERED"] == "1" and env["NO_COLOR"] == "1"

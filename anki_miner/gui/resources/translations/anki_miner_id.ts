@@ -1367,11 +1367,11 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Translation Folder:</source>
-        <translation type="unfinished" />
+        <translation>Folder Subtitel Terjemahan:</translation>
     </message>
     <message>
         <source>Translation Offset:</source>
-        <translation type="unfinished">Offset Subtitel Terjemahan:</translation>
+        <translation>Offset Subtitel Terjemahan:</translation>
     </message>
     <message>
         <source> seconds</source>
@@ -1383,7 +1383,7 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
-        <translation type="unfinished">Geser subtitel terjemahan saja (positif = lebih lambat, negatif = lebih awal)</translation>
+        <translation>Geser subtitel terjemahan saja (positif = lebih lambat, negatif = lebih awal)</translation>
     </message>
     <message>
         <source>Process Folder</source>
@@ -1403,7 +1403,15 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>That translation subtitle folder no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Folder subtitel terjemahan tersebut sudah tidak ada.</translation>
+    </message>
+    <message>
+        <source>The translation folder is the subtitle folder.</source>
+        <translation>Folder subtitel terjemahan sama dengan folder subtitel.</translation>
+    </message>
+    <message>
+        <source>Pick a separate folder for the translation subtitles.</source>
+        <translation>Pilih folder terpisah untuk subtitel terjemahan.</translation>
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -1581,7 +1589,7 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created.</source>
-        <translation type="unfinished" />
+        <translation>Setujui atau tolak setiap kata, pilih kalimat dan adegannya, potong audionya, tandai kata sebagai dikenal, serta perbaiki kalimat yang salah transkripsi atau ganti kata yang akan di-mining -- sebelum kartu dibuat.</translation>
     </message>
     <message>
         <source>Secondary-language subtitles</source>
@@ -1589,7 +1597,7 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
-        <translation type="unfinished" />
+        <translation>Muat berkas subtitel kedua dalam bahasa Anda sendiri di samping berkas bahasa mining: berkas ini muncul di bawah baris pada pratinjau Word Curator dan dapat disimpan ke bidang Terjemahan. Pada Video -&gt; Batch, arahkan ke folder subtitel terjemahan sebagai gantinya dan subtitel itu dipasangkan ke video berdasarkan nomor episode. Aktifkan di Pengaturan -&gt; Penyaringan.</translation>
     </message>
     <message>
         <source>Build a deck by coverage %</source>
@@ -2153,11 +2161,11 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Create .mokuro files from manga images</source>
-        <translation type="unfinished" />
+        <translation>Buat berkas .mokuro dari gambar manga</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation type="unfinished" />
+        <translation>Jalankan OCR mokuro pada folder volume atau seluruh seri agar Membaca -&gt; Manga dapat mining-nya. Pasang mokuro dari Pengaturan -&gt; Transkripsi &amp; Penyelarasan.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -3891,19 +3899,19 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     </message>
     <message>
         <source>Expand Playlist…</source>
-        <translation type="unfinished" />
+        <translation>Perluas Playlist…</translation>
     </message>
     <message>
         <source>Replace the URL line the cursor is on with the playlist's individual videos, so you can pick which ones to download.</source>
-        <translation type="unfinished" />
+        <translation>Ganti baris URL tempat kursor berada dengan video individual dari playlist tersebut, agar Anda dapat memilih video mana yang akan diunduh.</translation>
     </message>
     <message>
         <source>Detect Tracks</source>
-        <translation type="unfinished" />
+        <translation>Deteksi Trek</translation>
     </message>
     <message>
         <source>Ask the first URL which subtitle and audio languages it offers.</source>
-        <translation type="unfinished" />
+        <translation>Tanyakan ke URL pertama bahasa subtitel dan audio apa saja yang tersedia.</translation>
     </message>
     <message>
         <source>Options</source>
@@ -3963,23 +3971,23 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     </message>
     <message>
         <source>Choose…</source>
-        <translation type="unfinished">Pilih…</translation>
+        <translation>Pilih…</translation>
     </message>
     <message>
         <source>Pick subtitle languages by name.</source>
-        <translation type="unfinished" />
+        <translation>Pilih bahasa subtitel berdasarkan nama.</translation>
     </message>
     <message>
         <source>Audio language:</source>
-        <translation type="unfinished" />
+        <translation>Bahasa audio:</translation>
     </message>
     <message>
         <source>Preferred audio track on videos that carry several. A video without this language still downloads, with its default audio.</source>
-        <translation type="unfinished" />
+        <translation>Trek audio pilihan untuk video yang memiliki beberapa trek. Video tanpa bahasa ini tetap diunduh, dengan audio bawaannya.</translation>
     </message>
     <message>
         <source>Any (best available)</source>
-        <translation type="unfinished" />
+        <translation>Apa saja (terbaik yang tersedia)</translation>
     </message>
     <message>
         <source>Embed thumbnail</source>
@@ -4027,51 +4035,63 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     </message>
     <message>
         <source>Checking available tracks…</source>
-        <translation type="unfinished" />
+        <translation>Memeriksa trek yang tersedia…</translation>
+    </message>
+    <message>
+        <source>The URL that was checked is no longer in the list; its tracks were ignored.</source>
+        <translation>URL yang diperiksa sudah tidak ada dalam daftar; treknya diabaikan.</translation>
     </message>
     <message>
         <source>  · on this URL</source>
-        <translation type="unfinished" />
+        <translation>  · pada URL ini</translation>
     </message>
     <message>
         <source>Tracks found — subtitles: %1; audio: %2</source>
-        <translation type="unfinished" />
+        <translation>Trek ditemukan — subtitel: %1; audio: %2</translation>
     </message>
     <message>
         <source>none</source>
-        <translation type="unfinished" />
+        <translation>tidak ada</translation>
     </message>
     <message>
         <source>Could not read this URL's tracks.</source>
-        <translation type="unfinished" />
+        <translation>Tidak dapat membaca trek URL ini.</translation>
     </message>
     <message>
         <source>Put the cursor on the playlist URL line.</source>
-        <translation type="unfinished" />
+        <translation>Tempatkan kursor pada baris URL playlist.</translation>
     </message>
     <message>
         <source>Expand Playlist works on the line the text cursor is on.</source>
-        <translation type="unfinished" />
+        <translation>Perluas Playlist bekerja pada baris tempat kursor teks berada.</translation>
     </message>
     <message>
         <source>Resolving playlist…</source>
-        <translation type="unfinished">Menyelesaikan playlist…</translation>
+        <translation>Menyelesaikan playlist…</translation>
+    </message>
+    <message>
+        <source>Playlist line was removed; nothing added.</source>
+        <translation>Baris playlist telah dihapus; tidak ada yang ditambahkan.</translation>
     </message>
     <message>
         <source>Playlist expansion cancelled.</source>
-        <translation type="unfinished" />
+        <translation>Perluasan playlist dibatalkan.</translation>
     </message>
     <message>
         <source>Added %1 videos from '%2'.</source>
-        <translation type="unfinished" />
+        <translation>Menambahkan %1 video dari '%2'.</translation>
     </message>
     <message>
         <source>Skipped %1 already in the list.</source>
-        <translation type="unfinished" />
+        <translation>Melewati %1 yang sudah ada dalam daftar.</translation>
+    </message>
+    <message>
+        <source>Paste the playlist URL again and expand it for videos %1 onward.</source>
+        <translation>Tempel URL playlist lagi dan perluas untuk video %1 dan seterusnya.</translation>
     </message>
     <message>
         <source>Could not expand that playlist.</source>
-        <translation type="unfinished" />
+        <translation>Tidak dapat memperluas playlist tersebut.</translation>
     </message>
     <message>
         <source>Downloading %1 of %2</source>
@@ -5320,6 +5340,12 @@ Tambahkan %3 kata ke daftar kata yang dikenal Anda?</translation>
         <translation>Hapus SEMUA kata yang Anda tambahkan ke daftar kata yang dikenal lokal? Ini tidak dapat dibatalkan. Cache yang tersinkron dengan Anki tidak terpengaruh.</translation>
     </message>
 </context><context>
+    <name>LanguageNames</name>
+    <message>
+        <source>original</source>
+        <translation>asli</translation>
+    </message>
+</context><context>
     <name>LanguagePackDownloadWorker</name>
     <message>
         <source>Downloading the %1 pack…</source>
@@ -5333,35 +5359,35 @@ Tambahkan %3 kata ke daftar kata yang dikenal Anda?</translation>
     <name>LanguagePickerDialog</name>
     <message>
         <source>Subtitle Languages</source>
-        <translation type="unfinished" />
+        <translation>Bahasa Subtitel</translation>
     </message>
     <message>
         <source>Search languages…</source>
-        <translation type="unfinished" />
+        <translation>Cari bahasa…</translation>
     </message>
     <message>
-        <source>This URL also offers machine-translated captions in many more languages. Type a code in Advanced to request one.</source>
-        <translation type="unfinished" />
+        <source>This URL also offers machine-translated captions. A ticked language that is not listed for this URL is fetched as a machine translation.</source>
+        <translation>URL ini juga menyediakan teks terjemahan mesin. Bahasa yang dicentang tetapi tidak tercantum untuk URL ini akan diambil sebagai terjemahan mesin.</translation>
     </message>
     <message>
         <source>Advanced (raw yt-dlp language expression):</source>
-        <translation type="unfinished" />
+        <translation>Lanjutan (ekspresi bahasa yt-dlp mentah):</translation>
     </message>
     <message>
         <source>e.g. en.*,-live_chat</source>
-        <translation type="unfinished" />
+        <translation>mis. en.*,-live_chat</translation>
     </message>
     <message>
         <source>Available for this URL</source>
-        <translation type="unfinished" />
+        <translation>Tersedia untuk URL ini</translation>
     </message>
     <message>
         <source>Common languages</source>
-        <translation type="unfinished" />
+        <translation>Bahasa umum</translation>
     </message>
     <message>
         <source>  · automatic</source>
-        <translation type="unfinished" />
+        <translation>  · otomatis</translation>
     </message>
 </context><context>
     <name>LanguageSwitch</name>
@@ -5893,7 +5919,7 @@ Lanjutkan?</translation>
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation type="unfinished" />
+        <translation>Manga OCR</translation>
     </message>
     <message>
         <source>Single</source>
@@ -6137,201 +6163,217 @@ Lanjutkan?</translation>
     <name>MokuroInstallWorker</name>
     <message>
         <source>%1 (%2%)</source>
-        <translation type="unfinished">%1 (%2%)</translation>
+        <translation>%1 (%2%)</translation>
+    </message>
+    <message>
+        <source>Downloading uv…</source>
+        <translation>Mengunduh uv…</translation>
+    </message>
+    <message>
+        <source>Preparing Python %1…</source>
+        <translation>Menyiapkan Python %1…</translation>
+    </message>
+    <message>
+        <source>Installing %1…</source>
+        <translation>Memasang %1…</translation>
+    </message>
+    <message>
+        <source>Downloading packages — torch is large, this can take a while…</source>
+        <translation>Mengunduh paket — torch berukuran besar, ini mungkin memakan waktu…</translation>
     </message>
     <message>
         <source>Installing mokuro…</source>
-        <translation type="unfinished" />
+        <translation>Memasang mokuro…</translation>
     </message>
     <message>
         <source>mokuro installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>mokuro berhasil dipasang.</translation>
     </message>
 </context><context>
     <name>MokuroRunner</name>
     <message>
         <source>Page %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Halaman %1 dari %2</translation>
     </message>
     <message>
         <source>Downloading OCR models (first run only)</source>
-        <translation type="unfinished" />
+        <translation>Mengunduh model OCR (hanya proses pertama)</translation>
     </message>
     <message>
         <source>Loading models (%1)</source>
-        <translation type="unfinished" />
+        <translation>Memuat model (%1)</translation>
     </message>
 </context><context>
     <name>MokuroTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Progres</translation>
+        <translation>Progres</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Selesai</translation>
+        <translation>Selesai</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Selesai: </translation>
+        <translation>Selesai: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Dilewati</translation>
+        <translation>Dilewati</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Dilewati: </translation>
+        <translation>Dilewati: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Batal</translation>
+        <translation>Batal</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Membatalkan…</translation>
+        <translation>Membatalkan…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Dibatalkan</translation>
+        <translation>Dibatalkan</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Gagal — lihat log</translation>
+        <translation>Gagal — lihat log</translation>
     </message>
     <message>
         <source>Some volumes could not be processed.</source>
-        <translation type="unfinished" />
+        <translation>Beberapa volume tidak dapat diproses.</translation>
     </message>
     <message>
         <source>Complete — %1 volume(s) processed</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 volume diproses</translation>
     </message>
     <message>
         <source>Complete — %1 processed, %2 already had a .mokuro file</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 diproses, %2 sudah memiliki berkas .mokuro</translation>
     </message>
     <message>
         <source>Nothing processed — all %1 already have a .mokuro file. Tick Redo to run OCR again.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada yang diproses — semua %1 sudah memiliki berkas .mokuro. Centang Ulangi untuk menjalankan OCR lagi.</translation>
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation type="unfinished" />
+        <translation>Manga OCR</translation>
     </message>
     <message>
         <source>Manga</source>
-        <translation type="unfinished">Manga</translation>
+        <translation>Manga</translation>
     </message>
     <message>
         <source>mokuro not found. Install it in Settings → Transcription &amp; Alignment → Manga OCR, or set its path there.</source>
-        <translation type="unfinished" />
+        <translation>mokuro tidak ditemukan. Pasang di Pengaturan → Transkripsi &amp; Penyelarasan → Manga OCR, atau atur jalurnya di sana.</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
-        <translation type="unfinished" />
+        <translation>Jalankan OCR mokuro pada folder gambar halaman, atau folder seri berisi volume. Setiap volume mendapat berkas .mokuro di sampingnya untuk Membaca → Manga.</translation>
     </message>
     <message>
         <source>Folder:</source>
-        <translation type="unfinished">Folder:</translation>
+        <translation>Folder:</translation>
     </message>
     <message>
         <source>A folder of page images (one volume), or a folder whose subfolders and .cbz/.zip files are volumes.</source>
-        <translation type="unfinished" />
+        <translation>Folder berisi gambar halaman (satu volume), atau folder yang subfoldernya serta berkas .cbz/.zip di dalamnya merupakan volume.</translation>
     </message>
     <message>
         <source>Options</source>
-        <translation type="unfinished">Opsi</translation>
+        <translation>Opsi</translation>
     </message>
     <message>
         <source>Use GPU when available</source>
-        <translation type="unfinished" />
+        <translation>Gunakan GPU jika tersedia</translation>
     </message>
     <message>
         <source>Untick to force CPU even when mokuro's torch build can use a GPU.</source>
-        <translation type="unfinished" />
+        <translation>Hapus centang untuk memaksa CPU meskipun build torch mokuro dapat menggunakan GPU.</translation>
     </message>
     <message>
         <source>Redo volumes that already have a .mokuro file</source>
-        <translation type="unfinished" />
+        <translation>Ulangi volume yang sudah memiliki berkas .mokuro</translation>
     </message>
     <message>
         <source>Runs OCR again from scratch, ignoring mokuro's cached page results. Off each launch.</source>
-        <translation type="unfinished" />
+        <translation>Menjalankan OCR lagi dari awal, mengabaikan hasil halaman yang di-cache oleh mokuro. Nonaktif di setiap peluncuran.</translation>
     </message>
     <message>
         <source>Run OCR</source>
-        <translation type="unfinished" />
+        <translation>Jalankan OCR</translation>
     </message>
     <message>
         <source>No manga volumes found in this folder.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada volume manga yang ditemukan dalam folder ini.</translation>
     </message>
     <message>
         <source>%1 volume(s) found, %2 already processed.</source>
-        <translation type="unfinished" />
+        <translation>%1 volume ditemukan, %2 sudah diproses.</translation>
     </message>
     <message>
         <source>%1 volume(s) found.</source>
-        <translation type="unfinished" />
+        <translation>%1 volume ditemukan.</translation>
     </message>
     <message>
         <source>This folder could not be read.</source>
-        <translation type="unfinished" />
+        <translation>Folder ini tidak dapat dibaca.</translation>
     </message>
     <message>
         <source>Choose a manga folder before running OCR.</source>
-        <translation type="unfinished" />
+        <translation>Pilih folder manga sebelum menjalankan OCR.</translation>
     </message>
     <message>
         <source>That folder no longer exists.</source>
-        <translation type="unfinished">Folder tersebut sudah tidak ada.</translation>
+        <translation>Folder tersebut sudah tidak ada.</translation>
     </message>
     <message>
         <source>Manga folder is not writable.</source>
-        <translation type="unfinished" />
+        <translation>Folder manga tidak dapat ditulisi.</translation>
     </message>
     <message>
         <source>mokuro writes its .mokuro files beside the volumes; check permissions for %1.</source>
-        <translation type="unfinished" />
+        <translation>mokuro menulis berkas .mokuro-nya di samping volume; periksa izin untuk %1.</translation>
     </message>
     <message>
         <source>No manga volumes found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada volume manga yang ditemukan dalam folder tersebut.</translation>
     </message>
     <message>
         <source>A volume is a folder of page images (.jpg, .png, .webp, .avif) or a .cbz/.zip archive. A series folder holds one of those per volume.</source>
-        <translation type="unfinished" />
+        <translation>Volume adalah folder gambar halaman (.jpg, .png, .webp, .avif) atau arsip .cbz/.zip. Folder seri berisi satu di antaranya untuk setiap volume.</translation>
     </message>
     <message>
         <source>That folder could not be read.</source>
-        <translation type="unfinished">Folder tersebut tidak dapat dibaca.</translation>
+        <translation>Folder tersebut tidak dapat dibaca.</translation>
     </message>
     <message>
         <source> (already processed)</source>
-        <translation type="unfinished" />
+        <translation> (sudah diproses)</translation>
     </message>
     <message>
         <source>Volume %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Volume %1 dari %2</translation>
     </message>
 </context><context>
     <name>MokuroWorker</name>
     <message>
         <source>Already processed — tick Redo to run OCR again</source>
-        <translation type="unfinished" />
+        <translation>Sudah diproses — centang Ulangi untuk menjalankan OCR lagi</translation>
     </message>
     <message>
         <source>%1: %2%</source>
-        <translation type="unfinished">%1: %2%</translation>
+        <translation>%1: %2%</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Selesai</translation>
+        <translation>Selesai</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Dibatalkan</translation>
+        <translation>Dibatalkan</translation>
     </message>
 </context><context>
     <name>NoteTypePage</name>
@@ -6609,43 +6651,63 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     <name>PlaylistPickerDialog</name>
     <message>
         <source>Add from Playlist</source>
-        <translation type="unfinished" />
+        <translation>Tambah dari Playlist</translation>
     </message>
     <message>
-        <source>'%1' — %2 videos</source>
-        <translation type="unfinished" />
+        <source>'%1' — showing videos %2-%3 of %4</source>
+        <translation>'%1' — menampilkan video %2-%3 dari %4</translation>
     </message>
     <message>
-        <source>Showing the first %1. Download these, then expand the playlist again for the rest.</source>
-        <translation type="unfinished" />
+        <source>'%1' — showing videos %2-%3 of at least %3</source>
+        <translation>'%1' — menampilkan video %2-%3 dari setidaknya %3</translation>
+    </message>
+    <message>
+        <source>This playlist has more videos. Paste its URL again and expand it for the next batch — it continues where this one stops.</source>
+        <translation>Playlist ini memiliki lebih banyak video. Tempel URL-nya lagi dan perluas untuk batch berikutnya — batch itu melanjutkan dari tempat yang ini berhenti.</translation>
     </message>
     <message>
         <source>Search this playlist…</source>
-        <translation type="unfinished" />
+        <translation>Cari dalam playlist ini…</translation>
     </message>
     <message>
         <source>All</source>
-        <translation type="unfinished">Semua</translation>
+        <translation>Semua</translation>
     </message>
     <message>
         <source>None</source>
-        <translation type="unfinished" />
+        <translation>Tidak Ada</translation>
     </message>
     <message>
         <source>Range, e.g. 1-20,25</source>
-        <translation type="unfinished" />
+        <translation>Rentang, mis. 1-20,25</translation>
     </message>
     <message>
         <source>Select Range</source>
-        <translation type="unfinished" />
+        <translation>Pilih Rentang</translation>
     </message>
     <message>
         <source>Add</source>
-        <translation type="unfinished">Tambah</translation>
+        <translation>Tambah</translation>
+    </message>
+    <message>
+        <source>Not a number or a range: %1</source>
+        <translation>Bukan angka atau rentang: %1</translation>
+    </message>
+    <message>
+        <source>There is no video %1.</source>
+        <translation>Tidak ada video %1.</translation>
+    </message>
+    <message>
+        <source>A range needs at least one end.</source>
+        <translation>Rentang memerlukan setidaknya satu ujung.</translation>
+    </message>
+    <message>
+        <source>Videos are numbered from 1.</source>
+        <translation>Video diberi nomor mulai dari 1.</translation>
     </message>
     <message>
         <source>Add %1 videos</source>
-        <translation type="unfinished" />
+        <translation>Tambah %1 video</translation>
     </message>
 </context><context>
     <name>ProfileController</name>
@@ -6927,7 +6989,7 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source> • Translations</source>
-        <translation type="unfinished" />
+        <translation> • Terjemahan</translation>
     </message>
     <message>
         <source>%1 episodes • %2 cards created</source>
@@ -7007,11 +7069,11 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Translation Folder:</source>
-        <translation type="unfinished" />
+        <translation>Folder Subtitel Terjemahan:</translation>
     </message>
     <message>
         <source>Translation Offset:</source>
-        <translation type="unfinished">Offset Subtitel Terjemahan:</translation>
+        <translation>Offset Subtitel Terjemahan:</translation>
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -7027,7 +7089,11 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     </message>
     <message>
         <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
-        <translation type="unfinished">Geser subtitel terjemahan saja (positif = lebih lambat, negatif = lebih awal)</translation>
+        <translation>Geser subtitel terjemahan saja (positif = lebih lambat, negatif = lebih awal)</translation>
+    </message>
+    <message>
+        <source>The translation folder is the subtitle folder. Pick a separate folder for the translation subtitles.</source>
+        <translation>Folder subtitel terjemahan sama dengan folder subtitel. Pilih folder terpisah untuk subtitel terjemahan.</translation>
     </message>
     <message>
         <source>Empty Queue</source>
@@ -8081,31 +8147,31 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
     <name>SentenceEditDialog</name>
     <message>
         <source>Edit word and sentence</source>
-        <translation type="unfinished" />
+        <translation>Edit kata dan kalimat</translation>
     </message>
     <message>
         <source>Sentence</source>
-        <translation type="unfinished">Kalimat</translation>
+        <translation>Kalimat</translation>
     </message>
     <message>
         <source>Word to mine</source>
-        <translation type="unfinished" />
+        <translation>Kata untuk di-mining</translation>
     </message>
     <message>
         <source>Type a sentence.</source>
-        <translation type="unfinished" />
+        <translation>Ketik kalimat.</translation>
     </message>
     <message>
         <source>Finding words…</source>
-        <translation type="unfinished" />
+        <translation>Mencari kata…</translation>
     </message>
     <message>
         <source>No mineable word found in this sentence.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada kata yang dapat di-mining dalam kalimat ini.</translation>
     </message>
     <message>
         <source>Could not parse this sentence.</source>
-        <translation type="unfinished" />
+        <translation>Tidak dapat mengurai kalimat ini.</translation>
     </message>
 </context><context>
     <name>SettingsSearchBox</name>
@@ -8285,7 +8351,7 @@ Sumber yang berhenti berfungsi setelah pemutakhiran aplikasi diperbaiki dengan I
     </message>
     <message>
         <source>Installing…</source>
-        <translation type="unfinished" />
+        <translation>Memasang…</translation>
     </message>
     <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
@@ -9485,35 +9551,35 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     </message>
     <message>
         <source>Manga OCR</source>
-        <translation type="unfinished" />
+        <translation>Manga OCR</translation>
     </message>
     <message>
         <source>Optional: path to the mokuro executable</source>
-        <translation type="unfinished" />
+        <translation>Opsional: jalur ke executable mokuro</translation>
     </message>
     <message>
         <source>mokuro executable</source>
-        <translation type="unfinished" />
+        <translation>executable mokuro</translation>
     </message>
     <message>
         <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
-        <translation type="unfinished" />
+        <translation>Opsional: mokuro milik Anda sendiri (pip/pipx). Kosongkan untuk menggunakan pemasangan dalam aplikasi di bawah atau mokuro pada PATH Anda.</translation>
     </message>
     <message>
         <source>Install mokuro</source>
-        <translation type="unfinished" />
+        <translation>Pasang mokuro</translation>
     </message>
     <message>
         <source>Download mokuro and its OCR engine into Anki Miner's folder (about 1 GB, up to 4 GB with NVIDIA GPU support). Needed for Utilities → Manga OCR unless mokuro is already installed.</source>
-        <translation type="unfinished" />
+        <translation>Unduh mokuro dan mesin OCR-nya ke folder Anki Miner (sekitar 1 GB, hingga 4 GB dengan dukungan GPU NVIDIA). Diperlukan untuk Utilitas → Manga OCR kecuali mokuro sudah terpasang.</translation>
     </message>
     <message>
         <source>mokuro install</source>
-        <translation type="unfinished" />
+        <translation>pemasangan mokuro</translation>
     </message>
     <message>
         <source>Not available on this platform</source>
-        <translation type="unfinished" />
+        <translation>Tidak tersedia di platform ini</translation>
     </message>
     <message>
         <source>Subtitle generation needs the faster-whisper engine. This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, or run the command below and then launch the separate pipx-installed Anki Miner:</source>
@@ -9537,7 +9603,7 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     </message>
     <message>
         <source>Reinstall mokuro</source>
-        <translation type="unfinished" />
+        <translation>Pasang ulang mokuro</translation>
     </message>
     <message>
         <source>GPU acceleration is not available on this platform.</source>
@@ -9667,7 +9733,7 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     </message>
     <message>
         <source>mokuro (manga OCR)</source>
-        <translation type="unfinished" />
+        <translation>mokuro (OCR manga)</translation>
     </message>
     <message>
         <source>Anki Miner updates</source>
@@ -10037,7 +10103,7 @@ Urutkan menaik untuk menampilkan baris i+1 lebih dulu — baris yang satu-satuny
     </message>
     <message>
         <source>Frequency is looked up again for the edited word when the card is made.</source>
-        <translation type="unfinished" />
+        <translation>Frekuensi dicari ulang untuk kata yang diedit saat kartu dibuat.</translation>
     </message>
     <message>
         <source>Sentences (%1)</source>
@@ -10061,11 +10127,11 @@ Urutkan menaik untuk menampilkan baris i+1 lebih dulu — baris yang satu-satuny
     </message>
     <message>
         <source>Edit word and sentence…</source>
-        <translation type="unfinished" />
+        <translation>Edit kata dan kalimat…</translation>
     </message>
     <message>
         <source>Reset word and sentence</source>
-        <translation type="unfinished" />
+        <translation>Setel ulang kata dan kalimat</translation>
     </message>
     <message>
         <source>Your Known Words could not be saved, so no cards were created. Confirm again to retry, or Cancel to discard the pending marks.</source>

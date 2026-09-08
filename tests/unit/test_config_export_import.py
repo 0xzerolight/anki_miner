@@ -51,6 +51,7 @@ class TestMachineSpecificFields:
         assert "frequency_keep_unranked" not in fields
         assert "theme" not in fields
         assert "max_parallel_workers" not in fields
+        assert "mokuro_use_gpu" not in fields
 
 
 class TestExport:

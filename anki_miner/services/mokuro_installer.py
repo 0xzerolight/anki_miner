@@ -37,7 +37,13 @@ from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
 from anki_miner.utils.logging_ext import log_summary
-from anki_miner.utils.mokuro_resolver import managed_mokuro_path, managed_python_path, mokuro_env_dir
+from anki_miner.utils.mokuro_resolver import (
+    managed_mokuro_installed,
+    managed_mokuro_path,
+    managed_python_path,
+    mokuro_env_dir,
+    scrubbed_python_env,
+)
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 
 logger = logging.getLogger(__name__)
@@ -45,6 +51,13 @@ logger = logging.getLogger(__name__)
 UV_VERSION = "0.12.10"
 MOKURO_REQUIREMENT = "mokuro==0.2.5"
 MOKURO_PYTHON = "3.12"
+
+#: Phase lines handed to ``status``. Exact strings, so the GUI worker can map
+#: each to its translation; everything else it receives is raw uv output.
+STATUS_DOWNLOADING_UV = "Downloading uv…"
+STATUS_PREPARING_PYTHON = f"Preparing Python {MOKURO_PYTHON}…"
+STATUS_INSTALLING_MOKURO = f"Installing {MOKURO_REQUIREMENT}…"
+STATUS_DOWNLOADING_PACKAGES = "Downloading packages — torch is large, this can take a while…"
 
 _VENV_TIMEOUT_S = 30 * 60  # includes the managed-CPython download
 _PIP_TIMEOUT_S = 3 * 60 * 60  # torch + CUDA libs on a slow link
@@ -118,15 +131,12 @@ def _uv_receipt_path(bin_root: Path) -> Path:
 
 def is_installed(uv_root: Path) -> bool:
     """True when the managed mokuro console script is present and runnable. Cheap."""
-    shim = managed_mokuro_path(uv_root)
-    return shim.is_file() and (sys.platform == "win32" or os.access(shim, os.X_OK))
+    return managed_mokuro_installed(uv_root)
 
 
 def _uv_env(uv_root: Path) -> dict[str, str]:
     """Child env for every uv call: managed Python only, no cache, no user config."""
-    env = dict(os.environ)
-    for stale in ("VIRTUAL_ENV", "CONDA_PREFIX", "PYTHONHOME", "PYTHONPATH"):
-        env.pop(stale, None)
+    env = scrubbed_python_env()
     env.update(
         {
             "UV_PYTHON_INSTALL_DIR": str(uv_root / "python"),
@@ -214,7 +224,7 @@ def _run_uv(
         if status is not None:
             status(line.strip())
             if line.startswith("Resolved "):
-                status("Downloading packages — torch is large, this can take a while…")
+                status(STATUS_DOWNLOADING_PACKAGES)
 
     result = run_supervised(
         cmd,
@@ -259,7 +269,7 @@ def install_mokuro(
         )
     _check_cancel(cancel_event)
     if status is not None:
-        status("Downloading uv…")
+        status(STATUS_DOWNLOADING_UV)
     uv = _ensure_uv(bin_root, spec, progress=progress, cancel_event=cancel_event)
     _check_cancel(cancel_event)
 
@@ -267,7 +277,7 @@ def install_mokuro(
     env = _uv_env(uv_root)
     env_dir = mokuro_env_dir(uv_root)
     if status is not None:
-        status(f"Preparing Python {MOKURO_PYTHON}…")
+        status(STATUS_PREPARING_PYTHON)
     _run_uv(
         [str(uv), "venv", "--python", MOKURO_PYTHON, "--clear", str(env_dir)],
         timeout_s=_VENV_TIMEOUT_S,
@@ -279,7 +289,7 @@ def install_mokuro(
     )
     _check_cancel(cancel_event)
     if status is not None:
-        status(f"Installing {MOKURO_REQUIREMENT}…")
+        status(STATUS_INSTALLING_MOKURO)
     _run_uv(
         [
             str(uv),

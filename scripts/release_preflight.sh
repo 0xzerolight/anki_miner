@@ -60,6 +60,14 @@ NFPM_SHA256="43b4cb72cde2d6e61c02e5b330e3276882252bf67c057e089957f9dbd2c8de42"
 FAILED=()
 die() { echo "::error::$*" >&2; exit 1; }
 
+# --- 0. host tools ------------------------------------------------------------
+# Every other tool is fetched and SHA-verified below. appstreamcli is the one
+# the packaging steps expect on PATH: render_metainfo.sh validates with it, and
+# appimagetool rejects an unvalidated metainfo file.
+if [ "$SKIP_PACKAGE" = "0" ] && ! command -v appstreamcli >/dev/null 2>&1; then
+  die "appstreamcli not found — install it with: apt install appstream (or pass --skip-package)"
+fi
+
 echo "############################################################"
 echo "# release preflight (Linux mirror of release.yml build job)"
 echo "############################################################"
@@ -210,20 +218,31 @@ else
 
   # --- 6b. .deb (mirror release.yml: full AppImage tree, no strip) ------------
   echo "=== .deb ==="
-  if [ ! -x "$CACHE/nfpm" ]; then
-    NFPM_TGZ="$CACHE/nfpm.tar.gz"
-    curl -fL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" -o "$NFPM_TGZ" || die "nfpm download failed"
-    verify_sha "$NFPM_TGZ" "$NFPM_SHA256" || die "nfpm SHA256 mismatch"
-    tar -xzf "$NFPM_TGZ" -C "$CACHE" nfpm
-    chmod +x "$CACHE/nfpm"
-  fi
-  export VERSION
-  if "$CACHE/nfpm" package --config packaging/nfpm.yaml --packager deb \
-        --target "dist/anki-miner_${VERSION}_amd64.deb"; then
-    echo ".deb: PASS -> dist/anki-miner_${VERSION}_amd64.deb"
-  else
-    echo ".deb: FAIL"
+  # packaging/nfpm.yaml packs dist/anki-miner.metainfo.xml. The AppImage step
+  # renders the same file, but a skipped or failed AppImage must not surface
+  # here as an nfpm "file not found" — render again; it is idempotent.
+  DEB_OK=1
+  if ! bash packaging/render_metainfo.sh "$VERSION" "dist/anki-miner.metainfo.xml"; then
+    echo ".deb: FAIL (metainfo render/validate)"
     FAILED+=("deb")
+    DEB_OK=0
+  fi
+  if [ "$DEB_OK" = "1" ]; then
+    if [ ! -x "$CACHE/nfpm" ]; then
+      NFPM_TGZ="$CACHE/nfpm.tar.gz"
+      curl -fL "https://github.com/goreleaser/nfpm/releases/download/v${NFPM_VERSION}/nfpm_${NFPM_VERSION}_Linux_x86_64.tar.gz" -o "$NFPM_TGZ" || die "nfpm download failed"
+      verify_sha "$NFPM_TGZ" "$NFPM_SHA256" || die "nfpm SHA256 mismatch"
+      tar -xzf "$NFPM_TGZ" -C "$CACHE" nfpm
+      chmod +x "$CACHE/nfpm"
+    fi
+    export VERSION
+    if "$CACHE/nfpm" package --config packaging/nfpm.yaml --packager deb \
+          --target "dist/anki-miner_${VERSION}_amd64.deb"; then
+      echo ".deb: PASS -> dist/anki-miner_${VERSION}_amd64.deb"
+    else
+      echo ".deb: FAIL"
+      FAILED+=("deb")
+    fi
   fi
   echo
 fi

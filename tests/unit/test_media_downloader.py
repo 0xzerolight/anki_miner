@@ -8,6 +8,7 @@ yt-dlp is never spawned: ``run_supervised`` is patched at the
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -17,6 +18,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.exceptions import OperationCancelled
 from anki_miner.exceptions.youtube import (
     BotDetectionError,
     CookieDatabaseLockedError,
@@ -272,6 +274,17 @@ class TestCommandConstruction:
         recorder, _ = _run_download(monkeypatch, service, tmp_path, _opts())
         cmd = _cmd(recorder)
         assert cmd[cmd.index("--ffmpeg-location") + 1] == str(bundled)
+
+    def test_the_download_argv_is_logged_at_info(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        service: MediaDownloaderService,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        caplog.set_level(logging.INFO, logger="anki_miner.services.media_downloader")
+        _run_download(monkeypatch, service, tmp_path, _opts())
+        assert "yt-dlp download: argv=" in caplog.text
 
 
 # ---------------------------------------------------------------------------
@@ -880,6 +893,29 @@ class TestProbeTracks:
         with pytest.raises(BotDetectionError):
             service.probe_tracks("https://example.com/v")
 
+    def test_the_cancel_event_reaches_run_supervised(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        recorder, fake_run = _scripted_probe(stdout=self._payload())
+        monkeypatch.setattr(md, "run_supervised", fake_run)
+        event = threading.Event()
+        service.probe_tracks("https://example.com/v", cancel_event=event)
+        assert recorder.call_args.kwargs["cancel"] is event
+
+    def test_a_cancelled_probe_raises_operation_cancelled(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        monkeypatch.setattr(md, "run_supervised", lambda cmd, **kw: _fake_result(1, SupervisedState.CANCELLED))
+        with pytest.raises(OperationCancelled):
+            service.probe_tracks("https://example.com/v")
+
+    def test_the_probe_argv_is_logged_at_info(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        caplog.set_level(logging.INFO, logger="anki_miner.services.media_downloader")
+        self._probe(monkeypatch, service, self._payload())
+        assert "yt-dlp track probe: argv=" in caplog.text
+
 
 class TestProbePlaylist:
     @staticmethod
@@ -917,7 +953,7 @@ class TestProbePlaylist:
         assert "--flat-playlist" in cmd
         assert "--dump-single-json" in cmd
         assert "--no-playlist" not in cmd
-        assert cmd[cmd.index("--playlist-items") + 1] == "1:50"
+        assert cmd[cmd.index("--playlist-items") + 1] == "1:51"
         assert cmd[-2:] == ["--", "https://example.com/list"]
 
     def test_entries_are_numbered_from_one(
@@ -984,7 +1020,66 @@ class TestProbePlaylist:
     ) -> None:
         recorder, _ = self._probe(monkeypatch, service, self._payload())
         cmd = _cmd(recorder)
-        assert cmd[cmd.index("--playlist-items") + 1] == f"1:{md.PLAYLIST_PROBE_MAX}"
+        assert cmd[cmd.index("--playlist-items") + 1] == f"1:{md.PLAYLIST_PROBE_MAX + 1}"
+
+    def test_the_cancel_event_reaches_run_supervised(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        event = threading.Event()
+        recorder, _ = self._probe(monkeypatch, service, self._payload(), cancel_event=event)
+        assert recorder.call_args.kwargs["cancel"] is event
+
+    @staticmethod
+    def _n_entries(n: int) -> list[object]:
+        return [{"title": f"V{i}", "url": f"https://example.com/{i}"} for i in range(n)]
+
+    def test_start_shifts_the_window_and_the_numbering(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        recorder, pl = self._probe(monkeypatch, service, self._payload(playlist_count=None), limit=500, start=501)
+        cmd = _cmd(recorder)
+        assert cmd[cmd.index("--playlist-items") + 1] == "501:1001"
+        assert [e.index for e in pl.entries] == [501, 502, 503]
+        assert pl.truncated is False
+
+    def test_limit_plus_one_entries_means_truncated_and_only_limit_are_kept(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        payload = self._payload(entries=self._n_entries(501), playlist_count=None)
+        _, pl = self._probe(monkeypatch, service, payload, limit=500)
+        assert pl.truncated is True
+        assert len(pl.entries) == 500
+        assert pl.entries[-1].index == 500
+
+    def test_an_unusable_entry_inside_a_full_window_does_not_hide_the_rest(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        """Truncation is judged on the raw window: one private video among 501
+        must not read as 'exactly 500 usable, nothing more'."""
+        raw = self._n_entries(501)
+        raw[10] = {"title": "private", "url": None}
+        _, pl = self._probe(monkeypatch, service, self._payload(entries=raw, playlist_count=None), limit=500)
+        assert pl.truncated is True
+        assert len(pl.entries) == 499  # the 501st raw entry is outside the window, the private one dropped
+        assert [e.index for e in pl.entries[:3]] == [1, 2, 3]  # usable-contiguous numbering
+
+    def test_a_count_past_the_window_means_truncated(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        _, pl = self._probe(monkeypatch, service, self._payload(playlist_count=900), limit=3)
+        assert pl.truncated is True
+
+    def test_a_short_playlist_is_not_truncated(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        payload = self._payload(entries=self._n_entries(20), playlist_count=None)
+        _, pl = self._probe(monkeypatch, service, payload, limit=500)
+        assert pl.truncated is False
+        assert len(pl.entries) == 20
+
+    def test_an_empty_playlist_says_so(self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService) -> None:
+        with pytest.raises(MediaDownloadError, match="is empty"):
+            self._probe(monkeypatch, service, self._payload(entries=[]))
 
 
 # ---------------------------------------------------------------------------

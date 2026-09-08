@@ -316,8 +316,13 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                 # Use FilePairMatcher for cross-folder pairing
                 from anki_miner.utils.file_pairing import FilePairMatcher
 
+                # The setting is global and the row is not: a folder chosen while
+                # it was on stays on the row, but only mines while it is on --
+                # the same gate the quick path applies before pairing.
                 pairs = FilePairMatcher.find_pairs_by_episode_number(
-                    item.video_folder, item.subtitle_folder, secondary_folder=item.secondary_folder
+                    item.video_folder,
+                    item.subtitle_folder,
+                    secondary_folder=item.secondary_folder if self.config.secondary_subtitle_enabled else None,
                 )
 
                 if not pairs:

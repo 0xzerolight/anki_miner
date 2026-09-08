@@ -1491,3 +1491,48 @@ def test_reading_curation_materializes_a_sentence_edit(test_config):
     assert [item.word.mined_form for item in submitted] == ["持久"]
     assert submitted[0].word.sentence == edited
     assert submitted[0].word.start_time == 0.0
+
+
+def test_parse_sentence_forwards_the_run_s_cleanup_flag(test_config):
+    parser = MagicMock(name="SubtitleParser")
+    parser.parse_text_units.return_value = ([], None, collections.Counter())
+    proc = _make_processor(test_config, subtitle_parser=parser)
+
+    proc.parse_sentence_fn("x")
+    proc._sentence_parse_cleanup = True
+    proc.parse_sentence_fn("x")
+
+    assert [c.kwargs["subtitle_cleanup"] for c in parser.parse_text_units.call_args_list] == [False, True]
+
+
+@pytest.mark.parametrize(("kind", "cleanup"), [("subtitle", True), ("manga", False), ("book", False)])
+def test_sentence_edit_reparse_uses_the_document_s_cleanup(test_config, kind, cleanup):
+    """The editor's per-sentence parse strips annotations exactly when phase 1
+    did, or the words it offers are not the words the run mined."""
+    original = _word("時給", 0)
+    edited = "持久系のスポーツ"
+    rebuilt = replace(_word("持久", 0), sentence=edited, surface_start=0, surface_end=2, mined_form_override="持久")
+    parser = MagicMock(name="SubtitleParser")
+    sentence_parses: list[bool] = []
+
+    def _parse(units, want_line_index, *, subtitle_cleanup=False):
+        if units[0].text == edited:
+            sentence_parses.append(subtitle_cleanup)
+            return ([rebuilt], None, collections.Counter())
+        return ([original], None, collections.Counter({"時給": 1}))
+
+    parser.parse_text_units.side_effect = _parse
+    proc = _make_processor(test_config, subtitle_parser=parser)
+    intent = replace(original, sentence_edit=SentenceEdit(text=edited, target_start=0, target_end=2))
+
+    def _curate(words):
+        proc.parse_sentence_fn(edited)  # what the editor dialog does while the curator is open
+        return [intent]
+
+    with patch(_IMG):
+        proc.process_reading(
+            _document([_unit(0)], kind=kind, series="S", episode="E", title="E"), curation_callback=_curate
+        )
+
+    # One parse from the curator's editor, one from _materialize_sentence_edits.
+    assert sentence_parses == [cleanup, cleanup]

@@ -397,6 +397,10 @@ class EpisodeProcessor:
         # run N+1. Dropping the reference in a ``finally`` makes the bridge
         # per-run by construction.
         self._external_cancel: Callable[[], bool] | None = None
+        # What _parse_sentence passes as subtitle_cleanup: each entry point sets
+        # it to what its own phase-1 parse used, so the curator's sentence editor
+        # and _materialize_sentence_edits tokenise the way the run did.
+        self._sentence_parse_cleanup = False
         # Expression/sentence-audio stage (the one seam the god-module keep
         # verdict sanctions). The processor still constructs and closes the
         # fetchers; AudioStage only orchestrates the fetch loops. It reads a
@@ -508,7 +512,9 @@ class EpisodeProcessor:
         that :func:`resolve_sentence_edit` overwrites from the original word.
         """
         units = [ReadingUnit(text=text, index=0, location_label="")]
-        words, _line_index, _counts = self.subtitle_parser.parse_text_units(units, False)
+        words, _line_index, _counts = self.subtitle_parser.parse_text_units(
+            units, False, subtitle_cleanup=self._sentence_parse_cleanup
+        )
         return words
 
     def release_dictionary_resources(self) -> None:
@@ -2483,6 +2489,10 @@ class EpisodeProcessor:
                 offline dictionary is installed.
             AnkiConnectionError: AnkiConnect is unreachable.
         """
+        # Cues: the closest match to _clean_line_text (annotation strip + regex
+        # filter). Its markup strip is not applied — text typed into the editor
+        # carries no ASS/SRT markup.
+        self._sentence_parse_cleanup = True
         series_name = _resolve_identity(series_name_override, video_file.parent.name)
         episode_name = _resolve_identity(episode_name_override, video_file.stem)
         ctx = _EpisodeContext(
@@ -2937,6 +2947,7 @@ class EpisodeProcessor:
                 index needs reimport, or no usable offline dictionary is installed.
             AnkiConnectionError: AnkiConnect is unreachable.
         """
+        self._sentence_parse_cleanup = document.kind == "subtitle"
         # Manga and subtitle sources carry a meaningful series (mokuro title /
         # parent folder), so prefix it; books use the bare episode title.
         if document.kind in ("manga", "subtitle"):

@@ -404,6 +404,12 @@ class AnkiProbeController:
         # The endpoint these lists are about to describe. Recorded before the
         # fetches so ensure_name_lists() compares against the address actually
         # asked, not the one the panel happens to show when the answer lands.
+        # A different address also drops the latches: they were earned against
+        # the previous Anki, and an empty answer from this one must not inherit
+        # them, or ensure_name_lists() would never ask again.
+        if ankiconnect_url != self._names_endpoint:
+            self._decks_loaded = False
+            self._notetypes_loaded = False
         self._names_endpoint = ankiconnect_url
 
         if not still_running(self._name_decks_worker):

@@ -159,18 +159,45 @@ def alass_install_task(bin_root: Path) -> InstallTask:
     return _task
 
 
+def _mokuro_status_translations() -> dict[str, str]:
+    """Installer phase line → its translation. Raw uv output lines have no entry."""
+    from anki_miner.services import mokuro_installer as mi
+
+    return {
+        mi.STATUS_DOWNLOADING_UV: QCoreApplication.translate("MokuroInstallWorker", "Downloading uv…"),
+        mi.STATUS_PREPARING_PYTHON: tr_format(
+            QCoreApplication.translate("MokuroInstallWorker", "Preparing Python %1…"), mi.MOKURO_PYTHON
+        ),
+        mi.STATUS_INSTALLING_MOKURO: tr_format(
+            QCoreApplication.translate("MokuroInstallWorker", "Installing %1…"), mi.MOKURO_REQUIREMENT
+        ),
+        mi.STATUS_DOWNLOADING_PACKAGES: QCoreApplication.translate(
+            "MokuroInstallWorker", "Downloading packages — torch is large, this can take a while…"
+        ),
+    }
+
+
 def mokuro_install_task(bin_root: Path, uv_root: Path) -> InstallTask:
-    """Task: uv download (byte progress) + uv venv + uv pip install (status lines)."""
+    """Task: uv download (byte progress) + uv venv + uv pip install (status lines).
+
+    The installer is Qt-free and reports its phases as fixed strings; they are
+    swapped for translations here. uv's own lines pass through verbatim.
+    """
 
     def _task(worker: InstallWorker) -> str:
         from anki_miner.services.mokuro_installer import install_mokuro
 
         worker._progress_ctx = "MokuroInstallWorker"
+        translated = _mokuro_status_translations()
+
+        def _status(line: str) -> None:
+            worker.status.emit(translated.get(line, line))
+
         worker.status.emit(QCoreApplication.translate("MokuroInstallWorker", "Installing mokuro…"))
         install_mokuro(
             bin_root,
             uv_root,
-            status=worker.status.emit,
+            status=_status,
             progress=worker._on_progress,
             cancel_event=worker.cancel_event,
         )

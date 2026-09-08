@@ -47,6 +47,7 @@ from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.panels import QueuePanel
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.models.batch_queue import QueueItemStatus
+from anki_miner.utils.file_pairing import is_same_folder
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -414,13 +415,14 @@ class BatchProcessingTab(MiningTabBase):
         self.secondary_folder_selector.setVisible(enabled)
         self.secondary_offset_row.setVisible(enabled)
 
-    def _validated_secondary_folder(self) -> tuple[bool, Path | None]:
+    def _validated_secondary_folder(self, subtitle_folder: Path) -> tuple[bool, Path | None]:
         """The quick path's translation folder as ``(ok, folder)``.
 
         Kept apart from :meth:`_get_validated_folders` because the two answer
         different questions: the video/subtitle pair is required, this one is
-        optional and may simply be absent. ``ok`` is False only when the picker
-        holds a path that has since gone — silently mining without the
+        optional and may simply be absent. ``ok`` is False when the picker
+        holds a path that has since gone, or the subtitle folder itself --
+        the matcher refuses that silently, and silently mining without the
         translations the user chose is worse than saying so.
         """
         if not self.config.secondary_subtitle_enabled:
@@ -436,7 +438,16 @@ class BatchProcessingTab(MiningTabBase):
                 )
             )
             return False, None
-        return True, Path(secondary_path)
+        secondary_folder = Path(secondary_path)
+        if is_same_folder(secondary_folder, subtitle_folder):
+            self.show_screen_issue(
+                ScreenIssue(
+                    summary=self.tr("The translation folder is the subtitle folder."),
+                    details=self.tr("Pick a separate folder for the translation subtitles."),
+                )
+            )
+            return False, None
+        return True, secondary_folder
 
     def _secondary_offset(self) -> float:
         """The quick path's translation offset, or 0.0 without a chosen folder."""
@@ -479,7 +490,7 @@ class BatchProcessingTab(MiningTabBase):
             return
 
         video_folder, subtitle_folder = folders
-        ok, secondary_folder = self._validated_secondary_folder()
+        ok, secondary_folder = self._validated_secondary_folder(subtitle_folder)
         if not ok:
             return
         pairs = self._find_episode_pairs(video_folder, subtitle_folder, secondary_folder)

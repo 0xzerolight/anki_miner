@@ -120,7 +120,7 @@ Para la configuración completa de desarrollo, consulta [CONTRIBUTING.md](../CON
 - **Audiolibros** - minera audiolibros, pódcasts, radio, canciones (pares de audio + subtítulo/transcripción).
 - **Lectura** - minera manga (mokuro), novelas (`.epub`, `.txt`; un libro individual o una carpeta completa), archivos de subtítulos independientes o texto pegado.
 - **Analíticas** - historial de minería, clasificaciones de dificultad, hitos.
-- **Utilidades** - genera subtítulos (Whisper local), ajusta el tiempo de los subtítulos (ffsubsync/alass), condensa medios a audio solo de diálogos, descarga vídeo/audio/subtítulos de cualquier sitio compatible con yt-dlp, copia la parte que vale la pena aprender de un mazo prediseñado a uno nuevo, y rellena campos en tarjetas existentes.
+- **Utilidades** - genera subtítulos (Whisper local), ajusta el tiempo de los subtítulos (ffsubsync/alass), condensa medios a audio solo de diálogos, descarga vídeo/audio/subtítulos de cualquier sitio compatible con yt-dlp, copia la parte que vale la pena aprender de un mazo prediseñado a uno nuevo, rellena campos en tarjetas existentes, y aplica OCR a imágenes de páginas de manga para crear archivos .mokuro (mokuro, instalable desde Configuración).
 - **Configuración** - todo lo configurable.
 
 ## Otras Características

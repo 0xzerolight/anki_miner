@@ -1210,23 +1210,24 @@ def _connect_alass_download(window: MainWindow, settings_tab: SettingsTab) -> No
     )
 
 
-def _connect_mokuro_install(window: MainWindow, settings_tab: SettingsTab) -> None:
+def _connect_mokuro_install(window: MainWindow, settings_tab: SettingsTab, subtitles_tab: SubtitlesTab) -> None:
     """Wire the Subtitles panel's "Install mokuro" button to the install worker.
 
-    Mirrors ``_connect_alass_download``: on success drop the resolver's cached
-    miss and re-propagate config so the Manga OCR tab's guard re-runs.
+    Unlike ``_connect_alass_download`` this does NOT re-emit ``config_refreshed``:
+    an install changes no config value and ``MokuroTab.update_config`` masks a
+    same-config refresh, so the Manga OCR tab is told directly.
     """
 
     def _tail(request_arg: object, ok: bool, message: str) -> None:
         if ok:
-            # Cleared BEFORE the panel notify, which dispatches an off-thread
+            # Cleared BEFORE both notifies, which each dispatch an off-thread
             # re-probe that calls the resolver: a cached pre-install miss read
-            # by that probe would settle the label on "Not installed" right
-            # after a successful install.
+            # by that probe would settle on "Not installed" right after a
+            # successful install.
             mokuro_resolver._clear_cache()
         settings_tab.subtitles_panel.notify_mokuro_install_finished()
         if ok:
-            window.config_refreshed.emit(window.get_config())
+            subtitles_tab.mokuro_tab.notify_install_finished()
 
     def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
         config = window.get_config()
@@ -1655,13 +1656,14 @@ def compose_main_window(
     for _connect in (
         _connect_asr_download,
         _connect_alass_download,
-        _connect_mokuro_install,
         _connect_cuda_pack_download,
         _connect_vad_pack_download,
         _connect_vulkan_download,
         _connect_language_pack_download,
     ):
         _connect(window, settings_tab)
+    # mokuro needs the Manga OCR tab too (see _connect_mokuro_install).
+    _connect_mokuro_install(window, settings_tab, subtitles_tab)
     # Wire indexed-resource mutation hooks so replacing or deleting a store
     # releases cached readers across every tab first.
     settings_tab.dictionary_panel.set_release_callback(window.release_dictionary_resources)

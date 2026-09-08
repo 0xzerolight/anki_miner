@@ -1393,6 +1393,14 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
+        <source>The translation folder is the subtitle folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick a separate folder for the translation subtitles.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose existing video and subtitle folders.</source>
         <translation type="unfinished" />
     </message>
@@ -4006,6 +4014,10 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
+        <source>The URL that was checked is no longer in the list; its tracks were ignored.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>  · on this URL</source>
         <translation type="unfinished" />
     </message>
@@ -4034,6 +4046,10 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Playlist line was removed; nothing added.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Playlist expansion cancelled.</source>
         <translation type="unfinished" />
     </message>
@@ -4043,6 +4059,10 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Skipped %1 already in the list.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Paste the playlist URL again and expand it for videos %1 onward.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5285,6 +5305,12 @@ Add %3 word(s) to your known list?</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>LanguageNames</name>
+    <message>
+        <source>original</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>LanguagePackDownloadWorker</name>
     <message>
         <source>Downloading the %1 pack…</source>
@@ -5305,7 +5331,7 @@ Add %3 word(s) to your known list?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>This URL also offers machine-translated captions in many more languages. Type a code in Advanced to request one.</source>
+        <source>This URL also offers machine-translated captions. A ticked language that is not listed for this URL is fetched as a machine translation.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6101,6 +6127,22 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Downloading uv…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Preparing Python %1…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Installing %1…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading packages — torch is large, this can take a while…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Installing mokuro…</source>
         <translation type="unfinished" />
     </message>
@@ -6567,11 +6609,15 @@ Index files on disk will be left untouched because the folder could not be prove
         <translation type="unfinished" />
     </message>
     <message>
-        <source>'%1' — %2 videos</source>
+        <source>'%1' — showing videos %2-%3 of %4</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Showing the first %1. Download these, then expand the playlist again for the rest.</source>
+        <source>'%1' — showing videos %2-%3 of at least %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This playlist has more videos. Paste its URL again and expand it for the next batch — it continues where this one stops.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6596,6 +6642,22 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Add</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not a number or a range: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>There is no video %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A range needs at least one end.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Videos are numbered from 1.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6982,6 +7044,10 @@ Index files on disk will be left untouched because the folder could not be prove
     </message>
     <message>
         <source>Shift the translation subtitles only (positive = later, negative = earlier)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The translation folder is the subtitle folder. Pick a separate folder for the translation subtitles.</source>
         <translation type="unfinished" />
     </message>
     <message>

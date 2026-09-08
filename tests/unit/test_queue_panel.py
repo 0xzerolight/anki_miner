@@ -384,3 +384,72 @@ class TestSecondarySubtitleFolder:
         assert item is not None
         assert item.secondary_folder == tmp_path / "t"
         assert item.secondary_offset == 1.5
+
+    def test_edit_with_the_setting_off_keeps_the_row_s_translation_folder(self, panel, monkeypatch, tmp_path):
+        """The picker is hidden while the setting is off; OK must not empty what it cannot show."""
+        from PyQt6.QtWidgets import QDialog
+
+        for name in ("v", "s", "t"):
+            (tmp_path / name).mkdir()
+        widget = _add_widget(panel, "Show", "id-1", video=tmp_path / "v", subtitle=tmp_path / "s")
+        widget.secondary_folder = tmp_path / "t"
+        widget.secondary_offset = -0.5
+        panel._bind_widget(widget)
+        assert panel.secondary_subtitle_enabled is False
+        monkeypatch.setattr(QDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
+
+        panel._edit_item(widget)
+
+        item = panel._items[id(widget)]
+        assert widget.secondary_folder == tmp_path / "t"
+        assert widget.secondary_offset == -0.5
+        assert item.secondary_folder == tmp_path / "t"
+        assert item.secondary_offset == -0.5
+
+    def test_edit_counts_episodes_without_scanning_the_translation_folder(self, panel, monkeypatch, tmp_path):
+        """The count is the video/subtitle pairing's; the translation folder is
+        the run's business, not a coverage line logged from a dialog."""
+        from PyQt6.QtWidgets import QDialog
+
+        from anki_miner.utils.file_pairing import FilePairMatcher
+
+        for name in ("v", "s", "t"):
+            (tmp_path / name).mkdir()
+        panel.secondary_subtitle_enabled = True
+        widget = _add_widget(panel, "Show", "id-1", video=tmp_path / "v", subtitle=tmp_path / "s")
+        widget.secondary_folder = tmp_path / "t"
+        calls: list[dict] = []
+        monkeypatch.setattr(FilePairMatcher, "find_pairs_by_episode_number", lambda *a, **kw: calls.append(kw) or [])
+        monkeypatch.setattr(QDialog, "exec", lambda self: QDialog.DialogCode.Accepted)
+
+        panel._edit_item(widget)
+
+        assert len(calls) == 1
+        assert "secondary_folder" not in calls[0]
+        assert widget.secondary_folder == tmp_path / "t"
+
+    def test_edit_refuses_the_subtitle_folder_as_translation_folder(self, panel, monkeypatch, tmp_path):
+        from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel
+
+        from anki_miner.gui.widgets.enhanced import FileSelector
+
+        for name in ("v", "s"):
+            (tmp_path / name).mkdir()
+        panel.secondary_subtitle_enabled = True
+        widget = _add_widget(panel, "Show", "id-1", video=tmp_path / "v", subtitle=tmp_path / "s")
+
+        def point_at_subtitles_and_try_accept(dialog):
+            selectors = dialog.findChildren(FileSelector)
+            assert len(selectors) == 3
+            selectors[2].set_path(str(tmp_path / "s"))
+            dialog.findChild(QDialogButtonBox).button(QDialogButtonBox.StandardButton.Ok).click()
+            assert dialog.result() != QDialog.DialogCode.Accepted
+            shown = [lbl.text() for lbl in dialog.findChildren(QLabel) if not lbl.isHidden()]
+            assert any("is the subtitle folder" in text for text in shown)
+            return QDialog.DialogCode.Rejected
+
+        monkeypatch.setattr(QDialog, "exec", point_at_subtitles_and_try_accept)
+
+        panel._edit_item(widget)
+
+        assert widget.secondary_folder is None
