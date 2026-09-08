@@ -11,6 +11,8 @@ import pytest
 
 pytest.importorskip("PyQt6.QtCore")
 
+from PyQt6.QtCore import QTranslator
+
 from anki_miner.gui.workers.install_worker import InstallWorker, mokuro_install_task
 from tests.unit._worker_sync import _run_worker_sync
 
@@ -63,3 +65,47 @@ def test_cancel_event_is_forwarded(qapp, tmp_path, monkeypatch):
     worker = _worker(tmp_path)
     _run_worker_sync(worker)
     assert seen["ev"] is worker.cancel_event
+
+
+class _PrefixTranslator(QTranslator):
+    def translate(
+        self,
+        context: str | None,
+        source_text: str | None,
+        disambiguation: str | None = None,
+        n: int = -1,
+    ) -> str:
+        del context, disambiguation, n
+        return f"translated:{source_text or ''}"
+
+
+def test_installer_phase_lines_are_translated_and_uv_lines_pass_through(qapp, tmp_path, monkeypatch):
+    from anki_miner.services import mokuro_installer as mi
+
+    def fake(bin_root, uv_root, *, status=None, progress=None, cancel_event=None):
+        status(mi.STATUS_DOWNLOADING_UV)
+        status(mi.STATUS_PREPARING_PYTHON)
+        status(mi.STATUS_INSTALLING_MOKURO)
+        status("Resolved 46 packages in 2.31s")
+        status(mi.STATUS_DOWNLOADING_PACKAGES)
+        return uv_root
+
+    monkeypatch.setattr(_INSTALL, fake)
+    translator = _PrefixTranslator()
+    qapp.installTranslator(translator)
+    try:
+        worker = _worker(tmp_path)
+        statuses: list[str] = []
+        worker.status.connect(statuses.append)
+        _run_worker_sync(worker)
+    finally:
+        qapp.removeTranslator(translator)
+
+    assert statuses == [
+        "translated:Installing mokuro…",
+        "translated:Downloading uv…",
+        f"translated:Preparing Python {mi.MOKURO_PYTHON}…",
+        f"translated:Installing {mi.MOKURO_REQUIREMENT}…",
+        "Resolved 46 packages in 2.31s",  # raw uv output is not a catalog string
+        "translated:Downloading packages — torch is large, this can take a while…",
+    ]

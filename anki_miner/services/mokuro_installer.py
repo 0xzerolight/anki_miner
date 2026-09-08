@@ -46,6 +46,13 @@ UV_VERSION = "0.12.10"
 MOKURO_REQUIREMENT = "mokuro==0.2.5"
 MOKURO_PYTHON = "3.12"
 
+#: Phase lines handed to ``status``. Exact strings, so the GUI worker can map
+#: each to its translation; everything else it receives is raw uv output.
+STATUS_DOWNLOADING_UV = "Downloading uv…"
+STATUS_PREPARING_PYTHON = f"Preparing Python {MOKURO_PYTHON}…"
+STATUS_INSTALLING_MOKURO = f"Installing {MOKURO_REQUIREMENT}…"
+STATUS_DOWNLOADING_PACKAGES = "Downloading packages — torch is large, this can take a while…"
+
 _VENV_TIMEOUT_S = 30 * 60  # includes the managed-CPython download
 _PIP_TIMEOUT_S = 3 * 60 * 60  # torch + CUDA libs on a slow link
 _UV_RELEASES = f"https://github.com/astral-sh/uv/releases/download/{UV_VERSION}"
@@ -214,7 +221,7 @@ def _run_uv(
         if status is not None:
             status(line.strip())
             if line.startswith("Resolved "):
-                status("Downloading packages — torch is large, this can take a while…")
+                status(STATUS_DOWNLOADING_PACKAGES)
 
     result = run_supervised(
         cmd,
@@ -259,7 +266,7 @@ def install_mokuro(
         )
     _check_cancel(cancel_event)
     if status is not None:
-        status("Downloading uv…")
+        status(STATUS_DOWNLOADING_UV)
     uv = _ensure_uv(bin_root, spec, progress=progress, cancel_event=cancel_event)
     _check_cancel(cancel_event)
 
@@ -267,7 +274,7 @@ def install_mokuro(
     env = _uv_env(uv_root)
     env_dir = mokuro_env_dir(uv_root)
     if status is not None:
-        status(f"Preparing Python {MOKURO_PYTHON}…")
+        status(STATUS_PREPARING_PYTHON)
     _run_uv(
         [str(uv), "venv", "--python", MOKURO_PYTHON, "--clear", str(env_dir)],
         timeout_s=_VENV_TIMEOUT_S,
@@ -279,7 +286,7 @@ def install_mokuro(
     )
     _check_cancel(cancel_event)
     if status is not None:
-        status(f"Installing {MOKURO_REQUIREMENT}…")
+        status(STATUS_INSTALLING_MOKURO)
     _run_uv(
         [
             str(uv),

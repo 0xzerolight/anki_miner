@@ -126,7 +126,14 @@ def test_full_install_places_uv_then_runs_venv_and_pip(linux, tmp_path, monkeypa
         "auto",
         mi.MOKURO_REQUIREMENT,
     ]
-    assert any("Resolved" in s or "Downloading" in s for s in statuses)
+    assert statuses == [
+        mi.STATUS_DOWNLOADING_UV,
+        mi.STATUS_PREPARING_PYTHON,
+        mi.STATUS_INSTALLING_MOKURO,
+        "Resolved 46 packages in 2.31s",
+        mi.STATUS_DOWNLOADING_PACKAGES,
+        "Installed 46 packages in 1.20s",
+    ]
 
 
 def test_uv_env_is_self_contained(linux, tmp_path):
