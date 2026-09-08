@@ -709,21 +709,38 @@ class DownloadTab(_ToolTabBase):
         worker = DownloadTracksProbeWorker(MediaDownloaderService(self.config), urls[0], parent=self)
         # The URL rides along so a result for a line edited away mid-probe is dropped.
         worker.tracks_probed.connect(lambda tracks, url=urls[0]: self._on_tracks_probed_for(url, tracks))
-        worker.probe_error.connect(self._on_tracks_error)
+        worker.probe_error.connect(lambda message, url=urls[0]: self._on_tracks_error_for(url, message))
         worker.finished.connect(self._on_probe_finished)
         self._probe_worker = worker
         worker.start()
 
+    def _tracks_probe_url_gone(self, url: str) -> bool:
+        """True, after logging it, when *url* was edited out of the box mid-probe.
+
+        Shared by the result and the error slot: a probe outcome for a line
+        the user has since removed is dropped either way, and neither a stale
+        track list nor a stale error belongs on screen.
+        """
+        if url in self._valid_urls():
+            return False
+        logger.info("track probe outcome dropped: its URL is no longer in the box")
+        self.log_widget.append_info(
+            self.tr("The URL that was checked is no longer in the list; its tracks were ignored.")
+        )
+        self._refresh_url_actions()
+        return True
+
     def _on_tracks_probed_for(self, url: str, tracks: object) -> None:
         """Adopt a probe result only while its URL is still in the box."""
-        if url not in self._valid_urls():
-            logger.info("track probe result dropped: its URL is no longer in the box")
-            self.log_widget.append_info(
-                self.tr("The URL that was checked is no longer in the list; its tracks were ignored.")
-            )
-            self._refresh_url_actions()
+        if self._tracks_probe_url_gone(url):
             return
         self._on_tracks_probed(tracks)
+
+    def _on_tracks_error_for(self, url: str, message: str) -> None:
+        """Report a probe failure only while its URL is still in the box."""
+        if self._tracks_probe_url_gone(url):
+            return
+        self._on_tracks_error(message)
 
     def _on_tracks_probed(self, tracks: object) -> None:
         """Adopt a probe result: remember it, and offer its audio languages."""

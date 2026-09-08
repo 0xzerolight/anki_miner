@@ -571,6 +571,23 @@ class TestDetectTracks:
         deliver(UrlTracks("T", ("ja",), (), ("sw",), False))
         assert tab._detected is not None
 
+    def test_an_error_for_a_url_that_left_the_box_is_dropped(self, qtbot, tmp_path: Path) -> None:
+        """A stale probe failure must not raise a screen issue about a removed line."""
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/a")
+        fake = _FakeWorker()
+        with patch(_PROBE_WORKER_CLS, return_value=fake):
+            tab.detect_button.click()
+        deliver = fake.probe_error.connect.call_args.args[0]
+        tab.url_input.setPlainText("https://example.com/b")
+        deliver("boom")
+        assert tab.issue_banner().current_issue() is None
+        tab.url_input.setPlainText("https://example.com/a\nhttps://example.com/b")
+        deliver("boom")
+        issue = tab.issue_banner().current_issue()
+        assert issue is not None
+        assert "Could not read this URL's tracks." in issue.summary
+
 
 # ---------------------------------------------------------------------------
 # Playlist expansion
