@@ -1686,7 +1686,7 @@ def test_queue_finished_carries_the_whitelist_folded_over_every_pair(tmp_path):
     assert coverage.missing == {"c"}
 
 
-def _translation_worker(tmp_path, proc, pairs, **item_kwargs):
+def _translation_worker(tmp_path, proc, pairs, *, config=None, **item_kwargs):
     """Run one queued series over ``pairs``, returning the patched matcher."""
     item = QueueItem(
         video_folder=tmp_path / "video",
@@ -1697,7 +1697,7 @@ def _translation_worker(tmp_path, proc, pairs, **item_kwargs):
     )
     queue = MagicMock()
     queue.get_all_items.return_value = [item]
-    worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(), None)
+    worker = BatchQueueWorkerThread(queue, config if config is not None else AnkiMinerConfig(), MagicMock(), None)
     with (
         patch(
             "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
@@ -1717,9 +1717,34 @@ def test_matcher_receives_the_item_s_translation_folder(tmp_path):
     proc = MagicMock()
     proc.process_episode.return_value = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0)
 
-    matcher = _translation_worker(tmp_path, proc, [], secondary_folder=tmp_path / "trans")
+    matcher = _translation_worker(
+        tmp_path,
+        proc,
+        [],
+        config=AnkiMinerConfig(secondary_subtitle_enabled=True),
+        secondary_folder=tmp_path / "trans",
+    )
 
     assert matcher.call_args.kwargs["secondary_folder"] == tmp_path / "trans"
+
+
+def test_the_setting_off_pairs_without_the_item_s_translation_folder(tmp_path):
+    """A queued row keeps its folder, but a run with Secondary Subtitles off
+    must not mine translations from it -- the quick path already gates on it."""
+    proc = MagicMock()
+    proc.process_episode.return_value = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0)
+    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass", secondary=None)
+
+    matcher = _translation_worker(
+        tmp_path,
+        proc,
+        [pair],
+        config=AnkiMinerConfig(secondary_subtitle_enabled=False),
+        secondary_folder=tmp_path / "trans",
+        secondary_offset=-1.5,
+    )
+
+    assert matcher.call_args.kwargs["secondary_folder"] is None
 
 
 def test_an_item_without_a_translation_folder_pairs_none(tmp_path):
@@ -1745,7 +1770,14 @@ def test_each_pair_s_translation_track_reaches_process_episode(tmp_path):
         SimpleNamespace(video=tmp_path / "ep2.mkv", subtitle=tmp_path / "ep2.ass", secondary=None),
     ]
 
-    _translation_worker(tmp_path, proc, pairs, secondary_folder=tmp_path / "trans", secondary_offset=-1.5)
+    _translation_worker(
+        tmp_path,
+        proc,
+        pairs,
+        config=AnkiMinerConfig(secondary_subtitle_enabled=True),
+        secondary_folder=tmp_path / "trans",
+        secondary_offset=-1.5,
+    )
 
     first, second = proc.process_episode.call_args_list
     assert first.kwargs["secondary_subtitle_file"] == trans
