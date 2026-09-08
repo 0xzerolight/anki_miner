@@ -136,12 +136,14 @@ def test_full_install_places_uv_then_runs_venv_and_pip(linux, tmp_path, monkeypa
     ]
 
 
-def test_uv_env_is_self_contained(linux, tmp_path):
+def test_uv_env_is_self_contained(linux, tmp_path, monkeypatch):
+    for name in ("VIRTUAL_ENV", "CONDA_PREFIX", "PYTHONHOME", "PYTHONPATH"):
+        monkeypatch.setenv(name, "/host")
     env = mi._uv_env(tmp_path / "uv")
     assert env["UV_PYTHON_INSTALL_DIR"] == str(tmp_path / "uv" / "python")
     assert env["UV_PYTHON_PREFERENCE"] == "only-managed"
     assert env["UV_NO_CACHE"] == "1" and env["UV_NO_CONFIG"] == "1" and env["UV_NO_PROGRESS"] == "1"
-    assert "VIRTUAL_ENV" not in env and "CONDA_PREFIX" not in env
+    assert not {"VIRTUAL_ENV", "CONDA_PREFIX", "PYTHONHOME", "PYTHONPATH"} & env.keys()
 
 
 def test_windows_zip_member_and_exe_name(tmp_path, monkeypatch):

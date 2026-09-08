@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import collections
 import logging
-import os
 import re
 import threading
 from collections.abc import Callable
@@ -37,7 +36,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.mokuro import MokuroError, MokuroNotFoundError
 from anki_miner.services.mokuro_volumes import MokuroVolume
 from anki_miner.utils.i18n import tr_format
-from anki_miner.utils.mokuro_resolver import resolve_mokuro
+from anki_miner.utils.mokuro_resolver import resolve_mokuro, scrubbed_python_env
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 
 logger = logging.getLogger(__name__)
@@ -197,7 +196,7 @@ class MokuroRunnerService:
 
     @staticmethod
     def _child_env() -> dict[str, str]:
-        env = dict(os.environ)
+        env = scrubbed_python_env()
         env.update({"PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8", "PYTHONUNBUFFERED": "1", "NO_COLOR": "1"})
         return env
 

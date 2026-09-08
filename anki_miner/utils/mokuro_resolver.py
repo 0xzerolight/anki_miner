@@ -25,7 +25,15 @@ from typing import Any
 
 from anki_miner.utils.resolver_log import log_resolution, log_resolution_refused
 
-__all__ = ["managed_mokuro_path", "managed_python_path", "mokuro_available", "mokuro_env_dir", "resolve_mokuro"]
+__all__ = [
+    "managed_mokuro_installed",
+    "managed_mokuro_path",
+    "managed_python_path",
+    "mokuro_available",
+    "mokuro_env_dir",
+    "resolve_mokuro",
+    "scrubbed_python_env",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +62,25 @@ def managed_mokuro_path(uv_root: Path) -> Path:
 
 def _executable_file(path: Path) -> bool:
     return path.is_file() and (sys.platform == "win32" or os.access(path, os.X_OK))
+
+
+def managed_mokuro_installed(uv_root: Path) -> bool:
+    """True when the installer's console script is present and runnable. Cheap."""
+    return _executable_file(managed_mokuro_path(uv_root))
+
+
+#: Host-side Python selection. Inherited by a child, PYTHONHOME/PYTHONPATH
+#: re-point the managed venv's interpreter at the launching shell's
+#: site-packages, and VIRTUAL_ENV/CONDA_PREFIX steer uv the same way.
+_HOST_PYTHON_VARS = ("VIRTUAL_ENV", "CONDA_PREFIX", "PYTHONHOME", "PYTHONPATH")
+
+
+def scrubbed_python_env() -> dict[str, str]:
+    """A copy of ``os.environ`` for any child that must use the managed Python only."""
+    env = dict(os.environ)
+    for name in _HOST_PYTHON_VARS:
+        env.pop(name, None)
+    return env
 
 
 def _compute(override: Any, uv_root: Any) -> str:

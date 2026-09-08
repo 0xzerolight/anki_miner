@@ -81,3 +81,23 @@ def test_cache_keyed_on_inputs(tmp_path, monkeypatch):
     managed = _exe(tmp_path / "uv2" / "mokuro" / "bin" / "mokuro")
     cfg2 = SimpleNamespace(mokuro_location=None, uv_root=tmp_path / "uv2")
     assert mokuro_resolver.resolve_mokuro(cfg2) == str(managed)
+
+
+def test_scrubbed_python_env_drops_host_python_selection_only(monkeypatch):
+    for name in ("VIRTUAL_ENV", "CONDA_PREFIX", "PYTHONHOME", "PYTHONPATH"):
+        monkeypatch.setenv(name, "/host")
+    monkeypatch.setenv("ANKI_MINER_KEEP_ME", "1")
+    env = mokuro_resolver.scrubbed_python_env()
+    assert not {"VIRTUAL_ENV", "CONDA_PREFIX", "PYTHONHOME", "PYTHONPATH"} & env.keys()
+    assert env["ANKI_MINER_KEEP_ME"] == "1"
+
+
+def test_managed_mokuro_installed_needs_an_executable_shim(monkeypatch, tmp_path):
+    monkeypatch.setattr(mokuro_resolver.sys, "platform", "linux")
+    assert mokuro_resolver.managed_mokuro_installed(tmp_path) is False
+    shim = tmp_path / "mokuro" / "bin" / "mokuro"
+    shim.parent.mkdir(parents=True)
+    shim.write_text("x")
+    assert mokuro_resolver.managed_mokuro_installed(tmp_path) is False  # not executable
+    shim.chmod(0o755)
+    assert mokuro_resolver.managed_mokuro_installed(tmp_path) is True

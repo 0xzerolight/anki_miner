@@ -37,7 +37,13 @@ from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.services._install_common import cleanup_part, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
 from anki_miner.utils.logging_ext import log_summary
-from anki_miner.utils.mokuro_resolver import managed_mokuro_path, managed_python_path, mokuro_env_dir
+from anki_miner.utils.mokuro_resolver import (
+    managed_mokuro_installed,
+    managed_mokuro_path,
+    managed_python_path,
+    mokuro_env_dir,
+    scrubbed_python_env,
+)
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
 
 logger = logging.getLogger(__name__)
@@ -125,15 +131,12 @@ def _uv_receipt_path(bin_root: Path) -> Path:
 
 def is_installed(uv_root: Path) -> bool:
     """True when the managed mokuro console script is present and runnable. Cheap."""
-    shim = managed_mokuro_path(uv_root)
-    return shim.is_file() and (sys.platform == "win32" or os.access(shim, os.X_OK))
+    return managed_mokuro_installed(uv_root)
 
 
 def _uv_env(uv_root: Path) -> dict[str, str]:
     """Child env for every uv call: managed Python only, no cache, no user config."""
-    env = dict(os.environ)
-    for stale in ("VIRTUAL_ENV", "CONDA_PREFIX", "PYTHONHOME", "PYTHONPATH"):
-        env.pop(stale, None)
+    env = scrubbed_python_env()
     env.update(
         {
             "UV_PYTHON_INSTALL_DIR": str(uv_root / "python"),
