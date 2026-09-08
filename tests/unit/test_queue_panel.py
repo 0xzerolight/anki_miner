@@ -427,3 +427,29 @@ class TestSecondarySubtitleFolder:
         assert len(calls) == 1
         assert "secondary_folder" not in calls[0]
         assert widget.secondary_folder == tmp_path / "t"
+
+    def test_edit_refuses_the_subtitle_folder_as_translation_folder(self, panel, monkeypatch, tmp_path):
+        from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QLabel
+
+        from anki_miner.gui.widgets.enhanced import FileSelector
+
+        for name in ("v", "s"):
+            (tmp_path / name).mkdir()
+        panel.secondary_subtitle_enabled = True
+        widget = _add_widget(panel, "Show", "id-1", video=tmp_path / "v", subtitle=tmp_path / "s")
+
+        def point_at_subtitles_and_try_accept(dialog):
+            selectors = dialog.findChildren(FileSelector)
+            assert len(selectors) == 3
+            selectors[2].set_path(str(tmp_path / "s"))
+            dialog.findChild(QDialogButtonBox).button(QDialogButtonBox.StandardButton.Ok).click()
+            assert dialog.result() != QDialog.DialogCode.Accepted
+            shown = [lbl.text() for lbl in dialog.findChildren(QLabel) if not lbl.isHidden()]
+            assert any("is the subtitle folder" in text for text in shown)
+            return QDialog.DialogCode.Rejected
+
+        monkeypatch.setattr(QDialog, "exec", point_at_subtitles_and_try_accept)
+
+        panel._edit_item(widget)
+
+        assert widget.secondary_folder is None

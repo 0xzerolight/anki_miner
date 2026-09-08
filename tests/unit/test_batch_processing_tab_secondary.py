@@ -162,3 +162,20 @@ def test_the_run_log_counts_the_matched_translations(qtbot, test_config, tmp_pat
 
     assert fields["translations"] == 1
     assert fields["secondary_folder"] == str(tmp_path / "t")
+
+
+def test_the_subtitle_folder_as_translation_folder_refuses_the_run(qtbot, test_config, tmp_path):
+    """The matcher would refuse it with one log line; the run must say so on screen."""
+    tab = _tab(qtbot, _on(test_config))
+    _point(tab.video_folder_selector, tmp_path / "v")
+    _point(tab.subtitle_folder_selector, tmp_path / "s")
+    _point(tab.secondary_folder_selector, tmp_path / "s")
+    shown: list = []
+    tab.show_screen_issue = lambda issue, **_kw: shown.append(issue)  # type: ignore[method-assign]
+
+    with patch(_MATCHER) as matcher:
+        tab._process_pairs()
+
+    matcher.assert_not_called()
+    assert shown
+    assert "is the subtitle folder" in shown[0].summary

@@ -52,6 +52,7 @@ from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionH
 from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
 from anki_miner.gui.widgets.queue_item_widget import QueueItemWidget
 from anki_miner.models.batch_queue import BatchQueue, QueueItem, QueueItemStatus
+from anki_miner.utils.file_pairing import is_same_folder
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -479,7 +480,25 @@ class QueuePanel(QFrame):
             return None
 
         def accept_if_valid() -> None:
-            if selected_folders() is None:
+            folders = selected_folders()
+            if folders is None:
+                folder_error.setText(self.tr("Choose existing video and subtitle folders."))
+                folder_error.show()
+                return
+            secondary_folder = selected_secondary()
+            # Only a folder the user can see is refused: a row restored with the
+            # same folder twice while the setting is off is the matcher's to skip.
+            if (
+                self.secondary_subtitle_enabled
+                and secondary_folder is not None
+                and is_same_folder(secondary_folder, folders[1])
+            ):
+                folder_error.setText(
+                    self.tr(
+                        "The translation folder is the subtitle folder. "
+                        "Pick a separate folder for the translation subtitles."
+                    )
+                )
                 folder_error.show()
                 return
             folder_error.hide()

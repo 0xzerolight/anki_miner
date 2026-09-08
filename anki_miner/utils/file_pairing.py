@@ -200,6 +200,11 @@ def _sort_subtitles(subtitles: list[Path], prefer_retimed: bool) -> None:
     )
 
 
+def is_same_folder(a: Path, b: Path) -> bool:
+    """Whether two folder paths name one directory, literally or once resolved."""
+    return a == b or a.resolve() == b.resolve()
+
+
 def _attach_secondary(
     pairs: list["FilePair"],
     videos: list[Path],
@@ -222,7 +227,7 @@ def _attach_secondary(
     """
     from anki_miner.utils.episode_matcher import EpisodeMatcher
 
-    if secondary_folder == subtitle_folder or secondary_folder.resolve() == subtitle_folder.resolve():
+    if is_same_folder(secondary_folder, subtitle_folder):
         logger.warning(
             "secondary subtitles: the translation folder is the subtitle folder (%s); no translations attached",
             secondary_folder,
