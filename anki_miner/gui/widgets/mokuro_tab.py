@@ -137,6 +137,15 @@ class MokuroTab(_ToolTabBase):
         if masked != config:
             self._refresh_engine_state()
 
+    def notify_install_finished(self) -> None:
+        """Re-run the availability guard after the in-app installer succeeded.
+
+        Separate from :meth:`update_config` on purpose: an install changes no
+        config value, so the mask there (a GPU-only change must not re-probe)
+        would swallow a ``config_refreshed`` carrying the same config.
+        """
+        self._refresh_engine_state()
+
     def _apply_config_defaults(self) -> None:
         self._seeding = True
         try:

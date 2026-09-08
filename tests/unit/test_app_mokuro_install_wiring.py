@@ -1,16 +1,30 @@
 """Tests for app.py wiring the mokuro install to a post-install refresh.
 
 Clone of ``test_app_alass_download_wiring``: the in-app "Install mokuro"
-button must, on success, drop the resolver's cached PATH-miss AND re-propagate
-config, so the (non-Settings) Manga OCR tab re-runs its availability guard
-instead of staying disabled until a Settings save or restart. The production
-wiring lives in ``anki_miner.gui.app._connect_mokuro_install``; these tests
-call that real helper.
+button must, on success, drop the resolver's cached PATH-miss AND tell the
+Manga OCR tab directly, so the (non-Settings) tab re-runs its availability
+guard instead of staying disabled until a Settings save or restart. The
+production wiring lives in ``anki_miner.gui.app._connect_mokuro_install``;
+these tests call that real helper.
 """
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
+
+
+class _FakeMokuroTab:
+    """Records each notify and the resolver cache it saw at that moment."""
+
+    def __init__(self) -> None:
+        self.cache_seen: list[dict] = []
+
+    def notify_install_finished(self) -> None:
+        from anki_miner.utils import mokuro_resolver
+
+        self.cache_seen.append(dict(mokuro_resolver._CACHE))
 
 
 @pytest.fixture
@@ -50,49 +64,46 @@ def wired(monkeypatch, patch_heavy_init, test_config, qtbot):
         captured["on_finished"] = on_finished
 
     monkeypatch.setattr(window.background_tasks, "start_mokuro_install", _fake_start)
-    app_module._connect_mokuro_install(window, settings_tab)
+    mokuro_tab = _FakeMokuroTab()
+    app_module._connect_mokuro_install(window, settings_tab, SimpleNamespace(mokuro_tab=mokuro_tab))
 
-    refreshed: list = []
-    window.config_refreshed.connect(lambda cfg: refreshed.append(cfg))
-
-    yield window, settings_tab, captured, refreshed
+    yield window, settings_tab, captured, mokuro_tab
     window.deleteLater()
 
 
 class TestMokuroInstallWiring:
     def test_request_starts_install_with_config_roots(self, wired):
-        window, settings_tab, captured, _refreshed = wired
+        window, settings_tab, captured, _tab = wired
         settings_tab.mokuro_install_requested.emit()
 
         assert "on_finished" in captured  # button → background install requested
         assert captured["bin_root"] == window.get_config().bin_root
         assert captured["uv_root"] == window.get_config().uv_root
 
-    def test_successful_install_clears_cache_and_refreshes(self, wired):
+    def test_successful_install_clears_cache_then_notifies_the_tab(self, wired):
         from anki_miner.utils import mokuro_resolver
 
-        window, settings_tab, captured, refreshed = wired
+        _window, settings_tab, captured, mokuro_tab = wired
         settings_tab.mokuro_install_requested.emit()
 
-        # Seed a stale cache entry; the successful install must drop it.
         mokuro_resolver._CACHE[(None, None)] = "mokuro"
         captured["on_finished"](True, "ok")
 
         assert mokuro_resolver._CACHE == {}
-        assert refreshed == [window.get_config()]  # Manga OCR tab re-evaluates
+        # Notified once, AFTER the stale miss was dropped (its probe reads the cache).
+        assert mokuro_tab.cache_seen == [{}]
 
-    def test_failed_install_does_not_refresh(self, wired):
+    def test_failed_install_does_not_notify_the_tab(self, wired):
         from anki_miner.utils import mokuro_resolver
 
-        _window, settings_tab, captured, refreshed = wired
+        _window, settings_tab, captured, mokuro_tab = wired
         settings_tab.mokuro_install_requested.emit()
 
         mokuro_resolver._CACHE[(None, None)] = "mokuro"
         captured["on_finished"](False, "boom")
 
-        # A failed install leaves the cache untouched and emits no refresh.
         assert mokuro_resolver._CACHE.get((None, None)) == "mokuro"
-        assert refreshed == []
+        assert mokuro_tab.cache_seen == []
         mokuro_resolver._clear_cache()
 
     def test_cache_is_cleared_before_the_panel_reprobes(self, monkeypatch, wired):
@@ -101,7 +112,7 @@ class TestMokuroInstallWiring:
         notify fires can settle the label on "Not installed" after a success."""
         from anki_miner.utils import mokuro_resolver
 
-        _window, settings_tab, captured, _refreshed = wired
+        _window, settings_tab, captured, _tab = wired
         seen: list[dict] = []
         monkeypatch.setattr(
             settings_tab.subtitles_panel,
@@ -117,7 +128,7 @@ class TestMokuroInstallWiring:
 
     def test_panel_is_notified_on_failure_too(self, monkeypatch, wired):
         """The in-flight guard must clear whether the install worked or not."""
-        _window, settings_tab, captured, _refreshed = wired
+        _window, settings_tab, captured, _tab = wired
         calls: list[None] = []
         monkeypatch.setattr(
             settings_tab.subtitles_panel,

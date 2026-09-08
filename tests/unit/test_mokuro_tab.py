@@ -233,6 +233,23 @@ class TestPreviewAndPersistence:
             assert tab._availability_worker.wait(3000)
             assert compute.call_count == 1
 
+    def test_notify_install_finished_reprobes_and_enables_run(self, qtbot, tmp_path):
+        """An install changes no config value, so update_config's mask would skip
+        the probe; the install wiring tells the tab directly."""
+        with patch(_COMPUTE_AVAILABLE, return_value=False):
+            tab = MokuroTab(_config(tmp_path))
+            qtbot.addWidget(tab)
+            assert tab._availability_worker.wait(3000)
+            qtbot.waitUntil(lambda: not tab.engine_notice_label.isHidden(), timeout=3000)
+        assert not tab.run_button.isEnabled()
+
+        with patch(_COMPUTE_AVAILABLE, return_value=True) as compute:
+            tab.notify_install_finished()
+            assert tab._availability_worker.wait(3000)
+            qtbot.waitUntil(tab.run_button.isEnabled, timeout=3000)
+        assert compute.call_count == 1
+        assert tab.engine_notice_label.isHidden()
+
 
 class TestCancelAndClose:
     def test_cancel_forwards_to_worker(self, qtbot, tmp_path):
