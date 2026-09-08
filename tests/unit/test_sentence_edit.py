@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import unicodedata
 
 import pytest
 
@@ -209,3 +210,36 @@ def test_real_parser_round_trip_rebuilds_the_corrected_word(tmp_path):
     assert rebuilt.sentence == edited
     assert (rebuilt.start_time, rebuilt.end_time) == (5.0, 7.0)
     assert "<b>" in rebuilt.sentence_bolded  # bold precompute is config-gated; enabled above
+
+
+@pytest.mark.skipif(not _fugashi_available(), reason="fugashi/unidic-lite not installed")
+def test_real_parser_round_trip_survives_width_and_nfc_normalisation(tmp_path):
+    """The curator stores the parser's own ``token.sentence`` (folded to
+    fullwidth + NFC), so the resolver's re-parse changes no text and the stored
+    span lands on the same token. Pinned with text the folding changes in both
+    width and code-point count."""
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.services.subtitle_parser import SubtitleParserService
+    from tests.conftest import build_processor
+
+    config = AnkiMinerConfig(media_temp_folder=tmp_path / "media")
+    proc = build_processor(config, subtitle_parser=SubtitleParserService(config))
+    # Halfwidth katakana plus a decomposed が (か + U+3099): both change under normalisation.
+    typed = "ﾀﾅｶさんは持久系のスポーツ" + unicodedata.normalize("NFD", "が") + "苦手"
+    assert typed != unicodedata.normalize("NFC", typed)
+
+    tokens = proc.parse_sentence_fn(typed)
+    target = next(t for t in tokens if t.mined_form.startswith("持久"))
+    stored = target.sentence  # what SentenceEditDialog hands the curator
+    assert stored == "タナカさんは持久系のスポーツが苦手"
+    assert stored[target.surface_start : target.surface_end] == target.surface
+
+    intent = dataclasses.replace(
+        _word(),
+        sentence_edit=SentenceEdit(text=stored, target_start=target.surface_start, target_end=target.surface_end),
+    )
+    rebuilt = resolve_sentence_edit(intent, proc.parse_sentence_fn)
+
+    assert rebuilt.mined_form == target.mined_form
+    assert rebuilt.sentence == stored
+    assert rebuilt.sentence[rebuilt.surface_start : rebuilt.surface_end] == rebuilt.surface
