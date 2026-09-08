@@ -1822,17 +1822,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
     def _focused_word(self) -> tuple[TokenizedWord | None, int | None]:
         """The word under the cursor and its original index, or ``(None, None)``.
 
-        Resolves through the col-0 ``UserRole`` index because the table is
-        sortable, so the visual row is not the word's index.
+        Resolves through :meth:`_index_for_row` (the col-0 ``UserRole`` index)
+        because the table is sortable, so the visual row is not the word's index.
         """
-        current_row = self.table.currentRow()
-        if current_row < 0:
-            return None, None
-        check_item = self.table.item(current_row, 0)
-        if check_item is None:
-            return None, None
-        original_index = check_item.data(Qt.ItemDataRole.UserRole)
-        if original_index is None or not (0 <= original_index < len(self._words)):
+        original_index = self._index_for_row(self.table.currentRow())
+        if original_index is None:
             return None, None
         return self._words[original_index], original_index
 
