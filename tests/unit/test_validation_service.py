@@ -543,6 +543,7 @@ class TestValidationService:
                 lambda: (False, "Field(s) Picture not found"),
             )
             monkeypatch.setattr(service, "_check_offline_dictionary", lambda: (True, "ok"))
+            monkeypatch.setattr(service, "_check_mokuro", lambda: (True, "ok"))
 
             result = service.validate_setup()
 
@@ -624,6 +625,7 @@ class TestValidationService:
                     "anki_miner.services.validation_service.subprocess.run",
                     return_value=ffmpeg_result,
                 ),
+                patch("anki_miner.services.validation_service.mokuro_available", return_value=True),
             ):
                 result = service.validate_setup()
 
@@ -1138,6 +1140,51 @@ class TestCheckAlass:
             service._check_alass()
 
         assert run.call_args.args[0][1] == "--version"
+
+
+class TestCheckMokuro:
+    """_check_mokuro never spawns mokuro (torch import); it reads the resolver."""
+
+    def test_available_reports_where_it_came_from(self, test_config, monkeypatch):
+        service = ValidationService(test_config)
+        monkeypatch.setattr("anki_miner.services.validation_service.mokuro_available", lambda loc, root: True)
+        monkeypatch.setattr("anki_miner.services.validation_service.resolve_mokuro", lambda cfg: "/usr/bin/mokuro")
+        with patch(
+            "anki_miner.services.validation_service.subprocess.run", side_effect=AssertionError("must not spawn")
+        ):
+            ok, message = service._check_mokuro()
+        assert ok is True and "mokuro" in message and "[" in message
+
+    def test_missing_is_a_warning_with_the_settings_route(self, test_config, monkeypatch):
+        service = ValidationService(test_config)
+        monkeypatch.setattr("anki_miner.services.validation_service.mokuro_available", lambda loc, root: False)
+        ok, message = service._check_mokuro()
+        assert ok is False and "Manga OCR" in message and "Settings" in message
+
+    def test_validate_setup_records_component_and_version(self, test_config, monkeypatch):
+        """Same per-check stubbing as TestValidateSetup (test_validation_service.py:~530)."""
+        service = ValidationService(test_config)
+        for name, verdict in (
+            ("_check_ankiconnect", (True, "ok")),
+            ("_check_ffmpeg", (True, "ok")),
+            ("_check_ffprobe", (True, "ok")),
+            ("_check_alass", (True, "ok")),
+            ("_check_ytdlp", (True, "2026.08.01 [venv]")),
+            ("_check_deck_exists", (True, "ok")),
+            ("_check_note_type_exists", (True, "ok")),
+            ("_check_field_names_exist", (True, "ok")),
+            ("_check_offline_dictionary", (True, "ok")),
+            ("_check_mokuro", (False, "mokuro not found")),
+        ):
+            monkeypatch.setattr(service, name, lambda v=verdict: v)
+        result = service.validate_setup()
+        assert any(i.component == "mokuro" and i.severity == "WARNING" for i in result.issues)
+        assert result.tool_versions["mokuro"] == ""
+
+        monkeypatch.setattr(service, "_check_mokuro", lambda: (True, "mokuro [app-managed]"))
+        result = service.validate_setup()
+        assert not any(i.component == "mokuro" for i in result.issues)
+        assert result.tool_versions["mokuro"] == "mokuro [app-managed]"
 
 
 class TestCheckYtdlp:

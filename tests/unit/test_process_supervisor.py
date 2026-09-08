@@ -388,3 +388,25 @@ def test_supervised_success_logs_only_debug(caplog: pytest.LogCaptureFixture) ->
     assert [record.levelno for record in records] == [logging.DEBUG, logging.DEBUG]
     assert "ffmpeg: argv=" in records[0].getMessage()
     assert records[1].getMessage().startswith("ffmpeg ok: rc=0 elapsed=")
+
+
+def test_supervised_cr_terminates_lines_when_asked() -> None:
+    lines: list[str] = []
+    result = run_supervised(
+        [sys.executable, "-c", "import sys; sys.stdout.write('a\\rb\\r\\nc'); sys.stdout.flush()"],
+        timeout_s=10,
+        line_callback=lines.append,
+        treat_cr_as_newline=True,
+    )
+    assert result.state is SupervisedState.COMPLETED
+    assert [line for line in lines if line] == ["a", "b", "c"]
+
+
+def test_supervised_cr_stays_inside_a_line_by_default() -> None:
+    lines: list[str] = []
+    run_supervised(
+        [sys.executable, "-c", "import sys; sys.stdout.write('a\\rb\\n'); sys.stdout.flush()"],
+        timeout_s=10,
+        line_callback=lines.append,
+    )
+    assert lines == ["a\rb"]

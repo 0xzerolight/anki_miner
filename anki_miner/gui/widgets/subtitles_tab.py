@@ -1,4 +1,4 @@
-"""Utilities container tab — nests Generate, Retime, Condense, Card Backfill, Deck Filter, Download.
+"""Utilities container tab — nests Generate, Retime, Condense, Card Backfill, Deck Filter, Download, Manga OCR.
 
 Wraps :class:`~anki_miner.gui.widgets.subtitle_creation_tab.SubtitleCreationTab`
 (Generate), :class:`~anki_miner.gui.widgets.subtitle_retime_tab.SubtitleRetimeTab`
@@ -6,6 +6,7 @@ Wraps :class:`~anki_miner.gui.widgets.subtitle_creation_tab.SubtitleCreationTab`
 :class:`~anki_miner.gui.widgets.backfill_tab.CardBackfillTab` (Card Backfill),
 :class:`~anki_miner.gui.widgets.deck_filter_tab.DeckFilterTab` (Deck Filter),
 and :class:`~anki_miner.gui.widgets.download_tab.DownloadTab` (Download)
+and :class:`~anki_miner.gui.widgets.mokuro_tab.MokuroTab` (Manga OCR)
 inside a single top-level tab so the main tab bar stays uncluttered.
 
 Close contract:
@@ -35,6 +36,7 @@ from anki_miner.gui.widgets.base import install_animated_tab_bar
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
+from anki_miner.gui.widgets.mokuro_tab import MokuroTab
 from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
 from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.gui.workers.backfill_worker import BackfillScanWorker
@@ -97,6 +99,11 @@ class SubtitlesTab(QWidget):
             self.download_tab,
             QCoreApplication.translate("MainWindow", "Download"),
         )
+        self.mokuro_tab = MokuroTab(config, suppress_optional_startup=suppress_optional_startup)
+        self._inner_tabs.addTab(
+            self.mokuro_tab,
+            QCoreApplication.translate("MainWindow", "Manga OCR"),
+        )
 
         # Stable sub-tab keys for reveal_capability (see capabilities.SUBTAB_KEYS).
         self._subtab_index = {
@@ -106,6 +113,7 @@ class SubtitlesTab(QWidget):
             "backfill": 3,
             "deckfilter": 4,
             "download": 5,
+            "mokuro": 6,
         }
 
         layout = QVBoxLayout()
@@ -123,7 +131,8 @@ class SubtitlesTab(QWidget):
         ``key`` is a stable identifier from
         :data:`anki_miner.gui.capabilities.SUBTAB_KEYS` (``"generate"``,
         ``"retime"``, ``"condense"``, ``"backfill"``, ``"deckfilter"``,
-        ``"download"``). Unknown keys are ignored so a stale caller can't
+        ``"download"``, ``"mokuro"``). Unknown keys are ignored so a stale
+        caller can't
         crash the UI.
         """
         index = self._subtab_index.get(key)
@@ -168,6 +177,7 @@ class SubtitlesTab(QWidget):
         self.backfill_tab.update_config(config)
         self.deck_filter_tab.update_config(config)
         self.download_tab.update_config(config)
+        self.mokuro_tab.update_config(config)
 
     def release_dictionary_resources(self) -> bool:
         """Refuse resource mutation while a backfill or deck-filter scan uses providers."""
@@ -189,3 +199,4 @@ class SubtitlesTab(QWidget):
         yield from self.backfill_tab.iter_close_workers()
         yield from self.deck_filter_tab.iter_close_workers()
         yield from self.download_tab.iter_close_workers()
+        yield from self.mokuro_tab.iter_close_workers()

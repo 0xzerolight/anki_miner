@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:7ca8f4a43c52af6c -->
+<!-- i18n-source: README.md sha256:9325d0b0e576e9a4 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner

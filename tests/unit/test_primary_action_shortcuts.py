@@ -30,6 +30,7 @@ from anki_miner.gui.widgets.base import WorkflowActionBar
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
+from anki_miner.gui.widgets.mokuro_tab import MokuroTab
 from anki_miner.gui.widgets.reading_manga_tab import ReadingMangaTab
 from anki_miner.gui.widgets.reading_novels_tab import ReadingNovelsTab
 from anki_miner.gui.widgets.reading_subtitles_tab import ReadingSubtitlesTab
@@ -67,12 +68,13 @@ def _build(name: str, config: AnkiMinerConfig) -> QWidget:
         return YouTubeTab(config, MagicMock(name="Processor"), MagicMock(name="Fetcher"), MagicMock())
     if name == "audiobook":
         return AudiobookTab(config, MagicMock(name="Processor"), MagicMock())
-    if name in {"condense", "generate", "retime", "download"}:
+    if name in {"condense", "generate", "retime", "download", "mokuro"}:
         tool = {
             "condense": CondenseTab,
             "generate": SubtitleCreationTab,
             "retime": SubtitleRetimeTab,
             "download": DownloadTab,
+            "mokuro": MokuroTab,
         }[name]
         return tool(config)
     reading = {
@@ -99,6 +101,7 @@ SCREENS = [
     "generate",
     "retime",
     "download",
+    "mokuro",
 ]
 
 

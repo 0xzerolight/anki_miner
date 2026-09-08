@@ -2152,6 +2152,14 @@ Berkas indeks di disk tidak akan disentuh karena folder tersebut tidak dapat dip
         <translation>Simpan video, audio, atau subtitel dari sebuah URL ke folder menggunakan yt-dlp, tanpa mining. Berfungsi dengan semua situs yang didukung yt-dlp.</translation>
     </message>
     <message>
+        <source>Create .mokuro files from manga images</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Run mokuro's OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Restyle mined cards</source>
         <translation>Ubah gaya kartu hasil mining</translation>
     </message>
@@ -5884,6 +5892,10 @@ Lanjutkan?</translation>
         <translation>Unduhan</translation>
     </message>
     <message>
+        <source>Manga OCR</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Single</source>
         <translation>Tunggal</translation>
     </message>
@@ -6120,6 +6132,206 @@ Lanjutkan?</translation>
     <message>
         <source>Button</source>
         <translation>Tombol</translation>
+    </message>
+</context><context>
+    <name>MokuroInstallWorker</name>
+    <message>
+        <source>%1 (%2%)</source>
+        <translation type="unfinished">%1 (%2%)</translation>
+    </message>
+    <message>
+        <source>Installing mokuro…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>mokuro installed successfully.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>MokuroRunner</name>
+    <message>
+        <source>Page %1 of %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading OCR models (first run only)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Loading models (%1)</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>MokuroTab</name>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">Progres</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">Selesai</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation type="unfinished">Selesai: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation type="unfinished">Dilewati</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation type="unfinished">Dilewati: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">Batal</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Dibatalkan</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Gagal — lihat log</translation>
+    </message>
+    <message>
+        <source>Some volumes could not be processed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 volume(s) processed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 processed, %2 already had a .mokuro file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing processed — all %1 already have a .mokuro file. Tick Redo to run OCR again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga OCR</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga</source>
+        <translation type="unfinished">Manga</translation>
+    </message>
+    <message>
+        <source>mokuro not found. Install it in Settings → Transcription &amp; Alignment → Manga OCR, or set its path there.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Folder:</source>
+        <translation type="unfinished">Folder:</translation>
+    </message>
+    <message>
+        <source>A folder of page images (one volume), or a folder whose subfolders and .cbz/.zip files are volumes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Options</source>
+        <translation type="unfinished">Opsi</translation>
+    </message>
+    <message>
+        <source>Use GPU when available</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Untick to force CPU even when mokuro's torch build can use a GPU.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Redo volumes that already have a .mokuro file</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Runs OCR again from scratch, ignoring mokuro's cached page results. Off each launch.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Run OCR</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No manga volumes found in this folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 volume(s) found, %2 already processed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 volume(s) found.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This folder could not be read.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose a manga folder before running OCR.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That folder no longer exists.</source>
+        <translation type="unfinished">Folder tersebut sudah tidak ada.</translation>
+    </message>
+    <message>
+        <source>Manga folder is not writable.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>mokuro writes its .mokuro files beside the volumes; check permissions for %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No manga volumes found in that folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A volume is a folder of page images (.jpg, .png, .webp, .avif) or a .cbz/.zip archive. A series folder holds one of those per volume.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That folder could not be read.</source>
+        <translation type="unfinished">Folder tersebut tidak dapat dibaca.</translation>
+    </message>
+    <message>
+        <source> (already processed)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Volume %1 of %2</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>MokuroWorker</name>
+    <message>
+        <source>Already processed — tick Redo to run OCR again</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1: %2%</source>
+        <translation type="unfinished">%1: %2%</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">Selesai</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Dibatalkan</translation>
     </message>
 </context><context>
     <name>NoteTypePage</name>
@@ -8072,6 +8284,10 @@ Sumber yang berhenti berfungsi setelah pemutakhiran aplikasi diperbaiki dengan I
         <translation>Mengunduh…</translation>
     </message>
     <message>
+        <source>Installing…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
         <translation>yt-dlp tidak dapat diperbarui. Periksa koneksi Anda dan coba lagi.</translation>
     </message>
@@ -9268,6 +9484,38 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Tidak ada biner alass yang diterbitkan untuk macOS. Instal dengan Homebrew:</translation>
     </message>
     <message>
+        <source>Manga OCR</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional: path to the mokuro executable</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>mokuro executable</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Install mokuro</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download mokuro and its OCR engine into Anki Miner's folder (about 1 GB, up to 4 GB with NVIDIA GPU support). Needed for Utilities → Manga OCR unless mokuro is already installed.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>mokuro install</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not available on this platform</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Subtitle generation needs the faster-whisper engine. This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, or run the command below and then launch the separate pipx-installed Anki Miner:</source>
         <translation>Pembuatan subtitel memerlukan mesin faster-whisper. Aplikasi paket ini tidak dapat diperluas dengan ASR. Gunakan AppImage yang mendukung ASR, atau jalankan perintah di bawah ini lalu luncurkan Anki Miner terpisah yang terpasang via pipx:</translation>
     </message>
@@ -9286,6 +9534,10 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
         <source>Not installed</source>
         <translation>Tidak terpasang</translation>
+    </message>
+    <message>
+        <source>Reinstall mokuro</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>GPU acceleration is not available on this platform.</source>
@@ -9412,6 +9664,10 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     <message>
         <source>alass (subtitle retiming)</source>
         <translation>alass (penyelarasan ulang waktu subtitel)</translation>
+    </message>
+    <message>
+        <source>mokuro (manga OCR)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Anki Miner updates</source>

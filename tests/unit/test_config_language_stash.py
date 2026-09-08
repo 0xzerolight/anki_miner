@@ -134,5 +134,8 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "deck_builder_skip_known",
         "backfill_field_groups",
         "downloader_audio_lang",
+        "mokuro_use_gpu",
+        "mokuro_location",
+        "uv_root",
     }
     assert loaded.script_variant == "" and loaded.reading_tone_color is False

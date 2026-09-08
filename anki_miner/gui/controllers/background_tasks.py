@@ -161,11 +161,12 @@ class BackgroundTaskController(QObject):
         self.jmdict_migration_worker: ImportWorker | None = None
         self._dictionary_mutation_panel: ChainSettingsPanelBase | None = None
         self._jmdict_migration_lease: tuple[ImportWorker, ChainSettingsPanelBase, MutationToken] | None = None
-        # The five resource install/download handles are all InstallWorker now
+        # The six resource install/download handles are all InstallWorker now
         # (ARC-010), but stay separate attributes so each releases independently
         # and the shutdown join can address them by name.
         self.asr_model_download_worker: InstallWorker | None = None
         self.alass_install_worker: InstallWorker | None = None
+        self.mokuro_install_worker: InstallWorker | None = None
         self.cuda_pack_download_worker: InstallWorker | None = None
         self.onnx_pack_download_worker: InstallWorker | None = None
         self.vulkan_model_download_worker: InstallWorker | None = None
@@ -358,6 +359,34 @@ class BackgroundTaskController(QObject):
             on_finished,
         )
 
+    def start_mokuro_install(
+        self,
+        bin_root: Path,
+        uv_root: Path,
+        on_status: Callable[[str], None],
+        on_finished: Callable[[bool, str], None],
+    ) -> None:
+        """Start a mokuro install worker unless one is already running.
+
+        Args:
+            bin_root: Directory the pinned uv binary is downloaded into;
+                typically ``config.bin_root``.
+            uv_root: Directory the uv-managed mokuro environment is created in;
+                typically ``config.uv_root``.
+            on_status: Slot for ``status(str)`` — typically
+                ``SettingsTab.set_mokuro_status``.
+            on_finished: Slot for ``result_ready(bool, str)`` — called with
+                ``(ok, message)`` when the install completes or fails.
+        """
+        from anki_miner.gui.workers.install_worker import InstallWorker, mokuro_install_task
+
+        self._start_install(
+            "mokuro_install_worker",
+            lambda: InstallWorker(mokuro_install_task(bin_root, uv_root), parent=self),
+            on_status,
+            on_finished,
+        )
+
     def start_cuda_pack_download(
         self,
         cuda_libs_root: Path,
@@ -489,7 +518,7 @@ class BackgroundTaskController(QObject):
         on_status: Callable[[str], None],
         on_finished: Callable[[bool, str], None],
     ) -> None:
-        """Shared starter for the five resource install/download workers.
+        """Shared starter for the six resource install/download workers.
 
         Guards against a concurrent run on ``attr``, builds the worker via
         ``factory`` (deferred so a refused start constructs nothing), stores it
@@ -683,15 +712,16 @@ class BackgroundTaskController(QObject):
                 laggards.append(worker)
 
         # Controller-owned workers: validation, update check, yt-dlp update,
-        # JMdict migration, ASR model download, alass install, CUDA pack download,
-        # onnxruntime (VAD) pack download, Vulkan model download, and every
-        # in-flight language-pack download.
+        # JMdict migration, ASR model download, alass install, mokuro install,
+        # CUDA pack download, onnxruntime (VAD) pack download, Vulkan model
+        # download, and every in-flight language-pack download.
         join(self.validation_worker)
         join(self.update_worker)
         join(self.ytdlp_update_worker)
         join(self.jmdict_migration_worker)
         join(self.asr_model_download_worker)
         join(self.alass_install_worker)
+        join(self.mokuro_install_worker)
         join(self.cuda_pack_download_worker)
         join(self.onnx_pack_download_worker)
         join(self.vulkan_model_download_worker)

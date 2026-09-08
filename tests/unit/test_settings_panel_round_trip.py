@@ -21,6 +21,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.panels.anki_settings_panel import AnkiSettingsPanel
 from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
 from anki_miner.gui.widgets.panels.media_settings_panel import MediaSettingsPanel
+from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
 from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettingsPanel
 
 # ---------------------------------------------------------------------------
@@ -111,6 +112,8 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         reading_min_occurrence=7,
         bold_target_in_sentence=True,
         secondary_subtitle_enabled=True,
+        # --- SubtitlesSettingsPanel ---
+        mokuro_location=Path("/opt/mokuro/bin/mokuro"),
         # --- YouTubeSettingsPanel ---
         youtube_cookies_from_browser="firefox",
         youtube_cookies_file=cookies_txt,
@@ -119,7 +122,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
     )
 
 
-# The Save-path fields covered by the four panels.  Any field in this set that
+# The Save-path fields covered by the save-path panels.  Any field in this set that
 # doesn't round-trip is a regression the test must catch.
 _SAVE_PATH_FIELDS = frozenset(
     {
@@ -171,6 +174,8 @@ _SAVE_PATH_FIELDS = frozenset(
         "reading_min_occurrence",
         "bold_target_in_sentence",
         "secondary_subtitle_enabled",
+        # SubtitlesSettingsPanel
+        "mokuro_location",
         # YouTubeSettingsPanel
         "youtube_cookies_from_browser",
         "youtube_cookies_file",
@@ -187,7 +192,7 @@ class TestSavePathRoundTrip:
         """The canonical regression net for OVH-019/OVH-020.
 
         1. Build a config with non-default values for every Save-path field.
-        2. Load it into all four save-path panels.
+        2. Load it into every save-path panel.
         3. Fold contribute() over a *default* base config.
         4. Assert every Save-path field on the result equals the original.
         """
@@ -202,8 +207,13 @@ class TestSavePathRoundTrip:
         qtbot.addWidget(filtering_panel)
         youtube_panel = YouTubeSettingsPanel()
         qtbot.addWidget(youtube_panel)
+        # suppress_optional_startup: this panel's availability probes run
+        # off-thread and are irrelevant to the marshalling contract; suppressing
+        # them keeps the round-trip deterministic and thread-free.
+        subtitles_panel = SubtitlesSettingsPanel(suppress_optional_startup=True)
+        qtbot.addWidget(subtitles_panel)
 
-        panels = [anki_panel, media_panel, filtering_panel, youtube_panel]
+        panels = [anki_panel, media_panel, filtering_panel, youtube_panel, subtitles_panel]
 
         # Step 2: load.
         for panel in panels:

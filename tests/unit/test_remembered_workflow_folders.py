@@ -36,6 +36,7 @@ _INPUT_KEYS = frozenset(
         "tools.generate.inputs",
         "tools.retime.inputs",
         "tools.condense.inputs",
+        "tools.mokuro.inputs",
     }
 )
 _OUTPUT_KEYS = frozenset(

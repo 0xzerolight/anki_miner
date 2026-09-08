@@ -272,12 +272,15 @@ def run_supervised(
     retain_output: bool = True,
     op: str | None = None,
     noise_filter: Callable[[str], bool] | None = None,
+    treat_cr_as_newline: bool = False,
 ) -> SupervisedResult:
     """Run *command* to one terminal state without unbounded pipe reads or waits.
 
     ``op`` labels the operation in the log records (defaults to the executable's
     file name); ``noise_filter`` drops lines a caller knows are noise from the
-    failure tail, e.g. yt-dlp progress ticks.
+    failure tail, e.g. yt-dlp progress ticks. ``treat_cr_as_newline`` makes a
+    carriage return end a line too, for children that redraw a progress bar
+    with ``\\r`` (tqdm).
     """
     started = time.monotonic()
     deadline = started + max(timeout_s, 0.0)
@@ -357,6 +360,8 @@ def run_supervised(
             if name in ended:
                 return
             text = decoders[name].decode(b"", final=True)
+            if treat_cr_as_newline:
+                text = text.replace("\r\n", "\n").replace("\r", "\n")
             if text:
                 parts[name].append(text)
                 pending[name] += text
@@ -366,6 +371,8 @@ def run_supervised(
             ended.add(name)
             return
         text = decoders[name].decode(chunk)
+        if treat_cr_as_newline:
+            text = text.replace("\r\n", "\n").replace("\r", "\n")
         parts[name].append(text)
         pending[name] += text
         while "\n" in pending[name]:

@@ -86,7 +86,7 @@ from anki_miner.services.language_pack_installer import ensure_language_packs_on
 from anki_miner.services.startup_store_recovery import run_startup_store_recovery
 from anki_miner.services.stats_service import StatsService
 from anki_miner.services.validation_service import ValidationService
-from anki_miner.utils import alass_resolver
+from anki_miner.utils import alass_resolver, mokuro_resolver
 from anki_miner.utils.atomic_io import atomic_write_path
 from anki_miner.utils.file_utils import ensure_directory
 from anki_miner.utils.i18n import tr_format
@@ -1210,6 +1210,36 @@ def _connect_alass_download(window: MainWindow, settings_tab: SettingsTab) -> No
     )
 
 
+def _connect_mokuro_install(window: MainWindow, settings_tab: SettingsTab) -> None:
+    """Wire the Subtitles panel's "Install mokuro" button to the install worker.
+
+    Mirrors ``_connect_alass_download``: on success drop the resolver's cached
+    miss and re-propagate config so the Manga OCR tab's guard re-runs.
+    """
+
+    def _tail(request_arg: object, ok: bool, message: str) -> None:
+        if ok:
+            # Cleared BEFORE the panel notify, which dispatches an off-thread
+            # re-probe that calls the resolver: a cached pre-install miss read
+            # by that probe would settle the label on "Not installed" right
+            # after a successful install.
+            mokuro_resolver._clear_cache()
+        settings_tab.subtitles_panel.notify_mokuro_install_finished()
+        if ok:
+            window.config_refreshed.emit(window.get_config())
+
+    def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
+        config = window.get_config()
+        window.background_tasks.start_mokuro_install(config.bin_root, config.uv_root, on_status, on_finished)
+
+    _connect_download(
+        settings_tab.mokuro_install_requested,
+        set_status=settings_tab.set_mokuro_status,
+        start=_start,
+        on_finished_tail=_tail,
+    )
+
+
 def _connect_cuda_pack_download(window: MainWindow, settings_tab: SettingsTab) -> None:
     """Wire the Subtitles panel's "Download GPU acceleration" button to the worker.
 
@@ -1616,15 +1646,16 @@ def compose_main_window(
     )
     window.background_tasks.ytdlp_update_result.connect(settings_tab.set_ytdlp_status_from_result)
 
-    # Resource download buttons (ASR model, alass, CUDA pack, VAD pack, Vulkan
-    # model, language packs): each "Download …" button hands off to a background
-    # worker and refreshes its panel on finish. The five Subtitles-panel ones
+    # Resource download buttons (ASR model, alass, mokuro, CUDA pack, VAD pack,
+    # Vulkan model, language packs): each button hands off to a background
+    # worker and refreshes its panel on finish. The six Subtitles-panel ones
     # share the connect skeleton in _connect_download; the per-tool builders
     # carry the differences. The language packs sit on Mining Language, beside
     # the selector they unlock, and wire per language code.
     for _connect in (
         _connect_asr_download,
         _connect_alass_download,
+        _connect_mokuro_install,
         _connect_cuda_pack_download,
         _connect_vad_pack_download,
         _connect_vulkan_download,
@@ -1668,6 +1699,8 @@ def compose_main_window(
     subtitles_tab.condense_tab.config_changed.connect(window.update_config)
     # Same pattern for the Download tab's downloader_* options.
     subtitles_tab.download_tab.config_changed.connect(window.update_config)
+    # Same pattern for the Manga OCR tab's mokuro_use_gpu option.
+    subtitles_tab.mokuro_tab.config_changed.connect(window.update_config)
 
     # A validation sweep that reached Anki re-drives the three deck / note-type
     # fetches that failed while Anki was closed.
@@ -1693,6 +1726,7 @@ def compose_main_window(
         subtitles_tab.backfill_tab,
         subtitles_tab.deck_filter_tab,
         subtitles_tab.download_tab,
+        subtitles_tab.mokuro_tab,
     ):
         screen.bind_task_registry(window.task_registry)
     # --- end task-registry publication ------------------------------------

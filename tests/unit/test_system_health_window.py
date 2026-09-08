@@ -196,6 +196,38 @@ def test_only_the_first_message_per_component_is_shown():
     assert checks_from_validation(result, CHECKED_AT)["tools.ytdlp"].detail == "first"
 
 
+def test_mokuro_row_exists_and_has_a_repair_route():
+    """The row and its Fix anchor point at the (later-added) Settings control."""
+    assert "tools.mokuro" in HEALTH_KEYS
+    assert HEALTH_FIX_ANCHORS["tools.mokuro"] == "subtitles.mokuro_install"
+
+
+def test_mokuro_missing_warns_on_its_own_row():
+    result = _result(
+        issues=[
+            ValidationIssue(
+                component="mokuro",
+                severity="WARNING",
+                message="mokuro not found — Utilities → Manga OCR is unavailable",
+            )
+        ]
+    )
+
+    checks = checks_from_validation(result, CHECKED_AT)
+
+    assert checks["tools.mokuro"].state == HEALTH_WARN
+    assert "Manga OCR" in checks["tools.mokuro"].detail
+
+
+def test_mokuro_present_fills_detail_from_tool_versions():
+    result = _result(versions={"mokuro": "mokuro [app-managed]"})
+
+    checks = checks_from_validation(result, CHECKED_AT)
+
+    assert checks["tools.mokuro"].state == HEALTH_OK
+    assert checks["tools.mokuro"].detail == "mokuro [app-managed]"
+
+
 # ---------------------------------------------------------------------------
 # Report
 # ---------------------------------------------------------------------------
@@ -292,6 +324,10 @@ def test_unchecked_row_says_so_rather_than_showing_a_time(health_window):
     text = health_window._rows["app.updates"].checked_label.text()
 
     assert text == "Not checked yet"
+
+
+def test_mokuro_row_label_names_the_tool(health_window):
+    assert "mokuro" in health_window._rows["tools.mokuro"].label.text()
 
 
 def test_sweep_error_is_shown_and_then_cleared(health_window):

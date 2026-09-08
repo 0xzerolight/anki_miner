@@ -12,6 +12,11 @@ Subtitles main tab:
   and the three retiming knobs (split penalty, frame-rate correction,
   single-offset) that used to be per-run controls on the Retime screen.
   macOS has no upstream binary, so it shows Homebrew guidance instead.
+- **Manga OCR (mokuro)** — optional executable-path override plus the in-app
+  "Install mokuro" button, which builds a uv-managed environment under
+  ``config.uv_root``. Not a subtitle tool, but it is the third external
+  executable the app installs on the user's behalf, so it shares this panel's
+  path-override + install-button shape rather than growing a panel of its own.
 """
 
 import importlib.util
@@ -35,7 +40,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
-from anki_miner.services import alass_installer
+from anki_miner.services import alass_installer, mokuro_installer
 from anki_miner.services.asr import (
     _engine,
     cuda_pack_installer,
@@ -43,7 +48,7 @@ from anki_miner.services.asr import (
     model_manager,
     onnx_pack_installer,
 )
-from anki_miner.utils import alass_resolver
+from anki_miner.utils import alass_resolver, mokuro_resolver
 from anki_miner.utils.logging_ext import suppressed
 
 logger = logging.getLogger(__name__)
@@ -117,6 +122,7 @@ class _AsrState:
     onnxruntime_importable: bool
     vad_pack_installed: bool
     vulkan_installed: bool
+    mokuro_installed: bool
 
 
 class SubtitlesSettingsPanel(FormPanel):
@@ -141,6 +147,10 @@ class SubtitlesSettingsPanel(FormPanel):
     #: resolved by the wiring. One action fetches BOTH the ggml acoustic model
     #: and the Silero VAD.
     vulkan_model_download_requested = pyqtSignal(str)
+    #: Emitted when the user clicks "Install mokuro"; the managed install
+    #: targets (``config.bin_root`` for uv, ``config.uv_root`` for the
+    #: environment) are resolved by the wiring, not the panel.
+    mokuro_install_requested = pyqtSignal()
 
     def __init__(
         self,
@@ -157,6 +167,9 @@ class SubtitlesSettingsPanel(FormPanel):
         self._cuda_libs_root: Path | None = None
         self._onnx_pack_root: Path | None = None
         self._alass_supported = False if suppress_optional_startup else alass_installer.alass_install_supported()
+        self._mokuro_location: Path | None = None
+        self._uv_root: Path | None = None
+        self._mokuro_supported = False if suppress_optional_startup else mokuro_installer.mokuro_install_supported()
         # Vulkan ASR is "offerable" only where it can actually run: non-macOS AND
         # the whisper.cpp Vulkan backend lib (libggml-vulkan) is installed. That
         # lib ships only in the bundled release (built from source with the Vulkan
@@ -184,6 +197,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._cuda_pack_active = False
         self._vad_pack_active = False
         self._vulkan_active = False
+        self._mokuro_install_active = False
         # Off-thread state probe coordination. The heavy probes (ctranslate2
         # import + CUDA init, find_spec, model.bin disk walk) run on a worker;
         # _state_in_flight + _state_refresh_pending give the same single-shot
@@ -211,6 +225,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._vad_pack_installed_cache = False
         self._alass_installed_cache = False
         self._vulkan_installed_cache = False
+        self._mokuro_installed_cache = False
         self._setup_fields()
 
     # ------------------------------------------------------------------
@@ -218,10 +233,11 @@ class SubtitlesSettingsPanel(FormPanel):
     # ------------------------------------------------------------------
 
     def _setup_fields(self) -> None:
-        """Build the Speech-to-text, add-ons, and Alignment sections."""
+        """Build the Speech-to-text, add-ons, Alignment, and Manga OCR sections."""
         self._setup_asr_section()
         self._setup_addons_section()
         self._setup_alass_section()
+        self._setup_mokuro_section()
         self.add_stretch()
 
     def _add_help(self, text: str) -> QLabel:
@@ -486,6 +502,59 @@ class SubtitlesSettingsPanel(FormPanel):
         # in services/subtitle_retimer.py), and the old single-offset default
         # silently destroyed cross-release retimes.
 
+    def _setup_mokuro_section(self) -> None:
+        """mokuro path override plus the in-app installer (uv-managed environment)."""
+        self.add_section(self.tr("Manga OCR"))
+
+        self.mokuro_selector = FileSelector(
+            label="",
+            file_mode=True,
+            file_filter="All Files (*)",
+            placeholder=self.tr("Optional: path to the mokuro executable"),
+        )
+        self.add_field(
+            self.tr("mokuro executable"),
+            self.mokuro_selector,
+            helper=self.tr(
+                "Optional: your own mokuro (pip/pipx). Leave blank to use the in-app "
+                "install below or mokuro on your PATH."
+            ),
+        )
+
+        # Unlike alass, the button exists on every platform: an unsupported
+        # platform disables it and says so, because the path override above is
+        # still a usable route there.
+        self.install_mokuro_button = ModernButton(self.tr("Install mokuro"), variant="secondary")
+        self.install_mokuro_button.setToolTip(
+            self.tr(
+                "Download mokuro and its OCR engine into Anki Miner's folder "
+                "(about 1 GB, up to 4 GB with NVIDIA GPU support). Needed for "
+                "Utilities → Manga OCR unless mokuro is already installed."
+            )
+        )
+        self.install_mokuro_button.setEnabled(self._mokuro_supported)
+        self.install_mokuro_button.clicked.connect(self._on_mokuro_install_clicked)
+
+        self.mokuro_status_label = QLabel("")
+        self.mokuro_status_label.setObjectName("settings-save-status")
+
+        container = QWidget()
+        row = QHBoxLayout(container)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.addWidget(self.install_mokuro_button)
+        row.addWidget(self.mokuro_status_label)
+        row.addStretch()
+        button = self.install_mokuro_button
+        self.add_field(
+            self.tr("mokuro install"),
+            container,
+            anchor="mokuro_install",
+            anchor_focus=button,
+            anchor_text=lambda: (button.text(), button.toolTip()),
+        )
+        if not self._mokuro_supported:
+            self.set_mokuro_status(self.tr("Not available on this platform"))
+
     def _build_engine_guidance(self) -> QWidget:
         """Build the (initially hidden) 'install the ASR engine' guidance block."""
         if getattr(sys, "frozen", False):
@@ -672,6 +741,44 @@ class SubtitlesSettingsPanel(FormPanel):
             self.set_alass_status(self.tr("Not installed"))
 
     # ------------------------------------------------------------------
+    # mokuro install flow
+    # ------------------------------------------------------------------
+
+    def _on_mokuro_install_clicked(self) -> None:
+        """Disable the button in flight and request the mokuro install."""
+        self._mokuro_install_active = True
+        self.install_mokuro_button.setEnabled(False)
+        self.mokuro_install_requested.emit()
+
+    def notify_mokuro_install_finished(self) -> None:
+        """Clear the in-flight guard and re-probe mokuro after an install.
+
+        Mirrors :meth:`notify_alass_download_finished`: the off-thread re-probe
+        is what moves the label/button to the new on-disk state.
+        """
+        self._mokuro_install_active = False
+        self._refresh_state_async(self.get_model(), self._models_root, self._cuda_libs_root)
+
+    def set_mokuro_status(self, text: str) -> None:
+        """Set the mokuro status label text (shown beside the Install button)."""
+        self.mokuro_status_label.setText(text)
+
+    def _apply_mokuro_state(self, installed: bool) -> None:
+        """Reflect whether mokuro is reachable; re-enable the install button.
+
+        "Installed" covers the managed uv environment, an explicit path
+        override, and a user's own pip/pipx mokuro on PATH — the same chain the
+        Manga OCR tab resolves through, so the two can never disagree. An
+        install in flight keeps the button disabled and its status intact.
+        """
+        if self._mokuro_install_active:
+            self.install_mokuro_button.setEnabled(False)
+            return
+        self.install_mokuro_button.setEnabled(self._mokuro_supported)
+        self.install_mokuro_button.setText(self.tr("Reinstall mokuro") if installed else self.tr("Install mokuro"))
+        self.set_mokuro_status(self.tr("Installed") if installed else self.tr("Not installed"))
+
+    # ------------------------------------------------------------------
     # GPU acceleration pack download flow
     # ------------------------------------------------------------------
 
@@ -842,6 +949,8 @@ class SubtitlesSettingsPanel(FormPanel):
         onnx_pack_root = self._onnx_pack_root
         alass_supported = self._alass_supported
         vulkan_offerable = self._vulkan_offerable
+        mokuro_location = self._mokuro_location
+        uv_root = self._uv_root
         # Reuse cached process-lifetime probes; re-probe install/download flags.
         engine_cache = self._engine_available_cache
         cuda_cache = self._cuda_device_count_cache
@@ -915,6 +1024,19 @@ class SubtitlesSettingsPanel(FormPanel):
                     )
                     alass_installed = False
 
+            # Probed on every platform (unlike alass): the override / PATH tiers
+            # resolve where the in-app install is unsupported.
+            mokuro_installed = False
+            try:
+                mokuro_installed = mokuro_resolver.mokuro_available(mokuro_location, uv_root)
+            except Exception as exc:  # noqa: BLE001 — bucket A: mokuro falls back to unavailable.
+                logger.warning(
+                    "ASR probe degraded: service=%s error=%s",
+                    "mokuro",
+                    type(exc).__name__,
+                )
+                mokuro_installed = False
+
             # onnxruntime importability (find_spec scans sys.path) is the heavy
             # VAD probe; the install flag is a cheap dir check.
             onnxruntime_importable = False
@@ -961,6 +1083,7 @@ class SubtitlesSettingsPanel(FormPanel):
                 onnxruntime_importable=onnxruntime_importable,
                 vad_pack_installed=vad_pack_installed,
                 vulkan_installed=vulkan_installed,
+                mokuro_installed=mokuro_installed,
             )
 
         run_off_thread(self, _probe, self._on_state_ready, self._on_state_error)
@@ -977,6 +1100,8 @@ class SubtitlesSettingsPanel(FormPanel):
             self.download_vulkan_button.setEnabled(False)
         if self._alass_supported and not self._alass_download_active:
             self.download_alass_button.setEnabled(False)
+        if not self._mokuro_install_active:
+            self.install_mokuro_button.setEnabled(False)
 
     def _on_state_ready(self, state: object) -> None:
         """Apply a probed :class:`_AsrState` snapshot on the GUI thread."""
@@ -994,6 +1119,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._vad_pack_installed_cache = result.vad_pack_installed
         self._alass_installed_cache = result.alass_installed
         self._vulkan_installed_cache = result.vulkan_installed
+        self._mokuro_installed_cache = result.mokuro_installed
 
         self._apply_engine_state(result.engine_available)
         self._apply_model_state(result.engine_available, result.model_downloaded)
@@ -1001,6 +1127,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._apply_vad_pack_state(result.onnxruntime_importable, result.vad_pack_installed)
         self._apply_alass_state(result.alass_installed)
         self._apply_vulkan_state(result.vulkan_installed)
+        self._apply_mokuro_state(result.mokuro_installed)
 
         self._redispatch_pending_state()
 
@@ -1020,6 +1147,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._apply_vad_pack_state(self._onnxruntime_importable_now(), self._vad_pack_installed_cache)
         self._apply_alass_state(self._alass_installed_cache)
         self._apply_vulkan_state(self._vulkan_installed_cache)
+        self._apply_mokuro_state(self._mokuro_installed_cache)
         self._redispatch_pending_state()
 
     def _redispatch_pending_state(self) -> None:
@@ -1164,6 +1292,10 @@ class SubtitlesSettingsPanel(FormPanel):
         self._bin_root = config.bin_root
         self._alass_location = config.alass_location
         self._onnx_pack_root = config.onnx_pack_root
+        # mokuro
+        self.mokuro_selector.set_path(str(config.mokuro_location) if config.mokuro_location else "")
+        self._mokuro_location = config.mokuro_location
+        self._uv_root = config.uv_root
         # One unified off-thread probe drives every status label + button state.
         if self._suppress_optional_startup:
             self._show_checking_status()
@@ -1178,9 +1310,11 @@ class SubtitlesSettingsPanel(FormPanel):
         the contribute fold.
         """
         path = self.alass_selector.path_or_none()
+        mokuro_path = self.mokuro_selector.path_or_none()
         return replace(
             config,
             asr_model=self.get_model(),
             asr_device=self.get_device(),
             alass_location=Path(path) if path is not None else None,
+            mokuro_location=Path(mokuro_path) if mokuro_path is not None else None,
         )

@@ -67,7 +67,7 @@ HEALTH_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("destination", ("anki.connect", "anki.deck", "anki.note_type", "anki.fields")),
     ("media", ("tools.ffmpeg", "tools.ffprobe")),
     ("language", ("resources.dictionary", "resources.frequency", "resources.pitch", "resources.audio")),
-    ("optional", ("tools.ytdlp", "tools.alass")),
+    ("optional", ("tools.ytdlp", "tools.alass", "tools.mokuro")),
     ("updates", ("app.updates",)),
 )
 
@@ -94,6 +94,7 @@ HEALTH_FIX_ANCHORS: dict[str, str] = {
     "resources.audio": "audio.chain",
     "tools.ytdlp": "youtube.ytdlp_update",
     "tools.alass": "subtitles.alass_download",
+    "tools.mokuro": "subtitles.mokuro_install",
 }
 
 #: ``ValidationIssue.component`` → row key. Components with no row here (the
@@ -112,6 +113,7 @@ _COMPONENT_KEYS: dict[str, str] = {
     "Audio Packs": "resources.audio",
     "yt-dlp": "tools.ytdlp",
     "alass": "tools.alass",
+    "mokuro": "tools.mokuro",
 }
 
 #: Row state → ``StatusBadge`` status. ``unknown`` takes the neutral "pending"
@@ -218,6 +220,9 @@ def checks_from_validation(result: ValidationResult, checked_at: datetime) -> di
 
     ytdlp_state, ytdlp_detail = _issue_state("tools.ytdlp")
     checks["tools.ytdlp"] = _record("tools.ytdlp", ytdlp_state, ytdlp_detail or versions.get("yt-dlp", ""))
+
+    mokuro_state, mokuro_detail = _issue_state("tools.mokuro")
+    checks["tools.mokuro"] = _record("tools.mokuro", mokuro_state, mokuro_detail or versions.get("mokuro", ""))
 
     return checks
 
@@ -651,5 +656,6 @@ class SystemHealthWindow(EnhancedDialog):
             "resources.audio": self.tr("Audio packs"),
             "tools.ytdlp": self.tr("yt-dlp (YouTube mining)"),
             "tools.alass": self.tr("alass (subtitle retiming)"),
+            "tools.mokuro": self.tr("mokuro (manga OCR)"),
             "app.updates": self.tr("Anki Miner updates"),
         }
