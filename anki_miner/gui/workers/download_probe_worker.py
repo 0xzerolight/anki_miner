@@ -1,9 +1,10 @@
 """Short-lived probe threads for the Download tool's pickers.
 
 ``MediaDownloaderService.probe_tracks`` and ``.probe_playlist`` spawn yt-dlp and
-block on HTTP; running either on the Qt main thread freezes the GUI. Both are
-bounded by their own subprocess timeout, so ``quit()`` + ``wait()`` returns
-within ``timeout_s`` and neither worker needs cancellation support.
+block on HTTP; running either on the Qt main thread freezes the GUI. Each probe
+takes the worker's cancel event, so Cancel or an app close ends the yt-dlp
+process at once instead of waiting out ``PROBE_TIMEOUT_S`` (the close join
+grace is two seconds; the probe budget is two minutes).
 
 Separate from ``youtube_probe_worker``: that module's shared body is typed to
 ``YouTubeFetcherService`` and redacts YouTube URLs specifically, while the
@@ -16,13 +17,11 @@ from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services.audio_fetch_common import redact_url_for_log
-from anki_miner.services.media_downloader import MediaDownloaderService
+from anki_miner.services.media_downloader import PROBE_TIMEOUT_S, MediaDownloaderService
 
 # No module logger: every line this module emits comes from the base class's
 # log_start / log_end / report_failure, and an unused logger is gated by
 # tests/unit/test_logging_conventions.py.
-
-_PROBE_TIMEOUT_S = 120.0
 
 
 class _DownloadProbeThread(CancellableWorker):
@@ -41,7 +40,7 @@ class _DownloadProbeThread(CancellableWorker):
         service: MediaDownloaderService,
         url: str,
         *,
-        timeout_s: float = _PROBE_TIMEOUT_S,
+        timeout_s: float = PROBE_TIMEOUT_S,
         parent: object = None,
     ) -> None:
         super().__init__(parent)
@@ -80,7 +79,7 @@ class DownloadTracksProbeWorker(_DownloadProbeThread):
     tracks_probed = pyqtSignal(object)  # UrlTracks
 
     def _do_call(self) -> object:
-        return self._service.probe_tracks(self._url, timeout_s=self._timeout_s)
+        return self._service.probe_tracks(self._url, timeout_s=self._timeout_s, cancel_event=self._cancel_event)
 
     def _emit_result(self, result: object) -> None:
         self.tracks_probed.emit(result)
@@ -102,14 +101,16 @@ class DownloadPlaylistResolveWorker(_DownloadProbeThread):
         url: str,
         limit: int,
         *,
-        timeout_s: float = _PROBE_TIMEOUT_S,
+        timeout_s: float = PROBE_TIMEOUT_S,
         parent: object = None,
     ) -> None:
         super().__init__(service, url, timeout_s=timeout_s, parent=parent)
         self._limit = limit
 
     def _do_call(self) -> object:
-        return self._service.probe_playlist(self._url, limit=self._limit, timeout_s=self._timeout_s)
+        return self._service.probe_playlist(
+            self._url, limit=self._limit, timeout_s=self._timeout_s, cancel_event=self._cancel_event
+        )
 
     def _emit_result(self, result: object) -> None:
         self.playlist_resolved.emit(result)

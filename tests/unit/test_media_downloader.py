@@ -8,6 +8,7 @@ yt-dlp is never spawned: ``run_supervised`` is patched at the
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -17,6 +18,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.exceptions import OperationCancelled
 from anki_miner.exceptions.youtube import (
     BotDetectionError,
     CookieDatabaseLockedError,
@@ -272,6 +274,17 @@ class TestCommandConstruction:
         recorder, _ = _run_download(monkeypatch, service, tmp_path, _opts())
         cmd = _cmd(recorder)
         assert cmd[cmd.index("--ffmpeg-location") + 1] == str(bundled)
+
+    def test_the_download_argv_is_logged_at_info(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        service: MediaDownloaderService,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        caplog.set_level(logging.INFO, logger="anki_miner.services.media_downloader")
+        _run_download(monkeypatch, service, tmp_path, _opts())
+        assert "yt-dlp download: argv=" in caplog.text
 
 
 # ---------------------------------------------------------------------------
@@ -880,6 +893,29 @@ class TestProbeTracks:
         with pytest.raises(BotDetectionError):
             service.probe_tracks("https://example.com/v")
 
+    def test_the_cancel_event_reaches_run_supervised(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        recorder, fake_run = _scripted_probe(stdout=self._payload())
+        monkeypatch.setattr(md, "run_supervised", fake_run)
+        event = threading.Event()
+        service.probe_tracks("https://example.com/v", cancel_event=event)
+        assert recorder.call_args.kwargs["cancel"] is event
+
+    def test_a_cancelled_probe_raises_operation_cancelled(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        monkeypatch.setattr(md, "run_supervised", lambda cmd, **kw: _fake_result(1, SupervisedState.CANCELLED))
+        with pytest.raises(OperationCancelled):
+            service.probe_tracks("https://example.com/v")
+
+    def test_the_probe_argv_is_logged_at_info(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        caplog.set_level(logging.INFO, logger="anki_miner.services.media_downloader")
+        self._probe(monkeypatch, service, self._payload())
+        assert "yt-dlp track probe: argv=" in caplog.text
+
 
 class TestProbePlaylist:
     @staticmethod
@@ -985,6 +1021,13 @@ class TestProbePlaylist:
         recorder, _ = self._probe(monkeypatch, service, self._payload())
         cmd = _cmd(recorder)
         assert cmd[cmd.index("--playlist-items") + 1] == f"1:{md.PLAYLIST_PROBE_MAX}"
+
+    def test_the_cancel_event_reaches_run_supervised(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService
+    ) -> None:
+        event = threading.Event()
+        recorder, _ = self._probe(monkeypatch, service, self._payload(), cancel_event=event)
+        assert recorder.call_args.kwargs["cancel"] is event
 
 
 # ---------------------------------------------------------------------------

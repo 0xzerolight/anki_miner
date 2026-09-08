@@ -30,6 +30,7 @@ from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions.base import AnkiMinerException
+from anki_miner.exceptions.cancel import OperationCancelled
 from anki_miner.exceptions.youtube import (
     BotDetectionError,
     CookieDatabaseLockedError,
@@ -39,12 +40,15 @@ from anki_miner.services import ytdlp_invocation
 from anki_miner.services.audio_fetch_common import redact_url_for_log
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
+from anki_miner.utils.subprocess_log import log_command
 from anki_miner.utils.ytdlp_resolver import resolve_ytdlp, ytdlp_generation_lock
 
 logger = logging.getLogger(__name__)
 
 _DOWNLOAD_TIMEOUT_S = 3 * 60 * 60
-_PROBE_TIMEOUT_S = 120.0
+#: One probe's subprocess budget. Public: the probe workers take it as their
+#: default, so the service and the GUI cannot drift apart.
+PROBE_TIMEOUT_S = 120.0
 
 #: How many playlist entries one probe fetches. The picker dialog shows what
 #: came back and says so when the playlist is longer; a cap keeps a 5,000-video
@@ -264,6 +268,9 @@ class MediaDownloaderService:
 
         with ytdlp_generation_lock() as release_unless_managed:
             cmd = self._build_cmd(url, dest_dir, options)
+            # INFO: the format selector and the cookie source are what a failed
+            # download is diagnosed from, and the user has not enabled debug logging.
+            log_command(logger, "yt-dlp download", cmd, timeout_s=_DOWNLOAD_TIMEOUT_S, level=logging.INFO)
             # A transfer runs for as long as the file takes, so only the managed slot
             # keeps the lock across it; see ytdlp_generation_lock. Must stay the last
             # statement before the spawn.
@@ -300,7 +307,9 @@ class MediaDownloaderService:
     # Probes
     # ------------------------------------------------------------------
 
-    def probe_tracks(self, url: str, timeout_s: float = _PROBE_TIMEOUT_S) -> UrlTracks:
+    def probe_tracks(
+        self, url: str, timeout_s: float = PROBE_TIMEOUT_S, *, cancel_event: threading.Event | None = None
+    ) -> UrlTracks:
         """Return the subtitle and audio-track languages *url* offers.
 
         One ``--dump-single-json`` call, no download.
@@ -309,6 +318,7 @@ class MediaDownloaderService:
             YtdlpNotFoundError: the yt-dlp executable cannot be located/run.
             BotDetectionError / CookieDatabaseLockedError: well-known yt-dlp
                 failure modes detected in the output tail.
+            OperationCancelled: *cancel_event* was set before the probe finished.
             MediaDownloadError: timeout, non-JSON output, or any other non-zero
                 exit.
         """
@@ -319,7 +329,7 @@ class MediaDownloaderService:
             "--dump-single-json",
             "--no-playlist",
         ]
-        data = self._probe_json(cmd, url, timeout_s, op="yt-dlp track probe")
+        data = self._probe_json(cmd, url, timeout_s, op="yt-dlp track probe", cancel_event=cancel_event)
 
         subtitles = data.get("subtitles") or {}
         automatic = data.get("automatic_captions") or {}
@@ -350,7 +360,12 @@ class MediaDownloaderService:
         )
 
     def probe_playlist(
-        self, url: str, limit: int = PLAYLIST_PROBE_MAX, timeout_s: float = _PROBE_TIMEOUT_S
+        self,
+        url: str,
+        limit: int = PLAYLIST_PROBE_MAX,
+        timeout_s: float = PROBE_TIMEOUT_S,
+        *,
+        cancel_event: threading.Event | None = None,
     ) -> DownloadPlaylist:
         """List the entries of the playlist at *url*, without downloading.
 
@@ -361,6 +376,7 @@ class MediaDownloaderService:
 
         Raises:
             YtdlpNotFoundError: the yt-dlp executable cannot be located/run.
+            OperationCancelled: *cancel_event* was set before the probe finished.
             MediaDownloadError: *url* is not a playlist, holds no usable entry,
                 or the probe itself failed.
         """
@@ -373,7 +389,7 @@ class MediaDownloaderService:
             "--playlist-items",
             f"1:{limit}",
         ]
-        data = self._probe_json(cmd, url, timeout_s, op="yt-dlp playlist probe")
+        data = self._probe_json(cmd, url, timeout_s, op="yt-dlp playlist probe", cancel_event=cancel_event)
 
         raw_entries = data.get("entries")
         if not isinstance(raw_entries, list):
@@ -413,7 +429,15 @@ class MediaDownloaderService:
             total_count=total_count,
         )
 
-    def _probe_json(self, cmd: list[str], url: str, timeout_s: float, *, op: str) -> dict[str, Any]:
+    def _probe_json(
+        self,
+        cmd: list[str],
+        url: str,
+        timeout_s: float,
+        *,
+        op: str,
+        cancel_event: threading.Event | None = None,
+    ) -> dict[str, Any]:
         """Finish *cmd* with the shared flags, run it, and parse its JSON.
 
         Shared by both probes so cookie/JS-runtime/end-of-options handling and
@@ -427,11 +451,15 @@ class MediaDownloaderService:
             # as a yt-dlp option. T-34.
             cmd.append("--")
             cmd.append(url)
+            log_command(logger, op, cmd, timeout_s=timeout_s, level=logging.INFO)
             release_unless_managed(cmd[0])
-            proc = run_supervised(cmd, timeout_s=timeout_s, op=op)
+            proc = run_supervised(cmd, timeout_s=timeout_s, cancel=cancel_event, op=op)
 
         if isinstance(proc.error, FileNotFoundError):
             raise YtdlpNotFoundError(ytdlp_invocation.YTDLP_MISSING_HINT) from proc.error
+        if proc.state is SupervisedState.CANCELLED:
+            # Typed cancel: report_failure logs it at INFO and raises no screen issue.
+            raise OperationCancelled(f"{op} cancelled")
         if proc.state is SupervisedState.TIMED_OUT:
             raise MediaDownloadError(f"{op} timed out after {timeout_s}s")
         if proc.state is SupervisedState.FAILED:
