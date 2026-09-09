@@ -511,6 +511,17 @@ class EpisodeProcessor:
         """
         return self._parse_sentence
 
+    @property
+    def expression_audio_curation_fn(self) -> Callable[[TokenizedWord, Callable[[], bool] | None], bool] | None:
+        """The Word Curator's expression-audio prefetch, or None when inactive.
+
+        Handed to the curator the way :attr:`offline_lookup_fn` and
+        :attr:`parse_sentence_fn` are: a bound callable off this run's own
+        services, read on the GUI thread while this processor's worker is
+        parked in the curation gate. ``None`` hides the curator's Audio column.
+        """
+        return self._audio_stage.curation_fetch_fn
+
     def _parse_sentence(self, text: str) -> list[TokenizedWord]:
         """Tokenise one sentence into mineable words through the run's parser.
 

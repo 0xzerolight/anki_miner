@@ -1263,3 +1263,56 @@ class TestAttachExpressionAudioProbe:
         stage.attach_expression_audio_probe(words)
 
         assert words[0].expression_audio_available is None
+
+
+class TestCurationFetchFn:
+    @staticmethod
+    def _stage(config, fetcher):
+        return AudioStage(
+            config=config,
+            presenter=NullPresenter(),
+            cancelled=lambda: False,
+            expression_audio_fetcher=fetcher,
+            sentence_audio_fetcher=None,
+        )
+
+    @staticmethod
+    def _enabled(test_config):
+        return replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
+        )
+
+    def test_none_when_the_stage_is_inactive(self, test_config):
+        assert self._stage(test_config, MagicMock()).curation_fetch_fn is None
+
+    def test_none_without_a_fetcher(self, test_config):
+        assert self._stage(self._enabled(test_config), None).curation_fetch_fn is None
+
+    def test_true_when_the_chain_produces_a_path(self, test_config, tmp_path):
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = tmp_path / "a.mp3"
+        fetch = self._stage(self._enabled(test_config), fetcher).curation_fetch_fn
+
+        assert fetch is not None
+        assert fetch(_probe_word(), None) is True
+
+    def test_false_when_the_chain_produces_nothing(self, test_config):
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = None
+        fetch = self._stage(self._enabled(test_config), fetcher).curation_fetch_fn
+
+        assert fetch is not None
+        assert fetch(_probe_word(), None) is False
+
+    def test_forwards_the_candidate_ladder_and_the_cancel_check(self, test_config):
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = None
+        cancel = lambda: False  # noqa: E731 - identity matters, not the body
+        fetch = self._stage(self._enabled(test_config), fetcher).curation_fetch_fn
+
+        fetch(_probe_word(), cancel)
+
+        candidates, kwargs = fetcher.fetch_candidates.call_args
+        assert candidates[0][0] == ("食べる", "たべる")
+        assert candidates[1] is cancel or kwargs.get("cancelled_check") is cancel

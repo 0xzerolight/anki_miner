@@ -7263,3 +7263,12 @@ class TestParseSentenceFacade:
         assert len(units) == 1
         assert (units[0].text, units[0].index) == ("持久系のスポーツ", 0)
         assert want_index is False
+
+
+def test_expression_audio_curation_fn_delegates_to_the_audio_stage(test_config):
+    proc = build_processor(test_config)
+    sentinel = object()
+    proc._audio_stage = MagicMock()
+    proc._audio_stage.curation_fetch_fn = sentinel
+
+    assert proc.expression_audio_curation_fn is sentinel
