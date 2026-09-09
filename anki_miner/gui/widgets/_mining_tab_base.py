@@ -1116,6 +1116,12 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             presentation = self._curation_dialog_seq
             self._curation_pending_dialog = presentation
             self._active_curation_dialog = dialog
+            # BEFORE anything that can release the gate. `_resolve_curation`
+            # cancels the prefetch and then sets `_curation_event`, and the
+            # mining thread's join reads the stored entry — so an entry stored
+            # after the first possible `finished` would leave phase 3 fetching
+            # beside a prefetch nobody cancelled or joined.
+            self._start_curation_prefetch(dialog, words, audio_fetch_fn, token)
             # WordCurationDialog connects `finished` -> `_stop_player` in its own
             # __init__. Qt runs direct connections in connection order, so this
             # later connection always sees a dialog whose mpv core, page decode
@@ -1130,7 +1136,6 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             dialog.raise_()
             dialog.activateWindow()
             self._curation_offered = len(words)
-            self._start_curation_prefetch(dialog, words, audio_fetch_fn, token)
             # The single receipt that the curator actually reached the user, and
             # with what: a report of "it opened blank" is unreadable without
             # knowing whether the media context and the offline lookup survived
@@ -1183,7 +1188,11 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         the connection when the dialog is destroyed, and an emit with no
         receiver is a no-op.
         """
+        # Cleared on both early returns: nothing else clears the slot, so a
+        # previous run's entry would otherwise hold a dead worker for the
+        # session and be the one this run's join finds.
         if fetch_fn is None:
+            self._curation_prefetch = None
             return
         pending = [
             (index, word)
@@ -1191,6 +1200,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             if getattr(word, "expression_audio_available", None) is None
         ]
         if not pending:
+            self._curation_prefetch = None
             return
         channel = ExpressionAudioProbeChannel(self)
         channel.word_resolved.connect(dialog.set_expression_audio_state)
@@ -1253,15 +1263,14 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         if entry is None or entry[0] != token:
             return
         self._curation_prefetch = None
-        worker = entry[1]
-        # bucket C: a deleted worker wrapper is already stopped.
-        with contextlib.suppress(RuntimeError):
-            worker.cancel()
-            if not worker.wait(_CURATION_PREFETCH_JOIN_MS):
-                logger.warning(
-                    "Curator audio prefetch did not stop within %d ms; phase 3 will fetch alongside it",
-                    _CURATION_PREFETCH_JOIN_MS,
-                )
+        # join_or_retain cancels, bounded-joins, and absorbs the sip
+        # RuntimeError of joining an already-deleted wrapper; it returns the
+        # worker only while it is STILL live, which is the timeout case.
+        if join_or_retain(entry[1], _CURATION_PREFETCH_JOIN_MS) is not None:
+            logger.warning(
+                "Curator audio prefetch did not stop within %d ms; phase 3 will fetch alongside it",
+                _CURATION_PREFETCH_JOIN_MS,
+            )
 
     def _resolve_curation(
         self,
