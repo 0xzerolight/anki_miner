@@ -1,8 +1,11 @@
 """Episode number extraction and matching for video/subtitle pairs."""
 
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -43,6 +46,26 @@ def _strip_technical_tokens(name: str) -> str:
     name = re.sub(r"(?<![0-9A-Za-z])(?:[xh]\.?26[45]|av1|vp9)(?![0-9A-Za-z])", "", name, flags=re.IGNORECASE)
     name = re.sub(r"(?<![0-9A-Za-z])\d{1,2}[\s._-]?bit(?![0-9A-Za-z])", "", name, flags=re.IGNORECASE)
     name = re.sub(r"[\[(][0-9A-Fa-f]{8}[\])]", "", name)
+    # A re-upload's version marker ("24 V2", "24_v2", "S01E02v5") sits
+    # directly against the episode digits, so an unstripped name lets the
+    # bare-number fallback's LAST-run pick (BARE_NUMBER, below) grab the
+    # version digit instead of the real episode number — "Show_24_v2.mkv"
+    # used to mine as episode 2. The lookbehind requires a digit
+    # immediately (past only separator chars) before the marker, so a title
+    # token with no digit in front — "Show V2 - 03" — is left alone.
+    # MUST run after the codec/bit-depth strips above, not before: a codec
+    # or bit-depth token can sit between the episode digits and the marker
+    # ("05 x265 10bit v2"), and those tokens are letters, not separator
+    # characters, so the lookbehind cannot cross them until that token is
+    # already gone. Run this strip first and the marker survives untouched
+    # (it gets exactly one `re.sub` pass, never a second chance), the codec/
+    # bit-depth strips then expose "05   v2" too late for any pattern to
+    # notice, and the bare-number fallback picks the "2" from "v2" instead
+    # of the real episode number. Locked by
+    # test_bit_depth_and_version_marker_together and the "x265 10bit" row of
+    # test_version_marker_resolves_real_episode, both in
+    # test_episode_matcher.py.
+    name = re.sub(r"(?<=\d)[\s._-]*[vV]\d{1,2}(?![0-9A-Za-z])", "", name)
     return name
 
 
@@ -122,6 +145,24 @@ class EpisodeNumberExtractor:
         return None
 
 
+def _describe_collisions(kind: str, infos: list[EpisodeInfo]) -> list[str]:
+    """Describe every (season, episode) that 2+ *infos* share.
+
+    The pairing loop below keeps only the first file per number — a video
+    or subtitle collision drops the rest with no error, so this is what
+    lets the drop show up in anki_miner.log instead of vanishing.
+    """
+    groups: dict[tuple[int | None, int], list[str]] = {}
+    for info in infos:
+        groups.setdefault((info.season_number, info.episode_number), []).append(info.filename)
+    return [
+        f"{kind} {', '.join(names)} all resolve to episode {episode}"
+        + (f" of season {season}" if season is not None else "")
+        for (season, episode), names in groups.items()
+        if len(names) >= 2
+    ]
+
+
 class EpisodeMatcher:
     """Match video/subtitle files by episode number."""
 
@@ -152,6 +193,21 @@ class EpisodeMatcher:
             info = EpisodeNumberExtractor.extract_episode_info(subtitle)
             if info:
                 subtitle_episodes.append(info)
+
+        # One warning per call (mirrors the "one scan warning per pairing
+        # attempt" idiom in file_pairing.py, commit 0f38781c): the loop below
+        # keeps only the first file per (season, episode) and drops the rest
+        # with no error, so a folder holding two files for the same episode
+        # number silently loses one — this is the only trace of that in
+        # anki_miner.log.
+        collisions = _describe_collisions("videos", video_episodes) + _describe_collisions(
+            "subtitles", subtitle_episodes
+        )
+        if collisions:
+            logger.warning(
+                "episode-number pairing: %s — only the first file per number is matched, the rest are skipped",
+                "; ".join(collisions),
+            )
 
         # Match by episode number. A subtitle is consumed once and never reused:
         # without this, multiple videos sharing an episode number (multiple shows

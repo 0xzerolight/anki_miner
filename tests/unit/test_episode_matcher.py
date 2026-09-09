@@ -1,5 +1,6 @@
 """Tests for episode_matcher module."""
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -405,6 +406,97 @@ class TestEpisodeNumberExtractor:
             assert result is not None
             assert result.episode_number == 36
 
+    class TestVersionMarkers:
+        """Regression: a re-upload's version marker ("24 V2", "S01E02v5")
+        sits right against the episode digits. Six shapes used to lose the
+        real episode number to the bare-number fallback's LAST-run pick,
+        which grabbed the version digit instead ("Show_24_v2.mkv" mined as
+        episode 2, not 24). All six now resolve correctly; the four shapes
+        that already worked before the fix (via pattern 2's own inline
+        v-group, or a bracket/paren the strip's separator class does not
+        cross) are re-asserted here as a regression net now that the strip
+        runs on every one of them too. A seventh row, with a codec token
+        sitting between the episode digits and the marker, pins the strip
+        ORDER: the version strip only works because it runs after the
+        codec/bit-depth strips have already removed the letters that would
+        otherwise block its digit-adjacency lookbehind (see the comment in
+        _strip_technical_tokens).
+        """
+
+        @pytest.mark.parametrize(
+            ("filename", "episode"),
+            [
+                # Previously broken: the bare-number fallback picked the
+                # version digit instead of the real episode number.
+                ("Show - 24 V2.mkv", 24),
+                ("Show_24_v2.mkv", 24),
+                ("Show.24.v2.mkv", 24),
+                ("Show ep24v2.mkv", 24),
+                ("Show 24 V2.mkv", 24),
+                ("Show - 24 v2 [1080p].mkv", 24),
+                # A codec token (letters, not a separator) sits between the
+                # episode digits and the marker — pins that the version
+                # strip must run AFTER the codec/bit-depth strips, not
+                # before them.
+                ("Show - 05 x265 10bit v2.mkv", 5),
+                # Already correct before the fix; re-asserted as a
+                # regression net.
+                ("Show - 24v2.mkv", 24),
+                ("Show ep 24 V2.mkv", 24),
+                ("Show - 02 (v2).mkv", 2),
+                ("[Group] Show - 24 [v2][1080p].mkv", 24),
+            ],
+        )
+        def test_version_marker_resolves_real_episode(self, tmp_path, filename, episode):
+            path = tmp_path / filename
+            path.touch()
+
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+
+            assert result is not None
+            assert result.episode_number == episode
+
+        def test_s01e02v5_keeps_season_and_episode(self, tmp_path):
+            path = tmp_path / "Show S01E02v5.mkv"
+            path.touch()
+
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+
+            assert result is not None
+            assert (result.season_number, result.episode_number) == (1, 2)
+
+        def test_title_token_with_no_digit_in_front_survives(self, tmp_path):
+            """ "Show V2 - 03": no digit sits directly before the "V2", so it
+            is a title token, not a version marker, and must not be
+            stripped."""
+            path = tmp_path / "Show V2 - 03.mkv"
+            path.touch()
+
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+
+            assert result is not None
+            assert result.episode_number == 3
+
+        def test_bit_depth_and_version_marker_together(self, tmp_path):
+            """Locks the strip ORDER in _strip_technical_tokens: "10-bit"
+            sits between the episode digits and the version marker, and it
+            is letters, not separator characters, so the version strip's
+            digit-adjacency lookbehind cannot cross it. The version strip
+            only resolves this name correctly because it runs AFTER the
+            bit-depth strip has already removed "10-bit" — placed before
+            it, the marker would survive untouched and the bare-number
+            fallback would then pick its digit instead of the real episode
+            number. See test_version_marker_resolves_real_episode's
+            "x265 10bit" row for the codec-token version of the same
+            dependency."""
+            path = tmp_path / "Show - 03 10-bit v2.mkv"
+            path.touch()
+
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+
+            assert result is not None
+            assert result.episode_number == 3
+
 
 class TestEpisodeMatcher:
     """Tests for EpisodeMatcher class."""
@@ -607,6 +699,52 @@ class TestEpisodeMatcher:
         pairs = EpisodeMatcher.match_by_episode_number([video], [subtitle])
 
         assert len(pairs) == 0
+
+    def test_version_marker_no_longer_mispairs(self):
+        """Regression for the reported case: before the version-marker
+        strip, "Alpha - 24 V2.mkv" resolved to episode 2 (the version
+        digit) and collided with Beta's real episode 2, silently dropping
+        one pair (Issue #39's consume-once subtitle rule). Both now resolve
+        to their own episode number and pair with their own subtitle."""
+        videos = [Path("Alpha - 24 V2.mkv"), Path("Beta - 02.mkv")]
+        subtitles = [Path("Alpha - 24.srt"), Path("Beta - 02.srt")]
+
+        pairs = EpisodeMatcher.match_by_episode_number(videos, subtitles)
+
+        assert len(pairs) == 2
+        assert (Path("Alpha - 24 V2.mkv"), Path("Alpha - 24.srt")) in pairs
+        assert (Path("Beta - 02.mkv"), Path("Beta - 02.srt")) in pairs
+
+
+class TestEpisodeCollisionWarning:
+    """`match_by_episode_number` keeps only the first file per (season,
+    episode) — a collision on either side silently drops the rest. One
+    `logger.warning` per call makes the drop visible in anki_miner.log,
+    mirroring the "one scan warning per pairing attempt" idiom in
+    file_pairing.py (commit 0f38781c)."""
+
+    def test_two_videos_same_episode_logs_once(self, caplog):
+        video1 = Path("Alpha - 24.mkv")
+        video2 = Path("Alpha - 24v2.mkv")
+        subtitle = Path("Alpha - 24.srt")
+
+        with caplog.at_level(logging.WARNING, logger="anki_miner.utils.episode_matcher"):
+            EpisodeMatcher.match_by_episode_number([video1, video2], [subtitle])
+
+        warnings = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warnings) == 1
+        message = warnings[0].getMessage()
+        assert "Alpha - 24.mkv" in message
+        assert "Alpha - 24v2.mkv" in message
+
+    def test_clean_folder_logs_no_warning(self, caplog):
+        videos = [Path("Alpha - 24.mkv"), Path("Beta - 02.mkv")]
+        subtitles = [Path("Alpha - 24.srt"), Path("Beta - 02.srt")]
+
+        with caplog.at_level(logging.WARNING, logger="anki_miner.utils.episode_matcher"):
+            EpisodeMatcher.match_by_episode_number(videos, subtitles)
+
+        assert not any(r.levelno >= logging.WARNING for r in caplog.records)
 
 
 class TestParseMediaFilename:
