@@ -1,10 +1,11 @@
 """Word filtering settings panel."""
 
 import logging
+from collections.abc import Mapping
 from dataclasses import replace
 from pathlib import Path
 
-from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, pyqtSignal
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -14,6 +15,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListWidget,
+    QListWidgetItem,
     QPushButton,
     QSpinBox,
     QWidget,
@@ -130,6 +132,11 @@ class FilteringSettingsPanel(FormPanel):
             local known-words cache.
         manage_known_words_requested: Emitted when the user opens the Manage
             Known Words dialog (Issue #42).
+        fetch_known_words_note_types_requested: Emitted when the note type list
+            must be fetched from AnkiConnect to open the "Map Note Type…"
+            picker.
+        fetch_known_words_fields_requested: Emitted with the note type the user
+            picked, so its field list can be fetched for the second picker.
     """
 
     ANCHOR_NAMESPACE = "filtering"
@@ -137,12 +144,17 @@ class FilteringSettingsPanel(FormPanel):
     fetch_decks_requested = pyqtSignal()
     rebuild_known_words_requested = pyqtSignal()
     manage_known_words_requested = pyqtSignal()
+    fetch_known_words_note_types_requested = pyqtSignal()
+    fetch_known_words_fields_requested = pyqtSignal(str)
 
     def __init__(self, parent=None):
         """Initialize the filtering settings panel."""
         # Most recently fetched deck names. Every picker open refreshes them
         # first because the connected endpoint or Anki collection may change.
         self._available_decks: list[str] = []
+        # Most recently fetched note type names, cached the same way and for
+        # the same reason as `_available_decks`.
+        self._available_note_types: list[str] = []
         super().__init__("Word Filtering", parent=parent)
         self._setup_fields()
 
@@ -272,6 +284,45 @@ class FilteringSettingsPanel(FormPanel):
         rebuild_row.addWidget(self.manage_known_words_button)
         rebuild_row.addStretch()
         self.add_layout(rebuild_row)
+
+        # Per-note-type expression field for the known-words scan. The scan
+        # reads every note type in the collection and Anki convention puts the
+        # expression first, so a note type whose first field is the sentence
+        # otherwise fills the known-words list with whole sentences.
+        known_words_fields_helper = QLabel(
+            self.tr(
+                "The scan reads each note's first field. Map a note type here when its "
+                "first field is not the word — otherwise its sentences are stored as "
+                "known words. Unmapped note types keep the first field. Run Rebuild "
+                "Known Words DB afterwards to clear what was already stored."
+            )
+        )
+        known_words_fields_helper.setObjectName("helper-text")
+        known_words_fields_helper.setWordWrap(True)
+        self.add_widget(known_words_fields_helper)
+
+        self.known_words_fields_list = QListWidget()
+        self.known_words_fields_list.setSelectionMode(QListWidget.SelectionMode.SingleSelection)
+        configure_data_view(self.known_words_fields_list)
+        install_copy_rows(self.known_words_fields_list)
+        self.known_words_fields_list.setMaximumHeight(
+            _EXCLUDED_DECK_ROWS * data_row_height(self.known_words_fields_list)
+        )
+        self.add_widget(
+            self.known_words_fields_list,
+            anchor="known_words_expression_fields",
+            anchor_text=lambda: (known_words_fields_helper.text(),),
+        )
+
+        known_words_fields_buttons = QHBoxLayout()
+        self.add_known_words_field_button = QPushButton(self.tr("Map Note Type…"))
+        self.add_known_words_field_button.clicked.connect(self._on_add_known_words_field_clicked)
+        self.remove_known_words_field_button = QPushButton(self.tr("Remove"))
+        self.remove_known_words_field_button.clicked.connect(self._on_remove_known_words_field_clicked)
+        known_words_fields_buttons.addWidget(self.add_known_words_field_button)
+        known_words_fields_buttons.addWidget(self.remove_known_words_field_button)
+        known_words_fields_buttons.addStretch()
+        self.add_layout(known_words_fields_buttons)
 
         # Excluded decks (Issue #38)
         self.add_section(self.tr("Excluded Decks"))
@@ -750,6 +801,101 @@ class FilteringSettingsPanel(FormPanel):
         for deck in decks:
             self.excluded_decks_list.addItem(deck)
 
+    # --- Known-words expression fields ---
+
+    def get_known_words_expression_fields(self) -> dict[str, str]:
+        """Return the note type -> expression field mapping from the list."""
+        mapping: dict[str, str] = {}
+        for index in range(self.known_words_fields_list.count()):
+            item = self.known_words_fields_list.item(index)
+            if item is None:
+                continue
+            data = item.data(Qt.ItemDataRole.UserRole)
+            if isinstance(data, tuple) and len(data) == 2:
+                mapping[str(data[0])] = str(data[1])
+        return mapping
+
+    def set_known_words_expression_fields(self, mapping: Mapping[str, str]) -> None:
+        """Populate the list widget from config, sorted by note type name."""
+        self.known_words_fields_list.clear()
+        for note_type in sorted(mapping):
+            field_name = mapping[note_type]
+            # Not translated: the label is two user-authored Anki names and a
+            # separator, so a "%1 → %2" catalogue entry would give twelve
+            # translators nothing to translate.
+            item = QListWidgetItem(f"{note_type} → {field_name}")
+            # The pair rides on the item rather than being parsed back out of
+            # the label: a note type name may itself contain the separator.
+            item.setData(Qt.ItemDataRole.UserRole, (note_type, field_name))
+            self.known_words_fields_list.addItem(item)
+
+    def _map_known_words_field(self, note_type: str, field_name: str) -> None:
+        """Map ``note_type`` to ``field_name``, replacing any row it has."""
+        mapping = self.get_known_words_expression_fields()
+        mapping[note_type] = field_name
+        self.set_known_words_expression_fields(mapping)
+
+    def _on_add_known_words_field_clicked(self) -> None:
+        """Fetch the note type list, then open the two-step picker.
+
+        Like Add Deck, every click re-asks: the connected endpoint or the
+        active Anki collection may have changed since the previous one.
+        :meth:`set_available_note_types` opens the picker when it lands.
+        """
+        self.fetch_known_words_note_types_requested.emit()
+
+    def set_available_note_types(self, note_types: list[str]) -> None:
+        """Receive the fetched note type list and open the first picker."""
+        self._available_note_types = list(note_types)
+        self._open_known_words_note_type_picker()
+
+    def _open_known_words_note_type_picker(self) -> None:
+        """Ask which note type to map, then request that type's field list.
+
+        Every note type is offered, including one already listed: re-picking
+        it replaces its field, which beats forcing a Remove first. No
+        empty-list guard here — ``AnkiProbeController`` reports an empty
+        answer on the screen banner and never calls this (D24).
+        """
+        note_type, ok = QInputDialog.getItem(
+            self,
+            self.tr("Known Words Expression Field"),
+            self.tr("Note type to map (an existing mapping is replaced):"),
+            self._available_note_types,
+            0,
+            False,
+        )
+        if ok and note_type:
+            self.fetch_known_words_fields_requested.emit(note_type)
+
+    def set_available_note_type_fields(self, note_type: str, field_names: list[str]) -> None:
+        """Receive ``note_type``'s field list and open the second picker.
+
+        No empty-list guard, for the same reason as the note-type picker: an
+        empty answer is reported by ``AnkiProbeController`` and never reaches
+        here.
+        """
+        field_name, ok = QInputDialog.getItem(
+            self,
+            self.tr("Known Words Expression Field"),
+            tr_format(self.tr("Field to read as the expression for '%1':"), note_type),
+            field_names,
+            0,
+            False,
+        )
+        if ok and field_name:
+            self._map_known_words_field(note_type, field_name)
+
+    def _on_remove_known_words_field_clicked(self) -> None:
+        """Remove the selected mapping; the note type reverts to its first field."""
+        row = self.known_words_fields_list.currentRow()
+        if row >= 0:
+            self.known_words_fields_list.takeItem(row)
+
+    def set_map_note_type_button_enabled(self, enabled: bool) -> None:
+        """Enable or disable the Map Note Type button (AnkiProbeController)."""
+        self.add_known_words_field_button.setEnabled(enabled)
+
     # --- Name Wordsets (Issue #59) ---
 
     def get_excluded_wordsets(self) -> tuple[str, ...]:
@@ -1044,6 +1190,7 @@ class FilteringSettingsPanel(FormPanel):
         self.set_use_known_words_db(config.use_known_words_db)
         self.set_match_kana_variants(config.known_words_match_kana_variants)
         self.set_excluded_decks(config.excluded_decks)
+        self.set_known_words_expression_fields(config.known_words_expression_fields)
         self.set_excluded_wordsets(config.excluded_wordsets)
         # T-11: always set (including '' for None) so Reset-to-Defaults clears
         # the selector; without this the stale path stays visible and the next
@@ -1094,6 +1241,7 @@ class FilteringSettingsPanel(FormPanel):
             use_known_words_db=self.get_use_known_words_db(),
             known_words_match_kana_variants=self.get_match_kana_variants(),
             excluded_decks=self.get_excluded_decks(),
+            known_words_expression_fields=self.get_known_words_expression_fields(),
             excluded_wordsets=self.get_excluded_wordsets(),
             blacklist_path=self.get_blacklist_path(),
             use_blacklist=self.get_use_blacklist(),

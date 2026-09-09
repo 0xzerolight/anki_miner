@@ -93,6 +93,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         use_known_words_db=True,
         known_words_match_kana_variants=False,  # default is True
         excluded_decks=("Deck A", "Deck B"),
+        known_words_expression_fields={"Sentence First": "Word"},
         excluded_wordsets=("surnames", "given-names"),
         blacklist_path=bl,
         use_blacklist=True,
@@ -155,6 +156,7 @@ _SAVE_PATH_FIELDS = frozenset(
         "use_known_words_db",
         "known_words_match_kana_variants",
         "excluded_decks",
+        "known_words_expression_fields",
         "excluded_wordsets",
         "blacklist_path",
         "use_blacklist",
@@ -305,6 +307,7 @@ class TestSavePathRoundTrip:
             "use_known_words_db",
             "known_words_match_kana_variants",
             "excluded_decks",
+            "known_words_expression_fields",
             "excluded_wordsets",
             "blacklist_path",
             "use_blacklist",
