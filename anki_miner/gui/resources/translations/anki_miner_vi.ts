@@ -277,6 +277,30 @@
         <source>Note type '%1' is not in Anki — pick one below.</source>
         <translation>Loại ghi chú '%1' không có trong Anki — hãy chọn một loại bên dưới.</translation>
     </message>
+    <message>
+        <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The note type list could not be read from Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No fields came back for note type '%1'.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The field list could not be read from Anki.</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>AnkiService</name>
     <message>
@@ -4690,6 +4714,18 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <translation>Xem, gỡ bỏ, xuất, hoặc đặt lại các từ bạn đã thêm vào danh sách từ đã biết cục bộ từ Trình quản lý từ.</translation>
     </message>
     <message>
+        <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Map Note Type…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Gỡ bỏ</translation>
+    </message>
+    <message>
         <source>Excluded Decks</source>
         <translation>Bộ thẻ bị loại trừ</translation>
     </message>
@@ -4700,10 +4736,6 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     <message>
         <source>Add Deck…</source>
         <translation>Thêm bộ thẻ…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Gỡ bỏ</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -4926,6 +4958,18 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <translation>Loại bỏ các thẻ mà văn bản câu vượt quá số ký tự này. Đặt 0 để không giới hạn.</translation>
     </message>
     <message>
+        <source>Full Sentences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine full sentences across subtitle lines</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Joins the neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence, its timings and its audio instead of a fragment. Every subtitle-timed run uses it — video, YouTube, batch, audiobook; reading sources have no subtitle timings and ignore it. The Word Curator's line buttons still adjust any card by hand.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Reading</source>
         <translation>Cách đọc</translation>
     </message>
@@ -4980,6 +5024,18 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Bộ thẻ loại trừ khỏi việc phát hiện từ đã biết:</translation>
+    </message>
+    <message>
+        <source>Known Words Expression Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Note type to map (an existing mapping is replaced):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Field to read as the expression for '%1':</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -10006,6 +10062,10 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
         <translation>Bản dịch</translation>
     </message>
     <message>
+        <source>Audio</source>
+        <translation type="unfinished">Âm thanh</translation>
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
@@ -10028,6 +10088,12 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên trước — những dò
     <message>
         <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
         <translation>Dòng phụ đề ngôn ngữ thứ hai cho câu này. Dòng này cập nhật theo lựa chọn trong mục “Câu” hoặc theo nút + Dòng trước/+ Dòng sau.</translation>
+    </message>
+    <message>
+        <source>Whether your audio sources have pronunciation audio for this word.
+
+✓ found, ✗ not found, - not checked yet. Words are checked while this window is open, so a word you keep already has its audio ready. The check never changes which words you can mine.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -10092,6 +10158,18 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên trước — những dò
     <message>
         <source>Pick which sentence (and scene) gets mined for this word. Only shown when the word repeats.</source>
         <translation>Chọn câu (và cảnh) nào được khai thác cho từ này. Chỉ hiển thị khi từ lặp lại.</translation>
+    </message>
+    <message>
+        <source>Pronunciation audio found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No pronunciation audio found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not checked yet</source>
+        <translation type="unfinished">Chưa kiểm tra</translation>
     </message>
     <message>
         <source>%1

@@ -277,6 +277,30 @@
         <source>Note type '%1' is not in Anki — pick one below.</source>
         <translation>Tipe catatan '%1' tidak ada di Anki — pilih salah satu di bawah.</translation>
     </message>
+    <message>
+        <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The note type list could not be read from Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No fields came back for note type '%1'.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The field list could not be read from Anki.</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>AnkiService</name>
     <message>
@@ -4690,6 +4714,18 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>Lihat, hapus, ekspor, atau setel ulang kata yang Anda tambahkan ke daftar kata yang dikenal lokal dari Word Curator.</translation>
     </message>
     <message>
+        <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Map Note Type…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Hapus</translation>
+    </message>
+    <message>
         <source>Excluded Decks</source>
         <translation>Dek yang Dikecualikan</translation>
     </message>
@@ -4700,10 +4736,6 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <message>
         <source>Add Deck…</source>
         <translation>Tambah Dek…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Hapus</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -4926,6 +4958,18 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>Menghilangkan kartu yang teks kalimatnya melebihi jumlah karakter ini. Setel ke 0 untuk tanpa batas.</translation>
     </message>
     <message>
+        <source>Full Sentences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine full sentences across subtitle lines</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Joins the neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence, its timings and its audio instead of a fragment. Every subtitle-timed run uses it — video, YouTube, batch, audiobook; reading sources have no subtitle timings and ignore it. The Word Curator's line buttons still adjust any card by hand.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Reading</source>
         <translation>Cara Baca</translation>
     </message>
@@ -4980,6 +5024,18 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Dek yang dikecualikan dari deteksi kata yang dikenal:</translation>
+    </message>
+    <message>
+        <source>Known Words Expression Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Note type to map (an existing mapping is replaced):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Field to read as the expression for '%1':</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -10006,6 +10062,10 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
         <translation>Terjemahan</translation>
     </message>
     <message>
+        <source>Audio</source>
+        <translation type="unfinished">Audio</translation>
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
@@ -10028,6 +10088,12 @@ Urutkan menaik untuk menampilkan baris i+1 lebih dulu — baris yang satu-satuny
     <message>
         <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
         <translation>Baris subtitel bahasa sekunder untuk kalimat ini. Baris ini mengikuti pemilihan di “Kalimat” atau tombol + Baris sebelumnya/+ Baris berikutnya.</translation>
+    </message>
+    <message>
+        <source>Whether your audio sources have pronunciation audio for this word.
+
+✓ found, ✗ not found, - not checked yet. Words are checked while this window is open, so a word you keep already has its audio ready. The check never changes which words you can mine.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -10092,6 +10158,18 @@ Urutkan menaik untuk menampilkan baris i+1 lebih dulu — baris yang satu-satuny
     <message>
         <source>Pick which sentence (and scene) gets mined for this word. Only shown when the word repeats.</source>
         <translation>Pilih kalimat (dan adegan) mana yang di-mining untuk kata ini. Hanya ditampilkan saat kata berulang.</translation>
+    </message>
+    <message>
+        <source>Pronunciation audio found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No pronunciation audio found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not checked yet</source>
+        <translation type="unfinished">Belum diperiksa</translation>
     </message>
     <message>
         <source>%1

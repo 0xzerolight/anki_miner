@@ -277,6 +277,30 @@
         <source>Note type '%1' is not in Anki — pick one below.</source>
         <translation>筆記類型「%1」不在 Anki 中 — 請在下方選取一個。</translation>
     </message>
+    <message>
+        <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The note type list could not be read from Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No fields came back for note type '%1'.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The field list could not be read from Anki.</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>AnkiService</name>
     <message>
@@ -4690,6 +4714,18 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>檢視、移除、匯出或重設你從單字整理工具加入本機已知單字清單的單字。</translation>
     </message>
     <message>
+        <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Map Note Type…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>移除</translation>
+    </message>
+    <message>
         <source>Excluded Decks</source>
         <translation>排除的牌組</translation>
     </message>
@@ -4700,10 +4736,6 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Add Deck…</source>
         <translation>新增牌組…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>移除</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -4926,6 +4958,18 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>捨棄句子文字超過此字元數的卡片。設為 0 表示無限制。</translation>
     </message>
     <message>
+        <source>Full Sentences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine full sentences across subtitle lines</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Joins the neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence, its timings and its audio instead of a fragment. Every subtitle-timed run uses it — video, YouTube, batch, audiobook; reading sources have no subtitle timings and ignore it. The Word Curator's line buttons still adjust any card by hand.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Reading</source>
         <translation>讀音</translation>
     </message>
@@ -4980,6 +5024,18 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>從已知單字偵測中排除的牌組：</translation>
+    </message>
+    <message>
+        <source>Known Words Expression Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Note type to map (an existing mapping is replaced):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Field to read as the expression for '%1':</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -10006,6 +10062,10 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
         <translation>翻譯</translation>
     </message>
     <message>
+        <source>Audio</source>
+        <translation type="unfinished">音訊</translation>
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
@@ -10028,6 +10088,12 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     <message>
         <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
         <translation>此句子的次要語言字幕行。點選其他句子或使用「+ 上一行／+ 下一行」時會隨之更新。</translation>
+    </message>
+    <message>
+        <source>Whether your audio sources have pronunciation audio for this word.
+
+✓ found, ✗ not found, - not checked yet. Words are checked while this window is open, so a word you keep already has its audio ready. The check never changes which words you can mine.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -10092,6 +10158,18 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     <message>
         <source>Pick which sentence (and scene) gets mined for this word. Only shown when the word repeats.</source>
         <translation>選擇此單字要採集哪一個句子（及場景）。僅在單字重複時顯示。</translation>
+    </message>
+    <message>
+        <source>Pronunciation audio found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No pronunciation audio found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not checked yet</source>
+        <translation type="unfinished">尚未檢查</translation>
     </message>
     <message>
         <source>%1

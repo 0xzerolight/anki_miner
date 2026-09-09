@@ -278,6 +278,30 @@
         <source>Note type '%1' is not in Anki — pick one below.</source>
         <translation>El tipo de nota '%1' no está en Anki; elija uno a continuación.</translation>
     </message>
+    <message>
+        <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The note type list could not be read from Anki.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No fields came back for note type '%1'.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The field list could not be read from Anki.</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>AnkiService</name>
     <message>
@@ -4703,6 +4727,18 @@ Los archivos en el disco quedarán sin modificar porque no se pudo comprobar que
         <translation>Vea, elimine, exporte o restablezca las palabras que añadió a su lista local de palabras conocidas desde el Curador de palabras.</translation>
     </message>
     <message>
+        <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Map Note Type…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Eliminar</translation>
+    </message>
+    <message>
         <source>Excluded Decks</source>
         <translation>Mazos excluidos</translation>
     </message>
@@ -4713,10 +4749,6 @@ Los archivos en el disco quedarán sin modificar porque no se pudo comprobar que
     <message>
         <source>Add Deck…</source>
         <translation>Añadir mazo…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Eliminar</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -4939,6 +4971,18 @@ Los archivos en el disco quedarán sin modificar porque no se pudo comprobar que
         <translation>Descarta las tarjetas cuyo texto de la oración supera esta cantidad de caracteres. Establezca 0 para no aplicar límite.</translation>
     </message>
     <message>
+        <source>Full Sentences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine full sentences across subtitle lines</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Joins the neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence, its timings and its audio instead of a fragment. Every subtitle-timed run uses it — video, YouTube, batch, audiobook; reading sources have no subtitle timings and ignore it. The Word Curator's line buttons still adjust any card by hand.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Reading</source>
         <translation>Lectura</translation>
     </message>
@@ -4993,6 +5037,18 @@ Los archivos en el disco quedarán sin modificar porque no se pudo comprobar que
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Mazo a excluir de la detección de palabras conocidas:</translation>
+    </message>
+    <message>
+        <source>Known Words Expression Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Note type to map (an existing mapping is replaced):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Field to read as the expression for '%1':</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -10022,6 +10078,10 @@ Sus diccionarios instalados, audio, listas de frecuencia y tema se conservan.</t
         <translation>Traducción</translation>
     </message>
     <message>
+        <source>Audio</source>
+        <translation type="unfinished">Audio</translation>
+    </message>
+    <message>
         <source>How many times this word appears in this episode.
 
 The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
@@ -10044,6 +10104,12 @@ Ordene ascendente para poner primero las líneas i+1 — aquellas cuya única pa
     <message>
         <source>The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line.</source>
         <translation>La línea de subtítulos en el idioma secundario para esta frase. Sigue la frase elegida en «Frases» o el uso de «+ Línea anterior» / «+ Línea siguiente».</translation>
+    </message>
+    <message>
+        <source>Whether your audio sources have pronunciation audio for this word.
+
+✓ found, ✗ not found, - not checked yet. Words are checked while this window is open, so a word you keep already has its audio ready. The check never changes which words you can mine.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -10108,6 +10174,18 @@ Ordene ascendente para poner primero las líneas i+1 — aquellas cuya única pa
     <message>
         <source>Pick which sentence (and scene) gets mined for this word. Only shown when the word repeats.</source>
         <translation>Elija qué frase (y escena) se mina para esta palabra. Solo se muestra cuando la palabra se repite.</translation>
+    </message>
+    <message>
+        <source>Pronunciation audio found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No pronunciation audio found</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not checked yet</source>
+        <translation type="unfinished">Aún no comprobado</translation>
     </message>
     <message>
         <source>%1
