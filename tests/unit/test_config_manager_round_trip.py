@@ -91,3 +91,25 @@ class TestExcludedWordsetsRoundTrip:
         GUIConfigManager.save_config(create_default_config())
         loaded = GUIConfigManager.load_config()
         assert loaded.excluded_wordsets == ("surnames", "given-names", "place-names", "org-product")
+
+
+class TestKnownWordsExpressionFieldsRoundTrip:
+    def test_mapping_round_trips_through_json(self, isolated_config_file):
+        from dataclasses import replace
+
+        new = replace(
+            create_default_config(),
+            known_words_expression_fields={"Sentence First": "Word", "Lapis": "Expression"},
+        )
+        GUIConfigManager.save_config(new)
+
+        loaded = GUIConfigManager.load_config()
+        assert loaded.known_words_expression_fields == {
+            "Sentence First": "Word",
+            "Lapis": "Expression",
+        }
+
+    def test_default_is_empty_mapping(self, isolated_config_file):
+        GUIConfigManager.save_config(create_default_config())
+
+        assert GUIConfigManager.load_config().known_words_expression_fields == {}
