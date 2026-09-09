@@ -199,6 +199,67 @@ class TestEnvelopeInlineAxisOwnership:
         ), "envelope block-axis spacing (padding-top/bottom) lost"
 
 
+class TestAttributionLineCedesToHost:
+    """The attribution ``<i>`` rule must declare neither ``display`` nor ``color``.
+
+    ``<i>(part-of-speech…, Dictionary Name)</i>`` is Yomitan-conventional markup —
+    Yomitan's own Anki export emits the same element — which is why every
+    Yomitan-aware note type styles it by name. Senren declares ``display: block``
+    and a 40%-black colour on ``.definition-box .yomitan-glossary i`` /
+    ``.glossary-box .yomitan-glossary i``; Lapis declares a colour on
+    ``li[data-dictionary^="JMdict"] i``. Our gated rule sits at (0,4,3) and won
+    both, so the note type's own dictionary title rendered as our inline-block grey
+    chip instead (2026-09-09 note-type CSS audit, Finding A: the only contested
+    surface across Lapis, Senren and Kiku).
+
+    Withdrawing the contested declarations is the only thing a note-type stylesheet
+    cannot out-rank — the same settlement as Issue #93 for the ``li[data-dictionary]``
+    envelope and Android issue #5 for ``_MORA_LINE_STYLE``. Class-scoping is not
+    available: ``indexed_provider._render`` emits a CLASSLESS ``<i>``, so a class
+    would be a markup change and existing cards, whose bodies the restyler never
+    rewrites, would not get it. The uncontested typography stays — no note type
+    declares font-size, font-style or letter-spacing on this element.
+    """
+
+    _BANNED = frozenset({"display", "color"})
+
+    @staticmethod
+    def _attribution_rules(css):
+        return [
+            (sel.strip(), decl)
+            for grp, decl in _iter_rules(css)
+            for sel in grp.split(",")
+            if sel.strip().endswith("> i")
+        ]
+
+    def test_audit_matches_exactly_the_one_attribution_rule(self):
+        # Self-check against vacuous matching: reshaping the selector must update
+        # this pin rather than silently emptying the audit below.
+        rules = self._attribution_rules(load_glossary_css())
+        assert len(rules) == 1, f"expected exactly 1 attribution rule, found {[s for s, _ in rules]}"
+
+    def test_attribution_rule_declares_neither_display_nor_color(self):
+        for selector, declarations in self._attribution_rules(load_glossary_css()):
+            for decl in declarations.split(";"):
+                prop = decl.split(":", 1)[0].strip()
+                if not prop:
+                    continue
+                assert prop not in self._BANNED, (
+                    f"attribution rule {selector!r} declares {prop!r} — the note type owns the "
+                    "dictionary-title line (Senren sets display + colour on it, Lapis a colour), "
+                    "and no specificity we can spend loses to them. Withdraw instead."
+                )
+
+    def test_attribution_keeps_its_uncontested_typography(self):
+        # The fix must not degrade into deleting the rule: the small, upright label
+        # is what keeps the attribution from shouting on a note type that styles
+        # nothing here, and no audited note type declares any of these.
+        rules = self._attribution_rules(load_glossary_css())
+        decls = "".join(decl for _, decl in rules)
+        for prop in ("font-size", "font-style", "letter-spacing"):
+            assert prop in decls, f"attribution rule lost its uncontested {prop}"
+
+
 class TestGapFillerGate:
     """Every data-sc-* presentation gap-filler must be gated to unstyled dicts.
 
