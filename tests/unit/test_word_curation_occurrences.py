@@ -27,7 +27,7 @@ def test_occurrences_column_present(qtbot):
     dlg = WordCurationDialog([_word("食べる", 3)])
     qtbot.addWidget(dlg)
 
-    assert dlg.table.columnCount() == 10
+    assert dlg.table.columnCount() == 11
     header = dlg.table.horizontalHeaderItem(_OCC_COL)
     assert header is not None
     assert header.text() == "Occurrences"
