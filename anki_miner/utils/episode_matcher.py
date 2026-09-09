@@ -1,8 +1,11 @@
 """Episode number extraction and matching for video/subtitle pairs."""
 
+import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -142,6 +145,24 @@ class EpisodeNumberExtractor:
         return None
 
 
+def _describe_collisions(kind: str, infos: list[EpisodeInfo]) -> list[str]:
+    """Describe every (season, episode) that 2+ *infos* share.
+
+    The pairing loop below keeps only the first file per number — a video
+    or subtitle collision drops the rest with no error, so this is what
+    lets the drop show up in anki_miner.log instead of vanishing.
+    """
+    groups: dict[tuple[int | None, int], list[str]] = {}
+    for info in infos:
+        groups.setdefault((info.season_number, info.episode_number), []).append(info.filename)
+    return [
+        f"{kind} {', '.join(names)} all resolve to episode {episode}"
+        + (f" of season {season}" if season is not None else "")
+        for (season, episode), names in groups.items()
+        if len(names) >= 2
+    ]
+
+
 class EpisodeMatcher:
     """Match video/subtitle files by episode number."""
 
@@ -172,6 +193,21 @@ class EpisodeMatcher:
             info = EpisodeNumberExtractor.extract_episode_info(subtitle)
             if info:
                 subtitle_episodes.append(info)
+
+        # One warning per call (mirrors the "one scan warning per pairing
+        # attempt" idiom in file_pairing.py, commit 0f38781c): the loop below
+        # keeps only the first file per (season, episode) and drops the rest
+        # with no error, so a folder holding two files for the same episode
+        # number silently loses one — this is the only trace of that in
+        # anki_miner.log.
+        collisions = _describe_collisions("videos", video_episodes) + _describe_collisions(
+            "subtitles", subtitle_episodes
+        )
+        if collisions:
+            logger.warning(
+                "episode-number pairing: %s — only the first file per number is matched, the rest are skipped",
+                "; ".join(collisions),
+            )
 
         # Match by episode number. A subtitle is consumed once and never reused:
         # without this, multiple videos sharing an episode number (multiple shows

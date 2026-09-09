@@ -1,5 +1,6 @@
 """Tests for episode_matcher module."""
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -698,6 +699,52 @@ class TestEpisodeMatcher:
         pairs = EpisodeMatcher.match_by_episode_number([video], [subtitle])
 
         assert len(pairs) == 0
+
+    def test_version_marker_no_longer_mispairs(self):
+        """Regression for the reported case: before the version-marker
+        strip, "Alpha - 24 V2.mkv" resolved to episode 2 (the version
+        digit) and collided with Beta's real episode 2, silently dropping
+        one pair (Issue #39's consume-once subtitle rule). Both now resolve
+        to their own episode number and pair with their own subtitle."""
+        videos = [Path("Alpha - 24 V2.mkv"), Path("Beta - 02.mkv")]
+        subtitles = [Path("Alpha - 24.srt"), Path("Beta - 02.srt")]
+
+        pairs = EpisodeMatcher.match_by_episode_number(videos, subtitles)
+
+        assert len(pairs) == 2
+        assert (Path("Alpha - 24 V2.mkv"), Path("Alpha - 24.srt")) in pairs
+        assert (Path("Beta - 02.mkv"), Path("Beta - 02.srt")) in pairs
+
+
+class TestEpisodeCollisionWarning:
+    """`match_by_episode_number` keeps only the first file per (season,
+    episode) — a collision on either side silently drops the rest. One
+    `logger.warning` per call makes the drop visible in anki_miner.log,
+    mirroring the "one scan warning per pairing attempt" idiom in
+    file_pairing.py (commit 0f38781c)."""
+
+    def test_two_videos_same_episode_logs_once(self, caplog):
+        video1 = Path("Alpha - 24.mkv")
+        video2 = Path("Alpha - 24v2.mkv")
+        subtitle = Path("Alpha - 24.srt")
+
+        with caplog.at_level(logging.WARNING, logger="anki_miner.utils.episode_matcher"):
+            EpisodeMatcher.match_by_episode_number([video1, video2], [subtitle])
+
+        warnings = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        assert len(warnings) == 1
+        message = warnings[0].getMessage()
+        assert "Alpha - 24.mkv" in message
+        assert "Alpha - 24v2.mkv" in message
+
+    def test_clean_folder_logs_no_warning(self, caplog):
+        videos = [Path("Alpha - 24.mkv"), Path("Beta - 02.mkv")]
+        subtitles = [Path("Alpha - 24.srt"), Path("Beta - 02.srt")]
+
+        with caplog.at_level(logging.WARNING, logger="anki_miner.utils.episode_matcher"):
+            EpisodeMatcher.match_by_episode_number(videos, subtitles)
+
+        assert not any(r.levelno >= logging.WARNING for r in caplog.records)
 
 
 class TestParseMediaFilename:
