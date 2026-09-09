@@ -1,0 +1,6004 @@
+/* MOBILE FONTS
+============================================ */
+@font-face {
+  font-family: klee;
+  src: url("_KleeOne-SemiBold.ttf");
+}
+
+@font-face {
+  font-family: notosansjp;
+  src: url("_NotoSansJP.ttf");
+}
+
+@font-face {
+  font-family: notoserifjp;
+  src: url("_NotoSerifJP.ttf");
+}
+
+/* Custom Variables for Styling */
+:root {
+  /* CARD SETTINGS - Default States (true/false)
+  ============================================ */
+  /* General */
+  --enable-animations:                true;    /* Enable transition animations */
+
+  /* Front
+  -------------------------------------------- */
+  --word-sentence-default-expanded:   false;   /* Show sentence on word cards immediately */
+  --audio-sentence-default-expanded:  false;   /* Show sentence on audio cards immediately */
+  --hint-default-expanded:            false;   /* Show hint on cards immediately */
+
+  /* Back
+  -------------------------------------------- */
+  --translation-default-expanded:     false;   /* Show translation immediately */
+  --notes-default-expanded:           false;   /* Show notes immediately */
+  --no-duplicate-kana:                false;   /* Replace kana-only word with its reading */
+  --mute-sentence-audio:              false;   /* Mute any sentence audio */
+
+  /* Misc Info */
+  --misc-info-default-expanded:       false;   /* Show misc info immediately */
+  --misc-info-above:                  false;   /* Display Misc Info above or below tags and external links */
+
+  /* NSFW */
+  --blur-nsfw-picture:                true;    /* Blur picture on NSFW cards */
+  --mute-nsfw-audio:                  false;   /* Mute sentence audio on NSFW cards */
+
+
+  /* COMPONENT VISIBILITY ("1" to show, "0" to Hide)
+  ============================================ */
+  --settings-visibility:              1; /* Settings toggle */
+  --main-bg-visibility:               1; /* Main bg */
+  --main-bg-shadow-visibility:        0; /* Box shadow around the main bg */
+  --custom-dark-mode-visibility:      1; /* Custom dark mode toggle */
+  --audio-visibility:                 1; /* Audio button */
+  --freq-visibility:                  1; /* Frequency */
+  --definition-title-visibility:      1; /* Dict title in the definition box */  
+  --glossary-title-visibility:        1; /* Dict title in the glossary box */
+  --tag-visibility:                   1; /* Tags */
+  --external-links-visibility:        1; /* External links */
+  --misc-info-bg-visibility:          1; /* Misc info background */
+
+  /* Header/Mobile Visibility (≤ 1050px) */
+  --settings-visibility-header:       1; /* Settings toggle */
+  --main-bg-1050-visibility:          1; /* Main bg */
+  --main-bg-shadow-1050-visibility:   0; /* Shadow around the main bg */
+  --custom-dm-header-visibility:      1; /* Custom dark mode toggle */
+  --audio-header-visibility:          1; /* Audio button */
+  --freq-header-visibility:           1; /* Frequency */
+
+
+  /* TYPOGRAPHY & FONTS
+  ============================================ */
+  /* Global Settings */
+  --base-size:                        clamp(19px, 3vw, 24px);
+  --base-line-height:                 1.5;
+  --bold-highlight:                   0; /* "1" to bold highlights */
+  --bold-misc-info:                   0; /* "1" to bold misc info text */
+  
+  /* Font Families */
+  --custom-font:                      ;  /* Type your custom font name here */
+  --serif:                            "Klee One", klee, "Hiragino Mincho ProN", "Noto Serif CJK JP", notoserifjp, "Yu Mincho", serif;
+  --sans:                             "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", notosansjp, "Segoe UI", sans-serif;
+
+  /* Word Sizes (Dynamic Scaling) */
+  --word-size-base:                   2.5rem;
+  --word-size-4:                      2.1rem;  /* 4 chars */
+  --word-size-5:                      2.0rem;  /* 5 chars */
+  --word-size-6:                      1.7rem;  /* 6 chars */
+  --word-size-7:                      1.6rem;  /* 7 chars */
+  --word-size-8:                      1.3rem;  /* 8 chars */
+  --word-size-9:                      1.15rem; /* 9+ chars */
+
+  /* Word Furigana */
+  --reading-position:                 above;   /* "below" to display reading below word */
+  --dynamic-furigana-size:            0;       /* "1" to use automatic sizing for furigana */
+  --furigana-size:                    1rem;    
+  --furigana-height:                  0.0rem;  /* Negative value moves it UP (e.g., -0.05rem), Positive moves it DOWN */
+
+  /* Sentence Furigana */
+  --sentence-furigana-display:        1;       /* "0" to disable furigana in sentences */
+  --sentence-furigana-height:         0.0rem;  /* Negative value moves it UP (e.g., -0.05rem), Positive moves it DOWN */
+
+  /* Wrapped Text Alignment */
+  --sentence-alignment:               center;  /* "left" or "right" to align wrapped sentences */
+  --misc-info-alignment:              center;  /* "left" or "right" to align wrapped misc info */
+
+  /* Text Sizes */
+  --sentence-size:                    1.3rem;
+  --sentence-eng-size:                0.8rem;
+  --definition-size:                  0.8rem;
+  --misc-info-size:                   15px;
+  --tag-font-size:                    0.7rem;
+  --frequency-size:                   20px;
+  --frequency-content-size:           14px;
+
+
+  /* DICTIONARY & GLOSSARY STYLING
+  ============================================ */
+  /* Colorizer Settings */
+  --dictionary-colorizer:             0;       /* "1" to enable Dictionary Colorizer */
+  --dict-bg-enabled:                  1;       /* "0" to disable bg color */
+  --dict-back-bg:                     0;       /* "1" to enable bg on entire card */
+  --dict-bg-opacity:                  0.03;    /* Opacity of the bg color */
+  --dict-border-width:                5px;     /* Width of colored border */
+  
+  /* Dictionary Title Styles */
+  --dict-size:                        0.5rem;
+  --dict-display:                     inline-block;
+  --light-dict-color:                 rgba(0, 0, 0, 0.4);
+  --dict-color-dark:                  rgba(255, 255, 255, 0.4);
+
+  /* Dictionary Counter */
+  --dictionary-counter-visibility:    1;       /* "1" to always, "0" to show after toggle */
+
+  /* Collapse Settings */
+  --dictionary-collapse:              0;       /* "1" to enable */
+  --dictionary-max-height:            390px;   /* Max height before collapse */
+
+  /* Jitendex Settings */
+  --pos-header:                       0;       /* "1" to extract Jitendex POS tags into a centered sticky header. */
+  --jitendex-hide-numbers:            1;       /* Hide Numbered Definitions */
+  --jitendex-hide-examples:           0;       /* Hide Example Sentences */
+  --jitendex-hide-info-gloss:         0;       /* Hide Explanations */
+  --jitendex-hide-xref:               0;       /* Hide Cross References */
+  --jitendex-hide-graphic:            0;       /* Hide Graphics/Images */
+  --jitendex-hide-notes:              0;       /* Hide Sense Notes */
+  --jitendex-hide-antonyms:           0;       /* Hide Antonyms */
+  --jitendex-hide-forms:              1;       /* Hide Forms */
+  --jitendex-hide-attribution:        1;       /* Hide Attribution */
+
+  
+  /* PITCH ACCENT SETTINGS
+  ============================================ */
+  --pitch-style:                      default; /* "alt" to color the entire word + reading instead of only the downstep */
+  --pitch-position-visibility:        1;       /* Pitch downstep position */
+  --pitch-colors:                     true;    /* "false" to disable pitch downstep coloring */
+  --sentence-pitch-highlight:         false;   /* "true" to make pitch colors overwrite sentence highlights */
+  --only-kana-pitch-size:             0.08em;  /* Border thickness for kana-only words */
+
+
+  /* KANJI HOVER SETTINGS
+  ============================================ */
+  --enable-kanji-hover:               true;         /* Enable Kanji Hover */
+  --kanji-hover-sentence-visibility:  1;            /* "0" to hide kanji hover sentences */
+  --kanji-hover-auto-quote:           true;         /* Wrap the example sentences in quotation marks */
+  --kanji-hover-word-font:            var(--serif); /* Select the font style for the word */
+  --kanji-hover-word-size:            1rem;         /* Adjust the scale of the word */
+  --kanji-hover-word-reading-size:    0.65rem;      /* Adjust the scale of the reading */
+
+  /* Pitch Accent Options */
+  --kanji-hover-pitch-colors:         true;         /* "false" to disable pitch downstep coloring in Kanji Hover */
+  --kanji-hover-pitch-highlight:      true;         /* "false" to make pitch colors stop overwriting word + sentence highlights in Kanji Hover */
+
+
+  /* PICTURE SETTINGS
+  ============================================ */
+  --collect-glossary-images:          false;   /* Enable glossary images to be collected into the picture box */
+
+  /* Picture Counter */
+  --picture-counter-visibility:       3;       /* "1" Always, "2" Hover Only, "3" More than 1, "0" Hidden */
+  --picture-counter-bg-opacity:       0;       /* Background opacity of the counter */
+  --picture-counter-size:             0.5rem;  /* Font size of the counter */
+  --picture-counter-shadow-intensity: 0.8;     /* Opacity/Intensity of the shadow */
+
+  /* Dimensions */
+  --picture-height:                   220px;
+  --picture-height-small:             330px; /* Max picture container height */
+  
+
+  /* RESPONSIVE GRID CONTROL
+  ============================================ */
+  /* Global Grid Settings */
+  --grid-gap:                         var(--spacing-xl);
+  --grid-column-min-width:            390px;
+
+  /* Default Layout (> 1050px) */
+  --grid-order:                       1; /* "2" to flip grid horizontally */
+  --vertical-grid-order:              0; /* "1" to enable,  "2" to flip vertically */
+
+  /* Large Screens */
+  --horizontal-grid-large:            1; /* "0" to disable, "2" to flip horizontally */
+  --vertical-grid-large:              0; /* "1" to enable,  "2" to flip vertically */
+
+  /* Medium Screens */
+  --horizontal-grid-medium:           1; /* "0" to disable, "2" to flip horizontally */
+  --vertical-grid-medium:             0; /* "1" to enable,  "2" to flip vertically */
+
+  /* Small Screens */
+  --horizontal-grid-small:            0; /* "1" to enable,  "2" to flip horizontally */
+  --vertical-grid-small:              1; /* "0" to disable, "2" to flip vertically */
+
+  /* ==================================================================================
+     Note: You cannot enable the horizontal grid while the vertical grid is enabled.
+  ================================================================================== */ 
+
+
+  /* BACKDROP LAYOUT
+  ============================================ */
+  --enable-backdrop-layout:           0;       /* "1" to enable backdrop layout */
+
+  /* Offsets */
+  --bd-card-bg-front-offset:          55px;
+  --bd-word-bg-front-offset:          119px;
+
+  /* Front Side Word Alignment */
+  --enable-custom-offsets:            0;       /* "1" to enable manual overrides to align the front word with the back side */
+  --bd-word-bg-front-offset-1050:     5.45rem; /* Front word offset for Word BG mode at 1050px max width */
+  --bd-card-bg-front-offset-1050:     2.8rem;  /* Front word offset for Card BG mode at 1050px max width */
+  --bd-word-bg-front-offset-mobile:   11.5rem; /* Front word offset for Word BG mode on mobile devices */
+
+  /* Mode */
+  --backdrop-style:                   1;       /* "0" to Card BG, "1" to Word BG */
+
+  /* Image Height */
+  --backdrop-dynamic-height:          0;       /* "1" to enable Dynamic Height */
+  --backdrop-background-height:       250px;
+
+  /* Word Background Box */
+  --word-background-box:              0;       /* "1" to enable background box behind text */
+  
+  /* Image Opacity */
+  --backdrop-opacity:                 0.5; 
+
+  /* Fade Gradients */
+  --card-background-fade:             1;       /* "0" to disable */
+  --word-background-fade:             0;       /* "1" to enable */
+  --card-fade-strength:               50%;
+  --word-fade-strength:               60%;
+
+  /* Text Shadows */
+  --bd-text-shadow-opacity-light:     0.6;
+  --bd-text-shadow-opacity:           0.6;
+  --bd-text-shadow-color-light:       255, 255, 255; 
+  --bd-text-shadow-color:             0, 0, 0;
+
+
+  /* CUSTOM SHORTCUTS
+  ============================================ */
+  --toggle-settings-key:              p;                /* Set the key to toggle settings */
+  --scene-replay-shortcut-key:        w;                /* Set the key to replay active scene */
+  --toggle-custom-dark-mode-key:      c;                /* Set the key to toggle custom dark mode */
+  --toggle-picture-lightbox-key:      q;                /* Set the key to toggle lightbox */
+  --toggle-picture-lightbox-grid-key: shift+q;          /* Set the key to toggle lightbox grid */
+  --toggle-image-key:                 l;                /* Set the key to show or hide the image */
+  --toggle-image-switch-key:          Shift+Left/Right; /* Set the key to switch images */
+  --toggle-scene-switch-key:          Ctrl+Left/Right;  /* Set the key to switch scenes */
+  --toggle-dictionary-switch-key:     Left/Right;       /* Set the key to switch dictionaries */
+
+  /* AUTO ADVANCE SETTINGS
+  ============================================ */
+  --auto-show-answer:                 false;   /* Automatically reveal the back */
+  --show-answer-delay:                2s;      /* Delay before revealing */
+  --auto-advance:                     false;   /* Automatically go to next card */
+  --auto-advance-delay:               5s;      /* Delay before advancing */
+  --auto-advance-ease:                3;       /* Button to click (1=Again, 2=Hard, 3=Good) */
+  --enable-fade-in:                   false;   /* Adds a smooth fade-in effect when flipping the card */
+
+
+  /* COLOR PALETTE
+  ============================================ */
+  /* Light Theme
+  -------------------------------------------- */
+  /* Text Colors */
+  --text-light:                       #020202;
+  --light-devoiced-color:             RoyalBlue;
+  --light-highlight:                  #E20033;
+  --freq-text-light:                  rgba(105, 105, 105, 0.3);
+  --freq-text-hover-light:            rgba(0, 0, 0, 1);
+  --tag-color-light:                  rgba(105, 105, 105, 0.26);
+  --tag-color-hover-light:            rgba(255, 255, 255, 1);
+  --misc-info-text-light:             rgba(105, 105, 105, 0.26);
+  --misc-info-text-hover-light:       rgba(255, 255, 255, 1);
+
+  /* Pitch Colors */
+  --pitch-red-light:                  #D62839;
+  --pitch-blue-light:                 #3474FF;
+  --pitch-orange-light:               #FF6E03;
+  --pitch-green-light:                #2BAF7E;
+  --pitch-purple-light:               #8A5EDE;
+
+  /* Icon Colors */
+  --svg-color-light:                  rgba(105, 105, 105, 0.3);
+  --svg-hover-light:                  rgba(255, 255, 255, 1);
+
+  /* Background Colors */
+  --background-light:                 #f5f5f5;
+  --card-bg-light:                    rgba(255, 255, 255, 0.4);
+  --card-shadow-light:                rgba(0, 0, 0, 0.05);
+  --word-bg-light:                    rgba(0, 0, 0, 0.03);
+  --pitch-position-bg-light:          rgba(255, 255, 255, 0.8);
+  --picture-bg-light:                 rgba(0, 0, 0, 0.03);
+  --notes-bg-light:                   rgba(0, 0, 0, 0.03);
+  --definition-bg-light:              rgba(0, 0, 0, 0.03);
+  --dictionary-collapse-fade-light:   linear-gradient(to bottom, rgba(245,245,245,0), rgba(245,245,245,0.9));
+  --buttons-bg-light:                 rgba(0, 0, 0, 0.03);
+  --buttons-bg-hover-light:           rgba(0, 0, 0, 0.63);
+  --lightbox-bg-light:                rgba(0, 0, 0, 0.8);
+  --frequency-bg-light:               rgba(255, 255, 255, 0.8);
+  --tag-bg-light:                     rgba(0, 0, 0, 0.03);
+  --tag-bg-hover-light:               rgba(0, 0, 0, 0.63);
+  --external-links-bg-light:          rgba(0, 0, 0, 0.1);
+  --external-links-bg-hover-light:    rgba(255, 255, 255, 0.4);
+  --misc-info-bg-light:               rgba(0, 0, 0, 0.03);
+  --misc-info-bg-hover-light:         rgba(0, 0, 0, 0.63);
+
+  /* Dark Theme
+  -------------------------------------------- */
+  /* Text Colors */
+  --text:                             #fcfcfc;
+  --dark-devoiced-color:              cornflowerBlue;
+  --dark-highlight:                   #FCFF61;
+  --freq-text:                        rgba(255, 255, 255, 0.2);
+  --freq-text-hover:                  rgba(255, 255, 255, 1);
+  --tag-color:                        rgba(255, 255, 255, 0.21);
+  --tag-color-hover:                  rgba(255, 255, 255, 1);
+  --misc-info-text:                   rgba(255, 255, 255, 0.21);
+  --misc-info-text-hover:             rgba(255, 255, 255, 1);
+
+  /* Pitch Colors */
+  --pitch-red:                        #F5436D;
+  --pitch-blue:                       #39C1FF;
+  --pitch-orange:                     #fca311;
+  --pitch-green:                      #40D4A6;
+  --pitch-purple:                     #afa2ff;
+
+  /* Icon Colors */
+  --svg-color:                        rgba(255, 255, 255, 0.2);
+  --svg-hover:                        rgba(255, 255, 255, 1);
+
+  /* Background Colors */
+  --background:                       #2c2c2c;
+  --card-bg:                          rgba(0, 0, 0, 0.4);
+  --card-shadow:                      rgba(0, 0, 0, 0.3);
+  --word-bg:                          rgba(0, 0, 0, 0.3);
+  --pitch-position-bg:                rgba(0, 0, 0, 0.2);
+  --picture-bg:                       rgba(0, 0, 0, 0.3);
+  --notes-bg:                         rgba(0, 0, 0, 0.3);
+  --definition-bg:                    rgba(0, 0, 0, 0.3);
+  --dictionary-collapse-fade:         linear-gradient(to bottom, rgba(44, 44, 44, 0), rgba(26, 26, 26, 9));
+  --buttons-bg:                       rgba(0, 0, 0, 0.1);
+  --buttons-bg-hover:                 rgba(0, 0, 0, 0.63);
+  --lightbox-bg:                      rgba(0, 0, 0, 0.8);
+  --frequency-bg:                     rgba(0, 0, 0, 0.63);
+  --tag-bg:                           rgba(0, 0, 0, 0.1);
+  --tag-bg-hover:                     rgba(0, 0, 0, 0.3);
+  --external-links-bg:                rgba(0, 0, 0, 0.4);
+  --external-links-bg-hover:          rgba(0, 0, 0, 0.63);
+  --misc-info-bg:                     rgba(0, 0, 0, 0.1);
+  --misc-info-bg-hover:               rgba(0, 0, 0, 0.3);
+
+
+  /* DIMENSIONS & SPACING
+  ============================================ */
+  /* Spacing Scale */
+  --spacing-xs:                       2px;
+  --spacing-sm:                       3px;
+  --spacing-ms:                       8px;
+  --spacing-md:                       10px;
+  --spacing-lg:                       15px;
+  --spacing-xl:                       20px;
+  --spacing-xxl:                      24px;
+  --spacing-xxml:                     27px;
+  --spacing-xxxl:                     34px;
+  --base-padding:                     20px;
+
+  /* Border Radius */
+  --border-radius-sm:                 4px;
+  --border-radius-ms:                 5px;
+  --border-radius-md:                 10px;
+  --border-radius-lg:                 12px;
+  --tag-border-radius:                5px;
+
+  /* Dimensions */
+  --card-max-width:                   800px;
+  --front-top-offset:                 104px;
+  --back-top-offset:                  26px;
+  
+  /* UI Elements */
+  --button-size:                      20px;
+  --toggle-width-large:               60px;
+  --toggle-width-medium:              20px;
+  --picture-max-height-small:         100%;  /* Max picture img height */
+  --lightbox-nav-width:               100px;
+  --external-links-icon-size:         25px;
+  --frequency-max-height:             500px;
+
+  /* Margins & Padding */
+  --tag-padding:                      5px 10px;
+  --tag-margin-top:                   5px;
+  --tag-margin-bottom:                0;
+  --tags-container-gap:               0 5px;
+  
+  --external-links-padding:           5px 10px;
+  --external-links-margin-top:        5px;
+  --external-links-margin-bottom:     0; 
+
+
+  /* EFFECTS & ANIMATION
+  ============================================ */
+  /* Transitions */
+  --base-transition:                  0.3s ease;
+  --fast-transition:                  0.2s ease;
+
+  /* Shadows */
+  --button-shadow:                    0 0 5px 2.5px rgba(0, 0, 0, 0.1);
+  --button-shadow-dark:               0 0 5px 2.5px rgba(255, 255, 255, 0.1);
+  --lightbox-shadow:                  0 1px 8px rgba(0, 0, 0, 0.15);
+
+  /* Z-Index Layers */
+  --z-index-base:                     3;
+  --z-index-toggle:                   2;
+  --z-index-lightbox:                 1000;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+:is(.front, .back).fade-in {
+  animation: fadeIn 0.4s ease-out !important;
+}
+
+
+/* Card Layout */
+:root {
+  font-size: var(--base-size);
+  container-type: normal;
+}
+
+body {
+  color: var(--text-light);
+  background: var(--background-light);
+}
+
+.card.nightMode {
+  color: var(--text);
+  background: var(--background);
+}
+
+.front, .back {
+  position: relative;
+  padding: var(--base-padding);
+  max-width: var(--card-max-width);
+  margin: 0 auto;
+}
+
+.front { top: var(--front-top-offset); }
+.back { 
+  top: var(--back-top-offset); 
+  display: flex;
+  flex-direction: column;
+}
+
+.front::before, .back::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--border-radius-lg);
+  z-index: -1;
+}
+
+.front::before, .back::before {
+  background: var(--card-bg-light);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+:is(.front, .back)::before {
+  background: var(--card-bg);
+}
+
+/* ===== FRONT ===== */
+/* Word - Sentence */
+.desktop-word-layout {
+    display: block;
+}
+.mobile-word-layout {
+    display: none;
+}
+
+.front #word {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.desktop-word-layout > #word {
+  line-height: 0;
+  margin-top: 2px;
+  margin-bottom: 12px;
+  padding-top: 40px;
+  padding-bottom: 40px;
+}
+
+#word-wrapper,
+#sentence-wrapper, 
+#sentence-wrapper-audio,
+#hint-wrapper {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  margin: 0;
+  padding: 0;
+  box-sizing: content-box;
+  transition: max-height 0.3s ease,
+              opacity 0.3s ease,
+              margin 0.3s ease,
+              padding 0.3s ease;
+}
+
+#word-wrapper.expanded,
+#sentence-wrapper.expanded, 
+#sentence-wrapper-audio.expanded,
+#hint-wrapper.expanded {
+  opacity: 1;
+  pointer-events: auto;
+  margin: revert;
+  padding: revert;
+}
+
+.toggle-trigger {
+  cursor: pointer;
+}
+
+/* Audio */
+.front:is(:has(#wordAudio), :has(#sentenceAudio)) :is(.highlight, b) {
+  filter: blur(20px);
+  cursor: pointer;
+  transition: filter var(--base-transition);
+}
+
+.front:is(:has(#wordAudio), :has(#sentenceAudio)) :is(.highlight, b):active,
+.front:is(:has(#wordAudio), :has(#sentenceAudio)) :is(.highlight, b).unblurred {
+  filter: none;
+}
+
+.front:has(#wordAudio) > #sentence-wrapper-audio,
+.front:has(#sentenceAudio) > #sentence-wrapper-audio {
+  width: 100%;
+  text-align: center; 
+  line-height: 1.2;
+}
+
+.front:has(#wordAudio) > #sentence-wrapper-audio.expanded,
+.front:has(#sentenceAudio) > #sentence-wrapper-audio.expanded {
+  opacity: 1;
+  pointer-events: auto;
+  margin: revert;
+  padding: revert;
+  margin-top: 20px;
+}
+
+.front:has(#wordAudio), 
+.front:has(#sentenceAudio) {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+#wordAudio {
+  margin-right: 5px;
+}
+
+#wordAudio, #sentenceAudio, .playImage path {
+  width: var(--button-size);
+  height: var(--button-size);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--border-radius-ms);
+  padding: var(--spacing-ms) var(--spacing-lg);
+  cursor: pointer;
+  transition: box-shadow var(--fast-transition), 
+              background-color var(--fast-transition), 
+              fill var(--fast-transition);
+}
+
+#wordAudio, #sentenceAudio {
+  background: var(--buttons-bg-light);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+:is(#wordAudio, 
+#wordAudio, 
+#sentenceAudio, 
+#sentenceAudio) {
+  background: var(--buttons-bg);
+}
+
+#wordAudio:hover, 
+#sentenceAudio:hover, 
+#wordAudio:hover .playImage path, 
+#sentenceAudio:hover .playImage path {
+  box-shadow: var(--button-shadow);
+  background: var(--buttons-bg-hover-light);
+  fill: var(--svg-hover-light) !important;
+}
+
+:is(.card.nightMode) 
+:is(#wordAudio:hover,
+ #sentenceAudio:hover, 
+#wordAudio:hover .playImage path, 
+#sentenceAudio:hover .playImage path) {
+  background: var(--buttons-bg-hover);
+  fill: var(--svg-hover) !important;
+}
+
+:is(html.custom-dark-mode .card)
+:is(#wordAudio, #sentenceAudio):hover {
+  box-shadow: var(--button-shadow-dark);
+  background: white !important;
+}
+
+html.custom-dark-mode .card 
+:is(#wordAudio, #sentenceAudio):hover .playImage path {
+  fill: black !important; 
+}
+
+#wordAudio circle, #sentenceAudio circle {
+  display: none;
+}
+
+.front .playImage path {
+  fill: rgba(105, 105, 105, 0.6) !important;
+}
+
+/* ===== BACK ===== */
+/* Platform Specific */
+.win, .mac, .linux, .mobile {
+  text-align: center;
+  display: block;
+  width: 100%;
+  margin: auto;
+}
+
+/* Card Base */
+.card {
+  display: unset;
+  font-family: var(--sans);
+  text-align: center;
+  position: relative;
+  margin: 0;
+}
+
+.card-a rt li {
+  display: inline;
+  font-weight: normal;
+}
+
+.card-b {
+  font-size: var(--definition-size);
+}
+
+/* Hyperlinks */
+a {
+  color: currentColor;
+  text-decoration: none;
+}
+
+/* Highlight Text */
+:is(b, strong) {
+  color: var(--light-highlight);
+  font-weight: normal;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+:is(b, strong) {
+  color: var(--dark-highlight);
+}
+
+.highlight {
+  color: var(--light-highlight);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.highlight {
+  color: var(--dark-highlight);
+}
+
+@container style(--bold-highlight: 1) {
+  b, .highlight {
+    font-weight: bold;
+  }
+}
+
+/* Custom Dark Mode */
+.custom-dark-mode body {
+  background: black !important;
+  color: white !important;
+}
+
+/* Audio Hint Toggle */
+.audio-hint {
+  position: fixed;
+  top: 74px;
+  left: var(--spacing-xxxl);
+  padding: var(--spacing-ms) 17.5px;
+  color: var(--svg-color-light);
+  cursor: pointer;
+  border: none;
+  border-radius: var(--border-radius-ms);
+  user-select: none;
+  font-size: var(--button-size);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: var(--z-index-base);
+  background: var(--buttons-bg-light); 
+  transition: box-shadow var(--fast-transition), 
+              background-color var(--fast-transition), 
+              color var(--fast-transition);
+}
+
+@container style(--custom-dark-mode-visibility: 0) {
+  .audio-hint {
+    top: var(--spacing-xxl) !important;
+  }
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.audio-hint {
+  color: var(--svg-color);
+  background: var(--buttons-bg); 
+}
+
+.audio-hint:hover {
+  box-shadow: var(--button-shadow);
+  background: var(--buttons-bg-hover-light);
+  color: var(--svg-hover-light);
+}
+
+.card.nightMode .audio-hint:hover {
+  box-shadow: var(--button-shadow);
+  background: var(--buttons-bg-hover);
+  color: var(--svg-hover);
+}
+
+.custom-dark-mode .audio-hint:hover {
+  box-shadow: var(--button-shadow-dark) !important;
+  background: white !important;
+  color: black !important;
+}
+
+/* Hint Button */
+.hint-btn {
+  position: fixed;
+  top: var(--spacing-xxl);
+  left: auto;
+  right: var(--spacing-xxxl);
+  padding: var(--spacing-ms) 18.8px;
+  color: var(--svg-color-light);
+  cursor: pointer;
+  border: none;
+  border-radius: var(--border-radius-ms);
+  user-select: none;
+  font-size: var(--button-size);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: var(--z-index-base);
+  background: var(--buttons-bg-light); 
+  transition: box-shadow var(--fast-transition), 
+              background-color var(--fast-transition), 
+              color var(--fast-transition);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.hint-btn {
+  color: var(--svg-color);
+  background: var(--buttons-bg); 
+}
+
+.hint-btn:hover {
+  box-shadow: var(--button-shadow);
+  background: var(--buttons-bg-hover-light);
+  color: var(--svg-hover-light);
+}
+
+.card.nightMode .hint-btn:hover {
+  box-shadow: var(--button-shadow);
+  background: var(--buttons-bg-hover);
+  color: var(--svg-hover);
+}
+
+.custom-dark-mode .hint-btn:hover {
+  box-shadow: var(--button-shadow-dark) !important;
+  background: white !important;
+  color: black !important;
+}
+
+#hint-content {
+  font-size: var(--sentence-size);
+  opacity: 0.8;
+}
+
+.front:has(#sentence-wrapper.expanded):has(#hint-wrapper.expanded) #sentence-wrapper {
+  margin-bottom: 12px !important;
+}
+
+/* Dark Mode Toggle */
+.toggle-custom-dark-mode {
+  position: fixed;
+  top: var(--spacing-xxl);
+  left: var(--spacing-xxxl);
+  padding: var(--spacing-ms) var(--spacing-lg);
+  color: var(--svg-color-light);
+  background: var(--buttons-bg-light);
+  cursor: pointer;
+  border: none;
+  border-radius: var(--border-radius-ms);
+  user-select: none;
+  font-size: var(--button-size);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: var(--z-index-base);
+  transition: box-shadow var(--fast-transition), 
+              background-color var(--fast-transition), 
+              color var(--fast-transition);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.toggle-custom-dark-mode {
+  color: var(--svg-color);
+  background: var(--buttons-bg); 
+}
+
+.toggle-custom-dark-mode:hover {
+  box-shadow: var(--button-shadow);
+  background: var(--buttons-bg-hover-light);
+  color: var(--svg-hover-light);
+}
+
+.card.nightMode .toggle-custom-dark-mode:hover {
+  box-shadow: var(--button-shadow);
+  background: var(--buttons-bg-hover);
+  color: var(--svg-hover);
+}
+
+.custom-dark-mode .toggle-custom-dark-mode.dark-mode:hover {
+  box-shadow: var(--button-shadow-dark);
+  background: white;
+  color: black;
+}
+
+/* Settings Toggle */
+.toggle-settings-btn {
+  position: fixed;
+  left: var(--spacing-xxxl);
+  bottom: 30px;
+  padding: var(--spacing-ms) var(--spacing-lg);
+  color: var(--svg-color-light);
+  background: var(--buttons-bg-light);
+  cursor: pointer;
+  border: none;
+  border-radius: var(--border-radius-ms);
+  user-select: none;
+  font-size: var(--button-size);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: var(--z-index-base);
+  transition: box-shadow var(--fast-transition), 
+              background-color var(--fast-transition), 
+              color var(--fast-transition);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.toggle-settings-btn {
+  color: var(--svg-color);
+  background: var(--buttons-bg); 
+}
+
+.toggle-settings-btn:hover {
+  box-shadow: var(--button-shadow);
+  background: var(--buttons-bg-hover-light);
+  color: var(--svg-hover-light);
+}
+
+.card.nightMode .toggle-settings-btn:hover {
+  box-shadow: var(--button-shadow);
+  background: var(--buttons-bg-hover);
+  color: var(--svg-hover);
+}
+
+.custom-dark-mode .toggle-settings-btn:hover {
+  box-shadow: var(--button-shadow-dark);
+  background: white;
+  color: black;
+}
+
+/* Word + Grid Settings */
+#word.reading-is-word span[style*="border-top-width"],
+#word.reading-is-word span[style*="border-right-width"],
+#word.reading-is-word .pronunciation-mora[data-pitch="high"] > .pronunciation-mora-line {
+  border-top-width: var(--only-kana-pitch-size) !important;
+}
+
+#word.reading-is-word span[style*="border-top-width"],
+#word.reading-is-word span[style*="border-right-width"],
+#word.reading-is-word .pronunciation-mora[data-pitch-next="low"] > .pronunciation-mora-line {
+  border-right-width: var(--only-kana-pitch-size) !important;
+}
+
+#word li:not(:first-child) {
+  display: none;
+}
+
+#word {
+  position: relative;
+  font-family: var(--serif);
+  font-size: var(--word-size-base);
+  text-align: center;
+}
+
+#word.length-4 { font-size: var(--word-size-4); }
+#word.length-5 { font-size: var(--word-size-5); }
+#word.length-6 { font-size: var(--word-size-6); }
+#word.length-7 { font-size: var(--word-size-7); }
+#word.length-8 { font-size: var(--word-size-8); }
+#word.length-9 { font-size: var(--word-size-9); }
+
+#word ruby {
+  line-height: 1.4;
+}
+
+#word rt {
+  line-height: 1.5;
+  transform: translateY(var(--furigana-height)); 
+}
+
+#word ruby rt {
+  font-family: var(--sans);
+  font-size: var(--furigana-size);
+}
+
+@container style(--dynamic-furigana-size: 1) {
+  #word ruby rt {
+    font-size: revert
+  }
+}
+
+.background-box {
+  position: relative;
+  overflow: hidden;
+  padding: var(--spacing-ms);
+  border-radius: var(--border-radius-ms);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  white-space: nowrap;
+  min-width: min-content;
+}
+
+.background-box ol {
+  padding-left: 0;
+}
+
+.background-box {
+  background: var(--word-bg-light);
+  grid-area: word;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.background-box {
+  background: var(--word-bg);
+}
+
+/* Scene Indicator */
+.scene-indicator {
+  position: absolute;
+  bottom: 5px;
+  right: 11px;
+  font-size: 20px;
+  color: var(--svg-color-light);
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 5;
+  display: none;
+}
+
+:is(.card.nightMode, .custom-dark-mode) .scene-indicator {
+  color: var(--svg-color);
+}
+
+@container style(--reading-position: below) {
+  #word ruby {
+    ruby-position: under !important;
+    -webkit-ruby-position: after !important;
+    text-align: center;
+  }
+
+  #word ruby li {
+  padding-top: 10px;
+  }
+
+  #word rt ol, #word rt ul {
+    display: inline-block !important; 
+  }
+
+  #position {
+    top: auto !important;
+    align-content: center;
+  }
+
+  #categories {
+    top: auto !important;
+    transform-origin: bottom left !important;
+  }
+}
+
+/* Picture Container */
+.grid-container {
+  display: grid;
+  gap: var(--grid-gap);
+  align-items: stretch;
+  grid-template-areas: "word picture";
+  grid-template-columns: minmax(var(--grid-column-min-width), 1fr) auto;
+}
+
+.grid-container:not(:has(> .picture-container > img)) {
+  grid-template-columns: repeat(1, 1fr);
+  gap: unset;
+}
+
+@container style(--grid-order: 2) {
+  .grid-container {
+    display: grid;
+    gap: var(--grid-gap);
+    align-items: stretch;
+    grid-template-areas: "picture word";
+    grid-template-columns: auto minmax(var(--grid-column-min-width), 1fr);
+  }
+}
+
+@container style(--vertical-grid-order: 1) {
+  .grid-container {
+    display: grid;
+    gap: var(--grid-gap);
+    align-items: centerh;
+    grid-template-areas: "word" 
+                         "picture";
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+@container style(--vertical-grid-order: 2) {
+  .grid-container {
+    display: grid;
+    gap: var(--grid-gap);
+    align-items: stretch;
+    grid-template-areas: "picture"
+                         "word";
+    grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  user-select: none;
+}
+
+.lightbox img {
+  position: relative;
+  max-width: 80%;
+  max-height: 80%;
+  box-shadow: var(--lightbox-shadow);
+  transition: transform var(--base-transition);
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: var(--lightbox-bg-light);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  visibility: hidden;
+  z-index: var(--z-index-lightbox);
+  touch-action: none;
+  transition: opacity var(--base-transition), 
+              visibility var(--base-transition);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.lightbox {
+  background: var(--lightbox-bg);
+}
+
+.lightbox.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.picture-container {
+  grid-area: picture;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--picture-bg-light);
+  border-radius: var(--border-radius-ms);
+  overflow: hidden;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.picture-container {
+  background: var(--picture-bg);
+}
+
+.picture-container img {
+  display: none;
+  max-width: 100%;
+  max-height: var(--picture-height);
+  min-height: var(--picture-height);
+  object-fit: cover;
+  cursor: pointer;
+  user-select: none;
+}
+
+.picture-container img:first-of-type {
+  display: block;
+}
+
+/* Navigation Arrows */
+.nav-arrow {
+  position: absolute;
+  width: 50px;
+  height: 100%;
+  border-radius: var(--border-radius-ms);
+  background: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--base-transition);
+  z-index: 2;
+}
+
+.nav-arrow.hidden {
+  display: none;
+}
+
+.nav-arrow:hover {
+  opacity: 1;
+}
+
+.nav-arrow.left {
+  left: 0;
+  -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
+  mask-image: linear-gradient(to right, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
+}
+
+.nav-arrow.right {
+  right: 0;
+  -webkit-mask-image: linear-gradient(to left, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
+  mask-image: linear-gradient(to left, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
+}
+
+/* Lightbox Navigation */
+.lightbox .lightbox-nav {
+  position: absolute;
+  width: var(--lightbox-nav-width);
+  height: 100%;
+  background: rgba(255,255,255,0.05);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--base-transition);
+}
+
+.lightbox-nav.hidden {
+  display: none;
+}
+
+.lightbox .lightbox-nav:hover {
+  opacity: 1;
+}
+
+.lightbox .lightbox-nav.left {
+  left: 0;
+  -webkit-mask-image: linear-gradient(to right, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0));
+  mask-image: linear-gradient(to right, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0));
+}
+
+.lightbox .lightbox-nav.right {
+  right: 0;
+  -webkit-mask-image: linear-gradient(to left, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0));
+  mask-image: linear-gradient(to left, rgba(255, 255, 255, 1), rgba(0, 0, 0, 0));
+}
+
+/* Lightbox Grid Toggle */
+.lightbox-grid-toggle {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  background: rgba(0,0,0,0.2);
+  color: rgba(255,255,255,0.4);
+  border: none;
+  cursor: pointer;
+  z-index: 1001;
+  transition: background-color var(--base-transition), 
+              color var(--base-transition);
+}
+
+.lightbox-grid-toggle:hover {
+  color: white;
+  background: rgba(0,0,0,0.7);
+  border: none;
+}
+
+/* Lightbox Grid View */
+.lightbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  padding: 20px;
+  width: 90%;
+  height: 80%;
+  margin: 0 auto;
+  place-items: center;
+  overflow: hidden;
+}
+
+.lightbox-grid img {
+  max-width: 100%;
+  max-height: 150px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  cursor: pointer;
+  transition: transform var(--fast-transition);
+}
+
+.lightbox-grid img:hover {
+  transform: scale(1.05);
+}
+
+/* NSFW Content */
+@container style(--blur-nsfw-picture: true) {
+  [class*=" nsfw" i] {
+    overflow: hidden;
+    border-radius: var(--border-radius-md); 
+  }
+
+  [class*=" nsfw" i] img {
+    filter: blur(20px);
+    transition: filter var(--base-transition);
+  }
+
+  [class*=" nsfw" i] img.clicked {
+    filter: blur(0);
+  }
+}
+
+/* Image Toggle Styling  */
+@container style(--enable-backdrop-layout: 0) {
+  .back.image-removed .grid-container {
+    grid-template-columns: repeat(1, 1fr);
+    grid-template-areas: "word";
+    gap: unset;
+  }
+}
+
+.toggle-image-visibility.show-btn {
+  position: fixed;
+  top: 174px;
+  left: var(--spacing-xxxl);
+  padding: var(--spacing-ms) var(--spacing-lg);
+  color: var(--svg-color-light);
+  background: var(--buttons-bg-light);
+  cursor: pointer;
+  border: none;
+  border-radius: var(--border-radius-ms);
+  user-select: none;
+  font-size: var(--button-size);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: var(--z-index-base);
+  transition: box-shadow var(--fast-transition), 
+              background-color var(--fast-transition), 
+              color var(--fast-transition);
+}
+
+.back:has(.toggle-notes) 
+.toggle-image-visibility.show-btn {
+  top: 224px;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.toggle-image-visibility.show-btn {
+  color: var(--svg-color);
+  background: var(--buttons-bg);
+}
+
+.toggle-image-visibility.show-btn:hover {
+  box-shadow: var(--button-shadow);
+  background: var(--buttons-bg-hover-light);
+  color: var(--svg-hover-light);
+}
+
+.card.nightMode .toggle-image-visibility.show-btn:hover {
+  box-shadow: var(--button-shadow);
+  background: var(--buttons-bg-hover);
+  color: var(--svg-hover);
+}
+
+.custom-dark-mode .toggle-image-visibility.show-btn:hover {
+  box-shadow: var(--button-shadow);
+  background: white;
+  color: black;
+}
+
+.toggle-image-visibility.hide-btn {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 25px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.4), transparent);
+  color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 5px;
+  cursor: pointer;
+  opacity: 0; /* Hidden until hover */
+  transition: opacity var(--base-transition);
+  z-index: 20;
+}
+
+.toggle-image-visibility.hide-btn:hover  {
+  opacity: 1;
+}
+
+.back.image-removed .picture-container {
+  display: none !important;
+}
+
+@container (not style(--enable-backdrop-layout: 1)) and (not style(--backdrop-style: 0)) {
+  .back.image-removed .grid-container {
+    grid-template-columns: 1fr !important;
+    grid-template-areas: "word" !important;
+    height: var(--picture-height);
+  }
+}
+
+.back.image-removed .nav-arrow {
+  display: none;
+}
+
+@container style(--enable-backdrop-layout: 1) and style(--backdrop-style: 0) {
+  @media (max-width: 1050px) {
+    .toggle-image-visibility.hide-btn {
+      left: auto !important;
+      right: auto !important;
+      width: 250px;
+      background: radial-gradient(ellipse at top, rgba(0,0,0,0.4) 0%, 
+                  transparent 70%);
+    }
+  }
+}
+
+/* Sentence */
+.sentence-container {
+  margin: 0.85rem 0;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.sentence-container .picture-counter {
+  display: none;
+}
+
+#sentence,
+#sentence-audio {
+  font-size: var(--sentence-size);
+  display: inline-block; 
+  text-align: center;
+}
+
+@container style(--sentence-alignment: left) {
+  #sentence,
+  #sentence-audio {
+    direction: ltr;
+    unicode-bidi: normal; 
+    text-align: left;
+  }
+}
+
+@container style(--sentence-alignment: right) {
+  #sentence,
+  #sentence-audio {
+    direction: ltr;
+    unicode-bidi: normal; 
+    text-align: right;
+  }
+}
+
+.sentence-container:has(#sentence rb) {
+  margin-top: 8px;  
+}
+
+#sentence rb {
+  display: inline;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+#sentence rt {
+  transform: translateY(var(--sentence-furigana-height)) !important; 
+  opacity: 0;
+  transition: opacity var(--fast-transition);
+}
+
+@container style(--sentence-furigana-display: 0) {
+  #sentence rb {
+    margin-top: 21px;
+  }
+
+  #sentence rt {
+    display: none;
+  }
+}
+
+#sentence ruby:hover rt {
+  opacity: 1;
+}
+
+#sentenceEng {
+  font-size: var(--sentence-eng-size);
+  display: flex;
+  justify-content: center;
+  max-height: 0;
+  overflow: hidden;
+  will-change: max-height;
+  transition: max-height var(--base-transition);
+  visibility: visible;
+  text-align: center; 
+}
+
+@container style(--sentence-alignment: left) {
+  #sentenceEng {
+    text-align: left;
+    justify-content: flex;
+    direction: ltr;
+    unicode-bidi: normal;
+  }
+}
+
+@container style(--sentence-alignment: right) {
+  #sentenceEng {
+    text-align: right;
+    justify-content: flex;
+    direction: ltr;
+    unicode-bidi: normal;
+  }
+}
+
+#sentenceEng:has(> b) {
+  text-align: center;
+  display: block;
+}
+
+#formattedSentence.is-clickable {
+  cursor: pointer;
+}
+
+/* Notes */
+.notes {
+  position: relative;
+  padding: var(--spacing-lg); 
+  border-radius: var(--border-radius-ms);
+  background: var(--notes-bg-light);
+  margin-bottom: 5px;
+  max-height: 0;
+  overflow: hidden;
+  font-size: var(--definition-size);
+  display: block;
+  justify-content: center;
+  direction: ltr;
+  unicode-bidi: normal;
+  text-align: left;
+  transition: max-height var(--base-transition), 
+              opacity var(--base-transition), 
+              margin var(--base-transition), 
+              padding var(--base-transition);
+}
+
+.notes.is-collapsed {
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  opacity: 0;
+}
+
+.card.nightMode .notes {
+  background: var(--notes-bg);
+}
+
+/* Definition + Glossary */
+#selectionText {
+  text-align: left;
+}
+
+#selectionText.show {
+  display: block;
+}
+
+#selectionText {
+  display: none;
+}
+
+#definition, #glossary {
+  position: relative;
+  display: none;
+  line-height: var(--base-line-height);
+}
+
+#definition.show, #glossary.show {
+  display: block;
+}
+
+.glossary-box, .definition-box {
+  position: relative;
+  padding: var(--spacing-lg); 
+  border-radius: var(--border-radius-ms);
+  text-align: left;
+}
+
+.glossary-box, .definition-box {
+  background: var(--definition-bg-light);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+:is(.glossary-box, .definition-box) {
+  background: var(--definition-bg);
+}
+
+/* POS header */
+.pos-info-header  {
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 5px !important;
+  pointer-events: none;
+}
+
+#selectionText .pos-info-header [data-sc-class="tag"] {
+  margin-right: 0 !important;
+}
+
+.pos-info-header [data-sc-content="part-of-speech-info"] {
+  display: inline-block;
+  font-size: 0.5rem !important;
+  padding: 2px 4px !important;;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-weight: bold;
+}
+
+:is(.card.nightMode, .custom-dark-mode) .pos-info-header [data-sc-content="part-of-speech-info"] {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.glossary-box:has([data-dictionary*="Jitendex"][style*="display: block"]) .pos-info-header,
+.definition-box:has([data-dictionary*="Jitendex"]) .pos-info-header {
+  display: none !important;
+}
+
+/* Toggle Areas */
+.toggle-area {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--toggle-width-medium);
+  z-index: var(--z-index-toggle);
+  opacity: 1;
+  border-radius: var(--border-radius-ms);
+  cursor: pointer;
+  transition: background-color var(--base-transition);
+}
+
+.toggle-area:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.toggle-area:hover {
+  background: rgba(255, 255, 255, 0.8);
+  transition: background-color var(--base-transition);
+}
+
+.toggle-area.left { left: -20px; }
+.toggle-area.right { right: -20px; }
+
+/* Toggle Areas Larger */
+.toggle-area.left-larger,
+.toggle-area.right-larger {
+  opacity: 0.1;
+  width: var(--toggle-width-large);
+  transition: opacity var(--base-transition);
+}
+
+.toggle-area.left-larger {
+  left: -20px;
+  -webkit-mask-image: linear-gradient(to right, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
+  mask-image: linear-gradient(to right, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
+  transition: background-color var(--base-transition);
+}
+
+.toggle-area.right-larger {
+  right: -20px;
+  -webkit-mask-image: linear-gradient(to left, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
+  mask-image: linear-gradient(to left, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0));
+  transition: background-color var(--base-transition);
+}
+
+.toggle-area.left-larger:hover ~ .toggle-area.left:not(.left-larger):not(.right-larger),
+.toggle-area.right-larger:hover ~ .toggle-area.right:not(.left-larger):not(.right-larger) {
+  background: rgba(0, 0, 0, 0.8);
+  transition: background-color var(--base-transition);
+}
+
+:is(.card.nightMode, .custom-dark-mode)
+:is(.toggle-area.left-larger:hover ~ .toggle-area.left:not(.left-larger):not(.right-larger),
+    .toggle-area.right-larger:hover ~ .toggle-area.right:not(.left-larger):not(.right-larger)) {
+      background: rgba(255, 255, 255, 0.8);
+      transition: background-color var(--base-transition);
+}
+
+/* Audio */
+.audio, .sentenceaudio, .playImage path {
+  position: fixed;
+  width: var(--button-size);
+  height: var(--button-size);
+  top: 74px;
+  left: var(--spacing-xxxl);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--border-radius-ms);
+  padding: var(--spacing-ms) var(--spacing-lg);
+  cursor: pointer;
+  transition: box-shadow var(--fast-transition), 
+              background-color var(--fast-transition), 
+              fill var(--fast-transition);
+}
+
+.audio, .sentenceaudio {
+  background: var(--buttons-bg-light);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+:is(.audio, .audio, .sentenceaudio, .sentenceaudio) {
+  background: var(--buttons-bg);
+}
+
+.sentenceaudio {
+  top: 124px;
+}
+
+.back:not(:has(.audio)) .sentenceaudio {
+  top: 74px;
+}
+
+.playImage path {
+  fill: var(--svg-color-light) !important;
+}
+
+:is(.card.nightMode, .custom-dark-mode)
+.playImage path {
+  fill: var(--svg-color) !important;
+}
+
+.audio:hover, 
+.sentenceaudio:hover, 
+.audio:hover .playImage path, 
+.sentenceaudio:hover .playImage path {
+  box-shadow: var(--button-shadow);
+  background: var(--buttons-bg-hover-light);
+  fill: var(--svg-hover-light) !important;
+}
+
+:is(.card.nightMode) 
+:is(.audio:hover, .sentenceaudio:hover, 
+.audio:hover .playImage path, 
+.sentenceaudio:hover .playImage path) {
+  background: var(--buttons-bg-hover);
+  fill: var(--svg-hover) !important;
+}
+
+html.custom-dark-mode .card 
+:is(.audio:hover, .sentenceaudio:hover, 
+.audio:hover .playImage path,
+.sentenceaudio:hover .playImage path) {
+  box-shadow: var(--button-shadow-dark);
+  background: white !important;
+  fill: black !important;
+}
+
+.audio circle, .sentenceaudio circle {
+  display: none;
+}
+
+.replay-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
+  line-height: 1 !important;
+}
+
+.replay-button svg {
+  width: calc(var(--button-size) + 9px);
+  height: calc(var(--button-size) + 9px);
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+}
+
+#wordAudio,
+#sentenceAudio,
+.audio,
+.sentenceaudio,
+.playImage,
+.soundLink,
+.replaybutton,
+.soundplaying,
+.playing {
+  outline: 2px solid transparent !important;
+  outline-offset: -2px;
+}
+
+.playImage, 
+.playImage path, 
+.playImage svg, 
+.replay-button svg {
+  pointer-events: none !important;
+}
+
+svg.playImage path {
+  d: path("M15.7 16.8c0-3 3.3-5 6-3.4l27.1 15.2c2.7 1.6 2.7 5.4 0 7l-27.1 15.2c-2.7 1.6-6-0.3-6-3.4V16.8z");
+}
+
+#wordAudio, 
+#sentenceAudio {
+  position: relative !important;
+}
+
+#wordAudio .replay-button::after, 
+#sentenceAudio .replay-button::after,
+.audio .replay-button::after, 
+.sentenceaudio .replay-button::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+}
+
+.playImage, 
+.playImage path, 
+.playImage svg, 
+.replay-button svg {
+  pointer-events: none !important;
+}
+
+/* Notes Toggle */
+.toggle-notes {
+  position: fixed;
+  top: 174px;
+  left: var(--spacing-xxxl);
+  cursor: pointer;
+  border: none;
+  border-radius: var(--border-radius-ms);
+  user-select: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--buttons-bg-light);
+  z-index: var(--z-index-base);
+  transition: box-shadow var(--fast-transition),
+              background-color var(--fast-transition),
+              opacity var(--fast-transition);
+}
+
+.card.nightMode .toggle-notes {
+  background-color: var(--buttons-bg);
+}
+
+.toggle-notes .toggle-notes-svg {
+  height: var(--button-size);
+  width: var(--button-size);
+  padding: var(--spacing-ms) var(--spacing-lg);
+  -webkit-mask-image: url('_bookmark.svg');
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: var(--button-size);
+  mask-image: url('_bookmark.svg');
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: var(--button-size);
+  background-color: var(--svg-color-light); 
+  transition: background-color var(--fast-transition),
+              opacity var(--fast-transition);
+}
+
+:is(.card.nightMode, .custom-dark-mode)
+.toggle-notes .toggle-notes-svg {
+  background-color: var(--svg-color); 
+}
+
+.toggle-notes:hover {
+  box-shadow: var(--button-shadow);
+  background-color: var(--buttons-bg-hover-light);
+}
+
+.card.nightMode .toggle-notes:hover {
+  background-color: var(--buttons-bg-hover);
+}
+
+.custom-dark-mode .toggle-notes:hover {
+  box-shadow: var(--button-shadow-dark);
+  background-color: white !important;
+}
+
+.toggle-notes:hover .toggle-notes-svg {
+  background-color: var(--svg-hover-light);
+}
+
+.card.nightMode .toggle-notes:hover .toggle-notes-svg {
+  background-color: var(--svg-hover);
+}
+
+.custom-dark-mode .toggle-notes:hover .toggle-notes-svg {
+  background-color: black !important;
+}
+
+/* Pitch Accent Colors */
+@container style(--pitch-colors: true) {
+  .pitch .heiban span[style*="border-color:currentColor"],
+  .pitch-number.heiban,
+  #word.alt .heiban,
+  #formattedSentence.alt-highlight.heiban .highlight,
+  #formattedSentence.alt-highlight.heiban b { 
+    color: var(--pitch-blue-light); 
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) 
+  :is(.pitch .heiban span[style*="border-color:currentColor"],
+  .pitch-number.heiban,
+  #word.alt .heiban,
+  #formattedSentence.alt-highlight.heiban .highlight,
+  #formattedSentence.alt-highlight.heiban b) { 
+    color: var(--pitch-blue); 
+  }
+
+  .pitch .atamadaka span[style*="border-color:currentColor"],
+  .pitch-number.atamadaka,
+  #word.alt .atamadaka,
+  #formattedSentence.alt-highlight.atamadaka .highlight,
+  #formattedSentence.alt-highlight.atamadaka b {
+    color: var(--pitch-red-light); 
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) 
+  :is(.pitch .atamadaka span[style*="border-color:currentColor"],
+  .pitch-number.atamadaka,
+  #word.alt .atamadaka,
+  #formattedSentence.alt-highlight.atamadaka .highlight,
+  #formattedSentence.alt-highlight.atamadaka b) {
+    color: var(--pitch-red); 
+  }
+
+  .pitch .nakadaka span[style*="border-color:currentColor"],
+  .pitch-number.nakadaka,
+  #word.alt .nakadaka,
+  #formattedSentence.alt-highlight.nakadaka .highlight,
+  #formattedSentence.alt-highlight.nakadaka b { 
+    color: var(--pitch-orange-light); 
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) 
+  :is(.pitch .nakadaka span[style*="border-color:currentColor"],
+  .pitch-number.nakadaka,
+  #word.alt .nakadaka,
+  #formattedSentence.alt-highlight.nakadaka .highlight,
+  #formattedSentence.alt-highlight.nakadaka b) { 
+    color: var(--pitch-orange); 
+  }
+
+  .pitch .odaka span[style*="border-color:currentColor"],
+  .pitch-number.odaka,
+  #word.alt .odaka,
+  #formattedSentence.alt-highlight.odaka .highlight, 
+  #formattedSentence.alt-highlight.odaka b { 
+    color: var(--pitch-green-light); 
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) 
+  :is(.pitch .odaka span[style*="border-color:currentColor"],
+  .pitch-number.odaka,
+  #word.alt .odaka,
+  #formattedSentence.alt-highlight.odaka .highlight, 
+  #formattedSentence.alt-highlight.odaka b) { 
+    color: var(--pitch-green); 
+  }
+
+  .pitch .kifuku span[style*="border-color:currentColor"],
+  .pitch-number.kifuku,
+  #word.alt .kifuku,
+  #formattedSentence.alt-highlight.kifuku .highlight,
+  #formattedSentence.alt-highlight.kifuku b { 
+    color: var(--pitch-purple-light); 
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) 
+  :is(.pitch .kifuku span[style*="border-color:currentColor"],
+  .pitch-number.kifuku,
+  #word.alt .kifuku,
+  #formattedSentence.alt-highlight.kifuku .highlight,
+  #formattedSentence.alt-highlight.kifuku b) { 
+    color: var(--pitch-purple); 
+  }
+
+  #word.alt > :is(.heiban, .atamadaka, .nakadaka, .odaka, .kifuku) .pronunciation {
+    --pronunciation-annotation-color: var(--active-pitch-color);
+    color: var(--active-pitch-color);
+  }
+}
+
+/* Pitch Accent Colors (Disabled) */
+.pitch.colors :is(.heiban, .atamadaka, .nakadaka, .odaka, .kifuku) span[style*="border-color:currentColor"],
+.colors .pitch-number:is(.heiban, .atamadaka, .nakadaka, .odaka, .kifuku) {
+  color: var(--light-highlight);
+}
+
+:is(.card.nightMode, .custom-dark-mode)
+  .pitch.colors
+  :is(.heiban, .atamadaka, .nakadaka, .odaka, .kifuku)
+  span[style*="border-color:currentColor"],
+
+:is(.card.nightMode, .custom-dark-mode)
+  .colors
+  .pitch-number:is(.heiban, .atamadaka, .nakadaka, .odaka, .kifuku) {
+  color: var(--dark-highlight);
+}
+
+.colors :is(
+  .pronunciation.heiban,
+  .pronunciation.atamadaka,
+  .pronunciation.nakadaka,
+  .pronunciation.odaka,
+  .pronunciation.kifuku
+) {
+  --pronunciation-annotation-color: var(--light-highlight);
+}
+
+:is(.card.nightMode, .custom-dark-mode) .colors :is(
+  .pronunciation.heiban,
+  .pronunciation.atamadaka,
+  .pronunciation.nakadaka,
+  .pronunciation.odaka,
+  .pronunciation.kifuku
+) {
+  --pronunciation-annotation-color: var(--dark-highlight);
+}
+
+/* ===== Pitch Accent Fallback ===== */
+.pronunciation-mora {
+  position: relative;
+  display: inline-block;
+}
+
+.pronunciation-mora[data-pitch="high"][data-pitch-next="low"] {
+  position: relative;
+  display: inline-block;
+  padding-right: 0.1em;
+  margin-right: 0.1em;
+}
+
+.pronunciation-mora-line {
+  display: block;
+  user-select: none;
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0.1em;
+  border-top-width: 0.1em;
+  border-top-style: solid;
+  border-color: transparent; /* Hidden by default */
+}
+
+.pronunciation-mora[data-pitch=high] > .pronunciation-mora-line {
+  border-top-color: var(--pronunciation-annotation-color);
+}
+
+.pronunciation-mora[data-pitch=high] + .pronunciation-mora[data-pitch=high] > .pronunciation-mora-line {
+  left: -0.15em;
+}
+
+.pronunciation-mora[data-pitch=high]:has(+ .pronunciation-mora[data-pitch=high]) > .pronunciation-mora-line {
+  right: -0.15em;
+}
+
+.pronunciation-mora[data-pitch=high][data-pitch-next=low] > .pronunciation-mora-line {
+  right: -0.1em;
+  height: 0.4em;
+  border-right: 0.1em solid transparent;
+  border-right-color: var(--pronunciation-annotation-color);
+  border-top-color: var(--pronunciation-annotation-color);
+}
+
+.pronunciation.heiban { --pronunciation-annotation-color: var(--pitch-blue-light); }
+.pronunciation.atamadaka { --pronunciation-annotation-color: var(--pitch-red-light); }
+.pronunciation.nakadaka { --pronunciation-annotation-color: var(--pitch-orange-light); }
+.pronunciation.odaka { --pronunciation-annotation-color: var(--pitch-green-light); }
+.pronunciation.kifuku { --pronunciation-annotation-color: var(--pitch-purple-light); }
+
+:is(.card.nightMode, .custom-dark-mode)
+.pronunciation.heiban { --pronunciation-annotation-color: var(--pitch-blue); }
+:is(.card.nightMode, .custom-dark-mode)
+.pronunciation.atamadaka { --pronunciation-annotation-color: var(--pitch-red); }
+:is(.card.nightMode, .custom-dark-mode)
+.pronunciation.nakadaka { --pronunciation-annotation-color: var(--pitch-orange); }
+:is(.card.nightMode, .custom-dark-mode)
+.pronunciation.odaka { --pronunciation-annotation-color: var(--pitch-green); }
+:is(.card.nightMode, .custom-dark-mode)
+.pronunciation.kifuku { --pronunciation-annotation-color: var(--pitch-purple); }
+
+/* Nasal Mora */
+span[style*="border:1.5px solid #c83c28"] {
+  border: 0.1em solid #FF4936 !important;
+  margin: 2px 0px;
+  width: 0.30rem !important;
+  height: 0.30rem !important;
+}
+
+/* Devoiced Mora */
+span[style*="border:1.5px dotted #c83c28"] {
+  display: none !important;
+}
+
+span[style*="display:inline-block;position:relative;"] > 
+span[style*="display:inline"]:has(+ span[style*="border:1.5px dotted #c83c28"]) {
+  color: var(--light-devoiced-color) !important;
+}
+
+.card.nightMode span[style*="display:inline-block;position:relative;"] > 
+span[style*="display:inline"]:has(+ span[style*="border:1.5px dotted #c83c28"]),
+.custom-dark-mode span[style*="display:inline-block;position:relative;"] > 
+span[style*="display:inline"]:has(+ span[style*="border:1.5px dotted #c83c28"]) {
+  color: var(--dark-devoiced-color) !important;
+}
+
+/* Pitch Position */
+#position {
+  font-family: var(--sans);
+  font-weight: bold;
+  color: white;
+  position: absolute;
+  top: 0;
+  left: 100%;
+  color: var(--text-light);
+  margin-left: var(--spacing-ms);
+  transform: translateY(var(--furigana-height)); 
+  font-size: 0.5rem;
+  padding: 5px 5px 5px 5px;
+  border-radius: var(--border-radius-ms);
+  z-index: var(--z-index-base);
+  text-align: center;
+  line-height: 16px;
+  background: var(--pitch-position-bg-light);
+  white-space: nowrap;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+#position {
+  background: var(--pitch-position-bg);
+  color: var(--text);
+}
+
+#position:empty {
+  display: none;
+}
+
+@container style(--pitch-position-visibility: 0) {
+  #position {
+    display: none !important;
+  }
+}
+
+/* Pitch Categories */
+#categories {
+  font-family: var(--sans);
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: var(--spacing-ms);
+  font-size: 0.5rem;
+  padding: 5px 5px 5px 5px;
+  border-radius: var(--border-radius-sm);
+  z-index: var(--z-index-base);
+  text-align: center;
+  line-height: 16px;
+  opacity: 0; 
+  visibility: hidden;
+  overflow: hidden;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: opacity var(--base-transition), 
+              transform var(--base-transition), 
+              visibility var(--base-transition), 
+              background-color var(--base-transition), 
+              color var(--base-transition);
+}
+
+#position:hover + #categories,
+#categories:hover {
+  opacity: 1;
+  visibility: visible;
+  transform: scaleX(1);
+  background: rgba(0, 0, 0, 1);
+  color: rgba(255, 255, 255, 1);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+:is(#position:hover + #categories,
+#position:hover + #categories,
+#categories:hover,
+#categories:hover) {
+  background: rgba(255, 255, 255, 1);
+  color: rgba(0, 0, 0, 1);
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: scaleX(1);
+}
+
+#categories:empty {
+  display: none;
+}
+
+/* Picture Counter */
+.picture-counter {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: var(--picture-counter-size);
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow: 2px 0 1px rgba(0,0,0,0.1),
+               -2px 0 1px rgba(0,0,0,0.1),
+               0 2px 1px rgba(0,0,0,0.1),
+               0 -2px 1px rgba(0,0,0,0.1),
+               0 0 4px rgba(0, 0, 0, var(--picture-counter-shadow-intensity));
+  background-color: rgba(0, 0, 0, var(--picture-counter-bg-opacity));
+  padding: 4px 8px;
+  border-radius: var(--border-radius-ms);
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity var(--fast-transition);
+  margin-bottom: 10px;
+}
+
+.picture-container:hover .picture-counter {
+  opacity: 1;
+}
+
+/* Visibility is 1 (Always) */
+@container style(--picture-counter-visibility: 1) {
+  .picture-container .picture-counter {
+    opacity: 1 !important;
+  }
+}
+
+/* Visibility is 3 (More than 1) */
+@container style(--picture-counter-visibility: 3) {
+  .back.has-multiple-images .picture-container .picture-counter {
+    opacity: 1 !important;
+  }
+}
+
+/* Visibility is 0 (Hidden) */
+@container style(--picture-counter-visibility: 0) {
+  .picture-container .picture-counter {
+    display: none !important;
+  }
+}
+
+/* Dictionary Counter */
+@container style(--dictionary-counter-visibility: 1) {
+  #selectionText.show .dictionary-counter,
+  #definition.show .dictionary-counter,
+  #glossary.show .dictionary-counter {
+    opacity: 1;
+  }
+}
+
+.dictionary-counter {
+  position: absolute;
+  display: var(--dict-display);
+  top: 0;
+  right: 0;
+  font-size: var(--dict-size);
+  color: var(--light-dict-color);
+  line-height: 1;
+  padding: 15px;
+  pointer-events: none;
+  user-select: none;
+  opacity: 0;
+  transition: opacity var(--fast-transition);
+}
+
+.card.nightMode .dictionary-counter,
+.custom-dark-mode .dictionary-counter {
+  color: var(--dict-color);
+}
+
+.back.dict-toggled-once #selectionText.show .dictionary-counter,
+.back.dict-toggled-once #definition.show .dictionary-counter,
+.back.dict-toggled-once #glossary.show .dictionary-counter {
+    opacity: 1;
+}
+
+/* Dictionary Title */
+.definition-box .dictionary-title,
+.definition-box .yomitan-glossary i {
+  display: block;
+}
+
+.glossary-box .dictionary-title,
+.glossary-box .yomitan-glossary i {
+  display: block;
+}
+
+.dictionary-title,
+.yomitan-glossary i {
+  line-height: 1;
+  font-size: var(--dict-size);
+  display: var(--dict-display);
+  color: var(--light-dict-color);
+  padding: 0 0 10px;
+  font-style: normal;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+:is(.dictionary-title,
+    .dictionary-title,
+    .yomitan-glossary i,
+    .yomitan-glossary i) {
+  color: var(--dict-color);
+}
+
+@container style(--definition-title-visibility:0) {
+  .definition-box .dictionary-title,
+  .definition-box .yomitan-glossary i {
+    display: none !important;
+  }
+
+  .dict-group__tag {
+    display: none !important;
+  }
+}
+
+@container style(--glossary-title-visibility: 0) {
+  .glossary-box .dictionary-title,
+  .glossary-box .yomitan-glossary i {
+    display: none !important;
+  }
+
+  .dict-group__tag {
+    display: none !important;
+  }
+}
+
+.yomitan-glossary:has(.dictionary-title) :is(i, em) {
+  display: none !important;
+}
+
+.glossary-box .yomitan-glossary li[data-dictionary]:not(:has(> .dictionary-title))::before {
+  content: attr(data-dictionary);
+  display: block; 
+  line-height: 1;
+  font-size: var(--dict-size);
+  color: var(--light-dict-color);
+  padding: 0 0 10px;
+  font-style: normal;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+:is(.yomitan-glossary li[data-dictionary]:not(:has(> .dictionary-title))::before,
+    .yomitan-glossary li[data-dictionary]:not(:has(> .dictionary-title))::before) {
+  color: var(--dict-color);
+}
+
+/* Jitendex Settings */
+.yomitan-glossary [data-dictionary*="Jitendex.org"] {
+  & :is(
+      li[data-sc-content="sense-group"],
+      li[data-sc-content="forms"],
+      ul[data-sc-content="glossary"]
+    ) {
+    padding-left: 0 !important;
+  }
+
+  & :is(
+      div[data-sc-content="sense-group"],
+      li[data-sc-content="sense-group"]:first-child
+    ) {
+    margin-top: 0 !important;
+  }
+
+  & span[data-sc-class="tag"] {
+    margin-right: 0.25em !important;
+  }
+}
+
+[data-sc-content="example-sentence-a"],
+[data-sc-content="xref"],
+[data-sc-content="antonym"],
+[data-sc-content="sense-note"],
+[data-sc-content="info-gloss"],
+[data-sc-content="lang-source"] {
+  opacity: 0.5;
+}
+
+[data-sc-content="example-sentence-a"]:hover {
+  opacity: 1;
+}
+
+[data-sc-content="example-sentence-a"] + *,
+[data-sc-content="xref"] [data-sc-content="xref-glossary"],
+[data-sc-content="antonym"] [data-sc-content="antonym-glossary"],
+[data-sc-content="sense-note"] > div:last-child,
+[data-sc-content="info-gloss"] > div:last-child,
+[data-sc-content="lang-source"] > div:last-child {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.yomitan-glossary [data-dictionary*="Jitendex.org"] div[data-sc-class="extra-box"] {
+  width: auto !important;
+}
+
+[data-sc-content="example-sentence-a"],
+[data-sc-content="antonym"],
+[data-sc-content="sense-note"],
+[data-sc-content="xref"] {
+  opacity: 0.5;
+}
+
+[data-sc-content="example-sentence-a"], 
+[data-sc-content="example-sentence-b"] {
+  font-size: 1em !important;
+}
+
+[data-sc-content="example-sentence"] {
+  border-color: rgba(3, 3, 3, 0.5) !important;
+  transition: border-color var(--base-transition), 
+              opacity var(--base-transition);
+}
+
+[data-sc-content="example-sentence"]:hover {
+  border-color: rgba(3, 3, 3, 0.8) !important;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+[data-sc-content="example-sentence"] {
+  border-color: rgba(252, 252, 252, 0.5) !important;
+}
+
+.card.nightMode [data-sc-content="example-sentence"]:hover,
+.custom-dark-mode [data-sc-content="example-sentence"]:hover {
+  border-color: rgba(252, 252, 252, 0.8) !important;
+}
+
+[data-sc-content="example-sentence"].sentence-active {
+  border-color: color-mix(in srgb,
+                var(--light-highlight),
+                var(--dict-color) calc(var(--dictionary-colorizer) * 100%)
+                ) !important;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+[data-sc-content="example-sentence"].sentence-active {
+  border-color: color-mix(in srgb,
+                var(--dark-highlight),
+                var(--dict-color) calc(var(--dictionary-colorizer) * 100%)
+                ) !important;
+}
+
+[data-sc-content="glossary"] {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0;
+  margin: 0;
+}
+
+[data-sc-content="glossary"] li:not(:last-child)::after {
+  content: "|";
+  color: rgba(105, 105, 105, 0.3);
+  margin: 0 var(--spacing-ms);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+[data-sc-content="glossary"] li:not(:last-child)::after {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+[data-sc-content="example-sentence"] rt {
+  opacity: 0;
+  transition: opacity var(--base-transition);
+}
+
+[data-sc-content="example-sentence"]:hover rt {
+  opacity: 1;
+}
+
+span[data-sc-content="example-keyword"], span[style*="color-mix(in srgb, lime"] {
+  color: var(--light-highlight) !important;
+  text-decoration: none !important;
+}
+
+.card.nightMode span:is([data-sc-content="example-keyword"], [style*="color-mix("]),
+.custom-dark-mode span:is([data-sc-content="example-keyword"], [style*="color-mix("]) {
+  color: var(--dark-highlight) !important;
+}
+
+:is(
+  .definition-box,
+  .glossary-box
+) li[data-dictionary] :is(
+  span[data-sc-content="example-keyword"],
+  span[style*="color-mix(in srgb, lime"]
+) {
+  color: color-mix(in srgb,
+      var(--light-highlight),
+      var(--dict-color) calc(var(--dictionary-colorizer) * 100%)
+  ) !important;
+}
+
+.card.nightMode,
+.custom-dark-mode {
+  & :is(
+    .definition-box,
+    .glossary-box
+  ) li[data-dictionary] :is(
+    span[data-sc-content="example-keyword"],
+    span[style*="color-mix(in srgb, lime"]
+  ) {
+    color: color-mix(in srgb,
+        var(--dark-highlight),
+        var(--dict-color) calc(var(--dictionary-colorizer) * 100%)
+    ) !important;
+  }
+}
+
+/* Attribution */
+[data-sc-content="attribution"] {
+  color: var(--light-dict-color);
+  opacity: 0.5;
+}
+
+:is(.card.nightMode, .custom-dark-mode)
+[data-sc-content="attribution"] {
+  color: var(--dict-color-dark);
+}
+
+/* Selection Text Jitendex */
+#selectionText span[data-sc-class="tag"] {
+  border-radius: 0.3em;
+  font-size: 0.8em;
+  font-weight: bold;
+  margin-right: 0.5em;
+  padding: 0.2em 0.3em;
+  vertical-align: text-bottom;
+  word-break: keep-all;
+  color: white;
+}
+
+#selectionText {
+  & :is(
+      li[data-sc-content="sense-group"],
+      li[data-sc-content="forms"],
+      ul[data-sc-content="glossary"]
+    ) {
+    padding-left: 0 !important;
+  }
+
+  & :is(
+      div[data-sc-content="sense-group"],
+      li[data-sc-content="sense-group"]:first-child
+    ) {
+    margin-top: 0 !important;
+  }
+
+  & span[data-sc-class="tag"] {
+    margin-right: 0.25em !important;
+  }
+}
+
+#selectionText div[data-sc-class="extra-box"] {
+  width: auto !important;
+}
+
+/* Hide Example Sentences */
+@container style(--jitendex-hide-examples: 1) {
+  [data-sc-content="example-sentence"] {
+    display: none;
+  }
+}
+
+/* Hide Cross References (xref) */
+@container style(--jitendex-hide-xref: 1) {
+  [data-sc-content="xref"] {
+    display: none;
+  }
+}
+
+/* Hide Images */
+@container style(--jitendex-hide-graphic: 1) {
+  [data-sc-content="graphic"] {
+    display: none;
+  }
+}
+
+/* Hide Sense Notes */
+@container style(--jitendex-hide-notes: 1) {
+  [data-sc-content="sense-note"] {
+    display: none;
+  }
+}
+
+/* Hide Explanations */
+@container style(--jitendex-hide-info-gloss: 1) {
+  [data-sc-content="info-gloss"] {
+    display: none;
+  }
+}
+
+/* Hide Antonyms */
+@container style(--jitendex-hide-antonyms: 1) {
+  [data-sc-content="antonym"] {
+    display: none;
+  }
+}
+
+/* Hide Forms */
+@container style(--jitendex-hide-forms: 1) {
+  [data-sc-content="forms"] {
+    display: none;
+  }
+}
+
+/* Hide Attribution */
+@container style(--jitendex-hide-attribution: 0) {
+  [data-sc-content="attribution"] {
+  margin-bottom: -0.13rem !important; 
+  }
+}
+@container style(--jitendex-hide-attribution: 1) {
+  [data-sc-content="attribution"] {
+    font-size: 0 !important;
+  }
+
+  [data-sc-content="sense-group"]:not(:has(~ [data-sc-content="sense-group"])) 
+  [data-sc-content="sense"]:last-child 
+  [data-sc-class="extra-box"]:last-of-type {
+    margin-bottom: 0 !important;
+  }
+
+  [data-sc-content="sense-group"]:not(:has(~ [data-sc-content="sense-group"])) 
+  [data-sc-content="sense"]:last-child 
+  [data-sc-content="glossary"]:last-of-type {
+    margin-bottom: -0.13rem !important; 
+  }
+}
+
+/* Numbered Definitions */
+@container style(--jitendex-hide-numbers: 0) {
+  .yomitan-glossary ol,
+  [data-dictionary] ol {
+    margin-block-start: 0;
+    margin-block-end: 0;
+    margin-inline-start: 0;
+    margin-inline-end: 0;
+    padding-inline-start: 0;
+  }
+
+  .yomitan-glossary ul, 
+  [data-dictionary] ul {
+    padding-inline-start: var(--spacing-lg);
+  }
+}
+
+@container style(--jitendex-hide-numbers: 1) {
+  .yomitan-glossary ul, 
+  .yomitan-glossary ol,
+  [data-dictionary] ul, 
+  [data-dictionary] ol,
+  [data-sc-content="glossary"] {
+    list-style: none;
+    padding-left: 0;
+    display: inline;
+  }
+
+  .yomitan-glossary li,
+  [data-dictionary] li,
+  [data-sc-content="glossary"] li {
+    list-style: none !important;
+  }
+
+  li > span > div > span[data-sc-code] + ol > li,
+  ol > li:has(> span[data-sc-code] + ol) > ol > li,
+  ul > li:has(> span[data-sc-code] + ol) > ol > li {
+    display: inline;
+    padding-left: 0 !important;
+  }
+}
+
+/* Compact Mode Fix */
+.yomitan-glossary [data-dictionary*="Jitendex"] ul[data-sc-content="glossary"] {
+  display: flex !important;
+  flex-wrap: wrap !important;
+}
+
+.yomitan-glossary [data-dictionary*="Jitendex"] ul[data-sc-content="glossary"] > li {
+  display: block !important;
+  margin: 0 !important;
+}
+
+.yomitan-glossary [data-dictionary*="Jitendex"] ul[data-sc-content="glossary"] > li::before {
+  content: "" !important;
+  display: none !important;
+}
+
+/* Hide dict version date */
+/* Jitendex */
+[data-dictionary^="Jitendex"] .dictionary-title {
+  font-size: 0;
+}
+[data-dictionary^="Jitendex"] .dictionary-title::after {
+  content: "Jitendex";
+  font-size: var(--dict-size);
+}
+
+/* JMdict */
+[data-dictionary^="JMdict"] .dictionary-title {
+  font-size: 0;
+}
+[data-dictionary^="JMdict"] .dictionary-title::after {
+  content: "JMdict";
+  font-size: var(--dict-size);
+}
+
+/* JA Wikipedia */
+[data-dictionary^="JA Wikipedia"] .dictionary-title {
+  font-size: 0;
+}
+[data-dictionary^="JA Wikipedia"] .dictionary-title::after {
+  content: "JA Wikipedia";
+  font-size: var(--dict-size);
+}
+
+/* Pixiv */
+[data-dictionary^="Pixiv"] .dictionary-title {
+  font-size: 0;
+}
+[data-dictionary^="Pixiv"] .dictionary-title::after {
+  content: "Pixiv";
+  font-size: var(--dict-size);
+}
+
+/* 素材辞典 */
+[data-dictionary^="素材辞典"] .dictionary-title {
+  font-size: 0;
+}
+[data-dictionary^="素材辞典"] .dictionary-title::after {
+  content: "素材辞典";
+  font-size: var(--dict-size);
+}
+
+/* 絵でわかる慣用句 */
+[data-dictionary^="絵でわかる慣用句"] .dictionary-title {
+  font-size: 0;
+}
+[data-dictionary^="絵でわかる慣用句"] .dictionary-title::after {
+  content: "絵でわかる慣用句";
+  font-size: var(--dict-size);
+}
+
+/* Other Dictionaries */
+#glossary.yomitan-glossary .example a {
+  color: var(--light-highlight);
+  text-decoration: none;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+#glossary.yomitan-glossary .example a {
+  color: var(--dark-highlight);
+}
+
+#glossary.yomitan-glossary .yomitan-word {
+  font-weight: bold;
+  color: #333;
+}
+
+#glossary.yomitan-glossary .accent {
+  font-size: 0.7em;
+  vertical-align: super;
+  margin-left: 0.25em;
+  margin-right: 0.25em;
+}
+
+#glossary.yomitan-glossary a {
+  color: var(--light-highlight);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+#glossary.yomitan-glossary a {
+  color: var(--dark-highlight);
+}
+
+#glossary.yomitan-glossary img {
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+  border: none;
+  outline: none;
+}
+
+#glossary.yomitan-glossary .example {
+  margin-left: 1.5em;
+  font-size: 0.9em;
+  color: #555;
+}
+
+[style="font-weight: bold; color: red;"] {
+  color: var(--light-highlight) !important;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+[style="font-weight: bold; color: red;"] {
+  color: var(--dark-highlight) !important;
+  font-weight: normal !important;
+}
+
+[data-sc-iwakoku8="blksho"] {
+  margin-left: 0 !important;
+}
+
+[data-sc-iwakoku8="onkun_onlist"] li[data-sc-iwakoku8="onkun_on"] {
+  display: inline;
+}
+
+[data-sc-iwakoku8="onkun_onlist"] li[data-sc-iwakoku8="onkun_on"]:not(:last-child)::after {
+  content: " / ";
+  color: var(--dict-color);
+}
+
+[data-dictionary="YOJI-JUKUGO"] i + br {
+  display: none;
+}
+
+/* 大辞泉 */
+[data-dictionary*="大辞泉"] {
+  --daijisen-black: #ffffff;
+  --daijisen-white: #000000;
+  --daijisen-blue: #4a8ade;
+  --daijisen-header-djs: #B65058;
+  --daijisen-header-djsp: #999999;
+  --daijisen-header-text: #FFFFFF;
+  --daijisen-logo-color: black;
+  --daijisen-background-l3: black;
+  --daijisen-accent-mark: #CC0000;
+  --daijisen-accent-slash: #808080;
+}
+
+[data-sc-class="bold FM"], [data-sc-class="IM"], [data-sc-class="FM"] {
+ padding: 1px !important;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+[data-dictionary*="大辞泉"] {
+  --daijisen-blue: #00aaff;
+  --daijisen-header-djs: #a0484f;
+  --daijisen-header-djsp: #7a7a7a;
+  --daijisen-header-text: #000000;
+  --daijisen-logo-color: #606060;
+  --daijisen-background-l3: #606060;
+  --daijisen-accent-mark: #ff6666;
+  --daijisen-accent-slash: #a0a0a0;
+}
+
+.yomitan-glossary [data-dictionary="大辞泉 第二版"] div[data-sc-meaning][data-sc-c] {
+    margin-block: 0 !important;
+}
+
+:is([data-dictionary*="大辞泉"]) 
+span[data-sc補足ロゴ], span[data-sc-rect][data-sc-l3] {
+ color: white !important;
+}
+
+@container style(--dictionary-colorizer: 1) {
+}
+
+div[data-sc-meaning][data-sc-c][data-sc-class="C"]:has(span[data-sc-href="$c-ruigo"]),
+div[data-sc-meaning][data-sc-c][data-sc-class="C"]:has(span[data-sc-href="$c-ssgo"]) {
+  display: none;
+}
+
+div[data-sc-m-accent-audio-g] {
+  display: none;
+}
+
+/* 小学館例解学習国語 */
+li[data-dictionary*="小学館例解学習国語"] {
+	--rgko12-light-blue: #7fb4f3;
+	--rgko12-light-light-blue: #DDEEFF;
+	--rgko12-light-light-purple: #EEDDFF;
+	--rgko12-cream: #FFFFDD;
+	--rgko12-spring: #DDFFEE;
+	--rgko12-summer: #DDFFEE;
+	--rgko12-autumn: #FFEECC;
+	--rgko12-winter: #CCEEFF;
+	--rgko12-travel: #DDFFEE;
+	--rgko12-romance: #EEDDFF;
+	--rgko12-other: #FFFFCC;
+	--rgko12-red: #e84a4a;
+	--rgko12-orange: #FF9900;
+	--rgko12-light-orange: #FFCC99;
+	--rgko12-pink: #FF0099;
+	--rgko12-gray: rgba(0, 0, 0, 0.05);
+	--rgko12-brown: #976B33;
+	--rgko12-light-brown: #696158;
+	--rgko12-light-light-brown: ;
+	--rgko12-blue: ;
+	--rgko12-green: ;
+}
+
+:is(.card.nightMode, .custom-dark-mode)
+ li[data-dictionary*="小学館例解学習国語"] {
+	--rgko12-red: #d65252;
+	--rgko12-blue: ;
+	--rgko12-light-blue: #7dc9ef;
+	--rgko12-light-light-blue: #003366;
+	--rgko12-light-light-purple: #330033;
+	--rgko12-light-orange: #663300;
+	--rgko12-gray: rgba(255, 255, 255, 0.1);
+	--rgko12-brown: #885522;
+	--rgko12-light-brown: #696158;
+	--rgko12-light-light-brown: ;
+	--rgko12-cream: #333300;
+	--rgko12-green: ;
+}
+
+.yomitan-glossary [data-dictionary="小学館例解学習国語 第十二版"] [data-sc-num] {
+  margin-right: 0.25em;
+}
+
+[data-dictionary="小学館例解学習国語 第十二版"] [data-sc-image] {
+    margin-block: 0 !important;
+}
+
+li[data-dictionary*="小学館例解学習国語"] [data-sc-num] {
+  font-weight: normal !important;
+}
+
+[data-sc-ws] {
+  border-style: solid; 
+  border-width: 0.05em; 
+}
+
+.yomitan-glossary [data-dictionary="小学館例解学習国語 第十二版"] [data-sc-blue] {
+  color: black !important;
+}
+
+.card.nightMode .yomitan-glossary [data-dictionary="小学館例解学習国語 第十二版"] [data-sc-blue] {
+  color: white !important;
+}
+
+li[data-dictionary="小学館例解学習国語 第十二版"] span[style*="padding-top"] {
+  display: none !important;
+}
+
+li[data-dictionary="小学館例解学習国語 第十二版"] span[style*="width"][style*="em"] {
+  width: auto !important;
+  max-width: 100% !important;
+  height: auto !important;
+  display: block !important;
+  font-size: 1rem !important;
+}
+
+li[data-dictionary="小学館例解学習国語 第十二版"] img {
+  position: static !important;
+  display: block !important;
+  width: auto !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: 300px;
+  margin: 0 !important;
+  border-radius: var(--border-radius-ms);
+}
+
+li[data-dictionary="小学館例解学習国語 第十二版"] table[data-sc-image] {
+  display: block !important;
+  width: 100% !important;
+  border: none !important;
+}
+
+li[data-dictionary="小学館例解学習国語 第十二版"] tbody, 
+li[data-dictionary="小学館例解学習国語 第十二版"] tr[data-sc-tr] {
+  display: flex !important;
+  flex-flow: row wrap !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  border: none !important;
+}
+
+li[data-dictionary="小学館例解学習国語 第十二版"] td[data-sc-td] {
+  display: block !important;
+  border: none !important;
+  padding: 0 !important;
+  width: auto !important;
+  flex: 0 1 auto !important;
+}
+
+li[data-dictionary="小学館例解学習国語 第十二版"] td[data-sc-caption] {
+  padding: 0 5px !important;
+  margin-inline-start: 0 !important;
+  text-align: left !important;
+}
+
+li[data-dictionary="小学館例解学習国語 第十二版"] table[data-sc使い分け] {
+    display: table !important;
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+li[data-dictionary="小学館例解学習国語 第十二版"] table[data-sc使い分け] tbody,
+li[data-dictionary="小学館例解学習国語 第十二版"] table[data-sc使い分け] tr[data-sc-tr] {
+    display: table-row !important;
+    flex-flow: unset !important;
+    gap: 0 !important;
+}
+
+li[data-dictionary="小学館例解学習国語 第十二版"] table[data-sc使い分け] td[data-sc-td] {
+    display: table-cell !important;
+    border: 1px solid #666 !important;
+    padding: 4px 8px !important;
+    vertical-align: middle !important;
+    width: auto !important;
+}
+
+li[data-dictionary="小学館例解学習国語 第十二版"] table[data-sc使い分け] td[data-sc-td]:first-child {
+    text-align: left !important;
+    width: 30% !important;
+}
+
+li[data-dictionary="小学館例解学習国語 第十二版"] table[data-sc使い分け] td[data-sc-td]:not(:first-child) {
+    text-align: center !important;
+    width: auto !important;
+}
+
+li[data-dictionary="小学館例解学習国語 第十二版"] table[data-sc使い分け] td[data-sc-yes] {
+    font-weight: bold !important;
+    font-size: 1.2em !important;
+}
+
+@container style(--dictionary-colorizer: 1) {
+  li[data-dictionary*="小学館例解学習国語"] {
+    --rgko12-light-blue:        color-mix(in srgb, var(--dict-color), transparent 40%);
+    --rgko12-light-light-blue:  color-mix(in srgb, var(--dict-color), transparent 88%);
+    --rgko12-light-light-purple: color-mix(in srgb, var(--dict-color), transparent 92%);
+    --rgko12-cream:             color-mix(in srgb, var(--dict-color), transparent 95%);
+    --rgko12-spring:            color-mix(in srgb, var(--dict-color), transparent 95%);
+    --rgko12-summer:            color-mix(in srgb, var(--dict-color), transparent 93%);
+    --rgko12-autumn:            color-mix(in srgb, var(--dict-color), transparent 93%);
+    --rgko12-winter:            color-mix(in srgb, var(--dict-color), transparent 93%);
+    --rgko12-travel:            color-mix(in srgb, var(--dict-color), transparent 93%);
+    --rgko12-romance:           color-mix(in srgb, var(--dict-color), transparent 93%);
+    --rgko12-other:             color-mix(in srgb, var(--dict-color), transparent 95%);
+    --rgko12-red:               black;
+    --rgko12-orange:            #FF9900;
+    --rgko12-light-orange:      #FFCC99;
+    --rgko12-pink:              #FF0099;
+    --rgko12-gray:              rgba(0, 0, 0, 0.05);
+    --rgko12-brown:             #008B9C;
+    --rgko12-light-brown:       #445054;
+    --rgko12-light-light-brown: ;
+    --rgko12-blue: ;
+    --rgko12-green: ;
+  }
+
+  .card.nightMode li[data-dictionary*="小学館例解学習国語"],
+  .custom-dark-mode li[data-dictionary*="小学館例解学習国語"] {
+    --rgko12-red:               white !important;
+    --rgko12-gray:              rgba(255, 255, 255, 0.1);
+    --rgko12-light-orange:      #663300;
+    --rgko12-brown:             #227088;
+    --rgko12-light-brown:       #445054;
+    --rgko12-light-light-brown: ;
+    --rgko12-cream:             color-mix(in srgb, var(--dict-color), transparent 95%);
+    --rgko12-green: ;
+  }
+
+  .yomitan-glossary [data-dictionary="小学館例解学習国語 第十二版"] [data-sc外字][data-sc-fill] {
+    border-color: var(--dict-color) !important;
+  }
+
+  li[data-dictionary="小学館例解学習国語 第十二版"] [data-sc-ws] {
+    border-color: var(--dict-color) !important;
+  }
+
+  li[data-dictionary="小学館例解学習国語 第十二版"] [data-sc-paren] {
+    color: var(--dict-color) !important;
+  }
+
+  [data-dictionary="小学館例解学習国語 第十二版"] summary {
+    font-weight: normal !important;
+    color: black !important;
+    background-color: var(--dict-color) !important;
+  }
+}
+
+/* 明鏡国語辞典 */
+.card.nightMode, .custom-dark-mode {
+  --meikyo-white: #000000;
+  --meikyo-black: #cccccc;
+  --meikyo-blue: #33ccff;
+  --meikyo-red: #ff3333;
+  --meikyo-gray: #bbbbbb;
+  --meikyo-pink: #cc6666;
+  --meikyo-dark-red: #993333;
+  --meikyo-fbox-white: #ffffff;
+  --meikyo-fbox-gray: #cccccc;
+  --meikyo-box-gray: #663333;
+}
+
+li[data-dictionary*="明鏡国語辞典"] [data-sc-body] {
+  font-size: var(--definition-size) !important;
+}
+
+[data-dictionary*="明鏡国語辞典"] div[data-sc-ruigo_items] {
+	display: none !important;
+}
+
+[data-dictionary="明鏡国語辞典 第三版"] span {
+  width: 25em !important;
+  vertical-align: bottom !important;
+}
+
+[data-dictionary="明鏡国語辞典 第三版"] span[data-sc-fbox][data-sc-class="品格"] {
+  padding: 1px !important;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+li[data-dictionary="明鏡国語辞典 第三版"] [data-sc-img] img {
+  display: none !important;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+li[data-dictionary="明鏡国語辞典 第三版"] [data-sc-img] span[style*="--image"] {
+  display: block !important;
+  background-color: white !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 1 !important;
+}
+
+.yomitan-glossary [data-dictionary="明鏡国語辞典 第三版"] div[data-sc-head2] {
+  margin-block-start: 0 !important;
+}
+
+.yomitan-glossary [data-dictionary="明鏡国語辞典 第三版"] details {
+  margin-block: 0 !important;
+}
+
+[data-dictionary="明鏡国語辞典 第三版"] [data-sc-body] {
+  line-height: 1.9em !important;
+}
+
+[data-dictionary="明鏡国語辞典 第三版"] details:not(:last-child) summary {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: 1.5 !important;
+}
+
+[data-dictionary="明鏡国語辞典 第三版"] details:not(:last-child) summary {
+  margin-bottom: 0.2rem !important;
+}
+
+@container style(--dictionary-colorizer: 1) {
+  [data-dictionary="明鏡国語辞典 第三版"] span[data-sc-fbox][data-sc-class="品格"] {
+    background-color: transparent !important;
+  }
+
+  li[data-dictionary="明鏡国語辞典 第三版"] [data-sc-red] {
+    color: var(--dict-color) !important;
+  }
+
+  [data-dictionary="明鏡国語辞典 第三版"] details summary {
+    border-block-end-color: var(--dict-color) !important;
+  }
+
+  [data-dictionary="明鏡国語辞典 第三版"] span[data-sc-fbox] {
+    background-color: rgb(0,0,0,0) !important;
+    border-color: var(--dict-color) !important;
+    color: var(--dict-color) !important;
+  }
+
+  [data-dictionary="明鏡国語辞典 第三版"] div[data-sc-class="hinkaku"] {
+    background-color: rgb(0,0,0,0.02) !important;
+  }
+
+  .card.nightMode
+  [data-dictionary="明鏡国語辞典 第三版"] div[data-sc-class="hinkaku"] {
+    background-color: rgb(255,255,255,0.02) !important;
+  }
+
+  [data-dictionary="明鏡国語辞典 第三版"] span[data-sc-fbox][data-sc-class="書き方"] {
+    color: black !important;
+    background-color: transparent !important;
+    border-color: var(--dict-color) !important;
+  }
+
+  .card.nightMode
+  [data-dictionary="明鏡国語辞典 第三版"] span[data-sc-fbox][data-sc-class="書き方"] {
+    color: white !important;
+  }
+}
+
+/* Yomitan Links */
+[data-dictionary="新選国語辞典　第十版"] a, [data-dictionary="漢検漢字辞典　第二版"] a, [data-dictionary="岩波国語辞典　第八版"] a, [data-dictionary="大辞林　第四版"] a, [data-dictionary="明鏡国語辞典　第二版"] a, [data-dictionary="現代国語例解辞典　第五版"] a {
+  color: inherit !important;
+}
+
+[style="color: rgb(229, 0, 127);"]::before {
+  content: "\A";
+  white-space: pre;
+}
+
+/* 大辞林　第四版 - 新明解国語辞典　第八版 */
+:is(
+  li[data-dictionary="大辞林　第四版"],
+  li[data-dictionary="新明解国語辞典　第八版"]
+) .consolidated-entry-separator:has(+ span > a[href="#"]),
+:is(
+  li[data-dictionary="大辞林　第四版"],
+  li[data-dictionary="新明解国語辞典　第八版"]
+) .consolidated-entry-separator + span:has(> a[href="#"]),
+:is(
+  li[data-dictionary="大辞林　第四版"],
+  li[data-dictionary="新明解国語辞典　第八版"]
+) .consolidated-entry-separator:has(+ i + span > a[href="#"]),
+:is(
+  li[data-dictionary="大辞林　第四版"],
+  li[data-dictionary="新明解国語辞典　第八版"]
+) .consolidated-entry-separator + i + span:has(> a[href="#"]),
+
+li[data-dictionary="大辞林　第四版"]:has(a[href="#"]) .consolidated-entry-separator:has(~ ul),
+li[data-dictionary="大辞林　第四版"]:has(a[href="#"]) .consolidated-entry-separator ~ ul,
+li[data-dictionary="新明解国語辞典　第八版"]:has(a[href="#"]) .consolidated-entry-separator:has(~ ul),
+li[data-dictionary="新明解国語辞典　第八版"]:has(a[href="#"]) .consolidated-entry-separator ~ ul {
+  display: none;
+}
+
+/* 岩波国語辞典　第八版 */
+[data-sc-iwakoku8="blkhu"]:not(:has([style="vertical-align: text-bottom;"])) {
+  display: none;
+}
+
+/* 漢検漢字辞典　第二版 */
+[data-sc-subentries="子項目"], [data-sc-subentries="孫項目"] {
+  display: none !important;
+}
+
+/* Pixiv */
+[data-sc-pixiv="related-tags"], [data-sc-pixiv="parent-link"] {
+  display: none;
+}
+
+/* Stroke Order */
+/* 旺文社国語辞典 第十一版 */
+li[data-dictionary="旺文社国語辞典 第十一版"] a[href*="yomitan_dictionary_media"][href$=".png"]:has(> span > img) {
+  vertical-align: top;
+  max-height: 40px;
+  overflow: hidden;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-block;
+}
+
+li[data-dictionary="旺文社国語辞典 第十一版"] a[href*="yomitan_dictionary_media"][href$=".png"]:has(> span > img)::before {
+  content: "stroke order";
+  color: black;
+  font-size: 0.7rem;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+  white-space: nowrap;
+  font-family: var(--sans);
+}
+
+li[data-dictionary="旺文社国語辞典 第十一版"] a[href*="yomitan_dictionary_media"][href$=".png"]:has(> span > img):hover {
+  max-height: 100vh;
+}
+
+li[data-dictionary="旺文社国語辞典 第十一版"] a[href*="yomitan_dictionary_media"][href$=".png"]:has(> span > img):hover::before {
+  display: none;
+}
+
+/* 漢検漢字辞典　第二版 */
+li[data-dictionary="漢検漢字辞典　第二版"] table th[lang="ja"]:has(br):first-child:has(+ td:last-child) + td a[href*="yomitan_dictionary_media"][href$=".png"]:has(> span > img),
+li[data-dictionary="漢検漢字辞典　第二版"] table th[lang="ja"]:has(br):first-child:has(+ td:last-child) + td a[href*="yomitan_dictionary_media"][href$=".svg"]:has(> span > img) {
+  height: 50px;
+  min-width: 2.65rem;
+  cursor: pointer;
+}
+
+li[data-dictionary="漢検漢字辞典　第二版"] table th[lang="ja"]:has(br):first-child:has(+ td:last-child) + td a[href*="yomitan_dictionary_media"][href$=".png"]:has(> span > img) > span,
+li[data-dictionary="漢検漢字辞典　第二版"] table th[lang="ja"]:has(br):first-child:has(+ td:last-child) + td a[href*="yomitan_dictionary_media"][href$=".svg"]:has(> span > img) > span {
+  display: none !important;
+}
+
+li[data-dictionary="漢検漢字辞典　第二版"] table th[lang="ja"]:has(br):first-child:has(+ td:last-child) + td a[href*="yomitan_dictionary_media"][href$=".png"]:has(> span > img)::before,
+li[data-dictionary="漢検漢字辞典　第二版"] table th[lang="ja"]:has(br):first-child:has(+ td:last-child) + td a[href*="yomitan_dictionary_media"][href$=".svg"]:has(> span > img)::before {
+  content: "show stroke order";
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+li[data-dictionary="漢検漢字辞典　第二版"] table th[lang="ja"]:has(br):first-child:has(+ td:last-child) + td a[href*="yomitan_dictionary_media"][href$=".png"]:has(> span > img):hover,
+li[data-dictionary="漢検漢字辞典　第二版"] table th[lang="ja"]:has(br):first-child:has(+ td:last-child) + td a[href*="yomitan_dictionary_media"][href$=".svg"]:has(> span > img):hover {
+  height: auto;
+  width: auto;
+  max-height: auto;
+}
+
+li[data-dictionary="漢検漢字辞典　第二版"] table th[lang="ja"]:has(br):first-child:has(+ td:last-child) + td a[href*="yomitan_dictionary_media"][href$=".png"]:has(> span > img):hover > span:first-child,
+li[data-dictionary="漢検漢字辞典　第二版"] table th[lang="ja"]:has(br):first-child:has(+ td:last-child) + td a[href*="yomitan_dictionary_media"][href$=".svg"]:has(> span > img):hover > span:first-child {
+  display: inline-block !important;
+  width: auto;
+  height: auto;
+  max-height: auto;
+}
+
+li[data-dictionary="漢検漢字辞典　第二版"] table th[lang="ja"]:has(br):first-child:has(+ td:last-child) + td a[href*="yomitan_dictionary_media"][href$=".png"]:has(> span > img):hover::before,
+li[data-dictionary="漢検漢字辞典　第二版"] table th[lang="ja"]:has(br):first-child:has(+ td:last-child) + td a[href*="yomitan_dictionary_media"][href$=".svg"]:has(> span > img):hover::before {
+  display: none;
+}
+
+/* Hide default dictionary titles */
+[data-dictionary] i { 
+  display: none;
+}
+
+/* hr.consolidated-entry-separator */
+#glossary .glossary-box hr.consolidated-entry-separator {
+  background: rgba(0,0,0,0.2);
+  border: none;
+  height: 1px;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+#glossary .glossary-box hr.consolidated-entry-separator {
+  background: rgba(255,255,255,0.15);
+}
+
+/* Manatan Settings */
+div[style="flex-shrink: 0; width: 24px; font-weight: bold;"] {
+  display: none !important;
+}
+
+[style="margin-bottom: 12px; display: block;"] {
+  margin-bottom: 0 !important;
+}
+
+[style*="margin-bottom: 12px"] ul[style*="list-style-type"] {
+  display: block !important;
+  list-style: disc !important;
+  padding-left: 20px !important;
+}
+
+[style*="margin-bottom: 12px"] ul[style*="list-style-type"] li {
+  display: list-item !important;
+  list-style: inherit !important;
+}
+
+/* Frequency */
+#frequency {
+  position: fixed;
+  right: var(--spacing-xxml);
+  top: 55px;
+  font-family: var(--sans);
+  z-index: var(--z-index-base);
+}
+
+.freqbt {
+  position: fixed;
+  top: var(--spacing-md);
+  right: var(--spacing-xxml);
+  font-size: var(--frequency-size);
+  padding: var(--spacing-ms);
+  color: var(--freq-text-light);
+  cursor: pointer;
+  transition: color var(--base-transition), 
+              text-shadow var(--base-transition);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.freqbt {
+  color: var(--freq-text);
+}
+
+.frequency-box:hover .freqbt {
+  color: var(--freq-text-hover-light);
+  text-shadow: 0 0 5px white;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.frequency-box:hover .freqbt {
+  color: var(--freq-text-hover);
+  text-shadow: 0 0 5px black;
+}
+
+.frequency-content {
+  opacity: 0;
+  max-height: 0;
+  padding: 0 var(--spacing-lg);
+  color: var(--freq-text-hover-light);
+  background: var(--frequency-bg-light);
+  border-radius: var(--border-radius-ms);
+  font-size: var(--frequency-content-size);
+  overflow: hidden;
+  will-change: opacity, max-height, padding;
+  transition: opacity var(--base-transition), 
+              max-height var(--base-transition), 
+              padding var(--base-transition);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.frequency-content {
+  color: var(--freq-text-hover);
+  background: var(--frequency-bg);
+}
+
+.frequency-content ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.frequency-content li {
+  display: flex !important;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.frequency-content li {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.frequency-content li:last-child {
+  border-bottom: none;
+}
+
+.frequency-box:hover .frequency-content {
+  opacity: 1;
+  max-height: var(--frequency-max-height);
+  padding: var(--spacing-lg);
+}
+
+/* Hides Freq when it's 9999999 or empty */
+.freqbt[data-freq="9999999"],
+.freqbt[data-freq*="9999999"],
+.freqbt[data-freq=""] {
+  display: none !important;
+}
+
+/* Tags */
+.tags {
+  left: 0;
+  font-size: var(--tag-font-size);
+  margin-top: var(--tag-margin-top);
+  margin-bottom: var(--tag-margin-bottom);
+  padding: var(--tag-padding);
+  border-radius: var(--tag-border-radius);
+  z-index: var(--z-index-base);
+  transition: background-color var(--fast-transition), 
+              color var(--fast-transition);
+}
+
+.tags-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--tags-container-gap);
+}
+
+@container style(--tag-visibility: 0) {
+  .tags-container {
+    display: none;
+  }
+}
+
+.tags:empty {
+  display: none;
+}
+
+.tags {
+  height: var(--base-size);
+  line-height: clamp(18px, 3vw, 24px);
+  color: var(--tag-color-light);
+  background: var(--tag-bg-light);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.tags {
+  color: var(--tag-color);
+  background: var(--tag-bg);
+}
+
+.tags:hover {
+  color: var(--tag-color-hover-light);
+  background: var(--tag-bg-hover-light);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.tags:hover {
+  color: var(--tag-color-hover);
+  background: var(--tag-bg-hover);
+}
+
+/* External Links */
+.tags-and-links-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.external-links {
+  display: flex;
+  flex-wrap: nowrap;
+  margin-left: auto;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.light-icon {
+  display: inline-block;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.light-icon {
+  display: none;
+}
+
+.dark-icon {
+  display: none;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.dark-icon {
+  display: inline-block;
+}
+
+.external-links a {
+  margin-top: var(--external-links-margin-top);
+  margin-bottom: var(--tag-margin-bottom);
+  padding: var(--external-links-padding);
+  display: flex;
+  background: var(--external-links-bg-light);
+  opacity: 0.3;
+  transition: background-color var(--fast-transition), 
+              opacity var(--fast-transition);
+}
+
+.external-links img {
+  background: transparent;
+  width: var(--base-size);
+  height: var(--base-size);
+  filter: grayscale(1);
+  transition: filter var(--fast-transition);
+}
+
+.external-links a:hover {
+  background: var(--external-links-bg-hover-light);
+  opacity: 1;
+}
+
+.external-links a:hover img {
+  filter: grayscale(0);
+}
+
+.card.nightMode .external-links a {
+  background: var(--external-links-bg);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.external-links a:hover {
+  background: var(--external-links-bg-hover);
+}
+
+.external-links a:first-child {
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+
+.external-links a:last-child {
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+
+.tags-and-links-wrapper,
+.external-links,
+.light-icon,
+.dark-icon,
+.external-links a,
+.external-links img {
+  outline: 2px solid transparent !important;
+  outline-offset: -2px;
+}
+
+@container style(--external-links-visibility: 0) {
+  .external-links a {
+    display: none;
+  }
+}
+
+/* Misc Info */
+@container style(--misc-info-default-expanded: true) {
+  .misc-info {
+    color: var(--misc-info-text-light) !important;
+    background: var(--misc-info-bg-light) !important;
+    max-height: 500px !important;
+    padding: var(--spacing-md) !important;
+    margin-top: 5px !important;
+    opacity: 1 !important;
+    transition: opacity var(--base-transition), 
+                color var(--base-transition),
+                background-color var(--base-transition) !important;
+  }
+
+  :is(.card.nightMode, .custom-dark-mode)
+  .misc-info {
+    color: var(--misc-info-text) !important;
+    background: var(--misc-info-bg) !important;
+  }
+ 
+  .misc-info:hover {
+    color: var(--misc-info-text-light) !important;
+    background: var(--misc-info-bg-hover-light) !important;
+  }
+
+  :is(.card.nightMode, .custom-dark-mode)
+  .misc-info:hover {
+    color: var(--misc-info-text-hover) !important;
+    background: var(--misc-info-bg-hover) !important;
+  }
+}
+
+.misc-info {
+  display: none !important;
+  margin-top: 0px;
+  font-family: var(--sans);
+  font-size: var(--misc-info-size);
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  max-height: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+  will-change: max-height;
+  flex-wrap: wrap;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  padding-left: var(--spacing-lg); 
+  padding-right: var(--spacing-lg); 
+  border-radius: var(--border-radius-ms);
+  visibility: visible;
+  text-align: center; 
+  box-sizing: border-box;
+  background: var(--misc-info-bg-light);
+  z-index: var(--z-index-base);
+  transition: max-height var(--base-transition), 
+              padding var(--base-transition), 
+              opacity var(--base-transition),
+              color var(--base-transition),
+              margin-top var(--base-transition);
+}
+
+.misc-info.has-content {
+  display: flex !important;
+}
+
+:is(.card.nightMode, .custom-dark-mode)
+.misc-info {
+  background: var(--misc-info-bg);
+}
+
+.misc-info:hover {
+  color: var(--misc-info-text-hover-light) !important;
+}
+
+:is(.card.nightMode, .custom-dark-mode)
+.misc-info:hover {
+  color: var(--misc-info-text-hover) !important;
+}
+
+@container style(--misc-info-alignment: left) {
+  .misc-info {
+    text-align: left;
+    justify-content: flex;
+    direction: ltr;
+    unicode-bidi: normal;
+  }
+}
+
+@container style(--misc-info-alignment: right) {
+  .misc-info {
+    text-align: right;
+    justify-content: flex;
+    direction: ltr;
+    unicode-bidi: normal;
+  }
+}
+
+.misc-info:has(> b) {
+  text-align: center;
+  display: block;
+}
+
+.misc-info b {
+  margin: 0 0.25rem;
+}
+
+@container style(--bold-misc-info: 1) {
+  .misc-info {
+    font-weight: bold !important;
+  }
+}
+
+/* Misc Info Positioning */
+.tags-and-links-wrapper {
+  order: 50;
+}
+
+.misc-info {
+  order: 60;
+}
+
+@container style(--misc-info-above: true) {
+  .misc-info {
+    order: 49;
+  }
+}
+
+@container style(--misc-info-above: false) {
+  .misc-info {
+    order: 51;
+  }
+}
+
+/* Hide Misc Info background */
+@container style(--misc-info-bg-visibility: 0) {
+  .misc-info {
+    background: transparent !important;
+    padding-bottom: 0 !important;
+  }
+
+  @container style(--misc-info-default-expanded: true) {
+    .misc-info {
+      background: transparent !important;
+    }
+
+    :is(.card.nightMode, .custom-dark-mode)
+    .misc-info {
+      background: transparent !important;
+    }
+ 
+    .misc-info:hover {
+      background: transparent !important;
+    }
+
+    :is(.card.nightMode, .custom-dark-mode)
+    .misc-info:hover {
+      background: transparent !important;
+    }
+  }
+}
+
+/* Kanji Hover */
+#kanji-tooltip {
+  position: absolute;
+  display: none;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  padding: 10px 15px;
+  z-index: 999;
+  width: max-content;
+  max-width: 500px;
+  line-height: 1.4;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  color: #111;
+  --tooltip-arrow-left: 10px;
+  margin-top: 10px;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+#kanji-tooltip {
+  background: rgba(0, 0, 0, 0.9);
+  color: #eee;
+}
+
+#kanji-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  color: rgba(255, 255, 255, 0.8);
+  left: var(--tooltip-arrow-left);
+  margin-left: -7px;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 7px solid rgba(255, 255, 255, 0.9);
+}
+
+#kanji-tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: var(--tooltip-arrow-left);
+  margin-left: -8px; /* Slightly larger than ::before */
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 8px solid rgba(0, 0, 0, 0.1); /* Shadow color */
+  z-index: -1;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+#kanji-tooltip::before {
+  border-bottom: 7px solid rgba(0, 0, 0, 0.9);
+}
+
+.kanji-highlight {
+  color: var(--light-highlight);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.kanji-highlight {
+  color: var(--dark-highlight);
+}
+
+#kanji-tooltip ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#kanji-tooltip li {
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+#kanji-tooltip li {
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+#kanji-tooltip li:last-child {
+  border-bottom: none !important;
+}
+
+.related-sentence {
+  font-size: 0.8rem;
+  color: var(--fg);
+  margin-top: 4px;
+}
+
+@container style(--kanji-hover-sentence-visibility: 0) {
+  .related-sentence {
+    display: none !important;
+  }
+
+  #kanji-tooltip li {
+    text-align: center;
+  }
+
+  @container style(--pitch-position-visibility: 1) {
+    #kanji-tooltip {
+      padding: 10px 50px;
+    }
+
+    #kanji-tooltip li {
+      text-align: left;
+    }
+  }
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.related-sentence {
+  color: var(--fg);
+}
+
+.related-sentence .highlight {
+  opacity: 0.9;
+}
+
+.show-more-btn {
+  background: rgba(0,0,0,0.02); 
+  border: none; 
+  color: black; 
+  padding: 5px 10px; 
+  cursor: pointer; 
+  width: 100%; 
+  margin: 0; 
+  text-align: center; 
+  box-sizing: border-box;
+  transition: background-color var(--base-transition);
+}
+
+.show-more-btn:hover { 
+  background: rgba(0,0,0,0.04); 
+  border: none; 
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.show-more-btn {
+  background: rgba(255,255,255,0.02); 
+  color: white;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+.show-more-btn:hover { 
+  background: rgba(255,255,255,0.03); 
+}
+
+#kanji-tooltip .position {
+  font-family: var(--sans);
+  font-weight: bold;
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: var(--spacing-ms);
+  font-size: 0.5rem;
+  padding: 5px 5px 5px 5px;
+  border-radius: var(--border-radius-ms);
+  z-index: var(--z-index-base);
+  text-align: center;
+  line-height: 16px;
+  background: var(--pitch-position-bg-light);
+  white-space: nowrap;
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+#kanji-tooltip .position {
+  background: var(--pitch-position-bg);
+}
+
+#kanji-tooltip .position:empty {
+  display: none;
+}
+
+@container style(--pitch-position-visibility: 0) {
+  #kanji-tooltip .position {
+    display: none !important;
+  }
+}
+
+#kanji-tooltip .categories {
+  font-family: var(--sans);
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: var(--spacing-ms);
+  font-size: 0.5rem;
+  padding: 5px 5px 5px 5px;
+  border-radius: var(--border-radius-sm);
+  color: rgba(105, 105, 105, 0.3);
+  z-index: var(--z-index-base);
+  text-align: center;
+  line-height: 16px;
+  overflow: hidden;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: opacity var(--base-transition), 
+              transform var(--base-transition), 
+              visibility var(--base-transition), 
+              background-color var(--base-transition), 
+              color var(--base-transition);
+}
+
+#kanji-tooltip .position:hover + .categories,
+#kanji-tooltip .categories:hover {
+  opacity: 1;
+  visibility: visible;
+  transform: scaleX(1);
+  background: rgba(0, 0, 0, 1);
+  color: rgba(255, 255, 255, 1);
+}
+
+:is(.card.nightMode, .custom-dark-mode) 
+:is(#kanji-tooltip .position:hover + .categories,
+    #kanji-tooltip .categories:hover) {
+  background: rgba(255, 255, 255, 1);
+  color: rgba(0, 0, 0, 1);
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: scaleX(1);
+}
+
+#kanji-tooltip .categories:empty {
+  display: none;
+}
+
+#kanji-tooltip .related-word-container { 
+  position: relative;
+  display: inline-block;
+}
+
+#kanji-tooltip .related-word { 
+  font-family: var(--kanji-hover-word-font);
+  font-size: var(--kanji-hover-word-size);
+}
+
+.related-word-container ruby rt {
+  font-size: var(--kanji-hover-word-reading-size);
+}
+
+/* Tooltip Nasal Mora */
+#kanji-tooltip span[style*="border:1.5px solid #c83c28"] {
+  border: 1px solid #FF4936 !important;
+  margin: 3px 1px !important;
+  width: 0.20rem !important;
+  height: 0.20rem !important;
+}
+
+/* Unreviewed Cards */
+li.is-new-card {
+  opacity: 0.6;
+  transition: opacity var(--base-transition);
+}
+
+li.is-new-card .related-word,
+li.is-new-card rt,
+li.is-new-card .related-sentence,
+li.is-new-card .highlight,
+li.is-new-card .pitch-number,
+li.is-new-card .pronunciation-mora-line,
+li.is-new-card span[style*="border-color"] {
+  transition: color var(--base-transition), 
+              border-color var(--base-transition);
+}
+
+li.is-new-card:not(:hover) .related-word,
+li.is-new-card:not(:hover) rt,
+li.is-new-card:not(:hover) .related-sentence,
+li.is-new-card:not(:hover) .highlight,
+li.is-new-card:not(:hover) .pitch-number,
+li.is-new-card:not(:hover) span[style*="border-color"],
+li.is-new-card:not(:hover) .pronunciation-mora[data-pitch="high"] .pronunciation-mora-line {
+  color: #999 !important;
+  border-color: #999 !important;
+}
+
+li.is-new-card:hover {
+  opacity: 1;
+}
+
+/* Clickable Word */
+li.is-new-card:not(:hover) .related-word {
+  border-bottom-color: rgba(0, 0, 0, 0) !important;
+}
+
+.related-word.clickable-word {
+  cursor: pointer;
+  border-bottom: 1px dotted transparent; 
+  transition: color var(--base-transition), 
+              border-bottom-color var(--base-transition);
+}
+
+.related-word.clickable-word:hover {
+  color: var(--light-highlight);
+  border-bottom-color: rgba(150, 150, 150, 0.5);
+}
+
+:is(.card.nightMode, .custom-dark-mode) .related-word.clickable-word:hover {
+  color: var(--dark-highlight);
+}
+
+@container style(--kanji-hover-pitch-colors: false) {
+  #kanji-tooltip .pitch-info.heiban span[style*="border-color:currentColor"],
+  #kanji-tooltip .pitch-number.heiban {
+    color: var(--light-highlight); 
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip :is(
+    .pitch-info.heiban span[style*="border-color:currentColor"],
+    .pitch-number.heiban
+  ) { 
+    color: var(--dark-highlight); 
+  }
+
+  #kanji-tooltip .pitch-info.atamadaka span[style*="border-color:currentColor"],
+  #kanji-tooltip .pitch-number.atamadaka {
+    color: var(--light-highlight); 
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip :is(
+    .pitch-info.atamadaka span[style*="border-color:currentColor"],
+    .pitch-number.atamadaka
+  ) {
+    color: var(--dark-highlight); 
+  }
+
+  #kanji-tooltip .pitch-info.nakadaka span[style*="border-color:currentColor"],
+  #kanji-tooltip .pitch-number.nakadaka { 
+    color: var(--light-highlight); 
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip :is(
+    .pitch-info.nakadaka span[style*="border-color:currentColor"],
+    .pitch-number.nakadaka
+  ) { 
+    color: var(--dark-highlight); 
+  }
+
+  #kanji-tooltip .pitch-info.odaka span[style*="border-color:currentColor"],
+  #kanji-tooltip .pitch-number.odaka { 
+    color: var(--light-highlight); 
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip :is(
+    .pitch-info.odaka span[style*="border-color:currentColor"],
+    .pitch-number.odaka
+  ) { 
+    color: var(--dark-highlight); 
+  }
+
+  #kanji-tooltip .pitch-info.kifuku span[style*="border-color:currentColor"],
+  #kanji-tooltip .pitch-number.kifuku { 
+    color: var(--light-highlight); 
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip :is(
+    .pitch-info.kifuku span[style*="border-color:currentColor"],
+    .pitch-number.kifuku
+  ) { 
+    color: var(--dark-highlight); 
+  }
+
+  #kanji-tooltip .pronunciation.heiban { --pronunciation-annotation-color: var(--light-highlight); }
+  #kanji-tooltip .pronunciation.atamadaka { --pronunciation-annotation-color: var(--light-highlight); }
+  #kanji-tooltip .pronunciation.nakadaka { --pronunciation-annotation-color: var(--light-highlight); }
+  #kanji-tooltip .pronunciation.odaka { --pronunciation-annotation-color: var(--light-highlight); }
+  #kanji-tooltip .pronunciation.kifuku { --pronunciation-annotation-color: var(--light-highlight); }
+
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip .pronunciation.heiban { --pronunciation-annotation-color: var(--dark-highlight); }
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip .pronunciation.atamadaka { --pronunciation-annotation-color: var(--dark-highlight); }
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip .pronunciation.nakadaka { --pronunciation-annotation-color: var(--dark-highlight); }
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip .pronunciation.odaka { --pronunciation-annotation-color: var(--dark-highlight); }
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip .pronunciation.kifuku { --pronunciation-annotation-color: var(--dark-highlight); }
+}
+
+@container style(--kanji-hover-pitch-colors: true) {
+  #kanji-tooltip .pitch-info.heiban span[style*="border-color:currentColor"],
+  #kanji-tooltip .pitch-number.heiban {
+    color: var(--pitch-blue-light); 
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip :is(
+    .pitch-info.heiban span[style*="border-color:currentColor"],
+    .pitch-number.heiban
+  ) { 
+    color: var(--pitch-blue); 
+  }
+
+  #kanji-tooltip .pitch-info.atamadaka span[style*="border-color:currentColor"],
+  #kanji-tooltip .pitch-number.atamadaka {
+    color: var(--pitch-red-light); 
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip :is(
+    .pitch-info.atamadaka span[style*="border-color:currentColor"],
+    .pitch-number.atamadaka
+  ) {
+    color: var(--pitch-red); 
+  }
+
+  #kanji-tooltip .pitch-info.nakadaka span[style*="border-color:currentColor"],
+  #kanji-tooltip .pitch-number.nakadaka { 
+    color: var(--pitch-orange-light); 
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip :is(
+    .pitch-info.nakadaka span[style*="border-color:currentColor"]
+    li.nakadaka .related-sentence .highlight
+  ) { 
+    color: var(--pitch-orange); 
+  }
+
+  #kanji-tooltip .pitch-info.odaka span[style*="border-color:currentColor"],
+  #kanji-tooltip .pitch-number.odaka { 
+    color: var(--pitch-green-light); 
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip :is(
+    .pitch-info.odaka span[style*="border-color:currentColor"],
+    .pitch-number.odaka
+  ) { 
+    color: var(--pitch-green); 
+  }
+
+  #kanji-tooltip .pitch-info.kifuku span[style*="border-color:currentColor"],
+  #kanji-tooltip .pitch-number.kifuku { 
+    color: var(--pitch-purple-light); 
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip :is(
+    .pitch-info.kifuku span[style*="border-color:currentColor"],
+    .pitch-number.kifuku
+  ) { 
+    color: var(--pitch-purple); 
+  }
+
+  #kanji-tooltip .pronunciation.heiban { --pronunciation-annotation-color: var(--pitch-blue-light); }
+  #kanji-tooltip .pronunciation.atamadaka { --pronunciation-annotation-color: var(--pitch-red-light); }
+  #kanji-tooltip .pronunciation.nakadaka { --pronunciation-annotation-color: var(--pitch-orange-light); }
+  #kanji-tooltip .pronunciation.odaka { --pronunciation-annotation-color: var(--pitch-green-light); }
+  #kanji-tooltip .pronunciation.kifuku { --pronunciation-annotation-color: var(--pitch-purple-light); }
+
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip .pronunciation.heiban { --pronunciation-annotation-color: var(--pitch-blue); }
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip .pronunciation.atamadaka { --pronunciation-annotation-color: var(--pitch-red); }
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip .pronunciation.nakadaka { --pronunciation-annotation-color: var(--pitch-orange); }
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip .pronunciation.odaka { --pronunciation-annotation-color: var(--pitch-green); }
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip .pronunciation.kifuku { --pronunciation-annotation-color: var(--pitch-purple); }
+}
+
+@container style(--kanji-hover-pitch-highlight: false) {
+  #kanji-tooltip li :is(.kanji-highlight, .related-sentence .highlight) {
+    color: var(--light-highlight) !important;
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip li :is(.kanji-highlight, .related-sentence .highlight) {
+    color: var(--dark-highlight) !important;
+  }
+}
+
+@container style(--kanji-hover-pitch-highlight: true) {
+  #kanji-tooltip li.heiban :is(.kanji-highlight, .related-sentence .highlight, .related-word.clickable-word:hover) {
+    color: var(--pitch-blue-light) !important;
+  }
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip li.heiban :is(.kanji-highlight, .related-sentence .highlight, .related-word.clickable-word:hover) {
+    color: var(--pitch-blue) !important;
+  }
+
+  #kanji-tooltip li.atamadaka :is(.kanji-highlight, .related-sentence .highlight, .related-word.clickable-word:hover) {
+    color: var(--pitch-red-light) !important;
+  }
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip li.atamadaka :is(.kanji-highlight, .related-sentence .highlight, .related-word.clickable-word:hover) {
+    color: var(--pitch-red) !important;
+  }
+
+  #kanji-tooltip li.nakadaka :is(.kanji-highlight, .related-sentence .highlight, .related-word.clickable-word:hover) {
+    color: var(--pitch-orange-light) !important;
+  }
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip li.nakadaka :is(.kanji-highlight, .related-sentence .highlight, .related-word.clickable-word:hover) {
+    color: var(--pitch-orange) !important;
+  }
+
+  #kanji-tooltip li.odaka :is(.kanji-highlight, .related-sentence .highlight, .related-word.clickable-word:hover) {
+    color: var(--pitch-green-light) !important;
+  }
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip li.odaka :is(.kanji-highlight, .related-sentence .highlight, .related-word.clickable-word:hover) {
+    color: var(--pitch-green) !important;
+  }
+
+  #kanji-tooltip li.kifuku :is(.kanji-highlight, .related-sentence .highlight, .related-word.clickable-word:hover) {
+    color: var(--pitch-purple-light) !important;
+  }
+  :is(.card.nightMode, .custom-dark-mode) #kanji-tooltip li.kifuku :is(.kanji-highlight, .related-sentence .highlight, .related-word.clickable-word:hover) {
+    color: var(--pitch-purple) !important;
+  }
+}
+
+/* Responsive Design */
+.mobile .card, .mobile #content {
+  margin: 0;
+}
+
+.mobile {
+  overflow-x: hidden;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-drag: none;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+/* Dictionary Colorizer */
+@container style(--dictionary-colorizer: 1) {
+  :is(
+    div[data-sc-name="使い方"],
+    div[data-sc-name="意味"],
+    div[data-sc-name="共通する意味"],
+    div[data-sc-name=""],
+    div[data-sc-name="使い分け"],
+    div[data-sc-name="関連語"]
+  ) > span:first-child {
+    border-color: var(--dict-color);
+  }
+
+  span[title="右記以外の漢字に関する参考記事"],
+  span[title="見出し語と同じ読みで、別の漢字表記"] {
+    color: var(--dict-color) !important;
+    border-color: var(--dict-color) !important;
+  }
+
+  span[style="font-size: 0.8em; vertical-align: text-bottom; border-style: solid; border-width: 0.05em; margin-right: 0.25em; padding: 0.1em;"],
+  span[style="font-size: 0.85em; vertical-align: text-bottom; border-style: solid; border-radius: 0.18em; border-width: 0.03em; margin-right: 0.25em; padding: 0.1em 0.25em 0em 0.2em; cursor: default;"] {
+    border-color: var(--dict-color);
+  }
+
+  span[style="font-size: 0.85em; color: rgb(204, 0, 0); vertical-align: text-bottom; border-style: solid; border-radius: 0.18em; border-width: 0.03em; margin-right: 0.25em; padding: 0.1em 0.25em 0em 0.2em; cursor: default;"] {
+    color: var(--dict-color) !important;
+  }
+}
+
+/* Base Setup */
+:is(.definition-box, .glossary-box) li[data-dictionary] {
+  --dict-color: currentColor;
+  position: relative;
+  padding-left: calc(var(--dictionary-colorizer) * var(--spacing-lg));
+}
+
+.back:has(li[data-dictionary]) {
+  background-color: rgba(
+    var(--dict-color-rgb, 0, 0, 0),
+    calc(var(--dictionary-colorizer) * var(--dict-back-bg) * var(--dict-bg-opacity))
+  );
+  border-radius: var(--border-radius-ms);
+}
+
+:is(#definition, #glossary):has(li[data-dictionary]) {
+  background-color: rgba(
+    var(--dict-color-rgb, 0, 0, 0), 
+    calc(var(--dictionary-colorizer) * var(--dict-bg-enabled) * var(--dict-bg-opacity))
+  );
+  border-radius: var(--border-radius-ms);
+}
+
+/* Border Styling */
+:is(.definition-box, .glossary-box) li[data-dictionary]::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: calc(var(--dictionary-colorizer) * var(--dict-border-width));
+  background-color: var(--dict-color);
+  border-radius: var(--border-radius-ms);
+  height: 100%;
+}
+
+/* Title and Counter Coloring */
+.dictionary-title,
+.yomitan-glossary i,
+.dictionary-counter,
+.glossary-box .yomitan-glossary li[data-dictionary]:not(:has(> .dictionary-title))::before {
+  color: color-mix(in srgb, 
+      var(--light-dict-color),
+      var(--dict-color) calc(var(--dictionary-colorizer) * 100%)
+  );
+}
+
+:is(.card.nightMode, .custom-dark-mode) :is(
+  .dictionary-title,
+  .yomitan-glossary i,
+  .dictionary-counter,
+  .glossary-box .yomitan-glossary li[data-dictionary]:not(:has(> .dictionary-title))::before
+) {
+  color: color-mix(in srgb, 
+      var(--dict-color-dark),
+      var(--dict-color) calc(var(--dictionary-colorizer) * 100%)
+  );
+}
+
+/* Link and Keyword Coloring */
+:is(
+  :is(#glossary, #definition).yomitan-glossary a,
+  :is(.definition-box, .glossary-box) li[data-dictionary] span[data-sc-content="example-keyword"]
+) {
+  color: color-mix(in srgb,
+      var(--light-highlight),
+      var(--dict-color) calc(var(--dictionary-colorizer) * 100%)
+  );
+}
+
+:is(.card.nightMode, .custom-dark-mode) :is(
+  :is(#glossary, #definition).yomitan-glossary a,
+  :is(.definition-box, .glossary-box) li[data-dictionary] span[data-sc-content="example-keyword"]
+) {
+  color: color-mix(in srgb,
+      var(--dark-highlight),
+      var(--dict-color) calc(var(--dictionary-colorizer) * 100%)
+  );
+}
+
+/* Selection Text */
+#selectionText {
+  background-color: rgba(
+    var(--dict-color-rgb, 0, 0, 0),
+    calc(var(--dictionary-colorizer) * var(--dict-bg-enabled) * var(--dict-bg-opacity))
+  );
+  border-radius: var(--border-radius-ms);
+}
+
+#selectionText .definition-box {
+  position: relative;
+  padding-left: calc(var(--spacing-lg) + (var(--dictionary-colorizer) * var(--spacing-lg)));
+}
+
+#selectionText .definition-box::before {
+  content: '';
+  position: absolute;
+  left: var(--spacing-lg);
+  top: var(--spacing-lg);
+  bottom: var(--spacing-lg);
+  width: calc(var(--dictionary-colorizer) * var(--dict-border-width));
+  background-color: var(--dict-color);
+  border-radius: var(--border-radius-ms);
+  z-index: 0;
+}
+
+/* Dictionary Theme Mapping */
+/* Light Theme Colors */
+.card {
+  --selection-text-color: var(--selection-text-color-light);
+  --selection-text-color-rgb: var(--selection-text-color-rgb-light);
+  --jmdict-color: var(--jmdict-color-light);
+  --jmdict-color-rgb: var(--jmdict-color-rgb-light);
+  --shinmeikai-color: var(--shinmeikai-color-light);
+  --shinmeikai-color-rgb: var(--shinmeikai-color-rgb-light);
+  --daijirin-color: var(--daijirin-color-light);
+  --daijirin-color-rgb: var(--daijirin-color-rgb-light);
+  --digital-daijisen-color: var(--digital-daijisen-color-light);
+  --digital-daijisen-color-rgb: var(--digital-daijisen-color-rgb-light);
+  --gendai-kokugo-reikai-color: var(--gendai-kokugo-reikai-color-light);
+  --gendai-kokugo-reikai-color-rgb: var(--gendai-kokugo-reikai-color-rgb-light);
+  --iwanami-kokugo-jiten-color: var(--iwanami-kokugo-jiten-color-light);
+  --iwanami-kokugo-jiten-color-rgb: var(--iwanami-kokugo-jiten-color-rgb-light);
+  --koujien-color: var(--koujien-color-light);
+  --koujien-color-rgb: var(--koujien-color-rgb-light);
+  --meikyo-kokugo-jiten-color: var(--meikyo-kokugo-jiten-color-light);
+  --meikyo-kokugo-jiten-color-rgb: var(--meikyo-kokugo-jiten-color-rgb-light);
+  --obunsha-kokugo-jiten-color: var(--obunsha-kokugo-jiten-color-light);
+  --obunsha-kokugo-jiten-color-rgb: var(--obunsha-kokugo-jiten-color-rgb-light);
+  --sanseido-kokugo-jiten-color: var(--sanseido-kokugo-jiten-color-light);
+  --sanseido-kokugo-jiten-color-rgb: var(--sanseido-kokugo-jiten-color-rgb-light);
+  --shinsen-kokugo-color: var(--shinsen-kokugo-color-light);
+  --shinsen-kokugo-color-rgb: var(--shinsen-kokugo-color-rgb-light);
+  --seisenban-color: var(--seisenban-color-light);
+  --seisenban-color-rgb: var(--seisenban-color-rgb-light);
+  --hybrid-shin-jirin-color: var(--hybrid-shin-jirin-color-light);
+  --hybrid-shin-jirin-color-rgb: var(--hybrid-shin-jirin-color-rgb-light);
+  --new-saitou-waei-color: var(--new-saitou-waei-color-light);
+  --new-saitou-waei-color-rgb: var(--new-saitou-waei-color-rgb-light);
+  --shin-waei-color: var(--shin-waei-color-light);
+  --shin-waei-color-rgb: var(--shin-waei-color-rgb-light);
+  --kanjigen-color: var(--kanjigen-color-light);
+  --kanjigen-color-rgb: var(--kanjigen-color-rgb-light);
+  --kanjipedia-doukun-igi-color: var(--kanjipedia-doukun-igi-color-light);
+  --kanjipedia-doukun-igi-color-rgb: var(--kanjipedia-doukun-igi-color-rgb-light);
+  --kanken-kanji-jiten-color: var(--kanken-kanji-jiten-color-light);
+  --kanken-kanji-jiten-color-rgb: var(--kanken-kanji-jiten-color-rgb-light);
+  --gakken-yojijukugo-color: var(--gakken-yojijukugo-color-light);
+  --gakken-yojijukugo-color-rgb: var(--gakken-yojijukugo-color-rgb-light);
+  --gogen-yurai-jiten-color: var(--gogen-yurai-jiten-color-light);
+  --gogen-yurai-jiten-color-rgb: var(--gogen-yurai-jiten-color-rgb-light);
+  --koji-kotowaza-no-jiten-color: var(--koji-kotowaza-no-jiten-color-light);
+  --koji-kotowaza-no-jiten-color-rgb: var(--koji-kotowaza-no-jiten-color-rgb-light);
+  --nihongo-zokugo-jisho-color: var(--nihongo-zokugo-jisho-color-light);
+  --nihongo-zokugo-jisho-color-rgb: var(--nihongo-zokugo-jisho-color-rgb-light);
+  --ruigo-jiten-online-color: var(--ruigo-jiten-online-color-light);
+  --ruigo-jiten-online-color-rgb: var(--ruigo-jiten-online-color-rgb-light);
+  --shingo-jiji-yougo-color: var(--shingo-jiji-yougo-color-light);
+  --shingo-jiji-yougo-color-rgb: var(--shingo-jiji-yougo-color-rgb-light);
+  --donna-toki-dou-tsukau-color: var(--donna-toki-dou-tsukau-color-light);
+  --donna-toki-dou-tsukau-color-rgb: var(--donna-toki-dou-tsukau-color-rgb-light);
+  --e-de-wakaru-kanyouku-color: var(--e-de-wakaru-kanyouku-color-light);
+  --e-de-wakaru-kanyouku-color-rgb: var(--e-de-wakaru-kanyouku-color-rgb-light);
+  --e-de-wakaru-nihongo-color: var(--e-de-wakaru-nihongo-color-light);
+  --e-de-wakaru-nihongo-color-rgb: var(--e-de-wakaru-nihongo-color-rgb-light);
+  --jlpt-bunpou-kaisetsu-color: var(--jlpt-bunpou-kaisetsu-color-light);
+  --jlpt-bunpou-kaisetsu-color-rgb: var(--jlpt-bunpou-kaisetsu-color-rgb-light);
+  --mainichi-nonbiri-color: var(--mainichi-nonbiri-color-light);
+  --mainichi-nonbiri-color-rgb: var(--mainichi-nonbiri-color-rgb-light);
+  --nihongo-bunpou-jiten-color: var(--nihongo-bunpou-jiten-color-light);
+  --nihongo-bunpou-jiten-color-rgb: var(--nihongo-bunpou-jiten-color-rgb-light);
+  --reikai-gakushuu-kokugo-color: var(--reikai-gakushuu-kokugo-color-light);
+  --reikai-gakushuu-kokugo-color-rgb: var(--reikai-gakushuu-kokugo-color-rgb-light);
+  --tsukaikata-no-wakaru-color: var(--tsukaikata-no-wakaru-color-light);
+  --tsukaikata-no-wakaru-color-rgb: var(--tsukaikata-no-wakaru-color-rgb-light);
+  --kids-japonica-color: var(--kids-japonica-color-light);
+  --kids-japonica-color-rgb: var(--kids-japonica-color-rgb-light);
+  --jiten-online-color: var(--jiten-online-color-light);
+  --jiten-online-color-rgb: var(--jiten-online-color-rgb-light);
+  --jitsuyou-nihongo-color: var(--jitsuyou-nihongo-color-light);
+  --jitsuyou-nihongo-color-rgb: var(--jitsuyou-nihongo-color-rgb-light);
+  --pixiv-color: var(--pixiv-color-light);
+  --pixiv-color-rgb: var(--pixiv-color-rgb-light);
+  --sozai-jiten-color: var(--sozai-jiten-color-light);
+  --sozai-jiten-color-rgb: var(--sozai-jiten-color-rgb-light);
+  --wikipedia-color: var(--wikipedia-color-light);
+  --wikipedia-color-rgb: var(--wikipedia-color-rgb-light);
+  --goiryoku-nijijukugo-color: var(--goiryoku-nijijukugo-color-light);
+  --goiryoku-nijijukugo-color-rgb: var(--goiryoku-nijijukugo-color-rgb-light);
+  --shogakukan-reikai-12-color: var(--shogakukan-reikai-12-color-light);
+  --shogakukan-reikai-12-color-rgb: var(--shogakukan-reikai-12-color-rgb-light);
+  --weblio-kogo-jiten-color: var(--weblio-kogo-jiten-color-light);
+  --weblio-kogo-jiten-color-rgb: var(--weblio-kogo-jiten-color-rgb-light);
+}
+
+/* Dark Theme Colors */
+.card.nightMode,
+.custom-dark-mode :is(.definition-box, .glossary-box) {
+  --selection-text-color: var(--selection-text-color-dark);
+  --selection-text-color-rgb: var(--selection-text-color-dark-rgb);
+  --jmdict-color: var(--jmdict-color-dark);
+  --jmdict-color-rgb: var(--jmdict-color-dark-rgb);
+  --shinmeikai-color: var(--shinmeikai-color-dark);
+  --shinmeikai-color-rgb: var(--shinmeikai-color-dark-rgb);
+  --daijirin-color: var(--daijirin-color-dark);
+  --daijirin-color-rgb: var(--daijirin-color-dark-rgb);
+  --digital-daijisen-color: var(--digital-daijisen-color-dark);
+  --digital-daijisen-color-rgb: var(--digital-daijisen-color-dark-rgb);
+  --gendai-kokugo-reikai-color: var(--gendai-kokugo-reikai-color-dark);
+  --gendai-kokugo-reikai-color-rgb: var(--gendai-kokugo-reikai-color-dark-rgb);
+  --iwanami-kokugo-jiten-color: var(--iwanami-kokugo-jiten-color-dark);
+  --iwanami-kokugo-jiten-color-rgb: var(--iwanami-kokugo-jiten-color-dark-rgb);
+  --koujien-color: var(--koujien-color-dark);
+  --koujien-color-rgb: var(--koujien-color-dark-rgb);
+  --meikyo-kokugo-jiten-color: var(--meikyo-kokugo-jiten-color-dark);
+  --meikyo-kokugo-jiten-color-rgb: var(--meikyo-kokugo-jiten-color-dark-rgb);
+  --obunsha-kokugo-jiten-color: var(--obunsha-kokugo-jiten-color-dark);
+  --obunsha-kokugo-jiten-color-rgb: var(--obunsha-kokugo-jiten-color-dark-rgb);
+  --sanseido-kokugo-jiten-color: var(--sanseido-kokugo-jiten-color-dark);
+  --sanseido-kokugo-jiten-color-rgb: var(--sanseido-kokugo-jiten-color-dark-rgb);
+  --shinsen-kokugo-color: var(--shinsen-kokugo-color-dark);
+  --shinsen-kokugo-color-rgb: var(--shinsen-kokugo-color-dark-rgb);
+  --seisenban-color: var(--seisenban-color-dark);
+  --seisenban-color-rgb: var(--seisenban-color-dark-rgb);
+  --hybrid-shin-jirin-color: var(--hybrid-shin-jirin-color-dark);
+  --hybrid-shin-jirin-color-rgb: var(--hybrid-shin-jirin-color-dark-rgb);
+  --new-saitou-waei-color: var(--new-saitou-waei-color-dark);
+  --new-saitou-waei-color-rgb: var(--new-saitou-waei-color-dark-rgb);
+  --shin-waei-color: var(--shin-waei-color-dark);
+  --shin-waei-color-rgb: var(--shin-waei-color-dark-rgb);
+  --kanjigen-color: var(--kanjigen-color-dark);
+  --kanjigen-color-rgb: var(--kanjigen-color-dark-rgb);
+  --kanjipedia-doukun-igi-color: var(--kanjipedia-doukun-igi-color-dark);
+  --kanjipedia-doukun-igi-color-rgb: var(--kanjipedia-doukun-igi-color-dark-rgb);
+  --kanken-kanji-jiten-color: var(--kanken-kanji-jiten-color-dark);
+  --kanken-kanji-jiten-color-rgb: var(--kanken-kanji-jiten-color-dark-rgb);
+  --gakken-yojijukugo-color: var(--gakken-yojijukugo-color-dark);
+  --gakken-yojijukugo-color-rgb: var(--gakken-yojijukugo-color-dark-rgb);
+  --gogen-yurai-jiten-color: var(--gogen-yurai-jiten-color-dark);
+  --gogen-yurai-jiten-color-rgb: var(--gogen-yurai-jiten-color-dark-rgb);
+  --koji-kotowaza-no-jiten-color: var(--koji-kotowaza-no-jiten-color-dark);
+  --koji-kotowaza-no-jiten-color-rgb: var(--koji-kotowaza-no-jiten-color-dark-rgb);
+  --nihongo-zokugo-jisho-color: var(--nihongo-zokugo-jisho-color-dark);
+  --nihongo-zokugo-jisho-color-rgb: var(--nihongo-zokugo-jisho-color-dark-rgb);
+  --ruigo-jiten-online-color: var(--ruigo-jiten-online-color-dark);
+  --ruigo-jiten-online-color-rgb: var(--ruigo-jiten-online-color-dark-rgb);
+  --shingo-jiji-yougo-color: var(--shingo-jiji-yougo-color-dark);
+  --shingo-jiji-yougo-color-rgb: var(--shingo-jiji-yougo-color-dark-rgb);
+  --donna-toki-dou-tsukau-color: var(--donna-toki-dou-tsukau-color-dark);
+  --donna-toki-dou-tsukau-color-rgb: var(--donna-toki-dou-tsukau-color-dark-rgb);
+  --e-de-wakaru-kanyouku-color: var(--e-de-wakaru-kanyouku-color-dark);
+  --e-de-wakaru-kanyouku-color-rgb: var(--e-de-wakaru-kanyouku-color-dark-rgb);
+  --e-de-wakaru-nihongo-color: var(--e-de-wakaru-nihongo-color-dark);
+  --e-de-wakaru-nihongo-color-rgb: var(--e-de-wakaru-nihongo-color-dark-rgb);
+  --jlpt-bunpou-kaisetsu-color: var(--jlpt-bunpou-kaisetsu-color-dark);
+  --jlpt-bunpou-kaisetsu-color-rgb: var(--jlpt-bunpou-kaisetsu-color-dark-rgb);
+  --mainichi-nonbiri-color: var(--mainichi-nonbiri-color-dark);
+  --mainichi-nonbiri-color-rgb: var(--mainichi-nonbiri-color-dark-rgb);
+  --nihongo-bunpou-jiten-color: var(--nihongo-bunpou-jiten-color-dark);
+  --nihongo-bunpou-jiten-color-rgb: var(--nihongo-bunpou-jiten-color-dark-rgb);
+  --reikai-gakushuu-kokugo-color: var(--reikai-gakushuu-kokugo-color-dark);
+  --reikai-gakushuu-kokugo-color-rgb: var(--reikai-gakushuu-kokugo-color-dark-rgb);
+  --tsukaikata-no-wakaru-color: var(--tsukaikata-no-wakaru-color-dark);
+  --tsukaikata-no-wakaru-color-rgb: var(--tsukaikata-no-wakaru-color-dark-rgb);
+  --kids-japonica-color: var(--kids-japonica-color-dark);
+  --kids-japonica-color-rgb: var(--kids-japonica-color-dark-rgb);
+  --jiten-online-color: var(--jiten-online-color-dark);
+  --jiten-online-color-rgb: var(--jiten-online-color-dark-rgb);
+  --jitsuyou-nihongo-color: var(--jitsuyou-nihongo-color-dark);
+  --jitsuyou-nihongo-color-rgb: var(--jitsuyou-nihongo-color-dark-rgb);
+  --pixiv-color: var(--pixiv-color-dark);
+  --pixiv-color-rgb: var(--pixiv-color-dark-rgb);
+  --sozai-jiten-color: var(--sozai-jiten-color-dark);
+  --sozai-jiten-color-rgb: var(--sozai-jiten-color-dark-rgb);
+  --wikipedia-color: var(--wikipedia-color-dark);
+  --wikipedia-color-rgb: var(--wikipedia-color-dark-rgb);
+  --goiryoku-nijijukugo-color: var(--goiryoku-nijijukugo-color-dark);
+  --goiryoku-nijijukugo-color-rgb: var(--goiryoku-nijijukugo-color-dark-rgb);
+  --shogakukan-reikai-12-color: var(--shogakukan-reikai-12-color-dark);
+  --shogakukan-reikai-12-color-rgb: var(--shogakukan-reikai-12-color-dark-rgb);
+  --weblio-kogo-jiten-color: var(--weblio-kogo-jiten-color-dark);
+  --weblio-kogo-jiten-color-rgb: var(--weblio-kogo-jiten-color-dark-rgb);
+}
+
+/* Specific Color Definitions for Each Dictionary */
+#selectionText,
+#selectionText .definition-box,
+#selectionText li[data-dictionary] {
+  --dict-color: var(--selection-text-color) !important;
+  --dict-color-rgb: var(--selection-text-color-rgb) !important;
+}
+
+:is(.definition-box, .glossary-box) li:is(
+    [data-dictionary*="JMdict"],
+    [data-dictionary*="JMDict"],
+    [data-dictionary*="JMnedict"],
+    [data-dictionary*="Jitendex"]
+) {
+  --dict-color: var(--jmdict-color);
+  --dict-color-rgb: var(--jmdict-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="大辞林"] {
+  --dict-color: var(--daijirin-color);
+  --dict-color-rgb: var(--daijirin-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="旺文社国語辞典"] {
+  --dict-color: var(--obunsha-kokugo-jiten-color);
+  --dict-color-rgb: var(--obunsha-kokugo-jiten-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="明鏡国語辞典"] {
+  --dict-color: var(--meikyo-kokugo-jiten-color);
+  --dict-color-rgb: var(--meikyo-kokugo-jiten-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="岩波国語辞"] {
+  --dict-color: var(--iwanami-kokugo-jiten-color);
+  --dict-color-rgb: var(--iwanami-kokugo-jiten-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="新明解"] {
+  --dict-color: var(--shinmeikai-color);
+  --dict-color-rgb: var(--shinmeikai-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="大辞泉"] {
+  --dict-color: var(--digital-daijisen-color);
+  --dict-color-rgb: var(--digital-daijisen-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary="精選版　日本国語大辞典"] {
+  --dict-color: var(--seisenban-color);
+  --dict-color-rgb: var(--seisenban-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary="ハイブリッド新辞林"] {
+  --dict-color: var(--hybrid-shin-jirin-color);
+  --dict-color-rgb: var(--hybrid-shin-jirin-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary^="広辞苑"] {
+  --dict-color: var(--koujien-color);
+  --dict-color-rgb: var(--koujien-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li:is(
+    [data-dictionary$="辞典オンライン"],
+    [data-dictionary="故事・ことわざ・慣用句オンライン"]
+) {
+  --dict-color: var(--jiten-online-color);
+  --dict-color-rgb: var(--jiten-online-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary="実用日本語表現辞典"] {
+  --dict-color: var(--jitsuyou-nihongo-color);
+  --dict-color-rgb: var(--jitsuyou-nihongo-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary^="三省堂国語辞典"] {
+  --dict-color: var(--sanseido-kokugo-jiten-color);
+  --dict-color-rgb: var(--sanseido-kokugo-jiten-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary="NEW斎藤和英大辞典"] {
+  --dict-color: var(--new-saitou-waei-color);
+  --dict-color-rgb: var(--new-saitou-waei-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary="新和英"] {
+  --dict-color: var(--shin-waei-color);
+  --dict-color-rgb: var(--shin-waei-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary^="Pixiv"] {
+  --dict-color: var(--pixiv-color);
+  --dict-color-rgb: var(--pixiv-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary="漢字源"] {
+  --dict-color: var(--kanjigen-color);
+  --dict-color-rgb: var(--kanjigen-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary="日本語俗語辞書"] {
+  --dict-color: var(--nihongo-zokugo-jisho-color);
+  --dict-color-rgb: var(--nihongo-zokugo-jisho-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary="weblio古語辞典"] {
+  --dict-color: var(--weblio-kogo-jiten-color);
+  --dict-color-rgb: var(--weblio-kogo-jiten-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary="語源由来辞典"] {
+  --dict-color: var(--gogen-yurai-jiten-color);
+  --dict-color-rgb: var(--gogen-yurai-jiten-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary="学研 四字熟語辞典"] {
+  --dict-color: var(--gakken-yojijukugo-color);
+  --dict-color-rgb: var(--gakken-yojijukugo-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary="故事ことわざの辞典"] {
+  --dict-color: var(--koji-kotowaza-no-jiten-color);
+  --dict-color-rgb: var(--koji-kotowaza-no-jiten-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary^="日本語文法辞典"] {
+  --dict-color: var(--nihongo-bunpou-jiten-color);
+  --dict-color-rgb: var(--nihongo-bunpou-jiten-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary^="絵でわかる慣用句"] {
+  --dict-color: var(--e-de-wakaru-kanyouku-color);
+  --dict-color-rgb: var(--e-de-wakaru-kanyouku-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary="絵でわかる日本語"] {
+  --dict-color: var(--e-de-wakaru-nihongo-color);
+  --dict-color-rgb: var(--e-de-wakaru-nihongo-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary="JLPT文法解説まとめ"] {
+  --dict-color: var(--jlpt-bunpou-kaisetsu-color);
+  --dict-color-rgb: var(--jlpt-bunpou-kaisetsu-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="どんなときどう使う"] {
+  --dict-color: var(--donna-toki-dou-tsukau-color);
+  --dict-color-rgb: var(--donna-toki-dou-tsukau-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary="毎日のんびり日本語教師"] {
+  --dict-color: var(--mainichi-nonbiri-color);
+  --dict-color-rgb: var(--mainichi-nonbiri-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li:is(
+    [data-dictionary*="使い方の分かる"],
+    [data-dictionary*="全国方言辞典"]
+) {
+  --dict-color: var(--tsukaikata-no-wakaru-color);
+  --dict-color-rgb: var(--tsukaikata-no-wakaru-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary="類語辞典オンライン"] {
+  --dict-color: var(--ruigo-jiten-online-color);
+  --dict-color-rgb: var(--ruigo-jiten-online-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="新語時事用語辞典"] {
+  --dict-color: var(--shingo-jiji-yougo-color);
+  --dict-color-rgb: var(--shingo-jiji-yougo-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="漢字ペディア同訓異義"] {
+  --dict-color: var(--kanjipedia-doukun-igi-color);
+  --dict-color-rgb: var(--kanjipedia-doukun-igi-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="Wikipedia"] {
+  --dict-color: var(--wikipedia-color);
+  --dict-color-rgb: var(--wikipedia-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="漢検漢字辞典"] {
+  --dict-color: var(--kanken-kanji-jiten-color);
+  --dict-color-rgb: var(--kanken-kanji-jiten-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="例解学習国語辞典"] {
+  --dict-color: var(--reikai-gakushuu-kokugo-color);
+  --dict-color-rgb: var(--reikai-gakushuu-kokugo-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="現代国語例解辞典"] {
+  --dict-color: var(--gendai-kokugo-reikai-color);
+  --dict-color-rgb: var(--gendai-kokugo-reikai-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="新選国語辞典　第十版"] {
+  --dict-color: var(--shinsen-kokugo-color);
+  --dict-color-rgb: var(--shinsen-kokugo-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="きっずジャポニカ"] {
+  --dict-color: var(--kids-japonica-color);
+  --dict-color-rgb: var(--kids-japonica-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary^="素材辞典"] {
+  --dict-color: var(--sozai-jiten-color);
+  --dict-color-rgb: var(--sozai-jiten-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="語彙力"] {
+  --dict-color: var(--goiryoku-nijijukugo-color);
+  --dict-color-rgb: var(--goiryoku-nijijukugo-color-rgb);
+}
+
+:is(.definition-box, .glossary-box) li[data-dictionary*="小学館例解学習国語"] {
+  --dict-color: var(--shogakukan-reikai-12-color);
+  --dict-color-rgb: var(--shogakukan-reikai-12-color-rgb);
+}
+
+/* Dictionary Collapse */
+.definition-box.is-collapsed,
+.glossary-box.is-collapsed {
+  max-height: var(--dictionary-max-height);
+  overflow: hidden;
+  position: relative;
+}
+
+.fade-to-show-more {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 45px;
+  cursor: pointer;
+  z-index: 5;
+  background: var(--dictionary-collapse-fade-light);
+}
+
+.fade-to-show-more::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.card.nightMode .fade-to-show-more {
+  background: var(--dictionary-collapse-fade);
+}
+
+.custom-dark-mode .fade-to-show-more {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0), #000000) !important;
+}
+
+.fade-to-show-more::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.02));
+  transition: opacity var(--base-transition);
+}
+
+.card.nightMode .fade-to-show-more::before,
+.custom-dark-mode .fade-to-show-more::before {
+  background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.03));
+}
+
+.fade-to-show-more:hover::before {
+  opacity: 1;
+}
+
+/* Scene Switching */
+.sentence-nav {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  height: 100%;
+  width: 7.2%; 
+  max-width: 80px;
+  cursor: pointer;
+  border-radius: var(--border-radius-lg);
+  z-index: 1;
+  opacity: 0;
+  transition: opacity var(--base-transition);
+}
+
+.sentence-nav:hover {
+  opacity: 0.05;
+}
+
+.sentence-nav.left {
+  left: 0;
+  background: linear-gradient(to right, rgba(0, 0, 0, 1), transparent);
+}
+
+.sentence-nav.right {
+  right: 0;
+  background: linear-gradient(to left, rgba(0, 0, 0, 1), transparent);
+}
+
+:is(.card.nightMode, .custom-dark-mode) {
+  .sentence-nav.left {
+    left: 0;
+    background: linear-gradient(to right, rgba(255, 255, 255, 1), transparent);
+  }
+
+  .sentence-nav.right {
+    right: 0;
+    background: linear-gradient(to left, rgba(255, 255, 255, 1), transparent);
+  }
+}
+
+/* Hide scrollbar */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide settings toggle */
+@container style(--settings-visibility: 0) {
+  .toggle-settings-btn {
+    display: none;
+  }
+}
+
+.back:not(:has(.sentenceaudio))
+.toggle-notes {
+  top: 124px !important;
+}
+
+.back:not(:has(.sentenceaudio)) 
+.toggle-image-visibility.show-btn {
+  top: 174px !important;
+}
+
+.back:not(:has(.sentenceaudio)):not(:has(.toggle-notes)) .toggle-image-visibility.show-btn { 
+    top: 124px !important; 
+}
+
+@container style(--custom-dark-mode-visibility: 0) {
+  .audio {
+    top: var(--spacing-xxl);
+  }
+
+  .sentenceaudio {
+    top: 74px;
+  }
+
+  .toggle-notes {
+    top: 124px !important;
+  }
+
+  .back:has(.toggle-notes) 
+  .toggle-image-visibility.show-btn {
+    top: 174px !important;
+  }
+
+  .back:not(:has(.sentenceaudio)):not(:has(.toggle-notes)) 
+  .toggle-image-visibility.show-btn { 
+    top: 124px !important; 
+  }
+
+  .toggle-image-visibility.show-btn {
+    top: 124px;
+  }
+
+  .back:not(:has(.sentenceaudio)) 
+  .toggle-notes { 
+    top: 74px !important;
+  }
+}
+
+@media (min-width:1051px){
+  @container style(--main-bg-visibility: 0) {
+    .back::before, .front::before {
+      display: none;
+    }
+  }
+
+  @container style(--main-bg-shadow-visibility: 1) {
+    .front::before, .back::before {
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 5px 10px var(--card-shadow-light);
+    }
+
+    :is(.card.nightMode, .custom-dark-mode) :is(.front, .back)::before {
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 5px 10px var(--card-shadow);
+    }
+  }
+
+  @container style(--custom-dark-mode-visibility: 0) {
+    .toggle-custom-dark-mode {
+      display: none;
+    }
+  }
+
+  @container style(--audio-visibility: 0) {
+    .audio { 
+      display: none;
+    }
+
+    .sentenceaudio { 
+      display: none;
+    }
+  }
+
+  @container style(--freq-visibility: 0) {
+    #frequency {
+      display: none;
+    }
+  }
+}
+
+@media (max-width: 1050px) {
+  :root {
+    --horizontal-layout: var(--horizontal-grid-large);
+    --vertical-layout: var(--vertical-grid-large);
+  }
+
+  .toggle-image-visibility.show-btn {
+    top: 0 !important;
+    left: 0 !important;
+    position: relative;
+  }
+
+  .back:has(.toggle-notes) .toggle-image-visibility.show-btn {
+    top: 0 !important;
+  }
+
+  .back:not(:has(.sentenceaudio)) .toggle-image-visibility.show-btn {
+    top: 0 !important;
+  }
+
+  .toggle-image-visibility.show-btn {
+    top: 0 !important;
+  }
+
+  .back:not(:has(.sentenceaudio)):not(:has(.toggle-notes)) .toggle-image-visibility.show-btn {
+    top: 0 !important;
+  }
+
+  @container style(--settings-visibility-header: 0) {
+    .toggle-settings-btn {
+      display: none !important;
+    }
+  }
+
+  .dictionary-counter {
+    padding: var(--spacing-md);
+  }
+
+  .front:not(:has(#wordAudio)) .toggle-custom-dark-mode { 
+    position: unset;
+  }
+
+  .front:has(#wordAudio) .toggle-custom-dark-mode { 
+    position: absolute;
+  }
+
+  .front:has(#sentence-wrapper) .toggle-custom-dark-mode { 
+    position: absolute;
+  }
+
+  .front:not(:has(#wordAudio)) .toggle-settings-btn { 
+    position: unset;
+  }
+
+  .front:has(#wordAudio) .toggle-settings-btn { 
+    position: absolute;
+    left: auto;
+    right: 20px;
+  }
+
+  .front:has(#wordAudio) .hint-btn { 
+    position: absolute;
+    left: auto;
+    right: 75.5px;
+    top: 20px;
+  }
+
+
+  @container style(--settings-visibility-header: 0) {
+    .front:has(#wordAudio) .hint-btn {
+      right: 20px !important;
+    }
+  }
+
+  .front:has(#sentence-wrapper) .toggle-settings-btn { 
+    position: absolute;
+  }
+
+  .front:has(#sentence-wrapper) .hint-btn { 
+    position: absolute;
+    right: 20px;
+    top: 20px;
+  }
+
+  .front { top: 0; }
+  .back { top: 0; }
+
+  @container (not style(--enable-backdrop-layout: 1)) {
+    @container style(--horizontal-layout: 1) {
+      .grid-container {
+        grid-template-areas: "word picture";
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @container style(--horizontal-layout: 2) {
+      .grid-container {
+        grid-template-areas: "picture word";
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @container style(--vertical-layout: 1) {
+      .grid-container {
+        grid-template-areas: 
+        "word"
+        "picture";
+        grid-template-columns: repeat(1, 1fr);
+        gap: 10px;
+      }
+    }
+
+    @container style(--vertical-layout: 2) {
+      .grid-container {
+        grid-template-areas: 
+        "picture"
+        "word";
+        grid-template-columns: repeat(1, 1fr);
+        gap: 10px;
+      }
+    }
+  }
+
+  .header {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin-bottom: 5px;
+  }
+
+  .audio-hint {
+    position: absolute;
+    display: flex;
+    left: 75px;
+    top: 20px;
+  }
+
+  .toggle-custom-dark-mode {
+    position: absolute;
+    display: flex;
+    left: 20px;
+    top: 20px;
+  }
+
+  .toggle-settings-btn {
+    position: absolute;
+    display: flex;
+    left: 75px;
+    top: 20px;
+    bottom: auto;
+  }
+
+  @container style(--custom-dm-header-visibility: 0) {
+    .audio-hint {
+      left: 20px;
+    }
+  }
+
+  .back .toggle-custom-dark-mode {
+    position: unset;
+  }
+
+  .back .toggle-settings-btn {
+    position: unset;
+  }
+
+  @container style(--main-bg-1050-visibility: 0) {
+    .back::before, .front::before {
+      display: none;
+    }
+  }
+
+  @container style(--main-bg-shadow-1050-visibility: 1) {
+    .front::before, .back::before {
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 5px 10px var(--card-shadow-light);
+    }
+
+    :is(.card.nightMode, .custom-dark-mode) :is(.front, .back)::before {
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 5px 10px var(--card-shadow);
+    }
+  }
+
+  @container style(--custom-dm-header-visibility: 0) {
+    .toggle-custom-dark-mode {
+      display: none;
+    }
+  }
+
+  @container style(--audio-header-visibility: 0) {
+    .audio { 
+      display: none;
+    }
+
+    .sentenceaudio { 
+      display: none;
+    }
+  }
+
+  @container style(--freq-header-visibility: 0) {
+    #frequency {
+      display: none;
+    }
+  }
+
+  .back:not(:has(.audio)) .sentenceaudio {
+    top: 25px;
+    left: 25px;
+    position: unset;
+  }
+
+  .toggle-notes {
+    position: unset;
+  }
+
+  #frequency {
+    position: unset;
+  }
+
+  .freqbt {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    z-index: var(--z-index-toggle);
+  }
+
+  .frequency-content {
+    align-items: center;
+    position: absolute;
+    top: 61px;
+    right: 20px;
+    z-index: var(--z-index-toggle);
+  }
+
+  .glossary-box, .definition-box {
+    padding: var(--spacing-md);
+  }
+
+  #selectionText .definition-box::before {
+    left: var(--spacing-md) !important;
+    top: var(--spacing-md) !important;
+    bottom: var(--spacing-md) !important;
+  }
+
+  #selectionText .definition-box {
+    padding-left: calc(var(--spacing-md) + (var(--dictionary-colorizer) * var(--spacing-lg))) !important;
+  }
+
+  .back .audio, 
+  .back .sentenceaudio,
+  .back:not(:has(.audio)) .sentenceaudio {
+    position: relative !important;
+    top: auto !important;          
+    left: auto !important;         
+    right: auto !important;
+    bottom: auto !important;
+  }
+
+  .misc-info {
+    padding-left: var(--spacing-md); 
+    padding-right: var(--spacing-md); 
+  }
+}
+
+@media (max-width: 768px) {
+  :root { 
+    --horizontal-layout: var(--horizontal-grid-medium);
+    --vertical-layout: var(--vertical-grid-medium);
+  }
+
+  @container (not style(--enable-backdrop-layout: 1)) {
+    @container style(--horizontal-layout: 1) {
+      .grid-container {
+        grid-template-areas: "word picture";
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @container style(--horizontal-layout: 2) {
+      .grid-container {
+        grid-template-areas: "picture word";
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @container style(--vertical-layout: 1) {
+      .grid-container {
+        grid-template-areas: 
+        "word"
+        "picture";
+        grid-template-columns: repeat(1, 1fr);
+        gap: 10px;
+      }
+    }
+
+    @container style(--vertical-layout: 2) {
+      .grid-container {
+        grid-template-areas: 
+        "picture"
+        "word";
+        grid-template-columns: repeat(1, 1fr);
+        gap: 10px;
+      }
+    }
+  }
+
+  .front::before,
+  .back::before {
+    border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg) !important;
+  }
+
+  .nav-arrow {
+    border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg) !important;
+  }
+
+  /* sentence wrapping fix */
+  #sentence {
+    display: block !important;
+    white-space: normal !important;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  #sentence rb {
+    white-space: normal !important; 
+  }
+}
+
+@media (max-width: 624px) {
+  :root {
+    --horizontal-layout: var(--horizontal-grid-small);
+    --vertical-layout: var(--vertical-grid-small);
+  }
+
+  .back.image-removed .grid-container {
+    height: initial;
+  }
+
+  .front:not(:has(#wordAudio)) .toggle-custom-dark-mode { 
+    position: unset;
+  }
+
+  .front:not(:has(#wordAudio)) .toggle-settings-btn { 
+    position: unset;
+  }
+
+  .front > .header {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin-bottom: 5px;
+  }
+
+  .sentence-front {
+    padding-top: 10px;
+  }
+
+  @container (not style(--enable-backdrop-layout: 1)) {
+    @container style(--horizontal-layout: 1) {
+      .grid-container {
+        grid-template-areas: "word picture";
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @container style(--horizontal-layout: 2) {
+      .grid-container {
+        grid-template-areas: "picture word";
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @container style(--vertical-layout: 1) {
+      .grid-container {
+        grid-template-areas: 
+        "word"
+        "picture" !important;
+        grid-template-columns: repeat(1, 1fr) !important;
+      }
+    }
+
+    @container style(--vertical-layout: 2) {
+      .grid-container {
+        grid-template-areas: 
+        "picture"
+        "word" !important;
+        grid-template-columns: repeat(1, 1fr) !important;
+      }
+    }
+  }
+
+  @container style(--backdrop-style: 0) and style(--enable-backdrop-layout: 0) {
+    .picture-container {
+      max-height: var(--picture-height-small);
+    }
+
+    .picture-container img {
+      max-height: var(--picture-max-height-small);
+    }
+  }
+
+  .front, .back {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .grid-container {
+    gap: 10px;
+  }
+
+  .desktop-word-layout {
+    display: none;
+  }
+
+  .mobile-word-layout {
+    display: block;
+  }
+
+  .mobile-word-layout > .background-box {
+    padding-top: 23.5px;
+    padding-bottom: 27.5px;
+  }
+  .chrome:not(.win):not(.linux) .mobile-word-layout > .background-box {
+    padding-top: 25px;
+    padding-bottom: 29px;
+  }
+}
+
+/* Backdrop Layout */
+@container style(--enable-backdrop-layout: 1) {
+  .scene-indicator {
+    display: none !important;
+  }
+
+  .grid-container {
+    display: initial;
+  }
+
+  .picture-container {
+    grid-area: stack;
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background: transparent !important;
+    pointer-events: none;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: var(--border-radius-lg);
+  }
+
+  .picture-container img {
+    width: 100%;
+    height: auto !important;
+    min-height: var(--backdrop-background-height);
+    max-height: none !important;
+    object-fit: cover;
+    object-position: top center !important;
+    opacity: var(--backdrop-opacity);
+    border-radius: var(--border-radius-ms);
+    height: 100%;
+    will-change: mask-image, -webkit-mask-image;
+    transform: translateZ(0);
+    transition: none;
+  }
+
+  @container style(--card-background-fade: 1) {
+    .picture-container img {
+      -webkit-mask-image: linear-gradient(to bottom, black var(--card-fade-strength), transparent 100%);
+      mask-image: linear-gradient(to bottom, black var(--card-fade-strength), transparent 100%);
+    }
+  }
+
+  .back .background-box {
+    position: relative;
+    z-index: 2;
+    background: transparent !important;
+    align-content: center;
+    text-shadow: 0 1px 5px rgba(var(--bd-text-shadow-color-light), var(--bd-text-shadow-opacity-light));
+  }
+
+  :is(.card.nightMode, .custom-dark-mode) 
+  .back .background-box {
+    text-shadow: 0 1px 5px rgba(var(--bd-text-shadow-color), var(--bd-text-shadow-opacity));
+  }
+
+  /* Card BG */
+  @container style(--backdrop-style: 0) {
+    .misc-info {
+      background: var(--misc-info-bg-light);
+      color: var(--misc-info-text-light);
+      will-change: max-height, opacity;
+      transform: translateZ(0);
+      transition: max-height var(--base-transition), 
+                  padding var(--base-transition), 
+                  opacity var(--base-transition),
+                  color var(--base-transition),
+                  margin-top var(--base-transition),
+                  background-color var(--base-transition);
+    }
+
+    :is(.card.nightMode, .custom-dark-mode)
+    .misc-info {
+      background: var(--misc-info-bg);
+      color: var(--misc-info-text);
+    }
+
+    .misc-info:hover {
+      background: var(--misc-info-bg-hover-light);
+    }
+
+    :is(.card.nightMode, .custom-dark-mode)
+    .misc-info:hover {
+      background: var(--misc-info-bg-hover);
+    }
+
+    @media (min-width: 1050px) {
+      .front {
+        top: var(--bd-card-bg-front-offset);
+      }
+    }
+
+    #sentence, #sentenceEng {
+      text-shadow: 0 1px 5px rgba(var(--bd-text-shadow-color-light), var(--bd-text-shadow-opacity-light));
+    }
+
+    :is(.card.nightMode, .custom-dark-mode) 
+    #sentence, #sentenceEng {
+      text-shadow: 0 1px 5px rgba(var(--bd-text-shadow-color), var(--bd-text-shadow-opacity));
+    }
+
+    /* Force Tags & Links to Bottom of Card */
+    @container style(--backdrop-dynamic-height: 1) {
+      .back {
+        display: flex !important;
+        flex-direction: column !important;
+      }
+
+      .tags-and-links-wrapper {
+        position: relative !important;
+        margin-top: auto !important;
+        width: 100%;
+        box-sizing: border-box;
+        bottom: auto !important;
+        left: auto !important;
+      }
+    }
+
+    /* Card BG Fixes */
+    #sentence, #sentenceEng, .misc-info {
+      position: relative;
+      z-index: 2;
+    }
+
+    @media (max-width: 1050px) {
+      .audio, 
+      .sentenceaudio {
+        position: relative;
+        z-index: 2;
+      }
+    }
+
+    .sentence-container,
+    .notes,
+    .card-b,
+    .back .background-box,
+    .misc-info {
+      pointer-events: none !important;
+    }
+
+    .sentence-container > *,
+    .notes > *,
+    .card-b > *,
+    .misc-info > *,
+    #word span,
+    #word ruby,
+    #formattedSentence,
+    #formattedSentence *,
+    .definition-box *,
+    .glossary-box *,
+    .tags-container *,
+    .external-links a {
+      pointer-events: auto !important;
+    }
+
+    .picture-container {
+      pointer-events: auto !important;
+      z-index: 0 !important;
+    }
+
+    .misc-info {
+      pointer-events: auto !important;
+    }
+
+    @media (max-width: 768px) {
+      .picture-container, .picture-container img {
+        border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg) !important;  
+      }
+    }
+
+    /* Picture Counter Repositioning */
+    .picture-container .picture-counter {
+      display: none !important;
+    }
+
+    .sentence-container .picture-counter {
+      display: block;
+      position: relative;
+      bottom: auto;
+      left: auto;
+      transform: none;
+      width: fit-content;
+      margin: 5px auto -5px auto;
+      padding: 4px 8px;
+      pointer-events: none;
+      user-select: none;
+      z-index: 2;
+      font-size: var(--picture-counter-size);
+      font-weight: bold;
+      border-radius: var(--border-radius-ms);
+      background-color: rgba(0, 0, 0, var(--picture-counter-bg-opacity));
+      color: rgba(255, 255, 255, 0.9);
+      text-shadow: 2px 0 1px rgba(0,0,0,0.1),
+                   -2px 0 1px rgba(0,0,0,0.1),
+                   0 2px 1px rgba(0,0,0,0.1),
+                   0 -2px 1px rgba(0,0,0,0.1),
+                   0 0 4px rgba(0, 0, 0, var(--picture-counter-shadow-intensity));
+      transition: opacity var(--fast-transition);
+      opacity: 0; 
+    }
+
+    .card:hover .sentence-container .picture-counter,
+    .sentence-container:hover .picture-counter {
+      opacity: 1;
+    }
+
+    /* Visibility is 1 (Always) */
+    @container style(--picture-counter-visibility: 1) {
+      .sentence-container .picture-counter {
+        opacity: 1 !important;
+      }
+    }
+
+    /* Visibility is 3 (More than 1) */
+    @container style(--picture-counter-visibility: 3) {
+      .back.has-multiple-images .sentence-container .picture-counter {
+        opacity: 1 !important;
+      }
+    }
+
+    /* Visibility is 0 (Hidden) */
+    @container style(--picture-counter-visibility: 0) {
+      .sentence-container .picture-counter {
+        display: none !important;
+      }
+    }
+  }
+
+  @container style(--word-background-box: 1) {
+    .back .background-box {
+      background: var(--word-bg-light) !important;
+    }
+    :is(.card.nightMode, .custom-dark-mode)
+    .back .background-box {
+      background: var(--word-bg) !important;
+    }
+  }
+
+  /* Word Background */
+  @container style(--backdrop-style: 1) {
+   .toggle-image-visibility.hide-btn {
+     pointer-events: auto !important;
+   }
+
+    @media (min-width: 1050px) {
+      .front {
+        top: var(--bd-word-bg-front-offset);
+      }
+    }
+
+    .grid-container {
+      display: grid;
+      gap: 0 !important;
+      position: relative;
+      overflow: hidden;
+      min-height: var(--backdrop-background-height);
+    }
+
+    .picture-container {
+      align-items: center !important;
+    }
+
+    @container style(--card-background-fade: 1) {
+      .picture-container img {
+        -webkit-mask-image: none;
+        mask-image: none;
+      }
+    }
+
+    @container style(--word-background-fade: 1) {
+      .picture-container {
+        -webkit-mask-image: linear-gradient(to bottom, black var(--word-fade-strength), transparent 100%);
+        mask-image: linear-gradient(to bottom, black var(--word-fade-strength), transparent 100%);
+      }
+    }
+
+    .sentence-nav {
+      z-index: 0;
+    }
+
+    .picture-container {
+      z-index: 1 !important;
+      pointer-events: none !important;
+      border-radius: var(--border-radius-ms);
+    }
+
+    .picture-container img {
+      z-index: -1 !important;
+      position: relative !important;
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+
+    .back .background-box {
+      z-index: 2 !important;
+      pointer-events: none !important;
+    }
+
+    .background-box>* {
+      pointer-events: auto !important;
+    }
+
+    .nav-arrow {
+      z-index: 100 !important;
+      pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+
+    @media (max-width: 1050px) {
+      .grid-container {
+        display: grid !important;
+        grid-template-areas: "stack" !important;
+        grid-template-columns: 1fr !important;
+        gap: 0 !important;
+        height: var(--backdrop-background-height) !important;
+        min-height: var(--backdrop-background-height) !important;
+        overflow: hidden !important;
+        place-items: center !important;
+      }
+
+      .picture-container {
+        grid-area: stack !important;
+        position: relative !important;
+        width: 100% !important;
+        height: 100% !important;
+        display: flex;
+      }
+
+      .picture-container img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        object-position: center !important;
+      }
+
+      .back .background-box {
+        grid-area: stack !important;
+        z-index: 2 !important;
+        width: 100%;
+        height: auto !important;
+        align-self: center !important;
+        justify-self: center !important;
+        text-align: center;
+      }
+    }
+  }
+}
+
+/* Custom OFfsets to Align Front Word With Back Word */
+@container style(--enable-custom-offsets: 1) {
+  @container style(--enable-backdrop-layout: 1) and style(--backdrop-style: 0) {
+    @media (max-width: 1050px) {
+      .desktop-word-layout > #word {
+        margin-top: var(--bd-card-bg-front-offset-1050);  
+      }
+    }
+  }
+
+  @container style(--enable-backdrop-layout: 1) and style(--backdrop-style: 1) {
+    @media (max-width: 1050px) {
+      .desktop-word-layout > #word {
+        margin-top: var(--bd-word-bg-front-offset-1050);
+      }
+    }
+    @media (max-width: 624px) { 
+      .mobile-word-layout > .background-box {
+        line-height: var(--bd-word-bg-front-offset-mobile);
+      }
+    }
+  }
+}
+
+/* Fix Fade on Mobile */
+@media (max-width: 624px) {
+  @container style(--enable-backdrop-layout: 1) {
+    .picture-container img {
+      max-height: inherit !important;
+    }
+  } 
+}
+
+@supports (-webkit-touch-callout: none) {
+  #sentenceEng {
+    max-height: 0.5px;
+  }
+  .frequency-content {
+    max-height: 0.5px;
+  }
+}
+
+/* Disable Animations */
+@container style(--enable-animations: false) {
+  *, *::before, *::after {
+    -webkit-transition: none !important;
+    -moz-transition: none !important;
+    -o-transition: none !important;
+    transition: none !important;
+  
+    -webkit-animation: none !important;
+    -moz-animation: none !important;
+    -o-animation: none !important;
+    animation: none !important;
+  }
+}
+
+/* Dict Colors */
+:root {
+  --selection-text-color-light:             #009688;
+  --selection-text-color-rgb-light:         0, 150, 136;
+  --selection-text-color-dark:              #4DB6AC;
+  --selection-text-color-dark-rgb:          77, 182, 172;
+  --jmdict-color-light:                     #007ACC;
+  --jmdict-color-rgb-light:                 0, 122, 204;
+  --jmdict-color-dark:                      #4AB5FF;
+  --jmdict-color-dark-rgb:                  74, 181, 255;
+  --shinmeikai-color-light:                 #C80000;
+  --shinmeikai-color-rgb-light:             200, 0, 0;
+  --shinmeikai-color-dark:                  #FF0000;
+  --shinmeikai-color-dark-rgb:              255, 0, 0;
+  --daijirin-color-light:                   #8A5AB8;
+  --daijirin-color-rgb-light:               138, 90, 184;
+  --daijirin-color-dark:                    #B388DD;
+  --daijirin-color-dark-rgb:                179, 136, 221;
+  --digital-daijisen-color-light:           #D83A3A;
+  --digital-daijisen-color-rgb-light:       216, 58, 58;
+  --digital-daijisen-color-dark:            #FF5252;
+  --digital-daijisen-color-dark-rgb:        255, 82, 82;
+  --gendai-kokugo-reikai-color-light:       #B5282F;
+  --gendai-kokugo-reikai-color-rgb-light:   181, 40, 47;
+  --gendai-kokugo-reikai-color-dark:        #E3323A;
+  --gendai-kokugo-reikai-color-dark-rgb:    227, 50, 58;
+  --iwanami-kokugo-jiten-color-light:       #4CAF50;
+  --iwanami-kokugo-jiten-color-rgb-light:   76, 175, 80;
+  --iwanami-kokugo-jiten-color-dark:        #79C879;
+  --iwanami-kokugo-jiten-color-dark-rgb:    121, 200, 121;
+  --koujien-color-light:                    #D94A23;
+  --koujien-color-rgb-light:                217, 74, 35;
+  --koujien-color-dark:                     #FD5629;
+  --koujien-color-dark-rgb:                 253, 86, 41;
+  --meikyo-kokugo-jiten-color-light:        #4967E6;
+  --meikyo-kokugo-jiten-color-rgb-light:    73, 103, 230;
+  --meikyo-kokugo-jiten-color-dark:         #6B85FF;
+  --meikyo-kokugo-jiten-color-dark-rgb:     107, 133, 255;
+  --obunsha-kokugo-jiten-color-light:       #008080;
+  --obunsha-kokugo-jiten-color-rgb-light:   0, 128, 128;
+  --obunsha-kokugo-jiten-color-dark:        #BBFFFF;
+  --obunsha-kokugo-jiten-color-dark-rgb:    187, 255, 255;
+  --sanseido-kokugo-jiten-color-light:      #B8562D;
+  --sanseido-kokugo-jiten-color-rgb-light:  184, 86, 45;
+  --sanseido-kokugo-jiten-color-dark:       #E56B39;
+  --sanseido-kokugo-jiten-color-dark-rgb:   229, 107, 57;
+  --shinsen-kokugo-color-light:             #B80065;
+  --shinsen-kokugo-color-rgb-light:         184, 0, 101;
+  --shinsen-kokugo-color-dark:              #E5007F;
+  --shinsen-kokugo-color-dark-rgb:          229, 0, 127;
+  --seisenban-color-light:                  #A8A88A;
+  --seisenban-color-rgb-light:              168, 168, 138;
+  --seisenban-color-dark:                   #EEEECB;
+  --seisenban-color-dark-rgb:               238, 238, 204;
+  --hybrid-shin-jirin-color-light:          #AAB0D5;
+  --hybrid-shin-jirin-color-rgb-light:      170, 176, 213;
+  --hybrid-shin-jirin-color-dark:           #DDDDFA;
+  --hybrid-shin-jirin-color-dark-rgb:       221, 221, 238;
+  --new-saitou-waei-color-light:            #B590C8;
+  --new-saitou-waei-color-rgb-light:        181, 144, 200;
+  --new-saitou-waei-color-dark:             #F4E1FE;
+  --new-saitou-waei-color-dark-rgb:         244, 225, 254;
+  --shin-waei-color-light:                  #3E8E60;
+  --shin-waei-color-rgb-light:              62, 142, 96;
+  --shin-waei-color-dark:                   #5DBB87;
+  --shin-waei-color-dark-rgb:               93, 187, 135;
+  --kanjigen-color-light:                   #9E7648;
+  --kanjigen-color-rgb-light:               158, 118, 72;
+  --kanjigen-color-dark:                    #C9955D;
+  --kanjigen-color-dark-rgb:                201, 149, 93;
+  --kanjipedia-doukun-igi-color-light:      #757575;
+  --kanjipedia-doukun-igi-color-rgb-light:  117, 117, 117;
+  --kanjipedia-doukun-igi-color-dark:       #B7B7B7;
+  --kanjipedia-doukun-igi-color-dark-rgb:   183, 183, 183;
+  --kanken-kanji-jiten-color-light:         #B9872E;
+  --kanken-kanji-jiten-color-rgb-light:     185, 135, 46;
+  --kanken-kanji-jiten-color-dark:          #E7A93A;
+  --kanken-kanji-jiten-color-dark-rgb:      231, 169, 58;
+  --gakken-yojijukugo-color-light:          #8D9A75;
+  --gakken-yojijukugo-color-rgb-light:      141, 154, 117;
+  --gakken-yojijukugo-color-dark:           #B4C098;
+  --gakken-yojijukugo-color-dark-rgb:       180, 192, 152;
+  --gogen-yurai-jiten-color-light:          #A38625;
+  --gogen-yurai-jiten-color-rgb-light:      163, 134, 37;
+  --gogen-yurai-jiten-color-dark:           #CEA92F;
+  --gogen-yurai-jiten-color-dark-rgb:       206, 169, 47;
+  --koji-kotowaza-no-jiten-color-light:     #8E7270;
+  --koji-kotowaza-no-jiten-color-rgb-light: 142, 114, 112;
+  --koji-kotowaza-no-jiten-color-dark:      #B18F8D;
+  --koji-kotowaza-no-jiten-color-dark-rgb:  177, 143, 141;
+  --nihongo-zokugo-jisho-color-light:       #D450CF;
+  --nihongo-zokugo-jisho-color-rgb-light:   212, 80, 207;
+  --nihongo-zokugo-jisho-color-dark:        #FF69FA;
+  --nihongo-zokugo-jisho-color-dark-rgb:    255, 105, 250;
+  --ruigo-jiten-online-color-light:         #C06E5B;
+  --ruigo-jiten-online-color-rgb-light:     192, 110, 91;
+  --ruigo-jiten-online-color-dark:          #E88B74;
+  --ruigo-jiten-online-color-dark-rgb:      232, 139, 116;
+  --shingo-jiji-yougo-color-light:          #638CAF;
+  --shingo-jiji-yougo-color-rgb-light:      99, 140, 175;
+  --shingo-jiji-yougo-color-dark:           #8EB8DE;
+  --shingo-jiji-yougo-color-dark-rgb:       142, 184, 222;
+  --donna-toki-dou-tsukau-color-light:      #5C84C0;
+  --donna-toki-dou-tsukau-color-rgb-light:  92, 132, 192;
+  --donna-toki-dou-tsukau-color-dark:       #7EA8E8;
+  --donna-toki-dou-tsukau-color-dark-rgb:   126, 168, 232;
+  --e-de-wakaru-kanyouku-color-light:        #3DA98E;
+  --e-de-wakaru-kanyouku-color-rgb-light:    61, 169, 142;
+  --e-de-wakaru-kanyouku-color-dark:         #4CCFAD;
+  --e-de-wakaru-kanyouku-color-dark-rgb:     76, 207, 173;
+  --e-de-wakaru-nihongo-color-light:        #A93D58;
+  --e-de-wakaru-nihongo-color-rgb-light:    169, 61, 88;
+  --e-de-wakaru-nihongo-color-dark:         #CF4C6E;
+  --e-de-wakaru-nihongo-color-dark-rgb:     207, 76, 110;
+  --jlpt-bunpou-kaisetsu-color-light:       #D32F2F;
+  --jlpt-bunpou-kaisetsu-color-rgb-light:   211, 47, 47;
+  --jlpt-bunpou-kaisetsu-color-dark:        #F44236;
+  --jlpt-bunpou-kaisetsu-color-dark-rgb:    244, 66, 54;
+  --mainichi-nonbiri-color-light:           #EAA6B9;
+  --mainichi-nonbiri-color-rgb-light:       234, 166, 185;
+  --mainichi-nonbiri-color-dark:            #FFD8E4;
+  --mainichi-nonbiri-color-dark-rgb:        255, 216, 228;
+  --nihongo-bunpou-jiten-color-light:       #465DDB;
+  --nihongo-bunpou-jiten-color-rgb-light:   70, 93, 219;
+  --nihongo-bunpou-jiten-color-dark:        #687EFF;
+  --nihongo-bunpou-jiten-color-dark-rgb:    104, 126, 255;
+  --tsukaikata-no-wakaru-color-light:       #C06E5B;
+  --tsukaikata-no-wakaru-color-rgb-light:   192, 110, 91;
+  --tsukaikata-no-wakaru-color-dark:        #E88B74;
+  --tsukaikata-no-wakaru-color-dark-rgb:    232, 139, 116;
+  --kids-japonica-color-light:              #D98E00;
+  --kids-japonica-color-rgb-light:          217, 142, 0;
+  --kids-japonica-color-dark:               #FFA500;
+  --kids-japonica-color-dark-rgb:           255, 165, 0;
+  --reikai-gakushuu-kokugo-color-light:     #D28A22;
+  --reikai-gakushuu-kokugo-color-rgb-light: 210, 138, 34;
+  --reikai-gakushuu-kokugo-color-dark:      #FAA72F;
+  --reikai-gakushuu-kokugo-color-dark-rgb:  250, 167, 47;
+  --jiten-online-color-light:               #EBC258;
+  --jiten-online-color-rgb-light:           235, 194, 88;
+  --jiten-online-color-dark:                #FFE37C;
+  --jiten-online-color-dark-rgb:            255, 227, 124;
+  --jitsuyou-nihongo-color-light:           #848DA7;
+  --jitsuyou-nihongo-color-rgb-light:       132, 141, 167;
+  --jitsuyou-nihongo-color-dark:            #A6B0CF;
+  --jitsuyou-nihongo-color-dark-rgb:        166, 176, 207;
+  --pixiv-color-light:                      #0078D4;
+  --pixiv-color-rgb-light:                  0, 120, 212;
+  --pixiv-color-dark:                       #33A1FF;
+  --pixiv-color-dark-rgb:                   51, 161, 255;
+  --sozai-jiten-color-light:                #4A8B95;
+  --sozai-jiten-color-rgb-light:            74, 139, 149;
+  --sozai-jiten-color-dark:                 #65B3BF;
+  --sozai-jiten-color-dark-rgb:             101, 179, 191;
+  --wikipedia-color-light:                  #4674C3;
+  --wikipedia-color-rgb-light:              70, 116, 195;
+  --wikipedia-color-dark:                   #6495ED;
+  --wikipedia-color-dark-rgb:               100, 149, 237;
+  --goiryoku-nijijukugo-color-light:        #2A9D8F;
+  --goiryoku-nijijukugo-color-rgb-light:    42, 157, 143;
+  --goiryoku-nijijukugo-color-dark:         #48D1BF;
+  --goiryoku-nijijukugo-color-dark-rgb:     72, 209, 191;
+  --shogakukan-reikai-12-color-light:       #00ACC1;
+  --shogakukan-reikai-12-color-rgb-light:   0, 172, 193;
+  --shogakukan-reikai-12-color-dark:        #4DD0E1;
+  --shogakukan-reikai-12-color-dark-rgb:    77, 208, 225;
+  --weblio-kogo-jiten-color-light:          #385499;
+  --weblio-kogo-jiten-color-rgb-light:      56, 84, 153;
+  --weblio-kogo-jiten-color-dark:           #8DA7E6;
+  --weblio-kogo-jiten-color-dark-rgb:       141, 167, 230;
+}
+
+/* CUSTOM CSS START */
+/* CUSTOM CSS END */

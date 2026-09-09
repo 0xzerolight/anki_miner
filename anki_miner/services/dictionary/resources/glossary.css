@@ -108,16 +108,31 @@
   font-size: 0.92em;
 }
 
-/* The "(part-of-speech…, Dictionary Name)" line — a small muted label on
- * unstyled dicts; on a styled dict it defers to the note type (Yomitan renders
- * this attribution as a bare <i> on the card, with no grey/shrink). */
+/* The "(part-of-speech…, Dictionary Name)" line — a small label on unstyled
+ * dicts; on a styled dict it defers to the dictionary's own CSS (Yomitan renders
+ * this attribution as a bare <i> on the card, with no grey/shrink).
+ *
+ * NO `display` and NO `color` here, ever. The <i> is Yomitan-conventional markup
+ * — Yomitan's own Anki export emits the same element — so every Yomitan-aware
+ * note type styles it as its dictionary-title line: Senren declares
+ * `display: block` plus a 40%-black colour on `.definition-box/.glossary-box
+ * .yomitan-glossary i`, Lapis a colour on `li[data-dictionary^="JMdict"] i`.
+ * This rule's (0,4,3) out-ranked both, so the host's title rendered as our
+ * inline-block grey chip instead (2026-09-09 note-type CSS audit, Finding A —
+ * the only contested surface it found). Withdrawing is the only thing a note
+ * type cannot out-rank; a class on the <i> is NOT available, because
+ * indexed_provider._render emits it classless and the restyler rewrites style
+ * blocks, never card bodies. Same settlement as Issue #93 (envelope inline axis)
+ * and Android issue #5 (_MORA_LINE_STYLE). Pinned by
+ * TestAttributionLineCedesToHost. The typography below is uncontested — no
+ * audited note type declares it here — and keeps the label from shouting where
+ * the note type styles nothing. `margin-bottom` is inert while the element is
+ * inline and applies once a host makes it a block. */
 .yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) > i {
-  display: inline-block;
   margin-bottom: 0.3em;
   font-size: 0.8em;
   font-style: normal;
   letter-spacing: 0.02em;
-  color: var(--am-muted);
 }
 
 /* @am-endgroup */
@@ -352,24 +367,28 @@
 /* @am-endgroup */
 /* @am-group: tables */
 
-/* Collapsible notes / conjugation tables. Scope the accent summary to glossary
- * content so it never clashes with the muted dictionary label above. */
-.yomitan-glossary ol[data-count] details {
+/* Collapsible notes / conjugation tables. Scoped to the `gloss-sc-<tag>` classes
+ * `yomitan_renderer._render_attrs` stamps on every structured-content element: a
+ * bare `details`/`table`/`th`/`td` subject inside this namespace matched markup we
+ * did not emit and out-ranked the note type on its own element. The class also
+ * makes the old `.gloss-content` ancestor scope on `summary` redundant — only our
+ * renderer emits `.gloss-sc-summary`, so it can never reach the dictionary label. */
+.yomitan-glossary ol[data-count] .gloss-sc-details {
   margin: 0.25em 0;
 }
 
-.yomitan-glossary ol[data-count] .gloss-content summary {
+.yomitan-glossary ol[data-count] .gloss-sc-summary {
   cursor: pointer;
   color: var(--am-accent);
 }
 
-.yomitan-glossary ol[data-count] details[open] > summary {
+.yomitan-glossary ol[data-count] .gloss-sc-details[open] > .gloss-sc-summary {
   margin-bottom: 0.25em;
 }
 
 /* Tables (inflection/reading layouts) — full borders, and scroll instead of
  * overflowing the card when a dictionary embeds a wide table on a narrow screen. */
-.yomitan-glossary ol[data-count] table {
+.yomitan-glossary ol[data-count] .gloss-sc-table {
   border-collapse: collapse;
   margin: 0.3em 0;
   max-width: 100%;
@@ -378,14 +397,14 @@
   font-size: 0.9em;
 }
 
-.yomitan-glossary ol[data-count] th,
-.yomitan-glossary ol[data-count] td {
+.yomitan-glossary ol[data-count] .gloss-sc-th,
+.yomitan-glossary ol[data-count] .gloss-sc-td {
   padding: 0.18em 0.5em;
   border: 1px solid var(--am-faint);
   text-align: left;
 }
 
-.yomitan-glossary ol[data-count] th {
+.yomitan-glossary ol[data-count] .gloss-sc-th {
   font-weight: 600;
 }
 
@@ -525,13 +544,14 @@
 
 /* Inflection / forms tables: Yomitan inlines per-cell borders that we don't
  * receive, so cells render borderless. Restore them at higher specificity than
- * the generic table rule so forms tables read as a grid. */
-.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="forms"] table {
+ * the generic table rule so forms tables read as a grid. Same class scoping as the
+ * `tables` group above — the subject must be our own markup, never a bare type. */
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="forms"] .gloss-sc-table {
   border-collapse: collapse;
   margin-top: 0.2em;
 }
-.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="forms"] th,
-.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="forms"] td {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="forms"] .gloss-sc-th,
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="forms"] .gloss-sc-td {
   border: 1px solid var(--am-faint);
   padding: 0.2em 0.4em;
   text-align: center;

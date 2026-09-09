@@ -252,7 +252,11 @@ def css_witnesses(html_texts: Iterable[str]) -> frozenset[str]:
             groups.add("sc-gapfill")
     if "gloss-image" in html:
         groups.add("images")
-    if "<table" in html or "<details" in html:
+    # `<summary` joins the probe because the summary rule now keys on
+    # `.gloss-sc-summary`: the renderer allows a bare <summary> node, and a card
+    # carrying one without a <details> ancestor would otherwise shed a style it
+    # needs. Over-inclusion (`<thead>` never reaches here) is the safe direction.
+    if "<table" in html or "<details" in html or "<summary" in html:
         groups.add("tables")
     return frozenset(groups)
 

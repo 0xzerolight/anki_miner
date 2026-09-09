@@ -72,16 +72,16 @@ class TestLoadGlossaryCss:
         css = _no_comments(load_glossary_css())
         # Generic data-sc-* hooks for dicts that ship no styles.css (Issue #87).
         assert 'span[data-sc-class="tag"]' in css
-        assert '[data-sc-content="forms"] td' in css
+        assert '[data-sc-content="forms"] .gloss-sc-td' in css
         # Exact-match, not |= : the box rule must not hit the -a/-b inner lines.
         assert '[data-sc-content="example-sentence"]' in css
         assert '[data-sc-content|="example-sentence"]' not in css
 
     def test_tree_shaken_gapfill_keeps_forms_ancestor_table_rules(self):
         css = base_css_variant(frozenset({"sc-gapfill"}))
-        assert '[data-sc-content="forms"] table' in css
-        assert '[data-sc-content="forms"] th' in css
-        assert '[data-sc-content="forms"] td' in css
+        assert '[data-sc-content="forms"] .gloss-sc-table' in css
+        assert '[data-sc-content="forms"] .gloss-sc-th' in css
+        assert '[data-sc-content="forms"] .gloss-sc-td' in css
 
     def test_carries_hover_tag_chip_rule(self):
         css = _no_comments(load_glossary_css())
@@ -197,6 +197,67 @@ class TestEnvelopeInlineAxisOwnership:
         assert any(
             "padding-top" in decls and "padding-bottom" in decls for _, decls in rules
         ), "envelope block-axis spacing (padding-top/bottom) lost"
+
+
+class TestAttributionLineCedesToHost:
+    """The attribution ``<i>`` rule must declare neither ``display`` nor ``color``.
+
+    ``<i>(part-of-speech…, Dictionary Name)</i>`` is Yomitan-conventional markup —
+    Yomitan's own Anki export emits the same element — which is why every
+    Yomitan-aware note type styles it by name. Senren declares ``display: block``
+    and a 40%-black colour on ``.definition-box .yomitan-glossary i`` /
+    ``.glossary-box .yomitan-glossary i``; Lapis declares a colour on
+    ``li[data-dictionary^="JMdict"] i``. Our gated rule sits at (0,4,3) and won
+    both, so the note type's own dictionary title rendered as our inline-block grey
+    chip instead (2026-09-09 note-type CSS audit, Finding A: the only contested
+    surface across Lapis, Senren and Kiku).
+
+    Withdrawing the contested declarations is the only thing a note-type stylesheet
+    cannot out-rank — the same settlement as Issue #93 for the ``li[data-dictionary]``
+    envelope and Android issue #5 for ``_MORA_LINE_STYLE``. Class-scoping is not
+    available: ``indexed_provider._render`` emits a CLASSLESS ``<i>``, so a class
+    would be a markup change and existing cards, whose bodies the restyler never
+    rewrites, would not get it. The uncontested typography stays — no note type
+    declares font-size, font-style or letter-spacing on this element.
+    """
+
+    _BANNED = frozenset({"display", "color"})
+
+    @staticmethod
+    def _attribution_rules(css):
+        return [
+            (sel.strip(), decl)
+            for grp, decl in _iter_rules(css)
+            for sel in grp.split(",")
+            if sel.strip().endswith("> i")
+        ]
+
+    def test_audit_matches_exactly_the_one_attribution_rule(self):
+        # Self-check against vacuous matching: reshaping the selector must update
+        # this pin rather than silently emptying the audit below.
+        rules = self._attribution_rules(load_glossary_css())
+        assert len(rules) == 1, f"expected exactly 1 attribution rule, found {[s for s, _ in rules]}"
+
+    def test_attribution_rule_declares_neither_display_nor_color(self):
+        for selector, declarations in self._attribution_rules(load_glossary_css()):
+            for decl in declarations.split(";"):
+                prop = decl.split(":", 1)[0].strip()
+                if not prop:
+                    continue
+                assert prop not in self._BANNED, (
+                    f"attribution rule {selector!r} declares {prop!r} — the note type owns the "
+                    "dictionary-title line (Senren sets display + colour on it, Lapis a colour), "
+                    "and no specificity we can spend loses to them. Withdraw instead."
+                )
+
+    def test_attribution_keeps_its_uncontested_typography(self):
+        # The fix must not degrade into deleting the rule: the small, upright label
+        # is what keeps the attribution from shouting on a note type that styles
+        # nothing here, and no audited note type declares any of these.
+        rules = self._attribution_rules(load_glossary_css())
+        decls = "".join(decl for _, decl in rules)
+        for prop in ("font-size", "font-style", "letter-spacing"):
+            assert prop in decls, f"attribution rule lost its uncontested {prop}"
 
 
 class TestGapFillerGate:
@@ -424,10 +485,12 @@ class TestGroupPlacement:
     def _is_table_family(selector: str) -> bool:
         # Word-boundary detection on the selector's rightmost compound — a bare
         # substring check would read the "th" in `max-width` or the "table" in
-        # an attribute value.
+        # an attribute value. The rules are class-scoped to the renderer's
+        # `gloss-sc-<tag>` hooks; the bare type forms stay in the pattern so a
+        # regression back to them is still caught by the reverse core-exclusion lint.
         subject = selector.split()[-1]
-        return bool(re.match(r"^(table|th|td|details|summary)(?:\W|$)", subject)) or bool(
-            re.search(r"(?:^|\W)details(?:\W|$)", selector)
+        return bool(re.match(r"^\.?(?:gloss-sc-)?(table|th|td|details|summary)(?:\W|$)", subject)) or (
+            "gloss-sc-details" in selector
         )
 
     def test_forward_unstyled_chrome_rules_all_gated(self):
@@ -588,3 +651,79 @@ class TestCuratedExclusions:
             ".definition-item",
         ):
             assert token not in css, f"curated-out token {token!r} leaked into glossary.css"
+
+
+class TestNoBareTypeSelectorSubjects:
+    """No rule may take a BARE type selector as its subject.
+
+    ``.yomitan-glossary ol[data-count] table`` matched any ``<table>`` inside our
+    glossary block — including markup we did not emit — and out-ranked the note
+    type's own ``table {}`` on an element the note type owns. Every
+    structured-content element the renderer emits carries ``class="gloss-sc-<tag>"``
+    (``yomitan_renderer._render_attrs``), so the subject names that class instead.
+    A subject qualified by a class, id or attribute is fine; a bare element name is
+    not.
+    """
+
+    # The attribution line is the one sanctioned exception: indexed_provider._render
+    # emits a CLASSLESS <i>, so classing it would be a MARKUP change that existing
+    # cards never receive (the restyler rewrites style blocks, not bodies).
+    _ALLOWED_BARE_SUBJECTS = {"i"}
+
+    def test_no_rule_subject_is_a_bare_type_selector(self):
+        for selector_group, _ in _iter_rules(load_glossary_css()):
+            for selector in selector_group.split(","):
+                subject = selector.strip().split()[-1]
+                if any(ch in subject for ch in ".#["):
+                    continue
+                assert subject in self._ALLOWED_BARE_SUBJECTS, (
+                    f"selector {selector.strip()!r} takes the bare type selector "
+                    f"{subject!r} as its subject: it matches markup we do not own and "
+                    "out-ranks the note type on its own element. Scope it to the "
+                    "renderer's gloss-sc-<tag> class."
+                )
+
+    def test_table_family_rules_target_the_renderer_classes(self):
+        css = _no_comments(load_glossary_css())
+        for token in (
+            ".gloss-sc-details",
+            ".gloss-sc-summary",
+            ".gloss-sc-table",
+            ".gloss-sc-th",
+            ".gloss-sc-td",
+        ):
+            assert token in css, f"table-family rule lost its {token} scope"
+        for bare in ("] table", "] th", "] td", "] details", "] summary"):
+            assert bare not in css, f"bare type selector {bare!r} back in the sheet"
+
+    def test_table_cohort_still_ships_the_table_rules(self):
+        # Fail-if-wrong: the renamed rules must survive the per-card tree-shake a
+        # real conjugation-table card gets, not merely exist in the sheet.
+        from anki_miner.services.dictionary.card_style_block import base_css_variant, css_witnesses
+
+        body = (
+            '<div class="yomitan-glossary"><ol data-count="1">'
+            '<li data-dictionary="D"><ul class="gloss-list" data-count="1">'
+            '<li class="gloss-item"><div class="gloss-content">'
+            '<details class="gloss-sc-details"><summary class="gloss-sc-summary">C</summary>'
+            '<table class="gloss-sc-table"><tbody class="gloss-sc-tbody">'
+            '<tr class="gloss-sc-tr"><th class="gloss-sc-th">a</th>'
+            '<td class="gloss-sc-td">b</td></tr></tbody></table>'
+            "</details></div></li></ul></li></ol></div>"
+        )
+        assert "tables" in css_witnesses([body])
+        variant = base_css_variant(css_witnesses([body]))
+        for token in (".gloss-sc-details{", ".gloss-sc-summary{", ".gloss-sc-table{"):
+            assert token in variant, f"{token!r} shed from the tables variant"
+
+    def test_summary_without_details_still_witnesses_the_tables_group(self):
+        # The renderer allows a bare <summary> node, and the summary rule now keys on
+        # .gloss-sc-summary. A witness that only probed "<details" would shed a style
+        # the card needs — the one forbidden tree-shake outcome.
+        from anki_miner.services.dictionary.card_style_block import css_witnesses
+
+        body = (
+            '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="D">'
+            '<summary class="gloss-sc-summary">x</summary></li></ol></div>'
+        )
+        assert "tables" in css_witnesses([body])
