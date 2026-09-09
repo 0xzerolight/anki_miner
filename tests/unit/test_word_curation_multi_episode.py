@@ -287,3 +287,37 @@ class TestExpansionButtonsSeason:
 
         assert dlg.expand_next_button.isEnabled()
         assert not dlg.expand_prev_button.isEnabled()  # 犬's cue is the first entry
+
+
+class TestAutoMergeAcrossEpisodes:
+    """A stamped row of a not-yet-resolved episode (FUTURE_IDEAS 6).
+
+    Its cues arrive with the episode's media context, so the row cannot show
+    the merged sentence until then — and must stop showing the fragment the
+    moment it can.
+    """
+
+    @staticmethod
+    def _ep2_entries():
+        return [(1.0, 3.0, "だから"), (3.5, 5.5, "行きました。")]
+
+    def test_row_repaints_when_the_episode_context_lands(self, qtbot, ep1, ep2, deferred_off_thread):
+        from anki_miner.gui.utils.qt_helpers import COPY_ROLE
+        from anki_miner.services.word_filter import CUE_JOINER
+
+        merged = "だから" + CUE_JOINER + "行きました。"
+        here = _word("猫", video=ep1)
+        there = _word("犬", start_time=1.0, video=ep2, sentence="だから")
+        there.line_expansion = (0, 1)
+        ep2_ctx = CurationMediaContext(video_file=ep2, subtitle_entries=self._ep2_entries(), offset=0.0)
+        dlg, _player = _build_dialog(qtbot, [here, there], _ctx_for(ep1, MagicMock(return_value=ep2_ctx)))
+
+        # Before the swap: no cues for ep2, so the row shows its fragment.
+        assert dlg.table.item(1, 4).data(COPY_ROLE) == "だから"
+
+        _focus_row(dlg, 1)
+        work, on_done, _on_error = deferred_off_thread[-1]
+        on_done(work())
+
+        assert dlg.table.item(1, 4).data(COPY_ROLE) == merged
+        assert dlg.clip_editor.current_window() == (1.0 - 0.3, 5.5 + 0.3)
