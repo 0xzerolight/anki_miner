@@ -628,6 +628,21 @@ class FilteringSettingsPanel(FormPanel):
             helper=self.tr("Drops cards whose sentence text exceeds this many characters. Set to 0 for no limit."),
         )
 
+        # Full Sentences section (FUTURE_IDEAS 6).
+        self.add_section(self.tr("Full Sentences"))
+
+        self.merge_incomplete_cues_checkbox = QCheckBox(self.tr("Mine full sentences across subtitle lines"))
+        self.add_field(
+            "",
+            self.merge_incomplete_cues_checkbox,
+            helper=self.tr(
+                "Joins the neighbouring subtitle lines when a line does not end a sentence, so the "
+                "card carries the whole sentence, its timings and its audio instead of a fragment. "
+                "Video mining only — reading sources have no subtitle timings. The Word Curator's "
+                "line buttons still adjust any card by hand."
+            ),
+        )
+
         # Reading section: per-book minimum word occurrence (Reading tab).
         self.add_section(self.tr("Reading"))
 
@@ -1105,6 +1120,16 @@ class FilteringSettingsPanel(FormPanel):
         """Set the sentence length filter checkbox."""
         self.use_sentence_length_checkbox.setChecked(value)
 
+    # --- Full sentences ---
+
+    def get_merge_incomplete_cues(self) -> bool:
+        """Return whether incomplete subtitle lines merge into full sentences."""
+        return self.merge_incomplete_cues_checkbox.isChecked()
+
+    def set_merge_incomplete_cues(self, value: bool) -> None:
+        """Set the full-sentence merge checkbox."""
+        self.merge_incomplete_cues_checkbox.setChecked(value)
+
     def get_max_sentence_duration_seconds(self) -> float:
         """Return the max sentence duration (seconds)."""
         return self.max_sentence_duration_spinbox.value()
@@ -1212,6 +1237,7 @@ class FilteringSettingsPanel(FormPanel):
             checkbox.setChecked(bool(getattr(config, self._script_filter_fields[option_id])))
         self.set_use_i_plus_one_filter(config.use_i_plus_one_filter)
         self.set_use_sentence_length_filter(config.use_sentence_length_filter)
+        self.set_merge_incomplete_cues(config.merge_incomplete_cues)
         self.set_max_sentence_duration_seconds(config.max_sentence_duration_seconds)
         self.set_max_sentence_chars(config.max_sentence_chars)
         self.set_reading_min_occurrence(config.reading_min_occurrence)
@@ -1257,6 +1283,7 @@ class FilteringSettingsPanel(FormPanel):
             exclude_katakana_only_words=self.get_exclude_katakana_only_words(),
             use_i_plus_one_filter=self.get_use_i_plus_one_filter(),
             use_sentence_length_filter=self.get_use_sentence_length_filter(),
+            merge_incomplete_cues=self.get_merge_incomplete_cues(),
             max_sentence_duration_seconds=self.get_max_sentence_duration_seconds(),
             max_sentence_chars=self.get_max_sentence_chars(),
             reading_min_occurrence=self.get_reading_min_occurrence(),

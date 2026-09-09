@@ -367,6 +367,14 @@ def test_sentence_length_filter_defaults():
     assert cfg.max_sentence_chars == 0
 
 
+def test_merge_incomplete_cues_defaults_off():
+    """The full-sentence merge is opt-in: an untouched config mines fragments
+    exactly as it did before the feature (FUTURE_IDEAS 6)."""
+    from anki_miner.config import AnkiMinerConfig
+
+    assert AnkiMinerConfig().merge_incomplete_cues is False
+
+
 def test_reading_min_occurrence_default_and_replace():
     """reading_min_occurrence defaults to 1 (filter off) and round-trips via replace."""
     from dataclasses import replace

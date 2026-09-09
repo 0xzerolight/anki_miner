@@ -138,5 +138,6 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "mokuro_use_gpu",
         "mokuro_location",
         "uv_root",
+        "merge_incomplete_cues",
     }
     assert loaded.script_variant == "" and loaded.reading_tone_color is False
