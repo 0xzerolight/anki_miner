@@ -333,6 +333,12 @@ class AudioStage:
         # hasattr guard above, so the call goes through getattr.
         probe = getattr(fetcher, "has_cached_candidates")  # noqa: B009
         for word in words:
+            # Between-words, like the fetch loop in _run_stage: unlike the other
+            # attaches this one touches disk and sqlite per candidate form, so a
+            # pack on a slow volume would otherwise run to the end of the list
+            # before the user's cancel is seen.
+            if self._is_cancelled():
+                return
             word.expression_audio_available = probe(_candidate_ladder(fetcher, word))
 
     @property

@@ -1264,6 +1264,24 @@ class TestAttachExpressionAudioProbe:
 
         assert words[0].expression_audio_available is None
 
+    def test_a_cancelled_run_probes_nothing(self, test_config):
+        """Cancel is seen between words, so a slow pack costs nothing after it."""
+        chain = _ProbeChain(True)
+        words = [_probe_word("食べる"), _probe_word("猫", "ねこ")]
+        # Own stage: the class helper hardcodes cancelled=lambda: False.
+        stage = AudioStage(
+            config=self._enabled(test_config),
+            presenter=NullPresenter(),
+            cancelled=lambda: True,
+            expression_audio_fetcher=chain,
+            sentence_audio_fetcher=None,
+        )
+
+        stage.attach_expression_audio_probe(words)
+
+        assert chain.ladders == []
+        assert [w.expression_audio_available for w in words] == [None, None]
+
 
 class TestCurationFetchFn:
     @staticmethod
