@@ -854,3 +854,57 @@ class TestPackIdentity:
 
         assert fetcher.entry_count == fetcher.entry_count == 1
         assert len(reads) == 1
+
+
+class TestHasCached:
+    """The zero-network probe behind the Word Curator's Audio column."""
+
+    def test_indexed_word_is_a_hit_without_fetching(self, tmp_path: Path):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        assert fetcher.has_cached("食べる", "たべる") is True
+        assert not (tmp_path / "cache").exists()
+
+    def test_word_absent_from_the_index_is_a_definitive_no(self, tmp_path: Path):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        assert fetcher.has_cached("猫", "ねこ") is False
+
+    def test_cached_copy_is_a_hit(self, tmp_path: Path):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        cache_dir = tmp_path / "cache"
+        fetcher = _make_fetcher(db, pack_dir, cache_dir)
+        assert fetcher.fetch("食べる", "たべる") is not None
+
+        assert fetcher.has_cached("食べる", "たべる") is True
+
+    def test_katakana_stored_reading_still_answers_yes(self, tmp_path: Path):
+        """Packs store kana verbatim; the miner folds to hiragana."""
+        db, pack_dir = _build_pack(tmp_path, [("チップ", "チップ", "chip.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        assert fetcher.has_cached("チップ", "ちっぷ") is True
+
+    def test_empty_expression_is_a_definitive_no(self, tmp_path: Path):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        assert fetcher.has_cached("  ", "たべる") is False
+
+    def test_an_indexed_row_whose_file_is_gone_is_a_no(self, tmp_path: Path):
+        """A moved or emptied pack folder must not promise audio phase 3 cannot deliver."""
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        (pack_dir / "taberu.mp3").unlink()
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+
+        assert fetcher.has_cached("食べる", "たべる") is False
+        assert fetcher.fetch("食べる", "たべる") is None
+
+    def test_unreadable_index_is_unknown(self, tmp_path: Path):
+        db, pack_dir = _build_pack(tmp_path, [("食べる", "たべる", "taberu.mp3")])
+        fetcher = _make_fetcher(db, pack_dir, tmp_path / "cache")
+        db.unlink()
+
+        assert fetcher.has_cached("食べる", "たべる") is None

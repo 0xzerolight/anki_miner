@@ -194,24 +194,7 @@ class LocalAudioPackFetcher:
             # metadata token, and the entries live in the registered source db.
             conn = self._connection()
 
-            if is_kana_only(reading):
-                rows = storage.lookup(conn, mined_form, reading)
-                katakana_variant = hiragana_to_katakana(reading)
-                if not rows and katakana_variant != reading:
-                    # Packs store kana verbatim (often katakana for
-                    # NHK/SMK) while miner readings are hiragana-folded;
-                    # retry the exact match in the other script.
-                    rows = storage.lookup(conn, mined_form, katakana_variant)
-            else:
-                # Non-kana (or empty) reading: the exact key is useless.
-                # Wildcard the expression, then guard on ambiguity.
-                rows = storage.lookup(conn, mined_form, "")
-                distinct = {katakana_to_hiragana(r.reading) for r in rows if r.reading}
-                if len(distinct) > 1:
-                    # Genuinely ambiguous — only wildcard (NULL-reading)
-                    # rows may serve, matching what the old exact path
-                    # returned for a non-kana reading.
-                    rows = [r for r in rows if r.reading is None]
+            rows = self._lookup_rows(conn, mined_form, reading)
 
             # 3a. An android_db pack keeps its audio as blobs in the source db:
             #     there is no file to resolve, so the containment guard is moot.
@@ -248,6 +231,47 @@ class LocalAudioPackFetcher:
         """Try each candidate form, returning the first pack hit."""
         return _first_candidate_hit(self, candidates, cancelled_check)
 
+    def has_cached(self, mined_form: str, reading: str) -> bool | None:
+        """Answer from local disk alone whether this pack holds the word.
+
+        Zero network, never raises. A pack is definitive in BOTH directions,
+        unlike the online sources: the cache directory answers the hit, and the
+        index plus the files it points at answer the miss. ``None`` therefore
+        means only "the index could not be read", never "ask the network".
+
+        A matching row is deliberately NOT enough. The index records a path,
+        and a pack whose source folder has moved still indexes every row while
+        :meth:`_resolve_safe` resolves none of them — a documented state, since
+        the slot keeps no copy of the audio and Reimport All only *reports* a
+        moved pack. Answering ✓ off the row alone would promise audio phase 3
+        then fails to produce, so the row has to lead to a real file (or, for an
+        android_db pack, a present blob within ``MAX_AUDIO_BYTES``). Those are
+        the same two gates :meth:`fetch` and :meth:`_serve_from_blobs` apply.
+
+        Duck-typed like :meth:`close`, NOT part of the
+        ``ExpressionAudioFetcher`` Protocol — see the chain's
+        ``has_cached_candidates``.
+        """
+        if not mined_form.strip():
+            return False
+        reading = reading.strip()
+        stem = safe_filename(f"{self._pack_id}_{mined_form}_{reading}")
+        if _find_cached_by_stem(self._cache_dir, stem) is not None:
+            return True
+        try:
+            conn = self._connection()
+            rows = self._lookup_rows(conn, mined_form, reading)
+            if self._blob_db_path is not None:
+                return any(
+                    (size := self._blob_size(conn, row)) is not None and 0 < size <= MAX_AUDIO_BYTES for row in rows
+                )
+            return any(self._resolve_safe(row.file) is not None for row in rows)
+        # Broad Exception for the same reason fetch() carries one: sqlite3 and
+        # the kana-script helpers both raise, and no caller wraps this.
+        except Exception as exc:  # noqa: BLE001 — never raise per the fetcher protocol contract
+            logger.debug("LocalAudioPackFetcher: probe failed for %r (pack=%s): %s", mined_form, self._pack_id, exc)
+            return None
+
     def close(self) -> None:
         """Release the persistent sqlite handle, if one was ever opened.
 
@@ -280,6 +304,32 @@ class LocalAudioPackFetcher:
             self._conn = storage.open_readonly(lookup_db)
         return self._conn
 
+    def _lookup_rows(self, conn: sqlite3.Connection, mined_form: str, reading: str) -> list[storage.AudioEntry]:
+        """Resolve the index rows eligible to serve ``(mined_form, reading)``.
+
+        Lifted verbatim out of :meth:`fetch` so :meth:`has_cached` answers off
+        exactly the rows a real fetch would walk and the two cannot drift.
+        ``reading`` must already be stripped. Raises whatever sqlite or the
+        kana helpers raise; both callers own the never-raises guard.
+        """
+        if is_kana_only(reading):
+            rows = storage.lookup(conn, mined_form, reading)
+            katakana_variant = hiragana_to_katakana(reading)
+            if not rows and katakana_variant != reading:
+                # Packs store kana verbatim (often katakana for NHK/SMK) while
+                # miner readings are hiragana-folded; retry in the other script.
+                return storage.lookup(conn, mined_form, katakana_variant)
+            return rows
+        # Non-kana (or empty) reading: the exact key is useless. Wildcard the
+        # expression, then guard on ambiguity.
+        rows = storage.lookup(conn, mined_form, "")
+        distinct = {katakana_to_hiragana(r.reading) for r in rows if r.reading}
+        if len(distinct) > 1:
+            # Genuinely ambiguous — only wildcard (NULL-reading) rows may
+            # serve, matching what the old exact path returned.
+            return [r for r in rows if r.reading is None]
+        return rows
+
     def _serve_from_blobs(self, conn: sqlite3.Connection, rows: list[storage.AudioEntry], stem: str) -> Path | None:
         """Cache the first row whose blob can be read out of the android.db.
 
@@ -289,25 +339,11 @@ class LocalAudioPackFetcher:
         """
         assert self._blob_db_path is not None
         for row in rows:
-            try:
-                # length(data) first: an android_db pack's blob table can hold a
-                # corrupt or mismatched multi-hundred-MB row, and checking the
-                # stored size before touching the column avoids materializing
-                # that whole blob into memory just to discard it (matches the
-                # HTTP fetchers' MAX_AUDIO_BYTES abort in audio_fetch_common).
-                size = conn.execute(
-                    "SELECT length(data) FROM android WHERE file = ? AND source = ? ORDER BY id LIMIT 1",
-                    (row.file, row.source),
-                ).fetchone()
-            except sqlite3.Error as exc:
-                logger.debug("LocalAudioPackFetcher: blob size read failed for %s: %s", row.file, exc)
+            size = self._blob_size(conn, row)
+            if size is None:
                 continue
-            if size is None or size[0] is None:
-                continue
-            if size[0] > MAX_AUDIO_BYTES:
-                logger.debug(
-                    "LocalAudioPackFetcher: skipping oversized android blob for %s (%d bytes)", row.file, size[0]
-                )
+            if size > MAX_AUDIO_BYTES:
+                logger.debug("LocalAudioPackFetcher: skipping oversized android blob for %s (%d bytes)", row.file, size)
                 continue
             try:
                 found = conn.execute(
@@ -348,6 +384,28 @@ class LocalAudioPackFetcher:
             logger.debug("LocalAudioPackFetcher: cache write failed for %s: %s", cache_path, exc)
             return None
         return cache_path
+
+    def _blob_size(self, conn: sqlite3.Connection, row: storage.AudioEntry) -> int | None:
+        """Byte length of ``row``'s android.db blob, or None when there isn't one.
+
+        ``length(data)`` and never the column itself: an android_db pack's blob
+        table can hold a corrupt or mismatched multi-hundred-MB row, and reading
+        the size before touching the data is what keeps that blob out of memory.
+        Shared by :meth:`_serve_from_blobs` and :meth:`has_cached` so the probe
+        and the serve agree on what "this pack has it" means. None for an
+        unreadable row, an absent row, or a NULL blob.
+        """
+        try:
+            size = conn.execute(
+                "SELECT length(data) FROM android WHERE file = ? AND source = ? ORDER BY id LIMIT 1",
+                (row.file, row.source),
+            ).fetchone()
+        except sqlite3.Error as exc:
+            logger.debug("LocalAudioPackFetcher: blob size read failed for %s: %s", row.file, exc)
+            return None
+        if size is None or size[0] is None:
+            return None
+        return int(size[0])
 
     def _resolve_safe(self, rel_file: str) -> Path | None:
         """Resolve *rel_file* relative to pack_dir with a containment guard.
