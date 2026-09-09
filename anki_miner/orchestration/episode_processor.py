@@ -48,6 +48,7 @@ from anki_miner.services import (
     WordFilterService,
 )
 from anki_miner.services.anki_service import is_transient_anki_transport_error
+from anki_miner.services.cue_merge import auto_line_expansion, merge_budget_seconds
 from anki_miner.services.dictionary.card_style_block import attach_card_style_block
 from anki_miner.services.frequency.multi_frequency_service import harmonic_rank, min_rank
 from anki_miner.services.frequency.render import render_frequency_html
@@ -60,7 +61,12 @@ from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.services.secondary_subtitles import attach_translations
 from anki_miner.services.sentence_edit import resolve_sentence_edit
 from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
-from anki_miner.services.word_filter import enabled_script_options, script_options_kwarg, whitelist_hits
+from anki_miner.services.word_filter import (
+    enabled_script_options,
+    find_cue_index,
+    script_options_kwarg,
+    whitelist_hits,
+)
 from anki_miner.utils import ensure_directory, katakana_to_hiragana
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import capped, log_summary, suppressed
@@ -2305,6 +2311,49 @@ class EpisodeProcessor:
             )
         return curated
 
+    def _auto_stamp_line_expansions(
+        self,
+        words: list[TokenizedWord],
+        subtitle_file: Path,
+        subtitle_offset: float | None = None,
+    ) -> list[TokenizedWord]:
+        """Stamp the automatic cue merge onto words still at ``(0, 0)``.
+
+        Runs BEFORE curation, so the curator opens on the merged sentence and
+        its ± line buttons extend from there; the merge itself is left to
+        :meth:`_materialize_line_expansions` afterwards, from the same intent
+        the curator stamps by hand — this pass adds no merging code of its own.
+        ``parse_raw_entries`` is re-parsed at the offset the words carry, the
+        SAME call the materialiser makes, so ``find_cue_index`` sees one
+        timeline on both sides. The guard returns before the parse, so a run
+        with the setting off is unchanged down to the parse count.
+
+        A word whose cue cannot be located keeps its fragment: the curator
+        resolves the cue with the same function against the same texts, and a
+        guess here would put the two out of step.
+        """
+        if not self.config.merge_incomplete_cues:
+            return words
+        entries = self.subtitle_parser.parse_raw_entries(subtitle_file, subtitle_offset)
+        rules = get_profile(config_language(self.config)).sentence_rules
+        budget = merge_budget_seconds(self.config.audio_padding)
+        stamped: list[TokenizedWord] = []
+        merged = 0
+        for word in words:
+            index = (
+                None
+                if word.line_expansion != (0, 0)
+                else find_cue_index(entries, word.start_time, word.sentence, tolerance=1e-3)
+            )
+            if index is None or entries[index][2] != word.sentence:
+                stamped.append(word)
+                continue
+            expansion = auto_line_expansion(entries, index, rules, max_seconds=budget)
+            stamped.append(word if expansion == (0, 0) else replace(word, line_expansion=expansion))
+            merged += expansion != (0, 0)
+        logger.info("automatic cue merge: %d of %d word(s) stamped", merged, len(words))
+        return stamped
+
     def _materialize_line_expansions(
         self,
         words: list[TokenizedWord],
@@ -2557,6 +2606,11 @@ class EpisodeProcessor:
                 self._report_no_mineable_words(ctx)
                 return ctx.build_result(new_words_found=0)
 
+            # Before curation on purpose: the curator opens on the merged
+            # sentence and treats the stamp as what its ± line buttons extend
+            # from. A no-op unless the setting is on.
+            unknown_words = self._auto_stamp_line_expansions(unknown_words, subtitle_file, subtitle_offset)
+
             if curation_callback is not None:
                 # count_lemmas reuses the phase-1 parse cache, so no second MeCab pass.
                 outcome = self._run_curation(
@@ -2568,8 +2622,13 @@ class EpisodeProcessor:
                 )
                 if isinstance(outcome, ProcessingResult):
                     return outcome
-                unknown_words = self._materialize_line_expansions(outcome, subtitle_file, subtitle_offset)
-                unknown_words = self._materialize_sentence_edits(unknown_words)
+                unknown_words = outcome
+            # Outside the curation branch: the merge can now be stamped with no
+            # curator in the loop (Review words off, batch, Deck Builder). Both
+            # calls fast-path out when nothing was stamped or edited, so an
+            # untouched run pays nothing for standing here.
+            unknown_words = self._materialize_line_expansions(unknown_words, subtitle_file, subtitle_offset)
+            unknown_words = self._materialize_sentence_edits(unknown_words)
 
             if secondary_entries is not None:
                 # After curation and expansion materialisation on purpose: a

@@ -6808,6 +6808,79 @@ class TestCurationLineExpansion:
         extracted = mock_services["media_extractor"].extract_media_batch.call_args[0][1]
         assert extracted == [merged, word_b]
 
+    def test_auto_merge_off_never_stamps_or_reparses(self, test_config, mock_services, tmp_path):
+        """The default config is byte-identical to before the feature: no stamp,
+        no expansion, and no second parse_raw_entries call (FUTURE_IDEAS 6)."""
+        word = _make_word("食べる")
+        self._wire(mock_services, [word], _make_media())
+        mock_services["subtitle_parser"].parse_raw_entries.return_value = [
+            (1.0, 3.0, "食べるのテスト"),
+            (3.5, 5.0, "続きです。"),
+        ]
+        proc = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].expand_word_lines.assert_not_called()
+        assert mock_services["subtitle_parser"].parse_raw_entries.call_count == 1
+
+    def test_auto_merge_stamps_and_materializes_without_a_curator(self, test_config, mock_services, tmp_path):
+        """Setting on, no curator: the unterminated cue absorbs the next one and
+        the merged word is what phase 3 extracts."""
+        word = _make_word("食べる")
+        self._wire(mock_services, [word], _make_media())
+        entries = [(1.0, 3.0, "食べるのテスト"), (3.5, 5.0, "続きです。")]
+        mock_services["subtitle_parser"].parse_raw_entries.return_value = entries
+        merged = replace(word, sentence="食べるのテスト 続きです。", end_time=5.0)
+        mock_services["word_filter"].expand_word_lines.return_value = merged
+        config = replace(test_config, merge_incomplete_cues=True)
+        proc = build_processor(config=config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        stamped = mock_services["word_filter"].expand_word_lines.call_args[0][0]
+        assert stamped.line_expansion == (0, 1)
+        extracted = mock_services["media_extractor"].extract_media_batch.call_args[0][1]
+        assert extracted == [merged]
+
+    def test_auto_merge_reaches_the_curator_as_intent(self, test_config, mock_services, tmp_path):
+        """The curator opens on the stamped word, so its row shows the merged
+        sentence and its ± buttons extend from there."""
+        word = _make_word("食べる")
+        self._wire(mock_services, [word], _make_media())
+        mock_services["subtitle_parser"].parse_raw_entries.return_value = [
+            (1.0, 3.0, "食べるのテスト"),
+            (3.5, 5.0, "続きです。"),
+        ]
+        mock_services["word_filter"].expand_word_lines.side_effect = lambda w, e: w
+        seen: list = []
+        config = replace(test_config, merge_incomplete_cues=True)
+        proc = build_processor(config=config, presenter=NullPresenter(), **mock_services)
+
+        def _curate(words):
+            seen.extend(words)
+            return list(words)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=_curate)
+
+        assert [w.line_expansion for w in seen] == [(0, 1)]
+
+    def test_auto_merge_leaves_a_terminated_neighbourhood_alone(self, test_config, mock_services, tmp_path):
+        """Nothing to absorb: the word's cue is last in the file and the cue
+        before it ends its own sentence."""
+        word = _make_word("食べる")
+        self._wire(mock_services, [word], _make_media())
+        mock_services["subtitle_parser"].parse_raw_entries.return_value = [
+            (0.0, 0.5, "前です。"),
+            (1.0, 3.0, "食べるのテスト"),
+        ]
+        config = replace(test_config, merge_incomplete_cues=True)
+        proc = build_processor(config=config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].expand_word_lines.assert_not_called()
+
     def test_no_expansion_skips_extra_raw_entry_parse(self, test_config, mock_services, tmp_path):
         """The all-zero fast path never re-parses: parse_raw_entries stays at the
         single phase-1 logging call and expand_word_lines is untouched."""
