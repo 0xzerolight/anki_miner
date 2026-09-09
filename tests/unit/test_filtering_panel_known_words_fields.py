@@ -34,6 +34,10 @@ def test_mapping_get_set_roundtrip(panel):
         "Sentence First": "Word",
         "Lapis": "Expression",
     }
+    # Rows are sorted by note type, so row 0 is Lapis. The label is the only
+    # thing the user sees; the UserRole payload every other assertion reads
+    # would survive an empty one.
+    assert panel.known_words_fields_list.item(0).text() == "Lapis → Expression"
 
 
 def test_set_replaces_the_previous_mapping(panel):

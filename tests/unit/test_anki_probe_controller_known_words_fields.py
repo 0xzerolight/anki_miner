@@ -33,6 +33,27 @@ def wired(qtbot, test_config: AnkiMinerConfig):
     return ctrl, anki_panel, filtering_panel
 
 
+def test_fetch_note_types_starts_a_worker_and_disables_the_button(wired, monkeypatch):
+    """The starter itself, which no other test in this file reaches.
+
+    Every other test drives a result slot directly, so a wrong worker factory,
+    a mis-wired ``result_ready`` or a deleted ``worker.start()`` would ship a
+    dead button with the file green.
+    """
+    ctrl, _anki_panel, filtering_panel = wired
+    started: list[object] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.workers.base_worker.SingleCallWorker.start",
+        lambda self: started.append(self),
+    )
+
+    ctrl.fetch_known_words_note_types()
+
+    assert ctrl._known_words_notetypes_worker is not None
+    assert started == [ctrl._known_words_notetypes_worker]
+    assert filtering_panel.add_known_words_field_button.isEnabled() is False
+
+
 def test_fetched_note_types_open_the_picker(wired, monkeypatch):
     ctrl, _anki_panel, filtering_panel = wired
     requested: list[str] = []
@@ -53,11 +74,22 @@ def test_empty_note_type_list_reports_and_opens_nothing(wired, monkeypatch):
     never a modal)."""
     ctrl, _anki_panel, filtering_panel = wired
     reported: list[str] = []
+    opened: list[bool] = []
     monkeypatch.setattr(ctrl, "_report", lambda summary, details="": reported.append(summary))
+
+    def fake_get_item(*args, **kwargs):
+        opened.append(True)
+        return "", False
+
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.filtering_settings_panel.QInputDialog.getItem",
+        fake_get_item,
+    )
 
     ctrl._on_known_words_note_types_fetched([])
 
     assert len(reported) == 1
+    assert opened == []
     assert filtering_panel.add_known_words_field_button.isEnabled()
 
 
@@ -70,6 +102,21 @@ def test_note_type_result_for_another_endpoint_is_dropped(wired, monkeypatch):
     ctrl._on_known_words_note_types_fetched(["Lapis"], "http://127.0.0.1:8765")
 
     assert opened == []
+
+
+def test_fetch_fields_starts_a_worker(wired, monkeypatch):
+    """Same reason as the note-type starter: nothing else calls this method."""
+    ctrl, _anki_panel, _filtering_panel = wired
+    started: list[object] = []
+    monkeypatch.setattr(
+        "anki_miner.gui.workers.base_worker.SingleCallWorker.start",
+        lambda self: started.append(self),
+    )
+
+    ctrl.fetch_known_words_fields("Sentence First")
+
+    assert ctrl._known_words_fields_worker is not None
+    assert started == [ctrl._known_words_fields_worker]
 
 
 def test_fetched_fields_add_the_row(wired, monkeypatch):
