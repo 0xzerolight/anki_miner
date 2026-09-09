@@ -129,7 +129,7 @@ def test_close_workers_include_the_name_list_workers(wired, monkeypatch):
     )
     ctrl.refresh_name_lists()
     workers = ctrl.iter_close_workers()
-    assert len(workers) == 4
+    assert len(workers) == 6
     assert sum(w is not None for w in workers) == 2
     assert len(started) == 2
 
