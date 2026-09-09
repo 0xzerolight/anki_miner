@@ -1744,3 +1744,97 @@ class TestJPod101FailureLogging:
         warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
         assert any("word=食べる/たべる" in w for w in warnings), warnings
         assert not any("identity=" in w for w in warnings), warnings
+
+
+class _ProbeFetcher:
+    """Leaf double that answers the probe from a dict and never fetches."""
+
+    def __init__(self, answers: dict[tuple[str, str], bool | None]):
+        self.answers = answers
+        self.probes: list[tuple[str, str]] = []
+
+    def fetch(self, mined_form, reading, cancelled_check=None):
+        raise AssertionError("has_cached_candidates must not fetch")
+
+    def fetch_candidates(self, candidates, cancelled_check=None):
+        raise AssertionError("has_cached_candidates must not fetch")
+
+    def has_cached(self, mined_form, reading):
+        self.probes.append((mined_form, reading))
+        return self.answers.get((mined_form, reading))
+
+
+class _ProbelessFetcher:
+    """Leaf double satisfying only the Protocol — no has_cached at all."""
+
+    def fetch(self, mined_form, reading, cancelled_check=None):
+        return None
+
+    def fetch_candidates(self, candidates, cancelled_check=None):
+        return None
+
+
+class TestChainedHasCachedCandidates:
+    def test_any_source_hit_wins(self):
+        chain = ChainedExpressionAudioFetcher(
+            [_ProbeFetcher({("食べる", "たべる"): None}), _ProbeFetcher({("食べる", "たべる"): True})]
+        )
+
+        assert chain.has_cached_candidates([("食べる", "たべる")]) is True
+
+    def test_a_later_candidate_form_can_hit(self):
+        chain = ChainedExpressionAudioFetcher([_ProbeFetcher({("チップ", "チップ"): True})])
+
+        assert chain.has_cached_candidates([("チップ", "ちっぷ"), ("チップ", "チップ")]) is True
+
+    def test_all_definitive_misses_is_a_definitive_no(self):
+        chain = ChainedExpressionAudioFetcher(
+            [_ProbeFetcher({("猫", "ねこ"): False}), _ProbeFetcher({("猫", "ねこ"): False})]
+        )
+
+        assert chain.has_cached_candidates([("猫", "ねこ")]) is False
+
+    def test_one_unknown_makes_the_whole_answer_unknown(self):
+        chain = ChainedExpressionAudioFetcher(
+            [_ProbeFetcher({("猫", "ねこ"): False}), _ProbeFetcher({("猫", "ねこ"): None})]
+        )
+
+        assert chain.has_cached_candidates([("猫", "ねこ")]) is None
+
+    def test_a_member_without_the_probe_contributes_unknown(self):
+        chain = ChainedExpressionAudioFetcher([_ProbeFetcher({("猫", "ねこ"): False}), _ProbelessFetcher()])
+
+        assert chain.has_cached_candidates([("猫", "ねこ")]) is None
+
+    def test_a_magicmock_member_contributes_unknown_not_a_miss(self):
+        """A bare MagicMock auto-creates has_cached; the TYPE lookup ignores it."""
+        chain = ChainedExpressionAudioFetcher([MagicMock()])
+
+        assert chain.has_cached_candidates([("猫", "ねこ")]) is None
+
+    def test_empty_chain_is_a_definitive_no(self):
+        assert ChainedExpressionAudioFetcher([]).has_cached_candidates([("猫", "ねこ")]) is False
+
+    def test_empty_ladder_is_a_definitive_no_without_consulting_anyone(self):
+        """A word with no usable kana builds no ladder, and fetch_candidates([]) finds nothing."""
+        member = _ProbeFetcher({})
+        chain = ChainedExpressionAudioFetcher([member, _ProbelessFetcher()])
+
+        assert chain.has_cached_candidates([]) is False
+        assert member.probes == []
+        # ...and that False is what a real fetch over the same empty ladder yields.
+        assert ChainedExpressionAudioFetcher([_ProbelessFetcher()]).fetch_candidates([]) is None
+
+    def test_probe_stops_at_the_first_hit(self):
+        first = _ProbeFetcher({("食べる", "たべる"): True})
+        second = _ProbeFetcher({("食べる", "たべる"): True})
+        chain = ChainedExpressionAudioFetcher([first, second])
+
+        chain.has_cached_candidates([("食べる", "たべる")])
+
+        assert second.probes == []
+
+    def test_single_pair_form_delegates_to_the_ladder_form(self):
+        chain = ChainedExpressionAudioFetcher([_ProbeFetcher({("食べる", "たべる"): True})])
+
+        assert chain.has_cached("食べる", "たべる") is True

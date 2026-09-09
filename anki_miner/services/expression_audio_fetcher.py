@@ -541,6 +541,54 @@ class ChainedExpressionAudioFetcher:
             word=candidates[0][0] if candidates else "",
         )
 
+    def has_cached_candidates(self, candidates: list[tuple[str, str]]) -> bool | None:
+        """Fan the members' disk probes out over the whole candidate ladder.
+
+        Zero network and no budget thread: every member answers from its own
+        cache — and, for a local pack, its own index — so this is cheap enough
+        to run over a whole episode's word list on the worker thread before the
+        Word Curator opens.
+
+        * ``True``  — some source already holds one of the candidate forms.
+        * ``False`` — EVERY source answered definitively no for EVERY form.
+        * ``None``  — nobody said yes and at least one answer needs the network.
+
+        ``has_cached`` is duck-typed exactly like :meth:`stats` and
+        :meth:`close`, and looked up on the member's TYPE for the same reason
+        ``orchestration.audio_stage._candidate_ladder`` does: several suites
+        inject bare ``MagicMock`` members, on which every instance attribute
+        auto-exists, and an instance-level probe would read a MagicMock as a
+        definitive answer. A member without the method contributes "unknown".
+
+        An empty ladder — a word whose reading is not usable kana, so
+        ``expression_audio_candidates`` built nothing — is a definitive no
+        before any member is asked: ``fetch_candidates([])`` finds nothing in
+        every member, so that IS the answer phase 3 will reach.
+        """
+        if not candidates:
+            return False
+        unknown = False
+        for fetcher in self._fetchers:
+            if not hasattr(type(fetcher), "has_cached"):
+                unknown = True
+                continue
+            probe = getattr(fetcher, "has_cached")  # noqa: B009 — see the TYPE-vs-instance note above
+            for mined_form, reading in candidates:
+                answer = probe(mined_form, reading)
+                if answer is True:
+                    return True
+                if answer is None:
+                    unknown = True
+        return None if unknown else False
+
+    def has_cached(self, mined_form: str, reading: str) -> bool | None:
+        """One-pair form of :meth:`has_cached_candidates`.
+
+        Present so a nested chain answers the probe like any other member, and
+        so the fan-out is reachable without building a ladder.
+        """
+        return self.has_cached_candidates([(mined_form, reading)])
+
     def _walk(
         self,
         attempt: "Callable[[ExpressionAudioFetcher], Path | None]",
