@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.services.cue_merge import MAX_MERGED_SECONDS
 from anki_miner.utils.i18n import tr_format
 
 #: Shortest window the slider will produce. Matches
@@ -36,7 +37,10 @@ MIN_CLIP_SECONDS = 0.2
 
 #: Longest window the slider will produce. No vocabulary card wants a clip
 #: longer than this, and a long line plus its slack could otherwise reach it.
-MAX_CLIP_SECONDS = 30.0
+#: Defined in services/cue_merge.py so the automatic cue merge and this strip
+#: share one ceiling — an automatic merge must never produce a window the ±
+#: line buttons would have refused.
+MAX_CLIP_SECONDS = MAX_MERGED_SECONDS
 
 #: Resolution of one keyboard step, in seconds. Also the readout's precision.
 TICK_SECONDS = 0.1
