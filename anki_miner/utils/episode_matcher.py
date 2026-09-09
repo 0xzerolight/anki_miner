@@ -43,6 +43,26 @@ def _strip_technical_tokens(name: str) -> str:
     name = re.sub(r"(?<![0-9A-Za-z])(?:[xh]\.?26[45]|av1|vp9)(?![0-9A-Za-z])", "", name, flags=re.IGNORECASE)
     name = re.sub(r"(?<![0-9A-Za-z])\d{1,2}[\s._-]?bit(?![0-9A-Za-z])", "", name, flags=re.IGNORECASE)
     name = re.sub(r"[\[(][0-9A-Fa-f]{8}[\])]", "", name)
+    # A re-upload's version marker ("24 V2", "24_v2", "S01E02v5") sits
+    # directly against the episode digits, so an unstripped name lets the
+    # bare-number fallback's LAST-run pick (BARE_NUMBER, below) grab the
+    # version digit instead of the real episode number — "Show_24_v2.mkv"
+    # used to mine as episode 2. The lookbehind requires a digit
+    # immediately (past only separator chars) before the marker, so a title
+    # token with no digit in front — "Show V2 - 03" — is left alone.
+    # MUST run after the codec/bit-depth strips above, not before: a codec
+    # or bit-depth token can sit between the episode digits and the marker
+    # ("05 x265 10bit v2"), and those tokens are letters, not separator
+    # characters, so the lookbehind cannot cross them until that token is
+    # already gone. Run this strip first and the marker survives untouched
+    # (it gets exactly one `re.sub` pass, never a second chance), the codec/
+    # bit-depth strips then expose "05   v2" too late for any pattern to
+    # notice, and the bare-number fallback picks the "2" from "v2" instead
+    # of the real episode number. Locked by
+    # test_bit_depth_and_version_marker_together and the "x265 10bit" row of
+    # test_version_marker_resolves_real_episode, both in
+    # test_episode_matcher.py.
+    name = re.sub(r"(?<=\d)[\s._-]*[vV]\d{1,2}(?![0-9A-Za-z])", "", name)
     return name
 
 

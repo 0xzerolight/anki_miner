@@ -405,6 +405,97 @@ class TestEpisodeNumberExtractor:
             assert result is not None
             assert result.episode_number == 36
 
+    class TestVersionMarkers:
+        """Regression: a re-upload's version marker ("24 V2", "S01E02v5")
+        sits right against the episode digits. Six shapes used to lose the
+        real episode number to the bare-number fallback's LAST-run pick,
+        which grabbed the version digit instead ("Show_24_v2.mkv" mined as
+        episode 2, not 24). All six now resolve correctly; the four shapes
+        that already worked before the fix (via pattern 2's own inline
+        v-group, or a bracket/paren the strip's separator class does not
+        cross) are re-asserted here as a regression net now that the strip
+        runs on every one of them too. A seventh row, with a codec token
+        sitting between the episode digits and the marker, pins the strip
+        ORDER: the version strip only works because it runs after the
+        codec/bit-depth strips have already removed the letters that would
+        otherwise block its digit-adjacency lookbehind (see the comment in
+        _strip_technical_tokens).
+        """
+
+        @pytest.mark.parametrize(
+            ("filename", "episode"),
+            [
+                # Previously broken: the bare-number fallback picked the
+                # version digit instead of the real episode number.
+                ("Show - 24 V2.mkv", 24),
+                ("Show_24_v2.mkv", 24),
+                ("Show.24.v2.mkv", 24),
+                ("Show ep24v2.mkv", 24),
+                ("Show 24 V2.mkv", 24),
+                ("Show - 24 v2 [1080p].mkv", 24),
+                # A codec token (letters, not a separator) sits between the
+                # episode digits and the marker — pins that the version
+                # strip must run AFTER the codec/bit-depth strips, not
+                # before them.
+                ("Show - 05 x265 10bit v2.mkv", 5),
+                # Already correct before the fix; re-asserted as a
+                # regression net.
+                ("Show - 24v2.mkv", 24),
+                ("Show ep 24 V2.mkv", 24),
+                ("Show - 02 (v2).mkv", 2),
+                ("[Group] Show - 24 [v2][1080p].mkv", 24),
+            ],
+        )
+        def test_version_marker_resolves_real_episode(self, tmp_path, filename, episode):
+            path = tmp_path / filename
+            path.touch()
+
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+
+            assert result is not None
+            assert result.episode_number == episode
+
+        def test_s01e02v5_keeps_season_and_episode(self, tmp_path):
+            path = tmp_path / "Show S01E02v5.mkv"
+            path.touch()
+
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+
+            assert result is not None
+            assert (result.season_number, result.episode_number) == (1, 2)
+
+        def test_title_token_with_no_digit_in_front_survives(self, tmp_path):
+            """ "Show V2 - 03": no digit sits directly before the "V2", so it
+            is a title token, not a version marker, and must not be
+            stripped."""
+            path = tmp_path / "Show V2 - 03.mkv"
+            path.touch()
+
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+
+            assert result is not None
+            assert result.episode_number == 3
+
+        def test_bit_depth_and_version_marker_together(self, tmp_path):
+            """Locks the strip ORDER in _strip_technical_tokens: "10-bit"
+            sits between the episode digits and the version marker, and it
+            is letters, not separator characters, so the version strip's
+            digit-adjacency lookbehind cannot cross it. The version strip
+            only resolves this name correctly because it runs AFTER the
+            bit-depth strip has already removed "10-bit" — placed before
+            it, the marker would survive untouched and the bare-number
+            fallback would then pick its digit instead of the real episode
+            number. See test_version_marker_resolves_real_episode's
+            "x265 10bit" row for the codec-token version of the same
+            dependency."""
+            path = tmp_path / "Show - 03 10-bit v2.mkv"
+            path.touch()
+
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+
+            assert result is not None
+            assert result.episode_number == 3
+
 
 class TestEpisodeMatcher:
     """Tests for EpisodeMatcher class."""
