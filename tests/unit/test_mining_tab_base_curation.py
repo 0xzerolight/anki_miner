@@ -45,6 +45,18 @@ class _CurationWorker(QThread):
         self.result = self._tab._curation_bridge(self._words)
 
 
+def _fake_worker():
+    """A Mock worker whose processor offers no expression-audio fetch.
+
+    Left as a bare auto-Mock, ``curation_processor.expression_audio_curation_fn``
+    is truthy, so every curator test here would dispatch a real background
+    prefetch QThread parented to a widget qtbot is about to destroy.
+    """
+    worker = Mock()
+    worker.curation_processor.expression_audio_curation_fn = None
+    return worker
+
+
 def _fake_dialog_cls(*, decision="accept", selection=("picked",)):
     """Build a real-``QDialog`` curator stand-in plus its instance list.
 
@@ -62,7 +74,6 @@ def _fake_dialog_cls(*, decision="accept", selection=("picked",)):
             self.kwargs = kwargs
             self.shown_on = None
             self.deleted_later = False
-            self.audio_states: list[tuple[int, bool]] = []
             created.append(self)
 
         def show(self):
@@ -76,10 +87,6 @@ def _fake_dialog_cls(*, decision="accept", selection=("picked",)):
         def force_reject(self):
             """Stand-in for the real dialog's forced-shutdown path (D34-B)."""
             self.reject()
-
-        def set_expression_audio_state(self, index, found):
-            """Stand-in for the real curator's Audio-column slot (Task 6)."""
-            self.audio_states.append((index, found))
 
         def get_selected_words(self):
             return list(selection)
@@ -411,7 +418,7 @@ def test_reject_cancels_running_worker(qapp, qtbot):
     tab = _Bare()
     qtbot.addWidget(tab)
     tab._init_curation_bridge()
-    tab.worker_thread = Mock()  # _Bare has no worker; a queue tab supplies one
+    tab.worker_thread = _fake_worker()  # _Bare has no worker; a queue tab supplies one
 
     cls, _created = _fake_dialog_cls(decision="reject")
     with patch(f"{MODULE}.WordCurationDialog", cls):
@@ -432,7 +439,7 @@ def test_empty_accept_continues_without_cancel(qapp, qtbot):
     tab = _Bare()
     qtbot.addWidget(tab)
     tab._init_curation_bridge()
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
 
     cls, _created = _fake_dialog_cls(selection=())
     with patch(f"{MODULE}.WordCurationDialog", cls):

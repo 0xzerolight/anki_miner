@@ -75,6 +75,18 @@ def _drain_until(predicate, timeout_ms: int = 3000, step_ms: int = 10) -> bool:
     return predicate()
 
 
+def _fake_worker():
+    """A Mock worker whose processor offers no expression-audio fetch.
+
+    Left as a bare auto-Mock, ``curation_processor.expression_audio_curation_fn``
+    is truthy, so every curator test here would dispatch a real background
+    prefetch QThread parented to a widget qtbot is about to destroy.
+    """
+    worker = Mock()
+    worker.curation_processor.expression_audio_curation_fn = None
+    return worker
+
+
 def _fake_dialog_cls(*, show_raises: bool = False):
     """Build a real-``QDialog`` stand-in plus the list of instances it creates.
 
@@ -92,7 +104,6 @@ def _fake_dialog_cls(*, show_raises: bool = False):
             self.selection: list = ["picked"]
             self.events: list[str] = []
             self.finished.connect(lambda _code: self.events.append("stop_player"))
-            self.audio_states: list[tuple[int, bool]] = []
             created.append(self)
 
         def exec(self):  # pragma: no cover - the assertion is the point
@@ -106,10 +117,6 @@ def _fake_dialog_cls(*, show_raises: bool = False):
         def force_reject(self):
             """Stand-in for the real dialog's forced-shutdown path (D34-B)."""
             self.reject()
-
-        def set_expression_audio_state(self, index, found):
-            """Stand-in for the real curator's Audio-column slot (Task 6)."""
-            self.audio_states.append((index, found))
 
         def get_selected_words(self):
             self.events.append("get_selected_words")
@@ -172,7 +179,7 @@ def test_open_curator_is_retained_and_gate_stays_closed(tab):
 
 
 def test_accept_releases_gate_with_the_selection(tab):
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
     dialog = _show(tab)
     dialog.selection = ["食べる"]
 
@@ -185,7 +192,7 @@ def test_accept_releases_gate_with_the_selection(tab):
 
 def test_accept_with_empty_selection_is_a_skip_not_a_cancel(tab):
     """[] means "confirmed, nothing selected" — the queue continues."""
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
     dialog = _show(tab)
     dialog.selection = []
 
@@ -197,7 +204,7 @@ def test_accept_with_empty_selection_is_a_skip_not_a_cancel(tab):
 
 
 def test_reject_releases_gate_as_cancelled_and_stops_the_run(tab):
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
     dialog = _show(tab)
 
     dialog.reject()
@@ -209,7 +216,7 @@ def test_reject_releases_gate_as_cancelled_and_stops_the_run(tab):
 
 
 def test_window_close_releases_gate_as_cancelled(tab):
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
     dialog = _show(tab)
 
     dialog.close()
@@ -220,7 +227,7 @@ def test_window_close_releases_gate_as_cancelled(tab):
 
 
 def test_escape_releases_gate_as_cancelled(tab):
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
     dialog = _show(tab)
 
     QTest.keyClick(dialog, Qt.Key.Key_Escape)
@@ -317,7 +324,7 @@ def test_context_build_error_still_presents_and_releases(tab):
 
 def test_resolution_is_idempotent_across_finished_then_destroyed(tab):
     """The normal accept path ends in deleteLater(); its ``destroyed`` must no-op."""
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
     dialog = _show(tab)
     dialog.accept()
     assert tab._curation_event.is_set()
@@ -333,7 +340,7 @@ def test_resolution_is_idempotent_across_finished_then_destroyed(tab):
 
 
 def test_second_finished_emission_cannot_overwrite_the_result(tab):
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
     dialog = _show(tab)
     dialog.selection = ["kept"]
     dialog.accept()
@@ -348,7 +355,7 @@ def test_second_finished_emission_cannot_overwrite_the_result(tab):
 
 def test_stale_dialog_cannot_resolve_a_later_run(tab):
     """A superseded curator's late callback must not release the live item."""
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
     stale = _show(tab, ["old"])
     stale.reject()  # run A resolves normally
     tab.worker_thread.reset_mock()
