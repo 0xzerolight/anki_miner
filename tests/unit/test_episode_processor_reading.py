@@ -1536,3 +1536,41 @@ def test_sentence_edit_reparse_uses_the_document_s_cleanup(test_config, kind, cl
 
     # One parse from the curator's editor, one from _materialize_sentence_edits.
     assert sentence_parses == [cleanup, cleanup]
+
+
+def test_expression_audio_probe_attached_for_curation(test_config):
+    """Reading path parity: the curator sees the audio state for every word."""
+
+    class _Chain:
+        def fetch(self, mined_form, reading, cancelled_check=None):
+            return None
+
+        def fetch_candidates(self, candidates, cancelled_check=None):
+            return None
+
+        def has_cached_candidates(self, candidates):
+            return bool(candidates) and candidates[0][0] == "犬"
+
+    words = [_word("犬", 0), _word("猫", 1)]
+    # This module's _word() leaves expression_reading empty, and
+    # audio_fetch_common.expression_audio_candidates drops empty-kana pairs, so
+    # the ladder would be [] and every word would probe as a definitive miss.
+    # A real parse always stamps a reading; stamp one here so the ladder exists.
+    for word in words:
+        word.expression_reading = "カナ"
+    counts = collections.Counter({"犬": 1, "猫": 1})
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning(words, None, counts)
+    cfg = replace(test_config, anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"})
+    proc = _make_processor(cfg, subtitle_parser=sp, expression_audio_fetcher=_Chain())
+
+    seen = {}
+
+    def curate(curated_words):
+        for w in curated_words:
+            seen[w.lemma] = w.expression_audio_available
+        return curated_words
+
+    proc.process_reading(_document([_unit(0), _unit(1)]), curation_callback=curate)
+
+    assert seen == {"犬": True, "猫": False}

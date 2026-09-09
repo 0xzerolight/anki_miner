@@ -93,6 +93,10 @@ _PAGE_CACHE_MAX_BYTES = 64 * 1024 * 1024
 #: The secondary-language line; hidden unless the run has a second track.
 TRANSLATION_COLUMN = 9
 
+#: Whether the run's audio sources have pronunciation audio for the word;
+#: hidden unless the run mines expression audio.
+AUDIO_COLUMN = 10
+
 #: Table column : side column, as stretch factors. Also the ratio the split
 #: opens at, so the first frame and every resize after it agree.
 _MAIN_SPLIT_STRETCH = (3, 2)
@@ -181,6 +185,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         lookup_fn: Callable[..., list[tuple[str, str]]] | None = None,
         content_style: ContentTextStyle | None = None,
         parse_sentence_fn: Callable[[str], list[TokenizedWord]] | None = None,
+        expression_audio_fetch_fn: Callable[[TokenizedWord, Callable[[], bool] | None], bool] | None = None,
     ):
         super().__init__(parent)
         self._words = words
@@ -225,6 +230,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self._media_ctx_cache[ctx.video_file] = ctx
         self._media_swap_gen = 0
         self._show_dict = lookup_fn is not None
+        # Expression-audio availability (FUTURE_IDEAS item 4). The parameter is
+        # the run's own chained fetcher — the tab, not the window, drives it —
+        # so only its presence is kept: it is None exactly when the run maps no
+        # expression-audio field, which is the Audio column's gate.
+        self._has_expression_audio = expression_audio_fetch_fn is not None
         # Manga page pane: gated on page_units exactly like the player gates
         # on video_file. Cache holds converted QPixmaps (GUI-thread only);
         # _page_request_gen is the stale-guard for off-thread loads and
@@ -559,7 +569,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         # Table
         self.table = QTableWidget()
-        self.table.setColumnCount(10)
+        self.table.setColumnCount(11)
         self.table.setHorizontalHeaderLabels(
             [
                 "",
@@ -572,6 +582,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 self.tr("Unknowns in line"),
                 self.tr("Sentence length"),
                 self.tr("Translation"),
+                self.tr("Audio"),
             ]
         )
         # Occurrences and the Sentences picker count different things, and a user
@@ -613,6 +624,16 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                     "The secondary-language subtitle line for this sentence. It follows a sentence pick or a +line."
                 )
             )
+        audio_header = self.table.horizontalHeaderItem(AUDIO_COLUMN)
+        if audio_header is not None:
+            audio_header.setToolTip(
+                self.tr(
+                    "Whether your audio sources have pronunciation audio for this word.\n\n"
+                    "✓ found, ✗ not found, - not checked yet. Words are checked while this "
+                    "window is open, so a word you keep already has its audio ready. The "
+                    "check never changes which words you can mine."
+                )
+            )
 
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -627,6 +648,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # _restore_layout_state) -- a run with a track always shows it.
         self._has_translations = bool(self._media_context is not None and self._media_context.secondary_entries)
         self._apply_translation_column_gate()
+        self._apply_audio_column_gate()
         header_view = self.table.horizontalHeader()
         if header_view:
             # Columns are the user's to arrange: drag to reorder, right-click to
@@ -764,6 +786,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         if columns is not None and header_view and header_view.restoreState(columns):
             self._apply_header_resize_modes()
         self._apply_translation_column_gate()
+        self._apply_audio_column_gate()
 
     def _is_on_a_live_screen(self) -> bool:
         """True when the window's centre sits on a screen that exists."""
@@ -878,7 +901,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             7,
             8,
             TRANSLATION_COLUMN,
-        ):  # mined form, surface, reading, rank, count, signals, translation
+            AUDIO_COLUMN,
+        ):  # mined form, surface, reading, rank, count, signals, translation, audio
             header_view.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
         header_view.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)  # sentence
 
@@ -893,6 +917,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         actions: dict[int, QAction] = {}
         for column in range(1, self.table.columnCount()):
             if column == TRANSLATION_COLUMN and not self._has_translations:
+                continue
+            if column == AUDIO_COLUMN and not self._has_expression_audio:
                 continue
             header_item = self.table.horizontalHeaderItem(column)
             action = QAction(header_item.text() if header_item is not None else str(column), self)
@@ -933,9 +959,21 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 header_view.moveSection(header_view.visualIndex(column), column)
         self._apply_header_resize_modes()
         self._apply_translation_column_gate()
+        self._apply_audio_column_gate()
 
     def _apply_translation_column_gate(self) -> None:
         self.table.setColumnHidden(TRANSLATION_COLUMN, not self._has_translations)
+
+    def _apply_audio_column_gate(self) -> None:
+        """Force the Audio column hidden for a run that mines no expression audio.
+
+        One-directional, unlike :meth:`_apply_translation_column_gate`: an
+        active Audio column is the user's to hide from the header menu, and
+        that choice has to survive the saved header state, so this only ever
+        hides.
+        """
+        if not self._has_expression_audio:
+            self.table.setColumnHidden(AUDIO_COLUMN, True)
 
     def _build_right_pane(self) -> QWidget:
         """Build the right pane from whichever optional sub-panes are enabled.
@@ -1647,6 +1685,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             for column, text, tooltip, copy_text in self._translation_cell_values(row):
                 self.table.setItem(row, column, self._make_readonly_item(text, tooltip=tooltip, copy_text=copy_text))
 
+            text, sort_value, tooltip = self._audio_cell_value(word.expression_audio_available)
+            self.table.setItem(
+                row,
+                AUDIO_COLUMN,
+                self._make_readonly_item(text, role=CellRole.STATE, sort_value=sort_value, tooltip=tooltip),
+            )
+
         self.table.blockSignals(False)
         self.table.setSortingEnabled(True)
 
@@ -1712,6 +1757,30 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             (7, "-" if unknowns <= 0 else str(unknowns), float("inf") if unknowns <= 0 else float(unknowns)),
             (8, str(length), float(length)),
         )
+
+    def _audio_cell_value(self, state: bool | None) -> tuple[str, float, str]:
+        """``(text, sort_value, tooltip)`` for one Audio cell.
+
+        A bare triple, NOT the ``(column, …)`` tuple-of-tuples the neighbouring
+        specs use: those cover several columns each, this covers exactly one,
+        and reusing the shape here would put a four-field tuple next to
+        :meth:`_translation_cell_values`' four-field tuple with the third and
+        fourth fields meaning different things.
+
+        One spec shared by :meth:`_populate_table` and
+        :meth:`set_expression_audio_state`, so a cell the prefetch repaints
+        cannot drift from one the initial probe painted.
+
+        Three states, one glyph each, sorted found-first ascending; an unknown
+        carries ``inf`` so it sits last exactly like an unranked Freq. Rank. A
+        glyph says nothing on its own, so every cell also carries the sentence
+        the header tooltip abbreviates.
+        """
+        if state is True:
+            return ("✓", 0.0, self.tr("Pronunciation audio found"))
+        if state is False:
+            return ("✗", 1.0, self.tr("No pronunciation audio found"))
+        return ("-", float("inf"), self.tr("Not checked yet"))
 
     def _translation_cell_values(self, idx: int) -> tuple[tuple[int, str, str, str], ...]:
         """``(column, text, tooltip, copy_text)`` for the Translation column.
@@ -2291,6 +2360,35 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         start_time = chosen.start_time if window is None else window.start
         chosen_video = chosen.video_file
         QTimer.singleShot(0, lambda: self._preview_scene(start_time, chosen_video))
+
+    def set_expression_audio_state(self, index: int, found: bool) -> None:
+        """Repaint one row's Audio cell from the background prefetch (GUI thread).
+
+        ``index`` is the ORIGINAL word index (the col-0 ``UserRole``), not a
+        visual row: the table is sortable, so the row moves. The word itself is
+        stamped too, so a later repaint of the row cannot disagree with the cell.
+
+        Connected across threads to the prefetch worker, therefore delivered
+        queued on the GUI thread. Qt drops a queued delivery to a destroyed
+        receiver; ``_closing`` covers the window between teardown starting and
+        the deferred delete.
+
+        No sorting suspension, unlike :meth:`_apply_pick_to_row`: that method
+        writes several cells and has to pin the row across the batch, while
+        this writes one. Qt re-sorts off ``dataChanged`` only when the changed
+        column is the sort column, so a row moves here exactly when the user
+        asked for that by sorting on Audio.
+        """
+        if self._closing or not (0 <= index < len(self._words)):
+            return
+        self._words[index].expression_audio_available = found
+        row = self._visual_row_for_index(index)
+        if row is None:
+            return
+        item = self.table.item(row, AUDIO_COLUMN)
+        if item is not None:
+            text, sort_value, tooltip = self._audio_cell_value(found)
+            update_table_item(item, text, sort_value=sort_value, tooltip=tooltip)
 
     def _apply_pick_to_row(self, idx: int, chosen: TokenizedWord) -> None:
         """Repaint every pick-dependent cell of ``idx``'s row from ``chosen``.

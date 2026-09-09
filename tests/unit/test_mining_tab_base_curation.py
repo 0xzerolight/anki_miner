@@ -45,6 +45,18 @@ class _CurationWorker(QThread):
         self.result = self._tab._curation_bridge(self._words)
 
 
+def _fake_worker():
+    """A Mock worker whose processor offers no expression-audio fetch.
+
+    Left as a bare auto-Mock, ``curation_processor.expression_audio_curation_fn``
+    is truthy, so every curator test here would dispatch a real background
+    prefetch QThread parented to a widget qtbot is about to destroy.
+    """
+    worker = Mock()
+    worker.curation_processor.expression_audio_curation_fn = None
+    return worker
+
+
 def _fake_dialog_cls(*, decision="accept", selection=("picked",)):
     """Build a real-``QDialog`` curator stand-in plus its instance list.
 
@@ -406,7 +418,7 @@ def test_reject_cancels_running_worker(qapp, qtbot):
     tab = _Bare()
     qtbot.addWidget(tab)
     tab._init_curation_bridge()
-    tab.worker_thread = Mock()  # _Bare has no worker; a queue tab supplies one
+    tab.worker_thread = _fake_worker()  # _Bare has no worker; a queue tab supplies one
 
     cls, _created = _fake_dialog_cls(decision="reject")
     with patch(f"{MODULE}.WordCurationDialog", cls):
@@ -427,7 +439,7 @@ def test_empty_accept_continues_without_cancel(qapp, qtbot):
     tab = _Bare()
     qtbot.addWidget(tab)
     tab._init_curation_bridge()
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
 
     cls, _created = _fake_dialog_cls(selection=())
     with patch(f"{MODULE}.WordCurationDialog", cls):

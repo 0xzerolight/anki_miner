@@ -511,6 +511,17 @@ class EpisodeProcessor:
         """
         return self._parse_sentence
 
+    @property
+    def expression_audio_curation_fn(self) -> Callable[[TokenizedWord, Callable[[], bool] | None], bool] | None:
+        """The Word Curator's expression-audio prefetch, or None when inactive.
+
+        Handed to the curator the way :attr:`offline_lookup_fn` and
+        :attr:`parse_sentence_fn` are: a bound callable off this run's own
+        services, read on the GUI thread while this processor's worker is
+        parked in the curation gate. ``None`` hides the curator's Audio column.
+        """
+        return self._audio_stage.curation_fetch_fn
+
     def _parse_sentence(self, text: str) -> list[TokenizedWord]:
         """Tokenise one sentence into mineable words through the run's parser.
 
@@ -2290,6 +2301,11 @@ class EpisodeProcessor:
         # Attach per-run occurrence counts for the curator's "Occurrences"
         # column/sort (Issue #88).
         self.word_filter.attach_occurrence_counts(unknown_words, occurrence_counts)
+        # Zero-network probe of the run's audio chain for the curator's Audio
+        # column: local caches and pack indexes only, on the worker thread,
+        # before the callback, on both mining paths. No-op when the run maps no
+        # expression-audio field.
+        self._audio_stage.attach_expression_audio_probe(unknown_words)
         # A callback carrying suppress_curation_messages=True (the season
         # pre-pass capture) asks for a quiet run: its [] return is a capture
         # artifact, not a user decision, so the per-episode info lines would

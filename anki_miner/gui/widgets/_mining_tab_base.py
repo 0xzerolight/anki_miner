@@ -45,6 +45,10 @@ from anki_miner.gui.widgets.base import (
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
 from anki_miner.gui.widgets.inline_receipt import InlineReceipt
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
+from anki_miner.gui.workers.expression_audio_prefetch import (
+    ExpressionAudioProbeChannel,
+    run_expression_audio_prefetch,
+)
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils.i18n import tr_format
@@ -57,6 +61,7 @@ if TYPE_CHECKING:
 
     from anki_miner.config import AnkiMinerConfig
     from anki_miner.gui.controllers.task_registry import TaskRegistry
+    from anki_miner.gui.workers.base_worker import SingleCallWorker
     from anki_miner.models import TokenizedWord
     from anki_miner.models.processing import WhitelistCoverage
     from anki_miner.orchestration.episode_processor import EpisodeProcessor
@@ -73,6 +78,17 @@ _WORKER_JOIN_TIMEOUT_MS = 5000
 # already orphaned; we give it one short, capped join before closing its
 # processor, never an unbounded wait that could hang shutdown.
 _LEAKED_RUN_CLOSE_JOIN_MS = 2000
+
+# How long the mining thread waits for the curator's audio prefetch after the
+# gate opens. Bounded BELOW _WORKER_JOIN_TIMEOUT_MS, and that ordering is the
+# whole point: _teardown_previous_run bounded-joins the mining worker at that
+# timeout and leaks the entire run — worker plus processor — when it expires,
+# so a longer wait here would turn "rerun while a fetch is stalled" into a
+# leaked run. Every fetcher honours the cancel check at every checkpoint, so a
+# cancelled prefetch normally stops in milliseconds; reaching this ceiling
+# means a member is stuck in a socket read, and phase 3 then re-enters the same
+# fetcher alongside it (the log line says exactly that).
+_CURATION_PREFETCH_JOIN_MS = 3000
 
 
 class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidget):
@@ -737,6 +753,15 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         # result); [] ⇒ confirmed with nothing selected (completed, 0 cards).
         self._curation_result: list | None = None
         self._active_curation_dialog: WordCurationDialog | None = None
+        # Word Curator audio prefetch (FUTURE_IDEAS item 4): started with the
+        # window, cancelled on the GUI thread before the gate opens, and joined
+        # on the mining thread the instant it unparks — see
+        # _join_curation_prefetch for why the two halves live on two threads.
+        # The run token rides along because a leaked run's bridge can unpark
+        # after a NEW run has started its own prefetch, and must not join that
+        # one. App close is not this attribute's problem: run_off_thread's live
+        # registry owns that join.
+        self._curation_prefetch: tuple[int, SingleCallWorker] | None = None
         # Set when the user cancels. Covers the window between the worker
         # emitting _curation_requested and the queued GUI slot running: if
         # cancel lands in that gap the dialog doesn't exist yet, so rejecting
@@ -801,6 +826,10 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         self._curation_emit_tokens.append(token)
         self._curation_requested.emit(words)
         self._curation_event.wait()  # Block worker until the GUI sets the event.
+        # The gate is open, so phase 3 is next: this run's audio prefetch has to
+        # be off the shared fetcher before it starts. `token` is this bridge's
+        # own run identity, captured above.
+        self._join_curation_prefetch(token)
         return self._curation_result
 
     def _poison_curation_gate(self) -> None:
@@ -821,6 +850,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         # callback fires after this teardown/shutdown is recognised as stale
         # (its token can no longer match) and dropped without touching the event.
         self._curation_live_token = 0
+        self._cancel_curation_prefetch()
         self._curation_event.set()
 
     def _reset_curation_gate(self) -> None:
@@ -881,6 +911,25 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         except (AttributeError, NotImplementedError, RuntimeError):
             return None
         return None if proc is None else proc.parse_sentence_fn
+
+    def _curation_audio_fetch_fn(
+        self,
+    ) -> Callable[[TokenizedWord, Callable[[], bool] | None], bool] | None:
+        """The run's expression-audio fetch for the curator, or ``None``.
+
+        Sourced at show time on the GUI thread off the live worker's processor,
+        exactly like :meth:`_curation_parse_fn`: attribute access only, and the
+        worker is parked in ``_curation_event.wait()`` with its processor idle.
+        ``None`` — no worker, no processor, or a run that maps no
+        expression-audio field — hides the curator's Audio column and starts no
+        prefetch.
+        """
+        try:
+            worker = getattr(self, "worker_thread", None)
+            proc = None if worker is None else worker.curation_processor
+        except (AttributeError, NotImplementedError, RuntimeError):
+            return None
+        return None if proc is None else proc.expression_audio_curation_fn
 
     @staticmethod
     def _make_curation_media_context(
@@ -1052,6 +1101,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             return
         dialog: WordCurationDialog | None = None
         try:
+            audio_fetch_fn = self._curation_audio_fetch_fn()
             dialog = WordCurationDialog(
                 words,
                 self,
@@ -1060,11 +1110,18 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                 lookup_fn=lookup_fn,
                 content_style=get_profile(config_language(self.config)).content_style,
                 parse_sentence_fn=self._curation_parse_fn(),
+                expression_audio_fetch_fn=audio_fetch_fn,
             )
             self._curation_dialog_seq += 1
             presentation = self._curation_dialog_seq
             self._curation_pending_dialog = presentation
             self._active_curation_dialog = dialog
+            # BEFORE anything that can release the gate. `_resolve_curation`
+            # cancels the prefetch and then sets `_curation_event`, and the
+            # mining thread's join reads the stored entry — so an entry stored
+            # after the first possible `finished` would leave phase 3 fetching
+            # beside a prefetch nobody cancelled or joined.
+            self._start_curation_prefetch(dialog, words, audio_fetch_fn, token)
             # WordCurationDialog connects `finished` -> `_stop_player` in its own
             # __init__. Qt runs direct connections in connection order, so this
             # later connection always sees a dialog whose mpv core, page decode
@@ -1103,6 +1160,118 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                     dialog.deleteLater()
             raise
 
+    def _start_curation_prefetch(
+        self,
+        dialog: WordCurationDialog,
+        words: list,
+        fetch_fn: Callable[[TokenizedWord, Callable[[], bool] | None], bool] | None,
+        token: int | None,
+    ) -> None:
+        """Resolve the curator's unknown Audio cells in the background.
+
+        Only the words the pre-dialog disk probe could not answer are queued,
+        in table order. Dispatched through ``run_off_thread`` with the TAB as
+        parent, never the dialog: that helper already owns GC-safe ownership,
+        the live registry app close drains, the dispatch-closed contract and
+        failure classification, and the window is ``deleteLater()``'d the
+        moment it resolves while the join has to happen after that.
+
+        ``word_resolved`` goes straight to the dialog. The connection is
+        cross-thread and therefore queued, Qt drops a queued delivery to a
+        destroyed receiver, and the slot itself no-ops once the dialog has
+        started tearing down — so no stale-guard of our own is needed.
+
+        The channel is parented to the TAB, not to the dialog. The worker can
+        still be mid-emit when the window goes, and emitting on a destroyed
+        QObject raises out of the worker thread; a channel that outlives the
+        dialog cannot. Losing the receiver is already handled for us — Qt drops
+        the connection when the dialog is destroyed, and an emit with no
+        receiver is a no-op.
+        """
+        # Cleared on both early returns: nothing else clears the slot, so a
+        # previous run's entry would otherwise hold a dead worker for the
+        # session and be the one this run's join finds.
+        if fetch_fn is None:
+            self._curation_prefetch = None
+            return
+        pending = [
+            (index, word)
+            for index, word in enumerate(words)
+            if getattr(word, "expression_audio_available", None) is None
+        ]
+        if not pending:
+            self._curation_prefetch = None
+            return
+        channel = ExpressionAudioProbeChannel(self)
+        channel.word_resolved.connect(dialog.set_expression_audio_state)
+        worker = run_off_thread(
+            self,
+            partial(run_expression_audio_prefetch, fetch_fn, pending, channel),
+            lambda _result: None,
+            pass_cancel_check=True,
+            # One channel per curated item, and the tab outlives every one of
+            # them — without this a queue of fifty volumes leaves fifty dead
+            # relays parented here for the session.
+            on_finished=channel.deleteLater,
+        )
+        self._curation_prefetch = (token if token is not None else self._curation_live_token, worker)
+
+    def _cancel_curation_prefetch(self) -> None:
+        """Ask the curator's audio prefetch to stop. Non-blocking, GUI thread.
+
+        Called before every gate release so the fetcher is already winding down
+        by the time the mining thread unparks and joins. The GUI thread must
+        never be the one that waits: a stalled socket read costs up to the
+        chain's per-word budget, and a closing window cannot freeze for that.
+
+        Untokened, unlike the join: this is only ever called from the live
+        presentation's own exit paths, and cancelling a prefetch nobody is
+        waiting on any more is free.
+        """
+        if self._curation_prefetch is None:
+            return
+        # bucket C: a deleted worker wrapper must not cost the gate release.
+        with contextlib.suppress(RuntimeError):
+            self._curation_prefetch[1].cancel()
+
+    def _join_curation_prefetch(self, token: int) -> None:
+        """Cancel and JOIN this run's audio prefetch — ON THE MINING THREAD.
+
+        Called by :meth:`_curation_bridge` the instant the gate releases, which
+        is before ``process_episode`` can reach phase 3. That is what makes
+        "the curator's prefetch and phase 3's own fetch do not run at the same
+        time" a fact rather than a hope: the GUI thread only asks the worker to
+        stop, and this is where the run actually waits for it. Blocking here
+        costs nothing — the mining thread is about to do the same kind of work
+        anyway.
+
+        ``token`` is the caller's own run identity, and a mismatch is a no-op.
+        A run whose worker ``_teardown_previous_run`` gave up joining is leaked
+        rather than killed, so its bridge can unpark long after a NEW run has
+        opened its own curator and started its own prefetch; without the token
+        the straggler would cancel and clear the live run's worker, and the
+        live run's phase 3 would then fetch beside a prefetch nobody joined.
+        The straggler's own prefetch was already cancelled by the teardown's
+        ``_poison_curation_gate`` and is reaped by the off-thread live registry.
+
+        Bounded by ``_CURATION_PREFETCH_JOIN_MS``, which is deliberately under
+        the teardown's own join timeout (see the constant). A timeout means a
+        member is stuck in a socket read; phase 3 then re-enters that fetcher
+        alongside it, which is what the log line says.
+        """
+        entry = self._curation_prefetch
+        if entry is None or entry[0] != token:
+            return
+        self._curation_prefetch = None
+        # join_or_retain cancels, bounded-joins, and absorbs the sip
+        # RuntimeError of joining an already-deleted wrapper; it returns the
+        # worker only while it is STILL live, which is the timeout case.
+        if join_or_retain(entry[1], _CURATION_PREFETCH_JOIN_MS) is not None:
+            logger.warning(
+                "Curator audio prefetch did not stop within %d ms; phase 3 will fetch alongside it",
+                _CURATION_PREFETCH_JOIN_MS,
+            )
+
     def _resolve_curation(
         self,
         dialog: WordCurationDialog | None,
@@ -1135,6 +1304,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
             return
         self._curation_pending_dialog = 0
         self._active_curation_dialog = None
+        self._cancel_curation_prefetch()
 
         selection: list | None = None
         if dialog is not None and code == QDialog.DialogCode.Accepted:

@@ -275,6 +275,30 @@ class GoogleTranslateAudioFetcher:
         """Try each candidate form, returning the first synthesized hit."""
         return _first_candidate_hit(self, candidates, cancelled_check)
 
+    def has_cached(self, mined_form: str, reading: str) -> bool | None:
+        """Answer from disk alone whether :meth:`fetch` would produce audio.
+
+        Zero network, never raises. ``True`` for a non-empty cached mp3;
+        ``False`` only where the input guards refuse synthesis outright (a
+        non-kana reading is never synthesized); otherwise ``None``. There is
+        deliberately no definitive-miss answer: this fetcher writes no
+        ``.miss`` markers because synthesis failures are transient, so an
+        uncached word is "unknown", never "no".
+
+        Duck-typed like :meth:`stats` and :meth:`close` — see the chain's
+        ``has_cached_candidates``.
+        """
+        if not mined_form.strip() or not is_kana_only(reading.strip()):
+            return False
+        stem = safe_filename(f"{self._cache_stem_prefix}_{mined_form}_{reading}")
+        try:
+            mp3_path = self._cache_dir / f"{stem}.mp3"
+            if mp3_path.exists() and mp3_path.stat().st_size > 0:
+                return True
+        except OSError:
+            return None
+        return None
+
     def stats(self) -> dict[str, int]:
         """Return a copy of this run's failure-cause counts (see FAILURE_KEYS).
 

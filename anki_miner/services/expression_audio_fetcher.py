@@ -372,6 +372,43 @@ class JPod101AudioFetcher:
         """Try each candidate form, returning the first JPod101 hit."""
         return _first_candidate_hit(self, candidates, cancelled_check)
 
+    def has_cached(self, mined_form: str, reading: str) -> bool | None:
+        """Answer from disk alone whether :meth:`fetch` would produce audio.
+
+        Zero network, never raises. The three answers are the three states the
+        Word Curator's Audio column shows:
+
+        * ``True``  — a non-empty cached mp3 already exists.
+        * ``False`` — JPod101 has confirmed the word absent and the marker has
+          not expired, or the input guards :meth:`fetch` applies refuse the
+          pair outright (a non-kana reading is never sent, so no request will
+          ever be made for it).
+        * ``None``  — unknown; only the network can say.
+
+        Duck-typed like :meth:`stats` and :meth:`close`, NOT part of the
+        ``ExpressionAudioFetcher`` Protocol, so the minimal fetcher doubles
+        several suites inject keep working; a member without it contributes
+        "unknown" to the chain's fan-out.
+
+        The two disk checks are deliberately the same pair ``fetch`` makes at
+        its cache gate, in the same order, so the probe cannot promise
+        something the real fetch would not deliver.
+        """
+        if not mined_form.strip() or not is_kana_only(reading.strip()):
+            return False
+        stem = safe_filename(f"jpod101_{mined_form}_{reading}")
+        try:
+            mp3_path = self._cache_dir / f"{stem}.mp3"
+            if mp3_path.exists() and mp3_path.stat().st_size > 0:
+                return True
+            miss_path = self._cache_dir / f"{stem}.miss"
+            if miss_path.exists() and not _miss_marker_expired(miss_path):
+                return False
+        except OSError:
+            # An unreadable cache directory is not evidence either way.
+            return None
+        return None
+
     def stats(self) -> dict[str, int]:
         """Return a copy of this run's failure-cause counts (see FAILURE_KEYS).
 
@@ -503,6 +540,46 @@ class ChainedExpressionAudioFetcher:
             ),
             word=candidates[0][0] if candidates else "",
         )
+
+    def has_cached_candidates(self, candidates: list[tuple[str, str]]) -> bool | None:
+        """Fan the members' disk probes out over the whole candidate ladder.
+
+        Zero network and no budget thread: every member answers from its own
+        cache — and, for a local pack, its own index — so this is cheap enough
+        to run over a whole episode's word list on the worker thread before the
+        Word Curator opens.
+
+        * ``True``  — some source already holds one of the candidate forms.
+        * ``False`` — EVERY source answered definitively no for EVERY form.
+        * ``None``  — nobody said yes and at least one answer needs the network.
+
+        ``has_cached`` is duck-typed exactly like :meth:`stats` and
+        :meth:`close`, and looked up on the member's TYPE for the same reason
+        ``orchestration.audio_stage._candidate_ladder`` does: several suites
+        inject bare ``MagicMock`` members, on which every instance attribute
+        auto-exists, and an instance-level probe would read a MagicMock as a
+        definitive answer. A member without the method contributes "unknown".
+
+        An empty ladder — a word whose reading is not usable kana, so
+        ``expression_audio_candidates`` built nothing — is a definitive no
+        before any member is asked: ``fetch_candidates([])`` finds nothing in
+        every member, so that IS the answer phase 3 will reach.
+        """
+        if not candidates:
+            return False
+        unknown = False
+        for fetcher in self._fetchers:
+            if not hasattr(type(fetcher), "has_cached"):
+                unknown = True
+                continue
+            probe = getattr(fetcher, "has_cached")  # noqa: B009 — see the TYPE-vs-instance note above
+            for mined_form, reading in candidates:
+                answer = probe(mined_form, reading)
+                if answer is True:
+                    return True
+                if answer is None:
+                    unknown = True
+        return None if unknown else False
 
     def _walk(
         self,

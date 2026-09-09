@@ -55,7 +55,7 @@ def _focus(dlg: WordCurationDialog, row: int) -> None:
 
 def test_column_is_hidden_and_unlisted_without_a_second_track(qtbot, tmp_path):
     dlg = _dialog(qtbot, tmp_path, secondary=[])
-    assert dlg.table.columnCount() == 10
+    assert dlg.table.columnCount() == 11
     assert dlg.table.isColumnHidden(TRANSLATION_COLUMN)
     assert TRANSLATION_COLUMN not in dlg._column_menu_actions()
 

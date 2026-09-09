@@ -491,3 +491,41 @@ class TestCustomOutcomeLogging:
         message = caplog.records[-1].getMessage()
         assert "reason=transport" in message
         assert 'error="ConnectionError: offline"' in message
+
+
+class TestCustomHasCached:
+    def _fetcher(self, tmp_path):
+        return CustomAudioFetcher(
+            url_template="http://localhost:1234/?term={term}&reading={reading}",
+            kind="custom",
+            cache_dir=tmp_path / "cache",
+            file_prefix="custom_abc",
+            delay=0,
+        )
+
+    def test_cached_file_of_any_extension_is_a_hit(self, tmp_path):
+        cache = tmp_path / "cache"
+        cache.mkdir()
+        (cache / "custom_abc_食べる_たべる.opus").write_bytes(b"OggS")
+        fetcher = self._fetcher(tmp_path)
+
+        assert fetcher.has_cached("食べる", "たべる") is True
+
+    def test_uncached_is_unknown(self, tmp_path):
+        """A custom server's contents change, so a miss now may be a hit later."""
+        fetcher = self._fetcher(tmp_path)
+
+        assert fetcher.has_cached("食べる", "たべる") is None
+
+    def test_non_kana_reading_is_a_definitive_no(self, tmp_path):
+        fetcher = self._fetcher(tmp_path)
+
+        assert fetcher.has_cached("辛い", "辛い") is False
+
+    def test_probe_makes_no_request(self, tmp_path):
+        fetcher = self._fetcher(tmp_path)
+        fetcher._session = MagicMock()
+
+        fetcher.has_cached("食べる", "たべる")
+
+        fetcher._session.get.assert_not_called()

@@ -35,6 +35,18 @@ class _Bare(MiningTabBase):
         pass
 
 
+def _fake_worker():
+    """A Mock worker whose processor offers no expression-audio fetch.
+
+    Left as a bare auto-Mock, ``curation_processor.expression_audio_curation_fn``
+    is truthy, so every curator test here would dispatch a real background
+    prefetch QThread parented to a widget qtbot is about to destroy.
+    """
+    worker = Mock()
+    worker.curation_processor.expression_audio_curation_fn = None
+    return worker
+
+
 def _fake_dialog_cls():
     created: list = []
 
@@ -110,7 +122,7 @@ def test_table_only_curator_records_missing_media_and_lookup(tab, caplog):
 
 
 def test_reject_logs_a_run_cancelling_decision(tab, caplog):
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
     with caplog.at_level(logging.INFO, logger=MODULE):
         tab._curation_pending_dialog = 7
         tab._resolve_curation(None, 7, QDialog.DialogCode.Rejected)
@@ -125,7 +137,7 @@ def test_reject_logs_a_run_cancelling_decision(tab, caplog):
 
 
 def test_accept_logs_the_selected_count_and_does_not_cancel(tab, caplog):
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
     dialog = _show(tab, words=("a", "b", "c"))
     dialog.selection = ["a", "b"]
 
@@ -141,7 +153,7 @@ def test_accept_logs_the_selected_count_and_does_not_cancel(tab, caplog):
 
 def test_confirm_with_nothing_selected_is_an_accept_not_a_cancel(tab, caplog):
     """`[] != None`: an empty confirm skips one item; only None stops the run."""
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
     dialog = _show(tab, words=("a",))
     dialog.selection = []
 
@@ -190,7 +202,7 @@ def test_poisoned_gate_before_the_slot_runs_is_recorded_as_skipped(tab, caplog):
 
 def test_second_resolution_of_one_presentation_is_recorded_as_skipped(tab, caplog):
     """`finished` then `destroyed` both fire; only the first decides."""
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
     tab._curation_pending_dialog = 4
     tab._resolve_curation(None, 4, QDialog.DialogCode.Rejected)
 
@@ -208,7 +220,7 @@ def test_second_resolution_of_one_presentation_is_recorded_as_skipped(tab, caplo
 
 
 def test_selection_failure_keeps_the_exception_message_and_stack(tab, caplog):
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
     dialog = _show(tab)
     dialog.get_selected_words = Mock(side_effect=ValueError("table model gone"))
 
@@ -222,7 +234,7 @@ def test_selection_failure_keeps_the_exception_message_and_stack(tab, caplog):
 
 
 def test_typed_failure_keeps_its_message_but_drops_the_traceback(tab, caplog):
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
     dialog = _show(tab)
     dialog.get_selected_words = Mock(side_effect=AnkiMinerException("no words left"))
 
@@ -301,7 +313,7 @@ def test_accept_logs_how_many_words_were_edited(tab, caplog):
 
     from anki_miner.models import SentenceEdit
 
-    tab.worker_thread = Mock()
+    tab.worker_thread = _fake_worker()
     dialog = _show(tab, words=("a", "b"))
     edited = replace(make_word(), sentence_edit=SentenceEdit(text="x", target_start=0, target_end=1))
     dialog.selection = [edited, make_word()]

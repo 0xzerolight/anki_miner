@@ -1156,3 +1156,181 @@ class TestAudioChainIdentityLogging:
         assert "id=packA" in line
         assert f"dir={pack_dir.resolve()}" in line
         assert "entries=1" in line
+
+
+def _probe_word(mined="食べる", reading="たべる"):
+    word = TokenizedWord(
+        surface=mined,
+        lemma=mined,
+        reading=reading,
+        sentence=f"{mined}のテスト",
+        start_time=0.0,
+        end_time=1.0,
+        duration=1.0,
+        pos="動詞",
+    )
+    word.expression_reading = reading
+    return word
+
+
+class _ProbeChain:
+    """Chain double whose TYPE declares the duck-typed probe."""
+
+    def __init__(self, answer):
+        self.answer = answer
+        self.ladders: list[list[tuple[str, str]]] = []
+
+    def fetch(self, mined_form, reading, cancelled_check=None):
+        return None
+
+    def fetch_candidates(self, candidates, cancelled_check=None):
+        return None
+
+    def has_cached_candidates(self, candidates):
+        self.ladders.append(candidates)
+        return self.answer
+
+
+class TestAttachExpressionAudioProbe:
+    @staticmethod
+    def _stage(config, fetcher):
+        return AudioStage(
+            config=config,
+            presenter=NullPresenter(),
+            cancelled=lambda: False,
+            expression_audio_fetcher=fetcher,
+            sentence_audio_fetcher=None,
+        )
+
+    @staticmethod
+    def _enabled(test_config):
+        return replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
+        )
+
+    def test_stamps_the_probe_answer_on_every_word(self, test_config):
+        words = [_probe_word("食べる"), _probe_word("猫", "ねこ")]
+        stage = self._stage(self._enabled(test_config), _ProbeChain(True))
+
+        stage.attach_expression_audio_probe(words)
+
+        assert [w.expression_audio_available for w in words] == [True, True]
+
+    def test_stamps_a_definitive_miss(self, test_config):
+        words = [_probe_word("猫", "ねこ")]
+        stage = self._stage(self._enabled(test_config), _ProbeChain(False))
+
+        stage.attach_expression_audio_probe(words)
+
+        assert words[0].expression_audio_available is False
+
+    def test_probes_the_candidate_ladder_not_the_bare_pair(self, test_config):
+        chain = _ProbeChain(None)
+        stage = self._stage(self._enabled(test_config), chain)
+
+        stage.attach_expression_audio_probe([_probe_word("食べる")])
+
+        assert chain.ladders and chain.ladders[0][0] == ("食べる", "たべる")
+
+    def test_a_word_with_no_usable_reading_is_a_definitive_miss(self, test_config):
+        """No kana reading → no ladder → nothing to ask, and phase 3 produces nothing."""
+        from anki_miner.services.expression_audio_fetcher import ChainedExpressionAudioFetcher
+
+        word = _probe_word("辛い", "")
+        stage = self._stage(self._enabled(test_config), ChainedExpressionAudioFetcher([]))
+
+        stage.attach_expression_audio_probe([word])
+
+        assert word.expression_audio_available is False
+
+    def test_inactive_stage_leaves_every_word_unprobed(self, test_config):
+        """No mapped expression_audio field: the column is hidden, so no probe."""
+        chain = _ProbeChain(True)
+        words = [_probe_word("食べる")]
+        stage = self._stage(test_config, chain)
+
+        stage.attach_expression_audio_probe(words)
+
+        assert words[0].expression_audio_available is None
+        assert chain.ladders == []
+
+    def test_a_magicmock_fetcher_leaves_every_word_unprobed(self, test_config):
+        """A bare MagicMock auto-creates the probe; the TYPE lookup ignores it."""
+        words = [_probe_word("食べる")]
+        stage = self._stage(self._enabled(test_config), MagicMock())
+
+        stage.attach_expression_audio_probe(words)
+
+        assert words[0].expression_audio_available is None
+
+    def test_a_cancelled_run_probes_nothing(self, test_config):
+        """Cancel is seen between words, so a slow pack costs nothing after it."""
+        chain = _ProbeChain(True)
+        words = [_probe_word("食べる"), _probe_word("猫", "ねこ")]
+        # Own stage: the class helper hardcodes cancelled=lambda: False.
+        stage = AudioStage(
+            config=self._enabled(test_config),
+            presenter=NullPresenter(),
+            cancelled=lambda: True,
+            expression_audio_fetcher=chain,
+            sentence_audio_fetcher=None,
+        )
+
+        stage.attach_expression_audio_probe(words)
+
+        assert chain.ladders == []
+        assert [w.expression_audio_available for w in words] == [None, None]
+
+
+class TestCurationFetchFn:
+    @staticmethod
+    def _stage(config, fetcher):
+        return AudioStage(
+            config=config,
+            presenter=NullPresenter(),
+            cancelled=lambda: False,
+            expression_audio_fetcher=fetcher,
+            sentence_audio_fetcher=None,
+        )
+
+    @staticmethod
+    def _enabled(test_config):
+        return replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
+        )
+
+    def test_none_when_the_stage_is_inactive(self, test_config):
+        assert self._stage(test_config, MagicMock()).curation_fetch_fn is None
+
+    def test_none_without_a_fetcher(self, test_config):
+        assert self._stage(self._enabled(test_config), None).curation_fetch_fn is None
+
+    def test_true_when_the_chain_produces_a_path(self, test_config, tmp_path):
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = tmp_path / "a.mp3"
+        fetch = self._stage(self._enabled(test_config), fetcher).curation_fetch_fn
+
+        assert fetch is not None
+        assert fetch(_probe_word(), None) is True
+
+    def test_false_when_the_chain_produces_nothing(self, test_config):
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = None
+        fetch = self._stage(self._enabled(test_config), fetcher).curation_fetch_fn
+
+        assert fetch is not None
+        assert fetch(_probe_word(), None) is False
+
+    def test_forwards_the_candidate_ladder_and_the_cancel_check(self, test_config):
+        fetcher = MagicMock()
+        fetcher.fetch_candidates.return_value = None
+        cancel = lambda: False  # noqa: E731 - identity matters, not the body
+        fetch = self._stage(self._enabled(test_config), fetcher).curation_fetch_fn
+
+        fetch(_probe_word(), cancel)
+
+        candidates, kwargs = fetcher.fetch_candidates.call_args
+        assert candidates[0][0] == ("食べる", "たべる")
+        assert candidates[1] is cancel or kwargs.get("cancelled_check") is cancel

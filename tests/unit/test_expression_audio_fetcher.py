@@ -16,6 +16,7 @@ from anki_miner.services.expression_audio_fetcher import (
     FAILURE_KEYS,
     JPOD101_NOT_FOUND_SHA256,
     MAX_AUDIO_BYTES,
+    MISS_MARKER_TTL_SECONDS,
     STALE_PART_AGE_SECONDS,
     ChainedExpressionAudioFetcher,
     JPod101AudioFetcher,
@@ -876,6 +877,57 @@ class TestJPod101AudioFetcher:
         assert JPOD101_NOT_FOUND_SHA256 == "ae6398b5a27bc8c0a771df6c907ade794be15518174773c58c7c7ddd17098906"
 
 
+class TestJPod101HasCached:
+    """The zero-network probe behind the Word Curator's Audio column."""
+
+    def test_cached_mp3_is_a_hit(self, tmp_path):
+        (tmp_path / "jpod101_食べる_たべる.mp3").write_bytes(_VALID_MP3)
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+
+        assert fetcher.has_cached("食べる", "たべる") is True
+
+    def test_empty_cached_mp3_is_not_a_hit(self, tmp_path):
+        """Zero bytes fails fetch()'s own st_size gate, so it is not a hit."""
+        (tmp_path / "jpod101_食べる_たべる.mp3").write_bytes(b"")
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+
+        assert fetcher.has_cached("食べる", "たべる") is None
+
+    def test_unexpired_miss_marker_is_a_definitive_no(self, tmp_path):
+        (tmp_path / "jpod101_食べる_たべる.miss").touch()
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+
+        assert fetcher.has_cached("食べる", "たべる") is False
+
+    def test_expired_miss_marker_is_unknown_again(self, tmp_path):
+        marker = tmp_path / "jpod101_食べる_たべる.miss"
+        marker.touch()
+        stale = time.time() - MISS_MARKER_TTL_SECONDS - 60
+        os.utime(marker, (stale, stale))
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+
+        assert fetcher.has_cached("食べる", "たべる") is None
+
+    def test_absent_from_the_cache_is_unknown(self, tmp_path):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+
+        assert fetcher.has_cached("食べる", "たべる") is None
+
+    def test_non_kana_reading_is_a_definitive_no(self, tmp_path):
+        """fetch() refuses the pair outright, so no request will ever be made."""
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+
+        assert fetcher.has_cached("辛い", "辛い") is False
+
+    def test_probe_makes_no_request(self, tmp_path):
+        fetcher = JPod101AudioFetcher(cache_dir=tmp_path, delay=0)
+        fetcher._session = MagicMock()
+
+        fetcher.has_cached("食べる", "たべる")
+
+        fetcher._session.get.assert_not_called()
+
+
 class TestChainedExpressionAudioFetcher:
     """Tests for ChainedExpressionAudioFetcher."""
 
@@ -1692,3 +1744,92 @@ class TestJPod101FailureLogging:
         warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
         assert any("word=食べる/たべる" in w for w in warnings), warnings
         assert not any("identity=" in w for w in warnings), warnings
+
+
+class _ProbeFetcher:
+    """Leaf double that answers the probe from a dict and never fetches."""
+
+    def __init__(self, answers: dict[tuple[str, str], bool | None]):
+        self.answers = answers
+        self.probes: list[tuple[str, str]] = []
+
+    def fetch(self, mined_form, reading, cancelled_check=None):
+        raise AssertionError("has_cached_candidates must not fetch")
+
+    def fetch_candidates(self, candidates, cancelled_check=None):
+        raise AssertionError("has_cached_candidates must not fetch")
+
+    def has_cached(self, mined_form, reading):
+        self.probes.append((mined_form, reading))
+        return self.answers.get((mined_form, reading))
+
+
+class _ProbelessFetcher:
+    """Leaf double satisfying only the Protocol — no has_cached at all."""
+
+    def fetch(self, mined_form, reading, cancelled_check=None):
+        return None
+
+    def fetch_candidates(self, candidates, cancelled_check=None):
+        return None
+
+
+class TestChainedHasCachedCandidates:
+    def test_any_source_hit_wins(self):
+        chain = ChainedExpressionAudioFetcher(
+            [_ProbeFetcher({("食べる", "たべる"): None}), _ProbeFetcher({("食べる", "たべる"): True})]
+        )
+
+        assert chain.has_cached_candidates([("食べる", "たべる")]) is True
+
+    def test_a_later_candidate_form_can_hit(self):
+        chain = ChainedExpressionAudioFetcher([_ProbeFetcher({("チップ", "チップ"): True})])
+
+        assert chain.has_cached_candidates([("チップ", "ちっぷ"), ("チップ", "チップ")]) is True
+
+    def test_all_definitive_misses_is_a_definitive_no(self):
+        chain = ChainedExpressionAudioFetcher(
+            [_ProbeFetcher({("猫", "ねこ"): False}), _ProbeFetcher({("猫", "ねこ"): False})]
+        )
+
+        assert chain.has_cached_candidates([("猫", "ねこ")]) is False
+
+    def test_one_unknown_makes_the_whole_answer_unknown(self):
+        chain = ChainedExpressionAudioFetcher(
+            [_ProbeFetcher({("猫", "ねこ"): False}), _ProbeFetcher({("猫", "ねこ"): None})]
+        )
+
+        assert chain.has_cached_candidates([("猫", "ねこ")]) is None
+
+    def test_a_member_without_the_probe_contributes_unknown(self):
+        chain = ChainedExpressionAudioFetcher([_ProbeFetcher({("猫", "ねこ"): False}), _ProbelessFetcher()])
+
+        assert chain.has_cached_candidates([("猫", "ねこ")]) is None
+
+    def test_a_magicmock_member_contributes_unknown_not_a_miss(self):
+        """A bare MagicMock auto-creates has_cached; the TYPE lookup ignores it."""
+        chain = ChainedExpressionAudioFetcher([MagicMock()])
+
+        assert chain.has_cached_candidates([("猫", "ねこ")]) is None
+
+    def test_empty_chain_is_a_definitive_no(self):
+        assert ChainedExpressionAudioFetcher([]).has_cached_candidates([("猫", "ねこ")]) is False
+
+    def test_empty_ladder_is_a_definitive_no_without_consulting_anyone(self):
+        """A word with no usable kana builds no ladder, and fetch_candidates([]) finds nothing."""
+        member = _ProbeFetcher({})
+        chain = ChainedExpressionAudioFetcher([member, _ProbelessFetcher()])
+
+        assert chain.has_cached_candidates([]) is False
+        assert member.probes == []
+        # ...and that False is what a real fetch over the same empty ladder yields.
+        assert ChainedExpressionAudioFetcher([_ProbelessFetcher()]).fetch_candidates([]) is None
+
+    def test_probe_stops_at_the_first_hit(self):
+        first = _ProbeFetcher({("食べる", "たべる"): True})
+        second = _ProbeFetcher({("食べる", "たべる"): True})
+        chain = ChainedExpressionAudioFetcher([first, second])
+
+        chain.has_cached_candidates([("食べる", "たべる")])
+
+        assert second.probes == []
