@@ -489,6 +489,7 @@ class WordFilterService:
     def deduplicate_by_sentence(
         self,
         words: list[TokenizedWord],
+        text_of: Callable[[TokenizedWord], str] | None = None,
     ) -> list[TokenizedWord]:
         """Remove words that share a sentence with an already-selected word.
 
@@ -498,14 +499,21 @@ class WordFilterService:
 
         Args:
             words: List of words to deduplicate.
+            text_of: What to read the sentence from. ``None`` (the phase-2
+                call) reads ``word.sentence``. The automatic cue merge passes
+                the merged text a word is about to acquire, so two words on
+                adjacent cues that converge on one sentence dedup against each
+                other before the card exists — the same "one card per sentence"
+                rule, applied to what the card will actually say.
 
         Returns:
             Deduplicated list of words.
         """
+        read = text_of if text_of is not None else (lambda word: word.sentence)
         seen_sentences: set[str] = set()
         result = []
         for word in words:
-            key = _normalize_sentence(word.sentence)
+            key = _normalize_sentence(read(word))
             if key not in seen_sentences:
                 seen_sentences.add(key)
                 result.append(word)

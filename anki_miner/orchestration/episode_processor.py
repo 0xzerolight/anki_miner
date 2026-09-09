@@ -64,6 +64,7 @@ from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.services.word_filter import (
     enabled_script_options,
     find_cue_index,
+    merge_cue_window,
     script_options_kwarg,
     whitelist_hits,
 )
@@ -2331,6 +2332,14 @@ class EpisodeProcessor:
         A word whose cue cannot be located keeps its fragment: the curator
         resolves the cue with the same function against the same texts, and a
         guess here would put the two out of step.
+
+        Sentence dedup runs again here, on the text the card is ABOUT to carry:
+        phase 2 deduped the raw cues, and two words on adjacent cues converge on
+        one merged sentence, which is exactly the duplicate ``deduplicate_by_
+        sentence`` exists to drop. It runs before curation on purpose — dropping
+        a word after the user has reviewed and kept it would be worse than not
+        merging at all — and under phase 2's own gate, so a run that skipped
+        dedup there skips it here too.
         """
         if not self.config.merge_incomplete_cues:
             return words
@@ -2338,7 +2347,9 @@ class EpisodeProcessor:
         rules = get_profile(config_language(self.config)).sentence_rules
         budget = merge_budget_seconds(self.config.audio_padding)
         stamped: list[TokenizedWord] = []
-        merged = 0
+        # Merged text per stamped word, keyed by identity — every object is
+        # alive in `stamped` for as long as the dedup below needs it.
+        merged_text: dict[int, str] = {}
         for word in words:
             index = (
                 None
@@ -2349,9 +2360,26 @@ class EpisodeProcessor:
                 stamped.append(word)
                 continue
             expansion = auto_line_expansion(entries, index, rules, max_seconds=budget)
-            stamped.append(word if expansion == (0, 0) else replace(word, line_expansion=expansion))
-            merged += expansion != (0, 0)
-        logger.info("automatic cue merge: %d of %d word(s) stamped", merged, len(words))
+            if expansion == (0, 0):
+                stamped.append(word)
+                continue
+            merged_word = replace(word, line_expansion=expansion)
+            merged_text[id(merged_word)] = merge_cue_window(entries, index, *expansion).text
+            stamped.append(merged_word)
+        if not merged_text:
+            return words
+        logger.info("automatic cue merge: %d of %d word(s) stamped", len(merged_text), len(words))
+        if (
+            self.config.deduplicate_sentences
+            and not self.config.use_i_plus_one_filter
+            and not self.config.bypass_optional_filters
+        ):
+            before = len(stamped)
+            stamped = self.word_filter.deduplicate_by_sentence(
+                stamped, lambda word: merged_text.get(id(word), word.sentence)
+            )
+            if before != len(stamped):
+                logger.info("automatic cue merge: %d word(s) dropped as duplicate sentences", before - len(stamped))
         return stamped
 
     def _materialize_line_expansions(

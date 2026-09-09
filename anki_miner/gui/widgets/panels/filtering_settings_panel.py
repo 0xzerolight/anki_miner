@@ -638,8 +638,9 @@ class FilteringSettingsPanel(FormPanel):
             helper=self.tr(
                 "Joins the neighbouring subtitle lines when a line does not end a sentence, so the "
                 "card carries the whole sentence, its timings and its audio instead of a fragment. "
-                "Video mining only — reading sources have no subtitle timings. The Word Curator's "
-                "line buttons still adjust any card by hand."
+                "Every subtitle-timed run uses it — video, YouTube, batch, audiobook; reading "
+                "sources have no subtitle timings and ignore it. The Word Curator's line buttons "
+                "still adjust any card by hand."
             ),
         )
 

@@ -6747,7 +6747,11 @@ class TestCurationLineExpansion:
     def mock_services(self):
         subtitle_parser = MagicMock()
         word_filter = MagicMock()
-        word_filter.deduplicate_by_sentence.side_effect = lambda w: w
+        # The real dedup, so the automatic merge's second pass (which keys on
+        # the merged text) is exercised rather than stubbed away.
+        word_filter.deduplicate_by_sentence.side_effect = (
+            lambda words, text_of=None: WordFilterService.deduplicate_by_sentence(word_filter, words, text_of)
+        )
         media_extractor = MagicMock()
         definition_service = MagicMock()
         anki_service = MagicMock()
@@ -6864,6 +6868,42 @@ class TestCurationLineExpansion:
         proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass", curation_callback=_curate)
 
         assert [w.line_expansion for w in seen] == [(0, 1)]
+
+    def test_auto_merge_dedupes_words_that_converge_on_one_sentence(self, test_config, mock_services, tmp_path):
+        """Two words on adjacent cues merge into the SAME sentence, which is the
+        duplicate sentence dedup exists to drop — before curation, so nothing the
+        user kept is taken away afterwards."""
+        word_a = replace(_make_word("食べる", start_time=1.0), sentence="だから")
+        word_b = replace(_make_word("走る", start_time=3.5), sentence="行きました。")
+        self._wire(mock_services, [word_a, word_b], _make_media())
+        mock_services["subtitle_parser"].parse_raw_entries.return_value = [
+            (1.0, 3.0, "だから"),
+            (3.5, 5.5, "行きました。"),
+        ]
+        mock_services["word_filter"].expand_word_lines.side_effect = lambda w, e: w
+        config = replace(test_config, merge_incomplete_cues=True)
+        proc = build_processor(config=config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        extracted = mock_services["media_extractor"].extract_media_batch.call_args[0][1]
+        assert [w.lemma for w in extracted] == ["食べる"]
+
+    def test_both_words_survive_with_the_merge_off(self, test_config, mock_services, tmp_path):
+        """The same two cues without the setting: two fragments, two cards."""
+        word_a = replace(_make_word("食べる", start_time=1.0), sentence="だから")
+        word_b = replace(_make_word("走る", start_time=3.5), sentence="行きました。")
+        self._wire(mock_services, [word_a, word_b], _make_media())
+        mock_services["subtitle_parser"].parse_raw_entries.return_value = [
+            (1.0, 3.0, "だから"),
+            (3.5, 5.5, "行きました。"),
+        ]
+        proc = build_processor(config=test_config, presenter=NullPresenter(), **mock_services)
+
+        proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        extracted = mock_services["media_extractor"].extract_media_batch.call_args[0][1]
+        assert [w.lemma for w in extracted] == ["食べる", "走る"]
 
     def test_auto_merge_leaves_a_terminated_neighbourhood_alone(self, test_config, mock_services, tmp_path):
         """Nothing to absorb: the word's cue is last in the file and the cue

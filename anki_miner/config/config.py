@@ -495,12 +495,15 @@ class AnkiMinerConfig:
     # window instead of the fragment. The terminators come from the mining
     # language's profile (SentenceRules), which is why this is deliberately NOT
     # in LANGUAGE_SCOPED_FIELDS: the preference is the same decision in every
-    # language, only the punctuation differs. Video, YouTube and batch only —
-    # the reading paths have no cue timeline and ignore it. The sentence-length
-    # filter above is unaffected and still measures the raw cue in phase 2; the
-    # merged window is bounded instead by the clip strip's own ceiling
-    # (services/cue_merge.py), so a merged card can be longer than the cap its
-    # fragment passed.
+    # language, only the punctuation differs. Every subtitle-timed run inherits
+    # it (video, YouTube, batch, audiobook, Deck Builder — they all go through
+    # process_episode); the reading sources have no cue timeline and ignore it.
+    # The sentence-length filter above is unaffected and still measures the raw
+    # cue in phase 2, so a merged card can be longer than the cap its fragment
+    # passed; the merged window is bounded instead by the clip strip's own
+    # ceiling (services/cue_merge.py). Sentence dedup, by contrast, IS re-run
+    # over the merged text before curation — two words on adjacent cues would
+    # otherwise both survive on one sentence.
     merge_incomplete_cues: bool = False
 
     # Reading tab: minimum times a word must occur in a single book/volume to be
