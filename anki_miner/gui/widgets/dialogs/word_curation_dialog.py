@@ -230,11 +230,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             self._media_ctx_cache[ctx.video_file] = ctx
         self._media_swap_gen = 0
         self._show_dict = lookup_fn is not None
-        # Expression-audio availability (FUTURE_IDEAS item 4). The callable is
-        # the run's own chained fetcher, used by the tab's background prefetch;
-        # its presence is also the column's gate, because it is None exactly
-        # when the run maps no expression-audio field.
-        self._expression_audio_fetch_fn = expression_audio_fetch_fn
+        # Expression-audio availability (FUTURE_IDEAS item 4). The parameter is
+        # the run's own chained fetcher — the tab, not the window, drives it —
+        # so only its presence is kept: it is None exactly when the run maps no
+        # expression-audio field, which is the Audio column's gate.
         self._has_expression_audio = expression_audio_fetch_fn is not None
         # Manga page pane: gated on page_units exactly like the player gates
         # on video_file. Cache holds converted QPixmaps (GUI-thread only);

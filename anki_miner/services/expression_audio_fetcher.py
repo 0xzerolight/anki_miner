@@ -581,14 +581,6 @@ class ChainedExpressionAudioFetcher:
                     unknown = True
         return None if unknown else False
 
-    def has_cached(self, mined_form: str, reading: str) -> bool | None:
-        """One-pair form of :meth:`has_cached_candidates`.
-
-        Present so a nested chain answers the probe like any other member, and
-        so the fan-out is reachable without building a ladder.
-        """
-        return self.has_cached_candidates([(mined_form, reading)])
-
     def _walk(
         self,
         attempt: "Callable[[ExpressionAudioFetcher], Path | None]",

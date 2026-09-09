@@ -1833,8 +1833,3 @@ class TestChainedHasCachedCandidates:
         chain.has_cached_candidates([("食べる", "たべる")])
 
         assert second.probes == []
-
-    def test_single_pair_form_delegates_to_the_ladder_form(self):
-        chain = ChainedExpressionAudioFetcher([_ProbeFetcher({("食べる", "たべる"): True})])
-
-        assert chain.has_cached("食べる", "たべる") is True
