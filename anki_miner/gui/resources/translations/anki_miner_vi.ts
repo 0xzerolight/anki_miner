@@ -279,27 +279,27 @@
     </message>
     <message>
         <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation type="unfinished" />
+        <translation>Không thể yêu cầu danh sách loại ghi chú. Kiểm tra địa chỉ AnkiConnect trong Cài đặt.</translation>
     </message>
     <message>
         <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
-        <translation type="unfinished" />
+        <translation>Không có loại ghi chú nào được trả về. Kiểm tra Anki đang chạy với tiện ích AnkiConnect.</translation>
     </message>
     <message>
         <source>The note type list could not be read from Anki.</source>
-        <translation type="unfinished" />
+        <translation>Không thể đọc danh sách loại ghi chú từ Anki.</translation>
     </message>
     <message>
         <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation type="unfinished" />
+        <translation>Không thể yêu cầu danh sách trường. Kiểm tra địa chỉ AnkiConnect trong Cài đặt.</translation>
     </message>
     <message>
         <source>No fields came back for note type '%1'.</source>
-        <translation type="unfinished" />
+        <translation>Không có trường nào được trả về cho loại ghi chú '%1'.</translation>
     </message>
     <message>
         <source>The field list could not be read from Anki.</source>
-        <translation type="unfinished" />
+        <translation>Không thể đọc danh sách trường từ Anki.</translation>
     </message>
 </context><context>
     <name>AnkiService</name>
@@ -4715,11 +4715,11 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     </message>
     <message>
         <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
-        <translation type="unfinished" />
+        <translation>Quá trình quét đọc trường đầu tiên của mỗi ghi chú. Hãy ánh xạ loại ghi chú ở đây khi trường đầu tiên của nó không phải là từ — nếu không, câu của nó sẽ được lưu làm từ đã biết. Loại ghi chú chưa được ánh xạ sẽ giữ trường đầu tiên. Sau đó chạy Xây dựng lại CSDL từ đã biết để xóa những gì đã được lưu trước đó.</translation>
     </message>
     <message>
         <source>Map Note Type…</source>
-        <translation type="unfinished" />
+        <translation>Ánh xạ loại ghi chú…</translation>
     </message>
     <message>
         <source>Remove</source>
@@ -4959,15 +4959,15 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     </message>
     <message>
         <source>Full Sentences</source>
-        <translation type="unfinished" />
+        <translation>Câu đầy đủ</translation>
     </message>
     <message>
         <source>Mine full sentences across subtitle lines</source>
-        <translation type="unfinished" />
+        <translation>Khai thác câu đầy đủ qua các dòng phụ đề</translation>
     </message>
     <message>
         <source>Joins the neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence, its timings and its audio instead of a fragment. Every subtitle-timed run uses it — video, YouTube, batch, audiobook; reading sources have no subtitle timings and ignore it. The Word Curator's line buttons still adjust any card by hand.</source>
-        <translation type="unfinished" />
+        <translation>Nối các dòng phụ đề liền kề khi một dòng không kết thúc câu, để thẻ mang theo cả câu, thời gian và âm thanh thay vì một đoạn rời. Mọi lượt chạy có thời gian phụ đề đều dùng nó — video, YouTube, hàng loạt, sách nói; nguồn đọc không có thời gian phụ đề nên bỏ qua. Các nút dòng của Word Curator vẫn chỉnh từng thẻ theo cách thủ công.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -5027,15 +5027,15 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     </message>
     <message>
         <source>Known Words Expression Field</source>
-        <translation type="unfinished" />
+        <translation>Trường biểu thức của từ đã biết</translation>
     </message>
     <message>
         <source>Note type to map (an existing mapping is replaced):</source>
-        <translation type="unfinished" />
+        <translation>Loại ghi chú cần ánh xạ (ánh xạ hiện có sẽ bị thay thế):</translation>
     </message>
     <message>
         <source>Field to read as the expression for '%1':</source>
-        <translation type="unfinished" />
+        <translation>Trường cần đọc làm biểu thức cho '%1':</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -10063,7 +10063,7 @@ Các từ điển đã cài đặt, âm thanh, danh sách tần suất, và giao
     </message>
     <message>
         <source>Audio</source>
-        <translation type="unfinished">Âm thanh</translation>
+        <translation>Âm thanh</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -10093,7 +10093,9 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên trước — những dò
         <source>Whether your audio sources have pronunciation audio for this word.
 
 ✓ found, ✗ not found, - not checked yet. Words are checked while this window is open, so a word you keep already has its audio ready. The check never changes which words you can mine.</source>
-        <translation type="unfinished" />
+        <translation>Liệu các nguồn âm thanh của bạn có âm thanh phát âm cho từ này hay không.
+
+✓ đã tìm thấy, ✗ không tìm thấy, - chưa kiểm tra. Các từ được kiểm tra trong khi cửa sổ này đang mở, vì vậy một từ bạn giữ lại đã sẵn sàng âm thanh. Việc kiểm tra không bao giờ thay đổi những từ bạn có thể khai thác.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -10161,15 +10163,15 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên trước — những dò
     </message>
     <message>
         <source>Pronunciation audio found</source>
-        <translation type="unfinished" />
+        <translation>Đã tìm thấy âm thanh phát âm</translation>
     </message>
     <message>
         <source>No pronunciation audio found</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy âm thanh phát âm</translation>
     </message>
     <message>
         <source>Not checked yet</source>
-        <translation type="unfinished">Chưa kiểm tra</translation>
+        <translation>Chưa kiểm tra</translation>
     </message>
     <message>
         <source>%1

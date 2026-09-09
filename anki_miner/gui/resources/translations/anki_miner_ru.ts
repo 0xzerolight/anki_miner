@@ -281,27 +281,27 @@
     </message>
     <message>
         <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation type="unfinished" />
+        <translation>Не удалось запросить список типов заметок. Проверьте адрес AnkiConnect в настройках.</translation>
     </message>
     <message>
         <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
-        <translation type="unfinished" />
+        <translation>Не получено ни одного типа заметки. Убедитесь, что Anki запущен с дополнением AnkiConnect.</translation>
     </message>
     <message>
         <source>The note type list could not be read from Anki.</source>
-        <translation type="unfinished" />
+        <translation>Не удалось прочитать список типов заметок из Anki.</translation>
     </message>
     <message>
         <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation type="unfinished" />
+        <translation>Не удалось запросить список полей. Проверьте адрес AnkiConnect в настройках.</translation>
     </message>
     <message>
         <source>No fields came back for note type '%1'.</source>
-        <translation type="unfinished" />
+        <translation>Не получено ни одного поля для типа заметки «%1».</translation>
     </message>
     <message>
         <source>The field list could not be read from Anki.</source>
-        <translation type="unfinished" />
+        <translation>Не удалось прочитать список полей из Anki.</translation>
     </message>
 </context><context>
     <name>AnkiService</name>
@@ -4741,11 +4741,11 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
-        <translation type="unfinished" />
+        <translation>Сканирование читает первое поле каждой заметки. Сопоставьте здесь тип заметки, если его первое поле — не слово, иначе его предложения будут сохранены как известные слова. Несопоставленные типы заметок используют первое поле. После этого выполните «Перестроить БД известных слов», чтобы очистить уже сохранённое.</translation>
     </message>
     <message>
         <source>Map Note Type…</source>
-        <translation type="unfinished" />
+        <translation>Сопоставить тип заметки…</translation>
     </message>
     <message>
         <source>Remove</source>
@@ -4985,15 +4985,15 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Full Sentences</source>
-        <translation type="unfinished" />
+        <translation>Полные предложения</translation>
     </message>
     <message>
         <source>Mine full sentences across subtitle lines</source>
-        <translation type="unfinished" />
+        <translation>Майнить полные предложения из нескольких строк субтитров</translation>
     </message>
     <message>
         <source>Joins the neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence, its timings and its audio instead of a fragment. Every subtitle-timed run uses it — video, YouTube, batch, audiobook; reading sources have no subtitle timings and ignore it. The Word Curator's line buttons still adjust any card by hand.</source>
-        <translation type="unfinished" />
+        <translation>Объединяет соседние строки субтитров, если строка не заканчивает предложение, — тогда карточка получает всё предложение целиком, его тайминги и аудио, а не фрагмент. Используется при каждом запуске с таймингом по субтитрам — видео, YouTube, пакетная обработка, аудиокниги; источники чтения таймингов субтитров не имеют и игнорируют эту настройку. Кнопки строк в Кураторе слов по-прежнему позволяют вручную настроить любую карточку.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -5053,15 +5053,15 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Known Words Expression Field</source>
-        <translation type="unfinished" />
+        <translation>Поле выражения для известных слов</translation>
     </message>
     <message>
         <source>Note type to map (an existing mapping is replaced):</source>
-        <translation type="unfinished" />
+        <translation>Тип заметки для сопоставления (существующее сопоставление будет заменено):</translation>
     </message>
     <message>
         <source>Field to read as the expression for '%1':</source>
-        <translation type="unfinished" />
+        <translation>Поле, считываемое как выражение для «%1»:</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -10095,7 +10095,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Audio</source>
-        <translation type="unfinished">Аудио</translation>
+        <translation>Аудио</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -10125,7 +10125,9 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <source>Whether your audio sources have pronunciation audio for this word.
 
 ✓ found, ✗ not found, - not checked yet. Words are checked while this window is open, so a word you keep already has its audio ready. The check never changes which words you can mine.</source>
-        <translation type="unfinished" />
+        <translation>Есть ли у ваших источников аудио произношение для этого слова.
+
+✓ найдено, ✗ не найдено, - ещё не проверено. Слова проверяются, пока это окно открыто, поэтому у слова, которое вы оставите, аудио уже готово. Проверка никак не влияет на то, какие слова вы можете майнить.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -10193,15 +10195,15 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Pronunciation audio found</source>
-        <translation type="unfinished" />
+        <translation>Аудио произношения найдено</translation>
     </message>
     <message>
         <source>No pronunciation audio found</source>
-        <translation type="unfinished" />
+        <translation>Аудио произношения не найдено</translation>
     </message>
     <message>
         <source>Not checked yet</source>
-        <translation type="unfinished">Ещё не проверено</translation>
+        <translation>Ещё не проверено</translation>
     </message>
     <message>
         <source>%1

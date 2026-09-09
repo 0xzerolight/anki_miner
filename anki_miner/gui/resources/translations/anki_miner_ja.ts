@@ -279,27 +279,27 @@
     </message>
     <message>
         <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation type="unfinished" />
+        <translation>ノートタイプリストを要求できませんでした。設定で AnkiConnect のアドレスを確認してください。</translation>
     </message>
     <message>
         <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
-        <translation type="unfinished" />
+        <translation>ノートタイプが返されませんでした。Anki が AnkiConnect アドオンとともに起動していることを確認してください。</translation>
     </message>
     <message>
         <source>The note type list could not be read from Anki.</source>
-        <translation type="unfinished" />
+        <translation>Anki からノートタイプリストを読み取れませんでした。</translation>
     </message>
     <message>
         <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation type="unfinished" />
+        <translation>フィールドリストを要求できませんでした。設定で AnkiConnect のアドレスを確認してください。</translation>
     </message>
     <message>
         <source>No fields came back for note type '%1'.</source>
-        <translation type="unfinished" />
+        <translation>ノートタイプ「%1」のフィールドが返されませんでした。</translation>
     </message>
     <message>
         <source>The field list could not be read from Anki.</source>
-        <translation type="unfinished" />
+        <translation>Anki からフィールドリストを読み取れませんでした。</translation>
     </message>
 </context><context>
     <name>AnkiService</name>
@@ -4715,11 +4715,11 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
-        <translation type="unfinished" />
+        <translation>スキャンは各ノートの最初のフィールドを読み取ります。最初のフィールドが単語でない場合はここでノートタイプをマッピングしてください。そうしないと、その文が既知単語として保存されてしまいます。マッピングしていないノートタイプは最初のフィールドのまま扱われます。その後「既知単語DBを再構築」を実行し、すでに保存された内容をクリアしてください。</translation>
     </message>
     <message>
         <source>Map Note Type…</source>
-        <translation type="unfinished" />
+        <translation>ノートタイプをマッピング…</translation>
     </message>
     <message>
         <source>Remove</source>
@@ -4959,15 +4959,15 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Full Sentences</source>
-        <translation type="unfinished" />
+        <translation>文全体</translation>
     </message>
     <message>
         <source>Mine full sentences across subtitle lines</source>
-        <translation type="unfinished" />
+        <translation>字幕の行をまたいで文全体をマイニング</translation>
     </message>
     <message>
         <source>Joins the neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence, its timings and its audio instead of a fragment. Every subtitle-timed run uses it — video, YouTube, batch, audiobook; reading sources have no subtitle timings and ignore it. The Word Curator's line buttons still adjust any card by hand.</source>
-        <translation type="unfinished" />
+        <translation>字幕の行が文で終わっていない場合、隣接する行を結合し、カードには断片ではなく文全体とそのタイミング、音声が収録されます。字幕にタイミングがある実行（動画、YouTube、バッチ、オーディオブック）はすべてこれを使用し、字幕タイミングを持たない読み物ソースは対象外です。単語キュレーターの行ボタンを使えば、どのカードでも引き続き手動で調整できます。</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -5027,15 +5027,15 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Known Words Expression Field</source>
-        <translation type="unfinished" />
+        <translation>既知単語表現フィールド</translation>
     </message>
     <message>
         <source>Note type to map (an existing mapping is replaced):</source>
-        <translation type="unfinished" />
+        <translation>マッピングするノートタイプ（既存のマッピングは置き換えられます）:</translation>
     </message>
     <message>
         <source>Field to read as the expression for '%1':</source>
-        <translation type="unfinished" />
+        <translation>「%1」の表現として読み取るフィールド:</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -10063,7 +10063,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Audio</source>
-        <translation type="unfinished">音声</translation>
+        <translation>音声</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -10093,7 +10093,9 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <source>Whether your audio sources have pronunciation audio for this word.
 
 ✓ found, ✗ not found, - not checked yet. Words are checked while this window is open, so a word you keep already has its audio ready. The check never changes which words you can mine.</source>
-        <translation type="unfinished" />
+        <translation>音声ソースにこの単語の発音音声があるかどうかを示します。
+
+✓ 見つかった、✗ 見つからなかった、- 未確認。このウィンドウが開いている間に単語がチェックされるため、残した単語には音声がすでに用意されています。このチェックによって、マイニングできる単語が変わることはありません。</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -10161,15 +10163,15 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Pronunciation audio found</source>
-        <translation type="unfinished" />
+        <translation>発音音声が見つかりました</translation>
     </message>
     <message>
         <source>No pronunciation audio found</source>
-        <translation type="unfinished" />
+        <translation>発音音声が見つかりませんでした</translation>
     </message>
     <message>
         <source>Not checked yet</source>
-        <translation type="unfinished">未確認</translation>
+        <translation>未確認</translation>
     </message>
     <message>
         <source>%1

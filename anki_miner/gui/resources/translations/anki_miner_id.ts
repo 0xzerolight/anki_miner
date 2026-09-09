@@ -279,27 +279,27 @@
     </message>
     <message>
         <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation type="unfinished" />
+        <translation>Daftar tipe catatan tidak dapat diminta. Periksa alamat AnkiConnect di Pengaturan.</translation>
     </message>
     <message>
         <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada tipe catatan yang diterima. Periksa bahwa Anki berjalan dengan add-on AnkiConnect.</translation>
     </message>
     <message>
         <source>The note type list could not be read from Anki.</source>
-        <translation type="unfinished" />
+        <translation>Daftar tipe catatan tidak dapat dibaca dari Anki.</translation>
     </message>
     <message>
         <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation type="unfinished" />
+        <translation>Daftar bidang tidak dapat diminta. Periksa alamat AnkiConnect di Pengaturan.</translation>
     </message>
     <message>
         <source>No fields came back for note type '%1'.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada bidang yang diterima untuk tipe catatan '%1'.</translation>
     </message>
     <message>
         <source>The field list could not be read from Anki.</source>
-        <translation type="unfinished" />
+        <translation>Daftar bidang tidak dapat dibaca dari Anki.</translation>
     </message>
 </context><context>
     <name>AnkiService</name>
@@ -4715,11 +4715,11 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     </message>
     <message>
         <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
-        <translation type="unfinished" />
+        <translation>Pemindaian membaca bidang pertama setiap catatan. Petakan tipe catatan di sini jika bidang pertamanya bukan kata — jika tidak, kalimatnya akan tersimpan sebagai kata yang dikenal. Tipe catatan yang tidak dipetakan tetap memakai bidang pertama. Jalankan Bangun Ulang DB Kata yang Dikenal setelahnya untuk menghapus yang sudah tersimpan.</translation>
     </message>
     <message>
         <source>Map Note Type…</source>
-        <translation type="unfinished" />
+        <translation>Petakan Tipe Catatan…</translation>
     </message>
     <message>
         <source>Remove</source>
@@ -4959,15 +4959,15 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     </message>
     <message>
         <source>Full Sentences</source>
-        <translation type="unfinished" />
+        <translation>Kalimat Penuh</translation>
     </message>
     <message>
         <source>Mine full sentences across subtitle lines</source>
-        <translation type="unfinished" />
+        <translation>Mining kalimat penuh lintas baris subtitel</translation>
     </message>
     <message>
         <source>Joins the neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence, its timings and its audio instead of a fragment. Every subtitle-timed run uses it — video, YouTube, batch, audiobook; reading sources have no subtitle timings and ignore it. The Word Curator's line buttons still adjust any card by hand.</source>
-        <translation type="unfinished" />
+        <translation>Menggabungkan baris-baris subtitel yang berdekatan ketika suatu baris tidak mengakhiri kalimat, sehingga kartu memuat kalimat utuh beserta pewaktuan dan audionya, bukan penggalan. Setiap proses yang memakai pewaktuan subtitel menggunakannya — video, YouTube, batch, buku audio; sumber Bacaan tidak memiliki pewaktuan subtitel dan mengabaikannya. Tombol baris pada Word Curator tetap dapat menyesuaikan kartu mana pun secara manual.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -5027,15 +5027,15 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     </message>
     <message>
         <source>Known Words Expression Field</source>
-        <translation type="unfinished" />
+        <translation>Bidang Ekspresi Kata yang Dikenal</translation>
     </message>
     <message>
         <source>Note type to map (an existing mapping is replaced):</source>
-        <translation type="unfinished" />
+        <translation>Tipe catatan yang akan dipetakan (pemetaan yang ada akan diganti):</translation>
     </message>
     <message>
         <source>Field to read as the expression for '%1':</source>
-        <translation type="unfinished" />
+        <translation>Bidang yang dibaca sebagai ekspresi untuk '%1':</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -10063,7 +10063,7 @@ Kamus, audio, daftar frekuensi yang terpasang, dan tema Anda tetap dipertahankan
     </message>
     <message>
         <source>Audio</source>
-        <translation type="unfinished">Audio</translation>
+        <translation>Audio</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -10093,7 +10093,9 @@ Urutkan menaik untuk menampilkan baris i+1 lebih dulu — baris yang satu-satuny
         <source>Whether your audio sources have pronunciation audio for this word.
 
 ✓ found, ✗ not found, - not checked yet. Words are checked while this window is open, so a word you keep already has its audio ready. The check never changes which words you can mine.</source>
-        <translation type="unfinished" />
+        <translation>Apakah sumber audio Anda memiliki audio pelafalan untuk kata ini.
+
+✓ ditemukan, ✗ tidak ditemukan, - belum diperiksa. Kata-kata diperiksa selama jendela ini terbuka, sehingga kata yang Anda pertahankan sudah memiliki audionya siap. Pemeriksaan ini tidak pernah mengubah kata mana yang dapat Anda mining.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -10161,15 +10163,15 @@ Urutkan menaik untuk menampilkan baris i+1 lebih dulu — baris yang satu-satuny
     </message>
     <message>
         <source>Pronunciation audio found</source>
-        <translation type="unfinished" />
+        <translation>Audio pelafalan ditemukan</translation>
     </message>
     <message>
         <source>No pronunciation audio found</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada audio pelafalan yang ditemukan</translation>
     </message>
     <message>
         <source>Not checked yet</source>
-        <translation type="unfinished">Belum diperiksa</translation>
+        <translation>Belum diperiksa</translation>
     </message>
     <message>
         <source>%1

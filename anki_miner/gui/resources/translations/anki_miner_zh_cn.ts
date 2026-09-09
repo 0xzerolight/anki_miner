@@ -279,27 +279,27 @@
     </message>
     <message>
         <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation type="unfinished" />
+        <translation>无法获取笔记类型列表。请检查“设置”中的 AnkiConnect 地址。</translation>
     </message>
     <message>
         <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
-        <translation type="unfinished" />
+        <translation>未获取到笔记类型。请检查 Anki 是否正在运行且已安装 AnkiConnect 插件。</translation>
     </message>
     <message>
         <source>The note type list could not be read from Anki.</source>
-        <translation type="unfinished" />
+        <translation>无法从 Anki 读取笔记类型列表。</translation>
     </message>
     <message>
         <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation type="unfinished" />
+        <translation>无法获取字段列表。请检查“设置”中的 AnkiConnect 地址。</translation>
     </message>
     <message>
         <source>No fields came back for note type '%1'.</source>
-        <translation type="unfinished" />
+        <translation>笔记类型“%1”未返回任何字段。</translation>
     </message>
     <message>
         <source>The field list could not be read from Anki.</source>
-        <translation type="unfinished" />
+        <translation>无法从 Anki 读取字段列表。</translation>
     </message>
 </context><context>
     <name>AnkiService</name>
@@ -4715,11 +4715,11 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
-        <translation type="unfinished" />
+        <translation>扫描会读取每张笔记的第一个字段。若某笔记类型的第一个字段不是单词，请在此处映射该笔记类型——否则其例句会被当作已知单词存储。未映射的笔记类型仍使用第一个字段。之后运行“重建已知单词数据库”以清除已存储的内容。</translation>
     </message>
     <message>
         <source>Map Note Type…</source>
-        <translation type="unfinished" />
+        <translation>映射笔记类型…</translation>
     </message>
     <message>
         <source>Remove</source>
@@ -4959,15 +4959,15 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Full Sentences</source>
-        <translation type="unfinished" />
+        <translation>完整句子</translation>
     </message>
     <message>
         <source>Mine full sentences across subtitle lines</source>
-        <translation type="unfinished" />
+        <translation>跨字幕行挖取完整句子</translation>
     </message>
     <message>
         <source>Joins the neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence, its timings and its audio instead of a fragment. Every subtitle-timed run uses it — video, YouTube, batch, audiobook; reading sources have no subtitle timings and ignore it. The Word Curator's line buttons still adjust any card by hand.</source>
-        <translation type="unfinished" />
+        <translation>当某行字幕未构成完整句子时，将其与相邻字幕行合并，使卡片承载完整句子及其时间戳和音频，而非片段。所有基于字幕时间的挖词都会使用此功能——视频、YouTube、批量、有声书；阅读类来源没有字幕时间戳，不受影响。单词整理器的行按钮仍可手动调整任意卡片。</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -5027,15 +5027,15 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Known Words Expression Field</source>
-        <translation type="unfinished" />
+        <translation>已知单词表达字段</translation>
     </message>
     <message>
         <source>Note type to map (an existing mapping is replaced):</source>
-        <translation type="unfinished" />
+        <translation>要映射的笔记类型（将替换现有映射）：</translation>
     </message>
     <message>
         <source>Field to read as the expression for '%1':</source>
-        <translation type="unfinished" />
+        <translation>作为“%1”的表达读取的字段：</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -10063,7 +10063,7 @@ Your installed dictionaries, audio, frequency lists, and theme are kept.</source
     </message>
     <message>
         <source>Audio</source>
-        <translation type="unfinished">音频</translation>
+        <translation>音频</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -10093,7 +10093,9 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <source>Whether your audio sources have pronunciation audio for this word.
 
 ✓ found, ✗ not found, - not checked yet. Words are checked while this window is open, so a word you keep already has its audio ready. The check never changes which words you can mine.</source>
-        <translation type="unfinished" />
+        <translation>你的音频来源中是否有此单词的发音音频。
+
+✓ 已找到，✗ 未找到，- 尚未检查。窗口打开期间会检查单词，因此你保留的单词已备好音频。此检查不会改变你可挖取的单词。</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -10161,15 +10163,15 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Pronunciation audio found</source>
-        <translation type="unfinished" />
+        <translation>已找到发音音频</translation>
     </message>
     <message>
         <source>No pronunciation audio found</source>
-        <translation type="unfinished" />
+        <translation>未找到发音音频</translation>
     </message>
     <message>
         <source>Not checked yet</source>
-        <translation type="unfinished">尚未检查</translation>
+        <translation>尚未检查</translation>
     </message>
     <message>
         <source>%1

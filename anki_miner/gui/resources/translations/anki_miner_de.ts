@@ -280,27 +280,27 @@
     </message>
     <message>
         <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation type="unfinished" />
+        <translation>Die Notiztypliste konnte nicht angefordert werden. Prüfen Sie die AnkiConnect-Adresse in den Einstellungen.</translation>
     </message>
     <message>
         <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
-        <translation type="unfinished" />
+        <translation>Keine Notiztypen erhalten. Prüfen Sie, ob Anki mit dem AnkiConnect-Add-on läuft.</translation>
     </message>
     <message>
         <source>The note type list could not be read from Anki.</source>
-        <translation type="unfinished" />
+        <translation>Die Notiztypliste konnte nicht aus Anki gelesen werden.</translation>
     </message>
     <message>
         <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation type="unfinished" />
+        <translation>Die Feldliste konnte nicht angefordert werden. Prüfen Sie die AnkiConnect-Adresse in den Einstellungen.</translation>
     </message>
     <message>
         <source>No fields came back for note type '%1'.</source>
-        <translation type="unfinished" />
+        <translation>Für den Notiztyp „%1“ kamen keine Felder zurück.</translation>
     </message>
     <message>
         <source>The field list could not be read from Anki.</source>
-        <translation type="unfinished" />
+        <translation>Die Feldliste konnte nicht aus Anki gelesen werden.</translation>
     </message>
 </context><context>
     <name>AnkiService</name>
@@ -4728,11 +4728,11 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
     </message>
     <message>
         <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
-        <translation type="unfinished" />
+        <translation>Der Scan liest das erste Feld jeder Notiz. Ordnen Sie hier einen Notiztyp zu, wenn dessen erstes Feld nicht das Wort ist — andernfalls werden seine Sätze als bekannte Wörter gespeichert. Nicht zugeordnete Notiztypen behalten das erste Feld. Führen Sie anschließend „Datenbank bekannter Wörter neu aufbauen“ aus, um bereits Gespeichertes zu löschen.</translation>
     </message>
     <message>
         <source>Map Note Type…</source>
-        <translation type="unfinished" />
+        <translation>Notiztyp zuordnen…</translation>
     </message>
     <message>
         <source>Remove</source>
@@ -4972,15 +4972,15 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
     </message>
     <message>
         <source>Full Sentences</source>
-        <translation type="unfinished" />
+        <translation>Ganze Sätze</translation>
     </message>
     <message>
         <source>Mine full sentences across subtitle lines</source>
-        <translation type="unfinished" />
+        <translation>Ganze Sätze über Untertitelzeilen hinweg sammeln</translation>
     </message>
     <message>
         <source>Joins the neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence, its timings and its audio instead of a fragment. Every subtitle-timed run uses it — video, YouTube, batch, audiobook; reading sources have no subtitle timings and ignore it. The Word Curator's line buttons still adjust any card by hand.</source>
-        <translation type="unfinished" />
+        <translation>Fügt die benachbarten Untertitelzeilen zusammen, wenn eine Zeile keinen Satz beendet, sodass die Karte den ganzen Satz samt Timing und Audio statt eines Fragments erhält. Jeder untertitelgetaktete Lauf nutzt dies — Video, YouTube, Stapel, Hörbuch; Lesequellen haben keine Untertitel-Timings und ignorieren es. Die Zeilen-Schaltflächen des Wort-Kurators passen weiterhin jede Karte manuell an.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -5040,15 +5040,15 @@ Dateien auf der Festplatte werden unverändert gelassen, da nicht nachgewiesen w
     </message>
     <message>
         <source>Known Words Expression Field</source>
-        <translation type="unfinished" />
+        <translation>Ausdrucksfeld bekannter Wörter</translation>
     </message>
     <message>
         <source>Note type to map (an existing mapping is replaced):</source>
-        <translation type="unfinished" />
+        <translation>Zuzuordnender Notiztyp (eine bestehende Zuordnung wird ersetzt):</translation>
     </message>
     <message>
         <source>Field to read as the expression for '%1':</source>
-        <translation type="unfinished" />
+        <translation>Feld, das für „%1“ als Ausdruck gelesen werden soll:</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -10079,7 +10079,7 @@ Ihre installierten Wörterbücher, Audio, Häufigkeitslisten und Ihr Design blei
     </message>
     <message>
         <source>Audio</source>
-        <translation type="unfinished">Audio</translation>
+        <translation>Audio</translation>
     </message>
     <message>
         <source>How many times this word appears in this episode.
@@ -10109,7 +10109,9 @@ Aufsteigend sortieren, um i+1-Zeilen zuerst anzuzeigen – jene, deren einziges 
         <source>Whether your audio sources have pronunciation audio for this word.
 
 ✓ found, ✗ not found, - not checked yet. Words are checked while this window is open, so a word you keep already has its audio ready. The check never changes which words you can mine.</source>
-        <translation type="unfinished" />
+        <translation>Ob Ihre Audioquellen Aussprache-Audio für dieses Wort haben.
+
+✓ gefunden, ✗ nicht gefunden, - noch nicht geprüft. Wörter werden geprüft, solange dieses Fenster geöffnet ist, sodass ein Wort, das Sie behalten, sein Audio bereits bereit hat. Die Prüfung ändert nie, welche Wörter Sie sammeln können.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -10177,15 +10179,15 @@ Aufsteigend sortieren, um i+1-Zeilen zuerst anzuzeigen – jene, deren einziges 
     </message>
     <message>
         <source>Pronunciation audio found</source>
-        <translation type="unfinished" />
+        <translation>Aussprache-Audio gefunden</translation>
     </message>
     <message>
         <source>No pronunciation audio found</source>
-        <translation type="unfinished" />
+        <translation>Kein Aussprache-Audio gefunden</translation>
     </message>
     <message>
         <source>Not checked yet</source>
-        <translation type="unfinished">Noch nicht geprüft</translation>
+        <translation>Noch nicht geprüft</translation>
     </message>
     <message>
         <source>%1
