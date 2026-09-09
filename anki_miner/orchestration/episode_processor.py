@@ -2290,6 +2290,11 @@ class EpisodeProcessor:
         # Attach per-run occurrence counts for the curator's "Occurrences"
         # column/sort (Issue #88).
         self.word_filter.attach_occurrence_counts(unknown_words, occurrence_counts)
+        # Zero-network probe of the run's audio chain for the curator's Audio
+        # column: local caches and pack indexes only, on the worker thread,
+        # before the callback, on both mining paths. No-op when the run maps no
+        # expression-audio field.
+        self._audio_stage.attach_expression_audio_probe(unknown_words)
         # A callback carrying suppress_curation_messages=True (the season
         # pre-pass capture) asks for a quiet run: its [] return is a capture
         # artifact, not a user decision, so the per-episode info lines would

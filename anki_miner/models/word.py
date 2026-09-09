@@ -180,6 +180,15 @@ class TokenizedWord:
     # line index, or the sentence matched no line), which the curator renders
     # as "-" sorting last rather than as a better-than-i+1 zero.
     line_unknown_count: int = 0
+    # Whether the run's expression-audio chain can produce audio for this word,
+    # as far as a zero-network probe of every source's own cache and index
+    # could tell: True = some source already holds it, False = every source
+    # answered definitively no, None = not probed, or not knowable without the
+    # network. Display/sort-only, attached on the interactive curation path
+    # exactly like ``occurrence_count``. The Word Curator's Audio column renders
+    # the three states and its background prefetch resolves the Nones; nothing
+    # on the card path reads it.
+    expression_audio_available: bool | None = None
     pos: str | None = None  # MeCab pos1 (動詞/形容詞/名詞/...) — used for kifuku/odaka distinction
     # Character offsets of the target morpheme within ``sentence`` (post-filter).
     # -1 sentinel means "not tracked" — card builder falls back to plain escape.

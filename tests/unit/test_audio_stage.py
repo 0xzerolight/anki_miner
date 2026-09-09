@@ -1156,3 +1156,110 @@ class TestAudioChainIdentityLogging:
         assert "id=packA" in line
         assert f"dir={pack_dir.resolve()}" in line
         assert "entries=1" in line
+
+
+def _probe_word(mined="食べる", reading="たべる"):
+    word = TokenizedWord(
+        surface=mined,
+        lemma=mined,
+        reading=reading,
+        sentence=f"{mined}のテスト",
+        start_time=0.0,
+        end_time=1.0,
+        duration=1.0,
+        pos="動詞",
+    )
+    word.expression_reading = reading
+    return word
+
+
+class _ProbeChain:
+    """Chain double whose TYPE declares the duck-typed probe."""
+
+    def __init__(self, answer):
+        self.answer = answer
+        self.ladders: list[list[tuple[str, str]]] = []
+
+    def fetch(self, mined_form, reading, cancelled_check=None):
+        return None
+
+    def fetch_candidates(self, candidates, cancelled_check=None):
+        return None
+
+    def has_cached_candidates(self, candidates):
+        self.ladders.append(candidates)
+        return self.answer
+
+
+class TestAttachExpressionAudioProbe:
+    @staticmethod
+    def _stage(config, fetcher):
+        return AudioStage(
+            config=config,
+            presenter=NullPresenter(),
+            cancelled=lambda: False,
+            expression_audio_fetcher=fetcher,
+            sentence_audio_fetcher=None,
+        )
+
+    @staticmethod
+    def _enabled(test_config):
+        return replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "expression_audio": "ExpressionAudio"},
+        )
+
+    def test_stamps_the_probe_answer_on_every_word(self, test_config):
+        words = [_probe_word("食べる"), _probe_word("猫", "ねこ")]
+        stage = self._stage(self._enabled(test_config), _ProbeChain(True))
+
+        stage.attach_expression_audio_probe(words)
+
+        assert [w.expression_audio_available for w in words] == [True, True]
+
+    def test_stamps_a_definitive_miss(self, test_config):
+        words = [_probe_word("猫", "ねこ")]
+        stage = self._stage(self._enabled(test_config), _ProbeChain(False))
+
+        stage.attach_expression_audio_probe(words)
+
+        assert words[0].expression_audio_available is False
+
+    def test_probes_the_candidate_ladder_not_the_bare_pair(self, test_config):
+        chain = _ProbeChain(None)
+        stage = self._stage(self._enabled(test_config), chain)
+
+        stage.attach_expression_audio_probe([_probe_word("食べる")])
+
+        assert chain.ladders and chain.ladders[0][0] == ("食べる", "たべる")
+
+    def test_a_word_with_no_usable_reading_is_a_definitive_miss(self, test_config):
+        """No kana reading → no ladder → nothing to ask, and phase 3 produces nothing."""
+        from anki_miner.services.expression_audio_fetcher import ChainedExpressionAudioFetcher
+
+        word = _probe_word("辛い", "")
+        stage = self._stage(self._enabled(test_config), ChainedExpressionAudioFetcher([]))
+
+        stage.attach_expression_audio_probe([word])
+
+        assert word.expression_audio_available is False
+
+    def test_inactive_stage_leaves_every_word_unprobed(self, test_config):
+        """No mapped expression_audio field: the column is hidden, so no probe."""
+        chain = _ProbeChain(True)
+        words = [_probe_word("食べる")]
+        stage = self._stage(test_config, chain)
+
+        stage.attach_expression_audio_probe(words)
+
+        assert words[0].expression_audio_available is None
+        assert chain.ladders == []
+
+    def test_a_magicmock_fetcher_leaves_every_word_unprobed(self, test_config):
+        """A bare MagicMock auto-creates the probe; the TYPE lookup ignores it."""
+        words = [_probe_word("食べる")]
+        stage = self._stage(self._enabled(test_config), MagicMock())
+
+        stage.attach_expression_audio_probe(words)
+
+        assert words[0].expression_audio_available is None

@@ -306,6 +306,35 @@ class AudioStage:
             and (self.config.reading_tts_google_enabled or self.config.reading_tts_papago_enabled)
         )
 
+    def attach_expression_audio_probe(self, words: list[TokenizedWord]) -> None:
+        """Stamp ``word.expression_audio_available`` from a zero-network probe.
+
+        Runs on the mining worker thread just before the curation callback (both
+        mining paths, through ``EpisodeProcessor._run_curation``) so the Word
+        Curator opens with an Audio column already right for every word some
+        source has cached. Nothing is downloaded here: the curator's own
+        background prefetch resolves what is left at None, and phase 3's fetch
+        loop is unchanged.
+
+        A no-op when the expression-audio stage is not active — the column is
+        hidden then — and a no-op for a fetcher whose TYPE does not declare the
+        duck-typed ``has_cached_candidates``, which leaves every word at None
+        ("not knowable"), the state the column already shows. The lookup is on
+        the TYPE for the same reason :func:`_candidate_ladder` does it: the
+        suites inject bare MagicMocks, on which every instance attribute
+        auto-exists, and an instance-level probe would stamp a MagicMock onto
+        every word.
+        """
+        fetcher = self.expression_audio_fetcher
+        if not self.expression_audio_active or not hasattr(type(fetcher), "has_cached_candidates"):
+            return
+        # Duck-typed, deliberately not on the ExpressionAudioFetcher Protocol
+        # (see interfaces/expression_audio.py) — mypy can't narrow the TYPE-level
+        # hasattr guard above, so the call goes through getattr.
+        probe = getattr(fetcher, "has_cached_candidates")  # noqa: B009
+        for word in words:
+            word.expression_audio_available = probe(_candidate_ladder(fetcher, word))
+
     def _run_stage(
         self,
         media_results: list[tuple[TokenizedWord, MediaData]],
