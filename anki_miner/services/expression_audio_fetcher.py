@@ -372,6 +372,43 @@ class JPod101AudioFetcher:
         """Try each candidate form, returning the first JPod101 hit."""
         return _first_candidate_hit(self, candidates, cancelled_check)
 
+    def has_cached(self, mined_form: str, reading: str) -> bool | None:
+        """Answer from disk alone whether :meth:`fetch` would produce audio.
+
+        Zero network, never raises. The three answers are the three states the
+        Word Curator's Audio column shows:
+
+        * ``True``  — a non-empty cached mp3 already exists.
+        * ``False`` — JPod101 has confirmed the word absent and the marker has
+          not expired, or the input guards :meth:`fetch` applies refuse the
+          pair outright (a non-kana reading is never sent, so no request will
+          ever be made for it).
+        * ``None``  — unknown; only the network can say.
+
+        Duck-typed like :meth:`stats` and :meth:`close`, NOT part of the
+        ``ExpressionAudioFetcher`` Protocol, so the minimal fetcher doubles
+        several suites inject keep working; a member without it contributes
+        "unknown" to the chain's fan-out.
+
+        The two disk checks are deliberately the same pair ``fetch`` makes at
+        its cache gate, in the same order, so the probe cannot promise
+        something the real fetch would not deliver.
+        """
+        if not mined_form.strip() or not is_kana_only(reading.strip()):
+            return False
+        stem = safe_filename(f"jpod101_{mined_form}_{reading}")
+        try:
+            mp3_path = self._cache_dir / f"{stem}.mp3"
+            if mp3_path.exists() and mp3_path.stat().st_size > 0:
+                return True
+            miss_path = self._cache_dir / f"{stem}.miss"
+            if miss_path.exists() and not _miss_marker_expired(miss_path):
+                return False
+        except OSError:
+            # An unreadable cache directory is not evidence either way.
+            return None
+        return None
+
     def stats(self) -> dict[str, int]:
         """Return a copy of this run's failure-cause counts (see FAILURE_KEYS).
 

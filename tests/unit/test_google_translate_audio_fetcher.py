@@ -391,3 +391,29 @@ class TestGoogleTranslateFailureStats:
         with patch(f"{MODULE}.gtts.gTTS", _BoomGTTS):
             assert fetcher.fetch("食べる", "たべる") is None
         assert fetcher.stats()["connection"] == 1
+
+
+class TestGoogleTranslateHasCached:
+    def test_cached_mp3_is_a_hit(self, tmp_path):
+        (tmp_path / "googletts_食べる_たべる.mp3").write_bytes(_VALID_MP3)
+        fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
+
+        assert fetcher.has_cached("食べる", "たべる") is True
+
+    def test_uncached_is_unknown_never_a_definitive_no(self, tmp_path):
+        """Synthetic TTS writes no .miss markers, so a cold word is never 'no'."""
+        fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
+
+        assert fetcher.has_cached("食べる", "たべる") is None
+
+    def test_non_kana_reading_is_a_definitive_no(self, tmp_path):
+        fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0)
+
+        assert fetcher.has_cached("辛い", "辛い") is False
+
+    def test_cache_stem_prefix_is_honoured(self, tmp_path):
+        """`googletts_zh` is the real zh value (anki_miner/languages/zh/audio.py:46)."""
+        (tmp_path / "googletts_zh_中_ちゅう.mp3").write_bytes(_VALID_MP3)
+        fetcher = GoogleTranslateAudioFetcher(cache_dir=tmp_path, delay=0, cache_stem_prefix="googletts_zh")
+
+        assert fetcher.has_cached("中", "ちゅう") is True

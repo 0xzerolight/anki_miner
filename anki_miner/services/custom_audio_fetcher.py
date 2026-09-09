@@ -261,6 +261,24 @@ class CustomAudioFetcher:
         """Try each candidate form, returning the first custom-source hit."""
         return _first_candidate_hit(self, candidates, cancelled_check)
 
+    def has_cached(self, mined_form: str, reading: str) -> bool | None:
+        """Answer from disk alone whether :meth:`fetch` would produce audio.
+
+        Zero network, never raises. ``True`` for anything already in this
+        source's own cache directory (any extension — ``find_cached_by_stem``
+        is the same lookup ``fetch`` makes), ``False`` only where the input
+        guards refuse the pair, ``None`` otherwise: a custom server's contents
+        change, so this fetcher keeps no negative markers and a cold word is
+        never a definitive miss.
+
+        Duck-typed like :meth:`stats` and :meth:`close` — see the chain's
+        ``has_cached_candidates``.
+        """
+        if not mined_form.strip() or not is_kana_only(reading.strip()):
+            return False
+        stem = safe_filename(f"{self._file_prefix}_{mined_form}_{reading}")
+        return True if _find_cached_by_stem(self._cache_dir, stem) is not None else None
+
     def stats(self) -> dict[str, int]:
         """Return a copy of this run's failure-cause counts (see FAILURE_KEYS)."""
         return dict(self._failure_counts)
