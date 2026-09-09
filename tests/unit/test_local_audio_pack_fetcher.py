@@ -10,6 +10,8 @@ import pytest
 
 from anki_miner.services.audio_packs import fetcher as audio_pack_fetcher
 from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
+from anki_miner.services.audio_packs.importer import import_android_audio_db
+from anki_miner.services.audio_packs.registry import AudioPackRegistry
 from anki_miner.services.audio_packs.storage import (
     SCHEMA_VERSION,
     AudioPackRow,
@@ -908,3 +910,78 @@ class TestHasCached:
         db.unlink()
 
         assert fetcher.has_cached("食べる", "たべる") is None
+
+
+# ---------------------------------------------------------------------------
+# The probe's android_db branch
+# ---------------------------------------------------------------------------
+
+
+def _build_android_pack(tmp_path: Path, rows: list[tuple[str, str, str, bytes]]) -> LocalAudioPackFetcher:
+    """Install an android_db-format pack and return a fetcher over it.
+
+    Same source shape the importer's own suite builds
+    (``test_android_audio_db.py``): an ``entries`` lookup table beside an
+    ``android`` blob table in ONE file, imported by reference so the blobs stay
+    in the user's db and the fetcher reads them through ``blob_db_path``.
+    """
+    source = tmp_path / "android.db"
+    conn = sqlite3.connect(source)
+    try:
+        conn.executescript("""
+            CREATE TABLE entries (
+                id INTEGER PRIMARY KEY, expression TEXT NOT NULL, reading TEXT,
+                source TEXT NOT NULL, speaker TEXT, display TEXT, file TEXT NOT NULL
+            );
+            CREATE INDEX idx_expr_reading ON entries(expression, reading);
+            CREATE TABLE android (
+                id INTEGER PRIMARY KEY, file TEXT NOT NULL, source TEXT NOT NULL, data BLOB NOT NULL
+            );
+            CREATE INDEX idx_android ON android(file, source);
+            """)
+        for row_id, (expr, reading, file, blob) in enumerate(rows, start=1):
+            conn.execute(
+                "INSERT INTO entries VALUES (?, ?, ?, ?, NULL, ?, ?)",
+                (row_id, expr, reading, "nhk16", reading, file),
+            )
+            conn.execute("INSERT INTO android VALUES (?, ?, ?, ?)", (row_id, file, "nhk16", blob))
+        conn.commit()
+    finally:
+        conn.close()
+
+    packs_root = tmp_path / "packs"
+    import_android_audio_db(source, packs_root)
+    registry = AudioPackRegistry(packs_root)
+    registry.load()
+    installed = registry.packs["android"]
+    return LocalAudioPackFetcher(
+        db_path=installed.db_path,
+        pack_dir=installed.pack_dir,
+        pack_id=installed.pack_id,
+        cache_dir=tmp_path / "cache",
+        blob_db_path=installed.source_db,
+    )
+
+
+class TestHasCachedAndroidBlob:
+    """The probe's blob branch must answer exactly what ``_serve_from_blobs`` will."""
+
+    def test_a_present_in_range_blob_is_a_hit(self, tmp_path: Path):
+        fetcher = _build_android_pack(tmp_path, [("食べる", "たべる", "audio/one.mp3", b"ID3-test-audio")])
+
+        assert fetcher.has_cached("食べる", "たべる") is True
+        assert fetcher.fetch("食べる", "たべる") is not None
+
+    def test_a_zero_length_blob_is_a_definitive_no(self, tmp_path: Path):
+        """An empty blob serves nothing, so promising audio would be a lie."""
+        fetcher = _build_android_pack(tmp_path, [("食べる", "たべる", "audio/one.mp3", b"")])
+
+        assert fetcher.has_cached("食べる", "たべる") is False
+        assert fetcher.fetch("食べる", "たべる") is None
+
+    def test_an_oversized_blob_is_a_definitive_no(self, tmp_path: Path, monkeypatch):
+        monkeypatch.setattr(audio_pack_fetcher, "MAX_AUDIO_BYTES", 4)  # small cap keeps the fixture tiny
+        fetcher = _build_android_pack(tmp_path, [("食べる", "たべる", "audio/one.mp3", b"x" * 32)])
+
+        assert fetcher.has_cached("食べる", "たべる") is False
+        assert fetcher.fetch("食べる", "たべる") is None
