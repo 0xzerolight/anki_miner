@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-from anki_miner.languages.ko.script import KO_SENTENCE_RULES
-from anki_miner.languages.profile import SentenceRules
 from anki_miner.languages.registry import get_profile
 from anki_miner.services.cue_merge import (
     MAX_MERGE_GAP_SECONDS,
@@ -16,16 +14,8 @@ from anki_miner.services.cue_merge import (
 )
 
 JA_RULES = get_profile("ja").sentence_rules
-KO_RULES = KO_SENTENCE_RULES
-#: Mirrors the SentenceRules literal in languages/zh/__init__.py. Chinese shares
-#: Japanese's punctuation, so the zh cases pin that rather than a new set.
-ZH_RULES = SentenceRules(
-    terminators=frozenset("。｡！？!?‼⁉⁇⁈"),
-    ellipses=frozenset("…‥"),
-    openers=frozenset("「｢『（〔［｛〈《【([{｟〝"),
-    closers=frozenset("」｣』）〕］｝〉》】)]}｠〟"),
-    space_aware=False,
-)
+KO_RULES = get_profile("ko").sentence_rules
+ZH_RULES = get_profile("zh").sentence_rules
 
 
 def _cues(*texts: str, start: float = 0.0, length: float = 2.0, gap: float = 0.5):
@@ -106,8 +96,25 @@ class TestAutoLineExpansion:
         entries = _cues("だから僕は")
         assert auto_line_expansion(entries, 0, JA_RULES) == (0, 0)
 
-    def test_index_out_of_range_is_inert(self):
-        assert auto_line_expansion(_cues("あ。"), 7, JA_RULES) == (0, 0)
+    def test_forward_absorption_spends_the_budget_the_backward_side_needed(self):
+        """The backward span is measured over the ALREADY-extended window, so a
+        forward merge that fills the budget blocks the preceding cue."""
+        entries = [
+            (0.0, 5.0, "だから"),
+            (5.5, 20.0, "僕は"),
+            (20.5, 33.0, "行きました。"),
+        ]
+        assert auto_line_expansion(entries, 1, JA_RULES) == (0, 1)
+
+    def test_gap_is_measured_from_the_window_s_last_cue(self):
+        """Overlapping cues (an ASS sign over dialogue): the second hop is
+        judged against the cue just absorbed, not against the word's own."""
+        entries = [
+            (0.0, 6.0, "だから"),
+            (0.5, 2.0, "僕は"),
+            (7.0, 9.0, "行きました。"),
+        ]
+        assert auto_line_expansion(entries, 0, JA_RULES) == (0, 1)
 
     def test_korean_period_terminates(self):
         entries = _cues("갔습니다.", "그리고", "왔습니다.")

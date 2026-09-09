@@ -26,7 +26,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
-from anki_miner.services.reading.sentence_splitter import _DOT, _run_is_terminating
+from anki_miner.services.reading.sentence_splitter import _policy, _run_is_terminating
 
 if TYPE_CHECKING:
     from anki_miner.languages.profile import SentenceRules
@@ -64,17 +64,19 @@ def ends_sentence(text: str, rules: SentenceRules) -> bool:
     Trailing whitespace and closing brackets/quotes are stripped first, so
     ``「なるほど。」`` reads as terminated; the remaining run of sentence
     punctuation is judged by the splitter's own ``_run_is_terminating`` (a lone
-    ``．`` terminates, a run of 2+ and the ellipsis marks do not).
+    ``．`` terminates, a run of 2+ and the ellipsis marks do not). The
+    character classes come from the splitter's ``_policy``, so the two agree on
+    what a sentence end looks like by construction.
     """
+    terminators, _openers, closers, punct, _space_aware = _policy(rules)
     stripped = text.rstrip()
-    while stripped and stripped[-1] in rules.closers:
+    while stripped and stripped[-1] in closers:
         stripped = stripped[:-1].rstrip()
-    punct = rules.terminators | rules.ellipses | {_DOT}
     cut = len(stripped)
     while cut > 0 and stripped[cut - 1] in punct:
         cut -= 1
     run = stripped[cut:]
-    return bool(run) and _run_is_terminating(run, rules.terminators)
+    return bool(run) and _run_is_terminating(run, terminators)
 
 
 def _span(entries: Sequence[tuple[float, float, str]], lo: int, hi: int) -> float:
@@ -106,11 +108,9 @@ def auto_line_expansion(
     ``max_seconds``.
 
     ``(0, 0)`` — the common answer — for a cue that already ends a sentence and
-    follows one, for a file edge, and for an out-of-range index.
+    follows one, and at a file edge. ``index`` comes from ``find_cue_index`` on
+    both call sites, which returns an in-range index or None.
     """
-    if not 0 <= index < len(entries):
-        return (0, 0)
-
     next_count = 0
     while next_count < max_cues:
         last = index + next_count
