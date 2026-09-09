@@ -1342,6 +1342,22 @@ class TestAttachSentenceCandidates:
         assert word.sentence_candidates[1].start_time == 5.0
         assert word.sentence_candidates[1].end_time == 6.0
 
+    def test_candidate_variant_drops_the_expansion_intent(self, test_config):
+        """A variant belongs to another cue, so the word's line expansion — the
+        curator's ± lines or the automatic merge's stamp — cannot ride along."""
+        service = WordFilterService(test_config)
+        word = create_word("X", sentence="first")
+        word.line_expansion = (1, 1)
+        line_index = [
+            self._line({"X"}, text="first", start=1.0, end=2.0),
+            self._line({"X"}, text="second", start=5.0, end=6.0),
+        ]
+
+        service.attach_sentence_candidates([word], line_index)
+
+        assert word.sentence_candidates
+        assert all(variant.line_expansion == (0, 0) for variant in word.sentence_candidates)
+
     def test_sentence_candidates_skip_same_lemma_different_front(self, test_config):
         service = WordFilterService(test_config)
         word = TokenizedWord(

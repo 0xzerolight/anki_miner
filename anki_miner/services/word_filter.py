@@ -720,6 +720,11 @@ class WordFilterService:
             sentence_bolded=new_bolded,
             sentence_furigana_bolded=new_furi_bolded,
             sentence_candidates=[],
+            # The intent was counted against the cue this swap leaves behind
+            # (the curator's ± line buttons, or the automatic cue merge's
+            # stamp), so it cannot ride along: the curator re-derives it for
+            # the cue that was actually picked.
+            line_expansion=(0, 0),
         )
 
     def _bolded_pair(self, text: str, start: int, highlight_end: int, end: int) -> tuple[str, str]:
