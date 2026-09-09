@@ -1,0 +1,185 @@
+/* Kiku Note __VERSION__
+* This file is auto-generated. Any manual changes will be lost on save.
+*/
+
+@layer theme, base, components, utilities.daisyui.component, custom;
+
+@layer base {
+  /* Don't modify this line */
+  /* __CSS_VARIABLE__ */
+
+  /* Don't modify this line */
+  /* __CSS_VARIABLE_DARK__ */
+}
+
+/* Custom theme here */
+@layer custom {
+  /* Customize "light" theme here  */
+  .card:has(> #qa, #content > #qa),
+  #kiku-root[data-theme="light"],
+  :host([data-dark-mode]) #kiku-root[data-theme-dark="light"],
+  .nightMode #kiku-root[data-theme-dark="light"],
+  #kiku-host[data-theme="light"]::part(root),
+  .nightMode #kiku-host[data-theme-dark="light"]::part(root),
+  [data-theme-preview="light"] {
+    /* uncomment and customize the color */
+
+    /* color-scheme: light; */
+    /* --color-base-100: oklch(100% 0 0); */
+    /* --color-base-200: oklch(98% 0 0); */
+    /* --color-base-300: oklch(95% 0 0); */
+    /* --color-base-content: oklch(21% 0.006 285.885); */
+    /* --color-primary: oklch(45% 0.24 277.023); */
+    /* --color-primary-content: oklch(93% 0.034 272.788); */
+    /* --color-secondary: oklch(65% 0.241 354.308); */
+    /* --color-secondary-content: oklch(94% 0.028 342.258); */
+    /* --color-accent: oklch(77% 0.152 181.912); */
+    /* --color-accent-content: oklch(38% 0.063 188.416); */
+    /* --color-neutral: oklch(14% 0.005 285.823); */
+    /* --color-neutral-content: oklch(92% 0.004 286.32); */
+    /* --color-info: oklch(74% 0.16 232.661); */
+    /* --color-info-content: oklch(29% 0.066 243.157); */
+    /* --color-success: oklch(76% 0.177 163.223); */
+    /* --color-success-content: oklch(37% 0.077 168.94); */
+    /* --color-warning: oklch(82% 0.189 84.429); */
+    /* --color-warning-content: oklch(41% 0.112 45.904); */
+    /* --color-error: oklch(71% 0.194 13.428); */
+    /* --color-error-content: oklch(27% 0.105 12.094); */
+    /* --radius-selector: 0.5rem; */
+    /* --radius-field: 0.25rem; */
+    /* --radius-box: 0.5rem; */
+    /* --size-selector: 0.25rem; */
+    /* --size-field: 0.25rem; */
+    /* --border: 1px; */
+    /* --depth: 1; */
+    /* --noise: 0; */
+
+    /* don't forget this extra color */
+    /* --color-base-content-primary: var(--color-primary); */
+  }
+
+  /* Customize "dark" theme here  */
+  .card:has(> #qa, #content > #qa).nightMode,
+  #kiku-root[data-theme="dark"],
+  :host([data-dark-mode]) #kiku-root[data-theme-dark="dark"],
+  .nightMode #kiku-root[data-theme-dark="dark"],
+  #kiku-host[data-theme="dark"]::part(root),
+  .nightMode #kiku-host[data-theme-dark="dark"]::part(root),
+  [data-theme-preview="dark"] {
+    /* uncomment and customize the color */
+
+    /* color-scheme: dark; */
+    /* --color-base-100: oklch(25.33% 0.016 252.42); */
+    /* --color-base-200: oklch(23.26% 0.014 253.1); */
+    /* --color-base-300: oklch(21.15% 0.012 254.09); */
+    /* --color-base-content: oklch(97.807% 0.029 256.847); */
+    /* --color-primary: oklch(58% 0.233 277.117); */
+    /* --color-primary-content: oklch(96% 0.018 272.314); */
+    /* --color-secondary: oklch(65% 0.241 354.308); */
+    /* --color-secondary-content: oklch(94% 0.028 342.258); */
+    /* --color-accent: oklch(77% 0.152 181.912); */
+    /* --color-accent-content: oklch(38% 0.063 188.416); */
+    /* --color-neutral: oklch(14% 0.005 285.823); */
+    /* --color-neutral-content: oklch(92% 0.004 286.32); */
+    /* --color-info: oklch(74% 0.16 232.661); */
+    /* --color-info-content: oklch(29% 0.066 243.157); */
+    /* --color-success: oklch(76% 0.177 163.223); */
+    /* --color-success-content: oklch(37% 0.077 168.94); */
+    /* --color-warning: oklch(82% 0.189 84.429); */
+    /* --color-warning-content: oklch(41% 0.112 45.904); */
+    /* --color-error: oklch(71% 0.194 13.428); */
+    /* --color-error-content: oklch(27% 0.105 12.094); */
+    /* --radius-selector: 0.5rem; */
+    /* --radius-field: 0.25rem; */
+    /* --radius-box: 0.5rem; */
+    /* --size-selector: 0.25rem; */
+    /* --size-field: 0.25rem; */
+    /* --border: 1px; */
+    /* --depth: 1; */
+    /* --noise: 0; */
+
+    /* don't forget this extra color */
+    /* --color-base-content-primary: color-mix( */
+    /*   in srgb, */
+    /*   var(--color-primary) 50%, */
+    /*   var(--color-base-content) */
+    /* ); */
+  }
+}
+
+/* ──────────────────── Apply to Anki but not Ankiweb ──────────────────── */
+body:not([data-sveltekit-preload-data]) {
+  font-size: 16px;
+  scrollbar-gutter: stable;
+}
+body:not([data-sveltekit-preload-data]) *,
+body:not([data-sveltekit-preload-data]) :after,
+body:not([data-sveltekit-preload-data]) :before,
+body:not([data-sveltekit-preload-data]) ::backdrop {
+  box-sizing: border-box;
+}
+body:not([data-sveltekit-preload-data]) {
+  margin: 0;
+  background: var(--color-base-100);
+  /* Keep this until most Anki's webview is updated */
+  /* https://issues.chromium.org/issues/40792788 */
+  overflow-y: scroll;
+}
+body:not([data-sveltekit-preload-data]) ::-webkit-scrollbar {
+  background-color: var(--color-base-100) !important;
+}
+body:not([data-sveltekit-preload-data]) ::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--color-base-100), currentColor 30%) !important;
+}
+body:not([data-sveltekit-preload-data]) ::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--color-base-100), currentColor 40%) !important;
+}
+@media (min-width: 40rem) {
+  body:not([data-sveltekit-preload-data]) ::-webkit-scrollbar {
+    width: 10px !important;
+    border-radius: 0 !important;
+  }
+}
+/* ──────────────────── Apply to Anki but not Ankiweb ──────────────────── */
+
+/* ───────────────────── AnkiDroid old study screen ──────────────────── */
+.android body > div#content {
+  margin: 0;
+}
+/* NOTE: Fighting with https://github.com/ankidroid/Anki-Android/blob/a52a05fff9acf56d9718e7304c93a34463a8461a/AnkiDroid/src/main/assets/flashcard.css#L113 */
+.android body > div#content #kiku-root .picture-field img {
+  max-height: none;
+}
+.android body > div#content #kiku-root .picture-field-background img {
+  max-height: none;
+}
+/* ───────────────────── AnkiDroid old study screen ──────────────────── */
+
+/* ───────────────────────────── AnkiMobile ──────────────────────────── */
+.iphone,
+.ipad {
+  --anki-mobile-display-none: none;
+  --anki-mobile-display-block: block;
+}
+[data-anki-mobile-only="block"] {
+  display: var(--anki-mobile-display-block, none);
+}
+/* ───────────────────────────── AnkiMobile ──────────────────────────── */
+
+.card.card.card {
+  background-color: var(--color-base-100) !important;
+}
+
+#kiku-root {
+  position: relative;
+}
+
+[data-kiku-cloak] {
+  visibility: hidden;
+  opacity: 0;
+}
+
+/*TODO: move to head*/
+#qa {
+  opacity: 1 !important;
+}
