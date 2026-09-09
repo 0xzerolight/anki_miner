@@ -2,6 +2,7 @@
 
 import base64
 import logging
+from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -694,6 +695,136 @@ class TestGetExistingVocabulary:
         assert len(mock_post.call_args_list[1][1]["json"]["params"]["notes"]) == 1000
         # Last batch: 500 notes
         assert len(mock_post.call_args_list[3][1]["json"]["params"]["notes"]) == 500
+
+
+class TestKnownWordsExpressionFields:
+    """config.known_words_expression_fields overrides the first-field rule.
+
+    The scan covers every note type in the collection, so a note type whose
+    first field is the sentence otherwise stores whole sentences as known
+    words (FUTURE_IDEAS item 2).
+    """
+
+    def test_mapped_field_is_read_instead_of_the_first_field(self, test_config):
+        config = replace(
+            test_config,
+            known_words_expression_fields={"Sentence First": "Word"},
+        )
+        service = AnkiService(config)
+
+        find_resp = _mock_response(result=[1])
+        notes_resp = _mock_response(
+            result=[
+                {
+                    "modelName": "Sentence First",
+                    "fields": {
+                        "Sentence": {"value": "彼は毎日走る"},
+                        "Word": {"value": "走る"},
+                    },
+                }
+            ]
+        )
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
+            result = service.get_existing_vocabulary()
+
+        assert result == {"走る"}
+
+    def test_mapped_field_absent_on_the_note_falls_back_to_the_first_field(self, test_config):
+        """A note type renamed its field, or a note predates the rename."""
+        config = replace(
+            test_config,
+            known_words_expression_fields={"Sentence First": "NoSuchField"},
+        )
+        service = AnkiService(config)
+
+        find_resp = _mock_response(result=[1])
+        notes_resp = _mock_response(result=[{"modelName": "Sentence First", "fields": {"Sentence": {"value": "走る"}}}])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
+            result = service.get_existing_vocabulary()
+
+        assert result == {"走る"}
+
+    def test_unmapped_note_type_keeps_the_first_field(self, test_config):
+        config = replace(
+            test_config,
+            known_words_expression_fields={"Sentence First": "Word"},
+        )
+        service = AnkiService(config)
+
+        find_resp = _mock_response(result=[1])
+        notes_resp = _mock_response(
+            result=[
+                {
+                    "modelName": "Lapis",
+                    "fields": {"Expression": {"value": "走る"}, "Word": {"value": "飲む"}},
+                }
+            ]
+        )
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
+            result = service.get_existing_vocabulary()
+
+        assert result == {"走る"}
+
+    def test_row_without_a_model_name_keeps_the_first_field(self, test_config):
+        """notesInfo rows carry modelName; a malformed row must not raise."""
+        config = replace(
+            test_config,
+            known_words_expression_fields={"Sentence First": "Word"},
+        )
+        service = AnkiService(config)
+
+        find_resp = _mock_response(result=[1])
+        notes_resp = _mock_response(result=[{"fields": {"Expression": {"value": "走る"}}}])
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
+            result = service.get_existing_vocabulary()
+
+        assert result == {"走る"}
+
+    def test_empty_mapping_is_the_pre_feature_scan(self, test_config):
+        """The default: modelName is present and still ignored."""
+        service = AnkiService(test_config)
+
+        find_resp = _mock_response(result=[1])
+        notes_resp = _mock_response(
+            result=[
+                {
+                    "modelName": "Sentence First",
+                    "fields": {"Sentence": {"value": "彼は毎日走る"}, "Word": {"value": "走る"}},
+                }
+            ]
+        )
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
+            result = service.get_existing_vocabulary()
+
+        assert result == {"彼は毎日走る"}
+
+    def test_deck_filter_scan_inherits_the_mapping(self, test_config):
+        """get_vocabulary_excluding_deck shares _collect_first_field_forms."""
+        config = replace(
+            test_config,
+            known_words_expression_fields={"Sentence First": "Word"},
+        )
+        service = AnkiService(config)
+
+        find_resp = _mock_response(result=[1])
+        notes_resp = _mock_response(
+            result=[
+                {
+                    "modelName": "Sentence First",
+                    "fields": {"Sentence": {"value": "彼は毎日走る"}, "Word": {"value": "走る"}},
+                }
+            ]
+        )
+
+        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
+            result = service.get_vocabulary_excluding_deck("Source Deck")
+
+        assert result == {"走る"}
 
 
 class TestGetExistingVocabularySecondBatchTimeout:
