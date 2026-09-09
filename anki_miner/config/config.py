@@ -489,6 +489,23 @@ class AnkiMinerConfig:
     max_sentence_duration_seconds: float = 0.0  # 0 = no duration cap
     max_sentence_chars: int = 0  # 0 = no character cap
 
+    # Full-sentence mining (FUTURE_IDEAS 6). When True, a word whose subtitle
+    # cue does not end a sentence is stamped with the neighbouring cues that
+    # finish it, and the card carries the merged sentence, timings and clip
+    # window instead of the fragment. The terminators come from the mining
+    # language's profile (SentenceRules), which is why this is deliberately NOT
+    # in LANGUAGE_SCOPED_FIELDS: the preference is the same decision in every
+    # language, only the punctuation differs. Every subtitle-timed run inherits
+    # it (video, YouTube, batch, audiobook, Deck Builder — they all go through
+    # process_episode); the reading sources have no cue timeline and ignore it.
+    # The sentence-length filter above is unaffected and still measures the raw
+    # cue in phase 2, so a merged card can be longer than the cap its fragment
+    # passed; the merged window is bounded instead by the clip strip's own
+    # ceiling (services/cue_merge.py). Sentence dedup, by contrast, IS re-run
+    # over the merged text before curation — two words on adjacent cues would
+    # otherwise both survive on one sentence.
+    merge_incomplete_cues: bool = False
+
     # Reading tab: minimum times a word must occur in a single book/volume to be
     # mined. 1 = no minimum (filter off). Consumed via
     # WordFilterService.filter_by_episode_count, which early-returns when the

@@ -14,6 +14,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from PyQt6.QtCore import Qt
 
+from anki_miner.gui.utils.qt_helpers import COPY_ROLE
 from anki_miner.gui.widgets.audio_clip_editor import MAX_CLIP_SECONDS, to_ticks
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     CurationMediaContext,
@@ -401,3 +402,112 @@ class TestSpaceKey:
 
         assert mock_player.toggle_play_pause.called
         dlg.hide()
+
+
+#: Cues for the automatic merge (FUTURE_IDEAS 6): the word's own line is
+#: unterminated and the line after it finishes the sentence; the candidate line
+#: at 20.0s does the same with the line after that.
+AUTO_ENTRIES = [
+    (1.0, 3.0, "前の行です。"),
+    (5.0, 7.0, "食べるのテスト"),
+    (9.0, 11.0, "次の行です。"),
+    (20.0, 22.0, "もう一度食べる"),
+    (22.5, 24.0, "続きです。"),
+]
+MERGED_AUTO = "食べるのテスト" + CUE_JOINER + "次の行です。"
+MERGED_CANDIDATE = "もう一度食べる" + CUE_JOINER + "続きです。"
+
+
+def _ja_rules():
+    from anki_miner.languages.registry import get_profile
+
+    return get_profile("ja").sentence_rules
+
+
+class TestAutoMergeSeeding:
+    """A word arriving with an automatic stamp opens merged (FUTURE_IDEAS 6)."""
+
+    @staticmethod
+    def _auto_dialog(qtbot, existing_video):
+        word = _make_word("食べる", start_time=5.0, line_expansion=(0, 1))
+        return _dialog(
+            qtbot,
+            [word],
+            existing_video,
+            subtitle_entries=list(AUTO_ENTRIES),
+            auto_merge_rules=_ja_rules(),
+        )
+
+    def test_row_opens_on_the_merged_sentence(self, qtbot, existing_video):
+        dlg, _ = self._auto_dialog(qtbot, existing_video)
+        assert dlg._line_expansions == {0: (0, 1)}
+        assert dlg.table.item(0, 4).text() == MERGED_AUTO
+
+    def test_clip_strip_seeds_the_merged_window(self, qtbot, existing_video):
+        dlg, _ = self._auto_dialog(qtbot, existing_video)
+        _focus(dlg, 0)
+        assert dlg.clip_editor.current_window() == pytest.approx((5.0 - PADDING, 11.0 + PADDING))
+
+    def test_selection_keeps_the_stamp(self, qtbot, existing_video):
+        dlg, _ = self._auto_dialog(qtbot, existing_video)
+        _check_all(dlg)
+        assert dlg.get_selected_words()[0].line_expansion == (0, 1)
+
+    def test_reset_returns_the_fragment(self, qtbot, existing_video):
+        dlg, _ = self._auto_dialog(qtbot, existing_video)
+        _focus(dlg, 0)
+        dlg.expand_reset_button.click()
+        _check_all(dlg)
+        assert dlg._line_expansions == {}
+        assert dlg.table.item(0, 4).text() == "食べるのテスト"
+        assert dlg.get_selected_words()[0].line_expansion == (0, 0)
+
+    def test_manual_next_extends_from_the_word_s_own_cue(self, qtbot, existing_video):
+        """+ Next line counts from the word's cue, as it always has, so a
+        stamped (0, 1) becomes (0, 2) rather than restarting at (0, 1)."""
+        dlg, _ = self._auto_dialog(qtbot, existing_video)
+        _focus(dlg, 0)
+        dlg.expand_next_button.click()
+        _check_all(dlg)
+        assert dlg.get_selected_words()[0].line_expansion == (0, 2)
+
+
+class TestAutoMergeCandidatePick:
+    """Picking another example sentence re-runs the rule for the picked cue."""
+
+    @staticmethod
+    def _picker_dialog(qtbot, existing_video, **ctx_kwargs):
+        own = _make_word("食べる", start_time=5.0, sentence="食べるのテスト")
+        other = _make_word("食べる", start_time=20.0, sentence="もう一度食べる")
+        primary = _make_word("食べる", start_time=5.0, sentence="食べるのテスト")
+        primary.sentence_candidates = [own, other]
+        return _dialog(
+            qtbot,
+            [primary],
+            existing_video,
+            subtitle_entries=list(AUTO_ENTRIES),
+            **ctx_kwargs,
+        )
+
+    def test_pick_restamps_for_the_new_cue(self, qtbot, existing_video):
+        dlg, _ = self._picker_dialog(qtbot, existing_video, auto_merge_rules=_ja_rules())
+        _focus(dlg, 0)
+
+        dlg._on_candidate_chosen(1)
+
+        _check_all(dlg)
+        assert dlg._line_expansions == {0: (0, 1)}
+        # COPY_ROLE, not text(): a word with candidates carries a "(2)" badge
+        # after its sentence, exactly as the sentence-picker tests handle.
+        assert dlg.table.item(0, 4).data(COPY_ROLE) == MERGED_CANDIDATE
+        assert dlg.get_selected_words()[0].line_expansion == (0, 1)
+
+    def test_pick_without_the_setting_keeps_the_fragment(self, qtbot, existing_video):
+        dlg, _ = self._picker_dialog(qtbot, existing_video)
+        _focus(dlg, 0)
+
+        dlg._on_candidate_chosen(1)
+
+        _check_all(dlg)
+        assert dlg._line_expansions == {}
+        assert dlg.get_selected_words()[0].line_expansion == (0, 0)
