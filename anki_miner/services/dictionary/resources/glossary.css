@@ -352,24 +352,28 @@
 /* @am-endgroup */
 /* @am-group: tables */
 
-/* Collapsible notes / conjugation tables. Scope the accent summary to glossary
- * content so it never clashes with the muted dictionary label above. */
-.yomitan-glossary ol[data-count] details {
+/* Collapsible notes / conjugation tables. Scoped to the `gloss-sc-<tag>` classes
+ * `yomitan_renderer._render_attrs` stamps on every structured-content element: a
+ * bare `details`/`table`/`th`/`td` subject inside this namespace matched markup we
+ * did not emit and out-ranked the note type on its own element. The class also
+ * makes the old `.gloss-content` ancestor scope on `summary` redundant — only our
+ * renderer emits `.gloss-sc-summary`, so it can never reach the dictionary label. */
+.yomitan-glossary ol[data-count] .gloss-sc-details {
   margin: 0.25em 0;
 }
 
-.yomitan-glossary ol[data-count] .gloss-content summary {
+.yomitan-glossary ol[data-count] .gloss-sc-summary {
   cursor: pointer;
   color: var(--am-accent);
 }
 
-.yomitan-glossary ol[data-count] details[open] > summary {
+.yomitan-glossary ol[data-count] .gloss-sc-details[open] > .gloss-sc-summary {
   margin-bottom: 0.25em;
 }
 
 /* Tables (inflection/reading layouts) — full borders, and scroll instead of
  * overflowing the card when a dictionary embeds a wide table on a narrow screen. */
-.yomitan-glossary ol[data-count] table {
+.yomitan-glossary ol[data-count] .gloss-sc-table {
   border-collapse: collapse;
   margin: 0.3em 0;
   max-width: 100%;
@@ -378,14 +382,14 @@
   font-size: 0.9em;
 }
 
-.yomitan-glossary ol[data-count] th,
-.yomitan-glossary ol[data-count] td {
+.yomitan-glossary ol[data-count] .gloss-sc-th,
+.yomitan-glossary ol[data-count] .gloss-sc-td {
   padding: 0.18em 0.5em;
   border: 1px solid var(--am-faint);
   text-align: left;
 }
 
-.yomitan-glossary ol[data-count] th {
+.yomitan-glossary ol[data-count] .gloss-sc-th {
   font-weight: 600;
 }
 
@@ -525,13 +529,14 @@
 
 /* Inflection / forms tables: Yomitan inlines per-cell borders that we don't
  * receive, so cells render borderless. Restore them at higher specificity than
- * the generic table rule so forms tables read as a grid. */
-.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="forms"] table {
+ * the generic table rule so forms tables read as a grid. Same class scoping as the
+ * `tables` group above — the subject must be our own markup, never a bare type. */
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="forms"] .gloss-sc-table {
   border-collapse: collapse;
   margin-top: 0.2em;
 }
-.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="forms"] th,
-.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="forms"] td {
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="forms"] .gloss-sc-th,
+.yomitan-glossary ol[data-count] li[data-dictionary]:not([data-has-styles]) [data-sc-content="forms"] .gloss-sc-td {
   border: 1px solid var(--am-faint);
   padding: 0.2em 0.4em;
   text-align: center;
