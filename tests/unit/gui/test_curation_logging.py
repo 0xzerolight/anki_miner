@@ -43,7 +43,12 @@ def _fake_dialog_cls():
             super().__init__(parent)
             self.words = list(words)
             self.selection: list = ["picked"]
+            self.audio_states: list[tuple[int, bool]] = []
             created.append(self)
+
+        def set_expression_audio_state(self, index, found):
+            """Stand-in for the real curator's Audio-column slot (Task 6)."""
+            self.audio_states.append((index, found))
 
         def get_selected_words(self):
             return self.selection

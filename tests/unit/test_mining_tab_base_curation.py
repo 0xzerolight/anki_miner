@@ -62,6 +62,7 @@ def _fake_dialog_cls(*, decision="accept", selection=("picked",)):
             self.kwargs = kwargs
             self.shown_on = None
             self.deleted_later = False
+            self.audio_states: list[tuple[int, bool]] = []
             created.append(self)
 
         def show(self):
@@ -75,6 +76,10 @@ def _fake_dialog_cls(*, decision="accept", selection=("picked",)):
         def force_reject(self):
             """Stand-in for the real dialog's forced-shutdown path (D34-B)."""
             self.reject()
+
+        def set_expression_audio_state(self, index, found):
+            """Stand-in for the real curator's Audio-column slot (Task 6)."""
+            self.audio_states.append((index, found))
 
         def get_selected_words(self):
             return list(selection)
