@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -72,6 +73,28 @@ def _widget(qtbot) -> SubtitlePlayerWidget:
 
 VIDEO = Path("/tmp/fake_video.mkv")
 ENTRIES = [(1.0, 2.5, "こんにちは"), (3.0, 4.0, "テスト")]
+
+#: client.h MPV_END_FILE_REASON_ERROR, mirrored from the widget module.
+_END_FILE_ERROR = 4
+
+
+def _capture_event_callbacks(player: MagicMock) -> dict[str, object]:
+    """Record the handler the widget registers per mpv event name."""
+    handlers: dict[str, object] = {}
+
+    def _decorator(name: str):
+        def _wrap(fn):
+            handlers[name] = fn
+            return fn
+
+        return _wrap
+
+    player.event_callback.side_effect = _decorator
+    return handlers
+
+
+def _end_file_event(error: object) -> SimpleNamespace:
+    return SimpleNamespace(data=SimpleNamespace(reason=_END_FILE_ERROR, error=error))
 
 
 class TestInit:
@@ -544,6 +567,27 @@ class TestLifecycleSignals:
         with qtbot.waitSignal(widget.playback_failed, timeout=1000) as blocker:
             widget._on_playback_error("demux failure")
         assert blocker.args == ["demux failure"]
+
+    def test_end_file_error_uses_mpv_own_message(self, qtbot, fake_mpv):
+        """The reason becomes the banner's Details, so it must say something."""
+        widget = _widget(qtbot)
+        handlers = _capture_event_callbacks(fake_mpv["player"])
+        widget.set_source(VIDEO, ENTRIES)
+
+        with qtbot.waitSignal(widget.playback_failed, timeout=1000) as blocker:
+            handlers["end-file"](_end_file_event("Unrecognized file format"))
+
+        assert blocker.args == ["Unrecognized file format"]
+
+    def test_end_file_error_without_a_message_falls_back(self, qtbot, fake_mpv):
+        widget = _widget(qtbot)
+        handlers = _capture_event_callbacks(fake_mpv["player"])
+        widget.set_source(VIDEO, ENTRIES)
+
+        with qtbot.waitSignal(widget.playback_failed, timeout=1000) as blocker:
+            handlers["end-file"](_end_file_event(None))
+
+        assert blocker.args == ["playback failed"]
 
 
 class TestTeardown:

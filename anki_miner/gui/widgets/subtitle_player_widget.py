@@ -453,7 +453,11 @@ class SubtitlePlayerWidget(QWidget):
         def _on_end_file_event(event: Any) -> None:
             data = getattr(event, "data", None)
             if data is not None and getattr(data, "reason", None) == _END_FILE_REASON_ERROR:
-                self._mpv_playback_error.emit(self.tr("playback failed"))
+                # This reason becomes the Details of the caller's banner, so pass
+                # mpv's own message through; str() because python-mpv can hand
+                # back an ErrorCode enum rather than a string.
+                reason = str(getattr(data, "error", "") or "") or self.tr("playback failed")
+                self._mpv_playback_error.emit(reason)
 
     def _teardown_player(self) -> None:
         """Detach and request bounded mpv core termination. Idempotent.

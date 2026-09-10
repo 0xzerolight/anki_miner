@@ -158,14 +158,11 @@ def _read_member(zf: zipfile.ZipFile, entry: str, epub_path: Path) -> bytes:
     """
     info = zf.getinfo(entry)
     if info.file_size > _MAX_MEMBER_BYTES:
-        raise SetupError(
-            f"'{epub_path.name}': member '{entry}' declares {info.file_size:,} bytes "
-            f"(cap {_MAX_MEMBER_BYTES:,}); refusing to read."
-        )
+        raise SetupError(f"'{epub_path.name}' has a chapter too large to mine.")
     with zf.open(entry) as fp:
         data = fp.read(_MAX_MEMBER_BYTES + 1)
     if len(data) > _MAX_MEMBER_BYTES:
-        raise SetupError(f"'{epub_path.name}': member '{entry}' exceeds the {_MAX_MEMBER_BYTES:,}-byte cap.")
+        raise SetupError(f"'{epub_path.name}' has a chapter too large to mine.")
     return data
 
 
@@ -216,9 +213,7 @@ def load(
             _raise_if_cancelled(cancel_check)
             total_member_bytes += len(raw)
             if total_member_bytes > _MAX_TOTAL_MEMBER_BYTES:
-                raise SetupError(
-                    f"'{epub_path.name}': cumulative EPUB member data exceeds the {_MAX_TOTAL_MEMBER_BYTES:,}-byte cap."
-                )
+                raise SetupError(f"'{epub_path.name}' is too large to mine.")
 
         names = set(zf.namelist())
         _raise_if_cancelled(cancel_check)

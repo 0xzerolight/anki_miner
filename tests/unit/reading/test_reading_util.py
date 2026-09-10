@@ -87,7 +87,7 @@ def test_read_zip_member_text_capped_happy_path(tmp_path):
 
 def test_read_zip_member_text_capped_over_cap_declared_size(tmp_path):
     archive = _zip_with(tmp_path / "vol.cbz", {"vol.mokuro": b"x" * 64})
-    with pytest.raises(SetupError, match="cap"):
+    with pytest.raises(SetupError, match="too large to mine"):
         read_zip_member_text_capped(archive, "vol.mokuro", 16, ".mokuro member")
 
 

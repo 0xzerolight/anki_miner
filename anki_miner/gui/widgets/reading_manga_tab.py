@@ -281,7 +281,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         button_row.setSpacing(SPACING.sm)
 
         self.folder_mine_button = ModernButton(self.tr("Mine Folder"), variant="secondary")
-        self.folder_mine_button.setToolTip(self.tr("Mine the selected folder's volume(s) into Anki cards."))
+        self.folder_mine_button.setToolTip(self.tr("Mine every volume in the selected folder into Anki cards."))
         self.folder_mine_button.clicked.connect(self._on_folder_mine_clicked)
         button_row.addWidget(self.folder_mine_button)
 
@@ -367,11 +367,11 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             return
         raw = self.volume_file_selector.path_or_none()
         if raw is None:
-            self.log_widget.append_warning(self.tr("Select a .mokuro, .cbz, or .zip volume first."))
+            self.log_widget.append_warning(self.tr("Choose a .mokuro, .cbz, or .zip volume first."))
             return
         path = Path(raw)
         if path.suffix.lower() not in _MANGA_EXTS or not path.is_file():
-            self.log_widget.append_warning(self.tr("Select a .mokuro, .cbz, or .zip volume first."))
+            self.log_widget.append_warning(self.tr("Choose a .mokuro, .cbz, or .zip volume first."))
             return
 
         self._detect_and_launch(path)
@@ -382,7 +382,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
             return
         raw = self.volume_folder_selector.path_or_none()
         if raw is None:
-            self.log_widget.append_warning(self.tr("Select a manga folder first."))
+            self.log_widget.append_warning(self.tr("Choose a manga folder first."))
             return
         self._detect_and_launch(Path(raw))
 
@@ -425,7 +425,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         refs, diagnostics = cast(tuple[list, list[tuple[Path, str]]], result)
         if diagnostics:
             details = "; ".join(f"{path.name}: {reason}" for path, reason in diagnostics)
-            self.log_widget.append_warning(tr_format(self.tr("Skipped unreadable manga volume(s): %1"), details))
+            self.log_widget.append_warning(tr_format(self.tr("Skipped volumes: %1"), details))
         self._launch_detected(refs)
 
     def _on_detection_error(self, generation: int, message: str) -> None:

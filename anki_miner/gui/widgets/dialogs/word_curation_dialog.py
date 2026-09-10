@@ -456,6 +456,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         footer_layout.addStretch()
 
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
+        # Reject cancels the worker and breaks the queue, while Confirm with
+        # nothing ticked skips only this item (_mining_tab_base._resolve_curation).
+        # The two verbs are indistinguishable from the outside without this (A8-22).
+        self.cancel_button.setToolTip(self.tr("Cancels the whole run, not just this item."))
         self.cancel_button.clicked.connect(self.reject)
         self.cancel_button.setMinimumWidth(100)
         footer_layout.addWidget(self.cancel_button)
@@ -574,7 +578,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             [
                 "",
                 self.tr("Word (mined)"),
-                self.tr("Form in subtitle"),
+                self.tr("Form in text"),
                 self.tr("Reading"),
                 self.tr("Sentence"),
                 self.tr("Freq. Rank"),
@@ -594,11 +598,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         if occurrences_header is not None:
             occurrences_header.setToolTip(
                 self.tr(
-                    "How many times this word appears in this episode.\n\n"
-                    "The “Sentences” picker offers one option per subtitle line, so it "
-                    "usually lists fewer: repeats on the same line count once here, and "
-                    "lines where the word takes a form that would change the card’s Word "
-                    "are skipped."
+                    "How many times this word appears in the text being mined.\n\n"
+                    "The “Sentences” picker usually lists fewer: one option per line, "
+                    "and only lines whose form matches the card’s Word."
                 )
             )
         # The two sentence signals. They are columns rather than filters
@@ -609,7 +611,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             unknowns_header.setToolTip(
                 self.tr(
                     "How many words you do not know yet appear on this word’s own "
-                    "subtitle line.\n\n"
+                    "line.\n\n"
                     "Sort ascending to put i+1 lines first — the ones whose only "
                     "unknown word is this one. “-” means the line could not be counted."
                 )
@@ -1494,9 +1496,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # every word-wrapped row left/right on each focus change.
         self.sentence_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         install_copy_rows(self.sentence_list)
-        self.sentence_list.setToolTip(
-            self.tr("Pick which sentence (and scene) gets mined for this word. Only shown when the word repeats.")
-        )
+        self.sentence_list.setToolTip(self.tr("Pick which sentence gets mined for this word."))
         self.sentence_list.currentRowChanged.connect(self._on_candidate_chosen)
         vbox.addWidget(self.sentence_list, 1)
         return container
@@ -1644,7 +1644,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             check_item.setData(Qt.ItemDataRole.UserRole, row)  # Store original index
             self.table.setItem(row, 0, check_item)
 
-            # Word (mined), Form in subtitle, Reading and Sentence all describe
+            # Word (mined), Form in text, Reading and Sentence all describe
             # one occurrence, so they are built from the single spec the
             # sentence picker also repaints through (_pick_cell_values). Nothing
             # is picked yet at populate time, so the word is its own variant.
@@ -1663,7 +1663,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                     row, column, self._make_readonly_item(text, role=CellRole.NUMBER, sort_value=sort_value)
                 )
 
-            # Occurrences — times the word appears in this episode; sort
+            # Occurrences — times the word appears in the mined text; sort
             # numerically so 15 ranks above 2 (Issue #88).
             occ = word.occurrence_count
             self.table.setItem(
@@ -1827,7 +1827,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             # Word (mined) — what becomes the Anki Expression (source-orthography
             # dictionary form for verbs/adjectives, surface for nouns).
             (1, chosen.mined_form, chosen.mined_form, chosen.mined_form),
-            # Form in subtitle — the raw surface as it appeared.
+            # Form in text — the raw surface as it appeared.
             (2, chosen.surface, chosen.surface, chosen.surface),
             # Reading.
             (3, chosen.reading, chosen.reading, chosen.reading),
@@ -3013,10 +3013,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         logger.error("Known Words commit failed, review left open: %s", message)
         self.show_screen_issue(
             ScreenIssue(
-                summary=self.tr(
-                    "Your Known Words could not be saved, so no cards were created. "
-                    "Confirm again to retry, or Cancel to discard the pending marks."
-                ),
+                summary=self.tr("Known Words could not be saved, so no cards were created. Confirm again to retry."),
                 details=message,
             )
         )

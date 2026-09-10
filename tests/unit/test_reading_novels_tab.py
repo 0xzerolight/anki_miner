@@ -339,14 +339,14 @@ class TestInvalidPath:
         tab._on_mine_clicked()
         assert queue_cls.call_count == 0
         assert tab.worker_thread is None
-        assert "valid" in tab.log_widget.text_edit.toPlainText().lower()
+        assert "Choose an .epub or .txt book first." in tab.log_widget.text_edit.toPlainText()
 
     def test_nonexistent_file_warns_no_run(self, tab):
         queue_cls = tab._queue_worker_cls
         tab.book_selector.set_path("/no/such/book.epub")
         tab._on_mine_clicked()
         assert queue_cls.call_count == 0
-        assert "valid" in tab.log_widget.text_edit.toPlainText().lower()
+        assert "Choose an .epub or .txt book first." in tab.log_widget.text_edit.toPlainText()
 
     def test_wrong_suffix_warns_no_run(self, tmp_path, tab):
         queue_cls = tab._queue_worker_cls

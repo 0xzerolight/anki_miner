@@ -19,8 +19,8 @@ Drag-drop routes through the tab, not the file selectors. The FileSelector's own
 accepts URL drops by default, so both selectors have ``setAcceptDrops(False)``
 applied and every drop is delivered to this tab: the first ``.epub``/``.txt``
 fills the book selector; the first dropped directory fills the folder selector
-(no disk I/O at drop time — a bookless folder errors at Mine time with the
-manga cross-tab hint); a manga-file drop earns the hint immediately.
+(no disk I/O at drop time — a bookless folder errors at Mine time); a manga-file
+drop earns the cross-tab hint immediately.
 """
 
 from __future__ import annotations
@@ -208,7 +208,6 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             label_width=field_label_width(self.tr("Book File:")),
             history_key="reading.novels.inputs",
         )
-        self.book_selector.setToolTip(self.tr("Select an .epub or .txt book to mine."))
         card_layout.addWidget(self.book_selector)
 
         # Mine is this screen's one run action, so it lives in the pinned bar
@@ -342,11 +341,11 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             return
         raw = self.book_selector.path_or_none()
         if raw is None:
-            self.log_widget.append_warning(self.tr("Select a valid .epub or .txt book first."))
+            self.log_widget.append_warning(self.tr("Choose an .epub or .txt book first."))
             return
         path = Path(raw)
         if path.suffix.lower() not in _NOVEL_EXTS or not path.is_file():
-            self.log_widget.append_warning(self.tr("Select a valid .epub or .txt book first."))
+            self.log_widget.append_warning(self.tr("Choose an .epub or .txt book first."))
             return
 
         refs = self._detect_or_report(path)
@@ -374,7 +373,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
             return
         raw = self.folder_selector.path_or_none()
         if raw is None or not Path(raw).is_dir():
-            self.log_widget.append_warning(self.tr("Select a folder containing .epub or .txt books first."))
+            self.log_widget.append_warning(self.tr("Choose a folder of .epub or .txt books first."))
             return
 
         refs = self._detect_or_report(Path(raw), detect_fn=detector.detect_book_folder)

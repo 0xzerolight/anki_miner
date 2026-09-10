@@ -672,7 +672,7 @@ def test_cumulative_member_budget_rejects_many_spine_documents(tmp_path: Path, m
     budget = len(_CONTAINER.encode("utf-8")) + len(opf.encode("utf-8")) + first_two
     monkeypatch.setattr(epub_source, "_MAX_TOTAL_MEMBER_BYTES", budget, raising=False)
 
-    with pytest.raises(SetupError, match="cumulative EPUB member data exceeds"):
+    with pytest.raises(SetupError, match="is too large to mine"):
         load(_ref(path))
 
 
@@ -697,7 +697,7 @@ def test_cumulative_member_budget_counts_repeated_spine_idrefs(tmp_path: Path, m
 
     monkeypatch.setattr(epub_source, "_parse_content", _count_parse_calls)
 
-    with pytest.raises(SetupError, match="cumulative EPUB member data exceeds"):
+    with pytest.raises(SetupError, match="is too large to mine"):
         load(_ref(path))
 
     assert parse_calls == 1
