@@ -561,8 +561,14 @@ def test_cancel_before_run_skips_all(qapp, tmp_path):
     assert retimer_calls == []
 
 
-def test_cancel_via_retimer_reports_cancelled(qapp, tmp_path):
-    """Retimer sets cancel_event and returns False → file_finished reports 'Cancelled'."""
+def test_cancel_via_retimer_reports_no_per_item_outcome(qapp, tmp_path):
+    """Retimer sets cancel_event and returns False → no per-item outcome at all.
+
+    A per-item error string logged an ERROR ("Cancelled"), which raises "Some
+    files could not be retimed." while the same run's status said "Cancelled",
+    and it counted the pair as failed. The run-level CANCELLED outcome is the
+    whole report.
+    """
     v = tmp_path / "ep01.mkv"
     s = tmp_path / "ep01_orig.srt"
     v.write_bytes(b"")
@@ -577,9 +583,9 @@ def test_cancel_via_retimer_reports_cancelled(qapp, tmp_path):
     cap = _capture(worker)
     worker.run()
 
-    idx, out_path, err = cap["finished"][0]
-    assert out_path is None
-    assert err == "Cancelled"
+    assert cap["finished"] == []
+    assert cap["skipped"] == []
+    assert worker._failed_count == 0
 
 
 def test_cancel_between_pairs(qapp, tmp_path):
@@ -606,9 +612,8 @@ def test_cancel_between_pairs(qapp, tmp_path):
     assert 0 in cap["started"]
     assert 1 not in cap["started"]
 
-    finished_map = {item[0]: item for item in cap["finished"]}
-    assert finished_map[0][1] is None
-    assert finished_map[0][2] == "Cancelled"
+    assert cap["finished"] == []
+    assert worker._failed_count == 0
 
     assert cap["queue_finished"] == [True]
 

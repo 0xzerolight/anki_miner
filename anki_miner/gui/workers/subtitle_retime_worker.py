@@ -164,7 +164,11 @@ class SubtitleRetimeWorker(FileQueueWorker):
                     self.file_note.emit(idx, tr_format(self.tr("Retimed with %1"), engine))
                 self.file_finished.emit(idx, out_sub, None)
             elif self.is_cancelled or getattr(outcome, "cancelled", False):
-                self.file_finished.emit(idx, None, self.tr("Cancelled"))
+                # Nothing: a cancel is a run-level outcome, and the tab's status
+                # label already says "Cancelled". A per-item error string logged
+                # an ERROR line, which raises "Some files could not be retimed.",
+                # and counted the pair as failed.
+                pass
             else:
                 reason = getattr(outcome, "reason", "") or self.tr("no trustworthy sync; original kept unchanged")
                 self.file_finished.emit(

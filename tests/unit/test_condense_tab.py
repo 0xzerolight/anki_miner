@@ -74,6 +74,7 @@ class _FakeWorker:
         self.kwargs = kwargs
         self.file_started = MagicMock()
         self.file_progress = MagicMock()
+        self.file_note = MagicMock()
         self.file_finished = MagicMock()
         self.file_skipped = MagicMock()
         self.queue_finished = MagicMock()

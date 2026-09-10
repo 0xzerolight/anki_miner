@@ -995,6 +995,7 @@ class CondenseTab(_ToolTabBase):
 
         worker.file_started.connect(self._on_file_started)
         worker.file_progress.connect(self._on_file_progress)
+        worker.file_note.connect(self._on_file_note)
         worker.file_finished.connect(self._on_file_finished)
         worker.file_skipped.connect(self._on_file_skipped)
         worker.queue_finished.connect(self._on_queue_finished)
@@ -1155,3 +1156,11 @@ class CondenseTab(_ToolTabBase):
         self.progress_widget.set_status(
             tr_format(self.tr("Condensing file %1 of %2"), str(idx + 1), str(self._total_files))
         )
+
+    def _on_file_note(self, idx: int, note: str) -> None:
+        """Durable per-file detail: a sidecar write or tagging failure.
+
+        Unlike ``file_progress``, this always lands in the run log, so it
+        survives past the moment the next file overwrites the transient label.
+        """
+        self.log_widget.append_warning(note)

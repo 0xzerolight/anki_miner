@@ -170,8 +170,15 @@ class SubtitleGenWorker(FileQueueWorker):
             self.file_progress.emit(idx, 100, self.tr("Done"))
             self.file_finished.emit(idx, result.out_srt, None)
         elif status is SubtitleGenStatus.CANCELLED:
-            self.file_finished.emit(idx, None, self.tr("Cancelled"))
+            # Nothing: a cancel is a run-level outcome, and the tab's status
+            # label already says "Cancelled". A per-item error string logged an
+            # ERROR line, which raises "Some files could not be transcribed.",
+            # and counted the file as failed.
+            pass
         elif status is SubtitleGenStatus.NO_SPEECH:
-            self.file_finished.emit(idx, None, tr_format(self.tr("No speech detected in %1"), name))
+            # A skip, not a failure: extraction, the WAV load and transcription
+            # all succeeded — the track was silent or music-only. The base
+            # prints the file name itself, so the reason must not repeat it.
+            self.file_skipped.emit(idx, video_path, self.tr("No speech detected"))
         elif status is SubtitleGenStatus.EXTRACTION_FAILED:
             self.file_finished.emit(idx, None, tr_format(self.tr("Audio extraction failed for %1"), name))

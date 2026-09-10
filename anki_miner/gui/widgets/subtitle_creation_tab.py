@@ -112,10 +112,10 @@ class SubtitleCreationTab(_ToolTabBase):
             run_problem=self.tr("Some files could not be transcribed."),
             complete_template=self.tr("Complete — %1 files processed"),
             complete_skipped_template=self.tr("Complete — %1 processed, %2 skipped"),
-            all_skipped_template=self.tr(
-                "No subtitles generated — all %1 skipped because their output already exists. "
-                "Enable Overwrite to regenerate."
-            ),
+            # Cause-neutral: a skip here is either "output exists" or "no speech
+            # detected", and the per-file line already says which. Naming one
+            # cause lied about an all-silent run.
+            all_skipped_template=self.tr("No subtitles generated — all %1 skipped; see log."),
             select_output_folder=self.tr("Select Output Folder"),
             output_default=self.tr("Next to source media"),
             task_title=self.tr("Subtitle generation"),
