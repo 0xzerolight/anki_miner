@@ -346,7 +346,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
                     lambda: QMessageBox.information(
                         self,
                         self.tr("Export Complete"),
-                        tr_format(self.tr("Exported %1 word(s) to:\n%2"), count, path_str),
+                        tr_format(self.tr("Exported %1 words to:\n%2"), count, path_str),
                     ),
                 ),
                 lambda message: self._on_export_failed(generation, path_str, message),
