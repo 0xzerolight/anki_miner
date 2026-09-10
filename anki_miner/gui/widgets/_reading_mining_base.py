@@ -242,7 +242,7 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
         self._publish_task_cancelling()
 
     def _apply_terminal_bar_state(self, widget) -> None:
-        """Set the run's terminal bar state: cancel -> failed -> success.
+        """Set the run's terminal bar state: cancel -> partial -> failed -> success.
 
         Reads only the per-run flags/accumulators seeded in :meth:`_launch_run`
         — never ``_run_items``, which is already cleared when the cleanup hook
@@ -261,7 +261,12 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
         if outcome is TerminalOutcome.CANCELLED:
             # No reset(): see _freeze_run_bar.
             widget.set_status(QCoreApplication.translate("ReadingTab", "Cancelled"))
-        elif outcome in (TerminalOutcome.PARTIAL, TerminalOutcome.FAILED):
+        elif outcome is TerminalOutcome.PARTIAL:
+            # Some items mined, some failed (A8-27): "Failed" would deny the
+            # cards this run actually created. Same phrase as batch mining.
+            widget.reset()
+            widget.set_status(QCoreApplication.translate("ReadingTab", "Finished with errors — see log"))
+        elif outcome is TerminalOutcome.FAILED:
             widget.reset()
             widget.set_status(QCoreApplication.translate("ReadingTab", "Failed — see log"))
         else:

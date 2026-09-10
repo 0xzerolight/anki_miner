@@ -612,6 +612,17 @@ class TestAfterRunCleanup:
         assert tab.overall_progress_widget.progress_bar.value() == 100
         assert tab.overall_progress_widget.status_label.text() == "Complete — 5 cards created"
 
+    def test_cleanup_partial_shows_finished_with_errors(self, tab):
+        """One volume mined and one failed is not a failed run (A8-27)."""
+        _mine(tab, _series(2))
+        tab._on_item_finished(0, MagicMock(cards_created=3, new_words_found=4), None, 1)
+        tab._on_item_finished(1, None, "boom", 1)
+
+        tab._on_worker_finished()
+
+        assert tab.overall_progress_widget.progress_bar.value() == 0
+        assert tab.overall_progress_widget.status_label.text() == "Finished with errors — see log"
+
     def test_cleanup_failed_shows_failed(self, tab):
         """Run-level fatal (worker.error) must not render a success summary."""
         _mine(tab, _series(2))
