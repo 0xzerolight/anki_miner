@@ -9,7 +9,7 @@ for per-file pass/fail lines.
 Guard contract:
 - ``_engine.available()`` False → Generate disabled, notice visible.
 - Model not downloaded → Generate shows a prompt directing the user to Settings.
-- Output directory not writable → Generate aborts, error logged.
+- Output directory not writable → Generate aborts with a screen issue.
 
 Worker contract:
 - Worker stored on ``self.worker_thread``.
@@ -429,7 +429,13 @@ class SubtitleCreationTab(_ToolTabBase):
         # next to its source media, so check the first source file's parent.
         check_dir = out_dir if out_dir is not None else video_files[0].parent
         if not os.access(check_dir, os.W_OK):
-            self.log_widget.append_error(self.tr("Output directory is not writable: ") + str(check_dir))
+            # Its own banner, not a logged ERROR: nothing was transcribed, so
+            # the generic run_problem banner _on_log_problem raises would say
+            # "Some files could not be transcribed." about a run that never
+            # started. Same shape as download_tab's refusal.
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("Output folder is not writable."), details=str(check_dir))
+            )
             self.generate_button.setEnabled(True)
             return
 
@@ -446,10 +452,11 @@ class SubtitleCreationTab(_ToolTabBase):
             self.show_screen_issue(
                 ScreenIssue(
                     summary=tr_format(
-                        self.tr(
-                            "The transcription model %1 is not installed. "
-                            "Open Settings → Transcription & Alignment to install it."
-                        ),
+                        # Not "not installed": the guard also fails for a ggml
+                        # model that IS on disk but whose engine cannot load it
+                        # (model_availability.py:45-58). The repair lives in the
+                        # banner's own button, so the sentence does not repeat it.
+                        self.tr("The transcription model %1 is not ready."),
                         self.config.asr_model,
                     ),
                     action_id="settings.subtitles",
@@ -538,8 +545,10 @@ class SubtitleCreationTab(_ToolTabBase):
                 return
             on_files(files)
 
-        def _on_error(_msg: str) -> None:
-            self.show_screen_issue(ScreenIssue(summary=self.tr("That folder could not be read."), details=path_str))
+        def _on_error(msg: str) -> None:
+            # The path is what the user just picked; what they cannot see is
+            # why listing it failed, so that message is the Details.
+            self.show_screen_issue(ScreenIssue(summary=self.tr("That folder could not be scanned."), details=msg))
             on_files([])
 
         run_off_thread(self, _scan, _apply, _on_error)

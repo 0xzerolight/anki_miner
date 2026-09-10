@@ -346,8 +346,12 @@ def test_writable_check_precedes_model_check(qtbot, tmp_path):
     assert tab.worker_thread is None
 
 
-def test_unwritable_output_dir_logs_error(qtbot, tmp_path):
-    """When output dir is not writable, an error appears in the log widget."""
+def test_unwritable_output_dir_raises_screen_issue(qtbot, tmp_path):
+    """When output dir is not writable, the refusal is its own banner.
+
+    Not a logged ERROR: that raises the generic run_problem banner ("Some files
+    could not be transcribed.") about a run that never started.
+    """
     config = _make_config(tmp_path)
     video = tmp_path / "test.mp4"
     video.write_bytes(b"fake")
@@ -355,15 +359,19 @@ def test_unwritable_output_dir_logs_error(qtbot, tmp_path):
     tab = _make_tab(config, qtbot)
     tab.file_selector.set_path(str(video))
 
+    issues: list[object] = []
     with (
         patch(_ENGINE_AVAILABLE, return_value=True),
         patch(_OS_ACCESS, return_value=False),
         patch(_IS_DOWNLOADED, return_value=True),
+        patch.object(tab, "show_screen_issue", side_effect=issues.append),
     ):
         tab.generate_button.click()
 
-    log_text = tab.log_widget.text_edit.toPlainText()
-    assert "not writable" in log_text or str(video.parent) in log_text
+    assert issues, "refusal must raise a ScreenIssue, not a log line"
+    assert issues[0].summary == "Output folder is not writable."
+    assert issues[0].summary != tab._strings.run_problem
+    assert issues[0].details == str(video.parent)
 
 
 # ---------------------------------------------------------------------------
@@ -763,7 +771,12 @@ def test_iter_close_workers_returns_active_worker(qtbot, tmp_path):
 
 
 def test_model_not_downloaded_reports_an_issue_on_generate(qtbot, tmp_path):
-    """A model that is not installed names the real Settings destination (D24, string 2)."""
+    """An unusable model raises a banner whose repair is the button (D24).
+
+    The summary no longer spells the destination out: the banner carries "Open
+    Transcription Settings", and repeating it in the sentence is the button
+    written twice.
+    """
     config = _make_config(tmp_path)
     video = tmp_path / "episode.mp4"
     video.write_bytes(b"fake")
@@ -780,9 +793,8 @@ def test_model_not_downloaded_reports_an_issue_on_generate(qtbot, tmp_path):
 
     issue = tab.issue_banner().current_issue()
     assert issue is not None
-    assert "is not installed" in issue.summary
-    assert "Settings → Transcription & Alignment" in issue.summary
-    assert "assert tab.issue_banner().current_issue() is not None"
+    assert issue.summary == f"The transcription model {config.asr_model} is not ready."
+    assert issue.action_text == "Open Transcription Settings"
     # Worker must NOT be started
     assert tab.worker_thread is None
 
