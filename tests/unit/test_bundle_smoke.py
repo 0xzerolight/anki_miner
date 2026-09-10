@@ -30,10 +30,6 @@ def test_clean_release_preflight_fetches_verified_libmpv_before_pyinstaller(tmp_
     (repo / ".github").mkdir()
     shutil.copy2(PROJECT_ROOT / "scripts" / "release_preflight.sh", repo / "scripts" / "release_preflight.sh")
     (repo / "anki_miner" / "__init__.py").write_text('__version__ = "9.9.9"\n', encoding="utf-8")
-    (repo / ".github" / "ytdlp-pin.json").write_text(
-        '{"version":"test","assets":{"linux":{"asset":"yt-dlp_linux","sha256":"feedface","install_as":"yt-dlp"}}}\n',
-        encoding="utf-8",
-    )
     (repo / "requirements.lock").touch()
     (repo / "pyproject.toml").touch()
     (repo / "anki_miner.spec").touch()
@@ -66,9 +62,6 @@ def test_clean_release_preflight_fetches_verified_libmpv_before_pyinstaller(tmp_
         'case "$*" in\n'
         '  *"__version__"*) echo 9.9.9 ;;\n'
         "  *'[\"version\"]'*) echo test ;;\n"
-        "  *'[\"asset\"]'*) echo yt-dlp_linux ;;\n"
-        "  *'[\"sha256\"]'*) echo feedface ;;\n"
-        "  *'[\"install_as\"]'*) echo yt-dlp ;;\n"
         "esac\n",
     )
     _write_executable(
