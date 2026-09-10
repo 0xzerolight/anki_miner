@@ -369,14 +369,15 @@ class TestPreviewTable:
         assert "Mining::JP" in text
         assert "test_note_type" in text
 
-    def test_absent_fields_reported_as_a_stale_mapping(self, tab):
+    def test_absent_fields_reported_as_not_on_the_note_type(self, tab):
         # Distinct from unavailable_fields: the field name is not on the note
         # type at all, so installing resources cannot help.
         plan = _plan([], scanned=12, absent_fields=("PitchGraph",))
         tab._on_scan_finished(plan)
         text = tab.summary_label.text()
         assert "PitchGraph" in text
-        assert "stale mapping" in text.lower()
+        assert "not on the note type" in text.lower()
+        assert "Settings → Cards & Anki" in text
 
     def test_absent_fields_reported_alongside_a_nonempty_plan(self, tab):
         plan = _plan([_note_plan(1)], absent_fields=("PitchGraph",))

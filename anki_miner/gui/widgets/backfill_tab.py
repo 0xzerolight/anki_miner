@@ -415,7 +415,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
                 checkbox.setEnabled(enabled)
                 if not enabled:
                     checkbox.setChecked(False)
-                    checkbox.setToolTip(self.tr("Map this field in Settings → Anki"))
+                    checkbox.setToolTip(self.tr("Map this field in Settings → Cards & Anki"))
                 else:
                     # Restore the group's own tooltip; without this branch the
                     # "Map this field…" text set above outlives the condition that
@@ -692,12 +692,12 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
             if plan.options.deck:
                 parts.append(
                     self.tr(
-                        'No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.'
+                        'No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Cards & Anki.'
                     ).format(note_type=self.config.anki_note_type, deck=plan.options.deck)
                 )
             else:
                 parts.append(
-                    self.tr('No notes matched — note type "{note_type}". Check Settings → Anki.').format(
+                    self.tr('No notes matched — note type "{note_type}". Check Settings → Cards & Anki.').format(
                         note_type=self.config.anki_note_type
                     )
                 )
@@ -742,9 +742,9 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
             # name itself is not on the note type, so the mapping is stale and
             # no amount of installing dictionaries will help.
             parts.append(
-                self.tr(
-                    "Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping."
-                ).format(fields=", ".join(plan.absent_fields))
+                self.tr("These fields are not on the note type: {fields}. Fix them in Settings → Cards & Anki.").format(
+                    fields=", ".join(plan.absent_fields)
+                )
             )
         if plan.unavailable_fields:
             parts.append(
