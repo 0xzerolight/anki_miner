@@ -247,7 +247,7 @@ class ReadingTextTab(_ReadingMiningTabBase):
 
         card_layout.addWidget(SectionHeader(title=self.tr("Pasted Text")))
 
-        note = QLabel(self.tr("Paste Japanese text and mine it into Anki cards — no audio is extracted."))
+        note = QLabel(self.tr("Paste text and mine it into Anki cards — no audio is extracted."))
         note.setObjectName("caption")
         note.setWordWrap(True)
         card_layout.addWidget(note)
@@ -337,7 +337,7 @@ class ReadingTextTab(_ReadingMiningTabBase):
             self.log_widget.append_warning(
                 self.tr(
                     "This card image has no Picture field to land in. Map one"
-                    " in Settings → Anki, or clear the image to mine without one."
+                    " in Settings → Cards & Anki, or clear the image."
                 )
             )
             return
