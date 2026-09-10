@@ -149,7 +149,7 @@ def test_ready_manual_sub_source_is_hover_detail(qtbot) -> None:
     qtbot.addWidget(widget)
     widget.update_from(item)
 
-    assert widget.toolTip() == "Manual JA subs"
+    assert widget.toolTip() == "Manual subtitles"
 
 
 def test_ready_auto_sub_source_is_hover_detail(qtbot) -> None:
@@ -162,7 +162,7 @@ def test_ready_auto_sub_source_is_hover_detail(qtbot) -> None:
     qtbot.addWidget(widget)
     widget.update_from(item)
 
-    assert widget.toolTip() == "Auto JA subs"
+    assert widget.toolTip() == "Auto subtitles"
 
 
 def test_ready_transcribe_sub_source_is_hover_detail(qtbot) -> None:
@@ -188,7 +188,7 @@ def test_ready_auto_dub_sub_source_is_hover_detail(qtbot) -> None:
     qtbot.addWidget(widget)
     widget.update_from(item)
 
-    assert widget.toolTip() == "Auto JA subs (dub audio)"
+    assert widget.toolTip() == "Auto subtitles (dub audio)"
 
 
 def test_sub_mode_label_covers_every_sub_mode() -> None:
@@ -231,7 +231,7 @@ def test_completed_shows_card_count(qtbot) -> None:
     widget.update_from(item)
 
     assert widget.state_label.text() == "Complete"
-    assert widget.result_label.text() == "42 cards"
+    assert widget.result_label.text() == "Cards: 42"
 
 
 # ---------------------------------------------------------------------------
