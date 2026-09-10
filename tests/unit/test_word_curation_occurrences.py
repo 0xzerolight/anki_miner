@@ -44,7 +44,7 @@ def test_occurrences_header_explains_the_sentence_picker_gap(qtbot):
 
     tooltip = dlg.table.horizontalHeaderItem(_OCC_COL).toolTip()
     assert "Sentences" in tooltip
-    assert "same line" in tooltip
+    assert "one option per line" in tooltip
 
 
 def test_occurrence_count_rendered(qtbot):
