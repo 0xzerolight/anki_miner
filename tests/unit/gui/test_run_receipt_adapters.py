@@ -440,58 +440,61 @@ class TestBatchReceipt:
         batch_tab._on_run_thread_finished()
         assert batch_tab.log_widget.full_text().count(line) == 1
 
-    def test_the_quick_path_ends_in_a_receipt_and_no_message_box(self, batch_tab, clock):
-        with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox") as message_box:
-            with patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread", MagicMock()):
-                batch_tab._start_processing_with_pairs([object(), object()])
-            batch_tab._on_processing_finished([_result(20), _result(13)])
-            clock["t"] += 3612
-            batch_tab._on_run_thread_finished()
+    def test_the_tab_has_no_message_box_left_to_open(self):
+        """The static form of "and no dialog": the module imports none.
+
+        The tests below used to patch ``batch_processing_tab.QMessageBox`` and
+        assert it was never called. There is no such attribute now, which is
+        the same claim proven for every path at once.
+        """
+        from anki_miner.gui.widgets import batch_processing_tab
+
+        assert not hasattr(batch_processing_tab, "QMessageBox")
+
+    def test_the_quick_path_ends_in_a_receipt(self, batch_tab, clock):
+        with patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread", MagicMock()):
+            batch_tab._start_processing_with_pairs([object(), object()])
+        batch_tab._on_processing_finished([_result(20), _result(13)])
+        clock["t"] += 3612
+        batch_tab._on_run_thread_finished()
 
         assert batch_tab._receipt_widget.summary_text == ("Mining complete — 2 episodes, 33 notes added in 1h 00m 12s")
-        message_box.information.assert_not_called()
-        message_box.warning.assert_not_called()
 
-    def test_a_partly_failed_quick_run_names_the_failures_without_a_dialog(self, batch_tab, clock):
-        with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox") as message_box:
-            with patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread", MagicMock()):
-                batch_tab._start_processing_with_pairs([object(), object()])
-            batch_tab._on_processing_finished([_result(5), _result(0, errors=["deck missing"])])
-            clock["t"] += 30
-            batch_tab._on_run_thread_finished()
+    def test_a_partly_failed_quick_run_names_the_failures(self, batch_tab, clock):
+        with patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread", MagicMock()):
+            batch_tab._start_processing_with_pairs([object(), object()])
+        batch_tab._on_processing_finished([_result(5), _result(0, errors=["deck missing"])])
+        clock["t"] += 30
+        batch_tab._on_run_thread_finished()
 
         assert batch_tab._receipt_widget.summary_text == (
             "Finished with errors — 1 of 2 episodes completed; 5 notes added in 00m 30s"
         )
-        message_box.warning.assert_not_called()
 
     def test_a_cancelled_quick_run_congratulates_nobody(self, batch_tab, clock):
         """The old box fired after a cancellation too. This is the exact case."""
-        with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox") as message_box:
-            with patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread", MagicMock()):
-                batch_tab._start_processing_with_pairs([object(), object(), object()])
-            batch_tab._cancel_requested = True
-            batch_tab._on_processing_finished([_result(7)])
-            clock["t"] += 497
-            batch_tab._on_run_thread_finished()
+        with patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread", MagicMock()):
+            batch_tab._start_processing_with_pairs([object(), object(), object()])
+        batch_tab._cancel_requested = True
+        batch_tab._on_processing_finished([_result(7)])
+        clock["t"] += 497
+        batch_tab._on_run_thread_finished()
 
         assert batch_tab._receipt_widget.summary_text == (
             "Cancelled — 1 of 3 episodes completed; 7 notes added in 08m 17s"
         )
-        message_box.information.assert_not_called()
 
     def test_the_queue_path_reports_item_failure_consistently(self, batch_tab, clock, task_registry, tmp_path):
         batch_tab.bind_task_registry(task_registry)
         batch_tab.batch_queue.add_item(tmp_path, tmp_path, "Show A", 0.0)
         batch_tab.batch_queue.add_item(tmp_path, tmp_path, "Show B", 0.0)
-        with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox") as message_box:
-            with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", MagicMock()):
-                batch_tab._start_queue_worker()
-            batch_tab._on_item_completed(batch_tab.batch_queue.get_all_items()[0].id, 40)
-            batch_tab._on_item_failed(batch_tab.batch_queue.get_all_items()[1].id, "no subtitles", 5)
-            clock["t"] += 65
-            batch_tab._on_queue_finished(40)
-            batch_tab._on_run_thread_finished()
+        with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", MagicMock()):
+            batch_tab._start_queue_worker()
+        batch_tab._on_item_completed(batch_tab.batch_queue.get_all_items()[0].id, 40)
+        batch_tab._on_item_failed(batch_tab.batch_queue.get_all_items()[1].id, "no subtitles", 5)
+        clock["t"] += 65
+        batch_tab._on_queue_finished(40)
+        batch_tab._on_run_thread_finished()
 
         assert batch_tab._receipt_widget.summary_text == (
             "Finished with errors — 1 of 2 series completed; 45 notes added in 01m 05s"
@@ -499,7 +502,6 @@ class TestBatchReceipt:
         assert batch_tab.overall_progress_widget.status_label.text() == "Finished with errors — see log"
         assert batch_tab._receipt_widget.receipt.outcome is TerminalOutcome.PARTIAL
         assert task_registry.snapshot(batch_tab.TASK_ID).outcome is TaskOutcome.FAILED
-        message_box.information.assert_not_called()
 
     def test_the_queue_path_folds_the_worker_whitelist_into_the_receipt(self, batch_tab, clock, tmp_path):
         batch_tab.batch_queue.add_item(tmp_path, tmp_path, "Show A", 0.0)
@@ -516,18 +518,16 @@ class TestBatchReceipt:
         assert receipt.copy_words_button.isVisibleTo(receipt) is True
         assert "Whitelist: 1 of 2 mined. Not mined: 走る." in batch_tab.log_widget.full_text()
 
-    def test_a_cancelled_queue_run_opens_no_dialog(self, batch_tab, clock, tmp_path):
+    def test_a_cancelled_queue_run_states_what_it_got_through(self, batch_tab, clock, tmp_path):
         batch_tab.batch_queue.add_item(tmp_path, tmp_path, "Show A", 0.0)
-        with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox") as message_box:
-            with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", MagicMock()):
-                batch_tab._start_queue_worker()
-            batch_tab._cancel_requested = True
-            clock["t"] += 11
-            batch_tab._on_queue_finished(0)
-            batch_tab._on_run_thread_finished()
+        with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", MagicMock()):
+            batch_tab._start_queue_worker()
+        batch_tab._cancel_requested = True
+        clock["t"] += 11
+        batch_tab._on_queue_finished(0)
+        batch_tab._on_run_thread_finished()
 
         assert batch_tab._receipt_widget.summary_text == "Cancelled — 0 notes added in 00m 11s"
-        message_box.information.assert_not_called()
 
 
 def _assert_receipt_follows(tab, anchor_name: str) -> None:

@@ -542,7 +542,8 @@ class QueuePanel(QFrame):
         if self._locked:
             return
         if not self.queue_item_widgets:
-            QMessageBox.information(self, self.tr("Empty Queue"), self.tr("Queue is already empty."))
+            # Clearing nothing changes nothing; the counter above already reads
+            # "Queue is empty" (D24 keeps modals for destructive confirmation).
             return
 
         # A confirmation, not an error report: this is destructive and

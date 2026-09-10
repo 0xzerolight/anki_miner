@@ -6,7 +6,7 @@ Convention: success pins the bar at 100% with a summary; cancel resets to
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -36,8 +36,7 @@ def _prime_progress(tab):
 def test_queue_finished_success_pins_summary(tab):
     """Success: bar pinned at 100% with a card-count summary."""
     _prime_progress(tab)
-    with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox.information"):
-        tab._on_queue_finished(total_cards=5)
+    tab._on_queue_finished(total_cards=5)
     assert tab.overall_progress_widget.progress_bar.value() == 100
     assert tab.overall_progress_widget.status_label.text() == "Complete — 5 cards created"
 
@@ -48,8 +47,7 @@ def test_queue_finished_cancelled_keeps_the_frozen_bar(tab):
     question the user pressed Cancel to answer (D22)."""
     _prime_progress(tab)
     tab._cancel_requested = True
-    with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox.information"):
-        tab._on_queue_finished(total_cards=0)
+    tab._on_queue_finished(total_cards=0)
     assert tab.overall_progress_widget.progress_bar.value() == 60
     assert tab.overall_progress_widget.status_label.text() == "Cancelled"
 
@@ -58,8 +56,7 @@ def test_queue_finished_failed_resets_to_failed(tab):
     """Run-level fatal (error + queue_finished): "Failed — see log"."""
     _prime_progress(tab)
     tab._on_queue_worker_error("stale dicts")
-    with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox.information"):
-        tab._on_queue_finished(total_cards=0)
+    tab._on_queue_finished(total_cards=0)
     assert tab.overall_progress_widget.progress_bar.value() == 0
     assert tab.overall_progress_widget.status_label.text() == "Failed — see log"
 
@@ -67,8 +64,7 @@ def test_queue_finished_failed_resets_to_failed(tab):
 def test_processing_finished_pins_summary(tab):
     """Manual-pair completion pins the summary (result_ready implies no cancel)."""
     _prime_progress(tab)
-    with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox.information"):
-        tab._on_processing_finished(results=[])
+    tab._on_processing_finished(results=[])
     assert tab.overall_progress_widget.progress_bar.value() == 100
     assert tab.overall_progress_widget.status_label.text() == "Complete — 0 cards created"
 

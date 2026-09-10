@@ -985,7 +985,9 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
             item.error_message = None
             self.log_widget.append_info(tr_format(self._queue_list_strings.cancelled_item, label))
         else:
-            message = str(error) if error is not None else result_error_text(result)
+            # The model's default is untranslated (it has no tr context); the
+            # row and the log are UI, so the fallback is translated here.
+            message = str(error) if error is not None else result_error_text(result, default=self.tr("Mining failed"))
             item.status = self._status_error
             item.cards_created = cards
             item.error_message = message

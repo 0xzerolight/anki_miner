@@ -305,6 +305,25 @@ class TestListMinHeightFitsCardRows:
         assert collapsed >= panel._list_items[id(widget)].sizeHint().height() + self._frame(panel)
 
 
+class TestClearOnAnEmptyQueue:
+    def test_it_says_nothing_at_all(self, panel):
+        """Clearing nothing is neither a failure nor a change (D24, finding -26).
+
+        The counter above the list already reads "Queue is empty".
+        """
+        from unittest.mock import patch
+
+        assert panel.queue_item_widgets == []
+        with (
+            patch("PyQt6.QtWidgets.QMessageBox.information") as info,
+            patch("PyQt6.QtWidgets.QMessageBox.question") as question,
+        ):
+            panel._clear_queue()
+
+        info.assert_not_called()
+        question.assert_not_called()
+
+
 class TestSecondarySubtitleFolder:
     """A queued series can carry its own translation-subtitle folder (F7)."""
 

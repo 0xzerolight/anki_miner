@@ -15,7 +15,6 @@ from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QMessageBox,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -594,21 +593,31 @@ class BatchProcessingTab(MiningTabBase):
         self.worker_thread.start()
 
     def _warn_incomplete_items(self) -> None:
-        """Show warnings for incomplete queue items."""
+        """Report every series this run skipped, in ONE banner.
+
+        ``show_issue`` replaces whatever the banner held, so one call per row
+        left the user with the last name only and no sign the others were
+        skipped too. Several skips state the count and put the names in
+        ``details``; a lone skip keeps saying which folder is wrong.
+        """
         incomplete = self.queue_panel.get_incomplete_items()
-        for widget, issue_type in incomplete:
-            if issue_type == "invalid":
-                self.show_screen_issue(
-                    ScreenIssue(
-                        summary=tr_format(self.tr("%1 was skipped: its folders no longer exist."), widget.display_name)
-                    )
-                )
-            else:
-                self.show_screen_issue(
-                    ScreenIssue(
-                        summary=tr_format(self.tr("%1 was skipped: it is missing a folder."), widget.display_name)
-                    )
-                )
+        if not incomplete:
+            return
+        if len(incomplete) == 1:
+            widget, issue_type = incomplete[0]
+            summary = (
+                tr_format(self.tr("%1 was skipped: its folders no longer exist."), widget.display_name)
+                if issue_type == "invalid"
+                else tr_format(self.tr("%1 was skipped: it is missing a folder."), widget.display_name)
+            )
+            self.show_screen_issue(ScreenIssue(summary=summary))
+            return
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=tr_format(self.tr("%1 series were skipped: folders missing."), len(incomplete)),
+                details="\n".join(widget.display_name for widget, _ in incomplete),
+            )
+        )
 
     def _start_queue_worker(self) -> None:
         """Create and start the queue worker thread."""
@@ -1197,7 +1206,8 @@ class BatchProcessingTab(MiningTabBase):
 
         reset_count = self.batch_queue.reset_failed_for_retry()
         if reset_count == 0:
-            QMessageBox.information(self, self.tr("No Items to Retry"), self.tr("No failed items eligible for retry."))
+            # Nothing to retry is not a failure and not a change: the button
+            # hides itself on the next line, which is the whole answer (D24).
             self.retry_button.setVisible(False)
             return
 

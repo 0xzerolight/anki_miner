@@ -40,6 +40,19 @@ def _seed_failed_item(tab):
     return item
 
 
+def test_nothing_to_retry_hides_the_button_without_a_modal(tab):
+    """The button hides itself, which is the whole answer (D24, finding -27)."""
+    with (
+        patch.object(tab, "_start_queue_worker") as start,
+        patch("PyQt6.QtWidgets.QMessageBox.information") as mock_info,
+    ):
+        tab._retry_failed_items()
+
+    mock_info.assert_not_called()
+    start.assert_not_called()
+    assert tab.retry_button.isHidden()
+
+
 def test_retry_failed_items_shows_cancel_button(tab):
     """Regression for T-22: retry run must reveal the Cancel button."""
     _seed_failed_item(tab)
