@@ -117,46 +117,20 @@ class TestResolveYtdlp:
         monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: bin_dir)
         assert resolve_ytdlp(base_config) == "yt-dlp"
 
-    def test_bundled_used_when_frozen(self, base_config, tmp_path, monkeypatch):
-        bundled = _make_executable(tmp_path / "bin" / "yt-dlp")
-        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(ytdlp_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(ytdlp_resolver.sys, "platform", "linux")
-        # No downloaded copy in the (isolated) home.
-        assert resolve_ytdlp(base_config) == str(bundled)
+    def test_frozen_bundle_bin_is_ignored(self, base_config, tmp_path, monkeypatch):
+        """The app ships no yt-dlp, so _MEIPASS/bin must never resolve.
 
-    def test_bundled_non_executable_falls_through(self, base_config, tmp_path, monkeypatch):
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
-        bundled = bin_dir / "yt-dlp"
-        bundled.write_text("#!/bin/sh\n")
-        bundled.chmod(0o644)
+        A binary left there by an older install (or hand-planted) must not shadow
+        the managed slot the updater writes — that slot is now the only copy the
+        app knows how to keep fresh.
+        """
+        _make_executable(tmp_path / "bin" / "yt-dlp")
         monkeypatch.setattr(ytdlp_resolver.sys, "frozen", True, raising=False)
         monkeypatch.setattr(ytdlp_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
         monkeypatch.setattr(ytdlp_resolver.sys, "platform", "linux")
+        monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: tmp_path / "home" / "bin")
+        ytdlp_resolver._clear_cache()
         assert resolve_ytdlp(base_config) == "yt-dlp"
-
-    def test_bundled_windows_exe_name(self, base_config, tmp_path, monkeypatch):
-        bin_dir = tmp_path / "bin"
-        bin_dir.mkdir()
-        bundled = bin_dir / "yt-dlp.exe"
-        bundled.write_text("binary")
-        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(ytdlp_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(ytdlp_resolver.sys, "platform", "win32")
-        assert resolve_ytdlp(base_config) == str(bundled)
-
-    def test_downloaded_beats_bundled(self, base_config, tmp_path, monkeypatch):
-        download_dir = tmp_path / "home" / "bin"
-        downloaded = _make_executable(download_dir / "yt-dlp")
-        _write_receipt(downloaded)
-        bundled = _make_executable(tmp_path / "bin" / "yt-dlp")
-        assert bundled.exists()
-        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(ytdlp_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(ytdlp_resolver.sys, "platform", "linux")
-        monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: download_dir)
-        assert resolve_ytdlp(base_config) == str(downloaded)
 
     def test_override_beats_downloaded(self, base_config, tmp_path, monkeypatch):
         override = _make_executable(tmp_path / "override-yt-dlp")
@@ -169,7 +143,7 @@ class TestResolveYtdlp:
 
 
 class TestTierPrecedence:
-    """Pin the relative order of the managed / PATH / bundled tiers.
+    """Pin the relative order of the managed and PATH tiers.
 
     None of this was covered before: every test in this module nulls
     ``shutil.which``, so PATH never competed with another tier.
@@ -199,41 +173,6 @@ class TestTierPrecedence:
         monkeypatch.setattr(ytdlp_resolver.sys, "frozen", False, raising=False)
         monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: download_dir)
         assert resolve_ytdlp(base_config) == str(path_binary)
-
-    def test_path_beats_bundled_when_frozen(self, base_config, tmp_path, monkeypatch):
-        """Deliberate divergence from ffmpeg_resolver/alass_resolver.
-
-        yt-dlp breaks whenever YouTube changes something, so a user's own binary is
-        usually fresher than a build-time pin. Bundled-first would silently
-        downgrade the one population that never had the missing-binary bug. Do not
-        "fix" this toward consistency with the sibling resolvers.
-        """
-        bundled = _make_executable(tmp_path / "bin" / "yt-dlp")
-        path_binary = _make_executable(tmp_path / "path-bin" / "yt-dlp")
-        monkeypatch.setattr(shutil, "which", lambda name: str(path_binary))
-        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(ytdlp_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(ytdlp_resolver.sys, "platform", "linux")
-        assert bundled.exists()
-        assert resolve_ytdlp(base_config) == str(path_binary)
-
-    def test_managed_beats_bundled_when_frozen(self, base_config, tmp_path, monkeypatch):
-        """The bundle smoke cannot cover this: it always runs with an empty home.
-
-        ``scripts/bundle_smoke.sh`` points ANKI_MINER_HOME at a fresh mktemp dir, so
-        the managed slot is guaranteed empty there and this precedence is never
-        exercised by the release gate.
-        """
-        download_dir = tmp_path / "home" / "bin"
-        downloaded = _make_executable(download_dir / "yt-dlp")
-        _write_receipt(downloaded)
-        bundled = _make_executable(tmp_path / "bin" / "yt-dlp")
-        monkeypatch.setattr(ytdlp_resolver.sys, "frozen", True, raising=False)
-        monkeypatch.setattr(ytdlp_resolver.sys, "_MEIPASS", str(tmp_path), raising=False)
-        monkeypatch.setattr(ytdlp_resolver.sys, "platform", "linux")
-        monkeypatch.setattr(ytdlp_resolver, "ytdlp_download_dir", lambda: download_dir)
-        assert bundled.exists()
-        assert resolve_ytdlp(base_config) == str(downloaded)
 
 
 class TestInterpreterSiblingTier:
