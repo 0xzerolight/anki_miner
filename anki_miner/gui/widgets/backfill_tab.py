@@ -901,6 +901,12 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
     def _on_worker_finished(self) -> None:
         self._set_running(False)
         cancelled = self.worker_thread is not None and self.worker_thread.is_cancelled
+        # The scan worker declares no ``cancelled`` signal and returns silently,
+        # so this is the only place that can close out a cancelled scan. Guarded
+        # on the exact live text: the Apply path has already written its partial
+        # receipt here by the time ``finished`` arrives.
+        if cancelled and self.status_label.text() == self.tr("Cancelling…"):
+            self.status_label.setText(self.tr("Cancelled."))
         self._publish_task_finish(self._task_outcome(cancelled=cancelled, failed=self._run_failed))
         self._run_failed = False
         self.worker_thread = None

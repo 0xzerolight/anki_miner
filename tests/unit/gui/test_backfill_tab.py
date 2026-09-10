@@ -549,6 +549,46 @@ class TestApplyFlow:
         assert snapshot is not None
         assert snapshot.outcome is TaskOutcome.CANCELLED
 
+    def test_cancelled_apply_receipt_survives_the_finish(self, tab):
+        # _on_apply_cancelled runs before finished; the finish must not
+        # overwrite the partial receipt it composed.
+        worker = MagicMock()
+        worker.is_cancelled = True
+        tab.worker_thread = worker
+        tab.status_label.setText("Cancelled. Filled 2 field(s) on 1 note(s).")
+
+        tab._on_worker_finished()
+
+        assert tab.status_label.text() == "Cancelled. Filled 2 field(s) on 1 note(s)."
+
+
+class TestCancelledScan:
+    """The scan workers emit no ``cancelled`` signal, so ``finished`` closes out.
+
+    Without that, a cancelled scan left "Cancelling…" on screen for good — a
+    status asserting live work that had already ended (D17).
+    """
+
+    def test_cancelled_scan_reports_cancelled(self, tab):
+        worker = MagicMock()
+        worker.is_cancelled = True
+        tab.worker_thread = worker
+        tab.status_label.setText("Cancelling…")
+
+        tab._on_worker_finished()
+
+        assert tab.status_label.text() == "Cancelled."
+
+    def test_finished_scan_keeps_its_own_receipt(self, tab):
+        worker = MagicMock()
+        worker.is_cancelled = False
+        tab.worker_thread = worker
+        tab.status_label.setText("Cancelling…")
+
+        tab._on_worker_finished()
+
+        assert tab.status_label.text() == "Cancelling…"
+
 
 class TestConfigAndLifecycle:
     def test_update_config_clears_plan_and_regates(self, tab, backfill_config):
