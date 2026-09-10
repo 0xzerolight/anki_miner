@@ -18,7 +18,6 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QMessageBox,
     QScrollArea,
     QVBoxLayout,
     QWidget,
@@ -35,7 +34,7 @@ from anki_miner.gui.constants import (
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
-from anki_miner.gui.utils.qt_helpers import reveal_settings, urls_from_event
+from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.recent_files import RecentFilesManager
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.utils.service_factory import create_episode_processor
@@ -469,10 +468,6 @@ class SingleEpisodeTab(MiningTabBase):
         if sibling is not None:
             self.subtitle_selector.set_path(str(sibling))
 
-    def _open_media_settings(self) -> None:
-        """Repair action for a probe failure: the ffmpeg/ffprobe paths live there."""
-        reveal_settings(self, "media")
-
     def _on_tracks_clicked(self) -> None:
         """Open the AudioTracksDialog for manual audio track override selection."""
         # Not a fresh attempt (D24): opening the picker must not clear a real
@@ -511,11 +506,7 @@ class SingleEpisodeTab(MiningTabBase):
                     return
                 streams = cast("list[AudioStream]", result)
                 if not streams:
-                    QMessageBox.information(
-                        self,
-                        self.tr("No Audio Tracks"),
-                        self.tr("No audio tracks detected. Check that ffprobe is installed and the file has audio."),
-                    )
+                    self._report_no_audio_tracks()
                     return
 
                 # Resolve the auto-detected pick so the dialog can show it in the "Auto" radio.
@@ -542,17 +533,25 @@ class SingleEpisodeTab(MiningTabBase):
                 return
             with contextlib.suppress(RuntimeError):
                 self.tracks_button.setEnabled(True)
-                self.show_screen_issue(
-                    ScreenIssue(
-                        summary=self.tr("Audio tracks could not be read."),
-                        details=msg,
-                        action_id="settings.media",
-                        action_text=self.tr("Open Media Settings"),
-                    ),
-                    action=self._open_media_settings,
-                )
+                self._report_no_audio_tracks(details=msg)
 
         run_off_thread(self, _probe, _on_streams, _on_probe_error)
+
+    def _report_no_audio_tracks(self, details: str = "") -> None:
+        """One banner for a file with no audio track and for a probe that failed.
+
+        ``list_audio_streams`` never raises -- ffprobe missing, timing out or
+        returning junk all arrive as an empty list -- so the two branches are
+        the same problem to the user, and ffmpeg is the half of it they can act
+        on. No repair button: the Card Media panel has no ffmpeg control to
+        send them to.
+        """
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=self.tr("No audio track found — check that ffmpeg is installed."),
+                details=details,
+            )
+        )
 
     def _on_process_clicked(self) -> None:
         """Handle process button click."""
@@ -610,8 +609,14 @@ class SingleEpisodeTab(MiningTabBase):
                     return
                 entries = cast("list[tuple[float, float, str]]", result)
                 if not entries:
-                    QMessageBox.information(
-                        self, self.tr("No Subtitles"), self.tr("No subtitle entries found in the file.")
+                    # The file parsed: what is missing is lines that survived
+                    # Comment events, markup stripping and the user's
+                    # subtitle_regex_filter. A read failure has its own branch
+                    # in _on_parse_error.
+                    self.show_screen_issue(
+                        ScreenIssue(
+                            summary=self.tr("No subtitle lines to preview — check the filter in Settings → Filtering.")
+                        )
                     )
                     return
 

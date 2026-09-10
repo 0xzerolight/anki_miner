@@ -1057,7 +1057,12 @@ def test_timing_parse_discards_result_after_inputs_change(tab, tmp_path):
     assert tab.timing_button.isEnabled()
 
 
-def test_timing_empty_entries_shows_info_and_reenables(tab, tmp_path, qtbot):
+def test_timing_no_lines_reports_an_issue_and_reenables(tab, tmp_path, qtbot):
+    """The file parsed; every cue was dropped downstream (D24, finding -06).
+
+    "No subtitle entries found in the file." claimed the file had none, and it
+    said so in a modal for a recoverable problem.
+    """
     fake_video = tmp_path / "ep01.mkv"
     fake_video.touch()
     fake_subs = tmp_path / "ep01.ass"
@@ -1075,9 +1080,11 @@ def test_timing_empty_entries_shows_info_and_reenables(tab, tmp_path, qtbot):
         patch("PyQt6.QtWidgets.QMessageBox.information") as mock_info,
     ):
         tab._on_timing_clicked()
-        qtbot.waitUntil(lambda: mock_info.called, timeout=3000)
+        qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
 
-    mock_info.assert_called_once()
+    mock_info.assert_not_called()
+    issue = tab.issue_banner().current_issue()
+    assert issue.summary == "No subtitle lines to preview — check the filter in Settings → Filtering."
     assert tab.timing_button.isEnabled()
 
 
@@ -1183,7 +1190,12 @@ def test_torn_down_tab_survives_a_late_track_probe_completion(tab, tmp_path, qtb
         qtbot.wait(50)  # let the queued result_ready delivery run; must not raise
 
 
-def test_tracks_empty_streams_shows_info_and_reenables(tab, tmp_path, qtbot):
+def test_tracks_empty_streams_reports_an_issue_and_reenables(tab, tmp_path, qtbot):
+    """``list_audio_streams`` returns [] for a missing ffprobe too (finding -05).
+
+    So the empty list and the (unreachable) raise are one problem with one
+    banner, and neither carries a repair the Card Media panel cannot perform.
+    """
     fake_video = tmp_path / "ep01.mkv"
     fake_video.touch()
     tab.video_selector.get_path = MagicMock(return_value=str(fake_video))
@@ -1194,9 +1206,13 @@ def test_tracks_empty_streams_shows_info_and_reenables(tab, tmp_path, qtbot):
         patch("PyQt6.QtWidgets.QMessageBox.information") as mock_info,
     ):
         tab._on_tracks_clicked()
-        qtbot.waitUntil(lambda: mock_info.called, timeout=3000)
+        qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
 
-    mock_info.assert_called_once()
+    mock_info.assert_not_called()
+    issue = tab.issue_banner().current_issue()
+    assert issue.summary == "No audio track found — check that ffmpeg is installed."
+    assert issue.details == ""
+    assert issue.action_text == ""
     assert tab.tracks_button.isEnabled()
 
 
@@ -1216,7 +1232,7 @@ def test_tracks_probe_error_reports_an_issue_and_reenables(tab, tmp_path, qtbot)
         qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
 
     issue = tab.issue_banner().current_issue()
-    assert issue.summary == "Audio tracks could not be read."
+    assert issue.summary == "No audio track found — check that ffmpeg is installed."
     assert "ffprobe blew up" in issue.details
     assert tab.tracks_button.isEnabled()
 
