@@ -1459,10 +1459,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 action=lambda: self.reveal_capability(CapabilityTarget("settings", "anki")),
             )
             return
-        self.status_bar.set_operation(self.tr("Restyling mined cards…"), "info")
+        self.status_bar.set_operation(self.tr("Restyling mined cards…"), "info", transient=False)
 
         def on_progress(scanned: int, total: int) -> None:
-            self.status_bar.set_operation(tr_format(self.tr("Restyling mined cards… %1/%2"), scanned, total), "info")
+            self.status_bar.set_operation(
+                tr_format(self.tr("Restyling mined cards… %1/%2"), scanned, total), "info", transient=False
+            )
 
         def on_result(result: RestyleResult) -> None:
             if result.failed:
@@ -2400,7 +2402,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     def _maybe_migrate_jmdict(self) -> None:
         """One-time: migrate legacy JMdict XML into a SQLite index in the background."""
         if self.background_tasks.maybe_migrate_jmdict(self.config):
-            self.status_bar.set_operation(self.tr("Preparing the JMdict dictionary…"), "info")
+            self.status_bar.set_operation(self.tr("Preparing the JMdict dictionary…"), "info", transient=False)
 
     def _on_jmdict_migration_finished(self, dict_id: str, meta: dict) -> None:
         """Notify tabs that they need to rebuild any cached DefinitionService.

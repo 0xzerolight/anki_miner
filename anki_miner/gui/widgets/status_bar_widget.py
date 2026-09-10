@@ -277,19 +277,23 @@ class StatusBarWidget(QStatusBar):
             return
         self.task_activated.emit(task_id)
 
-    def set_operation(self, message: str, level: str = "info") -> None:
+    def set_operation(self, message: str, level: str = "info", *, transient: bool = True) -> None:
         """Set the current operation message.
 
         Args:
             message: Operation message
             level: Message level ('info', 'success', 'warning', 'error')
+            transient: ``False`` for a line that describes work still running,
+                which must stay until its own terminal line replaces it (A8-26).
+                A multi-minute step that posts one line and no further updates
+                otherwise left the bar reading "Ready" while it ran.
         """
         self._operation_timer.stop()
         self._render_operation(message, level)
 
-        # Errors stay put; everything else is a transient note about a moment
-        # that has passed, and must not outlive it.
-        if level != "error":
+        # Errors stay put; so does active work. Everything else is a transient
+        # note about a moment that has passed, and must not outlive it.
+        if transient and level != "error":
             self._operation_timer.start()
 
     def clear_operation(self) -> None:

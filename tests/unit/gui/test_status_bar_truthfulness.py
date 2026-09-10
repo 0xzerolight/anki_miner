@@ -88,6 +88,21 @@ class TestOperationMessagesExpire:
             timeout=OPERATION_EXPIRY_MS + 2000,
         )
 
+    def test_a_line_for_work_still_running_does_not_expire(self, qtbot):
+        """The other half of A8-26: active work must not decay to "Ready"."""
+        bar = StatusBarWidget()
+        qtbot.addWidget(bar)
+
+        bar.set_operation("Preparing the JMdict dictionary…", "info", transient=False)
+
+        assert bar.operation_label.text() == "Preparing the JMdict dictionary…"
+        assert bar._operation_timer.isActive() is False
+
+        # The terminal line for that same work is transient again.
+        bar.set_operation("JMdict ready (1,234 entries)", "info")
+
+        assert bar._operation_timer.isActive() is True
+
     def test_it_falls_back_to_ready_rather_than_blank(self, qtbot):
         bar = StatusBarWidget()
         qtbot.addWidget(bar)
