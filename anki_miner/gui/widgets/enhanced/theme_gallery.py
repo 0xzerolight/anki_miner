@@ -246,7 +246,7 @@ class ThemeCard(QFrame):
         side, font_px = _star_geometry(self)
         button.setFixedSize(side, side)
         button.setStyleSheet(f"font-size: {font_px}px;")
-        button.setToolTip(self.tr("Click to add to / remove from favorites."))
+        button.setToolTip(self.tr("Add to or remove from favorites."))
         button.clicked.connect(lambda _checked=False: self.star_clicked.emit(self._key))
         return button
 
@@ -495,7 +495,7 @@ class ThemeGalleryWidget(QWidget):
             button.setText(STAR_FILLED)
             button.setToolTip(
                 tr_format(
-                    self.tr("%1 of %2 %3 variants favorited. Click to favorite all."),
+                    self.tr("Favorite all %2 %3 variants (%1 favorited)."),
                     n_fav,
                     n_total,
                     family,

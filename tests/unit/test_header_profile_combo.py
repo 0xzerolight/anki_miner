@@ -362,7 +362,7 @@ def test_the_closed_combo_tooltip_leads_with_the_active_profiles_full_name(qtbot
     tooltip = header.profile_combo.toolTip()
     assert tooltip.startswith(long_name)
     # The generic explanation is kept, not replaced.
-    assert "Manage profiles…" in tooltip
+    assert header._profile_tooltip in tooltip
 
 
 def test_the_tooltip_falls_back_to_the_explanation_with_nothing_active(qtbot):

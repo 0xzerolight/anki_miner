@@ -67,7 +67,7 @@ class UpdateBanner(QFrame):
     # ------------------------------------------------------------------ helpers
 
     def _format_label(self, info: UpdateInfo) -> str:
-        return tr_format(self.tr("Anki Miner v%1 is available!"), info.version)
+        return tr_format(self.tr("Anki Miner v%1 is available"), info.version)
 
     def _download_label(self, info: UpdateInfo) -> str:
         """Map the asset URL extension to a user-facing button label."""
