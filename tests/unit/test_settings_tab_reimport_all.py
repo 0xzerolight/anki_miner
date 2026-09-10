@@ -216,7 +216,7 @@ def test_reimport_all_two_yomitan(tab_for_reimport_all, monkeypatch, stubbed_wor
     assert summaries, "Summary dialog must be shown"
     title, body = summaries[-1]
     assert title == "Reimport All"
-    assert "Reimported 2" in body
+    assert "Reimported dictionaries (2):" in body
     assert "Dict A" in body and "Dict B" in body
     assert "Cancelled" not in body
     assert warnings == []
@@ -246,7 +246,7 @@ def test_reimport_all_skips_legacy_without_source_zip(tab_for_reimport_all, monk
     # Only the fresh dict was given to a worker.
     assert stubbed_workers["yomitan_factory"].call_count == 1
     _, body = summaries[-1]
-    assert "Reimported 1" in body
+    assert "Reimported dictionaries (1):" in body
     assert "Fresh" in body
     assert "Legacy" in body
     assert "Skipped" in body
@@ -486,7 +486,7 @@ def test_reimport_all_one_failure_continues(tab_for_reimport_all, monkeypatch, s
     _complete_in_flight_worker(stubbed_workers)
 
     _, body = summaries[-1]
-    assert "Reimported 1" in body
+    assert "Reimported dictionaries (1):" in body
     assert "Failed" in body
     assert "Dict A" in body and "boom" in body
     assert "Dict B" in body
@@ -524,7 +524,7 @@ def test_reimport_all_release_refusal_blocks_workers(tab_for_reimport_all, monke
 
     stubbed_workers["yomitan_factory"].assert_not_called()
     stubbed_workers["jmdict_factory"].assert_not_called()
-    assert any("Indexed resources are in use" in summary for summary, _ in warnings), warnings
+    assert any("Another task is using the indexed resources" in summary for summary, _ in warnings), warnings
 
 
 def test_reimport_all_defers_reassignment_until_native_finished_without_wait(

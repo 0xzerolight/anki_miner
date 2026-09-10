@@ -602,8 +602,8 @@ class TestReimportPack:
 
         stub_worker.assert_not_called()
         stub_worker.repair_factory.assert_not_called()
-        assert any("Indexed resources are in use" in body for _title, body in warnings)
-        assert all(task in warnings[0][1] for task in ("mining", "startup prewarm", "card backfill"))
+        assert any("Another task is using the indexed resources" in body for _title, body in warnings)
+        assert warnings[0][1] == "Another task is using the indexed resources — try again when it finishes."
         assert tab.audio_panel._add_btn.isEnabled()
 
     def test_reimport_uses_repair_worker_and_pack_id(self, tab, monkeypatch, stub_worker, tmp_path):
@@ -1148,7 +1148,7 @@ class TestReimportAll:
         tab._audio_pack_import_flow.reimport_all(only_ids=frozenset({"forvo"}))
 
         stub_worker.repair_factory.assert_not_called()
-        assert any("Indexed resources are in use" in body for _title, body in warnings)
+        assert any("Another task is using the indexed resources" in body for _title, body in warnings)
 
     @pytest.mark.parametrize("scenario", ["nothing_to_do", "release_refused", "batch_runs"])
     def test_on_complete_fires_once_on_every_terminal_path(self, tab, monkeypatch, stub_worker, tmp_path, scenario):

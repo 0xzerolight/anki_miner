@@ -211,7 +211,7 @@ def test_reimport_without_recoverable_source_reports_dialog(tmp_path: Path):
         flow.reimport_dict("broken")
 
     reported.assert_called_once()
-    assert "recoverable source" in reported.call_args.args[1].summary.lower()
+    assert reported.call_args.args[1].summary == "No saved copy of 'broken' is left — add the dictionary again."
     yomitan.assert_not_called()
     jmdict.assert_not_called()
 

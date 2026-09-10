@@ -250,10 +250,11 @@ class AudioPackImportFlow(ModalImportFlowMixin):
         packs.sort(key=lambda pd_fmt: _PACK_PRIORITY.get(derive_pack_id(pd_fmt[0].name), len(_PACK_PRIORITY)))
         if not packs:
             self._report_import_issue(
+                QCoreApplication.translate("AudioPackImportFlow", "No audio packs were found in that folder."),
                 tr_format(
                     QCoreApplication.translate(
                         "AudioPackImportFlow",
-                        "No recognisable audio packs were found in:\n%1\n\n"
+                        "Scanned: %1\n\n"
                         "Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), "
                         "Forvo (speaker subdirectories), JPod legacy ({reading} - {expression} stems).",
                     ),
@@ -326,7 +327,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
                     if result.cancelled
                     else None
                 ),
-                empty=QCoreApplication.translate("AudioPackImportFlow", "Done."),
+                empty=QCoreApplication.translate("AudioPackImportFlow", "Nothing was imported."),
             )
             QMessageBox.information(
                 self._parent,
@@ -356,7 +357,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             join_noun="audio pack import worker",
             failure_summary=QCoreApplication.translate("AudioPackImportFlow", "The audio pack could not be imported."),
             missing_result_message=QCoreApplication.translate(
-                "AudioPackImportFlow", "The import worker finished without a completion result."
+                "AudioPackImportFlow", "The import stopped before it finished. Try again."
             ),
             trace_id=trace_id,
             on_finished=on_finished,
@@ -434,7 +435,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             ),
             cancelling_label=QCoreApplication.translate("AudioPackImportFlow", "Cancelling…"),
             missing_result_message=QCoreApplication.translate(
-                "AudioPackImportFlow", "The import worker finished without a completion result."
+                "AudioPackImportFlow", "The import stopped before it finished. Try again."
             ),
             trace_id=trace_id,
             on_success=on_success,
@@ -486,8 +487,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             self._report_import_issue(
                 QCoreApplication.translate(
                     "AudioPackImportFlow",
-                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
-                    "Wait for the active task to finish and try again.",
+                    "Another task is using the indexed resources — try again when it finishes.",
                 ),
             )
             self._set_import_buttons_enabled(True)
@@ -543,9 +543,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             QMessageBox.information(
                 self._parent,
                 reimported_title,
-                tr_format(
-                    QCoreApplication.translate("AudioPackImportFlow", "Re-imported %1 successfully."), imported_id
-                ),
+                tr_format(QCoreApplication.translate("AudioPackImportFlow", "Re-imported %1."), imported_id),
             )
 
         def on_success_error(exc: Exception) -> None:
@@ -570,7 +568,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             ),
             cancelling_label=QCoreApplication.translate("AudioPackImportFlow", "Cancelling…"),
             missing_result_message=QCoreApplication.translate(
-                "AudioPackImportFlow", "The import worker finished without a completion result."
+                "AudioPackImportFlow", "The import stopped before it finished. Try again."
             ),
             trace_id=trace_id,
             on_success=on_success,
@@ -588,8 +586,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             self._report_import_issue(
                 QCoreApplication.translate(
                     "AudioPackImportFlow",
-                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
-                    "Wait for the active task to finish and try again.",
+                    "Another task is using the indexed resources — try again when it finishes.",
                 ),
             )
             self._set_import_buttons_enabled(True)
@@ -705,7 +702,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             def _on_error(message: str) -> None:
                 self._set_import_buttons_enabled(True)
                 self._report_import_issue(
-                    QCoreApplication.translate("AudioPackImportFlow", "The audio pack folder could not be scanned."),
+                    QCoreApplication.translate("AudioPackImportFlow", "Installed audio packs could not be checked."),
                     message,
                 )
                 done()
@@ -719,7 +716,6 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             if skipped:
                 body = QCoreApplication.translate(
                     "AudioPackImportFlow",
-                    "No audio packs eligible for automatic repair were found.\n\n"
                     "Skipped (source folder or database not found; use per-row Re-import…):\n",
                 ) + "\n".join(f"  • {name}" for name in skipped)
             elif not only_ids_matched:
@@ -744,8 +740,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
             self._report_import_issue(
                 QCoreApplication.translate(
                     "AudioPackImportFlow",
-                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
-                    "Wait for the active task to finish and try again.",
+                    "Another task is using the indexed resources — try again when it finishes.",
                 ),
             )
             self._set_import_buttons_enabled(True)
@@ -820,7 +815,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
                     if result.cancelled
                     else None
                 ),
-                empty=QCoreApplication.translate("AudioPackImportFlow", "Nothing to do."),
+                empty=QCoreApplication.translate("AudioPackImportFlow", "Nothing was re-imported."),
             )
             QMessageBox.information(
                 self._parent,
@@ -852,7 +847,7 @@ class AudioPackImportFlow(ModalImportFlowMixin):
                 "AudioPackImportFlow", "Some audio packs could not be re-imported."
             ),
             missing_result_message=QCoreApplication.translate(
-                "AudioPackImportFlow", "The import worker finished without a completion result."
+                "AudioPackImportFlow", "The import stopped before it finished. Try again."
             ),
             trace_id=trace_id,
             on_finished=on_finished,

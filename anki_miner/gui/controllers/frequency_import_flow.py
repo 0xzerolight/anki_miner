@@ -48,14 +48,11 @@ class FrequencyImportFlow(SourceChainImportFlow):
             picker_add_caption=_tr("Choose frequency source"),
             picker_reimport_caption=_tr("Choose frequency source to re-import"),
             picker_filter_template=_tr("Frequency source (%1);;All Files (*)"),
-            scan_failed=_tr("That folder could not be scanned."),
-            resources_in_use=_tr(
-                "Indexed resources are in use by mining, startup prewarm, or card backfill. "
-                "Wait for the active task to finish and try again."
-            ),
+            scan_failed=_tr("Installed frequency sources could not be checked."),
+            resources_in_use=_tr("Another task is using the indexed resources — try again when it finishes."),
             settings_update_failed=_tr("The import finished, but the settings could not be updated."),
             refusal=_tr("Another import is still finishing. Wait for it to finish and try again."),
-            missing_result=_tr("The import worker finished without a completion result."),
+            missing_result=_tr("The import stopped before it finished. Try again."),
             cancel=_tr("Cancel"),
             cancelling=_tr("Cancelling…"),
             add_progress=_tr("Importing frequency source…"),
@@ -65,10 +62,11 @@ class FrequencyImportFlow(SourceChainImportFlow):
             picker_add_multi_caption=_tr("Choose frequency sources"),
             added_batch_title=_tr("Frequency Sources Added"),
             added_batch_header_template=_tr("Imported %1 frequency sources:"),
+            added_batch_done=_tr("Nothing was imported."),
             reimport_progress=_tr("Re-importing frequency source…"),
             reimport_failure_summary=_tr("The frequency source could not be re-imported."),
             reimported_title=_tr("Frequency Source Re-imported"),
-            reimported_body_template=_tr("Re-imported %1 successfully."),
+            reimported_body_template=_tr("Re-imported %1."),
             batch_progress_template=_tr("Frequency source %1 of %2: %3"),
             batch_failure_summary=_tr("The frequency sources could not be re-imported."),
             batch_title=_tr("Reimport All"),
@@ -76,13 +74,10 @@ class FrequencyImportFlow(SourceChainImportFlow):
             batch_skipped_header=_tr("Skipped (no saved copy to rebuild from; use per-row Re-import…):"),
             batch_failed_header=_tr("Failed:"),
             batch_cancelled=_tr("Cancelled before remaining frequency sources."),
-            batch_done=_tr("Done."),
+            batch_done=_tr("Nothing was re-imported."),
             nothing_title=_tr("Nothing to reimport"),
             nothing_empty_chain=_tr("No frequency sources in the chain."),
-            nothing_skipped_header=_tr(
-                "No frequency sources could be rebuilt automatically.\n\n"
-                "Skipped (no saved copy to rebuild from; use per-row Re-import…):\n"
-            ),
+            nothing_skipped_header=_tr("Skipped (no saved copy to rebuild from; use per-row Re-import…):\n"),
         )
 
     @property

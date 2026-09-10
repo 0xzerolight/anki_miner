@@ -97,6 +97,7 @@ class SourceFlowLabels:
     picker_add_multi_caption: str
     added_batch_title: str
     added_batch_header_template: str
+    added_batch_done: str
     # Single reimport.
     reimport_progress: str
     reimport_failure_summary: str
@@ -360,7 +361,7 @@ class SourceChainImportFlow(ModalImportFlowMixin):
                     ),
                 ],
                 cancelled_note=labels.batch_cancelled if result.cancelled else None,
-                empty=labels.batch_done,
+                empty=labels.added_batch_done,
             )
             QMessageBox.information(self._parent, labels.added_batch_title, summary)
 
@@ -495,6 +496,9 @@ class SourceChainImportFlow(ModalImportFlowMixin):
                 tr_format(labels.reimported_body_template, imported_id) + self._extra_reimport_notes(meta),
             )
 
+        def on_success_error(exc: Exception) -> None:
+            self._report_import_issue(labels.settings_update_failed, str(exc))
+
         self._run_modal_import(
             worker=worker,
             progress_label=labels.reimport_progress,
@@ -507,6 +511,7 @@ class SourceChainImportFlow(ModalImportFlowMixin):
             missing_result_message=labels.missing_result,
             trace_id=trace_id,
             on_success=on_success,
+            on_success_error=on_success_error,
         )
 
     # ------------------------------------------------------------------
