@@ -422,9 +422,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         """Set up accessibility features for screen readers and keyboard navigation."""
         # Set window accessible name and description
         self.setAccessibleName(self.tr("Anki Miner Main Window"))
-        self.setAccessibleDescription(
-            self.tr("Japanese vocabulary mining tool for creating Anki flashcards from video subtitles")
-        )
+        self.setAccessibleDescription(self.tr("Mines vocabulary from video, audio and text into Anki cards"))
 
         # Set accessible names for main components
         self.tabs.setAccessibleName(self.tr("Main Tabs"))
@@ -664,9 +662,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if self.background_tasks.prepare_dictionary_mutation():
             return True
         self.show_screen_issue(
-            ScreenIssue(
-                summary=self.tr("The startup JMdict migration is still stopping. Wait for it to finish and try again.")
-            )
+            ScreenIssue(summary=self.tr("Wait for the startup dictionary setup to finish, then try again."))
         )
         return False
 
@@ -1437,10 +1433,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             self,
             self.tr("Restyle Mined Cards"),
             self.tr(
-                "Re-apply the latest built-in styling to your mined cards so they match "
-                "new ones. Safe to re-run; it never removes card content.\n\nClose Anki's "
-                "card browser and any open note editor first — editing an open note can "
-                "lose unsaved edits.\n\nContinue?"
+                "Re-applies the current built-in styling to your mined cards.\n\nClose Anki's "
+                "card browser and note editor first — an open note can lose unsaved edits."
+                "\n\nContinue?"
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
@@ -1479,7 +1474,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                             result.failed,
                         ),
                         details=tr_format(
-                            self.tr("Restyled %1 card(s). (%2 scanned; %3 already up to date.)"),
+                            self.tr("Restyled %1 of %2 notes; %3 already up to date."),
                             result.restyled,
                             result.scanned,
                             result.skipped_styled,
@@ -1492,7 +1487,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 self,
                 self.tr("Restyle Mined Cards"),
                 tr_format(
-                    self.tr("Restyled %1 card(s). (%2 scanned; %3 already up to date.)"),
+                    self.tr("Restyled %1 of %2 notes; %3 already up to date."),
                     result.restyled,
                     result.scanned,
                     result.skipped_styled,
@@ -1786,7 +1781,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             self.anki_reachable.emit()
 
         if result.all_passed:
-            self.status_bar.set_operation(self.tr("System validation passed"), "success")
+            self.status_bar.set_operation(self.tr("All system checks passed"), "success")
             self.clear_screen_issue()
         elif not silent:
             # A wall of "- component: message" lines was the whole modal. The
@@ -2029,7 +2024,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             logger.warning("Cannot build AnkiService (invalid anki_fields): %s", exc)
             if hasattr(self, "status_bar"):
                 self.status_bar.set_operation(
-                    self.tr("Anki note-type fields are misconfigured; check Settings."), "error"
+                    self.tr("The Anki field mapping is not usable. Open Settings → Cards & Anki."), "error"
                 )
 
     def release_dictionary_resources(self) -> bool:
@@ -2333,14 +2328,14 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # The current (config-bound) service is passed per call so the rebuild
         # in _build_config_bound_services reaches the next run.
         if not self.background_tasks.start_validation(self.validation_service):
-            self.status_bar.set_operation(self.tr("Validation already running"), "info")
+            self.status_bar.set_operation(self.tr("System checks are already running."), "info")
             return
         # Both the badges and every health row go back to "not known yet". A
         # probe in flight is not a failure, and the previous sweep's answers are
         # no longer the answers to the question now being asked.
         self.status_bar.set_system_status_checking()
         self._publish_health(self._health_report.checking())
-        self.status_bar.set_operation(self.tr("Running system validation..."), "info")
+        self.status_bar.set_operation(self.tr("Running system checks…"), "info")
 
     def _on_validation_finished(self, result: ValidationResult) -> None:
         """Handle validation worker completion.
@@ -2405,7 +2400,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     def _maybe_migrate_jmdict(self) -> None:
         """One-time: migrate legacy JMdict XML into a SQLite index in the background."""
         if self.background_tasks.maybe_migrate_jmdict(self.config):
-            self.status_bar.set_operation(self.tr("Migrating JMdict to SQLite…"), "info")
+            self.status_bar.set_operation(self.tr("Preparing the JMdict dictionary…"), "info")
 
     def _on_jmdict_migration_finished(self, dict_id: str, meta: dict) -> None:
         """Notify tabs that they need to rebuild any cached DefinitionService.
