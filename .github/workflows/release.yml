@@ -183,7 +183,9 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxcb-xinerama0 libxkbcommon-x11-0 libegl1
+          # patchelf rewrites the vendored ffmpeg/ffprobe rpath — see the
+          # "Fetch shared ffmpeg (Linux)" step below.
+          sudo apt-get install -y libxcb-xinerama0 libxkbcommon-x11-0 libegl1 patchelf
 
       - name: Install dependencies
         run: |
@@ -282,16 +284,20 @@ jobs:
           echo "version=$CODE_VERSION" >> "$GITHUB_OUTPUT"
 
       # ---------------------------------------------------------------------
-      # Fetch a full static GPL ffmpeg build per-OS and flatten ffmpeg/ffprobe
-      # into vendor/ffmpeg/ at the repo root BEFORE PyInstaller runs. The spec
-      # (anki_miner.spec) globs vendor/ffmpeg/ and bundles whatever it finds at
-      # sys._MEIPASS/bin/ — the runtime resolver's lookup path. URLs are pinned
-      # to immutable assets and every download is SHA256-verified for
-      # reproducibility/supply-chain safety. These are GPL builds (NOT minimal):
-      # they ship libmp3lame, libopus, libsvtav1, and libwebp/libwebp_anim,
-      # which the bundled smoke step below asserts.
+      # Fetch a full GPL ffmpeg build per-OS and flatten it into vendor/ffmpeg/
+      # at the repo root BEFORE PyInstaller runs. The spec (anki_miner.spec)
+      # globs vendor/ffmpeg/ and bundles whatever it finds at sys._MEIPASS/bin/
+      # — the runtime resolver's lookup path. Linux and Windows take BtbN's
+      # gpl-SHARED variant: small ffmpeg/ffprobe executables over one set of
+      # libav*/libsw* libraries, so the codecs ship once instead of once per
+      # tool (the static pair was 390 MiB raw / 141 MiB gz, 30% of the Linux
+      # download). macOS keeps a static build — osxexperts and evermeet publish
+      # no shared one. URLs are pinned to immutable assets and every download is
+      # SHA256-verified for reproducibility/supply-chain safety. These are GPL
+      # builds (NOT minimal): they ship libmp3lame, libopus, libsvtav1, and
+      # libwebp/libwebp_anim, which the bundled smoke step below asserts.
       # ---------------------------------------------------------------------
-      - name: Fetch static ffmpeg (Linux)
+      - name: Fetch shared ffmpeg (Linux)
         if: runner.os == 'Linux'
         shell: bash
         run: |
@@ -299,14 +305,27 @@ jobs:
           # BtbN/FFmpeg-Builds. Pin a MONTHLY snapshot tag, never a daily one:
           # BtbN prunes daily autobuilds after ~10 days (404), but keeps the
           # last-of-month snapshot long-term (15+ months of history live).
-          URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-05-31-13-22/ffmpeg-n8.1.1-9-g58d4114d36-linux64-gpl-8.1.tar.xz"
-          SHA256="0d14781b885c491f5c3b799cbe7d3a26ba8a7eb01935483185e31ea7d79c8cd3"
+          URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-05-31-13-22/ffmpeg-n8.1.1-9-g58d4114d36-linux64-gpl-shared-8.1.tar.xz"
+          SHA256="5563b3454b754edbf066909c315729930018b8e1b00da4d97b52833dd094d109"
           curl -fL "$URL" -o ffmpeg-dl.tar.xz
           echo "${SHA256}  ffmpeg-dl.tar.xz" | sha256sum -c -
           mkdir -p vendor/ffmpeg extracted
           tar -xf ffmpeg-dl.tar.xz -C extracted
           cp "$(find extracted -type f -path '*/bin/ffmpeg' | head -1)" vendor/ffmpeg/ffmpeg
           cp "$(find extracted -type f -path '*/bin/ffprobe' | head -1)" vendor/ffmpeg/ffprobe
+          # One file per soname (libavcodec.so.62), dereferencing BtbN's symlink
+          # chain: the fully versioned name (libavcodec.so.62.28.101) is the same
+          # bytes and would ship twice. ffplay is not vendored at all.
+          for _lib in extracted/*/lib/*.so.*; do
+            case "${_lib##*/}" in *.so.*.*) continue ;; esac
+            cp -L "$_lib" vendor/ffmpeg/
+          done
+          # BtbN links the executables with a malformed rpath ("-Wl:../lib"), so
+          # nothing resolves; $ORIGIN points them at the copies that land beside
+          # them in _internal/bin/. --force-rpath writes DT_RPATH, which outranks
+          # the LD_LIBRARY_PATH the PyInstaller bootloader exports to child
+          # processes — DT_RUNPATH would lose to it.
+          patchelf --force-rpath --set-rpath '$ORIGIN' vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe
           chmod +x vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe
           rm -rf extracted ffmpeg-dl.tar.xz
           echo "Bundled ffmpeg landed in vendor/ffmpeg/:"
@@ -357,7 +376,7 @@ jobs:
           echo "Bundled ffmpeg landed in vendor/ffmpeg/:"
           ls -la vendor/ffmpeg/
 
-      - name: Fetch static ffmpeg (Windows)
+      - name: Fetch shared ffmpeg (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -365,8 +384,8 @@ jobs:
           # BtbN/FFmpeg-Builds. Pin a MONTHLY snapshot tag, never a daily one:
           # BtbN prunes daily autobuilds after ~10 days (404), but keeps the
           # last-of-month snapshot long-term (15+ months of history live).
-          $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-05-31-13-22/ffmpeg-n8.1.1-9-g58d4114d36-win64-gpl-8.1.zip"
-          $sha256 = "7fe1bb1e76edf97b8ec9e84fb32b96d125d846135b6b9218af772f5af2bd9065"
+          $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-05-31-13-22/ffmpeg-n8.1.1-9-g58d4114d36-win64-gpl-shared-8.1.zip"
+          $sha256 = "336f8af822c6bba8bbc7594ab67763661c22024b3e0c1206c5b701753a28f040"
           curl.exe -fL $url -o ffmpeg-dl.zip
           $actual = (Get-FileHash ffmpeg-dl.zip -Algorithm SHA256).Hash.ToLower()
           if ($actual -ne $sha256) {
@@ -379,6 +398,11 @@ jobs:
           $fp = Get-ChildItem -Path extracted -Recurse -Filter ffprobe.exe | Select-Object -First 1
           Copy-Item $ff.FullName vendor\ffmpeg\ffmpeg.exe -Force
           Copy-Item $fp.FullName vendor\ffmpeg\ffprobe.exe -Force
+          # BtbN ships the DLLs in the same bin/ directory as the executables,
+          # and Windows resolves imports from the executable's own directory, so
+          # they travel with it into _internal/bin/. ffplay.exe is left behind.
+          Get-ChildItem -Path extracted -Recurse -Filter *.dll |
+            ForEach-Object { Copy-Item $_.FullName vendor\ffmpeg\ -Force }
           Remove-Item -Recurse -Force extracted, ffmpeg-dl.zip
           Write-Host "Bundled ffmpeg landed in vendor/ffmpeg/:"
           Get-ChildItem vendor\ffmpeg

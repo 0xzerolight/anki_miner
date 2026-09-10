@@ -48,8 +48,8 @@ PIP="$VENV/bin/pip"
 
 # Pins mirrored from release.yml — bump together with the workflow.
 PYINSTALLER_VERSION="6.20.0"
-FFMPEG_URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-05-31-13-22/ffmpeg-n8.1.1-9-g58d4114d36-linux64-gpl-8.1.tar.xz"
-FFMPEG_SHA256="0d14781b885c491f5c3b799cbe7d3a26ba8a7eb01935483185e31ea7d79c8cd3"
+FFMPEG_URL="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-05-31-13-22/ffmpeg-n8.1.1-9-g58d4114d36-linux64-gpl-shared-8.1.tar.xz"
+FFMPEG_SHA256="5563b3454b754edbf066909c315729930018b8e1b00da4d97b52833dd094d109"
 ALASS_URL="https://github.com/kaegi/alass/releases/download/v2.0.0/alass-linux64"
 ALASS_SHA256="7bd0b9ae7e035d3ba940eacffb21243614df36231d47f21f0b4ce42001ab7fcd"
 LIBMPV_URL="https://github.com/0xzerolight/anki_miner/releases/download/vendor-libmpv-20260712/libmpv-linux-x86_64.tar.gz"
@@ -66,6 +66,11 @@ die() { echo "::error::$*" >&2; exit 1; }
 # appimagetool rejects an unvalidated metainfo file.
 if [ "$SKIP_PACKAGE" = "0" ] && ! command -v appstreamcli >/dev/null 2>&1; then
   die "appstreamcli not found — install it with: apt install appstream (or pass --skip-package)"
+fi
+# patchelf rewrites the vendored ffmpeg/ffprobe rpath (see the ffmpeg fetch
+# below). The fetch is not skippable, so this is checked unconditionally.
+if ! command -v patchelf >/dev/null 2>&1; then
+  die "patchelf not found — install it with: apt install patchelf"
 fi
 
 echo "############################################################"
@@ -102,13 +107,13 @@ echo "=== vendor ffmpeg + alass + yt-dlp + libmpv ==="
 mkdir -p "$CACHE" vendor/ffmpeg vendor/alass vendor/yt-dlp vendor/libmpv \
   licenses/alass licenses/yt-dlp licenses/libmpv
 if [ "$CLEAN" = "1" ]; then
-  rm -f vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe vendor/alass/alass vendor/yt-dlp/yt-dlp \
+  rm -f vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe vendor/ffmpeg/lib*.so.* vendor/alass/alass vendor/yt-dlp/yt-dlp \
     vendor/libmpv/libmpv.so.2 licenses/libmpv/Copyright licenses/libmpv/SOURCES.txt
 fi
 
 verify_sha() { echo "$2  $1" | sha256sum -c - >/dev/null 2>&1; }
 
-if [ ! -f vendor/ffmpeg/ffmpeg ] || [ ! -f vendor/ffmpeg/ffprobe ]; then
+if [ ! -f vendor/ffmpeg/ffmpeg ] || [ ! -f vendor/ffmpeg/ffprobe ] || ! ls vendor/ffmpeg/lib*.so.* >/dev/null 2>&1; then
   TARBALL="$CACHE/ffmpeg-linux64.tar.xz"
   if [ ! -f "$TARBALL" ] || ! verify_sha "$TARBALL" "$FFMPEG_SHA256"; then
     curl -fL "$FFMPEG_URL" -o "$TARBALL" || die "ffmpeg download failed"
@@ -118,6 +123,16 @@ if [ ! -f vendor/ffmpeg/ffmpeg ] || [ ! -f vendor/ffmpeg/ffprobe ]; then
   tar -xf "$TARBALL" -C "$CACHE/ff-extract"
   cp "$(find "$CACHE/ff-extract" -type f -path '*/bin/ffmpeg' | head -1)" vendor/ffmpeg/ffmpeg
   cp "$(find "$CACHE/ff-extract" -type f -path '*/bin/ffprobe' | head -1)" vendor/ffmpeg/ffprobe
+  # One file per soname, dereferencing BtbN's symlink chain: the fully versioned
+  # name is the same bytes and would ship twice. Mirrors release.yml.
+  for _lib in "$CACHE"/ff-extract/*/lib/*.so.*; do
+    case "${_lib##*/}" in *.so.*.*) continue ;; esac
+    cp -L "$_lib" vendor/ffmpeg/
+  done
+  # BtbN's rpath is a malformed literal; $ORIGIN finds the libraries that land
+  # beside the executables in _internal/bin/. Mirrors release.yml.
+  # shellcheck disable=SC2016  # $ORIGIN is resolved by the loader, not the shell
+  patchelf --force-rpath --set-rpath '$ORIGIN' vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe
   chmod +x vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe
 fi
 echo "vendor/ffmpeg: $(ls vendor/ffmpeg)"

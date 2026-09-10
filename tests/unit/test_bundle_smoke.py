@@ -86,6 +86,9 @@ def test_clean_release_preflight_fetches_verified_libmpv_before_pyinstaller(tmp_
         fake_bin / "sha256sum",
         '#!/usr/bin/env bash\nset -euo pipefail\ncat >> "$SHA_RECORD"\n',
     )
+    # The preflight refuses to run without patchelf: it rewrites the vendored
+    # ffmpeg/ffprobe rpath to $ORIGIN so they find the libav*/libsw* copies.
+    _write_executable(fake_bin / "patchelf", "#!/usr/bin/env bash\nexit 0\n")
     _write_executable(
         fake_bin / "tar",
         "#!/usr/bin/env bash\n"
@@ -100,7 +103,13 @@ def test_clean_release_preflight_fetches_verified_libmpv_before_pyinstaller(tmp_
         "  esac\n"
         "done\n"
         'case "$archive" in\n'
-        '  *ffmpeg*) mkdir -p "$dest/pkg/bin"; touch "$dest/pkg/bin/ffmpeg" "$dest/pkg/bin/ffprobe" ;;\n'
+        "  *ffmpeg*)\n"
+        '    mkdir -p "$dest/pkg/bin" "$dest/pkg/lib"\n'
+        '    touch "$dest/pkg/bin/ffmpeg" "$dest/pkg/bin/ffprobe"\n'
+        '    touch "$dest/pkg/lib/libavcodec.so.62.28.101" "$dest/pkg/lib/libavutil.so.60.26.101"\n'
+        '    ln -sf libavcodec.so.62.28.101 "$dest/pkg/lib/libavcodec.so.62"\n'
+        '    ln -sf libavutil.so.60.26.101 "$dest/pkg/lib/libavutil.so.60"\n'
+        "    ;;\n"
         '  *libmpv*) mkdir -p "$dest"; touch "$dest/libmpv.so.2" "$dest/Copyright" "$dest/SOURCES.txt" ;;\n'
         "esac\n",
     )
@@ -126,6 +135,8 @@ def test_clean_release_preflight_fetches_verified_libmpv_before_pyinstaller(tmp_
     )
 
     assert result.returncode == 0, result.stdout + result.stderr
+    assert (repo / "vendor" / "ffmpeg" / "libavcodec.so.62").is_file()
+    assert not (repo / "vendor" / "ffmpeg" / "libavcodec.so.62.28.101").exists()
     assert (repo / "vendor" / "libmpv" / "libmpv.so.2").is_file()
     assert (repo / "licenses" / "libmpv" / "Copyright").is_file()
     assert (repo / "licenses" / "libmpv" / "SOURCES.txt").is_file()

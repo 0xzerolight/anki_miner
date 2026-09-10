@@ -1,7 +1,7 @@
 # Bundled FFmpeg — license and source offer
 
 Anki Miner's downloadable binaries (Linux AppImage and `.deb`, Windows
-installer, macOS bundle) ship with a static build of
+installer, macOS bundle) ship with a GPL build of
 [FFmpeg](https://ffmpeg.org). These builds
 are licensed under the **GNU General Public License, version 3** — the full text
 is in [`COPYING.GPLv3`](COPYING.GPLv3).
@@ -21,11 +21,12 @@ below does not apply to them.
 
 ## Upstream build sources
 
-The bundled binaries are pre-built static builds taken from:
+The bundled binaries are pre-built builds taken from:
 
 - **Linux & Windows** — [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds),
   release tag `autobuild-2026-05-31-13-22`, FFmpeg version
-  `n8.1.1-9-g58d4114d36` (the `gpl-8.1` variant).
+  `n8.1.1-9-g58d4114d36` (the `gpl-shared-8.1` variant: `ffmpeg` and `ffprobe`
+  over shared `libav*`/`libsw*` libraries, all of which are bundled).
 - **macOS (arm64)** — [osxexperts.net](https://www.osxexperts.net) static
   FFmpeg 8.1 arm64 build.
 - **macOS (Intel / x86_64)** — [evermeet.cx](https://evermeet.cx/ffmpeg/) static
