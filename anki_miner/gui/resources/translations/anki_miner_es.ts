@@ -278,30 +278,6 @@
         <source>Note type '%1' is not in Anki — pick one below.</source>
         <translation>El tipo de nota '%1' no está en Anki; elija uno a continuación.</translation>
     </message>
-    <message>
-        <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation>No se pudo solicitar la lista de tipos de nota. Compruebe la dirección de AnkiConnect en Ajustes.</translation>
-    </message>
-    <message>
-        <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
-        <translation>No se recibieron tipos de nota. Compruebe que Anki se esté ejecutando con el complemento AnkiConnect.</translation>
-    </message>
-    <message>
-        <source>The note type list could not be read from Anki.</source>
-        <translation>No se pudo leer la lista de tipos de nota de Anki.</translation>
-    </message>
-    <message>
-        <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation>No se pudo solicitar la lista de campos. Compruebe la dirección de AnkiConnect en Ajustes.</translation>
-    </message>
-    <message>
-        <source>No fields came back for note type '%1'.</source>
-        <translation>No se recibieron campos para el tipo de nota '%1'.</translation>
-    </message>
-    <message>
-        <source>The field list could not be read from Anki.</source>
-        <translation>No se pudo leer la lista de campos de Anki.</translation>
-    </message>
 </context><context>
     <name>AnkiService</name>
     <message>
@@ -4727,18 +4703,6 @@ Los archivos en el disco quedarán sin modificar porque no se pudo comprobar que
         <translation>Vea, elimine, exporte o restablezca las palabras que añadió a su lista local de palabras conocidas desde el Curador de palabras.</translation>
     </message>
     <message>
-        <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
-        <translation>El escaneo lee el primer campo de cada nota. Asigne aquí un tipo de nota cuando su primer campo no sea la palabra: de lo contrario, sus oraciones se almacenan como palabras conocidas. Los tipos de nota sin asignar mantienen el primer campo. Ejecute después Reconstruir BD de palabras conocidas para borrar lo que ya se había almacenado.</translation>
-    </message>
-    <message>
-        <source>Map Note Type…</source>
-        <translation>Asignar tipo de nota…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Eliminar</translation>
-    </message>
-    <message>
         <source>Excluded Decks</source>
         <translation>Mazos excluidos</translation>
     </message>
@@ -4749,6 +4713,10 @@ Los archivos en el disco quedarán sin modificar porque no se pudo comprobar que
     <message>
         <source>Add Deck…</source>
         <translation>Añadir mazo…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Eliminar</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -5037,18 +5005,6 @@ Los archivos en el disco quedarán sin modificar porque no se pudo comprobar que
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Mazo a excluir de la detección de palabras conocidas:</translation>
-    </message>
-    <message>
-        <source>Known Words Expression Field</source>
-        <translation>Campo de expresión de palabras conocidas</translation>
-    </message>
-    <message>
-        <source>Note type to map (an existing mapping is replaced):</source>
-        <translation>Tipo de nota a asignar (se reemplaza una asignación existente):</translation>
-    </message>
-    <message>
-        <source>Field to read as the expression for '%1':</source>
-        <translation>Campo a leer como la expresión de '%1':</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>

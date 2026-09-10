@@ -277,30 +277,6 @@
         <source>Note type '%1' is not in Anki — pick one below.</source>
         <translation>Loại ghi chú '%1' không có trong Anki — hãy chọn một loại bên dưới.</translation>
     </message>
-    <message>
-        <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation>Không thể yêu cầu danh sách loại ghi chú. Kiểm tra địa chỉ AnkiConnect trong Cài đặt.</translation>
-    </message>
-    <message>
-        <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
-        <translation>Không có loại ghi chú nào được trả về. Kiểm tra Anki đang chạy với tiện ích AnkiConnect.</translation>
-    </message>
-    <message>
-        <source>The note type list could not be read from Anki.</source>
-        <translation>Không thể đọc danh sách loại ghi chú từ Anki.</translation>
-    </message>
-    <message>
-        <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation>Không thể yêu cầu danh sách trường. Kiểm tra địa chỉ AnkiConnect trong Cài đặt.</translation>
-    </message>
-    <message>
-        <source>No fields came back for note type '%1'.</source>
-        <translation>Không có trường nào được trả về cho loại ghi chú '%1'.</translation>
-    </message>
-    <message>
-        <source>The field list could not be read from Anki.</source>
-        <translation>Không thể đọc danh sách trường từ Anki.</translation>
-    </message>
 </context><context>
     <name>AnkiService</name>
     <message>
@@ -4714,18 +4690,6 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
         <translation>Xem, gỡ bỏ, xuất, hoặc đặt lại các từ bạn đã thêm vào danh sách từ đã biết cục bộ từ Trình quản lý từ.</translation>
     </message>
     <message>
-        <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
-        <translation>Quá trình quét đọc trường đầu tiên của mỗi ghi chú. Hãy ánh xạ loại ghi chú ở đây khi trường đầu tiên của nó không phải là từ — nếu không, câu của nó sẽ được lưu làm từ đã biết. Loại ghi chú chưa được ánh xạ sẽ giữ trường đầu tiên. Sau đó chạy Xây dựng lại CSDL từ đã biết để xóa những gì đã được lưu trước đó.</translation>
-    </message>
-    <message>
-        <source>Map Note Type…</source>
-        <translation>Ánh xạ loại ghi chú…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Gỡ bỏ</translation>
-    </message>
-    <message>
         <source>Excluded Decks</source>
         <translation>Bộ thẻ bị loại trừ</translation>
     </message>
@@ -4736,6 +4700,10 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     <message>
         <source>Add Deck…</source>
         <translation>Thêm bộ thẻ…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Gỡ bỏ</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -5024,18 +4992,6 @@ Các tệp trên đĩa sẽ được giữ nguyên vì không thể xác minh th
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Bộ thẻ loại trừ khỏi việc phát hiện từ đã biết:</translation>
-    </message>
-    <message>
-        <source>Known Words Expression Field</source>
-        <translation>Trường biểu thức của từ đã biết</translation>
-    </message>
-    <message>
-        <source>Note type to map (an existing mapping is replaced):</source>
-        <translation>Loại ghi chú cần ánh xạ (ánh xạ hiện có sẽ bị thay thế):</translation>
-    </message>
-    <message>
-        <source>Field to read as the expression for '%1':</source>
-        <translation>Trường cần đọc làm biểu thức cho '%1':</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>

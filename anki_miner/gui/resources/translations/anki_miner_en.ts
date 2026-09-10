@@ -277,30 +277,6 @@
         <source>Note type '%1' is not in Anki — pick one below.</source>
         <translation type="unfinished" />
     </message>
-    <message>
-        <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The note type list could not be read from Anki.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No fields came back for note type '%1'.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The field list could not be read from Anki.</source>
-        <translation type="unfinished" />
-    </message>
 </context><context>
     <name>AnkiService</name>
     <message>
@@ -4689,18 +4665,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation type="unfinished" />
     </message>
     <message>
-        <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Map Note Type…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Excluded Decks</source>
         <translation type="unfinished" />
     </message>
@@ -4710,6 +4674,10 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Add Deck…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Remove</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4998,18 +4966,6 @@ Files on disk will be left untouched because the folder could not be proven to b
     </message>
     <message>
         <source>Deck to exclude from known-words detection:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Known Words Expression Field</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Note type to map (an existing mapping is replaced):</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Field to read as the expression for '%1':</source>
         <translation type="unfinished" />
     </message>
 </context><context>

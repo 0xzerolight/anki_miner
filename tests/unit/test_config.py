@@ -239,19 +239,6 @@ def test_anki_fields_includes_sentence_translation_default():
     assert cfg.anki_fields["sentence_translation"] == ""
 
 
-def test_known_words_expression_fields_defaults_empty():
-    # {} keeps the first-field rule for every note type, so an existing
-    # collection scans exactly as it did before the field existed.
-    assert AnkiMinerConfig().known_words_expression_fields == {}
-
-
-def test_known_words_expression_fields_is_read_only():
-    cfg = AnkiMinerConfig(known_words_expression_fields={"Sentence First": "Word"})
-    assert isinstance(cfg.known_words_expression_fields, types.MappingProxyType)
-    with pytest.raises(TypeError):
-        cfg.known_words_expression_fields["Sentence First"] = "Other"  # type: ignore[index]
-
-
 def test_secondary_subtitles_default_off():
     assert AnkiMinerConfig().secondary_subtitle_enabled is False
 

@@ -2,7 +2,6 @@
 
 import base64
 import logging
-from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -697,134 +696,119 @@ class TestGetExistingVocabulary:
         assert len(mock_post.call_args_list[3][1]["json"]["params"]["notes"]) == 500
 
 
-class TestKnownWordsExpressionFields:
-    """config.known_words_expression_fields overrides the first-field rule.
+class TestExpressionFieldDetection:
+    """The scan decides each note type's expression field from its own notes.
 
-    The scan covers every note type in the collection, so a note type whose
-    first field is the sentence otherwise stores whole sentences as known
-    words (FUTURE_IDEAS item 2).
+    services/expression_field.py: the first field stays while it holds words;
+    a sentence- or index-first note type is read from its word field instead.
     """
 
-    def test_mapped_field_is_read_instead_of_the_first_field(self, test_config):
-        config = replace(
-            test_config,
-            known_words_expression_fields={"Sentence First": "Word"},
-        )
-        service = AnkiService(config)
+    POST = "anki_miner.services._ankiconnect.requests.post"
 
+    @staticmethod
+    def _migaku(sentence: str, word: str) -> dict:
+        return {
+            "modelName": "Migaku Japanese",
+            "fields": {"Sentence": {"value": sentence}, "Target Word": {"value": word}},
+        }
+
+    def test_sentence_first_note_type_reads_its_word_field(self, test_config):
+        service = AnkiService(test_config)
+        find_resp = _mock_response(result=[1, 2])
+        notes_resp = _mock_response(result=[self._migaku("彼は毎日走る。", "走る"), self._migaku("水を飲む。", "飲む")])
+
+        with patch(self.POST, side_effect=[find_resp, notes_resp]):
+            result = service.get_existing_vocabulary()
+
+        assert result == {"走る", "飲む"}
+
+    def test_index_first_deck_contributes_its_vocabulary(self, test_config):
+        """Core 2k/6k Optimized: the first field is a number, Expression is the sentence."""
+        service = AnkiService(test_config)
         find_resp = _mock_response(result=[1])
         notes_resp = _mock_response(
             result=[
                 {
-                    "modelName": "Sentence First",
+                    "modelName": "Core 2000",
                     "fields": {
-                        "Sentence": {"value": "彼は毎日走る"},
-                        "Word": {"value": "走る"},
+                        "Optimized-Voc-Index": {"value": "0001"},
+                        "Vocabulary-Kanji": {"value": "飲む"},
+                        "Expression": {"value": "水を飲む。"},
                     },
                 }
             ]
         )
 
-        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
+        with patch(self.POST, side_effect=[find_resp, notes_resp]):
             result = service.get_existing_vocabulary()
 
-        assert result == {"走る"}
+        assert result == {"飲む"}
 
-    def test_mapped_field_absent_on_the_note_falls_back_to_the_first_field(self, test_config):
-        """A note type renamed its field, or a note predates the rename."""
-        config = replace(
-            test_config,
-            known_words_expression_fields={"Sentence First": "NoSuchField"},
-        )
-        service = AnkiService(config)
-
-        find_resp = _mock_response(result=[1])
-        notes_resp = _mock_response(result=[{"modelName": "Sentence First", "fields": {"Sentence": {"value": "走る"}}}])
-
-        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
-            result = service.get_existing_vocabulary()
-
-        assert result == {"走る"}
-
-    def test_unmapped_note_type_keeps_the_first_field(self, test_config):
-        config = replace(
-            test_config,
-            known_words_expression_fields={"Sentence First": "Word"},
-        )
-        service = AnkiService(config)
-
-        find_resp = _mock_response(result=[1])
+    def test_word_first_note_types_scan_as_before(self, test_config):
+        service = AnkiService(test_config)
+        find_resp = _mock_response(result=[1, 2])
         notes_resp = _mock_response(
             result=[
                 {
                     "modelName": "Lapis",
-                    "fields": {"Expression": {"value": "走る"}, "Word": {"value": "飲む"}},
-                }
+                    "fields": {"Expression": {"value": "走る"}, "Sentence": {"value": "彼は毎日走る。"}},
+                },
+                {"modelName": "Basic", "fields": {"Front": {"value": "学生"}, "Back": {"value": "student"}}},
             ]
         )
 
-        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
+        with patch(self.POST, side_effect=[find_resp, notes_resp]):
             result = service.get_existing_vocabulary()
 
-        assert result == {"走る"}
+        assert result == {"走る", "学生"}
 
-    def test_row_without_a_model_name_keeps_the_first_field(self, test_config):
-        """notesInfo rows carry modelName; a malformed row must not raise."""
-        config = replace(
-            test_config,
-            known_words_expression_fields={"Sentence First": "Word"},
-        )
-        service = AnkiService(config)
-
-        find_resp = _mock_response(result=[1])
-        notes_resp = _mock_response(result=[{"fields": {"Expression": {"value": "走る"}}}])
-
-        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
-            result = service.get_existing_vocabulary()
-
-        assert result == {"走る"}
-
-    def test_empty_mapping_is_the_pre_feature_scan(self, test_config):
-        """The default: modelName is present and still ignored."""
+    def test_a_decision_carries_across_batches_without_extra_requests(self, test_config):
         service = AnkiService(test_config)
+        sentence_rows = [self._migaku(f"文{i}です。", f"語{i}") for i in range(200)]
+        lapis_rows = [
+            {"modelName": "Lapis", "fields": {"Expression": {"value": f"単{i}"}, "Sentence": {"value": "…"}}}
+            for i in range(800)
+        ]
+        find_resp = _mock_response(result=list(range(1001)))
+        batch1 = _mock_response(result=sentence_rows + lapis_rows)
+        batch2 = _mock_response(result=[self._migaku("最後の文です。", "最後")])
 
-        find_resp = _mock_response(result=[1])
-        notes_resp = _mock_response(
-            result=[
-                {
-                    "modelName": "Sentence First",
-                    "fields": {"Sentence": {"value": "彼は毎日走る"}, "Word": {"value": "走る"}},
-                }
-            ]
-        )
-
-        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
+        with patch(self.POST, side_effect=[find_resp, batch1, batch2]) as mock_post:
             result = service.get_existing_vocabulary()
 
-        assert result == {"彼は毎日走る"}
+        assert mock_post.call_count == 3
+        assert {"語0", "語199", "単0", "単799", "最後"} <= result
+        assert not any(word.endswith("。") for word in result)
 
-    def test_deck_filter_scan_inherits_the_mapping(self, test_config):
-        """get_vocabulary_excluding_deck shares _collect_first_field_forms."""
-        config = replace(
-            test_config,
-            known_words_expression_fields={"Sentence First": "Word"},
-        )
-        service = AnkiService(config)
-
+    def test_deck_filter_scan_detects_too(self, test_config):
+        service = AnkiService(test_config)
         find_resp = _mock_response(result=[1])
+        notes_resp = _mock_response(result=[self._migaku("彼は毎日走る。", "走る")])
+
+        with patch(self.POST, side_effect=[find_resp, notes_resp]):
+            result = service.get_vocabulary_excluding_deck("Mining")
+
+        assert result == {"走る"}
+
+    def test_scan_receipt_names_the_note_types_read_off_their_first_field(self, test_config, caplog):
+        caplog.set_level(logging.INFO, logger="anki_miner.services.anki_service")
+        service = AnkiService(test_config)
+        find_resp = _mock_response(result=[1, 2])
         notes_resp = _mock_response(
             result=[
-                {
-                    "modelName": "Sentence First",
-                    "fields": {"Sentence": {"value": "彼は毎日走る"}, "Word": {"value": "走る"}},
-                }
+                self._migaku("彼は毎日走る。", "走る"),
+                {"modelName": "Lapis", "fields": {"Expression": {"value": "学生"}, "Sentence": {"value": "…"}}},
             ]
         )
 
-        with patch("anki_miner.services._ankiconnect.requests.post", side_effect=[find_resp, notes_resp]):
-            result = service.get_vocabulary_excluding_deck("Source Deck")
+        with patch(self.POST, side_effect=[find_resp, notes_resp]):
+            service.get_existing_vocabulary()
 
-        assert result == {"走る"}
+        receipt = next(r.getMessage() for r in caplog.records if r.getMessage().startswith("Anki known words scan"))
+        assert "notes=2" in receipt
+        assert "note_types=2" in receipt
+        assert "Migaku Japanese: Target Word" in receipt
+        assert "Lapis" not in receipt.split("expression_fields=")[1]
 
 
 class TestGetExistingVocabularySecondBatchTimeout:

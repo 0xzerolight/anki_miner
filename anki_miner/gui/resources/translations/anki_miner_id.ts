@@ -277,30 +277,6 @@
         <source>Note type '%1' is not in Anki — pick one below.</source>
         <translation>Tipe catatan '%1' tidak ada di Anki — pilih salah satu di bawah.</translation>
     </message>
-    <message>
-        <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation>Daftar tipe catatan tidak dapat diminta. Periksa alamat AnkiConnect di Pengaturan.</translation>
-    </message>
-    <message>
-        <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
-        <translation>Tidak ada tipe catatan yang diterima. Periksa bahwa Anki berjalan dengan add-on AnkiConnect.</translation>
-    </message>
-    <message>
-        <source>The note type list could not be read from Anki.</source>
-        <translation>Daftar tipe catatan tidak dapat dibaca dari Anki.</translation>
-    </message>
-    <message>
-        <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation>Daftar bidang tidak dapat diminta. Periksa alamat AnkiConnect di Pengaturan.</translation>
-    </message>
-    <message>
-        <source>No fields came back for note type '%1'.</source>
-        <translation>Tidak ada bidang yang diterima untuk tipe catatan '%1'.</translation>
-    </message>
-    <message>
-        <source>The field list could not be read from Anki.</source>
-        <translation>Daftar bidang tidak dapat dibaca dari Anki.</translation>
-    </message>
 </context><context>
     <name>AnkiService</name>
     <message>
@@ -4714,18 +4690,6 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
         <translation>Lihat, hapus, ekspor, atau setel ulang kata yang Anda tambahkan ke daftar kata yang dikenal lokal dari Word Curator.</translation>
     </message>
     <message>
-        <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
-        <translation>Pemindaian membaca bidang pertama setiap catatan. Petakan tipe catatan di sini jika bidang pertamanya bukan kata — jika tidak, kalimatnya akan tersimpan sebagai kata yang dikenal. Tipe catatan yang tidak dipetakan tetap memakai bidang pertama. Jalankan Bangun Ulang DB Kata yang Dikenal setelahnya untuk menghapus yang sudah tersimpan.</translation>
-    </message>
-    <message>
-        <source>Map Note Type…</source>
-        <translation>Petakan Tipe Catatan…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Hapus</translation>
-    </message>
-    <message>
         <source>Excluded Decks</source>
         <translation>Dek yang Dikecualikan</translation>
     </message>
@@ -4736,6 +4700,10 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <message>
         <source>Add Deck…</source>
         <translation>Tambah Dek…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Hapus</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -5024,18 +4992,6 @@ Berkas di disk tidak akan disentuh karena folder tersebut tidak dapat dipastikan
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Dek yang dikecualikan dari deteksi kata yang dikenal:</translation>
-    </message>
-    <message>
-        <source>Known Words Expression Field</source>
-        <translation>Bidang Ekspresi Kata yang Dikenal</translation>
-    </message>
-    <message>
-        <source>Note type to map (an existing mapping is replaced):</source>
-        <translation>Tipe catatan yang akan dipetakan (pemetaan yang ada akan diganti):</translation>
-    </message>
-    <message>
-        <source>Field to read as the expression for '%1':</source>
-        <translation>Bidang yang dibaca sebagai ekspresi untuk '%1':</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>

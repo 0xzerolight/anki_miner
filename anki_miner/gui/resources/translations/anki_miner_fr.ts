@@ -278,30 +278,6 @@
         <source>Note type '%1' is not in Anki — pick one below.</source>
         <translation>Le type de note « %1 » n’est pas dans Anki — choisissez-en un ci-dessous.</translation>
     </message>
-    <message>
-        <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation>Impossible de demander la liste des types de note. Vérifiez l’adresse AnkiConnect dans les paramètres.</translation>
-    </message>
-    <message>
-        <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
-        <translation>Aucun type de note renvoyé. Vérifiez qu’Anki est lancé avec l’extension AnkiConnect.</translation>
-    </message>
-    <message>
-        <source>The note type list could not be read from Anki.</source>
-        <translation>Impossible de lire la liste des types de note depuis Anki.</translation>
-    </message>
-    <message>
-        <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation>Impossible de demander la liste des champs. Vérifiez l’adresse AnkiConnect dans les paramètres.</translation>
-    </message>
-    <message>
-        <source>No fields came back for note type '%1'.</source>
-        <translation>Aucun champ renvoyé pour le type de note « %1 ».</translation>
-    </message>
-    <message>
-        <source>The field list could not be read from Anki.</source>
-        <translation>Impossible de lire la liste des champs depuis Anki.</translation>
-    </message>
 </context><context>
     <name>AnkiService</name>
     <message>
@@ -4727,18 +4703,6 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Affichez, supprimez, exportez ou réinitialisez les mots que vous avez ajoutés à votre liste locale de mots connus depuis le Conservateur de mots.</translation>
     </message>
     <message>
-        <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
-        <translation>L'analyse lit le premier champ de chaque note. Mappez un type de note ici lorsque son premier champ n'est pas le mot — sinon ses phrases sont stockées comme mots connus. Les types de note non mappés conservent le premier champ. Exécutez ensuite Reconstruire la BD de mots connus pour effacer ce qui était déjà stocké.</translation>
-    </message>
-    <message>
-        <source>Map Note Type…</source>
-        <translation>Mapper le type de note…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Supprimer</translation>
-    </message>
-    <message>
         <source>Excluded Decks</source>
         <translation>Paquets exclus</translation>
     </message>
@@ -4749,6 +4713,10 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     <message>
         <source>Add Deck…</source>
         <translation>Ajouter un paquet…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Supprimer</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -5037,18 +5005,6 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Paquet à exclure de la détection des mots connus :</translation>
-    </message>
-    <message>
-        <source>Known Words Expression Field</source>
-        <translation>Champ Expression pour les mots connus</translation>
-    </message>
-    <message>
-        <source>Note type to map (an existing mapping is replaced):</source>
-        <translation>Type de note à mapper (un mappage existant sera remplacé) :</translation>
-    </message>
-    <message>
-        <source>Field to read as the expression for '%1':</source>
-        <translation>Champ à lire comme expression pour « %1 » :</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>

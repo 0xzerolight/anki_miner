@@ -279,30 +279,6 @@
         <source>Note type '%1' is not in Anki — pick one below.</source>
         <translation>Тип заметки «%1» отсутствует в Anki — выберите один ниже.</translation>
     </message>
-    <message>
-        <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation>Не удалось запросить список типов заметок. Проверьте адрес AnkiConnect в настройках.</translation>
-    </message>
-    <message>
-        <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
-        <translation>Не получено ни одного типа заметки. Убедитесь, что Anki запущен с дополнением AnkiConnect.</translation>
-    </message>
-    <message>
-        <source>The note type list could not be read from Anki.</source>
-        <translation>Не удалось прочитать список типов заметок из Anki.</translation>
-    </message>
-    <message>
-        <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation>Не удалось запросить список полей. Проверьте адрес AnkiConnect в настройках.</translation>
-    </message>
-    <message>
-        <source>No fields came back for note type '%1'.</source>
-        <translation>Не получено ни одного поля для типа заметки «%1».</translation>
-    </message>
-    <message>
-        <source>The field list could not be read from Anki.</source>
-        <translation>Не удалось прочитать список полей из Anki.</translation>
-    </message>
 </context><context>
     <name>AnkiService</name>
     <message>
@@ -4740,18 +4716,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>Просмотр, удаление, экспорт или сброс слов, добавленных вами в локальный список известных слов из Куратора слов.</translation>
     </message>
     <message>
-        <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
-        <translation>Сканирование читает первое поле каждой заметки. Сопоставьте здесь тип заметки, если его первое поле — не слово, иначе его предложения будут сохранены как известные слова. Несопоставленные типы заметок используют первое поле. После этого выполните «Перестроить БД известных слов», чтобы очистить уже сохранённое.</translation>
-    </message>
-    <message>
-        <source>Map Note Type…</source>
-        <translation>Сопоставить тип заметки…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>Удалить</translation>
-    </message>
-    <message>
         <source>Excluded Decks</source>
         <translation>Исключённые колоды</translation>
     </message>
@@ -4762,6 +4726,10 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Add Deck…</source>
         <translation>Добавить колоду…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>Удалить</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -5050,18 +5018,6 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Колода, исключаемая из определения известных слов:</translation>
-    </message>
-    <message>
-        <source>Known Words Expression Field</source>
-        <translation>Поле выражения для известных слов</translation>
-    </message>
-    <message>
-        <source>Note type to map (an existing mapping is replaced):</source>
-        <translation>Тип заметки для сопоставления (существующее сопоставление будет заменено):</translation>
-    </message>
-    <message>
-        <source>Field to read as the expression for '%1':</source>
-        <translation>Поле, считываемое как выражение для «%1»:</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
