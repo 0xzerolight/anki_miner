@@ -20,6 +20,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from anki_miner import __version__
 from anki_miner.gui.widgets.dialogs.system_health_window import HEALTH_OK, HEALTH_UNKNOWN
 from anki_miner.gui.workers.update_worker import UpdateWorkerThread
 from anki_miner.services.update_checker import UpdateChecker, UpdateInfo
@@ -119,6 +120,47 @@ def test_different_version_still_shows_when_other_skipped(main_window):
         main_window._on_update_check_result(_info("9.9.9"))
 
     banner_cls.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Help -> Check for Updates reports its answer
+# ---------------------------------------------------------------------------
+
+
+def test_the_manual_check_reports_up_to_date(main_window):
+    """The menu item used to do nothing visible when there was no update."""
+    main_window._check_for_updates_manual()
+    main_window._on_update_check_result(None)
+
+    assert main_window.status_bar.operation_label.text() == f"Up to date ({__version__})"
+
+
+def test_the_manual_check_reports_a_failure(main_window):
+    main_window._check_for_updates_manual()
+    main_window._on_update_check_result(RuntimeError("no network"))
+
+    assert main_window.status_bar.operation_label.text() == "The update check failed; try again later."
+
+
+def test_the_manual_check_reports_a_skipped_version(main_window):
+    """A skipped version shows no banner, so the line is the only answer."""
+    main_window.config = replace(main_window.config, skipped_update_version="9.9.9")
+
+    main_window._check_for_updates_manual()
+    with patch("anki_miner.gui.widgets.update_banner.UpdateBanner") as banner_cls:
+        main_window._on_update_check_result(_info("9.9.9"))
+
+    banner_cls.assert_not_called()
+    assert main_window.status_bar.operation_label.text() == "Version 9.9.9 is available."
+
+
+def test_the_boot_check_stays_silent(main_window):
+    """Nobody asked the startup check anything, so it says nothing."""
+    main_window._check_for_updates()
+    idle = main_window.status_bar.operation_label.text()
+    main_window._on_update_check_result(None)
+
+    assert main_window.status_bar.operation_label.text() == idle
 
 
 # ---------------------------------------------------------------------------

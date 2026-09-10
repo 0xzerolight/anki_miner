@@ -202,6 +202,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # the next Undo delete instead of the stale startup endpoint.
         self._build_config_bound_services()
         self._validation_silent = True
+        # Set by the Help menu only: the boot check stays silent, the one the
+        # user asked for reports its answer.
+        self._update_check_manual = False
 
         # Readiness facts live here, not on the System Health screen, so a
         # result arriving while that screen is closed is not lost and a reopened
@@ -478,7 +481,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         check_updates_action = help_menu.addAction(self.tr("Check for Updates"))
         assert check_updates_action is not None
-        check_updates_action.triggered.connect(self._check_for_updates)
+        # Not _check_for_updates directly: QAction.triggered passes its own
+        # `checked` bool, which would land in the manual flag as False.
+        check_updates_action.triggered.connect(self._check_for_updates_manual)
 
         help_menu.addSeparator()
 
@@ -2427,6 +2432,15 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         """Check for application updates in background thread."""
         self.background_tasks.check_for_updates()
 
+    def _check_for_updates_manual(self) -> None:
+        """Help-menu handler: the same check, but it reports what it found.
+
+        The flag is raised here rather than passed into _check_for_updates so
+        the silent boot step keeps calling that method with no arguments.
+        """
+        self._update_check_manual = True
+        self._check_for_updates()
+
     def _maybe_start_ytdlp_update(self) -> None:
         """Kick off the throttled yt-dlp self-update (deferred so the window paints first).
 
@@ -2450,6 +2464,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         from anki_miner.gui.widgets.update_banner import UpdateBanner
         from anki_miner.services.update_checker import UpdateInfo
 
+        # A menu item that answers nothing visible is the worst kind of
+        # misleading, so the manual path reports every outcome. The boot check
+        # stays silent: nobody asked it anything.
+        manual = self._update_check_manual
+        self._update_check_manual = False
+
         # System Health's Updates row is written on every outcome, including the
         # "nothing newer" one that returns below — a row that only ever changed
         # when an update existed would sit at "not checked yet" forever on an
@@ -2470,10 +2490,17 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         )
 
         if not isinstance(info, UpdateInfo):
+            if manual:
+                if info is None:
+                    self.status_bar.set_operation(tr_format(self.tr("Up to date (%1)"), __version__), "success")
+                else:
+                    self.status_bar.set_operation(self.tr("The update check failed; try again later."), "error")
             return
 
         # Honor the user's "skip this version" choice.
         if info.version == self.config.skipped_update_version:
+            if manual:
+                self.status_bar.set_operation(tr_format(self.tr("Version %1 is available."), info.version), "info")
             return
 
         # The banner is a singleton: create it once, then reuse it on every
