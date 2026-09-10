@@ -28,12 +28,12 @@ def test_subtitle_source_arg_renders(qapp):
 def test_stage_line_renders_position_and_name(qapp):
     """The stage line states the position; the number is no longer baked in."""
     msg = tr_format(
-        QCoreApplication.translate("GUIPresenter", "Step %1 of %2 — %3"),
+        QCoreApplication.translate("GUIPresenter", "Stage %1 of %2 — %3"),
         3,
         5,
         "Extracting media",
     )
-    assert msg == "Step 3 of 5 — Extracting media"
+    assert msg == "Stage 3 of 5 — Extracting media"
 
 
 def test_known_word_db_synced_multi_arg_renders(qapp):
