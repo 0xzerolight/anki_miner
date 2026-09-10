@@ -328,7 +328,7 @@ def test_handler_refuses_when_jmdict_migration_does_not_stop(main_window, monkey
     # The refusal is stated on the window rather than in a modal (D24).
     issue = main_window.issue_banner().current_issue()
     assert issue is not None
-    assert "still stopping" in issue.summary
+    assert issue.summary == "Wait for the startup dictionary setup to finish, then try again."
 
 
 @pytest.mark.parametrize(
