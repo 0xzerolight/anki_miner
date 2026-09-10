@@ -401,6 +401,11 @@ a = Analysis(
         # get its console script, which ytdlp_resolver's interpreter-sibling tier
         # finds. This exclude only affects the frozen bundle.
         "yt_dlp",
+        # tkinter/tcl/tk (6.9 MiB raw) ride in via stdlib hooks even though
+        # nothing in the app imports tkinter — PyQt6 is the only GUI toolkit
+        # used. Excluding both keeps the frozen graph from ever reaching Tcl.
+        "tkinter",
+        "_tkinter",
     ],
     noarchive=False,
     optimize=0,
@@ -414,12 +419,30 @@ a = Analysis(
 # drop that is absent on a host degrades to "libmpv fails to dlopen → preview
 # notice", never a crash.
 #
+# Same filter, same reasoning, covers a second case: the Linux Vulkan ICD
+# loader (libvulkan.so.1). bindepend's NEEDED-walk pulls it in via
+# libggml-vulkan.so's own NEEDED entry (pywhispercpp's Vulkan ASR backend),
+# even though PyInstaller-Hooks/hook-pywhispercpp.py already filters the
+# loader out of the libs IT explicitly collects — that hook only sees its own
+# collected list, not the separate NEEDED-walk that populates a.binaries. A
+# frozen loader is not a config-path quirk like the audio libs above; the
+# hook's docstring is explicit that it must never ship, because it shadows
+# the host GPU driver's own ICD loader (ggml's Vulkan backend degrades to a
+# graceful dlopen skip when no loader is present, same as the CPU fallback).
+#
 # PLAIN SONAMES ONLY: auditwheel-mangled wheel-vendored copies (e.g. PyAV's
 # libasound-c7818c60.so.2.0.0) are a hard NEEDED of their wheel's extension and
 # MUST stay bundled — filtering one broke the asr smoke (ImportError on av).
 # The mangled names have a -<hash> before ".so", so anchoring "lib<name>.so"
-# matches only the plain system sonames bindepend picked up via libmpv.
-_HOST_ONLY_LIB_RE = re.compile(r"^lib(asound|pulse(-simple)?|pulsecommon-[0-9.]+|jack|pipewire-0\.3)\.so(\.|$)")
+# matches only the plain system sonames bindepend picked up via libmpv (and,
+# for vulkan, the plain "libvulkan.so.1" the runner's system package
+# provides — never a hash-mangled wheel-vendored copy).
+#
+# .so-suffix-scoped, so this never reaches Windows (vulkan-1.dll, which MUST
+# stay bundled next to libmpv-2.dll — see release.yml's Windows leg) or macOS
+# (.dylib); no explicit platform.system() guard needed, matching the audio-lib
+# half of this same filter.
+_HOST_ONLY_LIB_RE = re.compile(r"^lib(asound|pulse(-simple)?|pulsecommon-[0-9.]+|jack|pipewire-0\.3|vulkan)\.so(\.|$)")
 a.binaries = [entry for entry in a.binaries if not _HOST_ONLY_LIB_RE.match(os.path.basename(entry[0]))]
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
