@@ -90,12 +90,12 @@ def test_counter_states_the_four_numbers(qtbot) -> None:
 
     bar.set_counts(total=200, ready=153, failed=7, complete=28)
 
-    assert bar.counter_label.text() == "200 queued · 153 ready · 7 failed · 28 complete"
+    assert bar.counter_label.text() == "200 in queue · 153 ready · 7 failed · 28 complete"
 
 
 def test_counter_starts_at_zero(qtbot) -> None:
     bar = _bar(qtbot)
-    assert bar.counter_label.text() == "0 queued · 0 ready · 0 failed · 0 complete"
+    assert bar.counter_label.text() == "0 in queue · 0 ready · 0 failed · 0 complete"
 
 
 # ---------------------------------------------------------------------------
