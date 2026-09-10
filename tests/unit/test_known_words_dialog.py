@@ -388,7 +388,9 @@ class TestImportSlot:
 
         seen = []
         for error in (
+            KnownWordsImportError("too_large"),
             KnownWordsImportError("unreadable"),
+            KnownWordsImportError("undecodable"),
             KnownWordsImportError("unrecognized"),
             KnownWordsImportError("no_known_words", format_key="migaku_csv"),
         ):
@@ -399,7 +401,12 @@ class TestImportSlot:
 
         assert db.get_words_by_source("user") == set()
         assert not message_boxes["questions"]
-        assert len(set(seen)) == 3, f"each failure reason needs a distinct message; got {seen!r}"
+        assert len(set(seen)) == 5, f"each failure reason needs a distinct message; got {seen!r}"
+        # The size gate never opens the file and the decode gate read it fine,
+        # so neither may claim a read failure.
+        assert seen[0] == "That file is too large to import."
+        assert seen[1] == "The file could not be read."
+        assert seen[2] == "That file's text encoding could not be read."
 
     def test_unexpected_error_reenables_and_warns(
         self, qtbot, tmp_path, monkeypatch, capture_off_thread, message_boxes

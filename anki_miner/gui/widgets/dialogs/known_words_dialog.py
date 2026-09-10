@@ -309,8 +309,12 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
                 self.tr("Detected: %1 — but no entries in this file qualify as known."),
                 self._format_display_name(error.format_key or "generic"),
             )
+        elif error.reason == "too_large":
+            message = self.tr("That file is too large to import.")
         elif error.reason == "unreadable":
             message = self.tr("The file could not be read.")
+        elif error.reason == "undecodable":
+            message = self.tr("That file's text encoding could not be read.")
         else:
             message = self.tr(
                 "File format not recognized. Supported: jpdb review export (JSON), "
@@ -323,7 +327,11 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         if generation != self._dialog_generation:
             return
         self.import_button.setEnabled(True)
-        self.show_screen_issue(ScreenIssue(summary=self.tr("That file could not be read."), details=message))
+        # Every expected failure is returned through on_done as a
+        # KnownWordsImportError, so anything landing here is an unexpected
+        # exception with no established cause (A8-35) — name the outcome, not
+        # a step the code never reached.
+        self.show_screen_issue(ScreenIssue(summary=self.tr("That file could not be imported."), details=message))
 
     def export_to(self, path: Path) -> int:
         """Write the user words to ``path``, one per line (UTF-8). Returns the count."""

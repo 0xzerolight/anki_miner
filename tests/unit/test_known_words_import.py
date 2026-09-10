@@ -267,13 +267,15 @@ class TestEncodingAndSize:
         result = parse_known_words_file(path)
         assert result.words == frozenset({"食べる", "犬"})
 
-    def test_oversized_file_is_unreadable(self, tmp_path, monkeypatch):
+    def test_oversized_file_is_too_large(self, tmp_path, monkeypatch):
+        # The gate stats the file and never opens it, so "unreadable" would be
+        # the one read-failure reason raised where no read failed.
         import anki_miner.services.known_words_import as kwi
 
         monkeypatch.setattr(kwi, "_MAX_IMPORT_BYTES", 8)
         with pytest.raises(KnownWordsImportError) as exc:
             parse_known_words_file(_write(tmp_path, "big.txt", "食べる\n犬\n猫\n"))
-        assert exc.value.reason == "unreadable"
+        assert exc.value.reason == "too_large"
 
     def test_json_word_is_stripped(self, tmp_path):
         # A padded JSON word must be stored stripped so it can match a card front.

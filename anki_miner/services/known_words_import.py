@@ -61,11 +61,15 @@ _MAX_IMPORT_BYTES = 50 * 1024 * 1024
 class KnownWordsImportError(Exception):
     """Raised when a file yields no importable known words.
 
-    ``reason`` distinguishes the failure class for user messaging:
-    ``"unreadable"`` (missing/undecodable file), ``"unrecognized"`` (format
-    not matched — including valid JSON matching no known signature), or
-    ``"no_known_words"`` (format matched but zero entries qualified;
-    ``format_key`` carries the detected format in that case).
+    ``reason`` distinguishes the failure class for user messaging, and the
+    three read-side reasons are deliberately distinct because the dialog
+    states what actually happened: ``"too_large"`` (over the size cap — the
+    file is stat-ed, never opened), ``"unreadable"`` (an ``OSError`` opening
+    or reading it), ``"undecodable"`` (bytes read fine, every encoding in the
+    ladder failed). Then ``"unrecognized"`` (format not matched — including
+    valid JSON matching no known signature) and ``"no_known_words"`` (format
+    matched but zero entries qualified; ``format_key`` carries the detected
+    format in that case).
     """
 
     def __init__(self, reason: str, format_key: str | None = None):
@@ -99,7 +103,7 @@ def parse_known_words_file(path: Path, *, encodings: tuple[str, ...] | None = No
     """
     try:
         if path.stat().st_size > _MAX_IMPORT_BYTES:
-            raise KnownWordsImportError("unreadable")
+            raise KnownWordsImportError("too_large")
         raw = path.read_bytes()
     except OSError as exc:
         raise KnownWordsImportError("unreadable") from exc
@@ -245,7 +249,8 @@ def _decode(raw: bytes, encodings: tuple[str, ...] | None = None) -> tuple[str, 
     # utf-8-sig strips a Windows/Excel BOM that would otherwise break
     # json.loads and the exact first-cell header matches; the rest of the
     # ladder is the mining language's (cp932 for Japanese Notepad/Excel
-    # exports). Every candidate failing => truly unreadable.
+    # exports). Every candidate failing => "undecodable", not "unreadable":
+    # the bytes were read, so only the encoding is at fault.
     #
     # `is None`, not truthiness: `()` is an EMPTY ladder the caller asked for,
     # not a request for the Japanese default. Truthiness would decode a
@@ -259,7 +264,7 @@ def _decode(raw: bytes, encodings: tuple[str, ...] | None = None) -> tuple[str, 
             return raw.decode(encoding), encoding
         except (UnicodeDecodeError, LookupError):
             continue
-    raise KnownWordsImportError("unreadable")
+    raise KnownWordsImportError("undecodable")
 
 
 def _clean(value: Any) -> str:
