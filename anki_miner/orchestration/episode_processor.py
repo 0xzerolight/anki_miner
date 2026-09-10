@@ -675,7 +675,7 @@ class EpisodeProcessor:
         if progress_callback is not None:
             progress_callback.on_stage(index, PIPELINE_STAGE_COUNT, name)
 
-    def _no_words_message(self, texts: Iterable[str]) -> str:
+    def _no_words_message(self, texts: Iterable[str], *, reading: bool = False) -> str:
         """The zero-word warning, naming a wrong-language subtitle when that is the cause.
 
         "No words found in subtitles" was the whole story of the first zh
@@ -684,15 +684,25 @@ class EpisodeProcessor:
         the problem. When no line carries the mining language's script, say so
         - the one zero-word case the user can act on (another track, another
         file) without opening the log.
+
+        ``reading`` swaps in the document wording: ``process_reading`` passes
+        ``subtitle_file_str=""`` and parses a mokuro volume, an EPUB/txt book or
+        a text paste, so a zero-word run there has no subtitles to blame.
         """
         lines = [text for text in texts if text]
         if lines:
             profile = get_profile(config_language(self.config))
             if not any(profile.script.contains_target_script(text) for text in lines):
                 return tr_format(
-                    QCoreApplication.translate("EpisodeProcessor", "Subtitles contain no %1 text"),
+                    (
+                        QCoreApplication.translate("EpisodeProcessor", "This document contains no %1 text")
+                        if reading
+                        else QCoreApplication.translate("EpisodeProcessor", "Subtitles contain no %1 text")
+                    ),
                     profile.display_name,
                 )
+        if reading:
+            return QCoreApplication.translate("EpisodeProcessor", "No words found in this document")
         return QCoreApplication.translate("EpisodeProcessor", "No words found in subtitles")
 
     def _report_no_mineable_words(self, ctx: _EpisodeContext) -> None:
@@ -735,7 +745,7 @@ class EpisodeProcessor:
             tr_format(
                 QCoreApplication.translate(
                     "EpisodeProcessor",
-                    "Ambiguous reading review required for %1 word(s); current readings kept",
+                    "%1 word(s) have more than one reading — the parsed reading was kept.",
                 ),
                 count,
             )
@@ -3139,7 +3149,9 @@ class EpisodeProcessor:
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
             if not all_words:
-                self.presenter.show_warning(self._no_words_message(unit.text for unit in document.units))
+                self.presenter.show_warning(
+                    self._no_words_message((unit.text for unit in document.units), reading=True)
+                )
                 return ctx.build_result()
 
             with timed_phase("filter", logger):

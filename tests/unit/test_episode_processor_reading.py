@@ -298,7 +298,7 @@ def test_ambiguous_reading_count_is_reported(test_config):
     proc.process_reading(_document([_unit(0)]))
 
     warnings = [str(c.args[0]) for c in presenter.show_warning.call_args_list]
-    assert any("3" in warning and "ambiguous reading" in warning.lower() for warning in warnings)
+    assert any("3" in warning and "more than one reading" in warning for warning in warnings)
 
 
 def test_d4_line_index_fused_for_iplus_one(test_config):
@@ -1574,3 +1574,33 @@ def test_expression_audio_probe_attached_for_curation(test_config):
     proc.process_reading(_document([_unit(0), _unit(1)]), curation_callback=curate)
 
     assert seen == {"犬": True, "猫": False}
+
+
+def test_zero_word_document_does_not_blame_subtitles(test_config):
+    """A manga volume or book has no subtitles at all.
+
+    ``process_reading`` passes ``subtitle_file_str=""``, so the shared zero-word
+    warning must name the document it actually parsed.
+    """
+    unit = ReadingUnit(text="犬猫", index=0, location_label="p.0", image_ref=None)
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning([], None, collections.Counter())
+    presenter = MagicMock(spec=NullPresenter())
+
+    _make_processor(test_config, subtitle_parser=sp, presenter=presenter).process_reading(_document([unit]))
+
+    warnings = [str(c.args[0]) for c in presenter.show_warning.call_args_list]
+    assert "No words found in this document" in warnings, warnings
+
+
+def test_wrong_script_document_names_the_document_not_subtitles(test_config):
+    """The wrong-language branch also runs on the reading path."""
+    unit = ReadingUnit(text="latin only", index=0, location_label="p.0", image_ref=None)
+    sp = MagicMock()
+    sp.parse_text_units.side_effect = _parse_returning([], None, collections.Counter())
+    presenter = MagicMock(spec=NullPresenter())
+
+    _make_processor(test_config, subtitle_parser=sp, presenter=presenter).process_reading(_document([unit]))
+
+    warnings = [str(c.args[0]) for c in presenter.show_warning.call_args_list]
+    assert "This document contains no 日本語 text" in warnings, warnings
