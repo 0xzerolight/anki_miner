@@ -212,7 +212,7 @@ class TestSeasonFlow:
         pool = bridge.call_args.args[0]
         assert [w.mined_form for w in pool] == ["犬"]
         assert item.status == QueueItemStatus.ERROR
-        assert "1/2 episodes failed" in item.error_message
+        assert item.error_message == "1 of 2 episodes failed, starting with ep1.mkv."
         # The failed pair is NOT committed; the confirmed-empty pair is.
         assert len(item.committed_pair_keys) == 1
 

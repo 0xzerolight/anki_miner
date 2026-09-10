@@ -237,9 +237,7 @@ def test_all_pairs_failed_emits_item_failed(tmp_path):
     assert results["completed"] == [], "item_completed should NOT be emitted on full failure"
     assert len(results["failed"]) == 1, "item_failed should be emitted once"
     _item_id, msg = results["failed"][0]
-    assert "2/2 episodes failed" in msg
-    assert "ep1.mkv" in msg
-    assert "Error: deck missing" in msg
+    assert msg == "2 of 2 episodes failed, starting with ep1.mkv."
     assert results["finished"] == [0], "queue_finished should emit 0 total cards"
 
 
@@ -274,7 +272,7 @@ def test_partial_failure_emits_item_failed_with_partial_cards(tmp_path):
     assert results["completed"] == [], "item_completed should NOT be emitted on partial failure"
     assert len(results["failed"]) == 1
     _item_id, msg = results["failed"][0]
-    assert "1/2 episodes failed" in msg
+    assert msg == "1 of 2 episodes failed, starting with ep2.mkv."
     assert failed_with_counts == [(queue.get_all_items()[0].id, msg, 3)]
     # Partial cards still count toward queue total
     assert results["finished"] == [3], "queue_finished should include cards from successful pairs"
@@ -482,10 +480,10 @@ def test_fast_fail_item_fails_exactly_once_when_gui_status_write_delayed(tmp_pat
         worker.run()
 
     assert len(results["failed"]) == 1, "item_failed must fire exactly once"
-    assert "No matching video/subtitle pairs found" in results["failed"][0][1]
+    assert results["failed"][0][1] == "No subtitle file could be matched to any video file in those folders."
     assert results["completed"] == []
     assert item.status == QueueItemStatus.ERROR
-    assert item.error_message == "No matching video/subtitle pairs found"
+    assert item.error_message == "No subtitle file could be matched to any video file in those folders."
 
 
 def test_worker_marks_item_processing_at_pick_time(tmp_path):
@@ -686,8 +684,12 @@ def test_cancel_before_run_exits_at_loop_top():
     assert results["finished"] == [0]
 
 
-def test_setup_error_emits_item_failed(tmp_path):
-    """process_episode raising SetupError causes item_failed to be emitted for that item."""
+def test_setup_error_emits_item_failed(tmp_path, caplog):
+    """process_episode raising SetupError causes item_failed to be emitted for that item.
+
+    The raised text stays in the log (A8-34): the row sentence states the
+    failure and names the episode instead of carrying a raw exception.
+    """
     pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass", secondary=None)
 
     proc = MagicMock()
@@ -709,6 +711,7 @@ def test_setup_error_emits_item_failed(tmp_path):
     worker.item_failed.connect(lambda item_id, msg, _cards: failed_emissions.append((item_id, msg)))
 
     with (
+        caplog.at_level("ERROR"),
         patch(
             "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
             return_value=proc,
@@ -722,7 +725,8 @@ def test_setup_error_emits_item_failed(tmp_path):
 
     assert len(failed_emissions) == 1
     assert failed_emissions[0][0] == "i1"
-    assert "note type not found" in failed_emissions[0][1]
+    assert failed_emissions[0][1] == "1 of 1 episodes failed, starting with ep1.mkv."
+    assert "note type not found" in caplog.text
 
 
 def test_mid_loop_raise_does_not_abort_remaining_pairs_or_lose_cards(tmp_path):
@@ -768,9 +772,7 @@ def test_mid_loop_raise_does_not_abort_remaining_pairs_or_lose_cards(tmp_path):
     # Item marked failed (one pair failed) with the raised pair reported.
     assert len(results["failed"]) == 1
     _item_id, msg = results["failed"][0]
-    assert "1/3 episodes failed" in msg
-    assert "ep2.mkv" in msg
-    assert "AnkiConnect unreachable" in msg
+    assert msg == "1 of 3 episodes failed, starting with ep2.mkv."
     assert results["completed"] == []
     # Cards from pairs 1 and 3 are preserved (3 + 5), not discarded by the raise.
     assert results["finished"] == [8]

@@ -31,6 +31,7 @@ from anki_miner.services.word_pool import (
     split_selection,
 )
 from anki_miner.utils.file_pairing import FilePair
+from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -326,7 +327,15 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                 )
 
                 if not pairs:
-                    raise ValueError("No matching video/subtitle pairs found")
+                    # Byte-identical to the quick path's banner in
+                    # batch_processing_tab: one pairing miss, one sentence,
+                    # whichever path hit it.
+                    raise ValueError(
+                        QCoreApplication.translate(
+                            "BatchQueueWorkerThread",
+                            "No subtitle file could be matched to any video file in those folders.",
+                        )
+                    )
 
                 committed_pair_keys = item.committed_pair_keys
                 pending_pairs = []
@@ -412,9 +421,16 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                     # the item cannot be re-picked here.
                     item.status = QueueItemStatus.PENDING
                 elif failed_pairs:
-                    msg = (
-                        f"{len(failed_pairs)}/{len(pending_pairs)} episodes failed "
-                        f"(e.g. {failed_pairs[0][0]}: {failed_pairs[0][1]})"
+                    # The per-episode exception text is already in the log
+                    # (logger.exception above); the row states the count and
+                    # names the first episode, not a raw error (A8-34).
+                    msg = tr_format(
+                        QCoreApplication.translate(
+                            "BatchQueueWorkerThread", "%1 of %2 episodes failed, starting with %3."
+                        ),
+                        len(failed_pairs),
+                        len(pending_pairs),
+                        failed_pairs[0][0],
                     )
                     item.status = QueueItemStatus.ERROR
                     item.error_message = msg

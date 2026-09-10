@@ -105,7 +105,7 @@ def test_counter_reports_the_queue_not_the_view(panel, tmp_path):
     panel._on_filter_changed("failed")
 
     assert panel.list_widget.item(0).isHidden()
-    assert "2 queued" in panel.queue_controls.counter_label.text()
+    assert "2 in queue" in panel.queue_controls.counter_label.text()
     assert "1 failed" in panel.queue_controls.counter_label.text()
 
 
