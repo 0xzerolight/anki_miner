@@ -78,7 +78,7 @@ class ResultsDialog(EnhancedDialog):
         elif self.processing_result.success:
             self.set_header("complete", result_copy.created_cards(self.processing_result.cards_created))
         else:
-            self.set_header("error", self.tr("Completed with Errors"))
+            self.set_header("error", self.tr("Finished with errors"))
 
         # Statistics cards in a frame
         stats_container = QFrame()
@@ -155,13 +155,17 @@ class ResultsDialog(EnhancedDialog):
         # Add undo button if callback and card IDs are available
         if self._undo_callback and self.processing_result.card_ids:
             self._undo_button = self.add_button(
-                tr_format(self.tr("Undo (%1 notes)"), len(self.processing_result.card_ids)),
+                self._undo_button_text(len(self.processing_result.card_ids)),
                 "danger",
                 self._on_undo_clicked,
             )
 
         # Add close button using EnhancedDialog method
         self._close_button = self.add_close_button(self.tr("Close"))
+
+    def _undo_button_text(self, count: int) -> str:
+        """Label the Undo button, in the singular when it deletes one note."""
+        return tr_format(self.tr("Undo (%1 note)") if count == 1 else self.tr("Undo (%1 notes)"), count)
 
     def _on_undo_clicked(self) -> None:
         """Confirm, then run the card delete OFF the GUI thread.
@@ -178,7 +182,9 @@ class ResultsDialog(EnhancedDialog):
         reply = QMessageBox.question(
             self,
             self.tr("Confirm Undo"),
-            tr_format(self.tr("Delete %1 notes from Anki? This cannot be undone."), count),
+            tr_format(
+                self.tr("Delete %1 notes from Anki? This cannot be undone; those words become mineable again."), count
+            ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
@@ -204,7 +210,12 @@ class ResultsDialog(EnhancedDialog):
         deleted = cast(int, result)
         self._undo_in_progress = False
         self._close_button.setEnabled(True)
-        self._undo_button.setText(tr_format(self.tr("Undone (%1 notes deleted)"), deleted))
+        self._undo_button.setText(
+            tr_format(
+                self.tr("Undone (%1 note deleted)") if deleted == 1 else self.tr("Undone (%1 notes deleted)"),
+                deleted,
+            )
+        )
         self.undo_completed = True
         if self._on_undo_committed is not None:
             self._on_undo_committed(deleted)
@@ -214,11 +225,17 @@ class ResultsDialog(EnhancedDialog):
         self._undo_in_progress = False
         self._close_button.setEnabled(True)
         self._undo_button.setEnabled(True)
-        self._undo_button.setText(tr_format(self.tr("Undo (%1 notes)"), len(self.processing_result.card_ids)))
+        self._undo_button.setText(self._undo_button_text(len(self.processing_result.card_ids)))
         logger.error("Undo failed: %s", message)
-        QMessageBox.critical(
-            self, self.tr("Undo Failed"), self.tr("Failed to delete notes. Check that Anki is running.")
-        )
+        # A8-34: the AnkiConnect text names causes this sentence cannot (a note
+        # type, a permission), so it survives behind Details instead of the log
+        # alone.
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Critical)
+        box.setWindowTitle(self.tr("Undo Failed"))
+        box.setText(self.tr("Failed to delete notes. Check that Anki is running."))
+        box.setDetailedText(message)
+        box.exec()
 
     def reject(self) -> None:
         """Ignore Escape while Undo still owns run state."""
