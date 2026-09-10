@@ -310,7 +310,7 @@ class TestPreviewTable:
         assert "No new values were found" in tab.summary_label.text()
         assert "already have values" not in tab.summary_label.text()
 
-    def test_empty_plan_overwrite_with_identicals_says_identical(self, tab):
+    def test_empty_plan_overwrite_with_identicals_says_values_already_match(self, tab):
         plan = _plan(
             [],
             scanned=12,
@@ -320,11 +320,11 @@ class TestPreviewTable:
         tab._on_scan_finished(plan)
         text = tab.summary_label.text()
         assert "Nothing to overwrite" in text
-        assert "identical" in text
+        assert "already matches the note" in text
 
     def test_empty_plan_overwrite_without_identicals_is_neutral(self, tab):
         # Empty overwrite plan with zero identical skips = lookups found nothing;
-        # must NOT claim values are identical or already present.
+        # must NOT claim values already match or are already present.
         plan = _plan(
             [],
             scanned=12,
@@ -334,7 +334,7 @@ class TestPreviewTable:
         tab._on_scan_finished(plan)
         text = tab.summary_label.text()
         assert "No new values were found" in text
-        assert "identical" not in text
+        assert "already matches the note" not in text
         assert "already have values" not in text
 
     def test_identical_skips_suffix_on_nonempty_plan(self, tab):
