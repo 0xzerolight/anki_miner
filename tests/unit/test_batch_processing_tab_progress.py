@@ -52,7 +52,7 @@ def test_on_pair_finished_advances_composed_bar(tab):
 def test_pair_started_sets_episode_prefix(tab):
     tab._on_batch_started(4)
     tab._on_pair_started(2, "ep02.mkv")
-    assert tab.overall_progress_widget.status_label.text() == "Episode 2/4: ep02.mkv"
+    assert tab.overall_progress_widget.status_label.text() == "Mining episode 2 of 4: ep02.mkv"
 
 
 def test_quick_path_stage_detail_never_moves_the_episode_bar(tab):
@@ -63,7 +63,7 @@ def test_quick_path_stage_detail_never_moves_the_episode_bar(tab):
     tab._on_progress_update(25, "Fetching definitions")
     assert tab.overall_progress_widget.progress_bar.value() == 0
     assert tab.overall_progress_widget.status_label.text() == (
-        "Episode 1/4: ep01.mkv — Fetching definitions (25 of 50)"
+        "Mining episode 1 of 4: ep01.mkv — Fetching definitions (25 of 50)"
     )
 
 
@@ -72,7 +72,7 @@ def test_quick_path_empty_stage_detail_keeps_prefix(tab):
     tab._on_batch_started(2)
     tab._on_pair_started(1, "ep01.mkv")
     tab._on_progress_update(100, "")
-    assert tab.overall_progress_widget.status_label.text() == "Episode 1/2: ep01.mkv"
+    assert tab.overall_progress_widget.status_label.text() == "Mining episode 1 of 2: ep01.mkv"
 
 
 def test_queue_mode_progress_update_is_status_only(tab):
@@ -121,7 +121,7 @@ def test_start_processing_wires_overall_progress_signals(tab):
     assert tab._items_total == 3
 
     worker.pair_started.emit(3, "ep03.mkv")
-    assert tab.overall_progress_widget.status_label.text() == "Episode 3/3: ep03.mkv"
+    assert tab.overall_progress_widget.status_label.text() == "Mining episode 3 of 3: ep03.mkv"
 
     worker.pair_finished.emit(3, 3)
     assert tab.overall_progress_widget.progress_bar.value() == 100

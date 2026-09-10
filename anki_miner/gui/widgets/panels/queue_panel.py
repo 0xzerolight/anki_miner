@@ -493,12 +493,7 @@ class QueuePanel(QFrame):
                 and secondary_folder is not None
                 and is_same_folder(secondary_folder, folders[1])
             ):
-                folder_error.setText(
-                    self.tr(
-                        "The translation folder is the subtitle folder. "
-                        "Pick a separate folder for the translation subtitles."
-                    )
-                )
+                folder_error.setText(self.tr("The translation folder must be different from the subtitle folder."))
                 folder_error.show()
                 return
             folder_error.hide()

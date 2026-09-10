@@ -445,7 +445,7 @@ class TestSecondarySubtitleFolder:
             dialog.findChild(QDialogButtonBox).button(QDialogButtonBox.StandardButton.Ok).click()
             assert dialog.result() != QDialog.DialogCode.Accepted
             shown = [lbl.text() for lbl in dialog.findChildren(QLabel) if not lbl.isHidden()]
-            assert any("is the subtitle folder" in text for text in shown)
+            assert "The translation folder must be different from the subtitle folder." in shown
             return QDialog.DialogCode.Rejected
 
         monkeypatch.setattr(QDialog, "exec", point_at_subtitles_and_try_accept)

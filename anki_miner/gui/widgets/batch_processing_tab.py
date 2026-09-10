@@ -171,9 +171,7 @@ class BatchProcessingTab(MiningTabBase):
         # this tab: one popup per series (queue) / per run (quick pairs).
         self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
         self._bind_review_words_checkbox()
-        self.review_words_checkbox.setToolTip(
-            self.tr("Show the word-selection popup once per series, covering every episode's words")
-        )
+        self.review_words_checkbox.setToolTip(self.tr("Pick which words get cards, once per series."))
         layout.addWidget(self.review_words_checkbox)
 
         # Overall Progress (for queue processing)
@@ -441,10 +439,7 @@ class BatchProcessingTab(MiningTabBase):
         secondary_folder = Path(secondary_path)
         if is_same_folder(secondary_folder, subtitle_folder):
             self.show_screen_issue(
-                ScreenIssue(
-                    summary=self.tr("The translation folder is the subtitle folder."),
-                    details=self.tr("Pick a separate folder for the translation subtitles."),
-                )
+                ScreenIssue(summary=self.tr("The translation folder must be different from the subtitle folder."))
             )
             return False, None
         return True, secondary_folder
@@ -736,10 +731,7 @@ class BatchProcessingTab(MiningTabBase):
     def _empty_run_summary(self) -> str:
         """Why a Process Queue click found nothing to mine."""
         if self.queue_panel.has_only_completed_rows():
-            return self.tr(
-                "Every series in the queue is already complete. "
-                "Select the ones you want to mine again, then click Run selected."
-            )
+            return self.tr("Every series is already complete. Select rows, then Run selected.")
         return self.tr("No valid series in the queue to process.")
 
     def _process_queue(self) -> None:
@@ -938,7 +930,7 @@ class BatchProcessingTab(MiningTabBase):
             index: 1-based pair index
             name: Display name (video file name)
         """
-        self._current_item_label = tr_format(self.tr("Episode %1/%2: %3"), index, self._items_total, name)
+        self._current_item_label = tr_format(self.tr("Mining episode %1 of %2: %3"), index, self._items_total, name)
         self.overall_progress_widget.set_status(self._current_item_label)
 
     def _on_pair_finished(self, completed: int, total: int) -> None:
@@ -967,7 +959,7 @@ class BatchProcessingTab(MiningTabBase):
         """
         self.presenter.show_info(tr_format(self.tr("Processing series: %1"), display_name))
         self._current_item_label = tr_format(
-            self.tr("Series %1/%2: %3"), self._items_done + 1, self._items_total, display_name
+            self.tr("Mining series %1 of %2: %3"), self._items_done + 1, self._items_total, display_name
         )
         self.overall_progress_widget.set_status(self._current_item_label)
         self.queue_panel.set_item_status(item_id, "processing")
