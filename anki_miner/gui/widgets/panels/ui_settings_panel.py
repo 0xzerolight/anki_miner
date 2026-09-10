@@ -204,7 +204,7 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         # change persists immediately but applies on next launch.
         lang_row = QHBoxLayout()
         lang_row.setSpacing(SPACING.sm)
-        language_label = QLabel(self.tr("Language"))
+        language_label = QLabel(self.tr("Interface language"))
         lang_row.addWidget(language_label)
 
         self.language_combo = QComboBox()
@@ -573,7 +573,7 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
 
             self.show_screen_issue(
                 ScreenIssue(
-                    summary=self.tr("The themes folder could not be opened."),
+                    summary=self.tr("The themes folder could not be created."),
                     details=f"{self._themes_root}: {e}",
                     action_id="ui.themes-folder-parent",
                     action_text=self.tr("Open Parent Folder"),

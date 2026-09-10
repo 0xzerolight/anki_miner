@@ -276,7 +276,7 @@ class TestThemesFolderFailureIsVisible:
 
         issue = panel.issue_banner().current_issue()
         assert issue is not None
-        assert issue.summary == "The themes folder could not be opened."
+        assert issue.summary == "The themes folder could not be created."
         assert "Permission denied" not in issue.summary
         assert "Permission denied" in issue.details
         assert str(blocked) in issue.details
@@ -304,7 +304,7 @@ class TestThemesFolderFailureIsVisible:
         panel = UISettingsPanel(target)
         qtbot.addWidget(panel)
         panel.show_screen_issue(
-            ScreenIssue(summary="The themes folder could not be opened."),
+            ScreenIssue(summary="The themes folder could not be created."),
         )
         monkeypatch.setattr(
             "anki_miner.gui.widgets.panels.ui_settings_panel.QDesktopServices.openUrl",
