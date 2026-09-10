@@ -252,7 +252,9 @@ def build_definition_service(
                 if not offline_available:
                     jisho_enabled = any(e.kind == "jisho" and e.enabled for e in config.dictionary_chain)
                     if jisho_enabled:
-                        load_result.warnings.append(_tr("No offline dictionary index; using Jisho only"))
+                        load_result.warnings.append(
+                            _tr("No offline dictionary — definitions will come from Jisho.org only")
+                        )
                     else:
                         load_result.warnings.append(_no_dictionary_warning())
 
@@ -261,11 +263,7 @@ def build_definition_service(
 
 def _no_dictionary_warning() -> str:
     """The actionable no-definition-source warning (Issue #100)."""
-    return _tr(
-        "No dictionary is installed or available — cards will have empty definitions. "
-        "Add one in Settings → Dictionaries → Add Dictionary, or rerun the setup wizard "
-        "from the Tools menu."
-    )
+    return _tr("Cards will have no definitions until you add a dictionary in Settings → Dictionaries.")
 
 
 def _build_pitch_service(

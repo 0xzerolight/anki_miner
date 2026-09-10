@@ -14,8 +14,8 @@ from anki_miner.config import AnkiMinerConfig, ChainEntry
 from anki_miner.gui.utils import service_factory
 from anki_miner.gui.utils.service_factory import ServiceLoadResult, build_definition_service
 
-NO_DICT_SNIPPET = "cards will have empty definitions"
-JISHO_ONLY_SNIPPET = "using Jisho only"
+NO_DICT_SNIPPET = "Cards will have no definitions"
+JISHO_ONLY_SNIPPET = "from Jisho.org only"
 
 
 class _FakeProvider:
