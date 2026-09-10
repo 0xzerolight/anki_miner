@@ -1440,7 +1440,10 @@ def _install_excepthook(app: QApplication, *, fail_fast: bool = False) -> None:
             box.setIcon(QMessageBox.Icon.Critical)
             box.setWindowTitle(QCoreApplication.translate("app", "Anki Miner — Unexpected Error"))
             box.setTextFormat(Qt.TextFormat.PlainText)
-            box.setText(
+            box.setText(QCoreApplication.translate("app", "Anki Miner hit an unexpected error."))
+            # A8-34/A8-35: the exception type and text are raw diagnostics, so
+            # they belong behind Details, never in the primary sentence.
+            box.setDetailedText(
                 tr_format(
                     QCoreApplication.translate(
                         "app",
