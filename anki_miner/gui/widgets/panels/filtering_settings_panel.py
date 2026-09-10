@@ -143,7 +143,7 @@ class FilteringSettingsPanel(FormPanel):
         # Most recently fetched deck names. Every picker open refreshes them
         # first because the connected endpoint or Anki collection may change.
         self._available_decks: list[str] = []
-        super().__init__("Word Filtering", parent=parent)
+        super().__init__(self.tr("Filtering"), parent=parent)
         self._setup_fields()
 
     def _setup_fields(self) -> None:
@@ -546,11 +546,7 @@ class FilteringSettingsPanel(FormPanel):
 
         self.use_sentence_length_checkbox = QCheckBox(self.tr("Enable Sentence Length Filter"))
         self.use_sentence_length_checkbox.setToolTip(
-            self.tr(
-                "Drop words whose example sentence exceeds the audio-duration "
-                "or character caps below. Either cap set to 0 means no limit "
-                "for that dimension. Reduces deck size and speeds up reviews."
-            )
+            self.tr("Drops words whose example sentence exceeds either cap below.")
         )
         self.add_field("", self.use_sentence_length_checkbox)
 
@@ -585,11 +581,9 @@ class FilteringSettingsPanel(FormPanel):
             "",
             self.merge_incomplete_cues_checkbox,
             helper=self.tr(
-                "Joins the neighbouring subtitle lines when a line does not end a sentence, so the "
-                "card carries the whole sentence, its timings and its audio instead of a fragment. "
-                "Every subtitle-timed run uses it — video, YouTube, batch, audiobook; reading "
-                "sources have no subtitle timings and ignore it. The Word Curator's line buttons "
-                "still adjust any card by hand."
+                "Joins neighbouring subtitle lines when a line does not end a sentence, so the "
+                "card carries the whole sentence instead of a fragment. Reading sources have no "
+                "subtitle timings and ignore it."
             ),
         )
 
