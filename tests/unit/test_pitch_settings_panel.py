@@ -98,7 +98,7 @@ def test_row_shows_name_format_and_count(qapp, qtbot, tmp_path):
     row = panel._row_widget(0)
     texts = [label.text() for label in row.findChildren(QLabel)]
     assert any("NHK Accent" in t for t in texts)
-    assert any("yomitan-pitch" in t for t in texts)
+    assert any("Yomitan" in t for t in texts)
     assert any("1,234" in t for t in texts)
 
 

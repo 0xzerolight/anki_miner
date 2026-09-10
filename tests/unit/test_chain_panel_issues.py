@@ -149,5 +149,5 @@ def test_chain_only_remove_says_files_remain(qtbot, tmp_path, monkeypatch, facto
 
     assert "_confirm_chain_only_remove" in factory.__dict__
     assert widget._confirm_chain_only_remove("Source") is False
-    assert "left untouched" in bodies[0]
-    assert "delete" not in bodies[0].lower()
+    assert bodies[0].endswith("No index files are deleted.")
+    assert "Only the index files are deleted" not in bodies[0]
