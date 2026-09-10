@@ -3327,7 +3327,7 @@ class TestProcessYoutubeUrl:
             **mock_services,
         )
 
-        with pytest.raises(RuntimeError, match="YouTubeFetcherService not injected"):
+        with pytest.raises(RuntimeError, match="YouTube mining is unavailable"):
             processor.process_youtube_url(
                 url="https://youtu.be/abc",
                 video_id="abc",

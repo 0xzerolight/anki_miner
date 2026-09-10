@@ -1529,15 +1529,15 @@ class EpisodeProcessor:
                 self.presenter.show_warning(
                     QCoreApplication.translate(
                         "EpisodeProcessor",
-                        "Using WebP for animated screenshots — this ffmpeg build has no AVIF (libsvtav1) encoder.",
+                        "Using WebP for animated screenshots — this ffmpeg build has no AVIF encoder.",
                     )
                 )
             elif animated_fmt is None:
                 self.presenter.show_warning(
                     QCoreApplication.translate(
                         "EpisodeProcessor",
-                        "Animated screenshots unavailable — this ffmpeg build has no AVIF or WebP encoder; "
-                        "switch to static screenshots in Settings.",
+                        "Animated screenshots unavailable — this ffmpeg build has no AVIF or "
+                        "WebP encoder (Settings → Card Media).",
                     )
                 )
 
@@ -1939,7 +1939,7 @@ class EpisodeProcessor:
             ctx.errors.append(CANCELLED_ERROR)
 
         self.presenter.show_success(
-            QCoreApplication.translate("EpisodeProcessor", "Successfully created %n card(s)", "", cards_created)
+            QCoreApplication.translate("EpisodeProcessor", "Created %n card(s)", "", cards_created)
         )
         media_failures = self.anki_service.last_media_store_failures
         if isinstance(media_failures, int) and media_failures > 0:
@@ -2243,7 +2243,7 @@ class EpisodeProcessor:
             )
             ctx.errors.append(str(e))
             partial_ids = list(self.anki_service.last_created_note_ids)
-            self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
+            self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "%1"), str(e)))
             return self._stamp_whitelist_coverage(
                 ctx, self._stamp_write_provenance(self._partial_failure_result(ctx, partial_ids), failure=e)
             )
@@ -2706,7 +2706,9 @@ class EpisodeProcessor:
                 return self._cancelled_result_from_ctx(ctx)
             if not media_results:
                 self.presenter.show_warning(
-                    QCoreApplication.translate("EpisodeProcessor", "No media extracted successfully")
+                    QCoreApplication.translate(
+                        "EpisodeProcessor", "Could not extract media for any word — no cards created"
+                    )
                 )
                 return ctx.build_result(errors=["Media extraction failed for all words"])
             self.presenter.show_success(
@@ -2940,7 +2942,7 @@ class EpisodeProcessor:
                                 tr_format(
                                     QCoreApplication.translate(
                                         "EpisodeProcessor",
-                                        "Skipped corrupt image archive %1 — its cards have no page image",
+                                        "Could not open image archive %1 — its cards have no page image",
                                     ),
                                     ref.source.name,
                                 )
@@ -3478,7 +3480,7 @@ class EpisodeProcessor:
             happens here — the worker handles it).
         """
         if self._youtube_fetcher is None:
-            raise RuntimeError("YouTubeFetcherService not injected — check service_factory")
+            raise RuntimeError("YouTube mining is unavailable.")
         # Bound to a local because the guard above cannot narrow the attribute
         # inside the nested fetch closure below.
         fetcher = self._youtube_fetcher

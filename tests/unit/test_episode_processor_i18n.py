@@ -55,16 +55,16 @@ def test_comprehension_float_arg_renders(qapp):
     assert msg == "Comprehension: 87.3% of words already known"
 
 
-def test_successfully_created_plural_renders(qapp):
-    """%n in 'Successfully created %n card(s)' renders with count."""
-    msg = QCoreApplication.translate("EpisodeProcessor", "Successfully created %n card(s)", "", 42)
-    assert msg == "Successfully created 42 card(s)"
+def test_created_cards_plural_renders(qapp):
+    """%n in 'Created %n card(s)' renders with count (A8-25 bans "Successfully")."""
+    msg = QCoreApplication.translate("EpisodeProcessor", "Created %n card(s)", "", 42)
+    assert msg == "Created 42 card(s)"
 
 
 def test_error_arg_renders(qapp):
-    """Error: %1 renders with the exception string."""
-    msg = tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), "AnkiConnect timeout")
-    assert msg == "Error: AnkiConnect timeout"
+    """The typed exception message stands alone — no banned "Error:" prefix."""
+    msg = tr_format(QCoreApplication.translate("EpisodeProcessor", "%1"), "AnkiConnect timeout")
+    assert msg == "AnkiConnect timeout"
 
 
 def test_i_plus_one_three_arg_renders(qapp):
