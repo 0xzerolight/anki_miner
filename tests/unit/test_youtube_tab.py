@@ -903,6 +903,40 @@ class TestQueueFinished:
         assert "1 succeeded" in last_line
         assert "0 failed" in last_line
 
+    def test_a_cancelled_queue_is_not_reported_as_done(self, tab):
+        """``queue_finished`` fires on the cancel break too.
+
+        Its counts cover only the items the loop reached, so the clean-path
+        lead claimed a two-item queue finished after one.
+        """
+        _add_ready_item(tab, "https://youtu.be/ok")
+        _add_ready_item(tab, "https://youtu.be/never")
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+        tab._on_item_finished(0, MagicMock(cards_created=2), None, 1)
+        tab._on_stop_all_clicked()
+        tab._on_queue_finished()
+
+        text = tab.log_widget.text_edit.toPlainText()
+        assert "Stopped: 1 succeeded, 0 failed." in text
+        assert "Queue done" not in text
+
+    def test_a_refused_run_logs_no_summary_at_all(self, tab):
+        """A pre-loop refusal emits ``error`` then ``queue_finished``.
+
+        The refusal already said what happened; a "0 succeeded, 0 failed"
+        summary on top of it only claims the queue ran.
+        """
+        _add_ready_item(tab)
+        tab._on_mine_clicked()
+        tab._on_run_error("Reimport the stale dictionary first.")
+        tab._on_queue_finished()
+
+        text = tab.log_widget.text_edit.toPlainText()
+        assert "Reimport the stale dictionary first." in text
+        assert "Queue done" not in text
+        assert "Stopped:" not in text
+
     def test_queue_finished_does_not_mutate_state(self, tab):
         """``_on_queue_finished`` only logs — state cleanup is wired to ``QThread.finished``."""
         _add_ready_item(tab)

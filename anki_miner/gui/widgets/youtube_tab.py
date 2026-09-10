@@ -155,6 +155,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
             unavailable=self.tr("Mining unavailable — restart Anki Miner."),
             run_starting=self.tr("%1 run starting — %2 queued."),
             mine_label=self.tr("Mine"),
+            stopped=self.tr("Stopped: %1 succeeded, %2 failed."),
             task_title=self.tr("YouTube queue"),
             retrying=self.tr("Attempt %1 of %2 · retrying in %3s"),
         )

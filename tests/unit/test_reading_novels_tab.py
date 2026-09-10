@@ -192,7 +192,7 @@ class TestStartRun:
 
     def test_start_logs_run_banner(self, tmp_path, tab):
         _run(tab, _book_file(tmp_path), [_make_ref()])
-        assert "1 items" in tab.log_widget.text_edit.toPlainText()
+        assert "1 queued" in tab.log_widget.text_edit.toPlainText()
 
     def test_lazy_factory_when_no_processor(self, qtbot, test_config, tmp_path):
         """No cached processor → the base hands the worker a factory (off-thread)."""
