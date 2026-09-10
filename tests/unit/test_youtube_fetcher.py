@@ -342,7 +342,7 @@ class TestProbeMetadata:
                 "anki_miner.services.youtube_fetcher.run_supervised",
                 return_value=_fake_run(0, json.dumps(payload), stderr="some warn"),
             ),
-            pytest.raises(YouTubeFetchError, match="incomplete metadata"),
+            pytest.raises(YouTubeFetchError, match="incomplete details for this video"),
         ):
             service.probe_metadata("https://youtu.be/abc123")
 
@@ -475,7 +475,7 @@ class TestProbeMetadata:
                 "anki_miner.services.youtube_fetcher.run_supervised",
                 return_value=_fake_run(0, "not-json", stderr="some warn"),
             ),
-            pytest.raises(YouTubeFetchError, match="non-JSON"),
+            pytest.raises(YouTubeFetchError, match="could not read this"),
         ):
             service.probe_metadata("https://youtu.be/abc123")
 
@@ -483,7 +483,7 @@ class TestProbeMetadata:
         """Exit 0 with empty stdout is also non-JSON, not an empty VideoInfo."""
         with (
             patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=_fake_run(0, "", stderr="")),
-            pytest.raises(YouTubeFetchError, match="non-JSON"),
+            pytest.raises(YouTubeFetchError, match="could not read this"),
         ):
             service.probe_metadata("https://youtu.be/abc123")
 
@@ -553,7 +553,7 @@ class TestProbeClassifiesLikeFetch:
             pytest.raises(CookieDatabaseLockedError) as exc,
         ):
             service.probe_metadata("https://youtu.be/abc123")
-        assert "No cookie database found for chrome" in str(exc.value)
+        assert "No cookie database for chrome" in str(exc.value)
         # Closing a browser that was never there cannot help.
         assert "Close chrome" not in str(exc.value)
 
@@ -577,7 +577,7 @@ class TestProbeClassifiesLikeFetch:
                 "anki_miner.services.youtube_fetcher.run_supervised",
                 return_value=_fake_run(1, "", stderr=stderr),
             ),
-            pytest.raises(YouTubeFetchError, match="Update yt-dlp now"),
+            pytest.raises(YouTubeFetchError, match="update yt-dlp in Settings"),
         ):
             service.probe_metadata("https://youtu.be/abc123")
 
@@ -1179,11 +1179,11 @@ class TestBuildFetchCmdAutoDub:
         side of the selector vanished between probe and fetch — saying 'update
         yt-dlp' would mislead — and must be typed as a deterministic failure."""
         tail = collections.deque(["ERROR: Requested format is not available"])
-        with pytest.raises(DubAudioUnavailableError, match="Japanese-audio") as excinfo:
+        with pytest.raises(DubAudioUnavailableError, match="dub audio track") as excinfo:
             service._raise_for_error(tail, "auto_dub")
         assert issubclass(DubAudioUnavailableError, YouTubeFetchError)
-        assert "Japanese-audio" in str(excinfo.value)
-        with pytest.raises(YouTubeFetchError, match="yt-dlp is out of date"):
+        assert "dub audio track" in str(excinfo.value)
+        with pytest.raises(YouTubeFetchError, match="no downloadable format"):
             service._raise_for_error(tail, "auto_only")
 
 
@@ -1219,7 +1219,7 @@ class TestTranscribeMode:
         self, service: YouTubeFetcherService, tmp_path: Path
     ) -> None:
         (tmp_path / "abc123.mp4").write_bytes(b"")
-        with pytest.raises(YouTubeFetchError, match="zero-byte video"):
+        with pytest.raises(YouTubeFetchError, match="video file is empty"):
             service._resolve_outputs(tmp_path, "abc123", "transcribe")
 
 
@@ -1410,7 +1410,7 @@ class TestStaleExtractorMapping:
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen([stderr_line], returncode=1)),
-            pytest.raises(YouTubeFetchError, match="Update yt-dlp now"),
+            pytest.raises(YouTubeFetchError, match="update yt-dlp in Settings"),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
@@ -1419,12 +1419,12 @@ class TestStaleExtractorMapping:
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(["ERROR: Video unavailable"], returncode=1)),
-            pytest.raises(YouTubeFetchError, match="exited non-zero"),
+            pytest.raises(YouTubeFetchError, match="could not download this video"),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
     def test_routine_sabr_warning_does_not_mask_later_failure(
-        self, service: YouTubeFetcherService, tmp_path: Path
+        self, service: YouTubeFetcherService, tmp_path: Path, caplog
     ) -> None:
         lines = [
             "WARNING: Some web client https formats have been skipped; YouTube is forcing SABR streaming for this client.",
@@ -1433,13 +1433,15 @@ class TestStaleExtractorMapping:
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=1)),
+            caplog.at_level(logging.WARNING, logger="anki_miner.services.youtube_fetcher"),
             pytest.raises(YouTubeFetchError) as exc_info,
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
-        message = str(exc_info.value)
-        assert "HTTP Error 403" in message
-        assert "Update yt-dlp now" not in message
+        # The SABR warning must not be classified as a stale extractor; the real
+        # 403 stays recoverable from the log tail.
+        assert "update yt-dlp" not in str(exc_info.value)
+        assert "HTTP Error 403" in caplog.text
 
 
 class TestFetchVideoErrors:
@@ -1494,9 +1496,10 @@ class TestFetchVideoErrors:
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
-    def test_generic_failure_message_carries_output_not_byte_counts(
-        self, service: YouTubeFetcherService, tmp_path: Path
+    def test_generic_failure_log_carries_output_not_byte_counts(
+        self, service: YouTubeFetcherService, tmp_path: Path, caplog
     ) -> None:
+        """The tail moved from the banner into the log; progress lines stay out of both."""
         lines = [
             "ERROR: Video unavailable",
             *[f"[ankimine_dl] {n * 1024} 8315519" for n in range(1, 61)],
@@ -1504,14 +1507,18 @@ class TestFetchVideoErrors:
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=1)),
+            caplog.at_level(logging.WARNING, logger="anki_miner.services.youtube_fetcher"),
             pytest.raises(YouTubeFetchError) as exc,
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
-        message = str(exc.value)
-        assert "Video unavailable" in message
-        assert "[ankimine_dl]" not in message
+        assert str(exc.value) == "yt-dlp could not download this video — see the log for what it reported."
+        tail_log = next(r.getMessage() for r in caplog.records if "output tail" in r.getMessage())
+        assert "Video unavailable" in tail_log
+        assert "[ankimine_dl]" not in tail_log
 
-    def test_warning_sharing_a_progress_line_survives(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
+    def test_warning_sharing_a_progress_line_survives(
+        self, service: YouTubeFetcherService, tmp_path: Path, caplog
+    ) -> None:
         # yt-dlp can flush a warning onto the same line as a progress record.
         # Only a line that is *nothing but* progress is droppable.
         lines = [
@@ -1521,10 +1528,12 @@ class TestFetchVideoErrors:
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=1)),
-            pytest.raises(YouTubeFetchError) as exc,
+            caplog.at_level(logging.WARNING, logger="anki_miner.services.youtube_fetcher"),
+            pytest.raises(YouTubeFetchError),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
-        assert "nsig extraction failed" in str(exc.value)
+        tail_log = next(r.getMessage() for r in caplog.records if "output tail" in r.getMessage())
+        assert "nsig extraction failed" in tail_log
 
     def test_missing_output_after_exit_zero(self, service: YouTubeFetcherService, tmp_path: Path) -> None:
         # No files created in workspace.
@@ -1532,7 +1541,7 @@ class TestFetchVideoErrors:
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
-            pytest.raises(YouTubeFetchError, match="expected output files are missing"),
+            pytest.raises(YouTubeFetchError, match="missing its video or subtitle file"),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
@@ -1546,7 +1555,7 @@ class TestFetchVideoErrors:
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen(lines, returncode=0)),
-            pytest.raises(YouTubeFetchError, match="zero-byte subtitle"),
+            pytest.raises(YouTubeFetchError, match="subtitle file is empty"),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
@@ -1564,7 +1573,7 @@ class TestFetchVideoErrors:
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
-            pytest.raises(NoJapaneseSubtitlesError, match="wrote no Japanese subtitle"),
+            pytest.raises(NoJapaneseSubtitlesError, match="Japanese subtitle track was no longer available"),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
@@ -1823,7 +1832,7 @@ class TestResolveOutputsAmbiguity:
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
-            pytest.raises(YouTubeFetchError, match="Multiple video outputs"),
+            pytest.raises(YouTubeFetchError, match="more than one video file"),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
@@ -1836,7 +1845,7 @@ class TestResolveOutputsAmbiguity:
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
-            pytest.raises(YouTubeFetchError, match="Multiple subtitle outputs"),
+            pytest.raises(YouTubeFetchError, match="more than one subtitle file"),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
@@ -1849,7 +1858,7 @@ class TestResolveOutputsAmbiguity:
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
-            pytest.raises(YouTubeFetchError, match="Multiple video outputs"),
+            pytest.raises(YouTubeFetchError, match="more than one video file"),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
@@ -1868,7 +1877,7 @@ class TestResolveOutputsAmbiguity:
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", return_value=_FakePopen([], returncode=0)),
             patch.object(Path, "stat", fake_stat),
-            pytest.raises(YouTubeFetchError, match="Subtitle file unreadable after fetch"),
+            pytest.raises(YouTubeFetchError, match="subtitle file could not be read"),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 
@@ -1876,7 +1885,7 @@ class TestResolveOutputsAmbiguity:
         _touch(tmp_path / "abc123.mp4", b"")
         _touch(tmp_path / "abc123.ja.srt", b"1\n00:00:01,000 --> 00:00:02,000\nhi\n")
 
-        with pytest.raises(YouTubeFetchError, match="zero-byte video"):
+        with pytest.raises(YouTubeFetchError, match="video file is empty"):
             service._resolve_outputs(tmp_path, "abc123", "manual_only")
 
 
@@ -2705,7 +2714,7 @@ class TestProbePlaylist:
                 "anki_miner.services.youtube_fetcher.run_supervised",
                 return_value=_fake_run(0, "not-json-output", stderr="some warn"),
             ),
-            pytest.raises(YouTubeFetchError, match="non-JSON"),
+            pytest.raises(YouTubeFetchError, match="could not read this"),
         ):
             service.probe_playlist("https://www.youtube.com/playlist?list=PLtest123456789", limit=50)
 

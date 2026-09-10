@@ -528,7 +528,7 @@ class TestErrors:
             # cookies.py:318 — no cookie DB under the browser's search root.
             (
                 'ERROR: could not find chrome cookies database in "/home/u/.config/google-chrome"',
-                "No cookie database found for chrome",
+                "No cookie database for chrome",
             ),
         ],
     )
