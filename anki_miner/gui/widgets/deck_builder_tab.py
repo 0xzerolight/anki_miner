@@ -257,7 +257,6 @@ class DeckBuilderTab(MiningTabBase):
         self.build_button.setEnabled(False)
 
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="danger")
-        self.cancel_button.setToolTip(self.tr("Cancel the current operation"))
         self.cancel_button.setEnabled(False)
 
         self.preview_button.clicked.connect(self._on_preview_clicked)
@@ -479,7 +478,7 @@ class DeckBuilderTab(MiningTabBase):
 
         self.log_widget.append_success(
             tr_format(
-                self.tr("Preview ready — %1 cards, ~%2% coverage. Click 'Build Deck' to proceed."),
+                self.tr("Preview ready — %1 cards; the candidate words cover ~%2% of tokens."),
                 f"{preview.card_count:,}",
                 f"{preview.projected_coverage_pct:.1f}",
             )
@@ -531,11 +530,11 @@ class DeckBuilderTab(MiningTabBase):
         deck_name = self.worker_thread.request.deck_name if self.worker_thread else "deck"
         # ``coverage`` is the Phase-1 projection over the candidate set (known
         # words count toward it); the actual card count can be lower when known
-        # words are skipped or a definition lookup yields nothing, so this is
-        # framed as a target rather than an achieved figure.
+        # words are skipped or a definition lookup yields nothing, so the line
+        # attributes the coverage to the candidate words, not to the cards.
         self.log_widget.append_success(
             tr_format(
-                self.tr("Done! Created %1 cards (~%2% target coverage) in deck '%3'."),
+                self.tr("Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens."),
                 f"{total:,}",
                 f"{coverage:.1f}",
                 deck_name,
@@ -566,7 +565,9 @@ class DeckBuilderTab(MiningTabBase):
     # ------------------------------------------------------------------
 
     def _on_error(self, msg: str) -> None:
-        self.log_widget.append_error(tr_format(self.tr("Error: %1"), msg))
+        # The rendered line already carries an [ERROR] level marker, so no
+        # "Error:" prefix of our own — and the worker's messages are sentences.
+        self.log_widget.append_error(msg)
         self.progress_widget.reset()
         self.progress_widget.set_status(self.tr("Failed — see log"))
         self._restore_buttons()

@@ -310,7 +310,7 @@ class TestPreviewTable:
         assert "No new values were found" in tab.summary_label.text()
         assert "already have values" not in tab.summary_label.text()
 
-    def test_empty_plan_overwrite_with_identicals_says_identical(self, tab):
+    def test_empty_plan_overwrite_with_identicals_says_values_already_match(self, tab):
         plan = _plan(
             [],
             scanned=12,
@@ -320,11 +320,11 @@ class TestPreviewTable:
         tab._on_scan_finished(plan)
         text = tab.summary_label.text()
         assert "Nothing to overwrite" in text
-        assert "identical" in text
+        assert "already matches the note" in text
 
     def test_empty_plan_overwrite_without_identicals_is_neutral(self, tab):
         # Empty overwrite plan with zero identical skips = lookups found nothing;
-        # must NOT claim values are identical or already present.
+        # must NOT claim values already match or are already present.
         plan = _plan(
             [],
             scanned=12,
@@ -334,7 +334,7 @@ class TestPreviewTable:
         tab._on_scan_finished(plan)
         text = tab.summary_label.text()
         assert "No new values were found" in text
-        assert "identical" not in text
+        assert "already matches the note" not in text
         assert "already have values" not in text
 
     def test_identical_skips_suffix_on_nonempty_plan(self, tab):
@@ -369,14 +369,15 @@ class TestPreviewTable:
         assert "Mining::JP" in text
         assert "test_note_type" in text
 
-    def test_absent_fields_reported_as_a_stale_mapping(self, tab):
+    def test_absent_fields_reported_as_not_on_the_note_type(self, tab):
         # Distinct from unavailable_fields: the field name is not on the note
         # type at all, so installing resources cannot help.
         plan = _plan([], scanned=12, absent_fields=("PitchGraph",))
         tab._on_scan_finished(plan)
         text = tab.summary_label.text()
         assert "PitchGraph" in text
-        assert "stale mapping" in text.lower()
+        assert "not on the note type" in text.lower()
+        assert "Settings → Cards & Anki" in text
 
     def test_absent_fields_reported_alongside_a_nonempty_plan(self, tab):
         plan = _plan([_note_plan(1)], absent_fields=("PitchGraph",))
@@ -547,6 +548,46 @@ class TestApplyFlow:
         snapshot = registry.snapshot(tab.TASK_ID)
         assert snapshot is not None
         assert snapshot.outcome is TaskOutcome.CANCELLED
+
+    def test_cancelled_apply_receipt_survives_the_finish(self, tab):
+        # _on_apply_cancelled runs before finished; the finish must not
+        # overwrite the partial receipt it composed.
+        worker = MagicMock()
+        worker.is_cancelled = True
+        tab.worker_thread = worker
+        tab.status_label.setText("Cancelled. Filled 2 field(s) on 1 note(s).")
+
+        tab._on_worker_finished()
+
+        assert tab.status_label.text() == "Cancelled. Filled 2 field(s) on 1 note(s)."
+
+
+class TestCancelledScan:
+    """The scan workers emit no ``cancelled`` signal, so ``finished`` closes out.
+
+    Without that, a cancelled scan left "Cancelling…" on screen for good — a
+    status asserting live work that had already ended (D17).
+    """
+
+    def test_cancelled_scan_reports_cancelled(self, tab):
+        worker = MagicMock()
+        worker.is_cancelled = True
+        tab.worker_thread = worker
+        tab.status_label.setText("Cancelling…")
+
+        tab._on_worker_finished()
+
+        assert tab.status_label.text() == "Cancelled."
+
+    def test_finished_scan_keeps_its_own_receipt(self, tab):
+        worker = MagicMock()
+        worker.is_cancelled = False
+        tab.worker_thread = worker
+        tab.status_label.setText("Cancelling…")
+
+        tab._on_worker_finished()
+
+        assert tab.status_label.text() == "Cancelling…"
 
 
 class TestConfigAndLifecycle:

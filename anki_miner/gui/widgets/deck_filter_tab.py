@@ -137,9 +137,7 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
         hint = QLabel(
             self.tr(
                 "Copy the worth-learning part of a premade deck into a new deck. "
-                "Notes are kept or dropped by your filters — known words, frequency "
-                "band, blacklist, script type and name wordsets (Settings → Filtering). "
-                "The source deck is not modified."
+                "Filters come from Settings → Filtering; the source deck is not modified."
             )
         )
         hint.setWordWrap(True)
@@ -521,7 +519,7 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
             "no_expression": self.tr("empty word field"),
             "not_japanese": self.tr("not the mining language"),
             "duplicate_in_source": self.tr("duplicate within the deck"),
-            "known": self.tr("already known or carded"),
+            "known": self.tr("already known or in Anki"),
             "unranked": self.tr("no frequency rank"),
             "frequency_band": self.tr("outside the frequency band"),
             "blacklist": self.tr("blacklisted"),
@@ -696,6 +694,12 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
     def _on_worker_finished(self) -> None:
         self._set_running(False)
         cancelled = self.worker_thread is not None and self.worker_thread.is_cancelled
+        # The scan worker declares no ``cancelled`` signal and returns silently,
+        # so this is the only place that can close out a cancelled scan. Guarded
+        # on the exact live text: the Apply path has already written its partial
+        # receipt here by the time ``finished`` arrives.
+        if cancelled and self.status_label.text() == self.tr("Cancelling…"):
+            self.status_label.setText(self.tr("Cancelled."))
         self._publish_task_finish(self._task_outcome(cancelled=cancelled, failed=self._run_failed))
         self._run_failed = False
         self.worker_thread = None

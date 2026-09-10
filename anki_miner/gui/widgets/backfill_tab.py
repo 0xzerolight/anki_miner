@@ -162,9 +162,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         hint = QLabel(
             self.tr(
                 "Fill missing fields on notes you mined earlier, using the currently "
-                "installed dictionaries, frequency sources and pitch data. "
-                "For very large collections, run per-deck. "
-                "Overwrite mode may need a follow-up Restyle to refresh card styling."
+                "installed dictionaries, frequency sources and pitch data."
             )
         )
         hint.setWordWrap(True)
@@ -218,6 +216,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         # silently. Pinned by
         # tests/unit/test_run_option_persistence.py::test_overwrite_is_never_persisted.
         self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing values"))
+        self.overwrite_checkbox.setToolTip(self.tr("Overwritten cards may need a Restyle to refresh their styling."))
         layout.addWidget(self.overwrite_checkbox)
 
         # Scan, Apply and Cancel all live in the pinned bar (D6). Scan is the
@@ -415,7 +414,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
                 checkbox.setEnabled(enabled)
                 if not enabled:
                     checkbox.setChecked(False)
-                    checkbox.setToolTip(self.tr("Map this field in Settings → Anki"))
+                    checkbox.setToolTip(self.tr("Map this field in Settings → Cards & Anki"))
                 else:
                     # Restore the group's own tooltip; without this branch the
                     # "Map this field…" text set above outlives the condition that
@@ -692,12 +691,12 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
             if plan.options.deck:
                 parts.append(
                     self.tr(
-                        'No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.'
+                        'No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Cards & Anki.'
                     ).format(note_type=self.config.anki_note_type, deck=plan.options.deck)
                 )
             else:
                 parts.append(
-                    self.tr('No notes matched — note type "{note_type}". Check Settings → Anki.').format(
+                    self.tr('No notes matched — note type "{note_type}". Check Settings → Cards & Anki.').format(
                         note_type=self.config.anki_note_type
                     )
                 )
@@ -712,29 +711,22 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         elif not plan.options.overwrite:
             parts.append(self.tr("No new values were found for the selected fields."))
         elif plan.identical_skips > 0:
-            parts.append(
-                self.tr("Nothing to overwrite — the freshly computed values are identical to the existing content.")
-            )
+            parts.append(self.tr("Nothing to overwrite — every computed value already matches the note."))
         elif plan.guessed_reading_skips > 0:
             # Not "nothing found": the values existed, they were withheld.
-            parts.append(self.tr("Nothing to overwrite — the existing pitch was kept, see below."))
+            parts.append(self.tr("Nothing to overwrite — the existing pitch was kept."))
         else:
             # Overwrite scan with zero identical skips: the lookups produced no
             # proposals (word not covered / field absent), so claiming the
             # values are "identical" or "already present" would be false.
             parts.append(self.tr("No new values were found for the selected fields."))
         if plan.identical_skips > 0:
-            parts.append(
-                self.tr("{count} field value(s) already up to date (identical to the computed value).").format(
-                    count=plan.identical_skips
-                )
-            )
+            parts.append(self.tr("{count} field value(s) already up to date.").format(count=plan.identical_skips))
         if plan.guessed_reading_skips > 0:
             parts.append(
                 self.tr(
-                    "{count} pitch field(s) kept — the reading could only be guessed from the word alone, "
-                    "so overwriting could have applied the wrong homograph's accent. "
-                    "Map an Expression Reading or Furigana field to overwrite them."
+                    "{count} pitch field(s) kept — the reading was guessed, so the accent could be "
+                    "the wrong homograph's. Map an Expression Reading or Furigana field to overwrite them."
                 ).format(count=plan.guessed_reading_skips)
             )
         if plan.absent_fields:
@@ -742,9 +734,9 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
             # name itself is not on the note type, so the mapping is stale and
             # no amount of installing dictionaries will help.
             parts.append(
-                self.tr(
-                    "Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping."
-                ).format(fields=", ".join(plan.absent_fields))
+                self.tr("These fields are not on the note type: {fields}. Fix them in Settings → Cards & Anki.").format(
+                    fields=", ".join(plan.absent_fields)
+                )
             )
         if plan.unavailable_fields:
             parts.append(
@@ -909,6 +901,12 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
     def _on_worker_finished(self) -> None:
         self._set_running(False)
         cancelled = self.worker_thread is not None and self.worker_thread.is_cancelled
+        # The scan worker declares no ``cancelled`` signal and returns silently,
+        # so this is the only place that can close out a cancelled scan. Guarded
+        # on the exact live text: the Apply path has already written its partial
+        # receipt here by the time ``finished`` arrives.
+        if cancelled and self.status_label.text() == self.tr("Cancelling…"):
+            self.status_label.setText(self.tr("Cancelled."))
         self._publish_task_finish(self._task_outcome(cancelled=cancelled, failed=self._run_failed))
         self._run_failed = False
         self.worker_thread = None
