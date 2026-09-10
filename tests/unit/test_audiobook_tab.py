@@ -163,6 +163,30 @@ class TestAddPair:
         # Pickers NOT cleared so the user can see/fix what they selected.
         assert tab.audio_selector.get_path() != ""
 
+    def test_add_no_audio_picked_says_choose_one(self, tab, tmp_path):
+        """Nothing picked is not a failed lookup — no "not found" for it."""
+        _, sub = _make_pair(tmp_path)
+        tab.subtitle_selector.set_path(str(sub))
+
+        tab._on_add_clicked()
+
+        assert tab._queue.all_items() == []
+        log = tab.log_widget.text_edit.toPlainText()
+        assert "Choose an audio file first." in log
+        assert "not found" not in log
+
+    def test_add_no_subtitle_picked_says_choose_one(self, tab, tmp_path):
+        audio, _ = _make_pair(tmp_path)
+        tab.audio_selector.set_path(str(audio))
+        tab.subtitle_selector.clear()
+
+        tab._on_add_clicked()
+
+        assert tab._queue.all_items() == []
+        log = tab.log_widget.text_edit.toPlainText()
+        assert "Choose a subtitle file first." in log
+        assert "not found" not in log
+
     def test_add_missing_subtitle_rejected(self, tab, tmp_path):
         audio, _ = _make_pair(tmp_path)
         tab.audio_selector.set_path(str(audio))

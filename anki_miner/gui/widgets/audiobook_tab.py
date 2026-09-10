@@ -378,29 +378,47 @@ class AudiobookTab(_ListQueueMiningTabBase):
         sub_text = self.subtitle_selector.path_or_none()
         if audio_text is None and sub_text is None:
             return
-        if audio_text is None or not Path(audio_text).is_file():
+        # Nothing picked and a picked file that no longer resolves are different
+        # states: only the second one is a lookup that happened and failed.
+        if audio_text is None:
             log_summary(
                 logger,
                 "Audiobook add rejected",
                 level=logging.WARNING,
                 reason="audio_file_missing",
-                file=Path(audio_text) if audio_text else None,
+                file=None,
             )
-            self.log_widget.append_error(
-                tr_format(self.tr("Audio file not found: %1"), audio_text or self.tr("(none selected)"))
-            )
+            self.log_widget.append_error(self.tr("Choose an audio file first."))
             return
-        if sub_text is None or not Path(sub_text).is_file():
+        if not Path(audio_text).is_file():
+            log_summary(
+                logger,
+                "Audiobook add rejected",
+                level=logging.WARNING,
+                reason="audio_file_missing",
+                file=Path(audio_text),
+            )
+            self.log_widget.append_error(tr_format(self.tr("Audio file not found: %1"), audio_text))
+            return
+        if sub_text is None:
             log_summary(
                 logger,
                 "Audiobook add rejected",
                 level=logging.WARNING,
                 reason="subtitle_file_missing",
-                file=Path(sub_text) if sub_text else None,
+                file=None,
             )
-            self.log_widget.append_error(
-                tr_format(self.tr("Subtitle file not found: %1"), sub_text or self.tr("(none selected)"))
+            self.log_widget.append_error(self.tr("Choose a subtitle file first."))
+            return
+        if not Path(sub_text).is_file():
+            log_summary(
+                logger,
+                "Audiobook add rejected",
+                level=logging.WARNING,
+                reason="subtitle_file_missing",
+                file=Path(sub_text),
             )
+            self.log_widget.append_error(tr_format(self.tr("Subtitle file not found: %1"), sub_text))
             return
 
         item = self._queue.add(Path(audio_text), Path(sub_text))
