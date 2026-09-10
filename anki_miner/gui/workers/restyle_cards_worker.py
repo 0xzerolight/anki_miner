@@ -56,8 +56,10 @@ class RestyleCardsWorker(CancellableWorker):
                     failed=result.failed,
                 )
         except Exception as e:  # noqa: BLE001 — surface every failure to the GUI
+            # No prefix: this lands in the banner's ``details``, under a summary
+            # that already says the mined cards could not be restyled.
             self.report_failure(
                 e,
                 context="RestyleCardsWorker",
-                on_error=lambda msg: self.error.emit(f"Restyle failed: {msg}"),
+                on_error=self.error.emit,
             )

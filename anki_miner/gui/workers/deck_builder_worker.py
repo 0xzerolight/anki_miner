@@ -289,7 +289,7 @@ class DeckBuilderWorker(ProcessorOwningWorker):
                 outcome = classify_result(result)
                 if outcome is MiningOutcome.FAILED:
                     pending_carded.clear()
-                    detail = "; ".join(result.errors) or "processing result reported failure"
+                    detail = "; ".join(result.errors) or "no reason reported (see log)"
                     raise RuntimeError(f"Deck build failed for {name}: {detail}")
 
                 confirmed_lemmas = list(proc.anki_service.last_created_lemmas)
