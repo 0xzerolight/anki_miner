@@ -125,7 +125,6 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "strict_card_order",
         "condenser_merge_output",
         "secondary_subtitle_enabled",
-        "known_words_expression_fields",
         "review_words_before_mining",
         "youtube_align_captions",
         "youtube_subtitle_source",

@@ -733,10 +733,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.filtering_panel.fetch_decks_requested.connect(self._anki_probe.fetch_decks)
         self.filtering_panel.rebuild_known_words_requested.connect(self._on_rebuild_known_words)
         self.filtering_panel.manage_known_words_requested.connect(self._on_manage_known_words)
-        self.filtering_panel.fetch_known_words_note_types_requested.connect(
-            self._anki_probe.fetch_known_words_note_types
-        )
-        self.filtering_panel.fetch_known_words_fields_requested.connect(self._anki_probe.fetch_known_words_fields)
 
         # Mining Language panel: the guarded switch proposal + the language packs.
         self.mining_language_panel.mining_language_requested.connect(self.mining_language_requested)
@@ -2081,7 +2077,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     def iter_close_workers(self) -> tuple:
         """Live worker handles MainWindow must join on close (T-12).
 
-        Chains the six AnkiConnect probe workers (T-66) with the active
+        Chains the four AnkiConnect probe workers (T-66) with the active
         import workers from all four import flows (OVH-004, 059, 060) so
         ``BackgroundTaskController._join_worker_for_close`` sees every live
         Settings-tab QThread.  ``None`` entries (idle flows) are filtered

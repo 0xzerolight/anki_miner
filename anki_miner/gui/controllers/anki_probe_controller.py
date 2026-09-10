@@ -69,12 +69,6 @@ class AnkiProbeController:
         # note-type dropdowns in the Anki panel.
         self._name_decks_worker: SingleCallWorker | None = None
         self._name_notetypes_worker: SingleCallWorker | None = None
-        # Same GC-safety rationale again for the two known-words expression
-        # field pickers. They cannot share the Auto-Map handle above: its slots
-        # write the Anki panel's note-type status label, and
-        # _set_notetype_status yields while it runs.
-        self._known_words_notetypes_worker: SingleCallWorker | None = None
-        self._known_words_fields_worker: SingleCallWorker | None = None
         # "Did real lists come back?", NOT "did we ask?". AnkiConnect returns []
         # for an unreachable Anki as well as for an empty collection, so a latch
         # set on the attempt remembers a failure as done and the "Could not load
@@ -102,8 +96,6 @@ class AnkiProbeController:
             self._fetch_decks_worker,
             self._name_decks_worker,
             self._name_notetypes_worker,
-            self._known_words_notetypes_worker,
-            self._known_words_fields_worker,
         )
 
     def shutdown(self) -> None:
@@ -544,141 +536,3 @@ class AnkiProbeController:
         if ankiconnect_url is not None and ankiconnect_url != self._anki_panel.get_ankiconnect_url().strip():
             return
         self._set_notetype_status(False, message)
-
-    # === Known-words expression fields ===
-
-    def fetch_known_words_note_types(self) -> None:
-        """Fetch the note type list for the known-words field picker.
-
-        Separate from :meth:`refresh_name_lists`, whose result fills the Anki
-        panel's dropdown and writes its status label; this one opens a picker
-        on the Filtering panel. Reads the AnkiConnect URL currently shown in
-        the Anki panel so the picker works before Save.
-        """
-        if still_running(self._known_words_notetypes_worker):
-            return
-        ankiconnect_url = self._anki_panel.get_ankiconnect_url().strip()
-        if not ankiconnect_url:
-            return
-        try:
-            service = AnkiService(replace(self._get_config(), ankiconnect_url=ankiconnect_url))
-        except ValueError as e:
-            self._report(
-                QCoreApplication.translate(
-                    "AnkiProbeController",
-                    "The note type list could not be requested. Check the AnkiConnect address in Settings.",
-                ),
-                str(e),
-            )
-            return
-
-        self._filtering_panel.set_map_note_type_button_enabled(False)
-        worker = FetchNotetypesWorker(service, self._parent)
-        self._known_words_notetypes_worker = worker
-        worker.finished.connect(lambda w=worker: self._release_worker("_known_words_notetypes_worker", w))
-        worker.result_ready.connect(
-            lambda names, endpoint=ankiconnect_url: self._on_known_words_note_types_fetched(names, endpoint)
-        )
-        worker.error.connect(
-            lambda message, endpoint=ankiconnect_url: self._on_known_words_note_types_error(message, endpoint)
-        )
-        worker.start()
-
-    def _on_known_words_note_types_fetched(
-        self,
-        model_names: object,
-        ankiconnect_url: str | None = None,
-    ) -> None:
-        """Hand the fetched note type list to the panel, which opens the picker."""
-        if not self._alive(self._filtering_panel):
-            return
-        self._filtering_panel.set_map_note_type_button_enabled(True)
-        if ankiconnect_url is not None and ankiconnect_url != self._anki_panel.get_ankiconnect_url().strip():
-            return
-        names = [str(n) for n in model_names] if isinstance(model_names, list) else []
-        if not names:
-            self._report(
-                QCoreApplication.translate(
-                    "AnkiProbeController",
-                    "No note types came back. Check that Anki is running with the AnkiConnect add-on.",
-                )
-            )
-            return
-        self._filtering_panel.set_available_note_types(names)
-
-    def _on_known_words_note_types_error(self, message: str, ankiconnect_url: str | None = None) -> None:
-        """Surface an unexpected note-type fetch exception."""
-        if not self._alive(self._filtering_panel):
-            return
-        self._filtering_panel.set_map_note_type_button_enabled(True)
-        if ankiconnect_url is not None and ankiconnect_url != self._anki_panel.get_ankiconnect_url().strip():
-            return
-        self._report(
-            QCoreApplication.translate("AnkiProbeController", "The note type list could not be read from Anki."),
-            message,
-        )
-
-    def fetch_known_words_fields(self, note_type: str) -> None:
-        """Fetch ``note_type``'s field list for the second known-words picker."""
-        if still_running(self._known_words_fields_worker):
-            return
-        ankiconnect_url = self._anki_panel.get_ankiconnect_url().strip()
-        if not ankiconnect_url or not note_type:
-            return
-        try:
-            service = AnkiService(replace(self._get_config(), ankiconnect_url=ankiconnect_url))
-        except ValueError as e:
-            self._report(
-                QCoreApplication.translate(
-                    "AnkiProbeController",
-                    "The field list could not be requested. Check the AnkiConnect address in Settings.",
-                ),
-                str(e),
-            )
-            return
-
-        worker = FetchFieldsWorker(service, note_type, self._parent)
-        self._known_words_fields_worker = worker
-        worker.finished.connect(lambda w=worker: self._release_worker("_known_words_fields_worker", w))
-        worker.result_ready.connect(
-            lambda names, stamp=(note_type, ankiconnect_url): self._on_known_words_fields_fetched(
-                stamp[0], names, stamp[1]
-            )
-        )
-        worker.error.connect(
-            lambda message, endpoint=ankiconnect_url: self._on_known_words_fields_error(message, endpoint)
-        )
-        worker.start()
-
-    def _on_known_words_fields_fetched(
-        self,
-        note_type: str,
-        field_names: object,
-        ankiconnect_url: str | None = None,
-    ) -> None:
-        """Hand ``note_type``'s field list to the panel, which opens the picker."""
-        if not self._alive(self._filtering_panel):
-            return
-        if ankiconnect_url is not None and ankiconnect_url != self._anki_panel.get_ankiconnect_url().strip():
-            return
-        names = [str(n) for n in field_names] if isinstance(field_names, list) else []
-        if not names:
-            self._report(
-                tr_format(
-                    QCoreApplication.translate("AnkiProbeController", "No fields came back for note type '%1'."),
-                    note_type,
-                )
-            )
-            return
-        self._filtering_panel.set_available_note_type_fields(note_type, names)
-
-    def _on_known_words_fields_error(self, message: str, ankiconnect_url: str | None = None) -> None:
-        """Surface an unexpected field-fetch exception."""
-        if not self._alive(self._filtering_panel):
-            return
-        if ankiconnect_url is not None and ankiconnect_url != self._anki_panel.get_ankiconnect_url().strip():
-            return
-        self._report(
-            QCoreApplication.translate("AnkiProbeController", "The field list could not be read from Anki."),
-            message,
-        )

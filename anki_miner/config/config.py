@@ -169,19 +169,6 @@ class AnkiMinerConfig:
     # words are NOT treated as already-known. Empty tuple = scan the whole collection.
     excluded_decks: tuple[str, ...] = field(default_factory=tuple)
 
-    # Note type name -> the field the known-words scan reads as the expression.
-    # The scan walks the WHOLE collection and Anki convention says the first
-    # field is the expression, so a note type that puts the sentence there had
-    # every one of its sentences stored as a known "word". An entry here names
-    # the field to read for that note type instead; a note type with no entry —
-    # and a note whose model lacks the named field — keeps the first-field rule,
-    # so {} (the default) is byte-identical to the pre-feature scan. Keyed per
-    # note type because a collection mixes them. Deliberately NOT in
-    # LANGUAGE_SCOPED_FIELDS: note type names are collection-wide, and parking
-    # them on a language switch would drop the mapping the moment the user
-    # mined another language.
-    known_words_expression_fields: Mapping[str, str] = field(default_factory=dict)
-
     # Media extraction settings
     audio_padding: float = 0.3  # Seconds to add before/after subtitle timing
     screenshot_offset: float = 1.0  # Seconds after subtitle start for screenshot
@@ -794,13 +781,6 @@ class AnkiMinerConfig:
         if not isinstance(self.card_type_marker_fields, types.MappingProxyType):
             object.__setattr__(
                 self, "card_type_marker_fields", types.MappingProxyType(dict(self.card_type_marker_fields))
-            )
-        # Same immutability wrap for the known-words expression field map.
-        if not isinstance(self.known_words_expression_fields, types.MappingProxyType):
-            object.__setattr__(
-                self,
-                "known_words_expression_fields",
-                types.MappingProxyType(dict(self.known_words_expression_fields)),
             )
         if not isinstance(self.language_stash, types.MappingProxyType) or any(
             not isinstance(value, types.MappingProxyType) for value in self.language_stash.values()

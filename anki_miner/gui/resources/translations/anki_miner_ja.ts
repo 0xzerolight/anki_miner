@@ -277,30 +277,6 @@
         <source>Note type '%1' is not in Anki — pick one below.</source>
         <translation>ノートタイプ「%1」は Anki にありません — 下で選択してください。</translation>
     </message>
-    <message>
-        <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation>ノートタイプリストを要求できませんでした。設定で AnkiConnect のアドレスを確認してください。</translation>
-    </message>
-    <message>
-        <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
-        <translation>ノートタイプが返されませんでした。Anki が AnkiConnect アドオンとともに起動していることを確認してください。</translation>
-    </message>
-    <message>
-        <source>The note type list could not be read from Anki.</source>
-        <translation>Anki からノートタイプリストを読み取れませんでした。</translation>
-    </message>
-    <message>
-        <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation>フィールドリストを要求できませんでした。設定で AnkiConnect のアドレスを確認してください。</translation>
-    </message>
-    <message>
-        <source>No fields came back for note type '%1'.</source>
-        <translation>ノートタイプ「%1」のフィールドが返されませんでした。</translation>
-    </message>
-    <message>
-        <source>The field list could not be read from Anki.</source>
-        <translation>Anki からフィールドリストを読み取れませんでした。</translation>
-    </message>
 </context><context>
     <name>AnkiService</name>
     <message>
@@ -4714,18 +4690,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>単語キュレーターからローカルの既知単語リストに追加した単語を表示、削除、エクスポート、またはリセットします。</translation>
     </message>
     <message>
-        <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
-        <translation>スキャンは各ノートの最初のフィールドを読み取ります。最初のフィールドが単語でない場合はここでノートタイプをマッピングしてください。そうしないと、その文が既知単語として保存されてしまいます。マッピングしていないノートタイプは最初のフィールドのまま扱われます。その後「既知単語DBを再構築」を実行し、すでに保存された内容をクリアしてください。</translation>
-    </message>
-    <message>
-        <source>Map Note Type…</source>
-        <translation>ノートタイプをマッピング…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>削除</translation>
-    </message>
-    <message>
         <source>Excluded Decks</source>
         <translation>除外するデッキ</translation>
     </message>
@@ -4736,6 +4700,10 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Add Deck…</source>
         <translation>デッキを追加…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>削除</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -5024,18 +4992,6 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>既知単語の検出から除外するデッキ:</translation>
-    </message>
-    <message>
-        <source>Known Words Expression Field</source>
-        <translation>既知単語表現フィールド</translation>
-    </message>
-    <message>
-        <source>Note type to map (an existing mapping is replaced):</source>
-        <translation>マッピングするノートタイプ（既存のマッピングは置き換えられます）:</translation>
-    </message>
-    <message>
-        <source>Field to read as the expression for '%1':</source>
-        <translation>「%1」の表現として読み取るフィールド:</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>

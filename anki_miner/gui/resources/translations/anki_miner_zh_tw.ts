@@ -277,30 +277,6 @@
         <source>Note type '%1' is not in Anki — pick one below.</source>
         <translation>筆記類型「%1」不在 Anki 中 — 請在下方選取一個。</translation>
     </message>
-    <message>
-        <source>The note type list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation>無法要求取得筆記類型清單。請檢查「設定」中的 AnkiConnect 位址。</translation>
-    </message>
-    <message>
-        <source>No note types came back. Check that Anki is running with the AnkiConnect add-on.</source>
-        <translation>未取得任何筆記類型。請確認 Anki 正在執行且已安裝 AnkiConnect 附加元件。</translation>
-    </message>
-    <message>
-        <source>The note type list could not be read from Anki.</source>
-        <translation>無法從 Anki 讀取筆記類型清單。</translation>
-    </message>
-    <message>
-        <source>The field list could not be requested. Check the AnkiConnect address in Settings.</source>
-        <translation>無法要求取得欄位清單。請檢查「設定」中的 AnkiConnect 位址。</translation>
-    </message>
-    <message>
-        <source>No fields came back for note type '%1'.</source>
-        <translation>筆記類型「%1」未取得任何欄位。</translation>
-    </message>
-    <message>
-        <source>The field list could not be read from Anki.</source>
-        <translation>無法從 Anki 讀取欄位清單。</translation>
-    </message>
 </context><context>
     <name>AnkiService</name>
     <message>
@@ -4714,18 +4690,6 @@ Files on disk will be left untouched because the folder could not be proven to b
         <translation>檢視、移除、匯出或重設你從單字整理工具加入本機已知單字清單的單字。</translation>
     </message>
     <message>
-        <source>The scan reads each note's first field. Map a note type here when its first field is not the word — otherwise its sentences are stored as known words. Unmapped note types keep the first field. Run Rebuild Known Words DB afterwards to clear what was already stored.</source>
-        <translation>掃描會讀取每則筆記的第一個欄位。若某筆記類型的第一個欄位不是單字，請在此對應該筆記類型 — 否則其例句會被儲存為已知單字。未對應的筆記類型會沿用第一個欄位。之後請執行「重建已知單字資料庫」以清除已儲存的內容。</translation>
-    </message>
-    <message>
-        <source>Map Note Type…</source>
-        <translation>對應筆記類型…</translation>
-    </message>
-    <message>
-        <source>Remove</source>
-        <translation>移除</translation>
-    </message>
-    <message>
         <source>Excluded Decks</source>
         <translation>排除的牌組</translation>
     </message>
@@ -4736,6 +4700,10 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Add Deck…</source>
         <translation>新增牌組…</translation>
+    </message>
+    <message>
+        <source>Remove</source>
+        <translation>移除</translation>
     </message>
     <message>
         <source>Word Lists</source>
@@ -5024,18 +4992,6 @@ Files on disk will be left untouched because the folder could not be proven to b
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>從已知單字偵測中排除的牌組：</translation>
-    </message>
-    <message>
-        <source>Known Words Expression Field</source>
-        <translation>已知單字表達式欄位</translation>
-    </message>
-    <message>
-        <source>Note type to map (an existing mapping is replaced):</source>
-        <translation>要對應的筆記類型（將取代現有對應）：</translation>
-    </message>
-    <message>
-        <source>Field to read as the expression for '%1':</source>
-        <translation>要讀取作為「%1」表達式的欄位：</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>

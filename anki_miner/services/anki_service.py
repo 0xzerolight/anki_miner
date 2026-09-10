@@ -627,15 +627,12 @@ class AnkiService:
         return self._script.contains_target_script(text)
 
     def _collect_first_field_forms(self, query: str) -> set[str]:
-        """Run ``query`` and return the dedup-normalized in-script expressions.
+        """Run ``query`` and return the dedup-normalized in-script first fields.
 
-        The findNotes → notesInfo → per-note expression scan shared by
+        The findNotes → notesInfo → first-field scan shared by
         :meth:`get_existing_vocabulary` and
-        :meth:`get_vocabulary_excluding_deck`. The expression is the note's
-        first field unless ``config.known_words_expression_fields`` maps the
-        note's own note type to a field the note actually has. Raises
-        ``AnkiConnectionError`` on transport failure; degradation policy
-        belongs to the callers.
+        :meth:`get_vocabulary_excluding_deck`. Raises ``AnkiConnectionError``
+        on transport failure; degradation policy belongs to the callers.
         """
         note_ids = _expect_list(
             post_action(
@@ -659,7 +656,6 @@ class AnkiService:
         # Get note info in batches to avoid timeouts on large collections.
         existing_words: set[str] = set()
         batch_size = 1000
-        expression_fields = self.config.known_words_expression_fields
 
         for i in range(0, len(note_ids), batch_size):
             batch = note_ids[i : i + batch_size]
@@ -681,25 +677,14 @@ class AnkiService:
                 fields = note.get("fields")
                 if not isinstance(fields, dict) or not fields:
                     continue
-                # The first field is the expression by Anki convention, and
-                # this scan covers every note type in the collection — so a
-                # note type that puts the sentence first fills the known-words
-                # set with sentences. `known_words_expression_fields` names the
-                # field to read for that note type instead; a note whose model
-                # is unmapped, or which lacks the named field, keeps the first
-                # field (the same fallback the Deck Filter scan uses).
-                # Whichever field wins is normalized the way Anki dedups (strip
+                # First field is always the expression/word in Anki
+                # convention. Normalize it the same way Anki dedups (strip
                 # HTML/media, unescape, NFC) so a markup-wrapped Expression
                 # matches the plain `mined_form` the filter compares against
                 # — otherwise the word slips the filter and AnkiConnect
                 # rejects it as a duplicate at addNotes time.
-                field_name = next(iter(fields))
-                model = note.get("modelName")
-                if isinstance(model, str):
-                    mapped = expression_fields.get(model, "")
-                    if mapped in fields:
-                        field_name = mapped
-                field_info = fields[field_name]
+                first_field = next(iter(fields))
+                field_info = fields[first_field]
                 if not isinstance(field_info, dict):
                     # Malformed field entry (not a {value, order} object).
                     continue
