@@ -24,7 +24,7 @@ GITHUB_URL = "https://github.com/0xzerolight/anki_miner"
 
 ABOUT_BLURB = QT_TRANSLATE_NOOP(
     "AboutDialog",
-    "Mine Japanese vocabulary cards from video into Anki — screenshots, " "audio, and definitions, automatically.",
+    "Mine vocabulary cards from video, audio and books into Anki.",
 )
 
 #: The keyboard table, re-exported from the module that also supplies the

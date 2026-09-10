@@ -65,10 +65,6 @@ class CapabilityBrowser(QDialog):
 
         layout = QVBoxLayout(self)
 
-        intro = QLabel(_tr("Search every Anki Miner feature."))
-        intro.setWordWrap(True)
-        layout.addWidget(intro)
-
         self.search_box = QLineEdit()
         self.search_box.setObjectName("capability-search")
         self.search_box.setPlaceholderText(_tr('Search features, e.g. "i+1", "pitch", "youtube"'))
