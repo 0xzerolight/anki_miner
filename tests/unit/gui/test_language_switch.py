@@ -76,6 +76,7 @@ class _FakeWindow:
         self.resources_ready = True
         self.screen = _FakeScreen(rows)
         self.issues: list[str] = []
+        self.issue_details: list[str] = []
         self.prewarms = 0
         self.syncs = 0
         self.guard_kinds: list[str] = []
@@ -105,6 +106,7 @@ class _FakeWindow:
 
     def show_screen_issue(self, issue, action=None) -> None:
         self.issues.append(issue.summary)
+        self.issue_details.append(issue.details)
 
     def restart_prewarm(self) -> None:
         self.prewarms += 1
@@ -231,6 +233,20 @@ def test_a_language_whose_stack_is_missing_is_refused_before_the_guard(test_conf
     assert window.issues == [reason]
     assert queue_state_store.stored_keys() == ("queue.youtube",)
     assert window.screen.cleared == 0
+
+
+def test_a_failed_commit_keeps_the_exception_behind_details(test_config):
+    """The banner summary is a plain sentence; str(error) goes to Details."""
+    window = _FakeWindow(test_config, rows=0)
+
+    def _explode(_config):
+        raise RuntimeError("commit exploded")
+
+    window.update_config = _explode  # type: ignore[method-assign]
+
+    assert language_switch.request_language_change(window, "zh") is False
+    assert window.issues == ["Could not switch to 中文. Nothing was switched."]
+    assert window.issue_details == ["commit exploded"]
 
 
 def test_a_missing_optional_package_does_not_refuse_the_switch(test_config, monkeypatch):
