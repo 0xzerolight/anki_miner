@@ -456,6 +456,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         footer_layout.addStretch()
 
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
+        # Reject cancels the worker and breaks the queue, while Confirm with
+        # nothing ticked skips only this item (_mining_tab_base._resolve_curation).
+        # The two verbs are indistinguishable from the outside without this (A8-22).
+        self.cancel_button.setToolTip(self.tr("Cancels the whole run, not just this item."))
         self.cancel_button.clicked.connect(self.reject)
         self.cancel_button.setMinimumWidth(100)
         footer_layout.addWidget(self.cancel_button)
@@ -3009,10 +3013,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         logger.error("Known Words commit failed, review left open: %s", message)
         self.show_screen_issue(
             ScreenIssue(
-                summary=self.tr(
-                    "Your Known Words could not be saved, so no cards were created. "
-                    "Confirm again to retry, or Cancel to discard the pending marks."
-                ),
+                summary=self.tr("Known Words could not be saved, so no cards were created. Confirm again to retry."),
                 details=message,
             )
         )
