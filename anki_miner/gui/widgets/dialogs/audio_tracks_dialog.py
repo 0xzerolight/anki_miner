@@ -59,7 +59,7 @@ class AudioTracksDialog(_TrackPickerDialog):
         return self.tr("Auto-detect (currently: Track %1 — %2)")
 
     def _auto_none_text(self) -> str:
-        return self.tr("Auto-detect (no Japanese track found — will use first track)")
+        return self.tr("Auto-detect (no track in the mining language — will use the first track)")
 
     def _apply_button_text(self) -> str:
         return self.tr("Apply")

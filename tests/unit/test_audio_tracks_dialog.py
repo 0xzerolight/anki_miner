@@ -189,7 +189,7 @@ def test_auto_detect_none_label(qtbot) -> None:
     qtbot.addWidget(dialog)
     auto_radio = _radios(dialog)[0]
 
-    assert "no Japanese track found" in auto_radio.text()
+    assert auto_radio.text() == "Auto-detect (no track in the mining language — will use the first track)"
 
 
 # ---------------------------------------------------------------------------

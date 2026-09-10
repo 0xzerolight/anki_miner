@@ -154,7 +154,7 @@ def test_cancel_preserves_override(qtbot) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 6. Auto-detect none label (no JP text track found)
+# 6. Auto-detect none label (no text track in the mining language)
 # ---------------------------------------------------------------------------
 
 
@@ -166,7 +166,7 @@ def test_auto_detect_none_label(qtbot) -> None:
     qtbot.addWidget(dialog)
     auto_radio = _radios(dialog)[0]
 
-    assert "no Japanese subtitle track found" in auto_radio.text()
+    assert auto_radio.text() == "Auto-detect (no subtitle track in the mining language — will use the first text track)"
 
 
 # ---------------------------------------------------------------------------
