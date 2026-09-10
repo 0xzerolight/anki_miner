@@ -108,6 +108,7 @@ class SubtitleCreationTab(_ToolTabBase):
             cancelling=self.tr("Cancelling…"),
             cancelled=self.tr("Cancelled"),
             failed=self.tr("Failed — see log"),
+            partial=self.tr("Finished with errors — see log"),
             run_problem=self.tr("Some files could not be transcribed."),
             complete_template=self.tr("Complete — %1 files processed"),
             complete_skipped_template=self.tr("Complete — %1 processed, %2 skipped"),

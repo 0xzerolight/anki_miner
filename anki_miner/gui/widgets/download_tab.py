@@ -160,6 +160,7 @@ class DownloadTab(_ToolTabBase):
             cancelling=self.tr("Cancelling…"),
             cancelled=self.tr("Cancelled"),
             failed=self.tr("Failed — see log"),
+            partial=self.tr("Finished with errors — see log"),
             run_problem=self.tr("Some URLs could not be downloaded."),
             complete_template=self.tr("Complete — %1 downloaded"),
             complete_skipped_template=self.tr("Complete — %1 downloaded, %2 already present"),

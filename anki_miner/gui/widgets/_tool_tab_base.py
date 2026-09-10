@@ -77,6 +77,10 @@ class _ToolTabStrings:
     cancelling: str
     cancelled: str
     failed: str
+    #: Terminal status when SOME items got through and others failed (PARTIAL).
+    #: Distinct from ``failed`` on purpose: a partial run keeps the bar's counts
+    #: rather than resetting them behind one generic "Failed" (A8-27).
+    partial: str
     #: Banner summary for a file the run could not process. The failing file's
     #: message goes in Details, never here (D24).
     run_problem: str
@@ -340,7 +344,12 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
             # No reset(): the frozen bar still says how many files got done
             # before the user stopped it.
             self.progress_widget.set_status(self._strings.cancelled)
-        elif outcome in (TerminalOutcome.PARTIAL, TerminalOutcome.FAILED):
+        elif outcome is TerminalOutcome.PARTIAL:
+            # No reset(): some items got through, and the bar is the only place
+            # that says how many. Merging them into "Failed — see log" behind a
+            # wiped bar is the anti-pattern A8-27 names.
+            self.progress_widget.set_status(self._strings.partial)
+        elif outcome is TerminalOutcome.FAILED:
             self.progress_widget.reset()
             self.progress_widget.set_status(self._strings.failed)
         else:
