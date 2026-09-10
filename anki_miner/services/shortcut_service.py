@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 APP_NAME = "Anki Miner"
 APP_ID = "anki-miner"
-APP_COMMENT = "Japanese vocabulary mining from media"
+APP_COMMENT = "Vocabulary mining from media"
 ICON_FILENAME = "anki_miner.svg"
 
 # These helpers run synchronously on the GUI thread; bound them so a hung
@@ -36,6 +36,10 @@ class ShortcutResult:
     """Structured outcome of a shortcut creation attempt."""
 
     success: bool = False
+    #: The one sentence shown to the user on success. ``messages`` keeps the
+    #: executable/icon/desktop-file paths for the log; a modal made of four
+    #: absolute paths was the whole result screen before.
+    summary: str = ""
     messages: list[str] = field(default_factory=list)
     paths_created: list[Path] = field(default_factory=list)
     error: str | None = None
@@ -154,9 +158,10 @@ class ShortcutService:
             )
         elif sys.platform == "darwin":
             result.success = True
-            result.messages.append(
+            result.summary = (
                 f"Automatic shortcut creation is not supported on macOS. To launch {APP_NAME}, run:\n  {exe_path}"
             )
+            result.messages.append(result.summary)
         else:
             result.error = f"Unsupported platform: {sys.platform}"
 
@@ -211,6 +216,9 @@ StartupWMClass=anki_miner
             )
 
         result.success = True
+        result.summary = QCoreApplication.translate(
+            "MainWindow", "'Anki Miner' should now appear in your application menu."
+        )
         result.messages.append(f"'{APP_NAME}' should now appear in your application menu.")
 
     @staticmethod
@@ -239,7 +247,7 @@ StartupWMClass=anki_miner
     @classmethod
     def _windows_shortcut_path_script(cls) -> str:
         """Build PowerShell that resolves the real Windows Desktop shortcut path."""
-        resolution_error = QCoreApplication.translate("MainWindow", "Failed to create desktop shortcut.")
+        resolution_error = QCoreApplication.translate("MainWindow", "Windows did not report a Desktop folder.")
         return (
             "$ErrorActionPreference = 'Stop'; "
             "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; "
@@ -309,6 +317,7 @@ StartupWMClass=anki_miner
                 partial_output = partial_output.decode("utf-8", errors="replace")
             if cls._record_windows_shortcut_output(partial_output, result):
                 result.success = True
+                result.summary = QCoreApplication.translate("MainWindow", "Desktop shortcut created.")
                 logger.warning("Windows shortcut creation timed out after creating a shortcut")
                 return
             result.error = "PowerShell timed out while creating the shortcut."
@@ -320,11 +329,14 @@ StartupWMClass=anki_miner
             return
 
         if not cls._record_windows_shortcut_output(completed.stdout, result):
-            result.error = QCoreApplication.translate("MainWindow", "Failed to create desktop shortcut.")
+            # The banner already says the shortcut could not be created, so
+            # Details carries the diagnostic instead of repeating the sentence.
+            result.error = QCoreApplication.translate("MainWindow", "PowerShell returned no shortcut path.")
             logger.warning("Windows shortcut creation failed: PowerShell returned no shortcut path")
             return
 
         result.success = True
+        result.summary = QCoreApplication.translate("MainWindow", "Desktop shortcut created.")
 
     @staticmethod
     def _record_windows_shortcut_output(output: str, result: ShortcutResult) -> bool:

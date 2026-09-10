@@ -20,6 +20,7 @@ class TestShortcutResult:
     def test_default_result_is_failure(self):
         result = ShortcutResult()
         assert result.success is False
+        assert result.summary == ""
         assert result.messages == []
         assert result.paths_created == []
         assert result.error is None
@@ -154,6 +155,9 @@ class TestCreateShortcut:
 
         desktop_file = tmp_path / ".local" / "share" / "applications" / f"{APP_ID}.desktop"
         assert result.success is True
+        # The reported sentence, not the four absolute paths behind it.
+        assert result.summary == "'Anki Miner' should now appear in your application menu."
+        assert str(tmp_path) not in result.summary
         assert desktop_file.exists()
         content = desktop_file.read_text()
         assert f"Name={APP_NAME}" in content
@@ -220,6 +224,7 @@ class TestCreateShortcut:
             result = ShortcutService.create_shortcut(include_start_menu=False)
 
         assert result.success is True
+        assert result.summary == "Desktop shortcut created."
         assert result.paths_created == [shortcut_path]
         assert mock_run.call_count == 1
         command = mock_run.call_args.args[0]
@@ -288,7 +293,7 @@ class TestCreateShortcut:
         failure = subprocess.CalledProcessError(
             returncode=1,
             cmd=["powershell"],
-            stderr="Failed to create desktop shortcut.",
+            stderr="Windows did not report a Desktop folder.",
         )
 
         with (
@@ -306,6 +311,8 @@ class TestCreateShortcut:
         assert "Windows shortcut creation failed" in caplog.text
         ps_script = mock_run.call_args.args[0][3]
         assert "$ws.SpecialFolders.Item('Desktop')" in ps_script
+        # The thrown text is the diagnostic, not a repeat of the banner sentence.
+        assert "Windows did not report a Desktop folder." in ps_script
         assert str(tmp_path / f"{APP_NAME}.lnk") not in ps_script
 
 

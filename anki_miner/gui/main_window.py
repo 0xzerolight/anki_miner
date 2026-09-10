@@ -1256,14 +1256,19 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         def on_done(value: object) -> None:
             finish_attempt()
+            if isinstance(value, ShortcutResult) and value.messages:
+                # The executable/icon/.desktop paths the modal no longer shows.
+                logger.info("Desktop shortcut: %s", " | ".join(value.messages))
             if not show_result or value is None:
                 return
             if not isinstance(value, ShortcutResult):
                 self._report_shortcut_failure("")
                 return
-            body = "\n".join(value.messages) if value.messages else ""
             if value.success:
-                QMessageBox.information(self, self.tr("Desktop Shortcut"), body or self.tr("Shortcut created."))
+                # One sentence, not four absolute paths (rule 5).
+                QMessageBox.information(
+                    self, self.tr("Desktop Shortcut"), value.summary or self.tr("Shortcut created.")
+                )
             else:
                 self._report_shortcut_failure(value.error or "")
 
