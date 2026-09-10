@@ -760,11 +760,17 @@ class SubtitlesSettingsPanel(FormPanel):
         override, and a user's own pip/pipx mokuro on PATH — the same chain the
         Manga OCR tab resolves through, so the two can never disagree. An
         install in flight keeps the button disabled and its status intact.
+
+        An unsupported platform is a no-op, like :meth:`_apply_alass_state`:
+        the button can never be enabled there and the construction-time
+        "Not available on this platform" status (_setup_mokuro_section) is the
+        only reason on screen for that, so a probe must not overwrite it with
+        "Not installed".
         """
-        if self._mokuro_install_active:
+        if self._mokuro_install_active or not self._mokuro_supported:
             self.install_mokuro_button.setEnabled(False)
             return
-        self.install_mokuro_button.setEnabled(self._mokuro_supported)
+        self.install_mokuro_button.setEnabled(True)
         self.install_mokuro_button.setText(self.tr("Reinstall mokuro") if installed else self.tr("Install mokuro"))
         self.set_mokuro_status(self.tr("Installed") if installed else self.tr("Not installed"))
 

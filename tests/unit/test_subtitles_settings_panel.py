@@ -1388,3 +1388,21 @@ def test_mokuro_button_disabled_when_platform_unsupported(qtbot, monkeypatch):
     qtbot.addWidget(panel)
     assert not panel.install_mokuro_button.isEnabled()
     assert panel.mokuro_status_label.text() == "Not available on this platform"
+
+
+def test_the_probe_keeps_the_unsupported_platform_status(qtbot, tmp_path, monkeypatch):
+    """A probe must not relabel an unsupported platform "Not installed".
+
+    The construction-time status is the only reason on screen for a
+    permanently disabled Install button, and the probe used to overwrite it.
+    """
+    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_installer.mokuro_install_supported", lambda: False)
+    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_resolver.mokuro_available", lambda loc, root: False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.load_from_config(AnkiMinerConfig(uv_root=tmp_path / "uv"))
+    _wait_state_settled(qtbot, panel)
+
+    assert panel.mokuro_status_label.text() == "Not available on this platform"
+    assert not panel.install_mokuro_button.isEnabled()
