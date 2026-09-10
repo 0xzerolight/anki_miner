@@ -486,7 +486,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         open_log_action = help_menu.addAction(self.tr("Open Log Folder"))
         assert open_log_action is not None
-        open_log_action.setToolTip(self.tr("Open the log folder in your file manager"))
         open_log_action.triggered.connect(self._open_log_folder)
 
         export_diagnostics_action = help_menu.addAction(self.tr("Export Diagnostics…"))
@@ -494,6 +493,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self.export_diagnostics_action = export_diagnostics_action
         export_diagnostics_action.setToolTip(self.tr("Save a zip with logs and system details for a bug report"))
         export_diagnostics_action.triggered.connect(self._export_diagnostics)
+
+        # QMenu hides action tooltips by default, so the one tooltip left in this
+        # menu (what the diagnostics zip contains) reached nobody.
+        help_menu.setToolTipsVisible(True)
 
         # Usage Guide -- a top-level menu-bar button, not a dropdown, placed
         # after Help. F1 is help everywhere, and "which screen does this?" is
@@ -526,10 +529,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         corner_layout.setContentsMargins(0, 0, 0, 0)
         corner_layout.setSpacing(0)
 
-        # "Report a Bug / Suggest a Feature" button (moved out of the Help menu).
+        # "Send feedback" button (moved out of the Help menu).
         report_button = QToolButton(corner_widget)
         report_button.setObjectName("report_issue_button")
-        report_button.setText(self.tr("Report a Bug / Suggest a Feature"))
+        report_button.setText(self.tr("Send feedback"))
         report_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         report_button.setAutoRaise(True)
         report_button.setToolTip(self.tr("Report a bug or suggest a feature on GitHub"))
@@ -539,10 +542,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # "Star on GitHub" button.
         star_button = QToolButton(corner_widget)
         star_button.setObjectName("github_star_button")
-        star_button.setText(self.tr("⭐ Star - help the project"))
+        star_button.setText(self.tr("Star on GitHub"))
         star_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         star_button.setAutoRaise(True)
-        star_button.setToolTip(self.tr("Star the project on GitHub"))
         star_button.clicked.connect(self._open_github_repo)
         corner_layout.addWidget(star_button)
 
@@ -551,7 +553,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         discord_button.setObjectName("discord_button")
         discord_button.setText(self.tr("Join Discord"))
         discord_button.setAutoRaise(True)
-        discord_button.setToolTip(self.tr("Join the community on Discord"))
         # Guard on the loaded icon (covers a missing OR unparseable SVG): a
         # TextBesideIcon button with a null icon would leave a blank gap, so fall
         # back to text-only if the brand mark fails to load.

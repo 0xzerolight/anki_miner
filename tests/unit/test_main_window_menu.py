@@ -56,7 +56,7 @@ def _corner_container(window):
 def test_report_removed_from_help_menu(main_window):
     """The Report item no longer lives on the Help menu."""
     help_menu = _help_menu(main_window)
-    assert _find_action(help_menu, "Report a Bug / Suggest a Feature") is None
+    assert _find_action(help_menu, "Send feedback") is None
     assert _find_action(help_menu, "Report an Issue") is None
     # Help retains About + Check for Updates.
     assert _find_action(help_menu, "About Anki Miner") is not None
@@ -72,13 +72,14 @@ def test_corner_has_report_and_star_buttons(main_window):
     assert report is not None, "Report button missing from corner container"
     assert star is not None, "Star button missing from corner container"
     assert discord is not None, "Discord button missing from corner container"
-    assert report.text() == "Report a Bug / Suggest a Feature"
-    assert "Star - help the project" in star.text()
+    assert report.text() == "Send feedback"
+    assert star.text() == "Star on GitHub"
     assert discord.text() == "Join Discord"
     assert report.autoRaise() is True
     assert star.autoRaise() is True
     assert discord.autoRaise() is True
-    assert discord.toolTip() == "Join the community on Discord"
+    # The label already says it; a tooltip repeating it is noise, not help.
+    assert discord.toolTip() == ""
 
 
 def test_discord_button_has_brand_icon(main_window):
@@ -112,11 +113,12 @@ def test_report_button_opens_issues_url(main_window, monkeypatch):
 
 
 def test_star_button_in_corner_container(main_window):
-    """A QToolButton labelled 'Star - help the project' sits in the corner container."""
+    """A QToolButton labelled 'Star on GitHub' sits in the corner container."""
     star = _corner_container(main_window).findChild(QToolButton, "github_star_button")
     assert star is not None
-    assert "Star - help the project" in star.text()
-    assert star.toolTip() == "Star the project on GitHub"
+    assert star.text() == "Star on GitHub"
+    # The tooltip restated the label verbatim, so it is gone.
+    assert star.toolTip() == ""
     assert star.autoRaise() is True
 
 
@@ -249,6 +251,10 @@ def test_export_diagnostics_immediately_follows_open_log_folder(main_window):
     assert not export_action.isSeparator()
     assert export_action.text() == "Export Diagnostics…"
     assert export_action.toolTip() == "Save a zip with logs and system details for a bug report"
+    # A QMenu hides action tooltips unless asked, so the surviving one is shown;
+    # Open Log Folder's tooltip only restated its label and is gone.
+    assert _help_menu(main_window).toolTipsVisible() is True
+    assert actions[open_log_index].toolTip() == "Open Log Folder"
 
 
 def test_about_dialog_builds_and_shows_version(qtbot):
