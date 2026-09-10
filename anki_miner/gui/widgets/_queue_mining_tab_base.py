@@ -103,8 +103,8 @@ class _QueueRunStrings:
     ``self.tr``) so the translated payload stays in that context.
     """
 
-    unavailable: str  # "Mining unavailable — services not initialized."
-    run_starting: str  # "%1 run starting — %2 items."
+    unavailable: str  # "Mining unavailable — restart Anki Miner."
+    run_starting: str  # "%1 run starting — %2 queued."
     mine_label: str  # "Mine"
     # Name the run carries in the task registry and the current-job strip.
     # Only the list-queue tabs publish runs, so it defaults to empty.

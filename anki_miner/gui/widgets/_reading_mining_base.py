@@ -131,8 +131,8 @@ class _ReadingMiningTabBase(_QueueMiningTabBase):
         # _ToolTabBase's _ToolTabStrings; the app installs the translator before
         # tabs are constructed, and reading has no runtime retranslate.
         self._run_strings = _QueueRunStrings(
-            unavailable=QCoreApplication.translate("ReadingTab", "Mining unavailable — services not initialized."),
-            run_starting=QCoreApplication.translate("ReadingTab", "%1 run starting — %2 items."),
+            unavailable=QCoreApplication.translate("ReadingTab", "Mining unavailable — restart Anki Miner."),
+            run_starting=QCoreApplication.translate("ReadingTab", "%1 run starting — %2 queued."),
             mine_label=QCoreApplication.translate("ReadingTab", "Mine"),
             retrying=QCoreApplication.translate("ReadingTab", "Attempt %1 of %2 · retrying in %3s"),
             # Extracted at the subclass's QT_TRANSLATE_NOOP, looked up here.

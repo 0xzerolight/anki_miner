@@ -152,8 +152,8 @@ class YouTubeTab(_ListQueueMiningTabBase):
         # like _ToolTabBase's _ToolTabStrings. The mined/failed_item templates
         # carry an attempts=%3 suffix unique to YouTube.
         self._run_strings = _QueueRunStrings(
-            unavailable=self.tr("Mining unavailable — services not initialized."),
-            run_starting=self.tr("%1 run starting — %2 items."),
+            unavailable=self.tr("Mining unavailable — restart Anki Miner."),
+            run_starting=self.tr("%1 run starting — %2 queued."),
             mine_label=self.tr("Mine"),
             task_title=self.tr("YouTube queue"),
             retrying=self.tr("Attempt %1 of %2 · retrying in %3s"),

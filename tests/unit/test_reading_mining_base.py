@@ -128,7 +128,7 @@ class TestLaunchRunGuards:
                 assert widget._launch_run([_make_item()]) is False
                 q_cls.assert_not_called()
                 assert widget.worker_thread is None
-                assert "not initialized" in widget.log_widget.text_edit.toPlainText().lower()
+                assert "Mining unavailable — restart Anki Miner." in widget.log_widget.text_edit.toPlainText()
             finally:
                 widget.deleteLater()
 
@@ -167,7 +167,7 @@ class TestLaunchRunStart:
 
     def test_logs_run_banner(self, tab):
         tab._launch_run([_make_item(), _make_item(title="v2")])
-        assert "2 items" in tab.log_widget.text_edit.toPlainText()
+        assert "2 queued" in tab.log_widget.text_edit.toPlainText()
 
     def test_curation_callback_none_when_unchecked(self, tab):
         tab._launch_run([_make_item()])

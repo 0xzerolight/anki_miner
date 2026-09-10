@@ -157,8 +157,8 @@ class AudiobookTab(_ListQueueMiningTabBase):
         # the i18n note in _queue_mining_tab_base). Built once at construction
         # like _ToolTabBase's _ToolTabStrings.
         self._run_strings = _QueueRunStrings(
-            unavailable=self.tr("Mining unavailable — services not initialized."),
-            run_starting=self.tr("%1 run starting — %2 items."),
+            unavailable=self.tr("Mining unavailable — restart Anki Miner."),
+            run_starting=self.tr("%1 run starting — %2 queued."),
             mine_label=self.tr("Mine"),
             task_title=self.tr("Audio queue"),
             retrying=self.tr("Attempt %1 of %2 · retrying in %3s"),
@@ -281,7 +281,7 @@ class AudiobookTab(_ListQueueMiningTabBase):
         self.mine_button.clicked.connect(self._on_mine_clicked)
 
         self.clear_button = ModernButton(self.tr("Clear"), variant="ghost")
-        self.clear_button.setToolTip(self.tr("Remove every queued item that is not currently mining."))
+        self.clear_button.setToolTip(self.tr("Remove every item from the queue."))
         self.clear_button.clicked.connect(self._on_clear_clicked)
 
         self.stop_button = ModernButton(self.tr("Cancel"), variant="secondary")
