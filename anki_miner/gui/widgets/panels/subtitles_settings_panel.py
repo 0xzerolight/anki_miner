@@ -263,10 +263,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self.add_field(
             self.tr("ASR model"),
             self.model_combo,
-            helper=self.tr(
-                "Select the Whisper model to use for subtitle generation. "
-                "'large-v3' gives the best accuracy; 'small' is faster but less accurate."
-            ),
+            helper=self.tr("large-v3 is the most accurate; small is much faster."),
         )
 
         self.device_combo = QComboBox()
@@ -275,9 +272,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self.add_field(
             self.tr("ASR device"),
             self.device_combo,
-            helper=self.tr(
-                "Auto uses the GPU when available, else CPU; GPU needs an NVIDIA card plus the acceleration pack."
-            ),
+            helper=self.tr("Auto uses the GPU when available, else CPU. Each GPU option needs its own download below."),
         )
 
         self.download_model_button = ModernButton(self.tr("Download model"), variant="secondary")
@@ -456,10 +451,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self.add_field(
             self.tr("alass binary"),
             self.alass_selector,
-            helper=self.tr(
-                "Optional: path to the alass executable used for subtitle retiming. "
-                "Leave blank to use a downloaded, bundled, or PATH alass."
-            ),
+            helper=self.tr("Leave blank to use the downloaded, bundled, or PATH alass."),
         )
 
         if self._alass_supported:
@@ -527,9 +519,8 @@ class SubtitlesSettingsPanel(FormPanel):
         self.install_mokuro_button = ModernButton(self.tr("Install mokuro"), variant="secondary")
         self.install_mokuro_button.setToolTip(
             self.tr(
-                "Download mokuro and its OCR engine into Anki Miner's folder "
-                "(about 1 GB, up to 4 GB with NVIDIA GPU support). Needed for "
-                "Utilities → Manga OCR unless mokuro is already installed."
+                "Downloads mokuro and its OCR engine into Anki Miner's folder "
+                "— about 1 GB, up to 4 GB with NVIDIA GPU support."
             )
         )
         self.install_mokuro_button.setEnabled(self._mokuro_supported)
@@ -559,9 +550,8 @@ class SubtitlesSettingsPanel(FormPanel):
         """Build the (initially hidden) 'install the ASR engine' guidance block."""
         if getattr(sys, "frozen", False):
             message = self.tr(
-                "Subtitle generation needs the faster-whisper engine. "
-                "This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, "
-                "or run the command below and then launch the separate pipx-installed Anki Miner:"
+                "Subtitle generation needs the faster-whisper engine, which this build does not "
+                "include. Install a copy with the command below and launch that one:"
             )
             command = _ASR_FROZEN_INSTALL_COMMAND
         else:
@@ -846,7 +836,7 @@ class SubtitlesSettingsPanel(FormPanel):
         if device_count <= 0:
             self.download_cuda_button.setEnabled(False)
             self.set_cuda_pack_status("")
-            self._cuda_guidance_label.setText(self.tr("No NVIDIA GPU detected. GPU acceleration needs an NVIDIA card."))
+            self._cuda_guidance_label.setText(self.tr("No NVIDIA GPU detected. This pack needs an NVIDIA card."))
             self._cuda_guidance_label.setVisible(True)
             self._cuda_help_label.setVisible(False)
             return

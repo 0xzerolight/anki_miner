@@ -18,9 +18,8 @@ def test_asr_less_frozen_install_guidance_offers_only_executable_remedies(qtbot,
     message = " ".join(label.text() for label in guidance.findChildren(QLabel))
     commands = [field.text() for field in guidance.findChildren(QLineEdit) if field.objectName() == "command-text"]
     assert "faster-whisper engine" in message
-    assert "This packaged app cannot be extended" in message
-    assert "launch the separate pipx-installed Anki Miner" in message
-    assert "ASR-capable AppImage" in message
+    assert "this build does not include" in message
+    assert "launch that one" in message
     assert commands == ['pipx install "anki-miner[asr]"']
     assert "pip install" not in message + " ".join(commands)
 
