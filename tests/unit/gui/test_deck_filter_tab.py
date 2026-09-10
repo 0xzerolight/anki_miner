@@ -154,7 +154,7 @@ class TestPlanLifecycle:
         assert tab.apply_button.objectName() == "primary"
         assert tab.scan_button.objectName() == "secondary"
         assert "1 of 3 note(s) will be copied." in tab.summary_label.text()
-        assert "already known or carded: 2" in tab.summary_label.text()
+        assert "already known or in Anki: 2" in tab.summary_label.text()
 
     def test_empty_plan_keeps_apply_disabled(self, tab):
         tab._on_scan_finished(_plan(kept_count=0))
