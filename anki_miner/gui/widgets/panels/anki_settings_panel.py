@@ -240,7 +240,7 @@ class AnkiSettingsPanel(FormPanel):
 
     def __init__(self, parent=None):
         """Initialize the Anki settings panel."""
-        super().__init__("Anki Configuration", parent=parent)
+        super().__init__(self.tr("Cards & Anki"), parent=parent)
         # Snapshot of the anki_fields mapping last loaded via set_card_fields.
         # get_card_fields() folds its owned inputs over this so keys the panel
         # doesn't expose (future/opt-in keys set via gui_config.json) survive a
@@ -386,7 +386,7 @@ class AnkiSettingsPanel(FormPanel):
         self.expression_field_input = QLineEdit()
         self.expression_field_input.setPlaceholderText("Expression")
         self.add_field(
-            self.tr("Expression Field"), self.expression_field_input, helper=self.tr("Stores the mined Japanese word.")
+            self.tr("Expression Field"), self.expression_field_input, helper=self.tr("Stores the mined word.")
         )
 
         # Sentence field
@@ -404,7 +404,7 @@ class AnkiSettingsPanel(FormPanel):
         self.add_field(
             self.tr("Definition Field"),
             self.definition_field_input,
-            helper=self.tr("Stores the English definition from the dictionary chain."),
+            helper=self.tr("Stores the first definition found in your dictionaries."),
         )
 
         # Glossary field (second definition slot — receives concatenated hits
