@@ -136,6 +136,6 @@ def test_progress_mapping_and_cancel_event(tmp_path):
     worker = _worker(tmp_path, [v], service)
     rec = _Recorder(worker)
     worker.run()
-    assert (0, 12, "Page 3 of 25: 12%") in rec.of("file_progress")
+    assert (0, 12, "Page 3 of 25") in rec.of("file_progress")
     assert (0, 0, "Loading models (cpu)") in rec.of("file_progress")
     assert service.process_volume.call_args.kwargs["cancel_event"] is worker._cancel_event

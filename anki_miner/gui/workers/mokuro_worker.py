@@ -17,7 +17,6 @@ from anki_miner.exceptions.mokuro import MokuroNotFoundError
 from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 from anki_miner.services.mokuro_runner import MokuroOptions, MokuroRunnerService, MokuroStatus
 from anki_miner.services.mokuro_volumes import MokuroVolume
-from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
 
@@ -58,8 +57,9 @@ class MokuroWorker(FileQueueWorker):
 
         def _progress(message: str, frac: float | None) -> None:
             if frac is not None:
-                pct = int(frac * 100)
-                self.file_progress.emit(idx, pct, tr_format(self.tr("%1: %2%"), message, pct))
+                # The message already carries the real count ("Page 3 of 40"),
+                # which IS the percentage — D18 asks for the count, not both.
+                self.file_progress.emit(idx, int(frac * 100), message)
             else:
                 self.file_progress.emit(idx, 0, message)
 

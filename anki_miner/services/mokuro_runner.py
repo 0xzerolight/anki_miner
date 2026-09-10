@@ -43,11 +43,13 @@ logger = logging.getLogger(__name__)
 
 #: A few hundred pages on CPU, plus on the very first run the ~550 MB of models
 #: mokuro downloads itself. Generous on purpose; Cancel is the fast path out.
+#: The TIMED_OUT MokuroError names this in hours; change both together.
 _VOLUME_TIMEOUT_S = 6 * 60 * 60
 
+# Stays a plain module constant: a module-level QCoreApplication.translate would
+# evaluate at import, before the app installs the translator, and cache English.
 MOKURO_MISSING_HINT = (
-    "mokuro executable not found. Install it in Settings → Transcription & Alignment → Manga OCR, "
-    "or set its path there, then retry."
+    "mokuro is not installed." " Install it in Settings → Transcription & Alignment → Manga OCR, or set its path there."
 )
 
 _PAGES_RE = re.compile(r"Processing pages\.\.\.:\s*\d+%\|[^|]*\|\s*(\d+)/(\d+)")
@@ -161,7 +163,7 @@ class MokuroRunnerService:
         if result.state is SupervisedState.CANCELLED:
             return MokuroResult(MokuroStatus.CANCELLED, None)
         if result.state is SupervisedState.TIMED_OUT:
-            raise MokuroError(f"mokuro timed out after {_VOLUME_TIMEOUT_S}s on {volume.source.name}")
+            raise MokuroError(f"mokuro timed out after 6 hours on {volume.source.name}")
         if result.state is SupervisedState.FAILED:
             if result.returncode is None and result.error is not None:
                 raise MokuroError(f"mokuro process failed: {result.error}") from result.error
