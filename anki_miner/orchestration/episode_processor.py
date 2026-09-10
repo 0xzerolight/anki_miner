@@ -932,9 +932,7 @@ class EpisodeProcessor:
             # entirely — including the Issue #42 user ignore list — and mine all
             # words that passed POS/subtype filtering. Coverage-deck builds
             # intentionally re-card words the user already knows.
-            self.presenter.show_info(
-                QCoreApplication.translate("EpisodeProcessor", "Known-words filter bypassed (include everything mode)")
-            )
+            self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Including words already known"))
             unknown_words = all_words
         else:
             # User-curated ignore list (Issue #42): always applied on the normal
@@ -1033,7 +1031,7 @@ class EpisodeProcessor:
             self.presenter.show_warning(
                 QCoreApplication.translate(
                     "EpisodeProcessor",
-                    "All %n word(s) from this subtitle are already in Anki — no new cards created",
+                    "All %n word(s) from this run are already known — no new cards created",
                     "",
                     len(all_words),
                 )
@@ -1141,7 +1139,8 @@ class EpisodeProcessor:
                 self.presenter.show_warning(
                     tr_format(
                         QCoreApplication.translate(
-                            "EpisodeProcessor", "Skipped %1 words with no definition found: %2%3"
+                            "EpisodeProcessor",
+                            "Skipped %1 words missing from your offline dictionaries: %2%3",
                         ),
                         len(dropped),
                         preview,
@@ -1212,7 +1211,7 @@ class EpisodeProcessor:
             self.presenter.show_warning(
                 QCoreApplication.translate(
                     "EpisodeProcessor",
-                    "Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).",
+                    "Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).",
                 )
             )
 
@@ -1251,9 +1250,9 @@ class EpisodeProcessor:
             if removed > 0:
                 kinds = []
                 if self.config.exclude_hiragana_only_words:
-                    kinds.append("hiragana-only")
+                    kinds.append(QCoreApplication.translate("EpisodeProcessor", "hiragana-only"))
                 if self.config.exclude_katakana_only_words:
-                    kinds.append("katakana-only")
+                    kinds.append(QCoreApplication.translate("EpisodeProcessor", "katakana-only"))
                 self.presenter.show_info(
                     tr_format(
                         QCoreApplication.translate("EpisodeProcessor", "Script-type filter: removed %1 %2 words"),

@@ -76,3 +76,21 @@ def test_i_plus_one_three_arg_renders(qapp):
         "53",
     )
     assert msg == "i+1 filter: kept 8/15 words (53%)"
+
+
+def test_script_filter_kind_names_are_translated():
+    """The two kind names must be translatable, not English spliced mid-sentence.
+
+    ``Script-type filter: removed %1 %2 words`` is a translated sentence whose
+    %2 is assembled from the enabled kinds, so a bare literal there leaves every
+    non-English user reading a translated clause with English fragments in it.
+    Asserted against the extracted source rather than a runtime call, which
+    would echo whatever literal it was handed.
+    """
+    from pathlib import Path
+
+    import anki_miner.orchestration.episode_processor as module
+
+    source = Path(module.__file__).read_text(encoding="utf-8")
+    for kind in ("hiragana-only", "katakana-only"):
+        assert f'QCoreApplication.translate("EpisodeProcessor", "{kind}")' in source
