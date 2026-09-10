@@ -100,7 +100,7 @@ def test_accessible_names_are_translated(
     progress._items_processed = 1
     progress._total_items = 10
     progress._update_stats()
-    assert "translated:ETA ~" in progress.stats_label.text()
+    assert "translated:Elapsed" in progress.stats_label.text()
 
 
 def test_glyph_buttons_have_nonempty_accessible_names(translated_qapp, qtbot, tmp_path: Path):
