@@ -42,8 +42,8 @@ class TestPopulation:
         dlg = KnownWordsManagerDialog(db)
         qtbot.addWidget(dlg)
         text = dlg.count_label.text()
-        assert "2 user word(s)" in text
-        assert "1 cached from Anki" in text
+        assert "User words: 2" in text
+        assert "cached from Anki: 1" in text
 
 
 class TestExport:
