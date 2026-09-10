@@ -7,6 +7,8 @@ AnkiConnect's HTTP call is in flight. The per-factory ``result_ready([])``
 contracts are documented on each function below.
 """
 
+from PyQt6.QtCore import QCoreApplication
+
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.services.anki_service import AnkiService
 
@@ -30,7 +32,7 @@ def FetchNotetypesWorker(service: AnkiService, parent=None) -> SingleCallWorker:
     """
     return SingleCallWorker(
         lambda: service.get_model_names(),
-        error_prefix="Error fetching note type names: ",
+        error_prefix=QCoreApplication.translate("AnkiProbeController", "Note types could not be read from Anki: "),
         context="FetchNotetypesWorker",
         parent=parent,
     )
@@ -54,7 +56,9 @@ def FetchFieldsWorker(service: AnkiService, note_type: str, parent=None) -> Sing
     """
     return SingleCallWorker(
         lambda: service.get_note_type_fields(note_type),
-        error_prefix="Error fetching note type fields: ",
+        error_prefix=QCoreApplication.translate(
+            "AnkiProbeController", "Note type fields could not be read from Anki: "
+        ),
         context="FetchFieldsWorker",
         parent=parent,
     )
@@ -79,7 +83,7 @@ def FetchDecksWorker(service: AnkiService, parent=None) -> SingleCallWorker:
     """
     return SingleCallWorker(
         lambda: service.get_deck_names(),
-        error_prefix="Error fetching deck names: ",
+        error_prefix=QCoreApplication.translate("AnkiProbeController", "Decks could not be read from Anki: "),
         context="FetchDecksWorker",
         parent=parent,
     )

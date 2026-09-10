@@ -259,7 +259,7 @@ def test_fetch_decks_uses_its_error_prefix():
 
     worker.run()
 
-    assert errors.calls == ["Error fetching deck names: connection refused"]
+    assert errors.calls == ["Decks could not be read from Anki: connection refused"]
 
 
 # ===========================================================================
@@ -309,7 +309,7 @@ def test_fetch_notetypes_uses_its_error_prefix():
 
     worker.run()
 
-    assert errors.calls == ["Error fetching note type names: connection refused"]
+    assert errors.calls == ["Note types could not be read from Anki: connection refused"]
 
 
 # ===========================================================================

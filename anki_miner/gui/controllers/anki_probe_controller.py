@@ -396,7 +396,9 @@ class AnkiProbeController:
                 note_type=probe_config.anki_note_type,
                 error=f"{type(e).__name__}: {e}",
             )
-            message = tr_format(QCoreApplication.translate("AnkiProbeController", "Cannot build AnkiService: %1"), e)
+            message = tr_format(
+                QCoreApplication.translate("AnkiProbeController", "The Anki field mapping is not usable: %1"), e
+            )
             self._anki_panel.set_deck_status(False, message)
             self._set_notetype_status(False, message)
             return
