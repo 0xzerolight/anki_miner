@@ -123,3 +123,16 @@ def get_profile(code: str) -> LanguageProfile:
         profile = builder()
         _CACHE[code] = profile
         return profile
+
+
+def language_display_name(code: str) -> str:
+    """The native name of *code*, or the upper-cased code where none builds.
+
+    Services name a language for the user (the cross-language slot warnings in
+    the four resource registries) and cannot reach
+    ``gui.utils.language_choices``, which delegates here.
+    """
+    try:
+        return get_profile(code).display_name
+    except (LookupError, ValueError, ImportError):
+        return code.upper()

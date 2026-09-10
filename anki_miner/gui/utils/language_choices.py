@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 
 from anki_miner.languages import AVAILABLE_LANGUAGES
-from anki_miner.languages.registry import get_profile
+from anki_miner.languages.registry import get_profile, language_display_name
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +52,7 @@ def mining_language_display_name(code: str) -> str:
     profile's own probe has ruled unavailable — that is precisely the language
     the pack exists to unlock — so the name has to resolve without the probe.
     """
-    try:
-        return get_profile(code).display_name
-    except (LookupError, ValueError, ImportError):
-        return code.upper()
+    return language_display_name(code)
 
 
 def mining_language_english_name(code: str) -> str:

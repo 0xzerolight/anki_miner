@@ -49,7 +49,7 @@ def format_stale_family_message(family: str, names: list[str]) -> str:
     joined = ", ".join(f"'{name}'" for name in names)
     verb = "need" if len(names) != 1 else "needs"
     noun = plural if len(names) != 1 else singular
-    return f"{noun} {joined} {verb} reimport (schema upgrade) — {fix}"
+    return f"{noun} {joined} {verb} reimport after the app upgrade — {fix}"
 
 
 def stale_resource_reimport_error(
