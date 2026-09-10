@@ -191,7 +191,12 @@ class AnkiProbeController:
                 note_type=note_type,
                 error=f"{type(e).__name__}: {e}",
             )
-            self._anki_panel.set_notetype_status(False, f"Cannot build AnkiService: {e}")
+            self._anki_panel.set_notetype_status(
+                False,
+                tr_format(
+                    QCoreApplication.translate("AnkiProbeController", "The Anki field mapping is not usable: %1"), e
+                ),
+            )
             return
 
         self._anki_panel.set_notetype_status(None, "Fetching fields from note type...")

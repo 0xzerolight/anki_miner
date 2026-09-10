@@ -3,8 +3,8 @@
 D16-C. On the next launch the app takes stock of two things it deliberately kept:
 partial downloads under ``runtime_state/downloads`` and queue contents under
 ``runtime_state/queues``. If there is anything to offer it asks once —
-*"Resume JMdict download? 312 MB already saved"*, *"Restore previous queue?
-200 items"* — with **Restore** and **Discard**, and then gets out of the way.
+*"JMdict — 312 MB already saved"*, *"200 queued items from your last session"*
+— with **Restore** and **Discard**, and then gets out of the way.
 
 Three things this controller deliberately does not do:
 
