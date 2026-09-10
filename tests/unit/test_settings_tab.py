@@ -522,11 +522,11 @@ class TestImportResultFeedback:
             "question",
             lambda *a, **k: QMessageBox.StandardButton.Yes,
         )
-        information: list[tuple[str, str]] = []
+        shown: list[tuple[str, str, str]] = []
         monkeypatch.setattr(
             QMessageBox,
-            "information",
-            lambda _parent, title, body, *a, **k: information.append((title, body)),
+            "exec",
+            lambda box: shown.append((box.windowTitle(), box.text(), box.detailedText())),
         )
         flashes: list[str] = []
         monkeypatch.setattr(tab, "_flash_save_status", flashes.append)
@@ -537,9 +537,14 @@ class TestImportResultFeedback:
 
         assert len(received) == 1
         assert received[0].anki_deck_name == "Imported Deck"
-        assert len(information) == 1
-        assert "check_for_updates" in information[0][1]
-        assert "Auto-update of yt-dlp was disabled (settings imported from an older version)." in information[0][1]
+        assert len(shown) == 1
+        title, body, details = shown[0]
+        assert title == "Settings Imported"
+        assert "Some imported settings were invalid and kept their current values." in body
+        assert "Auto-update of yt-dlp was disabled (settings imported from an older version)." in body
+        # The rejected field names are raw config keys — Details only (A8-34).
+        assert "check_for_updates" not in body
+        assert "check_for_updates" in details
         assert flashes == []
 
     def test_clean_import_keeps_inline_imported_flash(self, tab, monkeypatch, tmp_path):
