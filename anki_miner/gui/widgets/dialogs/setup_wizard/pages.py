@@ -59,11 +59,6 @@ ANKICONNECT_URL = "https://ankiweb.net/shared/info/2055492159"
 # Recommended Japanese-mining note type guidance (Lapis is the default note type).
 NOTE_TYPE_HELP_URL = "https://github.com/0xzerolight/anki_miner#recommended-note-type"
 
-# Moved from welcome_dialog.WELCOME_BLURB (that dialog is retired).
-RESOURCES_BLURB = QT_TRANSLATE_NOOP(
-    "SetupWizard",
-    "Download the recommended frequency list, pitch accent data, and dictionary now?",
-)
 RESOURCES_HELP_URL = "https://github.com/0xzerolight/anki_miner#recommended-resources"
 
 #: Family noun per catalog ``kind``, so a checkbox says what a resource *is*
@@ -686,9 +681,9 @@ class NoteTypePage(_LiveCheckPage):
         if not self._has_mining_shape(names):
             guidance = tr_format(
                 self.tr(
-                    "This note type does not look set up for Japanese mining (no obvious word/"
-                    "sentence fields). Import a recommended mining note type in Anki, then "
-                    '<a href="%1">recheck</a>. See: <a href="%1">recommended note type</a>.'
+                    "This note type has no obvious word or sentence fields. "
+                    '<a href="%1">Recheck</a> after importing a '
+                    '<a href="%1">recommended note type</a> in Anki.'
                 ),
                 NOTE_TYPE_HELP_URL,
             )
@@ -773,7 +768,7 @@ class NoteTypePage(_LiveCheckPage):
         mapped = sum(1 for value in preset.fields.values() if value)
         self.mapping_summary.setText(
             tr_format(
-                self.tr("Recognized %1 — mapped %2 fields. You can fine-tune these later in Settings → Anki."),
+                self.tr("Recognized %1 — mapped %2 fields. Fine-tune them in Settings → Cards & Anki."),
                 preset.name,
                 str(mapped),
             )
@@ -805,13 +800,14 @@ class NoteTypePage(_LiveCheckPage):
         self._warn_missing_fields()
 
     def _show_mapping_summary(self, mapped: dict[str, str]) -> None:
-        pairs = [f"{key} → {value}" for key, value in mapped.items() if value]
-        if pairs:
-            summary = ", ".join(pairs)
+        filled = [key for key, value in mapped.items() if value]
+        if filled:
+            # The count, not the key → field dump: those keys are config names
+            # (``expression_furigana``, ``frequency_sort``) nobody can act on.
             self.mapping_summary.setText(
                 tr_format(
-                    self.tr("Mapped: %1\nYou can fine-tune these later in Settings → Anki."),
-                    summary,
+                    self.tr("Mapped %1 fields. Fine-tune them in Settings → Cards & Anki."),
+                    len(filled),
                 )
             )
         else:
@@ -866,13 +862,6 @@ class ResourcesPage(_LiveCheckPage):
         self.setSubTitle(self.tr("Frequency and pitch accent are optional. A dictionary is required."))
 
         layout = QVBoxLayout(self)
-
-        # RESOURCES_BLURB is registered under the "SetupWizard" context (module-level
-        # QT_TRANSLATE_NOOP), so look it up there rather than via self.tr(), which would
-        # query the "ResourcesPage" context and miss the translation.
-        blurb = QLabel(QCoreApplication.translate("SetupWizard", RESOURCES_BLURB))
-        blurb.setWordWrap(True)
-        layout.addWidget(blurb)
 
         link = QLabel(f'<a href="{RESOURCES_HELP_URL}">{self.tr("What are these resources?")}</a>')
         link.setOpenExternalLinks(False)
@@ -930,10 +919,7 @@ class ResourcesPage(_LiveCheckPage):
             # an importer here. Saying so beats a dead button, and the sentence
             # has to name where the resources DO come from.
             self.status_label.setText(
-                self.tr(
-                    "No downloadable resources are recommended for this language — import a Yomitan "
-                    "dictionary in Settings → Dictionaries and a frequency list in Settings → Frequency."
-                )
+                self.tr("No recommended resources for this language. Import a dictionary in Settings → Dictionaries.")
             )
 
         # Kept apart from status_label: one reports how the *download* ended,
@@ -1142,7 +1128,7 @@ class ResourcesPage(_LiveCheckPage):
         summary = outcome.summary
         if summary.cancelled:
             status = (
-                self.tr("Download cancelled. Some resources were installed before cancellation.")
+                self.tr("Download cancelled. Some resources were installed.")
                 if summary.succeeded
                 else self.tr("Download cancelled. No resources were installed.")
             )
@@ -1150,7 +1136,7 @@ class ResourcesPage(_LiveCheckPage):
             status = self.tr("Imported, but not active — Retry setup")
         elif summary.failed:
             status = (
-                self.tr("Some resources were installed; some failed.")
+                tr_format(self.tr("%1 installed, %2 failed."), len(summary.succeeded), len(summary.failed))
                 if summary.succeeded
                 else self.tr("No resources were installed.")
             )

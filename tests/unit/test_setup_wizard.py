@@ -1257,11 +1257,11 @@ def test_notetype_page_empty_fieldlist_shows_unreachable_guidance(qtbot, wiz_con
     ("state", "expected_status"),
     [
         pytest.param("success", "Resources installed.", id="success"),
-        pytest.param("partial", "Some resources were installed; some failed.", id="partial"),
+        pytest.param("partial", "1 installed, 1 failed.", id="partial"),
         pytest.param("cancelled", "Download cancelled. No resources were installed.", id="cancelled"),
         pytest.param(
             "cancelled-partial",
-            "Download cancelled. Some resources were installed before cancellation.",
+            "Download cancelled. Some resources were installed.",
             id="cancelled-partial",
         ),
         pytest.param("failed", "No resources were installed.", id="failed"),
