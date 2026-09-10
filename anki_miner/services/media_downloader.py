@@ -221,10 +221,10 @@ class MediaDownloaderService:
             or options.embed_metadata
         )
         if needs_ffmpeg and not self._ffmpeg_reachable():
+            # No GUI control sets ``youtube_ffmpeg_location``, so PATH is the
+            # only repair the user can actually perform.
             raise MediaDownloadError(
-                "This preset needs ffmpeg (merging video+audio or extracting "
-                "audio), but no ffmpeg executable was found. Install ffmpeg or "
-                "set its location in Settings → YouTube."
+                "This preset needs ffmpeg, and none was found. Install ffmpeg and put it on your PATH."
             )
 
         tail: collections.deque[str] = collections.deque(maxlen=50)
@@ -296,7 +296,7 @@ class MediaDownloaderService:
         if result.state is SupervisedState.CANCELLED:
             return DownloadResult(DownloadStatus.CANCELLED, None)
         if result.state is SupervisedState.TIMED_OUT:
-            raise MediaDownloadError(f"yt-dlp download timed out after {_DOWNLOAD_TIMEOUT_S}s")
+            raise MediaDownloadError("The download timed out.")
         if result.state is SupervisedState.FAILED:
             if result.returncode is None and result.error is not None:
                 raise MediaDownloadError(f"yt-dlp process failed: {result.error}") from result.error
@@ -485,7 +485,7 @@ class MediaDownloaderService:
             # Typed cancel: report_failure logs it at INFO and raises no screen issue.
             raise OperationCancelled(f"{op} cancelled")
         if proc.state is SupervisedState.TIMED_OUT:
-            raise MediaDownloadError(f"{op} timed out after {timeout_s}s")
+            raise MediaDownloadError(f"{op} timed out.")
         if proc.state is SupervisedState.FAILED:
             if proc.returncode is None and proc.error is not None:
                 raise MediaDownloadError(f"{op} failed: {proc.error}") from proc.error

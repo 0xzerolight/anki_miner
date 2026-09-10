@@ -789,12 +789,7 @@ class DownloadTab(_ToolTabBase):
         candidate = lines[line_index].strip() if 0 <= line_index < len(lines) else ""
         parts = urlsplit(candidate) if candidate else None
         if parts is None or parts.scheme not in ("http", "https") or not parts.netloc:
-            self.show_screen_issue(
-                ScreenIssue(
-                    summary=self.tr("Put the cursor on the playlist URL line."),
-                    details=self.tr("Expand Playlist works on the line the text cursor is on."),
-                )
-            )
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Put the cursor on the playlist URL line.")))
             return
 
         self.clear_screen_issue()
