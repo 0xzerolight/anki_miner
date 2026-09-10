@@ -252,6 +252,92 @@ class TestEpisodeNumberExtractor:
             assert result is not None
             assert result.episode_number == 3
 
+    class TestFourDigitEpisodes:
+        """A show past episode 999 (One Piece, Detective Conan) must pair.
+
+        The fansub release slot already took four digits; the bare-number
+        fallback took three, so every name outside that slot — "One Piece
+        1085.mkv", "One.Piece.1085.mkv" — extracted nothing at all and the
+        file was dropped from pairing entirely.
+        """
+
+        @pytest.mark.parametrize(
+            ("filename", "episode"),
+            [
+                ("One Piece 1085.mkv", 1085),
+                ("One.Piece.1120.mkv", 1120),
+                ("One_Piece_1085.mkv", 1085),
+                ("OnePiece1085.mkv", 1085),
+                ("[Group] One Piece 1085 [1080p].mkv", 1085),
+                # Three-digit and shorter numbers are unchanged.
+                ("Show_999.mkv", 999),
+                ("Show_07.mkv", 7),
+            ],
+        )
+        def test_four_digit_episode_extracted(self, tmp_path, filename, episode):
+            path = tmp_path / filename
+            path.touch()
+
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+
+            assert result is not None
+            assert (result.season_number, result.episode_number) == (None, episode)
+
+        def test_four_digit_episodes_pair_distinctly(self, tmp_path):
+            video_dir = tmp_path / "videos"
+            video_dir.mkdir()
+            sub_dir = tmp_path / "subs"
+            sub_dir.mkdir()
+            vids, subs = [], []
+            for n in range(1085, 1089):
+                v = video_dir / f"One Piece {n}.mkv"
+                v.touch()
+                vids.append(v)
+                s = sub_dir / f"One Piece {n}.srt"
+                s.touch()
+                subs.append(s)
+
+            pairs = EpisodeMatcher.match_by_episode_number(vids, subs)
+
+            assert len(pairs) == 4
+            for v, s in pairs:
+                assert v.stem == s.stem
+
+        @pytest.mark.parametrize(
+            ("filename", "episode"),
+            [
+                # A release year is the one 4-digit run that is never an
+                # episode number: taking the last bare run would otherwise
+                # mine it in preference to the real episode beside it.
+                ("Show_05_(2019).mkv", 5),
+                ("Show 07 2019.mkv", 7),
+                ("Show (2019) 1085.mkv", 1085),
+            ],
+        )
+        def test_release_year_is_not_the_episode(self, tmp_path, filename, episode):
+            path = tmp_path / filename
+            path.touch()
+
+            result = EpisodeNumberExtractor.extract_episode_info(path)
+
+            assert result is not None
+            assert result.episode_number == episode
+
+        def test_year_alone_extracts_nothing(self, tmp_path):
+            """A movie carrying only its year has no episode number, as before."""
+            path = tmp_path / "Movie (2020).mkv"
+            path.touch()
+
+            assert EpisodeNumberExtractor.extract_episode_info(path) is None
+
+        def test_five_digit_run_is_not_an_episode(self, tmp_path):
+            """Only runs of up to four digits are candidates: a longer run
+            (a date stamp, an id) matches no boundary and stays invisible."""
+            path = tmp_path / "Show_20231005.mkv"
+            path.touch()
+
+            assert EpisodeNumberExtractor.extract_episode_info(path) is None
+
     class TestSeasonEpisodeWithSeparator:
         """Regression for T-04 — SxxEyy must tolerate separators (whitespace/._-)
         between the season and episode tokens; 'S02 E05' was falling through to the
