@@ -4,7 +4,7 @@ import logging
 import re
 import time
 from collections import Counter
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -33,6 +33,7 @@ from anki_miner.services.anki_note_builder import (
 from anki_miner.services.anki_note_builder import (
     REQUIRED_FIELD_KEYS as _REQUIRED_FIELD_KEYS,
 )
+from anki_miner.services.expression_field import ExpressionFieldResolver
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import capped, log_summary
 
@@ -192,6 +193,9 @@ class AnkiService:
         # Python <= 3.13 (this module has no `from __future__ import
         # annotations`), which a TYPE_CHECKING-only name cannot survive.
         self._script = script
+        # Sentence punctuation of the mining language; the known-words scan
+        # uses it to tell a word field from a sentence field (expression_field).
+        self._sentence_rules = profile.sentence_rules
         # What this service can prove about note writes (D30). Only ever
         # escalated by create_cards_batch; reset per mining run by
         # EpisodeProcessor._run_pipeline, which is the sole run boundary.
@@ -627,12 +631,15 @@ class AnkiService:
         return self._script.contains_target_script(text)
 
     def _collect_first_field_forms(self, query: str) -> set[str]:
-        """Run ``query`` and return the dedup-normalized in-script first fields.
+        """Run ``query`` and return the dedup-normalized in-script expressions.
 
-        The findNotes → notesInfo → first-field scan shared by
+        The findNotes → notesInfo → per-note expression scan shared by
         :meth:`get_existing_vocabulary` and
-        :meth:`get_vocabulary_excluding_deck`. Raises ``AnkiConnectionError``
-        on transport failure; degradation policy belongs to the callers.
+        :meth:`get_vocabulary_excluding_deck`. Which field is the expression
+        is decided per note type from the notes themselves
+        (``services/expression_field.py``): the first field unless it does not
+        hold words. Raises ``AnkiConnectionError`` on transport failure;
+        degradation policy belongs to the callers.
         """
         note_ids = _expect_list(
             post_action(
@@ -656,6 +663,26 @@ class AnkiService:
         # Get note info in batches to avoid timeouts on large collections.
         existing_words: set[str] = set()
         batch_size = 1000
+        # Which field is the expression is decided per note type from the
+        # notes themselves — the first field by Anki convention, unless it
+        # does not hold words (a sentence-first or index-first shared deck).
+        # See services/expression_field.py; nothing is configured.
+        resolver = ExpressionFieldResolver(script=self._script, sentence_rules=self._sentence_rules)
+
+        def collect(ready: list[tuple[Mapping[str, object], str]]) -> None:
+            for note_fields, field_name in ready:
+                field_info = note_fields[field_name]
+                if not isinstance(field_info, dict):
+                    # Malformed field entry (not a {value, order} object).
+                    continue
+                # Normalize the way Anki dedups (strip HTML/media, unescape,
+                # NFC) so a markup-wrapped Expression matches the plain
+                # `mined_form` the filter compares against — otherwise the
+                # word slips the filter and AnkiConnect rejects it as a
+                # duplicate at addNotes time.
+                word = _strip_for_dedup(field_info.get("value", ""))
+                if word and self._is_target_script(word):
+                    existing_words.add(word)
 
         for i in range(0, len(note_ids), batch_size):
             batch = note_ids[i : i + batch_size]
@@ -677,21 +704,17 @@ class AnkiService:
                 fields = note.get("fields")
                 if not isinstance(fields, dict) or not fields:
                     continue
-                # First field is always the expression/word in Anki
-                # convention. Normalize it the same way Anki dedups (strip
-                # HTML/media, unescape, NFC) so a markup-wrapped Expression
-                # matches the plain `mined_form` the filter compares against
-                # — otherwise the word slips the filter and AnkiConnect
-                # rejects it as a duplicate at addNotes time.
-                first_field = next(iter(fields))
-                field_info = fields[first_field]
-                if not isinstance(field_info, dict):
-                    # Malformed field entry (not a {value, order} object).
-                    continue
-                word = _strip_for_dedup(field_info.get("value", ""))
-                if word and self._is_target_script(word):
-                    existing_words.add(word)
+                collect(resolver.feed(note.get("modelName"), fields))
+        collect(resolver.flush())
 
+        log_summary(
+            logger,
+            "Anki known words scan",
+            notes=len(note_ids),
+            forms=len(existing_words),
+            note_types=len(resolver.chosen),
+            expression_fields=capped(f"{model}: {name}" for model, name in resolver.overrides().items()),
+        )
         return existing_words
 
     def get_vocabulary_excluding_deck(self, deck: str) -> set[str]:
