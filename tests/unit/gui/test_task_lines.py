@@ -40,18 +40,18 @@ class TestTheDetailedLine:
 
         line = format_task_line(registry.snapshot("queue.youtube"))
 
-        assert line == "Fetching definitions (3 of 5) · 18 cards · 7 / 24 · 01:18"
+        assert line == "Fetching definitions (3 of 5) · 18 cards · 7 / 24 · Elapsed 01:18"
 
     def test_it_falls_back_to_the_title_before_anything_is_reported(self, registry):
         registry.start(TaskSpec("queue.youtube", "Samurai Champloo", _OWNER), now=0.0)
 
-        assert format_task_line(registry.snapshot("queue.youtube")) == "Samurai Champloo · 00:00"
+        assert format_task_line(registry.snapshot("queue.youtube")) == "Samurai Champloo · Elapsed 00:00"
 
     def test_no_denominator_prints_no_position(self, registry):
         handle = registry.start(TaskSpec("queue.youtube", "Samurai Champloo", _OWNER), now=0.0)
         handle.count(current=18, total=None, detail="18 cards", now=5.0)
 
-        assert format_task_line(registry.snapshot("queue.youtube")) == "18 cards · 00:05"
+        assert format_task_line(registry.snapshot("queue.youtube")) == "18 cards · Elapsed 00:05"
 
 
 class TestTheCompactLine:

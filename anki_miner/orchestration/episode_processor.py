@@ -723,7 +723,7 @@ class EpisodeProcessor:
             # duplicated rather than shared; ``test_result_copy`` fails if the two
             # drift apart.
             self.presenter.show_info(
-                QCoreApplication.translate("EpisodeProcessor", "No cards created. Every word is already in Anki.")
+                QCoreApplication.translate("EpisodeProcessor", "No cards created. Every word is already known.")
             )
 
     def _report_ambiguous_readings(self) -> None:

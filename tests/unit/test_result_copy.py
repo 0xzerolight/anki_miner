@@ -40,7 +40,7 @@ class TestCreatedCards:
 
 class TestTheCalmZeroCase:
     def test_it_states_the_outcome_before_the_reason(self):
-        assert result_copy.nothing_new_to_mine() == "No cards created. Every word is already in Anki."
+        assert result_copy.nothing_new_to_mine() == "No cards created. Every word is already known."
 
     def test_the_episode_processor_says_the_same_sentence(self):
         """Orchestration cannot import the GUI, so the copy is duplicated.

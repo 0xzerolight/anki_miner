@@ -154,5 +154,5 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
             self.report_failure(
                 e,
                 context="EpisodeWorkerThread",
-                on_error=lambda msg: self.error.emit(f"Error processing episode: {msg}"),
+                on_error=self.error.emit,
             )
