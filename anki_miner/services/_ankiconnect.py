@@ -193,9 +193,15 @@ def _check_response_size(response: requests.Response, action: str) -> None:
     """
     size = len(response.content)
     if size > _MAX_RESPONSE_BYTES:
-        raise AnkiConnectionError(
-            f"AnkiConnect '{action}' response is {size:,} bytes, exceeding the {_MAX_RESPONSE_BYTES:,}-byte cap"
+        # The action, the size and the cap are the diagnosis and stay in the log;
+        # a banner summary carries none of the three (rule 5).
+        logger.warning(
+            "AnkiConnect response too large: action=%s size=%d cap=%d",
+            action,
+            size,
+            _MAX_RESPONSE_BYTES,
         )
+        raise AnkiConnectionError("Anki sent a reply too large to read.")
 
 
 def _timeout_message(action: str, timeout: int) -> str:
@@ -208,12 +214,7 @@ def _timeout_message(action: str, timeout: int) -> str:
     quick "is Anki connected?" probe still looks green — so the message must
     name the busy state, not the network.
     """
-    return (
-        f"AnkiConnect call '{action}' timed out after {timeout}s. "
-        "Anki accepted the connection but did not respond - it is likely busy "
-        "(syncing, showing a dialog, or checking the database). "
-        "Wait for Anki to finish and try again."
-    )
+    return f"Anki accepted the connection but did not answer within {timeout}s — wait for it to finish and retry."
 
 
 def post_action(
@@ -274,7 +275,7 @@ def post_action(
         raise AnkiConnectionError(_timeout_message(action, timeout)) from e
     except (requests.RequestException, ValueError) as e:
         _log_request_failed(ankiconnect_url, action, e, time.monotonic() - started, response)
-        raise AnkiConnectionError(f"AnkiConnect call '{action}' failed: {e}") from e
+        raise AnkiConnectionError("Anki sent an unusable reply.") from e
     if not isinstance(result, dict):
         # A non-object body (wrong service on the port, a proxy error page that
         # still parses as JSON) would otherwise crash on `result.get(...)`.
@@ -287,10 +288,7 @@ def post_action(
             type=type(result).__name__,
             body=_body_snippet(response),
         )
-        raise AnkiConnectionError(
-            f"AnkiConnect '{action}' returned a non-object response "
-            f"({type(result).__name__}); is another service listening on this port?"
-        )
+        raise AnkiConnectionError("Anki sent an unusable reply — check that only Anki is listening on that port.")
     if result.get("error"):
         # Hand-rolled, not `log_summary`: the AnkiConnect error string is the
         # whole diagnosis and must stay unquoted at the end of the line, where
@@ -365,7 +363,7 @@ def post_multi(
         raise AnkiConnectionError(_timeout_message("multi", timeout)) from e
     except (requests.RequestException, ValueError) as e:
         _log_request_failed(ankiconnect_url, "multi", e, time.monotonic() - started, response)
-        raise AnkiConnectionError(f"AnkiConnect call 'multi' failed: {e}") from e
+        raise AnkiConnectionError("Anki sent an unusable reply.") from e
     if not isinstance(result, dict):
         log_summary(
             logger,
@@ -376,10 +374,7 @@ def post_multi(
             type=type(result).__name__,
             body=_body_snippet(response),
         )
-        raise AnkiConnectionError(
-            f"AnkiConnect 'multi' returned a non-object response "
-            f"({type(result).__name__}); is another service listening on this port?"
-        )
+        raise AnkiConnectionError("Anki sent an unusable reply — check that only Anki is listening on that port.")
     if result.get("error"):
         # See post_action: the error string stays verbatim at end of line.
         logger.warning(
@@ -436,7 +431,7 @@ def _expect_list(
             action,
             type(result).__name__,
         )
-        raise AnkiConnectionError(f"AnkiConnect '{action}' returned {type(result).__name__}, expected a list")
+        raise AnkiConnectionError("Anki sent an unusable reply.")
     if expected_len >= 0 and len(result) != expected_len:
         logger.warning(
             "AnkiConnect response shape invalid: action=%s length=%d expected=%d",
@@ -444,7 +439,7 @@ def _expect_list(
             len(result),
             expected_len,
         )
-        raise AnkiConnectionError(f"AnkiConnect '{action}' returned {len(result)} item(s), expected {expected_len}")
+        raise AnkiConnectionError("Anki sent an unusable reply.")
     if elem_type is not None:
         for i, item in enumerate(result):
             if not isinstance(item, elem_type):
@@ -455,8 +450,5 @@ def _expect_list(
                     type(item).__name__,
                     _expected_type_name(elem_type),
                 )
-                raise AnkiConnectionError(
-                    f"AnkiConnect '{action}' item at index {i} is "
-                    f"{type(item).__name__}, expected {_expected_type_name(elem_type)}"
-                )
+                raise AnkiConnectionError("Anki sent an unusable reply.")
     return result
