@@ -321,14 +321,14 @@ class MokuroTab(_ToolTabBase):
                 self.volumes_label.setText(self.tr("No manga volumes found in this folder."))
             elif done:
                 self.volumes_label.setText(
-                    tr_format(self.tr("%1 volume(s) found, %2 already processed."), len(volumes), done)
+                    tr_format(self.tr("Volumes found: %1, already processed: %2."), len(volumes), done)
                 )
             else:
-                self.volumes_label.setText(tr_format(self.tr("%1 volume(s) found."), len(volumes)))
+                self.volumes_label.setText(tr_format(self.tr("Volumes found: %1."), len(volumes)))
 
         def _on_error(_msg: str) -> None:
             if generation == self._preview_generation:
-                self.volumes_label.setText(self.tr("This folder could not be read."))
+                self.volumes_label.setText(self.tr("This folder could not be scanned."))
 
         self._scan_worker = run_off_thread(self, lambda: scan_volumes(folder), _apply, _on_error)
 
@@ -396,7 +396,7 @@ class MokuroTab(_ToolTabBase):
         def _on_error(msg: str) -> None:
             self._scan_pending_run = False
             self.run_button.setEnabled(True)
-            self.show_screen_issue(ScreenIssue(summary=self.tr("That folder could not be read."), details=msg))
+            self.show_screen_issue(ScreenIssue(summary=self.tr("That folder could not be scanned."), details=msg))
 
         self._scan_worker = run_off_thread(self, lambda: scan_volumes(folder), _on_scanned, _on_error)
 
