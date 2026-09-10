@@ -386,20 +386,22 @@ def _audio_reference(
         label = f"audio track {audio_track_override + 1}"
     else:
         # Honest labelling: extraction falls back to the FIRST audio track when
-        # no Japanese-tagged stream exists, which on dual-audio releases can be
-        # the dub — say so instead of claiming "auto-detected Japanese".
+        # no stream carries a tag the mining language recognises, which on
+        # dual-audio releases can be the dub — say so instead of claiming a
+        # match. The codes come from the profile, so the label must not name a
+        # language either; RetimeReference.label is also cached, so a display
+        # name here would go stale on a language switch.
         codes = get_profile(config_language(config)).audio_track_codes
         jp_stream = find_japanese_audio_stream(video, resolve_ffprobe(config), codes=codes)
         if jp_stream is not None:
-            label = "Japanese audio"
+            label = QCoreApplication.translate("RetimeReference", "matching audio track")
         else:
-            label = "first audio track (no Japanese tag)"
+            label = QCoreApplication.translate("RetimeReference", "first audio track (no match)")
             _log(
                 log_cb,
                 QCoreApplication.translate(
                     "RetimeReference",
-                    "No Japanese-tagged audio track found; using the first audio track — "
-                    "on a dual-audio release this may be a dub.",
+                    "No audio track matches the mining language; using the first track, " "which may be a dub.",
                 ),
             )
     _log(

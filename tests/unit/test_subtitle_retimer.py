@@ -167,7 +167,7 @@ class TestEngineChain:
             outcome = retime_subtitle(cfg, video, in_sub, out_sub)
 
         assert not outcome
-        assert "original left untouched" in outcome.reason
+        assert outcome.reason == "no trustworthy alignment"
         assert not out_sub.exists()
         assert in_sub.read_bytes() == before
         assert len(outcome.attempts) == 4
@@ -193,7 +193,7 @@ class TestEngineChain:
             outcome = retime_subtitle(cfg, video, in_sub, out_sub)
 
         assert not outcome
-        assert "original left untouched" in outcome.reason
+        assert outcome.reason == "no trustworthy alignment"
         assert not out_sub.exists()
         assert in_sub.read_bytes() == before
         assert len(outcome.attempts) == 4

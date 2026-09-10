@@ -729,7 +729,7 @@ def test_condense_refuses_when_aselect_does_not_filter(tmp_path):
     with (
         patch(_RESOLVE, return_value="ffmpeg"),
         patch(_POPEN) as popen,
-        pytest.raises(FilterUnavailableError, match="aselect"),
+        pytest.raises(FilterUnavailableError, match="cannot condense audio"),
     ):
         svc.condense(Path("/v/in.mkv"), [(0, 2000)], tmp_path / "out.mp3")
 

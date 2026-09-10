@@ -279,7 +279,7 @@ class TestResolveReference:
         assert reference is not None
         assert reference.kind == "subtitle"
 
-    def test_audio_fallback_labels_missing_japanese_tag_honestly(self, config: MagicMock, video: Path) -> None:
+    def test_audio_fallback_labels_a_missing_tag_match_honestly(self, config: MagicMock, video: Path) -> None:
         with (
             patch(_LIST_STREAMS, return_value=[]),
             patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
@@ -294,11 +294,11 @@ class TestResolveReference:
             reference = resolve_reference(config, video, log_cb=lines.append)
 
         assert reference is not None
-        assert reference.label == "first audio track (no Japanese tag)"
+        assert reference.label == "first audio track (no match)"
         assert any("may be a dub" in line for line in lines)
         reference.path.unlink()
 
-    def test_audio_fallback_labels_japanese_track(self, config: MagicMock, video: Path) -> None:
+    def test_audio_fallback_labels_a_matching_track(self, config: MagicMock, video: Path) -> None:
         with (
             patch(_LIST_STREAMS, return_value=[]),
             patch(_RESOLVE_FFPROBE, return_value="ffprobe"),
@@ -312,7 +312,7 @@ class TestResolveReference:
             reference = resolve_reference(config, video)
 
         assert reference is not None
-        assert reference.label == "Japanese audio"
+        assert reference.label == "matching audio track"
         reference.path.unlink()
 
     def test_forced_track_is_skipped_without_extraction(self, config: MagicMock, video: Path) -> None:

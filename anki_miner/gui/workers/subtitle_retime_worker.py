@@ -170,7 +170,7 @@ class SubtitleRetimeWorker(FileQueueWorker):
                 # and counted the pair as failed.
                 pass
             else:
-                reason = getattr(outcome, "reason", "") or self.tr("no trustworthy sync; original kept unchanged")
+                reason = getattr(outcome, "reason", "") or self.tr("no trustworthy alignment")
                 self.file_finished.emit(
                     idx,
                     None,
