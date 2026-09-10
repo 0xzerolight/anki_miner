@@ -19,8 +19,8 @@ Drag-drop routes through the tab, not the file selectors. The FileSelector's own
 accepts URL drops by default, so both selectors have ``setAcceptDrops(False)``
 applied and every drop is delivered to this tab: the first ``.epub``/``.txt``
 fills the book selector; the first dropped directory fills the folder selector
-(no disk I/O at drop time — a bookless folder errors at Mine time with the
-manga cross-tab hint); a manga-file drop earns the hint immediately.
+(no disk I/O at drop time — a bookless folder errors at Mine time); a manga-file
+drop earns the cross-tab hint immediately.
 """
 
 from __future__ import annotations

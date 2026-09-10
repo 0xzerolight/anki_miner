@@ -38,6 +38,8 @@ from anki_miner.utils.text_utils import clean_subtitle_text
 
 logger = logging.getLogger(__name__)
 
+# The two over-cap SetupErrors below name this in MB ("over 32 MB"); change both
+# if this changes.
 _MAX_TEXT_FILE_BYTES = 32 * 1024 * 1024
 
 
@@ -79,16 +81,12 @@ def load(
     try:
         size = path.stat().st_size
         if size > _MAX_TEXT_FILE_BYTES:
-            raise SetupError(
-                f"subtitle file '{path.name}' is {size:,} bytes (cap {_MAX_TEXT_FILE_BYTES:,}); refusing to load"
-            )
+            raise SetupError(f"'{path.name}' is too large to mine (over 32 MB).")
         with path.open("rb") as f:
             raw = f.read(_MAX_TEXT_FILE_BYTES + 1)
         _raise_if_cancelled(cancel_check)
         if len(raw) > _MAX_TEXT_FILE_BYTES:
-            raise SetupError(
-                f"subtitle file '{path.name}' exceeds cap {_MAX_TEXT_FILE_BYTES:,} bytes; refusing to load"
-            )
+            raise SetupError(f"'{path.name}' is too large to mine (over 32 MB).")
     except OSError as e:
         logger.debug("Subtitle read failed: file=%s error=%s detail=%s", path, type(e).__name__, e)
         raise SetupError(f"Cannot read subtitle file '{path.name}': {e}") from e
@@ -103,7 +101,7 @@ def load(
         _raise_if_cancelled(cancel_check)
         # Parser exceptions can contain cue text; retain type, never message.
         logger.debug("Subtitle parse failed: file=%s error=%s", path, type(e).__name__)
-        raise SetupError(f"Cannot parse subtitle file '{path.name}': {e}") from e
+        raise SetupError(f"Cannot parse subtitle file '{path.name}'.") from e
     _raise_if_cancelled(cancel_check)
 
     units: list[ReadingUnit] = []
@@ -128,7 +126,7 @@ def load(
     # is almost certainly not a subtitle — fail the item with a reason instead
     # of mining silently to "0 cards".
     if not units:
-        raise SetupError(f"No subtitle cues found in '{path.name}' — is it really a subtitle file?")
+        raise SetupError(f"No subtitle cues found in '{path.name}'.")
 
     doc = ReadingDocument(
         title=path.stem,

@@ -37,6 +37,8 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# The two over-cap SetupErrors in load() name this in MB ("over 32 MB"); change
+# both if this changes.
 _MAX_TEXT_FILE_BYTES = 32 * 1024 * 1024
 
 # --- gaiji (external characters) -----------------------------------------
@@ -355,16 +357,12 @@ def load(
     try:
         size = ref.path.stat().st_size
         if size > _MAX_TEXT_FILE_BYTES:
-            raise SetupError(
-                f"novel file '{ref.path.name}' is {size:,} bytes (cap {_MAX_TEXT_FILE_BYTES:,}); refusing to load"
-            )
+            raise SetupError(f"'{ref.path.name}' is too large to mine (over 32 MB).")
         with ref.path.open("rb") as f:
             raw = f.read(_MAX_TEXT_FILE_BYTES + 1)
         _raise_if_cancelled(cancel_check)
         if len(raw) > _MAX_TEXT_FILE_BYTES:
-            raise SetupError(
-                f"novel file '{ref.path.name}' exceeds cap {_MAX_TEXT_FILE_BYTES:,} bytes; refusing to load"
-            )
+            raise SetupError(f"'{ref.path.name}' is too large to mine (over 32 MB).")
     except OSError as e:
         logger.debug("Aozora read failed: file=%s error=%s detail=%s", ref.path, type(e).__name__, e)
         raise SetupError(f"Cannot read novel file '{ref.path.name}': {e}") from e

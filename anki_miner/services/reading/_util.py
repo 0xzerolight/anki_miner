@@ -32,7 +32,7 @@ def read_text_capped(path: Path, cap: int, description: str) -> str:
     """
     size = path.stat().st_size
     if size > cap:
-        raise SetupError(f"{description} '{path.name}' is {size:,} bytes (cap {cap:,}); refusing to load.")
+        raise SetupError(f"{description} '{path.name}' is too large to mine.")
     try:
         return path.read_text(encoding="utf-8")
     except UnicodeDecodeError as e:
@@ -79,9 +79,7 @@ def read_zip_member_text_capped(
                     )
                 raise SetupError(f"{description} '{entry}' not found in '{archive.name}'.") from None
             if info.file_size > cap:
-                raise SetupError(
-                    f"{description} '{entry}' is {info.file_size:,} bytes (cap {cap:,}); refusing to load."
-                )
+                raise SetupError(f"{description} '{entry}' is too large to mine.")
             raw = zf.read(entry)
     except (zipfile.BadZipFile, OSError) as e:
         if log_failures:
@@ -195,7 +193,7 @@ def _decode(raw: bytes, *, encodings: tuple[str, ...] | None = None) -> str:
                 return raw.decode(encoding)
             except (UnicodeDecodeError, LookupError):
                 continue
-        raise SetupError(f"Could not decode {len(raw):,} bytes as any of: {', '.join(encodings) or '(none)'}.")
+        raise SetupError("Text encoding could not be detected.")
     if raw[:3] == b"\xef\xbb\xbf":
         return raw.decode("utf-8-sig")
     if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):

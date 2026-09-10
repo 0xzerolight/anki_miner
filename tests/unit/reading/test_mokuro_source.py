@@ -581,7 +581,7 @@ def test_embedded_ocr_entry_over_cap_raises_setup_error(tmp_path, monkeypatch):
         volume="1",
         ocr_entry="vol.mokuro",
     )
-    with pytest.raises(SetupError, match="cap"):
+    with pytest.raises(SetupError, match="too large to mine"):
         load(ref)
 
 
@@ -627,5 +627,5 @@ def test_load_over_cap_raises_setup_error(tmp_path, monkeypatch):
     ref = _write_ref(tmp_path, _mokuro([_page("001.jpg", [_block(["セリフ"])])]), None)
     monkeypatch.setattr(mokuro_source, "MAX_MOKURO_JSON_BYTES", 16)
 
-    with pytest.raises(SetupError, match="cap"):
+    with pytest.raises(SetupError, match="too large to mine"):
         load(ref)

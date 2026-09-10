@@ -268,9 +268,7 @@ def detect_book_folder(directory: Path) -> list[ReadingSourceRef]:
             input=directory,
             found=found_extensions,
         )
-        raise SetupError(
-            f"No .epub or .txt books found in '{directory.name}'. Manga folders are mined in the Manga tab."
-        )
+        raise SetupError(f"No .epub or .txt books found in '{directory.name}'.")
     refs = [_book_ref(child, "epub" if child.suffix.lower() == ".epub" else "txt") for child in books]
     _log_detected(
         directory,

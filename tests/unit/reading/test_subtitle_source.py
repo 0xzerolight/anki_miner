@@ -164,7 +164,7 @@ def test_oversized_subtitle_file_fails_cleanly(tmp_path, monkeypatch):
     path = _write(tmp_path, "Ep01.srt", _SRT)
     monkeypatch.setattr(subtitle_source, "_MAX_TEXT_FILE_BYTES", 4, raising=False)
 
-    with pytest.raises(SetupError, match=r"subtitle file.*cap 4"):
+    with pytest.raises(SetupError, match="too large to mine"):
         subtitle_source.load(_ref(path))
 
 
@@ -181,7 +181,7 @@ def test_subtitle_file_growth_after_stat_uses_bounded_read(monkeypatch):
     path.open.return_value = reader
     monkeypatch.setattr(subtitle_source, "_MAX_TEXT_FILE_BYTES", 4, raising=False)
 
-    with pytest.raises(SetupError, match=r"subtitle file.*cap 4"):
+    with pytest.raises(SetupError, match="too large to mine"):
         subtitle_source.load(_ref(path))  # type: ignore[arg-type]
 
     reader.read.assert_called_once_with(5)

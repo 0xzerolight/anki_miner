@@ -855,25 +855,28 @@ def test_book_folder_ignores_non_books_and_junk(tmp_path):
     assert [r.title for r in refs] == ["keep"]
 
 
-def test_book_folder_empty_errors_with_name_and_manga_hint(tmp_path):
+def test_book_folder_empty_errors_with_name(tmp_path):
     empty = tmp_path / "Comics"
     empty.mkdir()
 
     with pytest.raises(SetupError) as excinfo:
         detector.detect_book_folder(empty)
 
-    msg = str(excinfo.value)
-    assert "Comics" in msg
-    assert "Manga" in msg
+    assert str(excinfo.value) == "No .epub or .txt books found in 'Comics'."
 
 
-def test_book_folder_mokuro_only_errors_with_manga_hint(tmp_path):
+def test_book_folder_mokuro_only_does_not_guess_manga(tmp_path):
+    """The branch never inspects what the folder held, so it must not name manga.
+
+    The Novels tab's own drop handler carries the cross-tab hint, where it IS
+    conditional on the dropped file.
+    """
     (tmp_path / "vol1.mokuro").write_text("{}", encoding="utf-8")
 
     with pytest.raises(SetupError) as excinfo:
         detector.detect_book_folder(tmp_path)
 
-    assert "Manga" in str(excinfo.value)
+    assert "Manga" not in str(excinfo.value)
 
 
 def test_book_folder_unreadable_errors(tmp_path):
@@ -892,5 +895,5 @@ def test_mokuro_meta_over_cap_raises_setup_error(tmp_path, monkeypatch):
     (tmp_path / "vol").mkdir()
     monkeypatch.setattr(detector, "MAX_MOKURO_JSON_BYTES", 1024)
 
-    with pytest.raises(SetupError, match="cap"):
+    with pytest.raises(SetupError, match="too large to mine"):
         detector.detect(mok)
