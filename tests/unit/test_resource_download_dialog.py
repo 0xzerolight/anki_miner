@@ -171,8 +171,7 @@ def test_release_false_aborts_without_downloading(parent, monkeypatch):
     built.assert_not_called()  # nothing touched disk
     warn.assert_not_called()
     body = parent.status_label.text()
-    assert "Indexed resources are in use" in body
-    assert all(task in body for task in ("mining", "startup prewarm", "card backfill"))
+    assert body == "Another task is using the indexed resources — try again when it finishes."
 
 
 def test_release_true_proceeds_to_the_worker(parent, monkeypatch, tmp_path, qtbot):
@@ -550,7 +549,7 @@ def test_native_finish_without_a_summary_reports_failure(parent, monkeypatch, tm
 
     assert outcomes == [None]
     assert "Failed" in session.window.resource_label.text()
-    assert "completion result" in session.window.results_label.text().lower()
+    assert session.window.results_label.text() == "The download stopped before it finished. Try again."
 
 
 # ---------------------------------------------------------------------------
@@ -898,7 +897,7 @@ def test_download_detail_is_the_owners_transfer_line():
     assert "160.0 MB / 600.0 MB" in text
     assert "MB/s" in text
     assert "Elapsed" in text
-    assert "left" in text
+    assert "About 01:50 remaining" in text
 
 
 def test_download_detail_without_a_sample_promises_nothing():
@@ -921,7 +920,7 @@ def test_indexing_detail_states_the_real_entry_count():
 
 def test_activating_detail_is_a_phase_not_a_claim_of_success():
     text = mod.resource_detail(_progress(ResourcePhase.ACTIVATING), locale=QLocale())
-    assert text == "Activating"
+    assert text == "Activating…"
     assert "Installed" not in text
 
 

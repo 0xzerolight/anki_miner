@@ -64,7 +64,7 @@ class TestCudaPackDownloadWiring:
             lambda root: calls.append(root),
         )
 
-        captured["on_finished"](True, "GPU libraries installed successfully.")
+        captured["on_finished"](True, "GPU libraries installed.")
 
-        assert settings_tab.subtitles_panel.cuda_status_label.text() == "GPU libraries installed successfully."
+        assert settings_tab.subtitles_panel.cuda_status_label.text() == "GPU libraries installed."
         assert calls == [_window.get_config().cuda_libs_root]

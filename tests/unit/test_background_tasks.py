@@ -651,8 +651,8 @@ class TestStartAlassDownload:
         finished_calls: list[tuple] = []
         controller.start_alass_download(tmp_path, lambda msg: None, lambda ok, msg: finished_calls.append((ok, msg)))
 
-        worker.emit_result(True, "alass installed successfully.")
-        assert finished_calls == [(True, "alass installed successfully.")]
+        worker.emit_result(True, "alass installed.")
+        assert finished_calls == [(True, "alass installed.")]
 
     def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
         worker_a = _FakeInstallWorker()
@@ -703,8 +703,8 @@ class TestStartMokuroInstall:
             lambda ok, msg: finished_calls.append((ok, msg)),
         )
 
-        worker.emit_result(True, "mokuro installed successfully.")
-        assert finished_calls == [(True, "mokuro installed successfully.")]
+        worker.emit_result(True, "mokuro installed.")
+        assert finished_calls == [(True, "mokuro installed.")]
 
     def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
         worker_a = _FakeInstallWorker()
@@ -754,8 +754,8 @@ class TestStartAsrModelDownload:
             "small", tmp_path, lambda msg: None, lambda ok, msg: finished_calls.append((ok, msg))
         )
 
-        worker.emit_result(True, "small downloaded successfully.")
-        assert finished_calls == [(True, "small downloaded successfully.")]
+        worker.emit_result(True, "small downloaded.")
+        assert finished_calls == [(True, "small downloaded.")]
 
     def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
         """A second start while one is running must not replace the handle."""
@@ -818,8 +818,8 @@ class TestStartCudaPackDownload:
             tmp_path, lambda msg: None, lambda ok, msg: finished_calls.append((ok, msg))
         )
 
-        worker.emit_result(True, "GPU libraries installed successfully.")
-        assert finished_calls == [(True, "GPU libraries installed successfully.")]
+        worker.emit_result(True, "GPU libraries installed.")
+        assert finished_calls == [(True, "GPU libraries installed.")]
 
     def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
         worker_a = _FakeInstallWorker()
@@ -867,8 +867,8 @@ class TestStartVulkanDownload:
             "small", tmp_path, lambda msg: None, lambda ok, msg: finished_calls.append((ok, msg))
         )
 
-        worker.emit_result(True, "Vulkan model installed successfully.")
-        assert finished_calls == [(True, "Vulkan model installed successfully.")]
+        worker.emit_result(True, "Vulkan model installed.")
+        assert finished_calls == [(True, "Vulkan model installed.")]
 
     def test_refused_while_running(self, controller, qtbot, monkeypatch, tmp_path):
         worker_a = _FakeInstallWorker()

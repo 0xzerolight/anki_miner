@@ -154,7 +154,7 @@ def alass_install_task(bin_root: Path) -> InstallTask:
 
         worker.status.emit(QCoreApplication.translate("AlassInstallWorker", "Downloading alass…"))
         install_alass(bin_root, cancel_event=worker.cancel_event)
-        return QCoreApplication.translate("AlassInstallWorker", "alass installed successfully.")
+        return QCoreApplication.translate("AlassInstallWorker", "alass installed.")
 
     return _task
 
@@ -201,7 +201,7 @@ def mokuro_install_task(bin_root: Path, uv_root: Path) -> InstallTask:
             progress=worker._on_progress,
             cancel_event=worker.cancel_event,
         )
-        return QCoreApplication.translate("MokuroInstallWorker", "mokuro installed successfully.")
+        return QCoreApplication.translate("MokuroInstallWorker", "mokuro installed.")
 
     return _task
 
@@ -216,9 +216,7 @@ def asr_download_task(model_name: str, models_root: Path) -> InstallTask:
             tr_format(QCoreApplication.translate("AsrModelDownloadWorker", "Downloading %1…"), model_name)
         )
         model_manager.download(model_name, models_root, cancel_event=worker.cancel_event)
-        return tr_format(
-            QCoreApplication.translate("AsrModelDownloadWorker", "%1 downloaded successfully."), model_name
-        )
+        return tr_format(QCoreApplication.translate("AsrModelDownloadWorker", "%1 downloaded."), model_name)
 
     return _task
 
@@ -232,7 +230,7 @@ def cuda_pack_task(cuda_libs_root: Path) -> InstallTask:
         worker._progress_ctx = "CudaPackDownloadWorker"
         worker.status.emit(QCoreApplication.translate("CudaPackDownloadWorker", "Downloading GPU libraries…"))
         install_cuda_pack(cuda_libs_root, progress=worker._on_progress, cancel_event=worker.cancel_event)
-        return QCoreApplication.translate("CudaPackDownloadWorker", "GPU libraries installed successfully.")
+        return QCoreApplication.translate("CudaPackDownloadWorker", "GPU libraries installed.")
 
     return _task
 
@@ -265,7 +263,7 @@ def language_pack_task(code: str, root: Path, display_name: str) -> InstallTask:
         )
         install_language_pack(code, root, progress=_on_progress, cancelled_check=worker.cancel_event.is_set)
         return tr_format(
-            QCoreApplication.translate("LanguagePackDownloadWorker", "%1 pack installed successfully."),
+            QCoreApplication.translate("LanguagePackDownloadWorker", "%1 pack installed."),
             display_name,
         )
 
@@ -281,7 +279,7 @@ def onnx_pack_task(onnx_pack_root: Path) -> InstallTask:
         worker._progress_ctx = "OnnxPackDownloadWorker"
         worker.status.emit(QCoreApplication.translate("OnnxPackDownloadWorker", "Downloading silence-removal library…"))
         install_onnx_pack(onnx_pack_root, progress=worker._on_progress, cancel_event=worker.cancel_event)
-        return QCoreApplication.translate("OnnxPackDownloadWorker", "Silence-removal library installed successfully.")
+        return QCoreApplication.translate("OnnxPackDownloadWorker", "Silence-removal library installed.")
 
     return _task
 
@@ -302,6 +300,6 @@ def vulkan_model_task(asr_model: str, asr_models_root: Path) -> InstallTask:
         install_ggml_model(asr_model, asr_models_root, progress=worker._on_progress, cancel_event=worker.cancel_event)
         if not worker.check_cancelled():
             install_vad_model(asr_models_root, progress=worker._on_progress, cancel_event=worker.cancel_event)
-        return QCoreApplication.translate("VulkanModelDownloadWorker", "Vulkan model installed successfully.")
+        return QCoreApplication.translate("VulkanModelDownloadWorker", "Vulkan model installed.")
 
     return _task

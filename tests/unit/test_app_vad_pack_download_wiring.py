@@ -64,7 +64,7 @@ class TestVadPackDownloadWiring:
             lambda root: calls.append(root),
         )
 
-        captured["on_finished"](True, "Silence-removal library installed successfully.")
+        captured["on_finished"](True, "Silence-removal library installed.")
 
-        assert settings_tab.subtitles_panel.vad_status_label.text() == "Silence-removal library installed successfully."
+        assert settings_tab.subtitles_panel.vad_status_label.text() == "Silence-removal library installed."
         assert calls == [_window.get_config().onnx_pack_root]

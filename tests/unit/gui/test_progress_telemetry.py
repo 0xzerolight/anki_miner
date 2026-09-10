@@ -251,7 +251,7 @@ class TestFormatTransfer:
         line = format_transfer(_locale(), stats)
 
         assert " / " not in line  # no denominator; the "MB/s" slash is not one
-        assert "left" not in line
+        assert "remaining" not in line
         assert line.startswith("11.0 MB downloaded")
 
     def test_a_stalled_transfer_states_the_silence(self):

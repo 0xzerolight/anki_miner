@@ -25,7 +25,9 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from PyQt6.QtCore import QLocale
+from PyQt6.QtCore import QCoreApplication, QLocale
+
+from anki_miner.utils.i18n import tr_format
 
 #: Rate smoothing time constant, in seconds. Larger is steadier but slower to
 #: react; 3s keeps a chunked HTTP transfer legible without lagging a real stall.
@@ -45,6 +47,11 @@ STALL_AFTER_S = 2.0
 #: plausible GUI stall: misclassifying lag as a suspend would silently stop the
 #: elapsed clock, which is the exact dishonesty this module exists to prevent.
 SUSPEND_GAP_S = 30.0
+
+
+def _tr(text: str) -> str:
+    """Translate a telemetry fragment (this module owns no QObject)."""
+    return QCoreApplication.translate("ProgressTelemetry", text)
 
 
 @dataclass(frozen=True)
@@ -245,26 +252,28 @@ def format_duration_words(seconds: float) -> str:
 def format_transfer(locale: QLocale, stats: TransferStats) -> str:
     """Render a transfer as one line, omitting every field that is not known.
 
-    With a total: ``10.4 MB / 600.0 MB · 1.1 MB/s · Elapsed 00:37 · 02:20 left``
+    With a total: ``10.4 MB / 600.0 MB · 1.1 MB/s · Elapsed 00:37 · About 02:20 remaining``
     Without one: ``10.4 MB downloaded · 1.1 MB/s · Elapsed 00:37``
     Stalled:     ``10.4 MB / 600.0 MB · Elapsed 00:41 · No update for 20 s``
     """
     amount = format_data_size(locale, stats.downloaded)
-    total = f" / {format_data_size(locale, stats.total)}" if stats.total else " downloaded"
-    parts = [f"{amount}{total}"]
+    if stats.total:
+        parts = [f"{amount} / {format_data_size(locale, stats.total)}"]
+    else:
+        parts = [tr_format(_tr("%1 downloaded"), amount)]
 
     if stats.rate_bytes_per_s:
         parts.append(f"{format_data_size(locale, int(stats.rate_bytes_per_s))}/s")
 
-    elapsed = f"Elapsed {format_clock(stats.active_elapsed_s)}"
+    elapsed = tr_format(_tr("Elapsed %1"), format_clock(stats.active_elapsed_s))
     if stats.resumed:
-        elapsed = f"{elapsed} · Resumed"
+        elapsed = f"{elapsed} · {_tr('Resumed')}"
     parts.append(elapsed)
 
     if stats.eta_s is not None:
-        parts.append(f"{format_clock(stats.eta_s)} left")
+        parts.append(tr_format(_tr("About %1 remaining"), format_clock(stats.eta_s)))
 
     if stats.no_update_age_s >= STALL_AFTER_S:
-        parts.append(f"No update for {int(stats.no_update_age_s)} s")
+        parts.append(tr_format(_tr("No update for %1 s"), str(int(stats.no_update_age_s))))
 
     return " · ".join(parts)

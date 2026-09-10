@@ -74,7 +74,7 @@ class TestVulkanDownloadWiring:
             lambda ok, msg: calls.append((ok, msg)),
         )
 
-        captured["on_finished"](True, "Vulkan model installed successfully.")
+        captured["on_finished"](True, "Vulkan model installed.")
 
-        assert settings_tab.subtitles_panel.vulkan_status_label.text() == "Vulkan model installed successfully."
-        assert calls == [(True, "Vulkan model installed successfully.")]
+        assert settings_tab.subtitles_panel.vulkan_status_label.text() == "Vulkan model installed."
+        assert calls == [(True, "Vulkan model installed.")]
