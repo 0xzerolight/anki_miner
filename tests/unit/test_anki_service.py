@@ -3812,7 +3812,7 @@ class TestVerifyCardTarget:
         assert "createDeck" not in actions
 
     def test_missing_field_raises_setup_error(self, test_config):
-        """Should raise SetupError naming the missing field and available fields list."""
+        """Should raise SetupError naming the missing field and the remap destination."""
         # Remove "word" field from the actual model fields
         truncated_fields = [f for f in self._FIELDS if f != "word"]
         service = AnkiService(test_config)
@@ -3827,7 +3827,10 @@ class TestVerifyCardTarget:
 
         actions = [c[0][1] for c in mock_pa.call_args_list]
         assert "createDeck" not in actions
-        assert "Available:" in str(exc_info.value)
+        # The available-field dump is logged, not put in the banner summary (A8-34).
+        assert str(exc_info.value) == (
+            "word not found on note type 'test_note_type' — remap in Settings → Cards & Anki."
+        )
 
     def test_word_mapping_must_target_first_model_field(self, test_config):
         """The mined word must map to the note type's ordered first field."""
@@ -4272,7 +4275,7 @@ class TestProbeDuplicates:
 
         with (
             patch("anki_miner.services._ankiconnect.requests.post", return_value=probe),
-            pytest.raises(AnkiConnectionError, match="not a duplicate"),
+            pytest.raises(AnkiConnectionError, match="Anki refused the card for"),
         ):
             service.create_cards_batch(items)
 
@@ -4903,3 +4906,83 @@ class TestProfileExtraFieldKeys:
             keys = {spec.key for spec in get_profile(code).extra_card_fields}
             assert keys
             assert keys <= OPTIONAL_FIELD_KEYS
+
+
+class TestRejectedNoteNamesTheWord:
+    """A rejection names the word on the card, not its index in a probe batch.
+
+    A 0-based index into an internal probe batch identifies nothing the user can
+    act on; the first field of the note being probed carries the mined form,
+    which is the spelling on the card front.
+    """
+
+    pytestmark = pytest.mark.real_probe
+
+    def _payload(self, make_tokenized_word, lemma: str) -> CardPayload:
+        return CardPayload(
+            word=make_tokenized_word(surface=lemma, lemma=lemma, sentence=f"{lemma}だ。", pos="名詞"),
+            media=MediaData(),
+            definition="d",
+        )
+
+    def test_non_duplicate_rejection_names_the_word(self, test_config, make_tokenized_word):
+        service = AnkiService(test_config)
+        items = [self._payload(make_tokenized_word, "犬"), self._payload(make_tokenized_word, "猫")]
+        probe = _mock_response(
+            result=[
+                {"canAdd": True, "error": None},
+                {"canAdd": False, "error": "cannot create note because it is empty"},
+            ]
+        )
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=probe),
+            pytest.raises(AnkiConnectionError) as exc_info,
+        ):
+            service.create_cards_batch(items)
+
+        assert str(exc_info.value) == "Anki refused the card for '猫': cannot create note because it is empty"
+
+    def test_duplicates_allowed_rejection_names_the_word(self, test_config, make_tokenized_word):
+        from dataclasses import replace
+
+        config = replace(test_config, excluded_decks=("Archive",))
+        service = AnkiService(config)
+        service._existing_vocab_cache = set()
+        items = [self._payload(make_tokenized_word, "犬"), self._payload(make_tokenized_word, "猫")]
+        probe = _mock_response(
+            result=[
+                {"canAdd": True, "error": None},
+                {"canAdd": False, "error": "field mapping is wrong"},
+            ]
+        )
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=probe),
+            pytest.raises(AnkiConnectionError) as exc_info,
+        ):
+            service.create_cards_batch(items)
+
+        assert str(exc_info.value) == "Anki refused the card for '猫': field mapping is wrong"
+
+    def test_legacy_can_add_notes_rejection_names_the_word(self, test_config, make_tokenized_word):
+        """The older-AnkiConnect arm has no per-note error, so it names the word alone."""
+        from dataclasses import replace
+
+        config = replace(test_config, excluded_decks=("Archive",))
+        service = AnkiService(config)
+        service._existing_vocab_cache = set()
+        items = [self._payload(make_tokenized_word, "犬"), self._payload(make_tokenized_word, "猫")]
+        unsupported = _mock_response(error="unsupported action")
+        addible = _mock_response(result=[True, False])
+
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=[unsupported, addible],
+            ),
+            pytest.raises(AnkiConnectionError) as exc_info,
+        ):
+            service.create_cards_batch(items)
+
+        assert str(exc_info.value) == "Anki refused the card for '猫'."
