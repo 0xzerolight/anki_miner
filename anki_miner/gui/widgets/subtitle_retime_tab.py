@@ -15,7 +15,7 @@ files.
 
 Guard contract:
 - alass not found → notice visible; retiming stays enabled (ffsubsync-only).
-- Output directory not writable → Retime aborts, error logged.
+- Output directory not writable → Retime aborts with a screen issue.
 
 Worker contract:
 - Worker stored on ``self.worker_thread``.
@@ -49,7 +49,6 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.constants import SUBTITLE_FILE_FILTER, VIDEO_FILE_FILTER
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.qt_helpers import reveal_settings
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
@@ -131,8 +130,8 @@ class SubtitleRetimeTab(_ToolTabBase):
             complete_template=self.tr("Complete — %1 files processed"),
             complete_skipped_template=self.tr("Complete — %1 processed, %2 skipped"),
             all_skipped_template=self.tr(
-                "No files retimed — all %1 skipped. Enable Overwrite to replace the existing "
-                "retimed files, or choose a different output folder."
+                "No files retimed — all %1 skipped because their output already exists. "
+                "Enable Overwrite to replace it."
             ),
             select_output_folder=self.tr("Select Output Folder"),
             output_default=self.tr("Next to source video"),
@@ -198,7 +197,9 @@ class SubtitleRetimeTab(_ToolTabBase):
 
         # alass notice (shown when alass unavailable; retiming still works)
         self.engine_notice_label = QLabel(
-            self.tr("alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.")
+            self.tr(
+                "alass not found; retiming uses ffsubsync only. Install it in Settings → Transcription & Alignment."
+            )
         )
         self.engine_notice_label.setObjectName("helper-text")
         self.engine_notice_label.setWordWrap(True)
@@ -416,7 +417,7 @@ class SubtitleRetimeTab(_ToolTabBase):
         # Deliberately NOT persisted. Off-by-default each launch is the safety
         # property: a remembered destructive default carries no reminder. Pinned
         # by tests/unit/test_run_option_persistence.py::test_overwrite_is_never_persisted.
-        self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing subtitle files"))
+        self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing retimed files"))
         self.overwrite_checkbox.setToolTip(
             self.tr("When unchecked, pairs whose output subtitle already exists are skipped, not overwritten.")
         )
@@ -424,7 +425,7 @@ class SubtitleRetimeTab(_ToolTabBase):
 
         # Alignment tunes itself (engine chain + result validation); a result
         # that cannot be trusted never overwrites the original subtitle.
-        auto_hint = QLabel(self.tr("Alignment is automatic; an untrustworthy result never replaces the original file."))
+        auto_hint = QLabel(self.tr("Alignment is automatic; the result is written to a separate _retimed file."))
         auto_hint.setObjectName("helper-text")
         auto_hint.setWordWrap(True)
         layout.addWidget(auto_hint)
@@ -592,7 +593,7 @@ class SubtitleRetimeTab(_ToolTabBase):
                 QMessageBox.information(
                     self,
                     self.tr("No Tracks"),
-                    self.tr("No audio or subtitle tracks detected. Check that ffprobe is installed."),
+                    self.tr("This file has no audio or subtitle tracks."),
                 )
                 return
 
@@ -628,15 +629,11 @@ class SubtitleRetimeTab(_ToolTabBase):
             except RuntimeError:
                 # Tab torn down while the probe was in flight; nothing to surface.
                 return
-            self.show_screen_issue(
-                ScreenIssue(
-                    summary=self.tr("Tracks could not be read."),
-                    details=msg,
-                    action_id="settings.media",
-                    action_text=self.tr("Open Media Settings"),
-                ),
-                action=lambda: reveal_settings(self, "media"),
-            )
+            # No repair button: ffmpeg/ffprobe are PATH-or-bundle only and no
+            # settings panel writes config.ffmpeg_location, so "Open Media
+            # Settings" landed on a page of card audio/screenshot fields. A
+            # banner without a plausible repair omits the button.
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Tracks could not be read."), details=msg))
 
         run_off_thread(self, _probe, _on_choices, _on_probe_error)
 
@@ -713,7 +710,12 @@ class SubtitleRetimeTab(_ToolTabBase):
         # next to its source video, so check the first video's parent.
         check_dir = out_dir if out_dir is not None else pairs[0][0].parent
         if not os.access(check_dir, os.W_OK):
-            self.log_widget.append_error(self.tr("Output directory is not writable: ") + str(check_dir))
+            # Its own banner, not a logged ERROR: nothing was retimed, so the
+            # generic run_problem banner _on_log_problem raises would say "Some
+            # files could not be retimed." about a run that never started.
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("Output folder is not writable."), details=str(check_dir))
+            )
             self.retime_button.setEnabled(True)
             return
 
@@ -839,9 +841,11 @@ class SubtitleRetimeTab(_ToolTabBase):
                 matched_videos = {fp.video for fp in file_pairs}
                 unmatched = [v for v in all_videos if v not in matched_videos]
                 n_unmatched = len(unmatched)
-                self.log_widget.append_error(
-                    tr_format(self.tr("Warning: %1 video file(s) could not be matched."), str(n_unmatched))
-                )
+                # WARNING, not ERROR: this fires while collecting pairs, before
+                # the run. An ERROR here raises the run_problem banner, which
+                # never self-dismisses, so a run whose every matched pair
+                # succeeded still ended showing "Some files could not be retimed."
+                self.log_widget.append_warning(tr_format(self.tr("Unmatched video files: %1."), str(n_unmatched)))
 
             if not file_pairs:
                 self.show_screen_issue(
@@ -854,10 +858,12 @@ class SubtitleRetimeTab(_ToolTabBase):
 
             on_pairs([(fp.video, fp.subtitle) for fp in file_pairs])
 
-        def _on_error(_msg: str) -> None:
-            self.show_screen_issue(
-                ScreenIssue(summary=self.tr("That video folder could not be read."), details=video_folder_str)
-            )
+        def _on_error(msg: str) -> None:
+            # _scan lists the video folder AND pairs across both, so a failure
+            # here is not necessarily the video folder's — and both folders
+            # passed is_dir() above, so neither was unreachable. The real
+            # message is what the user cannot see, so it is the Details.
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Those folders could not be scanned."), details=msg))
             on_pairs([])
 
         run_off_thread(self, _scan, _apply, _on_error)
