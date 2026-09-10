@@ -82,7 +82,7 @@ class PlaylistPickerDialog(QDialog):
             )
         else:
             header = tr_format(
-                self.tr("'%1' — showing videos %2-%3 of at least %3"),
+                self.tr("'%1' — showing videos %2-%3"),
                 playlist.title,
                 str(self._first_index),
                 str(last),
@@ -92,10 +92,7 @@ class PlaylistPickerDialog(QDialog):
         layout.addWidget(self.header_label)
 
         self.truncation_label = QLabel(
-            self.tr(
-                "This playlist has more videos. Paste its URL again and expand it "
-                "for the next batch — it continues where this one stops."
-            )
+            self.tr("This playlist has more videos. Paste the URL again to continue from here.")
         )
         self.truncation_label.setObjectName("helper-text")
         self.truncation_label.setWordWrap(True)
@@ -211,7 +208,7 @@ class PlaylistPickerDialog(QDialog):
         """The translated sentence for a malformed range part."""
         messages = {
             "not_a_range": self.tr("Not a number or a range: %1"),
-            "no_such_video": self.tr("There is no video %1."),
+            "no_such_video": self.tr("Video %1 is not on this page."),
             "open_range": self.tr("A range needs at least one end."),
             "from_one": self.tr("Videos are numbered from 1."),
         }
@@ -220,7 +217,8 @@ class PlaylistPickerDialog(QDialog):
     def _refresh_add_button(self, *_: object) -> None:
         """Name the count on the button, and disable it at zero."""
         count = len(self.selected_urls())
-        self.add_button.setText(tr_format(self.tr("Add %1 videos"), str(count)))
+        template = self.tr("Add %1 video") if count == 1 else self.tr("Add %1 videos")
+        self.add_button.setText(tr_format(template, str(count)))
         self.add_button.setEnabled(count > 0)
 
     # ------------------------------------------------------------------

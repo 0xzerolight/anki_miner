@@ -605,7 +605,7 @@ class PlaylistAddController:
                 tr_format(
                     QCoreApplication.translate(
                         "PlaylistAddController",
-                        "This video is part of the playlist '%1' (%2 videos). Add just this video or all of them?",
+                        "This video is part of the playlist '%1' (%2 videos). Add just this video, or the playlist?",
                     ),
                     pl.title,
                     total_text,
@@ -625,7 +625,7 @@ class PlaylistAddController:
                 tr_format(
                     QCoreApplication.translate(
                         "PlaylistAddController",
-                        "Playlist '%1' has %2 videos — more than the configured maximum (%3). Add the first %3?",
+                        "Playlist '%1' has %2 videos. Add the first %3?",
                     ),
                     pl.title,
                     total_text,
@@ -668,7 +668,7 @@ class PlaylistAddController:
         if skipped:
             self._callbacks.log_warning(
                 tr_format(
-                    QCoreApplication.translate("PlaylistAddController", "Skipped %1 already-queued video(s)."),
+                    QCoreApplication.translate("PlaylistAddController", "Skipped %1 already in the queue."),
                     skipped,
                 )
             )
@@ -702,7 +702,11 @@ class PlaylistAddController:
 
         self._callbacks.log_info(
             tr_format(
-                QCoreApplication.translate("PlaylistAddController", "Added %1 videos from playlist '%2'."),
+                (
+                    QCoreApplication.translate("PlaylistAddController", "Added %1 video from playlist '%2'.")
+                    if len(kept_items) == 1
+                    else QCoreApplication.translate("PlaylistAddController", "Added %1 videos from playlist '%2'.")
+                ),
                 len(kept_items),
                 playlist_title,
             )

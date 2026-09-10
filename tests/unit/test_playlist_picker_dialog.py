@@ -105,7 +105,7 @@ def test_a_bad_expression_is_reported_in_a_full_sentence(qtbot: Any) -> None:
     assert dialog.range_error_label.text() == "Not a number or a range: 1-a"
     dialog.range_edit.setText("9")
     dialog.apply_range_button.click()
-    assert dialog.range_error_label.text() == "There is no video 9."
+    assert dialog.range_error_label.text() == "Video 9 is not on this page."
 
 
 def test_accept_button_is_disabled_with_nothing_selected(qtbot: Any) -> None:
@@ -152,9 +152,15 @@ def test_the_header_names_the_page_and_the_total(qtbot: Any) -> None:
     assert "900" in dialog.header_label.text()
 
 
-def test_an_unknown_total_reads_at_least(qtbot: Any) -> None:
+def test_an_unknown_total_names_the_page_only(qtbot: Any) -> None:
+    """With no total, the header states the page and nothing else.
+
+    It used to render "showing videos 1-3 of at least 3" -- the range's own
+    last index sold as a total. The "there is more" fact is the truncation
+    label's job.
+    """
     dialog = _make(qtbot, DownloadPlaylist("My List", _page(1, 3), None, truncated=True), truncated=True)
-    assert "at least 3" in dialog.header_label.text()
+    assert dialog.header_label.text() == "'My List' — showing videos 1-3"
 
 
 def test_a_range_on_a_later_page_uses_the_numbers_shown(qtbot: Any) -> None:
@@ -166,4 +172,4 @@ def test_a_range_on_a_later_page_uses_the_numbers_shown(qtbot: Any) -> None:
 
 def test_the_truncation_notice_says_how_to_continue(qtbot: Any) -> None:
     dialog = _make(qtbot, _playlist(3, total=900), truncated=True)
-    assert "Paste its URL again" in dialog.truncation_label.text()
+    assert "Paste the URL again" in dialog.truncation_label.text()

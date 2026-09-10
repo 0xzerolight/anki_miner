@@ -1576,7 +1576,7 @@ class TestPlaylistDedupe:
 
         new_items = tab._queue.all_items()[1:]
         assert [i.video_id for i in new_items] == [pl.entries[1].video_id, pl.entries[2].video_id]
-        assert "Skipped 1 already-queued video(s)." in tab.log_widget.text_edit.toPlainText()
+        assert "Skipped 1 already in the queue." in tab.log_widget.text_edit.toPlainText()
 
     def test_dedupe_within_batch(self, tab):
         entry = _make_playlist_entry(video_id="vid00000000", title="Dup")
@@ -1624,7 +1624,7 @@ class TestPlaylistDedupe:
         # The bare-id item should survive; the playlist duplicate must be skipped.
         items = tab._queue.all_items()
         assert len(items) == 1, "Duplicate playlist entry must have been deduped"
-        assert "Skipped 1 already-queued video(s)." in tab.log_widget.text_edit.toPlainText()
+        assert "Skipped 1 already in the queue." in tab.log_widget.text_edit.toPlainText()
 
     def test_all_duplicates_skips_probe_worker(self, tab):
         pl = _make_playlist_info(n=2)
