@@ -210,7 +210,7 @@ class LogWidget(QWidget):
         row.addWidget(self.save_button)
 
         self.clear_button = self._make_button(self.tr("Clear"), "ghost")
-        self.clear_button.setToolTip(self.tr("Clear all log messages"))
+        self.clear_button.setToolTip(self.tr("Discard every retained line."))
         self.clear_button.clicked.connect(self._on_clear_clicked)
         row.addWidget(self.clear_button)
 

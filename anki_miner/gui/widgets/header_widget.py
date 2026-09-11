@@ -162,10 +162,7 @@ class HeaderWidget(QWidget):
         # profile the combo's tooltip LEADS with that profile's full name, so an
         # elided name is readable without opening the drop-down (the per-item
         # ToolTipRole only ever surfaces inside the popup).
-        self._profile_tooltip = self.tr(
-            "Active settings profile. Switching swaps every setting; "
-            "pick 'Manage profiles…' to add, rename or remove them."
-        )
+        self._profile_tooltip = self.tr("Active settings profile. Switching swaps every setting.")
         self.profile_label.setBuddy(self.profile_combo)
         profile_layout.addWidget(self.profile_combo)
 
@@ -264,9 +261,7 @@ class HeaderWidget(QWidget):
 
             # The count now rides on the sentinel item, so the comma-joined dump
             # of every installed name is redundant here.
-            self.theme_combo.setToolTip(
-                self.tr("Active theme. This list shows your favorites; pick 'Browse all themes…' to see previews.")
-            )
+            self.theme_combo.setToolTip(self.tr("Active theme. Only your favorites are listed."))
         finally:
             self.theme_combo.blockSignals(False)
 

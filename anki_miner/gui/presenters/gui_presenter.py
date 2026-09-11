@@ -121,7 +121,7 @@ class GUIPresenter(QObject):
         )
         self.info_signal.emit(
             tr_format(
-                QCoreApplication.translate("GUIPresenter", "Step %1 of %2 — %3"),
+                QCoreApplication.translate("GUIPresenter", "Stage %1 of %2 — %3"),
                 index,
                 total,
                 name,

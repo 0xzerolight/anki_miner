@@ -51,10 +51,12 @@ def test_logs_and_shows_diagnostic_dialog(qapp, qtbot, monkeypatch, caplog, rest
     assert len(boxes) == 1
     box = boxes[0]
     assert box.windowTitle() == "Anki Miner — Unexpected Error"
-    assert "ValueError: boom" in box.text()
-    assert f"Version: {__version__}" in box.text()
-    assert "Platform: TestOS-1" in box.text()
-    assert f"Log file: {log_path}" in box.text()
+    # The primary sentence stays actionable; the raw diagnostics live in Details.
+    assert box.text() == "Anki Miner hit an unexpected error."
+    assert "ValueError: boom" in box.detailedText()
+    assert f"Version: {__version__}" in box.detailedText()
+    assert "Platform: TestOS-1" in box.detailedText()
+    assert f"Log file: {log_path}" in box.detailedText()
     assert any(button.text() == "Open Log Folder" for button in box.buttons())
     assert any(r.levelno == logging.CRITICAL for r in caplog.records)
 

@@ -20,6 +20,7 @@ from anki_miner.services.anki_note_builder import (
     field_mapping_error,
     field_target_collision_message,
 )
+from anki_miner.services.resource_staleness import format_stale_family_message
 from anki_miner.utils import ensure_directory
 from anki_miner.utils.alass_resolver import resolve_alass
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
@@ -733,8 +734,7 @@ class ValidationService:
             return _record(
                 "offline-dictionary",
                 False,
-                f"Dictionary index(es) need reimporting after an upgrade: {', '.join(stale)}. "
-                "Use Settings → Dictionaries → Reimport All.",
+                format_stale_family_message("dictionary", stale),
                 root=self.config.dicts_root,
                 reason="schema-stale",
                 sources=capped(stale),
@@ -806,8 +806,7 @@ class ValidationService:
             return _record(
                 "frequency-sources",
                 False,
-                f"Frequency source(s) need reimporting after an upgrade: {', '.join(stale)}. "
-                "Use Settings → Frequency → Reimport All.",
+                format_stale_family_message("frequency", stale),
                 root=self.config.freqs_root,
                 reason="schema-stale",
                 sources=capped(stale),
@@ -873,8 +872,7 @@ class ValidationService:
             return _record(
                 "pitch-sources",
                 False,
-                f"Pitch accent source(s) need reimporting after an upgrade: {', '.join(stale)}. "
-                "Use Settings → Pitch Accent → Reimport All.",
+                format_stale_family_message("pitch", stale),
                 root=self.config.pitch_root,
                 reason="schema-stale",
                 sources=capped(stale),
@@ -956,8 +954,7 @@ class ValidationService:
             return _record(
                 "audio-packs",
                 False,
-                f"Audio pack(s) need reimporting after an upgrade: {', '.join(stale)}. "
-                "Use Settings → Audio → Reimport All.",
+                format_stale_family_message("audio", stale),
                 root=self.config.audio_packs_root,
                 reason="schema-stale",
                 sources=capped(stale),
@@ -1032,7 +1029,7 @@ class ValidationService:
             "deck",
             False,
             f"Deck '{deck_name}' not found in Anki. "
-            f"Pick an existing deck in Settings → Anki. "
+            f"Pick an existing deck in Settings → Cards & Anki. "
             f"Available: {available}{more}",
             deck=deck_name,
             reason="missing",

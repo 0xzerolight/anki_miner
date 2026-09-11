@@ -12,6 +12,7 @@ from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.utils.progress_telemetry import format_clock
 from anki_miner.gui.utils.task_lines import format_task_summary
 from anki_miner.gui.widgets.base import StatusBadge
+from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.gui.controllers.task_registry import TaskRegistry, TaskSnapshot
@@ -142,7 +143,7 @@ class StatusBarWidget(QStatusBar):
         # Right section: System status (clickable container)
         self.system_status_widget = QWidget()
         self.system_status_widget.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.system_status_widget.setToolTip(self.tr("Click to view detailed system validation"))
+        self.system_status_widget.setToolTip(self.tr("Open System Health"))
         self.system_status_widget.mousePressEvent = lambda event: self._on_system_status_clicked(event)  # type: ignore[method-assign,assignment]
 
         system_layout = QHBoxLayout()
@@ -209,7 +210,7 @@ class StatusBarWidget(QStatusBar):
                 (
                     self.tr("%n task(s)", "", len(running)),
                     self._task_line(displayed),
-                    format_clock(displayed.elapsed_s),
+                    tr_format(self.tr("Elapsed %1"), format_clock(displayed.elapsed_s)),
                 )
             )
         )
@@ -252,7 +253,8 @@ class StatusBarWidget(QStatusBar):
         if self._task_registry is None:
             return
         for snapshot in self._task_registry.running():
-            action = QAction(f"{self._task_line(snapshot)} · {format_clock(snapshot.elapsed_s)}", self.task_menu)
+            elapsed = tr_format(self.tr("Elapsed %1"), format_clock(snapshot.elapsed_s))
+            action = QAction(f"{self._task_line(snapshot)} · {elapsed}", self.task_menu)
             action.setData((snapshot.task_id, snapshot.run_token))
             action.triggered.connect(self._on_task_action_triggered)
             self.task_menu.addAction(action)
@@ -277,19 +279,23 @@ class StatusBarWidget(QStatusBar):
             return
         self.task_activated.emit(task_id)
 
-    def set_operation(self, message: str, level: str = "info") -> None:
+    def set_operation(self, message: str, level: str = "info", *, transient: bool = True) -> None:
         """Set the current operation message.
 
         Args:
             message: Operation message
             level: Message level ('info', 'success', 'warning', 'error')
+            transient: ``False`` for a line that describes work still running,
+                which must stay until its own terminal line replaces it (A8-26).
+                A multi-minute step that posts one line and no further updates
+                otherwise left the bar reading "Ready" while it ran.
         """
         self._operation_timer.stop()
         self._render_operation(message, level)
 
-        # Errors stay put; everything else is a transient note about a moment
-        # that has passed, and must not outlive it.
-        if level != "error":
+        # Errors stay put; so does active work. Everything else is a transient
+        # note about a moment that has passed, and must not outlive it.
+        if transient and level != "error":
             self._operation_timer.start()
 
     def clear_operation(self) -> None:

@@ -245,7 +245,9 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         id="text-mining",
         title=QT_TRANSLATE_NOOP("Capabilities", "Mine pasted text"),
-        description=QT_TRANSLATE_NOOP("Capabilities", "Paste any Japanese text and mine it straight into Anki cards."),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Paste text in your mining language and mine it into Anki cards."
+        ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("reading", "text"),
         keywords=("paste", "text", "clipboard", "copy paste", "raw text", "snippet", "article"),

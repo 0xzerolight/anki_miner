@@ -70,7 +70,7 @@ class TestTheStripNamesRunningWork:
 
         registry.tick(now=37.0)
 
-        assert "00:37" in bar.task_button.text()
+        assert "Elapsed 00:37" in bar.task_button.text()
 
     def test_the_strip_goes_away_when_the_last_job_ends(self, bar, registry):
         handle = registry.start(_spec(), now=0.0)

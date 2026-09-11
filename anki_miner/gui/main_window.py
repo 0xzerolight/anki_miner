@@ -202,6 +202,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # the next Undo delete instead of the stale startup endpoint.
         self._build_config_bound_services()
         self._validation_silent = True
+        # Set by the Help menu only: the boot check stays silent, the one the
+        # user asked for reports its answer.
+        self._update_check_manual = False
 
         # Readiness facts live here, not on the System Health screen, so a
         # result arriving while that screen is closed is not lost and a reopened
@@ -422,9 +425,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         """Set up accessibility features for screen readers and keyboard navigation."""
         # Set window accessible name and description
         self.setAccessibleName(self.tr("Anki Miner Main Window"))
-        self.setAccessibleDescription(
-            self.tr("Japanese vocabulary mining tool for creating Anki flashcards from video subtitles")
-        )
+        self.setAccessibleDescription(self.tr("Mines vocabulary from video, audio and text into Anki cards"))
 
         # Set accessible names for main components
         self.tabs.setAccessibleName(self.tr("Main Tabs"))
@@ -480,13 +481,14 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         check_updates_action = help_menu.addAction(self.tr("Check for Updates"))
         assert check_updates_action is not None
-        check_updates_action.triggered.connect(self._check_for_updates)
+        # Not _check_for_updates directly: QAction.triggered passes its own
+        # `checked` bool, which would land in the manual flag as False.
+        check_updates_action.triggered.connect(self._check_for_updates_manual)
 
         help_menu.addSeparator()
 
         open_log_action = help_menu.addAction(self.tr("Open Log Folder"))
         assert open_log_action is not None
-        open_log_action.setToolTip(self.tr("Open the log folder in your file manager"))
         open_log_action.triggered.connect(self._open_log_folder)
 
         export_diagnostics_action = help_menu.addAction(self.tr("Export Diagnostics…"))
@@ -494,6 +496,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self.export_diagnostics_action = export_diagnostics_action
         export_diagnostics_action.setToolTip(self.tr("Save a zip with logs and system details for a bug report"))
         export_diagnostics_action.triggered.connect(self._export_diagnostics)
+
+        # QMenu hides action tooltips by default, so the one tooltip left in this
+        # menu (what the diagnostics zip contains) reached nobody.
+        help_menu.setToolTipsVisible(True)
 
         # Usage Guide -- a top-level menu-bar button, not a dropdown, placed
         # after Help. F1 is help everywhere, and "which screen does this?" is
@@ -526,10 +532,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         corner_layout.setContentsMargins(0, 0, 0, 0)
         corner_layout.setSpacing(0)
 
-        # "Report a Bug / Suggest a Feature" button (moved out of the Help menu).
+        # "Send feedback" button (moved out of the Help menu).
         report_button = QToolButton(corner_widget)
         report_button.setObjectName("report_issue_button")
-        report_button.setText(self.tr("Report a Bug / Suggest a Feature"))
+        report_button.setText(self.tr("Send feedback"))
         report_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         report_button.setAutoRaise(True)
         report_button.setToolTip(self.tr("Report a bug or suggest a feature on GitHub"))
@@ -539,10 +545,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # "Star on GitHub" button.
         star_button = QToolButton(corner_widget)
         star_button.setObjectName("github_star_button")
-        star_button.setText(self.tr("⭐ Star - help the project"))
+        star_button.setText(self.tr("Star on GitHub"))
         star_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         star_button.setAutoRaise(True)
-        star_button.setToolTip(self.tr("Star the project on GitHub"))
         star_button.clicked.connect(self._open_github_repo)
         corner_layout.addWidget(star_button)
 
@@ -551,7 +556,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         discord_button.setObjectName("discord_button")
         discord_button.setText(self.tr("Join Discord"))
         discord_button.setAutoRaise(True)
-        discord_button.setToolTip(self.tr("Join the community on Discord"))
         # Guard on the loaded icon (covers a missing OR unparseable SVG): a
         # TextBesideIcon button with a null icon would leave a blank gap, so fall
         # back to text-only if the brand mark fails to load.
@@ -663,9 +667,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if self.background_tasks.prepare_dictionary_mutation():
             return True
         self.show_screen_issue(
-            ScreenIssue(
-                summary=self.tr("The startup JMdict migration is still stopping. Wait for it to finish and try again.")
-            )
+            ScreenIssue(summary=self.tr("Wait for the startup dictionary setup to finish, then try again."))
         )
         return False
 
@@ -1259,14 +1261,19 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
         def on_done(value: object) -> None:
             finish_attempt()
+            if isinstance(value, ShortcutResult) and value.messages:
+                # The executable/icon/.desktop paths the modal no longer shows.
+                logger.info("Desktop shortcut: %s", " | ".join(value.messages))
             if not show_result or value is None:
                 return
             if not isinstance(value, ShortcutResult):
                 self._report_shortcut_failure("")
                 return
-            body = "\n".join(value.messages) if value.messages else ""
             if value.success:
-                QMessageBox.information(self, self.tr("Desktop Shortcut"), body or self.tr("Shortcut created."))
+                # One sentence, not four absolute paths (rule 5).
+                QMessageBox.information(
+                    self, self.tr("Desktop Shortcut"), value.summary or self.tr("Shortcut created.")
+                )
             else:
                 self._report_shortcut_failure(value.error or "")
 
@@ -1436,10 +1443,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             self,
             self.tr("Restyle Mined Cards"),
             self.tr(
-                "Re-apply the latest built-in styling to your mined cards so they match "
-                "new ones. Safe to re-run; it never removes card content.\n\nClose Anki's "
-                "card browser and any open note editor first — editing an open note can "
-                "lose unsaved edits.\n\nContinue?"
+                "Re-applies the current built-in styling to your mined cards.\n\nClose Anki's "
+                "card browser and note editor first — an open note can lose unsaved edits."
+                "\n\nContinue?"
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
@@ -1463,10 +1469,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 action=lambda: self.reveal_capability(CapabilityTarget("settings", "anki")),
             )
             return
-        self.status_bar.set_operation(self.tr("Restyling mined cards…"), "info")
+        self.status_bar.set_operation(self.tr("Restyling mined cards…"), "info", transient=False)
 
         def on_progress(scanned: int, total: int) -> None:
-            self.status_bar.set_operation(tr_format(self.tr("Restyling mined cards… %1/%2"), scanned, total), "info")
+            self.status_bar.set_operation(
+                tr_format(self.tr("Restyling mined cards… %1/%2"), scanned, total), "info", transient=False
+            )
 
         def on_result(result: RestyleResult) -> None:
             if result.failed:
@@ -1478,7 +1486,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                             result.failed,
                         ),
                         details=tr_format(
-                            self.tr("Restyled %1 card(s). (%2 scanned; %3 already up to date.)"),
+                            self.tr("Restyled %1 of %2 notes; %3 already up to date."),
                             result.restyled,
                             result.scanned,
                             result.skipped_styled,
@@ -1491,7 +1499,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 self,
                 self.tr("Restyle Mined Cards"),
                 tr_format(
-                    self.tr("Restyled %1 card(s). (%2 scanned; %3 already up to date.)"),
+                    self.tr("Restyled %1 of %2 notes; %3 already up to date."),
                     result.restyled,
                     result.scanned,
                     result.skipped_styled,
@@ -1785,7 +1793,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             self.anki_reachable.emit()
 
         if result.all_passed:
-            self.status_bar.set_operation(self.tr("System validation passed"), "success")
+            self.status_bar.set_operation(self.tr("All system checks passed"), "success")
             self.clear_screen_issue()
         elif not silent:
             # A wall of "- component: message" lines was the whole modal. The
@@ -2028,7 +2036,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             logger.warning("Cannot build AnkiService (invalid anki_fields): %s", exc)
             if hasattr(self, "status_bar"):
                 self.status_bar.set_operation(
-                    self.tr("Anki note-type fields are misconfigured; check Settings."), "error"
+                    self.tr("The Anki field mapping is not usable. Open Settings → Cards & Anki."), "error"
                 )
 
     def release_dictionary_resources(self) -> bool:
@@ -2332,14 +2340,14 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # The current (config-bound) service is passed per call so the rebuild
         # in _build_config_bound_services reaches the next run.
         if not self.background_tasks.start_validation(self.validation_service):
-            self.status_bar.set_operation(self.tr("Validation already running"), "info")
+            self.status_bar.set_operation(self.tr("System checks are already running."), "info")
             return
         # Both the badges and every health row go back to "not known yet". A
         # probe in flight is not a failure, and the previous sweep's answers are
         # no longer the answers to the question now being asked.
         self.status_bar.set_system_status_checking()
         self._publish_health(self._health_report.checking())
-        self.status_bar.set_operation(self.tr("Running system validation..."), "info")
+        self.status_bar.set_operation(self.tr("Running system checks…"), "info")
 
     def _on_validation_finished(self, result: ValidationResult) -> None:
         """Handle validation worker completion.
@@ -2404,7 +2412,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     def _maybe_migrate_jmdict(self) -> None:
         """One-time: migrate legacy JMdict XML into a SQLite index in the background."""
         if self.background_tasks.maybe_migrate_jmdict(self.config):
-            self.status_bar.set_operation(self.tr("Migrating JMdict to SQLite…"), "info")
+            self.status_bar.set_operation(self.tr("Preparing the JMdict dictionary…"), "info", transient=False)
 
     def _on_jmdict_migration_finished(self, dict_id: str, meta: dict) -> None:
         """Notify tabs that they need to rebuild any cached DefinitionService.
@@ -2423,6 +2431,15 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     def _check_for_updates(self) -> None:
         """Check for application updates in background thread."""
         self.background_tasks.check_for_updates()
+
+    def _check_for_updates_manual(self) -> None:
+        """Help-menu handler: the same check, but it reports what it found.
+
+        The flag is raised here rather than passed into _check_for_updates so
+        the silent boot step keeps calling that method with no arguments.
+        """
+        self._update_check_manual = True
+        self._check_for_updates()
 
     def _maybe_start_ytdlp_update(self) -> None:
         """Kick off the throttled yt-dlp self-update (deferred so the window paints first).
@@ -2447,6 +2464,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         from anki_miner.gui.widgets.update_banner import UpdateBanner
         from anki_miner.services.update_checker import UpdateInfo
 
+        # A menu item that answers nothing visible is the worst kind of
+        # misleading, so the manual path reports every outcome. The boot check
+        # stays silent: nobody asked it anything.
+        manual = self._update_check_manual
+        self._update_check_manual = False
+
         # System Health's Updates row is written on every outcome, including the
         # "nothing newer" one that returns below — a row that only ever changed
         # when an update existed would sit at "not checked yet" forever on an
@@ -2467,10 +2490,17 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         )
 
         if not isinstance(info, UpdateInfo):
+            if manual:
+                if info is None:
+                    self.status_bar.set_operation(tr_format(self.tr("Up to date (%1)"), __version__), "success")
+                else:
+                    self.status_bar.set_operation(self.tr("The update check failed; try again later."), "error")
             return
 
         # Honor the user's "skip this version" choice.
         if info.version == self.config.skipped_update_version:
+            if manual:
+                self.status_bar.set_operation(tr_format(self.tr("Version %1 is available."), info.version), "info")
             return
 
         # The banner is a singleton: create it once, then reuse it on every

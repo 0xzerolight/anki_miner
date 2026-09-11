@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from anki_miner.services import validation_service
+from anki_miner.services.resource_staleness import format_stale_family_message
 from anki_miner.services.validation_service import ValidationService
 from anki_miner.utils import ytdlp_resolver
 
@@ -1077,7 +1078,8 @@ class TestOptionalResourceWarnings:
 
         ok, message = _check("stale-dict")
         assert ok is False
-        assert "reimporting" in message
+        # Same sentence the pre-run gate aborts with (resource_staleness).
+        assert message == format_stale_family_message("dictionary", ["stale-dict"])
 
         ok, message = _check("empty-dict")
         assert ok is False

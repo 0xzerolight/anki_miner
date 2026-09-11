@@ -28,6 +28,8 @@ from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QSizePolicy, QVBo
 from anki_miner.gui.resources.styles import FONT_SIZES, MOTION, SPACING
 from anki_miner.gui.utils import motion
 from anki_miner.gui.utils.fonts import make_scaled_monospace_font
+from anki_miner.gui.utils.progress_telemetry import format_clock
+from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.gui.controllers.task_registry import TaskRegistry
@@ -39,7 +41,7 @@ class ProgressWidget(QWidget):
     Features:
     - Gradient animated progress bar (styled via QSS)
     - Main status label showing current operation
-    - Statistics bar with elapsed time, rate, and ETA
+    - Statistics bar with the labelled elapsed clock
     - Support for both determinate and indeterminate modes
     """
 
@@ -213,7 +215,7 @@ class ProgressWidget(QWidget):
 
         Unlike ``set_determinate(100)`` + ``set_value``, this recovers from a
         prior ``set_indeterminate`` (restores ``setMaximum(100)``) without
-        killing the elapsed timer, and keeps the stats/ETA math in percent
+        killing the elapsed timer, and keeps the progress math in percent
         units (``_total_items`` pinned to 100).
 
         Args:
@@ -286,7 +288,7 @@ class ProgressWidget(QWidget):
         """Pin the bar at 100%, show a completion summary, freeze stats.
 
         Renders the final elapsed time, then drops the timer so a late
-        straggler update cannot resurrect the ETA.
+        straggler update cannot restart the clock.
 
         Args:
             message: Completion summary text
@@ -298,9 +300,7 @@ class ProgressWidget(QWidget):
         self.status_label.setText(message)
         elapsed = self._elapsed()
         if elapsed is not None:
-            minutes = int(elapsed // 60)
-            seconds = int(elapsed % 60)
-            self.stats_label.setText(f"{minutes:02d}:{seconds:02d}")
+            self.stats_label.setText(tr_format(self.tr("Elapsed %1"), format_clock(elapsed)))
         self._start_time = None
 
     def set_status(self, message: str) -> None:
@@ -382,10 +382,10 @@ class ProgressWidget(QWidget):
         """Set progress bar to determinate mode.
 
         The bar maximum is always pinned to 100; ``maximum`` only seeds the
-        total used by ``set_progress`` scaling and the ETA estimate.
+        total used by ``set_progress`` scaling.
 
         Args:
-            maximum: Total item count for ``set_progress``/ETA (default: 100)
+            maximum: Total item count for ``set_progress`` (default: 100)
         """
         self._total_items = maximum
         self.progress_bar.setMaximum(100)
@@ -394,35 +394,20 @@ class ProgressWidget(QWidget):
         self._items_processed = 0
 
     def _update_stats(self) -> None:
-        """Update the statistics label with elapsed time and rate."""
+        """Update the statistics label with the labelled elapsed clock.
+
+        There is no ETA here and there must not be one: ``_items_processed``
+        carries *percent units* on the mining path, so a remaining/rate
+        estimate divided incomparable items into one blended number - the
+        fabricated estimate D18 forbids. The clock is the only figure this
+        widget can state truthfully.
+        """
         elapsed = self._elapsed()
         if elapsed is None:
             self.stats_label.setText("")
             return
 
-        # Format elapsed time
-        minutes = int(elapsed // 60)
-        seconds = int(elapsed % 60)
-        elapsed_str = f"{minutes:02d}:{seconds:02d}"
-
-        # Rate stays internal ETA input only — displaying it reads as
-        # "N.N/sec" of percent units on the mining path, which looks buggy.
-        rate = self._items_processed / elapsed if elapsed > 0 else 0
-
-        # Build stats string
-        stats_parts = [f"{elapsed_str}"]
-
-        # Calculate ETA if we have total
-        if self._total_items > 0 and rate > 0:
-            remaining = self._total_items - self._items_processed
-            eta_seconds = remaining / rate
-            eta_minutes = int(eta_seconds // 60)
-            eta_secs = int(eta_seconds % 60)
-
-            if eta_minutes > 0:
-                stats_parts.append(f"{self.tr('ETA ~')}{eta_minutes:02d}:{eta_secs:02d}")
-
-        self.stats_label.setText(" | ".join(stats_parts))
+        self.stats_label.setText(tr_format(self.tr("Elapsed %1"), format_clock(elapsed)))
 
     def _elapsed(self) -> float | None:
         """Return the registry clock, falling back for unbound standalone use."""

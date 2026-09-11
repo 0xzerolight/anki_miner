@@ -138,7 +138,17 @@ class TestWording:
 
     def test_the_queue_line_states_a_count_it_actually_has(self, _home):
         _seed_queue(count=200)
-        assert "200 items" in describe(take_inventory())
+        assert "200 queued item" in describe(take_inventory())
+
+    def test_every_queue_gets_one_line_not_one_each(self, _home):
+        """Two snapshots the user cannot answer separately are one offer."""
+        _seed_queue(key="queue.youtube", count=4)
+        _seed_queue(key="queue.reading.subtitles", count=11)
+
+        text = describe(take_inventory())
+
+        assert text.count("queued item") == 1
+        assert "15 queued item" in text
 
     def test_the_offer_never_shows_a_raw_url(self, _home):
         _seed_partial(url="https://cdn.example.com/some/long/path/jmdict.zip")

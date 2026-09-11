@@ -3,8 +3,8 @@
 D16-C. On the next launch the app takes stock of two things it deliberately kept:
 partial downloads under ``runtime_state/downloads`` and queue contents under
 ``runtime_state/queues``. If there is anything to offer it asks once —
-*"Resume JMdict download? 312 MB already saved"*, *"Restore previous queue?
-200 items"* — with **Restore** and **Discard**, and then gets out of the way.
+*"JMdict — 312 MB already saved"*, *"200 queued items from your last session"*
+— with **Restore** and **Discard**, and then gets out of the way.
 
 Three things this controller deliberately does not do:
 
@@ -221,7 +221,7 @@ class RecoveryController:
         box.setWindowTitle(QCoreApplication.translate("RecoveryController", "Pick up where you left off?"))
         box.setText(describe(inventory))
         box.setInformativeText(
-            QCoreApplication.translate("RecoveryController", "Nothing starts on its own — restored rows wait for you.")
+            QCoreApplication.translate("RecoveryController", "Nothing starts on its own — restored items wait for you.")
         )
         restore = box.addButton(
             QCoreApplication.translate("RecoveryController", "Restore"), QMessageBox.ButtonRole.AcceptRole
@@ -243,21 +243,29 @@ class RecoveryController:
 
 
 def describe(inventory: RecoveryInventory) -> str:
-    """One line per thing on offer, each stating a number the app actually has."""
+    """One line per partial download, plus one for every restorable queue.
+
+    The queues get a single line on purpose. A snapshot carries only a machine
+    key ("queue.youtube"), so per-snapshot lines were the same sentence repeated
+    with a different number and nothing to tell them apart - and there is one
+    Restore button for all of them, so the user cannot answer them separately.
+    """
     lines: list[str] = []
     for download in inventory.downloads:
         lines.append(
             tr_format(
-                QCoreApplication.translate("RecoveryController", "Resume %1? %2 already saved"),
+                QCoreApplication.translate("RecoveryController", "%1 — %2 already saved"),
                 _download_label(download),
                 format_bytes(download.saved_bytes),
             )
         )
-    for snapshot in inventory.queues:
+    if inventory.queued_items:
         lines.append(
-            tr_format(
-                QCoreApplication.translate("RecoveryController", "Restore previous queue? %1 items"),
-                len(snapshot.items),
+            QCoreApplication.translate(
+                "RecoveryController",
+                "%n queued item(s) from your last session",
+                "",
+                inventory.queued_items,
             )
         )
     return "\n".join(lines)

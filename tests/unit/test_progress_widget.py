@@ -37,7 +37,7 @@ def test_set_determinate_keeps_progress_bar_max_at_100(widget):
 
 
 def test_set_determinate_stores_total_for_stats(widget):
-    """Item count is still tracked separately for ETA/rate stats."""
+    """Item count is still tracked separately from the bar's percent."""
     widget.set_determinate(12)
     assert widget.total == 12
 
@@ -198,12 +198,11 @@ def test_show_completion_pins_100_and_freezes_stats(widget):
     widget.show_completion("Complete — 87 cards created")
     assert widget.progress_bar.value() == 100
     assert widget.status_label.text() == "Complete — 87 cards created"
-    # Late straggler updates must not resurrect the ETA line.
+    # Late straggler updates must not restart the clock.
     stats_after = widget.stats_label.text()
     widget.set_percent(100, "")
-    assert "ETA" not in widget.stats_label.text()
+    assert widget.stats_label.text() == stats_after
     assert widget.progress_bar.value() == 100
-    del stats_after
 
 
 def test_stats_line_has_no_rate_display(widget):
@@ -228,16 +227,16 @@ def test_registry_clock_includes_time_before_and_between_progress_signals(widget
     # The first minute belongs to the run even though no positive progress has
     # arrived yet.
     registry.tick(now=70.0)
-    assert widget.stats_label.text() == "01:00"
+    assert widget.stats_label.text() == "Elapsed 01:00"
 
     widget.set_percent(25, "First item finished")
     before_silence = widget.stats_label.text()
 
     # No worker signal arrives during the next minute. The registry's existing
-    # monotonic tick still advances both elapsed time and ETA.
+    # monotonic tick still advances the elapsed clock.
     registry.tick(now=130.0)
-    assert before_silence == "01:00 | ETA ~03:00"
-    assert widget.stats_label.text() == "02:00 | ETA ~06:00"
+    assert before_silence == "Elapsed 01:00"
+    assert widget.stats_label.text() == "Elapsed 02:00"
     registry.shutdown()
 
 
@@ -258,7 +257,7 @@ def _assert_tab_binds_its_progress_clock(tab, progress_widget, qtbot):
 
         registry.tick(now=70.0)
 
-        assert progress_widget.stats_label.text() == "01:00"
+        assert progress_widget.stats_label.text() == "Elapsed 01:00"
     finally:
         registry.shutdown()
 
@@ -290,12 +289,12 @@ def test_single_episode_completion_keeps_terminal_elapsed_without_eta(qtbot, tes
         registry.tick(now=610.0)
 
         tab.progress_widget.show_completion("Complete — 1 card created")
-        assert tab.progress_widget.stats_label.text() == "10:00"
+        assert tab.progress_widget.stats_label.text() == "Elapsed 10:00"
 
         clock[0] = 610.0
         tab._on_run_thread_finished()
 
-        assert tab.progress_widget.stats_label.text() == "10:00"
+        assert tab.progress_widget.stats_label.text() == "Elapsed 10:00"
     finally:
         registry.shutdown()
 
