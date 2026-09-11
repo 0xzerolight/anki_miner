@@ -34,8 +34,7 @@ before the raise would let a rejected receiptless managed binary fall through to
 real executable, quietly defeating the containment the raise exists for.
 
 Mirrors :mod:`anki_miner.utils.ffmpeg_resolver`: module-level ``_CACHE`` dict,
-``_clear_cache()`` test/updater hook, and the shared ``frozen_state()`` /
-``bundled_name()`` bundle helpers.
+``_clear_cache()`` test/updater hook, and the shared ``frozen_state()`` helper.
 
 Returning the bare literal (rather than an absolute ``shutil.which`` path) in the
 no-override / non-frozen / no-download case is intentional: it preserves the
@@ -269,7 +268,7 @@ def ytdlp_generation_lock() -> Iterator[Callable[[str | Path], None]]:
       caller has built argv naming it, and on Windows a running image cannot be
       replaced. NEVER release and re-acquire around the spawn instead — that
       reopens exactly the TOCTOU window this closes.
-    - **Anything else** (config override, PATH, bundle, interpreter sibling) —
+    - **Anything else** (config override, PATH, interpreter sibling) —
       the lock is dropped before the subprocess starts. Those binaries are not
       the updater's to swap, and a transfer can run for hours; holding the lock
       across one starved every other resolver caller in-session (System Health

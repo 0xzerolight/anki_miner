@@ -54,7 +54,7 @@ def _download_prefix(repo: str) -> str:
 
 # Latest-release endpoint for the yt-dlp project (no auth / key — free API).
 # Kept as stable-channel constants: the CDN canary and containment tests import
-# them, and scripts/check_ytdlp_pin.py mirrors the stable URL.
+# them.
 GITHUB_API_URL = _api_url(_STABLE_REPO)
 
 # Per-OS release asset name. Every entry MUST be a *standalone* build: the bare
