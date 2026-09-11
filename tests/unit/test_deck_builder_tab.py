@@ -530,6 +530,16 @@ def test_build_clicked_disables_build_and_preview(tab):
     assert not tab.preview_button.isEnabled()
 
 
+def test_item_started_status_reads_like_the_batch_screen(tab):
+    """The per-episode status line is the app's own status grammar."""
+    tab._items_done = 1
+    tab._items_total = 4
+
+    tab._on_item_started("Show S01E02")
+
+    assert tab.progress_widget.status_label.text() == "Mining episode 2 of 4: Show S01E02"
+
+
 # ---------------------------------------------------------------------------
 # 8. _on_cancel_clicked calls worker.cancel()
 # ---------------------------------------------------------------------------
