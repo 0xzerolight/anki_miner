@@ -467,7 +467,7 @@ class TestProcessEpisode:
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         warnings = [str(c.args[0]) for c in presenter.show_warning.call_args_list]
-        assert any("2" in warning and "ambiguous reading" in warning.lower() for warning in warnings)
+        assert any("2" in warning and "more than one reading" in warning for warning in warnings)
 
     def test_early_return_all_words_known(self, processor, mock_services, tmp_path):
         """All words already in Anki → early return."""
@@ -3327,7 +3327,7 @@ class TestProcessYoutubeUrl:
             **mock_services,
         )
 
-        with pytest.raises(RuntimeError, match="YouTubeFetcherService not injected"):
+        with pytest.raises(RuntimeError, match="YouTube mining is unavailable"):
             processor.process_youtube_url(
                 url="https://youtu.be/abc",
                 video_id="abc",

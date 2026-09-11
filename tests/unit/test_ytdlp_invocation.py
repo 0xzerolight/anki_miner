@@ -140,7 +140,7 @@ class TestCookieFailureMessage:
     def test_missing_does_not_say_close_the_browser(self) -> None:
         msg = cookie_failure_message("cookie_missing", "chrome", CHROME_DB_NOT_FOUND.lower(), platform="linux")
         assert "Close chrome" not in msg
-        assert "No cookie database found" in msg
+        assert "No cookie database for chrome" in msg
 
     def test_unset_browser_reads_as_a_sentence(self) -> None:
         msg = cookie_failure_message("cookie_locked", None, "", platform="win32")

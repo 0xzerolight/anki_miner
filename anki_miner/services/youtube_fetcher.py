@@ -56,6 +56,17 @@ _YTDLP_FETCH_TIMEOUT_S = 3 * 60 * 60
 YOUTUBE_MAX_HEIGHT = 720
 
 
+def _log_probe_tail(label: str, reason: str, stderr: str | None) -> None:
+    """Record what yt-dlp printed when a probe exits 0 but its output is unusable.
+
+    ``run_supervised`` only logs the tail at WARNING when the process failed; a
+    zero exit logs it at DEBUG, so a JSON/metadata surprise would otherwise lose
+    the only copy of the diagnosis once the message stopped carrying it.
+    """
+    tail = (stderr or "").strip().splitlines()[-10:]
+    logger.warning("yt-dlp %s probe %s: stderr_tail=%s", label, reason, " | ".join(tail))
+
+
 class YouTubeFetcherService:
     """Probe and download YouTube video+subtitles via yt-dlp.
 
@@ -152,10 +163,11 @@ class YouTubeFetcherService:
         try:
             data = json.loads(proc.stdout)
         except json.JSONDecodeError as e:
-            stderr_tail = (proc.stderr or "").strip().splitlines()[-10:]
+            # A zero exit only logs its tail at DEBUG, so record it here: the
+            # banner carries the remedy, the log carries what yt-dlp printed.
+            _log_probe_tail("metadata", "non-JSON output", proc.stderr)
             raise YouTubeFetchError(
-                "yt-dlp returned non-JSON output — the site or yt-dlp may have "
-                f"broken. stderr: {chr(10).join(stderr_tail)}"
+                "yt-dlp could not read this video's details — update yt-dlp in Settings → YouTube, then retry."
             ) from e
 
         try:
@@ -163,10 +175,9 @@ class YouTubeFetcherService:
             title = data["title"]
             duration = data["duration"]
         except KeyError as e:
-            stderr_tail = (proc.stderr or "").strip().splitlines()[-10:]
+            _log_probe_tail("metadata", "incomplete metadata", proc.stderr)
             raise YouTubeFetchError(
-                "yt-dlp returned incomplete metadata — the site or yt-dlp may "
-                f"have broken. stderr: {chr(10).join(stderr_tail)}"
+                "yt-dlp returned incomplete details for this video — update yt-dlp in Settings → YouTube, then retry."
             ) from e
 
         if not isinstance(video_id, str) or not _VIDEO_ID_RE.match(video_id):
@@ -180,7 +191,8 @@ class YouTubeFetcherService:
         duration_s = 0 if duration is None else int(duration)
         if duration_s > self._config.youtube_max_duration_s:
             raise VideoTooLongError(
-                f"Video duration {duration_s}s exceeds configured maximum {self._config.youtube_max_duration_s}s"
+                f"This video is {round(duration_s / 60)} minutes long — the limit in "
+                f"Settings → YouTube is {round(self._config.youtube_max_duration_s / 60)}."
             )
 
         captions = self._captions()
@@ -306,18 +318,14 @@ class YouTubeFetcherService:
         try:
             data = json.loads(proc.stdout)
         except json.JSONDecodeError as e:
-            stderr_tail = (proc.stderr or "").strip().splitlines()[-10:]
+            _log_probe_tail("playlist", "non-JSON output", proc.stderr)
             raise YouTubeFetchError(
-                "yt-dlp returned non-JSON output — the site or yt-dlp may have "
-                f"broken. stderr: {chr(10).join(stderr_tail)}"
+                "yt-dlp could not read this playlist's details — update yt-dlp in Settings → YouTube, then retry."
             ) from e
 
         raw_entries = data.get("entries")
         if not isinstance(raw_entries, list):
-            raise YouTubeFetchError(
-                "yt-dlp output is not a playlist (missing or non-list 'entries' key). "
-                "Pass a playlist URL, not a single video URL."
-            )
+            raise YouTubeFetchError("That URL is not a playlist — paste a playlist URL.")
 
         playlist_id: str | None = data.get("id") or None
         raw_title = data.get("title") or ""
@@ -602,9 +610,7 @@ class YouTubeFetcherService:
         if ytdlp_invocation.effective_ffmpeg_location(self._config) is not None:
             return
         if shutil.which("ffmpeg") is None:
-            raise FfmpegNotFoundError(
-                "ffmpeg not found on PATH. Install ffmpeg or set the 'youtube_ffmpeg_location' config option."
-            )
+            raise FfmpegNotFoundError("ffmpeg not found — install ffmpeg and restart.")
 
     def _build_fetch_cmd(
         self,
@@ -779,10 +785,7 @@ class YouTubeFetcherService:
         )
 
         if classification == "bot":
-            return BotDetectionError(
-                "YouTube requires login. In Settings → YouTube, set Cookies from "
-                "browser, or point Cookies file at an exported cookies.txt, then retry."
-            )
+            return BotDetectionError("YouTube requires login — set a cookies source in Settings → YouTube, then retry.")
 
         if classification in ytdlp_invocation.COOKIE_TAGS:
             return CookieDatabaseLockedError(
@@ -819,17 +822,10 @@ class YouTubeFetcherService:
                 # Unreachable from a probe: probes pass sub_mode=None, and a probe
                 # requests no format at all, so it cannot fail to match one.
                 return DubAudioUnavailableError(
-                    "No format matched the pinned Japanese-audio selector — the "
-                    "auto-dub track listed at probe time is no longer available "
-                    "(or no separate video stream exists), so this video cannot "
-                    f"be mined via the dub route. yt-dlp said: {ytdlp_invocation.tail_lines(tail, 5)}"
+                    "The dub audio track this video listed is no longer available — " "pick another subtitle source."
                 )
             return YouTubeFetchError(
-                "YouTube served no downloadable format for this video, which usually "
-                "means yt-dlp is out of date (YouTube's DRM/SABR experiments break "
-                "older versions). Use Settings → YouTube → Update yt-dlp now, or "
-                "enable 'Keep yt-dlp up to date automatically', then retry. "
-                f"yt-dlp said: {ytdlp_invocation.tail_lines(tail, 5)}"
+                "YouTube served no downloadable format — update yt-dlp in Settings → YouTube, then retry."
             )
 
         return None
@@ -846,7 +842,7 @@ class YouTubeFetcherService:
         error = self._classified_error(tail, sub_mode)
         if error is not None:
             raise error
-        raise YouTubeFetchError(f"yt-dlp exited non-zero: {ytdlp_invocation.tail_lines(tail, 20)}")
+        raise YouTubeFetchError("yt-dlp could not download this video — see the log for what it reported.")
 
     def _raise_for_probe_error(self, label: str, returncode: int | None, stderr: str | None) -> NoReturn:
         """Raise the probe-side failure for a non-zero yt-dlp exit.
@@ -894,7 +890,8 @@ class YouTubeFetcherService:
 
         if len(video_candidates) > 1:
             names = sorted(p.name for p in video_candidates)
-            raise YouTubeFetchError(f"Multiple video outputs found in workspace: {names}")
+            logger.warning("youtube fetch ambiguous video outputs: workspace=%s names=%s", workspace, names)
+            raise YouTubeFetchError("The download left more than one video file.")
 
         # Prefer srt when both survive — one fetch writes a single subtitle, so a
         # second one is a leftover from an earlier run in a reused workspace, not an
@@ -903,7 +900,8 @@ class YouTubeFetcherService:
         preferred = srt_candidates or subtitle_candidates
         if len(preferred) > 1:
             names = sorted(p.name for p in preferred)
-            raise YouTubeFetchError(f"Multiple subtitle outputs found in workspace: {names}")
+            logger.warning("youtube fetch ambiguous subtitle outputs: workspace=%s names=%s", workspace, names)
+            raise YouTubeFetchError("The download left more than one subtitle file.")
 
         video_file = video_candidates[0] if video_candidates else None
         subtitle_file = preferred[0] if preferred else None
@@ -913,7 +911,8 @@ class YouTubeFetcherService:
             # outcome, not the deterministic failure below. The video checks
             # still run: a truncated download must not reach the ASR pass.
             if video_file is None:
-                raise YouTubeFetchError(f"yt-dlp exited 0 but no video file was produced (workspace={workspace})")
+                logger.warning("youtube fetch produced no video file: workspace=%s", workspace)
+                raise YouTubeFetchError("The download produced no video file.")
             self._assert_nonempty(video_file, "video")
             return FetchedMedia(video_file=video_file, subtitle_file=None, sub_source="generated")
 
@@ -923,15 +922,18 @@ class YouTubeFetcherService:
             # while still exiting 0, so we only learn this after paying for the whole
             # download. Deterministic, so the queue worker must not retry it.
             label = get_profile(config_language(self._config)).english_name or "source"
+            logger.warning("youtube fetch wrote no subtitle: label=%s mode=%s", label, sub_mode)
             raise NoSourceSubtitlesError(
-                f"yt-dlp downloaded the video but wrote no {label} subtitle "
-                f"(mode={sub_mode}). The track listed at probe time was not available "
-                "at download time."
+                f"The video downloaded, but its {label} subtitle track was no longer available."
             )
         if video_file is None or subtitle_file is None:
-            raise YouTubeFetchError(
-                f"yt-dlp exited 0 but expected output files are missing (video={video_file}, subtitle={subtitle_file})"
+            logger.warning(
+                "youtube fetch missing outputs: workspace=%s video=%s subtitle=%s",
+                workspace,
+                video_file,
+                subtitle_file,
             )
+            raise YouTubeFetchError("The download is missing its video or subtitle file.")
         self._assert_nonempty(video_file, "video")
         self._assert_nonempty(subtitle_file, "subtitle")
 
@@ -948,6 +950,8 @@ class YouTubeFetcherService:
         try:
             size = path.stat().st_size
         except OSError as e:
-            raise YouTubeFetchError(f"{label.capitalize()} file unreadable after fetch: {path}") from e
+            logger.warning("youtube fetch output unreadable: label=%s path=%s", label, path)
+            raise YouTubeFetchError(f"The downloaded {label} file could not be read.") from e
         if size <= 0:
-            raise YouTubeFetchError(f"yt-dlp produced a zero-byte {label} file: {path}")
+            logger.warning("youtube fetch output empty: label=%s path=%s", label, path)
+            raise YouTubeFetchError(f"The downloaded {label} file is empty.")

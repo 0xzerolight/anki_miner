@@ -174,11 +174,12 @@ def wav_to_float32(path: Path) -> "tuple[Any, int, float]":
         # allocation this prevents does not exist yet at this point.
         duration = n_frames / sample_rate
         if duration > _MAX_ASR_DURATION_S:
-            raise ValueError(
-                f"Audio duration {duration:.0f}s exceeds the ASR ceiling of "
-                f"{_MAX_ASR_DURATION_S}s ({_MAX_ASR_DURATION_S // 3600}h); refusing to "
-                "load a track this long into memory."
+            logger.warning(
+                "ASR audio too long: duration=%.0fs ceiling=%ds",
+                duration,
+                _MAX_ASR_DURATION_S,
             )
+            raise ValueError(f"This audio is too long to transcribe (over {_MAX_ASR_DURATION_S // 3600} h).")
 
         # Preallocate the float32 output and fill it from chunked int16 reads
         # — never the whole int16 byte buffer and the whole float32 array
@@ -610,7 +611,7 @@ class MediaExtractorService:
                                     attempted,
                                     tr_format(
                                         QCoreApplication.translate("MediaExtractorService", "Extracting media: %1"),
-                                        word.lemma,
+                                        word.mined_form,
                                     ),
                                 )
                             # OVH-044: screenshot succeeded but audio failed (default
@@ -622,7 +623,7 @@ class MediaExtractorService:
                             # the deliberate exception, with include_audio=False.
                             if not audio_only and include_audio and not has_audio and progress_callback:
                                 progress_callback.on_error(
-                                    word.lemma,
+                                    word.mined_form,
                                     QCoreApplication.translate("MediaExtractorService", "audio extraction failed"),
                                 )
                         else:
@@ -634,7 +635,7 @@ class MediaExtractorService:
                                 else QCoreApplication.translate("MediaExtractorService", "No screenshot: %1")
                             )
                             if progress_callback:
-                                progress_callback.on_progress(attempted, tr_format(skip_template, word.lemma))
+                                progress_callback.on_progress(attempted, tr_format(skip_template, word.mined_form))
                             # OVH-043: word dropped because the primary medium
                             # failed (screenshot in default mode, audio in
                             # audio_only mode).  A frame can always be grabbed at a
@@ -644,7 +645,7 @@ class MediaExtractorService:
                             # does not abort the run.
                             if progress_callback:
                                 progress_callback.on_error(
-                                    word.lemma,
+                                    word.mined_form,
                                     QCoreApplication.translate(
                                         "MediaExtractorService",
                                         "media extraction failed — see log",
@@ -661,7 +662,7 @@ class MediaExtractorService:
                             )
                             n_logged += 1
                         if progress_callback:
-                            progress_callback.on_error(word.lemma, str(e))
+                            progress_callback.on_error(word.mined_form, str(e))
 
             if was_cancelled:
                 # Drop queued futures, then kill in-flight ffmpeg so the

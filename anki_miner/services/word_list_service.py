@@ -105,7 +105,9 @@ class WordListService:
             SetupError: If the file cannot be read.
         """
         if not path.exists():
-            raise SetupError(f"Word list file not found: {path}")
+            # The path is diagnostics, not the sentence (rule 5).
+            logger.warning("Word list file missing: path=%s", path)
+            raise SetupError("Your word list file is missing.")
 
         try:
             words: set[str] = set()
@@ -118,4 +120,5 @@ class WordListService:
         except MemoryError:
             raise
         except Exception as e:
-            raise SetupError(f"Error reading word list file {path}: {e}") from e
+            logger.warning("Word list file unreadable: path=%s exc=%s: %s", path, type(e).__name__, e)
+            raise SetupError("Could not read your word list file.") from e

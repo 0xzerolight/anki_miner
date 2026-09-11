@@ -1480,8 +1480,8 @@ class TestExtractMediaBatch:
     ):
         """Should catch per-word exceptions and report via on_error."""
         words = [
-            make_tokenized_word(lemma="良い", start_time=1.0),
-            make_tokenized_word(lemma="悪い", start_time=3.0),
+            make_tokenized_word(surface="良い", lemma="良い", start_time=1.0),
+            make_tokenized_word(surface="悪い", lemma="悪い", start_time=3.0),
         ]
 
         def fake_extract(vf, word, temp_folder=None, **kwargs):
@@ -2288,7 +2288,7 @@ class TestOVH043DroppedWordOnError:
 
     def test_dropped_word_triggers_on_error(self, service, video_file, make_tokenized_word, recording_progress):
         """A word with no screenshot (keep=False) must call on_error with a failure message."""
-        words = [make_tokenized_word(lemma="失敗", start_time=1.0)]
+        words = [make_tokenized_word(surface="失敗", lemma="失敗", start_time=1.0)]
 
         def fake_extract(vf, word, temp_folder=None, **kwargs):
             from anki_miner.models import MediaData
@@ -2337,8 +2337,8 @@ class TestOVH043DroppedWordOnError:
     ):
         """on_error for a dropped word must not abort the batch; subsequent words are processed."""
         words = [
-            make_tokenized_word(lemma="失敗", start_time=1.0),
-            make_tokenized_word(lemma="成功", start_time=2.0),
+            make_tokenized_word(surface="失敗", lemma="失敗", start_time=1.0),
+            make_tokenized_word(surface="成功", lemma="成功", start_time=2.0),
         ]
 
         def fake_extract(vf, word, temp_folder=None, **kwargs):
@@ -2372,7 +2372,7 @@ class TestOVH043DroppedWordOnError:
         self, service, video_file, make_tokenized_word, recording_progress
     ):
         """In audio_only mode a dropped word (no audio) still emits on_error."""
-        words = [make_tokenized_word(lemma="失敗音声", start_time=1.0)]
+        words = [make_tokenized_word(surface="失敗音声", lemma="失敗音声", start_time=1.0)]
 
         def fake_extract(vf, word, temp_folder=None, **kwargs):
             from anki_miner.models import MediaData
@@ -2397,7 +2397,7 @@ class TestOVH044AudioFailedOnError:
         self, service, video_file, make_tokenized_word, recording_progress, tmp_path
     ):
         """Default mode: screenshot succeeded, audio failed → on_error with 'audio extraction failed'."""
-        words = [make_tokenized_word(lemma="音声なし", start_time=1.0)]
+        words = [make_tokenized_word(surface="音声なし", lemma="音声なし", start_time=1.0)]
 
         def fake_extract(vf, word, temp_folder=None, **kwargs):
             from anki_miner.models import MediaData
@@ -2830,7 +2830,7 @@ class TestWavToFloat32DurationCeiling:
     ASR-engine behavior, and it must run on every CI leg.
     """
 
-    def test_ceiling_check_precedes_any_frame_read(self, monkeypatch, tmp_path):
+    def test_ceiling_check_precedes_any_frame_read(self, monkeypatch, tmp_path, caplog):
         """A stub wave file whose ``readframes`` fails the test if called proves
         the check runs off the header (nframes/framerate) alone."""
         from anki_miner.services import media_extractor
@@ -2867,12 +2867,17 @@ class TestWavToFloat32DurationCeiling:
 
         monkeypatch.setattr(media_extractor.wave, "open", lambda *a, **k: _ExplodingWave())
 
-        with pytest.raises(ValueError) as exc_info:
+        with (
+            caplog.at_level(logging.WARNING, logger="anki_miner.services.media_extractor"),
+            pytest.raises(ValueError) as exc_info,
+        ):
             wav_to_float32(tmp_path / "huge.wav")
 
-        msg = str(exc_info.value)
-        assert str(over_cap_s) in msg, msg
-        assert str(_MAX_ASR_DURATION_S) in msg, msg
+        # The seconds are diagnostics and stay in the log; the message states
+        # the ceiling in hours, which is what the user can act on.
+        assert str(exc_info.value) == f"This audio is too long to transcribe (over {_MAX_ASR_DURATION_S // 3600} h)."
+        assert f"duration={over_cap_s}s" in caplog.text
+        assert f"ceiling={_MAX_ASR_DURATION_S}" in caplog.text
 
     def test_duration_at_cap_is_accepted(self, monkeypatch, tmp_path):
         """The cap itself is inclusive — only durations strictly past it refuse.
@@ -3179,3 +3184,59 @@ class TestAudioFilterCapabilityProbe:
             svc._audio_filter_capability()
 
         assert mock_run.call_args[0][0][0] == str(fake_ffmpeg)
+
+
+class TestProgressLinesNameTheCardForm:
+    """The per-word lines name the mined form, which is the card front.
+
+    ``mined_form`` is POS-aware (a noun mines as its surface), so a lemma in
+    these lines names a spelling that appears on no card. Every other surface
+    - the definition lookup, the reading image line, the Anki note - keys on
+    ``mined_form``.
+    """
+
+    def test_progress_line_names_the_mined_form(
+        self, service, video_file, make_tokenized_word, recording_progress, tmp_path
+    ):
+        word = make_tokenized_word(surface="猫", lemma="ねこ", pos="名詞", start_time=1.0)
+        assert word.mined_form != word.lemma
+
+        def fake_extract(vf, w, temp_folder=None, **kwargs):
+            from anki_miner.models import MediaData
+
+            ss = tmp_path / "shot.jpg"
+            ss.write_bytes(b"\xff\xd8fake")
+            audio = tmp_path / "a.mp3"
+            audio.write_bytes(b"ID3fake")
+            return MediaData(
+                screenshot_path=ss,
+                screenshot_filename=ss.name,
+                audio_path=audio,
+                audio_filename=audio.name,
+            )
+
+        with patch.object(service, "extract_media", side_effect=fake_extract):
+            result = service.extract_media_batch(video_file, [word], recording_progress)
+
+        assert len(result) == 1
+        labels = [label for _current, label in recording_progress.progresses]
+        assert any(word.mined_form in label for label in labels), labels
+        assert not any(word.lemma in label for label in labels), labels
+
+    def test_skip_line_and_error_band_name_the_mined_form(
+        self, service, video_file, make_tokenized_word, recording_progress
+    ):
+        word = make_tokenized_word(surface="猫", lemma="ねこ", pos="名詞", start_time=1.0)
+
+        def fake_extract(vf, w, temp_folder=None, **kwargs):
+            from anki_miner.models import MediaData
+
+            return MediaData()
+
+        with patch.object(service, "extract_media", side_effect=fake_extract):
+            result = service.extract_media_batch(video_file, [word], recording_progress)
+
+        assert result == []
+        labels = [label for _current, label in recording_progress.progresses]
+        assert any(word.mined_form in label for label in labels), labels
+        assert [item for item, _msg in recording_progress.errors] == [word.mined_form]

@@ -436,12 +436,16 @@ class AnkiService:
 
         decks = post_action(self.config.ankiconnect_url, "deckNames", timeout=15) or []
         if self.config.anki_deck_name not in decks:
-            available = ", ".join(decks[:5])
-            more = "..." if len(decks) > 5 else ""
+            # The deck list is diagnostics, not the sentence (A8-34) — the deck
+            # dropdown this points at shows the same list live.
+            logger.warning(
+                "Anki deck missing: wanted=%s available=%s",
+                self.config.anki_deck_name,
+                sorted(decks),
+            )
             raise SetupError(
-                f"Deck '{self.config.anki_deck_name}' not found in Anki. "
-                f"Available: {available}{more}. "
-                f"Pick an existing deck in Settings → Anki, or create it in Anki first."
+                f"Deck '{self.config.anki_deck_name}' is not in Anki — "
+                f"pick an existing deck in Settings → Cards & Anki."
             )
         logger.debug(
             "Anki verify card target done: models=%d fields=%d configured=%d decks=%d",
@@ -1166,6 +1170,17 @@ class AnkiService:
             stripped["fields"] = {}
         return stripped
 
+    @staticmethod
+    def _first_field_value(note: dict) -> str:
+        """The card front of a probe note — the word every rejection must name.
+
+        ``verify_card_target`` requires the word mapping to target the model's
+        first field and ``build_note`` emits that mined-form field first, so the
+        first field of a probed note is the spelling the user sees on the card.
+        """
+        fields = note.get("fields") or {}
+        return str(next(iter(fields.values()), ""))
+
     def _post_probe_with_retry(self, action: str, params: dict, timeout: int) -> object:
         """``post_action`` for the read-only duplicate probes, with bounded retry.
 
@@ -1319,7 +1334,7 @@ class AnkiService:
                     item.get("canAdd"),
                     error,
                 )
-                raise AnkiConnectionError(f"AnkiConnect rejected note {i} (not a duplicate): {error}")
+                raise AnkiConnectionError(f"Anki refused the card for '{self._first_field_value(no_dup[i])}': {error}")
         logger.debug("Anki duplicate probe done: duplicates=%d", sum(is_duplicate))
         return is_duplicate
 
@@ -1357,7 +1372,7 @@ class AnkiService:
             for index, can_add in enumerate(addible):
                 if not can_add:
                     raise AnkiConnectionError(
-                        f"AnkiConnect rejected note {index} even with duplicates allowed"
+                        f"Anki refused the card for '{self._first_field_value(dup_allowed[index])}'."
                     ) from None
             return
 
@@ -1365,7 +1380,9 @@ class AnkiService:
             error = item.get("error")
             if error is not None or item.get("canAdd") is not True:
                 detail = error if isinstance(error, str) and error else "note is not addable"
-                raise AnkiConnectionError(f"AnkiConnect rejected note {index}: {detail}")
+                raise AnkiConnectionError(
+                    f"Anki refused the card for '{self._first_field_value(dup_allowed[index])}': {detail}"
+                )
 
     def _probe_duplicates_fallback(self, stripped: list[dict], no_dup: list[dict]) -> list[bool]:
         """Classify duplicates via two diffed ``canAddNotes`` calls.

@@ -7,6 +7,7 @@ submission, and error recovery; this module owns what goes in each note.
 """
 
 import html
+import logging
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -14,6 +15,8 @@ from dataclasses import dataclass
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import CardPayload
 from anki_miner.utils.text_utils import strip_format_chars
+
+logger = logging.getLogger(__name__)
 
 # Field keys every config's ``anki_fields`` must contain (AnkiService
 # validates this at construction time).
@@ -69,21 +72,22 @@ def missing_note_type_message(note_type: str, available: list[str]) -> str:
     identical wording. Lives here rather than in ``anki_service`` because the
     backfill caller is deliberately PyQt-free and cannot import that module.
     """
-    shown = ", ".join(available[:5])
-    more = "..." if len(available) > 5 else ""
-    return f"Note type '{note_type}' not found. Available: {shown}{more}. Check Settings → Anki."
+    # The list of note types the collection does have is diagnostics, not the
+    # sentence (A8-34): the Settings panel this points at shows the same list
+    # live, so it belongs in the log rather than in a banner summary.
+    logger.warning("Anki note type missing: wanted=%s available=%s", note_type, sorted(available))
+    return f"Note type '{note_type}' is not in Anki — pick one in Settings → Cards & Anki."
 
 
 def missing_fields_message(note_type: str, missing: set[str], actual: set[str]) -> str:
     """The one sentence every field-absent-from-note-type check raises."""
-    shown = ", ".join(sorted(actual)[:5])
-    more = "..." if len(actual) > 5 else ""
-    return (
-        f"Field(s) {', '.join(sorted(missing))} not found on note type "
-        f"'{note_type}'. "
-        f"Available: {shown}{more}. "
-        f"Check Settings → Anki field mapping."
+    logger.warning(
+        "Anki fields missing: note_type=%s missing=%s actual=%s",
+        note_type,
+        sorted(missing),
+        sorted(actual),
     )
+    return f"{', '.join(sorted(missing))} not found on note type '{note_type}' — remap in Settings → Cards & Anki."
 
 
 def field_target_collision_message(note_type: str, targets: list[str]) -> str | None:
@@ -92,10 +96,8 @@ def field_target_collision_message(note_type: str, targets: list[str]) -> str | 
     if not duplicate_targets:
         return None
     shown = ", ".join(sorted(duplicate_targets))
-    return (
-        f"Field(s) {shown} mapped more than once. "
-        f"Map each Anki Miner field to a different field on note type '{note_type}'."
-    )
+    logger.warning("Anki field targets collide: note_type=%s duplicates=%s", note_type, shown)
+    return f"{shown} mapped more than once — give each field a different target in Settings → Cards & Anki."
 
 
 def field_mapping_error(
@@ -113,7 +115,7 @@ def field_mapping_error(
         first_field = ordered_actual[0] if ordered_actual else "(none)"
         return (
             f"Word field '{word_target}' must map to the first field '{first_field}' "
-            f"on note type '{note_type}'. Check Settings → Anki field mapping."
+            f"on note type '{note_type}'. Check Settings → Cards & Anki."
         )
     return None
 

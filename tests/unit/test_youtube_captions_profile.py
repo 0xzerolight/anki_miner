@@ -78,5 +78,5 @@ def test_resolved_outputs_accept_the_profile_suffix(ko_config, tmp_path):
 
 def test_missing_subtitle_raises_the_shared_error(ko_config, tmp_path):
     (tmp_path / "abc123.mp4").write_bytes(b"v")
-    with pytest.raises(NoSourceSubtitlesError, match="wrote no Korean subtitle"):
+    with pytest.raises(NoSourceSubtitlesError, match="Korean subtitle track was no longer available"):
         YouTubeFetcherService(ko_config)._resolve_outputs(tmp_path, "abc123", "auto_only")

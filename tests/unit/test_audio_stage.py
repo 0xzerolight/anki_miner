@@ -877,7 +877,7 @@ class TestProcessorAudioFailureSummary:
 class TestSlowPackDiagnosis:
     """A dominant "slow" bucket names the pack and the pack-specific remedy.
 
-    The generic "responding too slowly" advice (reorder or disable the source)
+    The generic "too slow" advice (reorder or disable the source)
     is right for an online source and wrong for a local pack, whose fix is to
     move the folder onto a local drive and re-import. The chain knows which
     member expired; the stage has to say so.
@@ -887,15 +887,14 @@ class TestSlowPackDiagnosis:
         msg = _audio_failure_diagnosis(_counts(slow=6), attempts=10, slow_pack="forvo")
         assert msg is not None
         assert "'forvo'" in msg
-        assert "Settings -> Audio" in msg
         assert "re-import" in msg.lower()
         assert "local drive" in msg
 
     def test_slow_dominant_without_pack_keeps_the_generic_message(self):
         msg = _audio_failure_diagnosis(_counts(slow=6), attempts=10)
         assert msg is not None
-        assert "responding too slowly" in msg
-        assert "Reorder or disable" in msg
+        assert "Word-audio source is too slow" in msg
+        assert "Settings → Audio" in msg
 
     def test_pack_name_is_ignored_when_slow_is_not_dominant(self):
         msg = _audio_failure_diagnosis(_counts(ssl=8, slow=1), attempts=10, slow_pack="forvo")
@@ -944,7 +943,7 @@ class TestSlowPackDiagnosis:
         fetcher.slowest_pack_id.return_value = "forvo"
 
         warnings = self._run(test_config, mock_services, tmp_path, fetcher)
-        assert any("'forvo'" in w and "Settings -> Audio" in w for w in warnings), warnings
+        assert any("'forvo'" in w and "local drive" in w for w in warnings), warnings
 
     def test_stage_warning_stays_generic_without_a_slow_pack(self, test_config, mock_services, tmp_path):
         fetcher = MagicMock()
@@ -953,7 +952,7 @@ class TestSlowPackDiagnosis:
         fetcher.slowest_pack_id.return_value = None
 
         warnings = self._run(test_config, mock_services, tmp_path, fetcher)
-        assert any("responding too slowly" in w for w in warnings), warnings
+        assert any("Word-audio source is too slow" in w for w in warnings), warnings
 
     def test_non_string_slowest_pack_id_is_treated_as_absent(self, test_config, mock_services, tmp_path):
         """A MagicMock fetcher auto-stubs slowest_pack_id(); the stage must not crash on it."""
@@ -962,7 +961,7 @@ class TestSlowPackDiagnosis:
         fetcher.stats.return_value = _counts(slow=1)
 
         warnings = self._run(test_config, mock_services, tmp_path, fetcher)
-        assert any("responding too slowly" in w for w in warnings), warnings
+        assert any("Word-audio source is too slow" in w for w in warnings), warnings
 
 
 class _StubPackFetcher:

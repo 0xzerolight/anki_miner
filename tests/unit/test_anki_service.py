@@ -63,7 +63,7 @@ class TestAnkiConnectLogging:
         assert record.name == "anki_miner.services._ankiconnect"
         assert record.levelno == logging.WARNING
         assert "status=503" in record.getMessage()
-        assert str(exc_info.value) == "AnkiConnect call 'findNotes' failed: 503 Service Unavailable"
+        assert str(exc_info.value) == "Anki sent an unusable reply."
 
     def test_non_object_body_logs_type_before_translation(self, caplog):
         resp = MagicMock()
@@ -80,9 +80,7 @@ class TestAnkiConnectLogging:
         assert record.name == "anki_miner.services._ankiconnect"
         assert record.levelno == logging.WARNING
         assert "type=list" in record.getMessage()
-        assert str(exc_info.value) == (
-            "AnkiConnect 'findNotes' returned a non-object response (list); is another service listening on this port?"
-        )
+        assert str(exc_info.value) == ("Anki sent an unusable reply — check that only Anki is listening on that port.")
 
     def test_ankiconnect_error_logs_diagnostic_before_translation(self, caplog):
         resp = _mock_response(error="deck was not found")
@@ -111,7 +109,7 @@ class TestAnkiConnectLogging:
         assert record.name == "anki_miner.services._ankiconnect"
         assert record.levelno == logging.WARNING
         assert "type=dict" in record.getMessage()
-        assert str(exc_info.value) == "AnkiConnect 'findNotes' returned dict, expected a list"
+        assert str(exc_info.value) == "Anki sent an unusable reply."
 
     def test_request_debug_logs_param_count_without_values(self, caplog):
         distinctive_value = "PRIVATE-SENTENCE-DO-NOT-LOG"
@@ -144,18 +142,24 @@ class TestAnkiConnectLogging:
         ),
     ],
 )
-def test_http_error_is_not_ankiconnect_success(call):
-    """HTTP failure wins over an AnkiConnect-shaped success body."""
+def test_http_error_is_not_ankiconnect_success(call, caplog):
+    """HTTP failure wins over an AnkiConnect-shaped success body.
+
+    The status text is diagnostics and stays in the log; the raised message is
+    the plain sentence a banner can show.
+    """
     resp = _mock_response(result=[123])
     resp.raise_for_status.side_effect = requests.HTTPError("503 Service Unavailable")
 
     with (
         patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
-        pytest.raises(AnkiConnectionError, match="503 Service Unavailable"),
+        caplog.at_level(logging.WARNING, logger="anki_miner.services._ankiconnect"),
+        pytest.raises(AnkiConnectionError, match="unusable reply"),
     ):
         call()
 
     resp.json.assert_not_called()
+    assert any("503 Service Unavailable" in r.getMessage() for r in caplog.records), caplog.text
 
 
 class TestAnkiConnectResponseSizeCap:
@@ -168,7 +172,7 @@ class TestAnkiConnectResponseSizeCap:
 
         with (
             patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
-            pytest.raises(AnkiConnectionError, match="exceeding the 10-byte cap"),
+            pytest.raises(AnkiConnectionError, match="too large to read"),
         ):
             post_action("http://localhost:8765", "notesInfo")
 
@@ -189,7 +193,7 @@ class TestAnkiConnectResponseSizeCap:
 
         with (
             patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
-            pytest.raises(AnkiConnectionError, match="exceeding the 10-byte cap"),
+            pytest.raises(AnkiConnectionError, match="too large to read"),
         ):
             post_multi("http://localhost:8765", [{"action": "findNotes"}])
 
@@ -217,8 +221,9 @@ class TestReadTimeoutCopy:
             post_action("http://localhost:8765", "canAddNotesWithErrorDetail", timeout=60)
 
         message = str(exc_info.value)
-        assert "'canAddNotesWithErrorDetail' timed out after 60s" in message
-        assert "likely busy" in message
+        assert message == (
+            "Anki accepted the connection but did not answer within 60s — wait for it to finish and retry."
+        )
         # The cause chain is load-bearing: is_transient_anki_transport_error
         # classifies via __cause__, and the queue-level retry hangs off it.
         assert isinstance(exc_info.value.__cause__, requests.exceptions.ReadTimeout)
@@ -230,7 +235,7 @@ class TestReadTimeoutCopy:
                 "anki_miner.services._ankiconnect.requests.post",
                 side_effect=requests.exceptions.ReadTimeout("read timed out"),
             ),
-            pytest.raises(AnkiConnectionError, match="'multi' timed out after 30s"),
+            pytest.raises(AnkiConnectionError, match="did not answer within 30s"),
         ):
             post_multi("http://localhost:8765", [{"action": "findNotes", "version": 6, "params": {}}])
 
@@ -274,16 +279,25 @@ class TestExpectList:
         assert _expect_list([1, 2], "findNotes", -1, int) == [1, 2]
 
     def test_non_list_raises(self):
-        with pytest.raises(AnkiConnectionError, match="expected a list"):
+        with pytest.raises(AnkiConnectionError, match="unusable reply"):
             _expect_list({"error": "x"}, "findNotes")
 
-    def test_length_mismatch_raises(self):
-        with pytest.raises(AnkiConnectionError, match="2 item.*expected 3"):
+    def test_length_mismatch_raises(self, caplog):
+        with (
+            caplog.at_level(logging.WARNING, logger="anki_miner.services._ankiconnect"),
+            pytest.raises(AnkiConnectionError, match="unusable reply"),
+        ):
             _expect_list([1, 2], "addNotes", 3)
+        assert "length=2 expected=3" in caplog.text
 
-    def test_element_type_mismatch_reports_index(self):
-        with pytest.raises(AnkiConnectionError, match="index 1"):
+    def test_element_type_mismatch_reports_index(self, caplog):
+        """The index moved from the sentence to the log, but must not be lost."""
+        with (
+            caplog.at_level(logging.WARNING, logger="anki_miner.services._ankiconnect"),
+            pytest.raises(AnkiConnectionError, match="unusable reply"),
+        ):
             _expect_list([1, "two", 3], "findNotes", elem_type=int)
+        assert "index=1" in caplog.text
 
     def test_tuple_elem_type_allows_none_slots(self):
         assert _expect_list([1, None, 3], "addNotes", 3, (int, type(None))) == [1, None, 3]
@@ -473,7 +487,7 @@ class TestGetExistingVocabulary:
 
         with (
             patch("anki_miner.services._ankiconnect.requests.post", return_value=bad_body),
-            pytest.raises(AnkiConnectionError, match="non-object response"),
+            pytest.raises(AnkiConnectionError, match="unusable reply"),
         ):
             service.get_existing_vocabulary()
 
@@ -961,7 +975,7 @@ class TestCreateCardsBatch:
 
         with (
             patch("anki_miner.services._ankiconnect.requests.post", return_value=short_resp),
-            pytest.raises(AnkiConnectionError, match="addNotes"),
+            pytest.raises(AnkiConnectionError, match="unusable reply"),
         ):
             service.create_cards_batch(items)
 
@@ -975,7 +989,7 @@ class TestCreateCardsBatch:
 
         with (
             patch("anki_miner.services._ankiconnect.requests.post", return_value=bad_resp),
-            pytest.raises(AnkiConnectionError, match="index 1"),
+            pytest.raises(AnkiConnectionError, match="unusable reply"),
         ):
             service.create_cards_batch(items)
 
@@ -2149,7 +2163,7 @@ class TestPostMultiErrors:
 
         with (
             patch("anki_miner.services._ankiconnect.requests.post", return_value=resp),
-            pytest.raises(AnkiConnectionError, match="1 item.*expected 2"),
+            pytest.raises(AnkiConnectionError, match="unusable reply"),
         ):
             post_multi("http://localhost:8765", actions)
 
@@ -3812,7 +3826,7 @@ class TestVerifyCardTarget:
         assert "createDeck" not in actions
 
     def test_missing_field_raises_setup_error(self, test_config):
-        """Should raise SetupError naming the missing field and available fields list."""
+        """Should raise SetupError naming the missing field and the remap destination."""
         # Remove "word" field from the actual model fields
         truncated_fields = [f for f in self._FIELDS if f != "word"]
         service = AnkiService(test_config)
@@ -3827,7 +3841,10 @@ class TestVerifyCardTarget:
 
         actions = [c[0][1] for c in mock_pa.call_args_list]
         assert "createDeck" not in actions
-        assert "Available:" in str(exc_info.value)
+        # The available-field dump is logged, not put in the banner summary (A8-34).
+        assert str(exc_info.value) == (
+            "word not found on note type 'test_note_type' — remap in Settings → Cards & Anki."
+        )
 
     def test_word_mapping_must_target_first_model_field(self, test_config):
         """The mined word must map to the note type's ordered first field."""
@@ -4272,7 +4289,7 @@ class TestProbeDuplicates:
 
         with (
             patch("anki_miner.services._ankiconnect.requests.post", return_value=probe),
-            pytest.raises(AnkiConnectionError, match="not a duplicate"),
+            pytest.raises(AnkiConnectionError, match="Anki refused the card for"),
         ):
             service.create_cards_batch(items)
 
@@ -4331,7 +4348,7 @@ class TestProbeDuplicates:
 
         with (
             patch("anki_miner.services._ankiconnect.requests.post", return_value=bad),
-            pytest.raises(AnkiConnectionError, match="canAddNotesWithErrorDetail"),
+            pytest.raises(AnkiConnectionError, match="unusable reply"),
         ):
             service.create_cards_batch(items)
 
@@ -4374,7 +4391,7 @@ class TestProbeRetry:
                 "anki_miner.services._ankiconnect.requests.post",
                 side_effect=requests.exceptions.ReadTimeout("busy"),
             ) as mock_post,
-            pytest.raises(AnkiConnectionError, match="timed out after 60s"),
+            pytest.raises(AnkiConnectionError, match="did not answer within 60s"),
         ):
             service._probe_duplicates([dict(self._NOTE)])
 
@@ -4389,7 +4406,7 @@ class TestProbeRetry:
                 "anki_miner.services._ankiconnect.requests.post",
                 side_effect=requests.exceptions.ReadTimeout("busy"),
             ) as mock_post,
-            pytest.raises(AnkiConnectionError, match="timed out"),
+            pytest.raises(AnkiConnectionError, match="did not answer"),
         ):
             service._probe_duplicates([dict(self._NOTE)])
 
@@ -4407,7 +4424,7 @@ class TestProbeRetry:
                 "anki_miner.services._ankiconnect.requests.post",
                 side_effect=[probe, requests.exceptions.ReadTimeout("busy")],
             ) as mock_post,
-            pytest.raises(AnkiConnectionError, match="'addNotes' timed out"),
+            pytest.raises(AnkiConnectionError, match="did not answer"),
         ):
             service.create_cards_batch(items)
 
@@ -4903,3 +4920,83 @@ class TestProfileExtraFieldKeys:
             keys = {spec.key for spec in get_profile(code).extra_card_fields}
             assert keys
             assert keys <= OPTIONAL_FIELD_KEYS
+
+
+class TestRejectedNoteNamesTheWord:
+    """A rejection names the word on the card, not its index in a probe batch.
+
+    A 0-based index into an internal probe batch identifies nothing the user can
+    act on; the first field of the note being probed carries the mined form,
+    which is the spelling on the card front.
+    """
+
+    pytestmark = pytest.mark.real_probe
+
+    def _payload(self, make_tokenized_word, lemma: str) -> CardPayload:
+        return CardPayload(
+            word=make_tokenized_word(surface=lemma, lemma=lemma, sentence=f"{lemma}だ。", pos="名詞"),
+            media=MediaData(),
+            definition="d",
+        )
+
+    def test_non_duplicate_rejection_names_the_word(self, test_config, make_tokenized_word):
+        service = AnkiService(test_config)
+        items = [self._payload(make_tokenized_word, "犬"), self._payload(make_tokenized_word, "猫")]
+        probe = _mock_response(
+            result=[
+                {"canAdd": True, "error": None},
+                {"canAdd": False, "error": "cannot create note because it is empty"},
+            ]
+        )
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=probe),
+            pytest.raises(AnkiConnectionError) as exc_info,
+        ):
+            service.create_cards_batch(items)
+
+        assert str(exc_info.value) == "Anki refused the card for '猫': cannot create note because it is empty"
+
+    def test_duplicates_allowed_rejection_names_the_word(self, test_config, make_tokenized_word):
+        from dataclasses import replace
+
+        config = replace(test_config, excluded_decks=("Archive",))
+        service = AnkiService(config)
+        service._existing_vocab_cache = set()
+        items = [self._payload(make_tokenized_word, "犬"), self._payload(make_tokenized_word, "猫")]
+        probe = _mock_response(
+            result=[
+                {"canAdd": True, "error": None},
+                {"canAdd": False, "error": "field mapping is wrong"},
+            ]
+        )
+
+        with (
+            patch("anki_miner.services._ankiconnect.requests.post", return_value=probe),
+            pytest.raises(AnkiConnectionError) as exc_info,
+        ):
+            service.create_cards_batch(items)
+
+        assert str(exc_info.value) == "Anki refused the card for '猫': field mapping is wrong"
+
+    def test_legacy_can_add_notes_rejection_names_the_word(self, test_config, make_tokenized_word):
+        """The older-AnkiConnect arm has no per-note error, so it names the word alone."""
+        from dataclasses import replace
+
+        config = replace(test_config, excluded_decks=("Archive",))
+        service = AnkiService(config)
+        service._existing_vocab_cache = set()
+        items = [self._payload(make_tokenized_word, "犬"), self._payload(make_tokenized_word, "猫")]
+        unsupported = _mock_response(error="unsupported action")
+        addible = _mock_response(result=[True, False])
+
+        with (
+            patch(
+                "anki_miner.services._ankiconnect.requests.post",
+                side_effect=[unsupported, addible],
+            ),
+            pytest.raises(AnkiConnectionError) as exc_info,
+        ):
+            service.create_cards_batch(items)
+
+        assert str(exc_info.value) == "Anki refused the card for '猫'."

@@ -675,7 +675,7 @@ class EpisodeProcessor:
         if progress_callback is not None:
             progress_callback.on_stage(index, PIPELINE_STAGE_COUNT, name)
 
-    def _no_words_message(self, texts: Iterable[str]) -> str:
+    def _no_words_message(self, texts: Iterable[str], *, reading: bool = False) -> str:
         """The zero-word warning, naming a wrong-language subtitle when that is the cause.
 
         "No words found in subtitles" was the whole story of the first zh
@@ -684,15 +684,25 @@ class EpisodeProcessor:
         the problem. When no line carries the mining language's script, say so
         - the one zero-word case the user can act on (another track, another
         file) without opening the log.
+
+        ``reading`` swaps in the document wording: ``process_reading`` passes
+        ``subtitle_file_str=""`` and parses a mokuro volume, an EPUB/txt book or
+        a text paste, so a zero-word run there has no subtitles to blame.
         """
         lines = [text for text in texts if text]
         if lines:
             profile = get_profile(config_language(self.config))
             if not any(profile.script.contains_target_script(text) for text in lines):
                 return tr_format(
-                    QCoreApplication.translate("EpisodeProcessor", "Subtitles contain no %1 text"),
+                    (
+                        QCoreApplication.translate("EpisodeProcessor", "This document contains no %1 text")
+                        if reading
+                        else QCoreApplication.translate("EpisodeProcessor", "Subtitles contain no %1 text")
+                    ),
                     profile.display_name,
                 )
+        if reading:
+            return QCoreApplication.translate("EpisodeProcessor", "No words found in this document")
         return QCoreApplication.translate("EpisodeProcessor", "No words found in subtitles")
 
     def _report_no_mineable_words(self, ctx: _EpisodeContext) -> None:
@@ -735,7 +745,7 @@ class EpisodeProcessor:
             tr_format(
                 QCoreApplication.translate(
                     "EpisodeProcessor",
-                    "Ambiguous reading review required for %1 word(s); current readings kept",
+                    "%1 word(s) have more than one reading — the parsed reading was kept.",
                 ),
                 count,
             )
@@ -932,9 +942,7 @@ class EpisodeProcessor:
             # entirely — including the Issue #42 user ignore list — and mine all
             # words that passed POS/subtype filtering. Coverage-deck builds
             # intentionally re-card words the user already knows.
-            self.presenter.show_info(
-                QCoreApplication.translate("EpisodeProcessor", "Known-words filter bypassed (include everything mode)")
-            )
+            self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Including words already known"))
             unknown_words = all_words
         else:
             # User-curated ignore list (Issue #42): always applied on the normal
@@ -1033,7 +1041,7 @@ class EpisodeProcessor:
             self.presenter.show_warning(
                 QCoreApplication.translate(
                     "EpisodeProcessor",
-                    "All %n word(s) from this subtitle are already in Anki — no new cards created",
+                    "All %n word(s) from this run are already known — no new cards created",
                     "",
                     len(all_words),
                 )
@@ -1141,7 +1149,8 @@ class EpisodeProcessor:
                 self.presenter.show_warning(
                     tr_format(
                         QCoreApplication.translate(
-                            "EpisodeProcessor", "Skipped %1 words with no definition found: %2%3"
+                            "EpisodeProcessor",
+                            "Skipped %1 words missing from your offline dictionaries: %2%3",
                         ),
                         len(dropped),
                         preview,
@@ -1212,7 +1221,7 @@ class EpisodeProcessor:
             self.presenter.show_warning(
                 QCoreApplication.translate(
                     "EpisodeProcessor",
-                    "Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).",
+                    "Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).",
                 )
             )
 
@@ -1251,9 +1260,9 @@ class EpisodeProcessor:
             if removed > 0:
                 kinds = []
                 if self.config.exclude_hiragana_only_words:
-                    kinds.append("hiragana-only")
+                    kinds.append(QCoreApplication.translate("EpisodeProcessor", "hiragana-only"))
                 if self.config.exclude_katakana_only_words:
-                    kinds.append("katakana-only")
+                    kinds.append(QCoreApplication.translate("EpisodeProcessor", "katakana-only"))
                 self.presenter.show_info(
                     tr_format(
                         QCoreApplication.translate("EpisodeProcessor", "Script-type filter: removed %1 %2 words"),
@@ -1520,15 +1529,15 @@ class EpisodeProcessor:
                 self.presenter.show_warning(
                     QCoreApplication.translate(
                         "EpisodeProcessor",
-                        "Using WebP for animated screenshots — this ffmpeg build has no AVIF (libsvtav1) encoder.",
+                        "Using WebP for animated screenshots — this ffmpeg build has no AVIF encoder.",
                     )
                 )
             elif animated_fmt is None:
                 self.presenter.show_warning(
                     QCoreApplication.translate(
                         "EpisodeProcessor",
-                        "Animated screenshots unavailable — this ffmpeg build has no AVIF or WebP encoder; "
-                        "switch to static screenshots in Settings.",
+                        "Animated screenshots unavailable — this ffmpeg build has no AVIF or "
+                        "WebP encoder (Settings → Card Media).",
                     )
                 )
 
@@ -1930,7 +1939,7 @@ class EpisodeProcessor:
             ctx.errors.append(CANCELLED_ERROR)
 
         self.presenter.show_success(
-            QCoreApplication.translate("EpisodeProcessor", "Successfully created %n card(s)", "", cards_created)
+            QCoreApplication.translate("EpisodeProcessor", "Created %n card(s)", "", cards_created)
         )
         media_failures = self.anki_service.last_media_store_failures
         if isinstance(media_failures, int) and media_failures > 0:
@@ -2234,7 +2243,7 @@ class EpisodeProcessor:
             )
             ctx.errors.append(str(e))
             partial_ids = list(self.anki_service.last_created_note_ids)
-            self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "Error: %1"), str(e)))
+            self.presenter.show_error(tr_format(QCoreApplication.translate("EpisodeProcessor", "%1"), str(e)))
             return self._stamp_whitelist_coverage(
                 ctx, self._stamp_write_provenance(self._partial_failure_result(ctx, partial_ids), failure=e)
             )
@@ -2697,7 +2706,9 @@ class EpisodeProcessor:
                 return self._cancelled_result_from_ctx(ctx)
             if not media_results:
                 self.presenter.show_warning(
-                    QCoreApplication.translate("EpisodeProcessor", "No media extracted successfully")
+                    QCoreApplication.translate(
+                        "EpisodeProcessor", "Could not extract media for any word — no cards created"
+                    )
                 )
                 return ctx.build_result(errors=["Media extraction failed for all words"])
             self.presenter.show_success(
@@ -2931,7 +2942,7 @@ class EpisodeProcessor:
                                 tr_format(
                                     QCoreApplication.translate(
                                         "EpisodeProcessor",
-                                        "Skipped corrupt image archive %1 — its cards have no page image",
+                                        "Could not open image archive %1 — its cards have no page image",
                                     ),
                                     ref.source.name,
                                 )
@@ -3140,7 +3151,9 @@ class EpisodeProcessor:
             if self.cancelled:
                 return self._cancelled_result_from_ctx(ctx)
             if not all_words:
-                self.presenter.show_warning(self._no_words_message(unit.text for unit in document.units))
+                self.presenter.show_warning(
+                    self._no_words_message((unit.text for unit in document.units), reading=True)
+                )
                 return ctx.build_result()
 
             with timed_phase("filter", logger):
@@ -3467,7 +3480,7 @@ class EpisodeProcessor:
             happens here — the worker handles it).
         """
         if self._youtube_fetcher is None:
-            raise RuntimeError("YouTubeFetcherService not injected — check service_factory")
+            raise RuntimeError("YouTube mining is unavailable.")
         # Bound to a local because the guard above cannot narrow the attribute
         # inside the nested fetch closure below.
         fetcher = self._youtube_fetcher

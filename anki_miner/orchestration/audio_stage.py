@@ -185,9 +185,8 @@ def _audio_failure_diagnosis(counts: dict[str, int], attempts: int, slow_pack: s
             return tr_format(
                 QCoreApplication.translate(
                     "EpisodeProcessor",
-                    "Audio pack '%1' is slow to read — audio skipped for those words. "
-                    "Its folder is probably on a cloud-synced, network or external drive: "
-                    "move it to a local drive, then re-import the pack (Settings -> Audio -> Re-import…).",
+                    "Audio pack '%1' reads too slowly — audio skipped; move its folder "
+                    "to a local drive and re-import it.",
                 ),
                 slow_pack,
             )
@@ -197,8 +196,7 @@ def _audio_failure_diagnosis(counts: dict[str, int], attempts: int, slow_pack: s
         # to reorder or disable it rather than to wait it out.
         return QCoreApplication.translate(
             "EpisodeProcessor",
-            "Word-audio source is responding too slowly — audio skipped for those words. "
-            "Reorder or disable it in Settings -> Audio if this keeps happening.",
+            "Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Audio.",
         )
     if dominant in ("ssl", "connection", "timeout"):
         return QCoreApplication.translate(

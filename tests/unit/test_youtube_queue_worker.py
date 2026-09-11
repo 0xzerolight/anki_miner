@@ -190,7 +190,9 @@ def test_no_japanese_subtitles_is_not_retried(make_worker, mock_processor):
 
     def _side_effect(**kw):
         if kw["video_id"] == "a":
-            raise NoJapaneseSubtitlesError("wrote no Japanese subtitle (mode=manual_only)")
+            raise NoJapaneseSubtitlesError(
+                "The video downloaded, but its Japanese subtitle track was no longer available."
+            )
         return f"R_{kw['video_id'].upper()}"
 
     mock_processor.process_youtube_url.side_effect = _side_effect
@@ -200,7 +202,13 @@ def test_no_japanese_subtitles_is_not_retried(make_worker, mock_processor):
     worker.run()
 
     assert caps["finished"].calls == [
-        (0, None, "NoJapaneseSubtitlesError: wrote no Japanese subtitle (mode=manual_only)", 1),
+        (
+            0,
+            None,
+            "NoJapaneseSubtitlesError: The video downloaded, but its Japanese subtitle "
+            "track was no longer available.",
+            1,
+        ),
         (1, "R_B", None, 1),
     ]
     # The queue keeps going; only that item fails.

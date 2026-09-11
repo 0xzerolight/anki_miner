@@ -319,16 +319,11 @@ def cookie_failure_message(tag: str, browser: str | None, joined_lower: str, *, 
     named = browser or "the browser"
     if tag == "cookie_decrypt":
         return (
-            f"Windows could not decrypt {named}'s cookies. Export a cookies.txt and set it as "
-            "Cookies file in Settings → YouTube, or set Cookies → Browser to None. Restarting "
-            "the browser does not help."
+            f"Windows could not decrypt {named}'s cookies — restarting it does not help; "
+            "use a cookies.txt in Settings → YouTube."
         )
     if tag == "cookie_missing":
-        msg = (
-            f"No cookie database found for {named}. Pick a browser you actually use in "
-            "Settings → YouTube, set Cookies → Browser to None, or point Cookies file at an "
-            "exported cookies.txt."
-        )
+        msg = f"No cookie database for {named} — pick another browser or a cookies.txt file in Settings → YouTube."
         # Flatpak/Snap Firefox keeps its profile outside ~/.mozilla, so yt-dlp
         # searches the right path and finds nothing. Only tell a Firefox user
         # this: on a Chrome miss it is noise pointing at the wrong browser.
