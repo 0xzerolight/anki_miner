@@ -82,10 +82,7 @@ class LanguagePickerDialog(QDialog):
         self._populate(detected, checked)
 
         self.translations_note = QLabel(
-            self.tr(
-                "This URL also offers machine-translated captions. A ticked language "
-                "that is not listed for this URL is fetched as a machine translation."
-            )
+            self.tr("A ticked language not listed for this URL is fetched as a machine translation.")
         )
         self.translations_note.setObjectName("helper-text")
         self.translations_note.setWordWrap(True)

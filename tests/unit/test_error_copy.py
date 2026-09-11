@@ -110,4 +110,4 @@ class TestPreviouslyLogOnly:
         assert "Installed dictionaries could not be checked." in _source(dictionary_settings_panel)
 
     def test_the_themes_folder_failure_is_a_sentence_now(self):
-        assert "The themes folder could not be opened." in _source(ui_settings_panel)
+        assert "The themes folder could not be created." in _source(ui_settings_panel)

@@ -92,13 +92,10 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         header.setFont(font)
         layout.addWidget(header)
 
-        helper = QLabel(
-            self.tr(
-                "Words you added from the Word Curator — ignored on every run, kept "
-                "across cache rebuilds, exportable for re-import into jiten.moe. "
-                "Import accepts jpdb, Migaku and AnkiMorphs exports or plain word lists."
-            )
+        helper_text = self.tr(
+            "Words you added from the Word Curator. Ignored on every run and kept across cache rebuilds."
         )
+        helper = QLabel(helper_text)
         helper.setObjectName("helper-text")
         helper.setWordWrap(True)
         layout.addWidget(helper)
@@ -164,7 +161,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         self._on_search_changed(self.search_input.text())
 
         cached = max(0, self._db.word_count() - len(user_words))
-        self.count_label.setText(tr_format(self.tr("%1 user word(s) · %2 cached from Anki"), len(user_words), cached))
+        self.count_label.setText(tr_format(self.tr("User words: %1 · cached from Anki: %2"), len(user_words), cached))
 
     def _on_search_changed(self, text: str) -> None:
         needle = text.lower()
@@ -268,20 +265,16 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
             return
         if outcome.format_key == "generic":
             prompt = tr_format(
-                self.tr(
-                    "Detected: %1 — this file has no known/learning status; "
-                    "all %2 entries will be imported.\n\nAdd %3 word(s) to your known list?"
-                ),
+                self.tr("Detected: %1 — every entry is imported.\n\nWords to add: %2. Continue?"),
                 self._format_display_name(outcome.format_key),
                 # A plain list has no known/unknown split, so its "entries" ARE the
-                # imported words — report the deduplicated count (matching %3), not
-                # the raw line count, which over-states on lists with duplicates.
-                len(outcome.words),
+                # imported words — report the deduplicated count, not the raw line
+                # count, which over-states on lists with duplicates.
                 len(outcome.words),
             )
         else:
             prompt = tr_format(
-                self.tr("Detected: %1 — %2 entries, %3 qualify as known.\n\nAdd %3 word(s) to your known list?"),
+                self.tr("Detected: %1 — %2 entries, %3 qualify as known.\n\nWords to add: %3. Continue?"),
                 self._format_display_name(outcome.format_key),
                 outcome.total_entries,
                 len(outcome.words),
@@ -307,7 +300,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         QMessageBox.information(
             self,
             self.tr("Import Complete"),
-            tr_format(self.tr("Added %1 word(s) to your list. %2 were already in it."), added, already),
+            tr_format(self.tr("Added to your list: %1. Already in it: %2."), added, already),
         )
 
     def _show_import_error(self, error: KnownWordsImportError) -> None:
@@ -316,8 +309,12 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
                 self.tr("Detected: %1 — but no entries in this file qualify as known."),
                 self._format_display_name(error.format_key or "generic"),
             )
+        elif error.reason == "too_large":
+            message = self.tr("That file is too large to import.")
         elif error.reason == "unreadable":
             message = self.tr("The file could not be read.")
+        elif error.reason == "undecodable":
+            message = self.tr("That file's text encoding could not be read.")
         else:
             message = self.tr(
                 "File format not recognized. Supported: jpdb review export (JSON), "
@@ -330,7 +327,11 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         if generation != self._dialog_generation:
             return
         self.import_button.setEnabled(True)
-        self.show_screen_issue(ScreenIssue(summary=self.tr("That file could not be read."), details=message))
+        # Every expected failure is returned through on_done as a
+        # KnownWordsImportError, so anything landing here is an unexpected
+        # exception with no established cause (A8-35) — name the outcome, not
+        # a step the code never reached.
+        self.show_screen_issue(ScreenIssue(summary=self.tr("That file could not be imported."), details=message))
 
     def export_to(self, path: Path) -> int:
         """Write the user words to ``path``, one per line (UTF-8). Returns the count."""
@@ -353,7 +354,7 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
                     lambda: QMessageBox.information(
                         self,
                         self.tr("Export Complete"),
-                        tr_format(self.tr("Exported %1 word(s) to:\n%2"), count, path_str),
+                        tr_format(self.tr("Exported %1 words to:\n%2"), count, path_str),
                     ),
                 ),
                 lambda message: self._on_export_failed(generation, path_str, message),

@@ -22,7 +22,7 @@ class MediaSettingsPanel(FormPanel):
 
     def __init__(self, parent=None):
         """Initialize the media settings panel."""
-        super().__init__("Media Extraction Settings", parent=parent)
+        super().__init__(self.tr("Card Media"), parent=parent)
         self._setup_fields()
 
     def _setup_fields(self) -> None:
@@ -90,7 +90,7 @@ class MediaSettingsPanel(FormPanel):
                 "Larger files, slower encode; not all Anki clients render animated AVIF/WebP."
             )
         )
-        self.add_field(self.tr("Animated Screenshots"), self.animated_checkbox)
+        self.add_field("", self.animated_checkbox)
 
         # Format
         self.animated_format_combo = QComboBox()
@@ -106,7 +106,7 @@ class MediaSettingsPanel(FormPanel):
         self.animated_match_audio_checkbox.setToolTip(
             self.tr("Animated clip spans the audio clip's time range. Overrides Clip Duration.")
         )
-        self.add_field(self.tr("Match Audio Duration"), self.animated_match_audio_checkbox)
+        self.add_field("", self.animated_match_audio_checkbox)
 
         # Clip duration
         self.animated_duration_spinbox = QDoubleSpinBox()
@@ -114,7 +114,7 @@ class MediaSettingsPanel(FormPanel):
         self.animated_duration_spinbox.setSingleStep(0.5)
         self.animated_duration_spinbox.setSuffix(self.tr(" seconds"))
         self.animated_duration_spinbox.setToolTip(
-            self.tr("Clip length, capped by subtitle duration. Ignored if Match Audio Duration is on.")
+            self.tr("Clip length, capped by subtitle duration. Ignored if Match audio duration is on.")
         )
         self.add_field(self.tr("Clip Duration"), self.animated_duration_spinbox)
 

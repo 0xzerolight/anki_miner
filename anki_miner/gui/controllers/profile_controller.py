@@ -105,8 +105,11 @@ def _incoming_language_name(incoming: AnkiMinerConfig) -> str:
 def _boot_only_label(field: str) -> str:
     """User-facing label for a boot-only field name (falls back to the name)."""
     labels = {
-        "ui_language": QCoreApplication.translate("ProfileController", "Language"),
-        "ui_zoom": QCoreApplication.translate("ProfileController", "Interface scale"),
+        # The labels the Appearance & Language panel itself shows — "Language"
+        # read as the mining language, and nothing on screen is called
+        # "Interface scale".
+        "ui_language": QCoreApplication.translate("ProfileController", "Interface language"),
+        "ui_zoom": QCoreApplication.translate("ProfileController", "Zoom"),
         "ui_font_scale": QCoreApplication.translate("ProfileController", "Text size"),
         "stats_db_path": QCoreApplication.translate("ProfileController", "Statistics database"),
         "log_path": QCoreApplication.translate("ProfileController", "Log file"),
@@ -137,10 +140,16 @@ class SwitchResult:
     switch that DID happen but could not fully refresh the running window. So
     ``switched`` is the branch callers act on; ``reason`` is only there for
     tests and logs. A plain no-op (already on that profile) carries neither.
+
+    ``details`` is the untranslated diagnostic behind the banner's Details —
+    exception text and internal filenames, which the banner rule keeps out of
+    ``reason`` (screen_issue_banner: "summary = plain sentence only"). It is
+    ``None`` wherever the refusal has nothing to add.
     """
 
     switched: bool
     reason: str | None = None
+    details: str | None = None
 
 
 @dataclass(frozen=True)
@@ -433,10 +442,10 @@ class ProfileController:
             return SwitchResult(
                 switched=False,
                 reason=tr_format(
-                    QCoreApplication.translate("ProfileController", "Could not create the profile '%1': %2"),
+                    QCoreApplication.translate("ProfileController", "Could not create the profile '%1'."),
                     name,
-                    exc,
                 ),
+                details=str(exc),
             )
         result = self._switch_locked(profile.id)
         if result.switched:
@@ -448,14 +457,16 @@ class ProfileController:
             cleanup_reason = tr_format(
                 QCoreApplication.translate(
                     "ProfileController",
-                    "The new profile '%1' (%2) remains because cleanup failed: %3. Delete it manually.",
+                    "The new profile '%1' remains — delete it in Settings Profiles.",
                 ),
                 profile.name,
-                f"{profile.id}.json",
-                exc,
             )
+            cleanup_details = f"{profile.id}.json: {exc}"
             reason = f"{result.reason} {cleanup_reason}" if result.reason else cleanup_reason
-            return SwitchResult(switched=False, reason=reason)
+            # Both halves of the two-failure path keep their diagnostics, joined
+            # the same way their sentences are.
+            details = f"{result.details} {cleanup_details}" if result.details else cleanup_details
+            return SwitchResult(switched=False, reason=reason, details=details)
         return result
 
     def _switch_locked(self, profile_id: str) -> SwitchResult:
@@ -495,11 +506,11 @@ class ProfileController:
                     reason=tr_format(
                         QCoreApplication.translate(
                             "ProfileController",
-                            "Could not save the current profile '%1': %2. Nothing was switched.",
+                            "Could not save the current profile '%1'. Nothing was switched.",
                         ),
                         outgoing_name,
-                        exc,
                     ),
+                    details=str(exc),
                 )
 
         # 2. Read the incoming file. read_profile propagates by design (it must
@@ -514,14 +525,11 @@ class ProfileController:
             logger.warning("Could not read settings profile '%s': %s", profile_id, exc)
             return SwitchResult(
                 switched=False,
-                reason=tr_format(
-                    QCoreApplication.translate(
-                        "ProfileController",
-                        "Could not read the profile file %1: %2. Nothing was switched.",
-                    ),
-                    f"{profile_id}.json",
-                    exc,
+                reason=QCoreApplication.translate(
+                    "ProfileController",
+                    "Could not read that profile's file. Nothing was switched.",
                 ),
+                details=f"{profile_id}.json: {exc}",
             )
 
         # 2b. Trigger 2 of the mining-language switch (spec 6.1). The snapshot
@@ -547,7 +555,7 @@ class ProfileController:
         except Exception as exc:  # noqa: BLE001 - theme discovery must not strand a switch
             logger.exception("Could not apply the theme of settings profile '%s'", profile_id)
             self._restore_theme(outgoing_theme)
-            return SwitchResult(switched=False, reason=self._could_not_apply(incoming_name, exc))
+            return SwitchResult(switched=False, reason=self._could_not_apply(incoming_name), details=str(exc))
 
         # 4. Move the pointer, THEN commit. update_config raises before touching
         # anything when save_config fails, so a pointer advanced past a failed
@@ -607,7 +615,11 @@ class ProfileController:
         if not persisted:
             # Rolled back in the finally above; deliberately no apply_to_app,
             # because the running app was never repainted.
-            return SwitchResult(switched=False, reason=self._could_not_apply(incoming_name, commit_error))
+            return SwitchResult(
+                switched=False,
+                reason=self._could_not_apply(incoming_name),
+                details=str(commit_error),
+            )
 
         # The switch is durable from here on, even if the refresh half failed;
         # the pointer stays where it is.
@@ -642,12 +654,11 @@ class ProfileController:
                 reason=tr_format(
                     QCoreApplication.translate(
                         "ProfileController",
-                        "Switched to '%1', but the running window could not be fully refreshed: %2. "
-                        "Restart Anki Miner if something looks wrong.",
+                        "Switched to '%1', but the window could not be fully refreshed. Restart Anki Miner.",
                     ),
                     incoming_name,
-                    refresh_error,
                 ),
+                details=str(refresh_error),
             )
         return SwitchResult(switched=True)
 
@@ -712,7 +723,7 @@ class ProfileController:
         """
         if result.reason is None:
             return
-        report_screen_issue(self._window, ScreenIssue(summary=result.reason))
+        report_screen_issue(self._window, ScreenIssue(summary=result.reason, details=result.details or ""))
 
     @staticmethod
     def _apply_theme() -> None:
@@ -786,12 +797,11 @@ class ProfileController:
         )
 
     @staticmethod
-    def _could_not_apply(profile_name: str, error: object) -> str:
+    def _could_not_apply(profile_name: str) -> str:
         return tr_format(
             QCoreApplication.translate(
                 "ProfileController",
-                "Could not apply the profile '%1': %2. Your current settings are unchanged.",
+                "Could not apply the profile '%1'. Your current settings are unchanged.",
             ),
             profile_name,
-            error,
         )

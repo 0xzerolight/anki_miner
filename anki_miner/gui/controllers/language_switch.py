@@ -243,22 +243,26 @@ def request_language_change(window: Any, code: str) -> bool:
             _refuse(
                 window,
                 tr_format(
-                    QCoreApplication.translate("LanguageSwitch", "Could not switch to %1: %2. Nothing was switched."),
+                    QCoreApplication.translate("LanguageSwitch", "Could not switch to %1. Nothing was switched."),
                     profile.display_name,
-                    error,
                 ),
+                details=str(error),
             )
             return False
     commit_language_change(window, config, flush=bool(pending), first_visit=first_visit)
     return True
 
 
-def _refuse(window: Any, summary: str) -> None:
-    """Report a refusal on the window's banner (D24), never in a modal."""
+def _refuse(window: Any, summary: str, *, details: str = "") -> None:
+    """Report a refusal on the window's banner (D24), never in a modal.
+
+    *details* is the raw diagnostic the banner keeps behind Details; the
+    summary stays a plain sentence with no exception text in it.
+    """
     from anki_miner.gui.widgets.base.screen_issue_banner import ScreenIssue
 
     show = getattr(window, "show_screen_issue", None)
     if callable(show):
-        show(ScreenIssue(summary=summary))
+        show(ScreenIssue(summary=summary, details=details))
     else:
         logger.warning("%s", summary)

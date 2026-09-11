@@ -118,7 +118,7 @@ class MiningLanguageSettingsPanel(FormPanel):
 
     def __init__(self, parent=None):
         """Initialize the mining language settings panel."""
-        super().__init__("Mining Language", parent=parent)
+        super().__init__(self.tr("Mining Language"), parent=parent)
         self._setup_fields()
 
     def _setup_fields(self) -> None:
@@ -133,9 +133,9 @@ class MiningLanguageSettingsPanel(FormPanel):
             self.tr("Mining Language"),
             self.mining_language_combo,
             helper=self.tr(
-                "The language you mine. Separate from the interface language "
-                "(Settings -> Appearance & Language). Switching swaps dictionaries, "
-                "filters, deck and card fields to that language's own settings."
+                "Switching swaps dictionaries, filters, deck and card fields to that "
+                "language's own settings. The interface language is separate "
+                "(Settings → Appearance & Language)."
             ),
         )
 

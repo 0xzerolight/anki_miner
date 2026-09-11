@@ -172,11 +172,26 @@ def theme_applies(monkeypatch, qapp):
 
 @pytest.fixture(autouse=True)
 def warnings_shown(monkeypatch):
-    """Capture the refusals, now reported as screen issues (D24)."""
-    shown: list[str] = []
+    """Capture the refusals, now reported as screen issues (D24).
+
+    Yields the summaries; ``warnings_shown.issues`` carries the whole
+    ``ScreenIssue`` for the tests that check what went behind Details.
+    """
+
+    class _Shown(list):
+        issues: list = []
+
+    shown = _Shown()
+    shown.issues = []
+
+    def _record(_origin, issue):
+        shown.append(issue.summary)
+        shown.issues.append(issue)
+        return True
+
     monkeypatch.setattr(
         "anki_miner.gui.controllers.profile_controller.report_screen_issue",
-        lambda origin, issue: shown.append(issue.summary) or True,
+        _record,
     )
     return shown
 
@@ -794,7 +809,9 @@ class TestSwitchOrdering:
         assert GUIConfigManager.ACTIVE_PROFILE_ID == "a"
         assert _file_bytes(path_b) == before[0]
 
-    def test_the_refusal_names_the_unreadable_file(self, controller, window, profile_a, profile_b):
+    def test_the_refusal_keeps_the_file_name_out_of_the_summary(self, controller, window, profile_a, profile_b):
+        # <profile_id>.json is an internal filename; the banner summary is a
+        # plain sentence and the diagnostics go behind Details.
         _seed("a", profile_a, "A")
         _seed("b", profile_b, "B")
         (ProfileStore.profiles_dir() / "b.json").unlink()
@@ -802,7 +819,8 @@ class TestSwitchOrdering:
 
         result = controller.switch_to("b")
 
-        assert result.reason is not None and "b.json" in result.reason
+        assert result.reason is not None and "b.json" not in result.reason
+        assert result.details is not None and "b.json" in result.details
 
 
 # ---------------------------------------------------------------------------
@@ -883,10 +901,13 @@ class TestCommitBoundary:
         result = controller.switch_to("b")
 
         assert result.switched is True
-        assert result.reason is not None and "services exploded" in result.reason
+        assert result.reason is not None and "services exploded" not in result.reason
+        assert result.details is not None and "services exploded" in result.details
         assert GUIConfigManager.ACTIVE_PROFILE_ID == "b"
         assert window.config.anki_deck_name == "Deck B"
         assert warnings_shown == [result.reason]
+        # The banner shows the plain sentence; the exception is behind Details.
+        assert warnings_shown.issues[0].details == result.details
 
     def test_an_unexpected_raise_before_the_config_moved_reverts_the_pointer(
         self, controller, window, profile_a, profile_b
@@ -1138,7 +1159,8 @@ class TestSettingsRepaint:
         result = controller.switch_to("b")
 
         assert result.switched
-        assert result.reason is not None and "panel blew up" in result.reason
+        assert result.reason is not None and "panel blew up" not in result.reason
+        assert result.details is not None and "panel blew up" in result.details
         assert GUIConfigManager.ACTIVE_PROFILE_ID == "b"
 
 
@@ -1158,7 +1180,9 @@ class TestRestartNote:
 
         assert window.status_bar.messages
         message, level = window.status_bar.messages[-1]
-        assert "Language" in message
+        # ui_language, not the mining language — and the label the Appearance
+        # panel itself shows.
+        assert "Interface language" in message
         assert level == "info"
 
     def test_a_round_trip_back_to_the_boot_values_clears_the_note(self, controller, window, profile_a):
@@ -1328,7 +1352,8 @@ class TestCreateFromCurrent:
         assert not result.switched
         assert result.reason is not None
         assert "Anime" in result.reason
-        assert "cleanup denied" in result.reason
+        assert "cleanup denied" not in result.reason
+        assert result.details is not None and "cleanup denied" in result.details
         assert ProfileStore.list_profiles() == (
             Profile(id="a", name="A"),
             Profile(id="anime", name="Anime"),
@@ -1342,7 +1367,8 @@ class TestCreateFromCurrent:
         result = controller.create_from_current("Anime")
 
         assert result.switched
-        assert result.reason is not None and "refresh failed" in result.reason
+        assert result.reason is not None and "refresh failed" not in result.reason
+        assert result.details is not None and "refresh failed" in result.details
         assert GUIConfigManager.ACTIVE_PROFILE_ID == "anime"
         assert ProfileStore.read_profile("anime").anki_deck_name == profile_a.anki_deck_name
         assert "anime" in {profile.id for profile in ProfileStore.list_profiles()}

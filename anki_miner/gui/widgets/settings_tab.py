@@ -437,11 +437,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         button_layout.setSpacing(SPACING.sm)
 
         self.reset_settings_button = ModernButton(self.tr("Reset to Defaults…"), variant="secondary")
-        self.reset_settings_button.setToolTip(
-            self.tr(
-                "Reset settings to defaults. Installed dictionaries, audio, frequency lists, and your theme are kept."
-            )
-        )
+        self.reset_settings_button.setToolTip(self.tr("Your installed resources and your theme are kept."))
         self.reset_settings_button.clicked.connect(self._on_reset_to_defaults_clicked)
         button_layout.addWidget(self.reset_settings_button)
 
@@ -1927,26 +1923,27 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         if import_result.invalid_fields or import_result.notices:
             summary: list[str] = []
             if import_result.invalid_fields:
-                summary.append(
-                    tr_format(
-                        self.tr("Invalid imported fields were ignored; current values were kept: %1"),
-                        ", ".join(import_result.invalid_fields),
-                    )
-                )
+                summary.append(self.tr("Some imported settings were invalid and kept their current values."))
             for notice in import_result.notices:
                 if notice == ("Auto-update of yt-dlp was disabled (settings imported from an older version)."):
                     summary.append(
                         self.tr("Auto-update of yt-dlp was disabled (settings imported from an older version).")
                     )
                 elif notice == ("Settings from version 2.8.3 were mapped conservatively to schema 2."):
-                    summary.append(self.tr("Settings from version 2.8.3 were mapped conservatively to schema 2."))
+                    summary.append(self.tr("Settings from version 2.8.3 were applied conservatively."))
                 else:
                     summary.append(notice)
-            QMessageBox.information(
-                self,
-                self.tr("Settings Imported"),
-                "\n\n".join(summary),
-            )
+            # The rejected field names are raw config keys off the incoming
+            # JSON, so they belong behind Details, not in the sentence the user
+            # reads first (A8-34). QMessageBox.information has no detailed-text
+            # argument, hence the constructed box.
+            box = QMessageBox(self)
+            box.setIcon(QMessageBox.Icon.Information)
+            box.setWindowTitle(self.tr("Settings Imported"))
+            box.setText("\n\n".join(summary))
+            if import_result.invalid_fields:
+                box.setDetailedText(", ".join(import_result.invalid_fields))
+            box.exec()
         else:
             self._flash_save_status(self.tr("✓ Imported"))
 
@@ -1967,10 +1964,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         reply = QMessageBox.question(
             self,
             self.tr("Reset Settings"),
-            self.tr(
-                "Reset all settings to their defaults?\n\n"
-                "Your installed dictionaries, audio, frequency lists, and theme are kept."
-            ),
+            self.tr("Reset all settings to their defaults?\n\nYour installed resources and your theme are kept."),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,  # safe default focus / Enter target
         )
@@ -2230,7 +2224,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self,
             self.tr("Retry missing expression audio"),
             tr_format(
-                self.tr("Cleared %1 missing-audio marker(s). Those words will be re-tried on the next mining run."),
+                self.tr("Missing-audio markers cleared: %1. Those words are re-tried on the next run."),
                 count,
             ),
         )
@@ -2318,7 +2312,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                     self,
                     self.tr("Rebuild Known Words DB"),
                     tr_format(
-                        self.tr("Cleared %1 cached word(s). The cache will rebuild on the next run."),
+                        self.tr("Cached words cleared: %1. The cache rebuilds on the next run."),
                         removed,
                     ),
                 )

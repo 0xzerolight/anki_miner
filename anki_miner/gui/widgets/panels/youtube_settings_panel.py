@@ -42,7 +42,7 @@ class YouTubeSettingsPanel(FormPanel):
 
     def __init__(self, parent=None):
         """Initialize the YouTube settings panel."""
-        super().__init__("YouTube Settings", parent=parent)
+        super().__init__(self.tr("YouTube"), parent=parent)
         self._setup_fields()
 
     def _setup_fields(self) -> None:
@@ -97,12 +97,9 @@ class YouTubeSettingsPanel(FormPanel):
         # YouTube mining keeps working, since yt-dlp breaks whenever YouTube changes.
         self.auto_update_checkbox = QCheckBox(self.tr("Keep yt-dlp up to date automatically"))
         self.add_field(
-            self.tr("Auto-update"),
+            "",
             self.auto_update_checkbox,
-            helper=self.tr(
-                "Checks once a day on startup and downloads into Anki Miner's own folder. "
-                "Leaving this off means YouTube mining will eventually stop working."
-            ),
+            helper=self.tr("Checks once a day on startup; off means YouTube mining eventually stops working."),
         )
 
         # Nightly channel for the updater above. YouTube breakage is fixed in
@@ -111,7 +108,7 @@ class YouTubeSettingsPanel(FormPanel):
         # gap" switch.
         self.prerelease_checkbox = QCheckBox(self.tr("Use pre-release yt-dlp builds"))
         self.add_field(
-            self.tr("Pre-release"),
+            "",
             self.prerelease_checkbox,
             helper=self.tr(
                 "Updates install yt-dlp's nightly channel, which fixes YouTube "
@@ -136,12 +133,7 @@ class YouTubeSettingsPanel(FormPanel):
         # yt-dlp updater: manual trigger + status. yt-dlp also self-updates in
         # the background on startup; this is the explicit "do it now" button.
         self.update_ytdlp_button = ModernButton(self.tr("Update yt-dlp now"), variant="secondary")
-        self.update_ytdlp_button.setToolTip(
-            self.tr(
-                "Download the latest yt-dlp into Anki Miner's own folder. "
-                "Keeping yt-dlp current is what fixes most 'YouTube broke' errors."
-            )
-        )
+        self.update_ytdlp_button.setToolTip(self.tr("Downloads the latest yt-dlp into Anki Miner's own folder."))
         self.update_ytdlp_button.clicked.connect(self.update_ytdlp_requested)
 
         self.ytdlp_status_label = QLabel("")

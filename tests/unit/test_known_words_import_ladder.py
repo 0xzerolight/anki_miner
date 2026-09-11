@@ -39,7 +39,7 @@ def test_an_explicit_empty_ladder_decodes_nothing(tmp_path):
     path = _write(tmp_path, "猫\n犬\n", "utf-8")
     with pytest.raises(KnownWordsImportError) as exc:
         parse_known_words_file(path, encodings=())
-    assert str(exc.value) == "unreadable"
+    assert str(exc.value) == "undecodable"
 
 
 @pytest.mark.parametrize("encoding", ["utf-8", "cp932"])

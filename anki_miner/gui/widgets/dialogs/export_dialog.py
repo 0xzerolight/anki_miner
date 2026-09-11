@@ -269,7 +269,7 @@ class ExportDialog(ScreenIssueHost, QDialog):
         QMessageBox.information(
             self,
             self.tr("Export Complete"),
-            tr_format(self.tr("Successfully exported %1 words to:\n%2"), count, self._output_path),
+            tr_format(self.tr("Exported %1 words to:\n%2"), count, self._output_path),
         )
         self.accept()
 
