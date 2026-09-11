@@ -54,7 +54,7 @@ class TestLoad:
         """Should raise SetupError for nonexistent file."""
         service = WordListService(blacklist_path=tmp_path / "nonexistent.txt")
 
-        with pytest.raises(SetupError, match="not found"):
+        with pytest.raises(SetupError, match="Your word list file is missing."):
             service.load()
 
     def test_empty_file(self, tmp_path):
@@ -162,7 +162,7 @@ class TestReadWordFileException:
                 "open",
                 side_effect=UnicodeDecodeError("utf-8", b"", 0, 1, "invalid"),
             ),
-            pytest.raises(SetupError, match="Error reading word list file"),
+            pytest.raises(SetupError, match="Could not read your word list file."),
         ):
             service.load()
 
