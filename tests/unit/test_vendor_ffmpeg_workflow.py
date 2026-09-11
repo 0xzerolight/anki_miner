@@ -20,6 +20,18 @@ _LICENCE = _ROOT / "licenses" / "ffmpeg" / "README.md"
 
 _ASSET_RE = re.compile(r"ffmpeg-n[0-9][^/\"' ]*?-(?:linux64|win64)-gpl[^/\"' ]*?\.(?:tar\.xz|zip)")
 _PATCHELF = "patchelf --force-rpath --set-rpath '$ORIGIN' vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe"
+# The seven shared libraries the pinned win64-gpl-shared zip puts in bin/ beside
+# ffmpeg.exe. Major-version suffixes: a pin bump that moves one updates this tuple
+# and the workflow's own list together.
+_WINDOWS_DLLS = (
+    "avcodec-62.dll",
+    "avdevice-62.dll",
+    "avfilter-11.dll",
+    "avformat-62.dll",
+    "avutil-60.dll",
+    "swresample-6.dll",
+    "swscale-9.dll",
+)
 
 
 def _release() -> str:
@@ -87,13 +99,45 @@ def test_patchelf_is_available_to_both_fetchers() -> None:
     assert "command -v patchelf" in _preflight()
 
 
-def test_windows_vendors_the_dlls_beside_the_executables() -> None:
-    windows_step = _release().split("- name: Fetch shared ffmpeg (Windows)", 1)[1].split("# ----", 1)[0]
+def _windows_step() -> str:
+    return _release().split("- name: Fetch shared ffmpeg (Windows)", 1)[1].split("# ----", 1)[0]
 
-    assert "-Filter *.dll" in windows_step
+
+def test_windows_vendors_the_dlls_beside_the_executables() -> None:
+    windows_step = _windows_step()
+
+    assert "$bin = Split-Path -Parent $ff.FullName" in windows_step, (
+        "take the directory ffmpeg.exe was found in: the DLLs sit beside it and "
+        "Windows resolves imports from the executable's own directory."
+    )
+    assert "-Path $bin -Filter *.dll" in windows_step, (
+        "a wildcard in -Path makes -Filter match the items the path resolves to (the "
+        "bin directories) rather than their children, so '-Path extracted\\*\\bin "
+        "-Filter *.dll' copied nothing and shipped an ffmpeg.exe that could not start."
+    )
+    assert (
+        "-Path extracted\\*\\bin" not in windows_step
+    ), "that is the wildcard -Path form whose -Filter matches the directories, not the DLLs."
     assert "-Recurse -Filter *.dll" not in windows_step, (
         "copy bin/*.dll only: lib/ holds build-time import libraries, and a recursive "
         "sweep would ship whatever a future layout puts elsewhere in the archive."
+    )
+
+
+def test_windows_fails_closed_on_a_missing_dll() -> None:
+    windows_step = _windows_step()
+
+    for dll in _WINDOWS_DLLS:
+        assert f'"{dll}"' in windows_step, (
+            f"{dll} is one of the seven libraries the pinned BtbN zip ships beside "
+            "ffmpeg.exe; assert it landed so a copy that silently finds nothing reds "
+            "the build instead of shipping an ffmpeg that cannot start. A pin bump "
+            "that changes a major version updates this list deliberately."
+        )
+    assert "Test-Path -LiteralPath (Join-Path vendor\\ffmpeg $_)" in windows_step
+    assert 'Write-Error "vendor/ffmpeg is missing required ffmpeg DLL(s)' in windows_step, (
+        "name the missing files and red the build there: a copy that finds nothing "
+        "otherwise only surfaces as an unexplained bundle-smoke failure."
     )
 
 
