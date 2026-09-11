@@ -36,9 +36,9 @@ logger = logging.getLogger(__name__)
 _TOOL_PROBE_TIMEOUT_SECONDS = 10
 
 #: Age at which a resolved yt-dlp earns a staleness nudge. Generous on purpose:
-#: yt-dlp ships roughly monthly and a bundled binary is already weeks old on release
-#: day, so this must not fire on a healthy install that simply has auto-update off
-#: and a recent manual download.
+#: yt-dlp ships roughly monthly and a fresh install downloads the latest yt-dlp on
+#: first use, so this must not fire on a healthy install that simply has auto-update
+#: off and a recent manual download.
 _YTDLP_STALE_AFTER_DAYS = 120
 
 #: How long :meth:`ValidationService._check_ytdlp` waits for the yt-dlp lock before
@@ -626,7 +626,7 @@ class ValidationService:
                     "yt-dlp",
                     False,
                     "yt-dlp is present but unverified, so it will not be used. "
-                    "Re-run Settings → YouTube → Update yt-dlp now.",
+                    "Re-run Settings → YouTube → Download yt-dlp.",
                     reason="unverified",
                 )
             return self._check_tool(
@@ -636,7 +636,7 @@ class ValidationService:
                 prefix_args=("--ignore-config",),
                 missing_message=(
                     "yt-dlp not found — YouTube mining will be unavailable; "
-                    "use Settings → YouTube → Update yt-dlp now to install it"
+                    "use Settings → YouTube → Download yt-dlp to install it"
                 ),
             )
 
@@ -663,10 +663,9 @@ class ValidationService:
         dates the binary directly.
 
         Fires only while ``auto_update_ytdlp`` is False. That gate is load-bearing: a
-        bundled binary is pinned at build time and is already weeks old on release
-        day, so an ungated nudge would nag every fresh install about a setting that is
-        already on. Gated, it reaches exactly the audience that needs it — existing
-        users carrying the old opt-out default.
+        fresh install downloads the latest yt-dlp on first use, so an ungated nudge
+        would nag about a setting that is already on. Gated, it reaches exactly the
+        audience that needs it — existing users carrying the old opt-out default.
         """
         if self.config.auto_update_ytdlp:
             return None

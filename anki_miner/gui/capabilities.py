@@ -401,7 +401,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Keep yt-dlp up to date"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Auto-update the bundled yt-dlp downloader, update it on demand, or point at your own binary.",
+            "Keep the yt-dlp downloader up to date, update it on demand, or point at your own binary.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("settings", "youtube"),

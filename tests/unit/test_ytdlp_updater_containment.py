@@ -354,7 +354,7 @@ def test_fetcher_translates_rejected_managed_path_before_subprocess(
 
     monkeypatch.setattr("anki_miner.services.ytdlp_invocation.subprocess.run", unexpected_run)
 
-    with pytest.raises(YtdlpNotFoundError, match="Update yt-dlp now"):
+    with pytest.raises(YtdlpNotFoundError, match="Download yt-dlp"):
         YouTubeFetcherService(AnkiMinerConfig()).probe_metadata("https://youtu.be/abc123")
 
 

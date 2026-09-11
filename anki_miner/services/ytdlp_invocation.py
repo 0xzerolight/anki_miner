@@ -28,7 +28,7 @@ from anki_miner.utils.ytdlp_resolver import managed_ytdlp_lock
 logger = logging.getLogger(__name__)
 
 # Message appended to YtdlpNotFoundError so the user can self-serve the fix.
-YTDLP_MISSING_HINT = "yt-dlp executable not found. Use Settings → YouTube → Update yt-dlp now, then retry."
+YTDLP_MISSING_HINT = "yt-dlp executable not found. Use Settings → YouTube → Download yt-dlp, then retry."
 
 PROGRESS_RE = re.compile(r"\[ankimine_dl\] (\S+) (\S+)")
 
