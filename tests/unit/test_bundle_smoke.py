@@ -247,7 +247,7 @@ def test_bundle_smoke_uses_one_temporary_anki_miner_home(tmp_path: Path) -> None
     assert (caller_home / "sentinel").read_text(encoding="utf-8") == "keep"
 
 
-def _write_smoke_dist(tmp_path: Path, record: Path) -> Path:
+def _write_smoke_dist(tmp_path: Path) -> Path:
     """A fake onedir whose AnkiMiner records ANKI_MINER_HOME and the seeded slot."""
     dist = tmp_path / "dist" / "AnkiMiner"
     dist.mkdir(parents=True)
@@ -308,7 +308,7 @@ def test_bundle_smoke_seeds_the_managed_ytdlp_before_the_youtube_leg(tmp_path: P
     """The bundle ships no yt-dlp: the youtube leg only runs on a seeded slot."""
     record = tmp_path / "probe-homes.txt"
     (tmp_path / "caller-home").mkdir()
-    dist = _write_smoke_dist(tmp_path, record)
+    dist = _write_smoke_dist(tmp_path)
     seed = tmp_path / "ytdlp-seed" / "bin"
     seed.mkdir(parents=True)
     (seed / "yt-dlp").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
@@ -333,7 +333,7 @@ def test_bundle_smoke_skips_the_youtube_leg_without_a_seed(tmp_path: Path) -> No
     """A failed seed fetch skips the leg loudly — it never reds a correct bundle."""
     record = tmp_path / "probe-homes.txt"
     (tmp_path / "caller-home").mkdir()
-    dist = _write_smoke_dist(tmp_path, record)
+    dist = _write_smoke_dist(tmp_path)
 
     result = subprocess.run(
         ["bash", str(PROJECT_ROOT / "scripts" / "bundle_smoke.sh"), str(dist)],
@@ -348,6 +348,7 @@ def test_bundle_smoke_skips_the_youtube_leg_without_a_seed(tmp_path: Path) -> No
     assert result.returncode == 0, result.stdout + result.stderr
     assert "SKIP youtube" in result.stdout
     assert "PASS youtube" not in result.stdout
+    assert "::warning::" in result.stdout
 
 
 @pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")
@@ -355,7 +356,7 @@ def test_bundle_smoke_skips_the_youtube_leg_on_an_empty_seed_dir(tmp_path: Path)
     """The updater creates <seed>/bin before it downloads, so an outage leaves it empty."""
     record = tmp_path / "probe-homes.txt"
     (tmp_path / "caller-home").mkdir()
-    dist = _write_smoke_dist(tmp_path, record)
+    dist = _write_smoke_dist(tmp_path)
     (tmp_path / "ytdlp-seed" / "bin").mkdir(parents=True)
 
     result = subprocess.run(
@@ -370,6 +371,7 @@ def test_bundle_smoke_skips_the_youtube_leg_on_an_empty_seed_dir(tmp_path: Path)
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "SKIP youtube" in result.stdout
+    assert "::warning::" in result.stdout
 
 
 @pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")
@@ -377,7 +379,7 @@ def test_bundle_smoke_skips_the_youtube_leg_without_a_receipt(tmp_path: Path) ->
     """A binary with no .verified receipt is one the resolver would refuse anyway."""
     record = tmp_path / "probe-homes.txt"
     (tmp_path / "caller-home").mkdir()
-    dist = _write_smoke_dist(tmp_path, record)
+    dist = _write_smoke_dist(tmp_path)
     seed = tmp_path / "ytdlp-seed" / "bin"
     seed.mkdir(parents=True)
     (seed / "yt-dlp").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
@@ -394,6 +396,7 @@ def test_bundle_smoke_skips_the_youtube_leg_without_a_receipt(tmp_path: Path) ->
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert "SKIP youtube" in result.stdout
+    assert "::warning::" in result.stdout
 
 
 @pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")

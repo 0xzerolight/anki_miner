@@ -980,7 +980,7 @@ jobs:
       # Bundle-validation smokes, all three in one shared script so the local
       # preflight (scripts/release_preflight.sh) and CI assert identically and
       # cannot drift. The script runs, fail-closed:
-      #   - youtube : the app-managed yt-dlp (seeded below) resolves through the
+      #   - youtube : the app-managed yt-dlp (seeded above) resolves through the
       #               resolver and runs --version + impersonate targets (no network)
       #   - asr     : faster-whisper + ctranslate2 + av native libs resolve, no
       #               model download (HF_HUB_OFFLINE=1 set inside the script). A
