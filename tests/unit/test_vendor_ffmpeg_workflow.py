@@ -114,5 +114,5 @@ def test_spec_attaches_vendored_ffmpeg_after_analysis() -> None:
     )
     assert spec.index("a = Analysis(") < spec.index("a.binaries += ffmpeg_toc")
     assert (
-        '_ffmpeg_is_static = sys.platform == "darwin"' in spec
+        '_ffmpeg_is_static = platform.system() == "Darwin"' in spec
     ), "macOS has no shared build and keeps the Analysis path (.app layout + codesign step)."

@@ -71,7 +71,7 @@ if os.path.isdir(vendor_ffmpeg):
         if os.path.isfile(_full):
             ffmpeg_files.append(_full)
 
-_ffmpeg_is_static = sys.platform == "darwin"
+_ffmpeg_is_static = platform.system() == "Darwin"
 ffmpeg_binaries = [(_f, "bin") for _f in ffmpeg_files] if _ffmpeg_is_static else []
 ffmpeg_toc = (
     []
