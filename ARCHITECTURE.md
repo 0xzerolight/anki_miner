@@ -452,7 +452,7 @@ The subtitle flags carry one load-bearing invariant. `auto_only` passes `--write
 
 Progress is parsed from a custom `--progress-template`, with post-download phases detected from the `ytdlp_invocation.POSTPROCESS_MARKERS` line signatures. Optional `--cookies-from-browser` or `--cookies` bypasses bot-detection prompts and age restrictions.
 
-### Bundling yt-dlp
+### Installing yt-dlp
 
 The app ships **no yt-dlp at all**. Every call site spawns it as a subprocess, so the importable
 `yt_dlp` package was never used at runtime and `anki_miner.spec` excludes it; it stays a pip
