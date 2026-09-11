@@ -260,7 +260,10 @@ def test_failed_rollback_reports_deleted_config_pending_after_rescan(
 
     assert not canonical.exists()
     assert len(list(tmp_path.glob("slot.tomb-*"))) == 1
-    assert "settings update failed" in _issue(panel).summary.lower()
+    assert (
+        _issue(panel).summary
+        == "slot could not be removed: its settings could not be saved. Restart Anki Miner and try again."
+    )
 
 
 def test_tombstone_cleanup_failure_keeps_durable_remove_and_reports_residue(
