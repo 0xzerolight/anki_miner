@@ -87,6 +87,16 @@ def test_the_action_starts_one_download_and_shows_progress(host: _Host) -> None:
     assert issue.action_text == "", "a download in flight must not offer a second one"
 
 
+def test_a_success_while_pending_clears_the_downloading_banner(host: _Host) -> None:
+    """The in-progress issue must still be recognized as ours once it succeeds."""
+    host._apply_probe_result(False)
+    host.issue_banner().action_button.click()
+
+    host._apply_probe_result(True)
+
+    assert host.issue_banner().current_issue() is None
+
+
 def test_an_update_result_reprobes_and_leaves_the_pending_state(host: _Host) -> None:
     host._apply_probe_result(False)
     host.issue_banner().action_button.click()

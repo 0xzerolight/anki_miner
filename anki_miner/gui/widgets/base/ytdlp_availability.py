@@ -152,7 +152,11 @@ class YtdlpAvailabilityMixin(ScreenIssueHost):
             self._ytdlp_failure_details = ""
             return
         if self._ytdlp_download_pending:
-            self.show_screen_issue(ScreenIssue(summary=strings.downloading))
+            # action_id set (action_text left empty, so no button renders) so
+            # _showing_ytdlp_issue still recognizes this as ours to clear once
+            # the download succeeds — otherwise a success landing here would
+            # find action_id=="" on the banner and leave it stuck showing this.
+            self.show_screen_issue(ScreenIssue(summary=strings.downloading, action_id=YTDLP_DOWNLOAD_ACTION))
             return
         self.show_screen_issue(
             ScreenIssue(
