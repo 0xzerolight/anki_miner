@@ -12,6 +12,11 @@
   <name>Anki Miner</name>
   <summary>Mine vocabulary from video, audio and books into Anki flashcards</summary>
 
+  <!--
+    AppStream 1.0 form. 0.15 reports it as an unknown tag, but that is an INFO
+    and infos do not fail validation, so the deprecated <developer_name> is not
+    worth carrying alongside it.
+  -->
   <developer id="io.github._0xzerolight">
     <name>Anki Miner Contributors</name>
   </developer>
@@ -49,9 +54,15 @@
     <keyword>vocabulary</keyword>
   </keywords>
 
+  <!--
+    Only url types AppStream 0.15.2 knows. The release runner is pinned to
+    ubuntu-22.04 for its glibc floor, so that is the appstreamcli this file is
+    validated with, and there an unrecognised url type is a WARNING — which
+    fails the validation. vcs-browser and contribute arrived in 0.15.5; do not
+    add them back. The repository is already the homepage url.
+  -->
   <url type="homepage">https://github.com/0xzerolight/anki_miner</url>
   <url type="bugtracker">https://github.com/0xzerolight/anki_miner/issues</url>
-  <url type="vcs-browser">https://github.com/0xzerolight/anki_miner</url>
 
   <screenshots>
     <screenshot type="default">
