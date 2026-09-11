@@ -1249,6 +1249,22 @@ def _connect_mokuro_install(window: MainWindow, settings_tab: SettingsTab, subti
     )
 
 
+def _connect_ytdlp_download(window: MainWindow, video_tab: VideoTab, subtitles_tab: SubtitlesTab) -> None:
+    """Wire the two screens that need yt-dlp to the one updater.
+
+    Same call as the Settings button (force=True bypasses the 24h throttle, which
+    is what makes a FIRST install work from a click). No new worker: the
+    controller refuses a concurrent run by itself, and the running worker's result
+    reaches every listener, so a click during the startup auto-update still
+    resolves the banner.
+    """
+    for tab in (subtitles_tab.download_tab, video_tab.youtube_tab):
+        tab.ytdlp_download_requested.connect(
+            lambda: window.background_tasks.start_ytdlp_update(window.get_config(), force=True)
+        )
+        window.background_tasks.ytdlp_update_result.connect(tab.notify_ytdlp_update_result)
+
+
 def _connect_cuda_pack_download(window: MainWindow, settings_tab: SettingsTab) -> None:
     """Wire the Subtitles panel's "Download GPU acceleration" button to the worker.
 
@@ -1675,6 +1691,9 @@ def compose_main_window(
         _connect(window, settings_tab)
     # mokuro needs the Manga OCR tab too (see _connect_mokuro_install).
     _connect_mokuro_install(window, settings_tab, subtitles_tab)
+    # Utilities -> Download and Video -> YouTube offer the same repair when
+    # yt-dlp is missing; both route to the updater the Settings button uses.
+    _connect_ytdlp_download(window, video_tab, subtitles_tab)
     # Wire indexed-resource mutation hooks so replacing or deleting a store
     # releases cached readers across every tab first.
     settings_tab.dictionary_panel.set_release_callback(window.release_dictionary_resources)

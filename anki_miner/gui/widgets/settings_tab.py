@@ -1100,6 +1100,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         """Forward a yt-dlp updater status line to the YouTube panel."""
         self.youtube_panel.set_ytdlp_status(text)
 
+    def set_ytdlp_present(self, present: bool) -> None:
+        """Forward the yt-dlp presence verdict to the YouTube panel."""
+        self.youtube_panel.set_ytdlp_present(present)
+
     def set_ytdlp_status_from_result(self, result: object) -> None:
         """Update the YouTube panel status from a yt-dlp update result.
 
@@ -1110,6 +1114,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         message = getattr(result, "message", "") or ""
         action = getattr(result, "action", "")
         self.youtube_panel.set_ytdlp_status(message)
+        if action in ("installed", "up_to_date"):
+            self.youtube_panel.set_ytdlp_present(True)
 
         manual = getattr(self, "_ytdlp_manual_pending", False)
         self._ytdlp_manual_pending = False

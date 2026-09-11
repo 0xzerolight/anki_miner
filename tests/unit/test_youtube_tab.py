@@ -38,6 +38,7 @@ import pytest
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils import queue_state_store
 from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
+from anki_miner.gui.widgets.base.ytdlp_availability import YTDLP_DOWNLOAD_ACTION
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.models.youtube import PlaylistEntry, PlaylistInfo, VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus
@@ -2092,3 +2093,43 @@ class TestTranscriptionPreflight:
             tab._on_mine_clicked()
 
         assert tab.issue_banner().current_issue() is None
+
+
+class TestYtdlpPreflight:
+    """Video -> YouTube refuses a run it cannot make, and offers the fix."""
+
+    def test_first_show_probes_and_banners_a_missing_ytdlp(self, tab, qtbot) -> None:
+        with patch.object(YouTubeTab, "_compute_ytdlp_available", staticmethod(lambda config: False)):
+            tab.show()
+            qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
+        assert tab.issue_banner().current_issue().action_id == YTDLP_DOWNLOAD_ACTION
+
+    def test_the_banner_action_asks_the_window_for_a_download(self, tab, qtbot) -> None:
+        tab._apply_probe_result(False)
+        with qtbot.waitSignal(tab.ytdlp_download_requested, timeout=1000):
+            tab.issue_banner().action_button.click()
+
+    def test_mine_refuses_a_run_with_no_ytdlp(self, tab) -> None:
+        _add_ready_item(tab, "https://youtu.be/v1")
+        tab._apply_probe_result(False)
+
+        tab._on_mine_clicked()
+
+        assert tab._queue_worker_cls.call_count == 0
+        assert tab.issue_banner().current_issue().action_id == YTDLP_DOWNLOAD_ACTION
+
+    def test_mine_runs_when_yt_dlp_is_there(self, tab) -> None:
+        _add_ready_item(tab, "https://youtu.be/v1")
+        tab._apply_probe_result(True)
+
+        tab._on_mine_clicked()
+
+        assert tab._queue_worker_cls.call_count == 1
+
+    def test_an_unprobed_tab_still_runs(self, tab) -> None:
+        """Every existing caller builds the tab without showing it."""
+        _add_ready_item(tab, "https://youtu.be/v1")
+
+        tab._on_mine_clicked()
+
+        assert tab._queue_worker_cls.call_count == 1
