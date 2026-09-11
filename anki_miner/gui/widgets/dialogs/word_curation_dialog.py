@@ -1429,7 +1429,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
     # ------------------------------------------------------------------
 
     def _on_use_current_frame(self) -> None:
-        """Stamp the player's current position as this word's screenshot frame."""
+        """Stamp the frame the player is showing as this word's screenshot frame."""
         word, idx = self._pending_word, self._pending_index
         if word is None or idx is None or not hasattr(self, "player_widget"):
             return
@@ -1437,6 +1437,12 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             # Season curation: the source swap for the chosen episode is still
             # in flight, so the frame on screen belongs to the PREVIOUS one.
             return
+        # Pause BEFORE reading, never after: the stamped instant has to be the
+        # frame that stays on screen, or the only confirmation the user gets is
+        # of a frame the picture has already left behind. Picking out of a
+        # running playback is the normal gesture, and a reaction-time frame or
+        # two is then correctable with the player's frame steppers.
+        self.player_widget.pause()
         self._screenshot_overrides[idx] = max(0.0, float(self.player_widget.current_seconds))
         self._refresh_frame_buttons()
 

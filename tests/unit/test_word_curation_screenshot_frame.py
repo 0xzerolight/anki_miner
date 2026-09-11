@@ -8,7 +8,7 @@ invalidates it, and what ``get_selected_words`` hands the extraction phase.
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from PyQt6.QtWidgets import QWidget
@@ -101,12 +101,45 @@ class TestButtonPresence:
         assert dlg._side_key == "player"
 
 
+class TestPauseOnPick:
+    """A pick has to leave the stamped frame on screen, or it confirms nothing."""
+
+    def test_pick_pauses_the_player(self, qtbot, words, existing_video):
+        dlg, mock_player = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        mock_player.reset_mock()  # focus already paused via _preview_scene
+        dlg.use_frame_button.click()
+        mock_player.pause.assert_called_once_with()
+
+    def test_pause_happens_before_the_position_is_read(self, qtbot, words, existing_video):
+        """Reading first would stamp a frame the picture has already left."""
+        dlg, mock_player = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        order: list[str] = []
+        mock_player.pause.side_effect = lambda: order.append("pause")
+        type(mock_player).current_seconds = PropertyMock(side_effect=lambda: (order.append("read"), 31 / 15)[1])
+        try:
+            dlg.use_frame_button.click()
+        finally:
+            del type(mock_player).current_seconds
+        assert order == ["pause", "read"]
+        assert dlg._screenshot_overrides == {0: pytest.approx(31 / 15)}
+
+
 class TestStamping:
     def test_click_records_the_players_position(self, qtbot, words, existing_video):
         dlg, _ = _dialog(qtbot, words, existing_video, seconds=12.5)
         _focus(dlg, 0)
         dlg.use_frame_button.click()
         assert dlg._screenshot_overrides == {0: 12.5}
+
+    def test_click_records_a_frame_boundary_verbatim(self, qtbot, words, existing_video):
+        """Real frame boundaries are not round: 15 fps frame 31 is 2.0666... s."""
+        dlg, _ = _dialog(qtbot, words, existing_video, seconds=31 / 15)
+        _focus(dlg, 0)
+        dlg.use_frame_button.click()
+        assert dlg._screenshot_overrides == {0: pytest.approx(31 / 15)}
+        assert "2.07" in dlg.frame_reset_button.toolTip()
 
     def test_click_records_against_the_focused_index(self, qtbot, words, existing_video):
         dlg, _ = _dialog(qtbot, words, existing_video, seconds=21.0)
