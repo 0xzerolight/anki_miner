@@ -182,7 +182,9 @@ class TestWiring:
         _focus(dlg, 1)
         player.seek_seconds.reset_mock()
         _focus(dlg, 0)
-        player.seek_seconds.assert_called_with(1.0)
+        # The merged window is 1.0-7.0, so the card's frame is 1.0 + min(offset,
+        # half the window) = 2.0: the preview parks where the card's frame comes from.
+        player.seek_seconds.assert_called_with(2.0)
 
     def test_reset_restores_cell_window_and_counts(self, qtbot, words, existing_video):
         dlg, _ = _dialog(qtbot, words, existing_video)
@@ -200,7 +202,9 @@ class TestWiring:
         player.seek_seconds.reset_mock()
         dlg.expand_prev_button.click()
         qtbot.waitUntil(lambda: player.seek_seconds.called, timeout=1000)
-        player.seek_seconds.assert_called_with(1.0)
+        # The merged window is 1.0-7.0, so the card's frame is 1.0 + min(offset,
+        # half the window) = 2.0: the preview parks where the card's frame comes from.
+        player.seek_seconds.assert_called_with(2.0)
 
     def test_next_add_does_not_snap(self, qtbot, words, existing_video):
         dlg, player = _dialog(qtbot, words, existing_video)

@@ -976,6 +976,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                 audio_track_codes=get_profile(config_language(config)).audio_track_codes,
                 audio_padding=config.audio_padding,
                 screenshot_animated=config.screenshot_animated,
+                screenshot_offset=config.screenshot_offset,
                 auto_merge_rules=(
                     get_profile(config_language(config)).sentence_rules if config.merge_incomplete_cues else None
                 ),

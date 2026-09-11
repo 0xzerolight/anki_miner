@@ -37,8 +37,10 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
+    QSizePolicy,
     QSlider,
     QTextEdit,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -70,6 +72,12 @@ _STRIP_PADDING_Y = SPACING.xxs
 # client.h: MPV_END_FILE_REASON_ERROR). Kept as a literal so this module never
 # needs the mpv module itself at import time.
 _END_FILE_REASON_ERROR = 4
+
+# Frame-step glyphs. Outline triangles, deliberately not the filled ones the
+# clip strip's play button uses: these move the picture by a single frame, they
+# do not start playback.
+_FRAME_BACK_GLYPH = "◁"
+_FRAME_FORWARD_GLYPH = "▷"
 
 
 class SubtitlePlayerWidget(QWidget):
@@ -285,10 +293,41 @@ class SubtitlePlayerWidget(QWidget):
         self.play_button.setFixedWidth(80)
         self.play_button.clicked.connect(self.toggle_play_pause)
         controls_layout.addWidget(self.play_button)
+        # Frame steppers. They live HERE, in the player's own transport row,
+        # rather than in the curator's frame-pick row: a button row's width is a
+        # hard floor on a splitter pane, and this row (one 80px button) has room
+        # the curator's text-button rows do not. Both hosts get them, which the
+        # subtitle viewer needs for the same reason the curator does — the
+        # position slider spans a whole episode, so one pixel of drag is seconds
+        # and no single frame is reachable by dragging.
+        self.frame_back_button = self._make_frame_step_button(_FRAME_BACK_GLYPH, self.tr("Step one frame back"), -1)
+        self.frame_forward_button = self._make_frame_step_button(
+            _FRAME_FORWARD_GLYPH, self.tr("Step one frame forward"), 1
+        )
+        controls_layout.addWidget(self.frame_back_button)
+        controls_layout.addWidget(self.frame_forward_button)
         controls_layout.addStretch()
         layout.addLayout(controls_layout)
 
         self.setLayout(layout)
+
+    def _make_frame_step_button(self, glyph: str, label: str, direction: int) -> QToolButton:
+        """One compact, auto-raised frame stepper.
+
+        QToolButton rather than the app's square ModernButton: it is narrower,
+        it matches the clip strip's transport button, and it is not a
+        QPushButton, so it never enters a QDialog's auto-default promotion.
+        Hidden without a video surface — an audio-only core has no frames.
+        """
+        button = QToolButton()
+        button.setText(glyph)
+        button.setToolTip(label)
+        button.setAccessibleName(label)
+        button.setAutoRaise(True)
+        button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        button.clicked.connect(lambda: self.step_frame(direction))
+        button.setVisible(self._video_surface)
+        return button
 
     def set_source(
         self,
@@ -525,11 +564,26 @@ class SubtitlePlayerWidget(QWidget):
     def current_seconds(self) -> float:
         """The position the viewer is currently looking at, in seconds.
 
-        Read off the slider rather than mpv's ``time_pos`` on purpose: the
-        slider is what the user sees, and while the handle is held down it
-        holds the drag target that mpv is still catching up to. Zero until the
-        first position tick lands.
+        mpv's ``time_pos`` is the authority, read here and now: it is the
+        DISPLAYED frame's own pts, and it is the same instant ``ffmpeg -ss``
+        resolves to the same frame (both take the first frame whose pts is at
+        or after the target -- measured on a 15 fps source, an exact seek to
+        5.1 reports 5.133333 and ffmpeg hands back that frame). The slider is
+        only as fresh as the last ``time-pos`` observer tick that crossed into
+        the GUI thread, and under GUI load that is arbitrarily far behind the
+        picture -- a frame read off it is one the viewer already watched go
+        past.
+
+        The slider still wins mid-drag: while the handle is held down it holds
+        the drag target mpv is still catching up to, which IS the frame the
+        user is asking for. It is also the fallback when there is no player
+        (audio-only, or libmpv absent) and when mpv answers ``None``, the
+        normal reply while idle. Zero until the first position tick lands.
         """
+        if not self.position_slider.isSliderDown() and self.player is not None:
+            position = self.player.time_pos
+            if isinstance(position, (int, float)):
+                return max(0.0, float(position))
         return self.position_slider.value() / 1000.0
 
     def seek_seconds(self, seconds: float) -> None:
@@ -629,6 +683,28 @@ class SubtitlePlayerWidget(QWidget):
             self.play()
         else:
             self.pause()
+
+    def step_frame(self, direction: int) -> None:
+        """Move one frame back (``direction`` < 0) or forward, leaving mpv paused.
+
+        The position slider spans the whole file, so on an episode-length source
+        one pixel of drag is seconds and a chosen frame cannot be reached by
+        dragging at all. This is how a frame is reached.
+
+        mpv's own commands are used by their documented hyphenated names rather
+        than python-mpv's generated helpers: that library's ``frame_back_step()``
+        sends ``frame_back_step`` with an underscore, which is not a command
+        name, and ``command()`` passes the name through unnormalized. Both
+        commands imply a pause, so this is transport and cancels a pending
+        clip-preview stop like every other transport entry point.
+        """
+        self.cancel_range()
+        if self.player is None or not self._file_loaded:
+            # A queued frame step is meaningless (unlike seek_seconds, which has
+            # a pending-seek mechanism for a pre-load target): there is no frame
+            # to step from yet.
+            return
+        self.player.command("frame-back-step" if direction < 0 else "frame-step")
 
     # ------------------------------------------------------------------
     # GUI-thread slots (fed by the queued marshalling signals)

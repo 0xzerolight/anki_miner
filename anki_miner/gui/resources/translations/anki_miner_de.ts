@@ -739,6 +739,20 @@ Trotzdem fortfahren?</translation>
         <translation>%1 heruntergeladen.</translation>
     </message>
 </context><context>
+    <name>AsrPackDownloadWorker</name>
+    <message>
+        <source>Transcription engine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading the transcription engine…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcription engine installed successfully.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AudioClipEditor</name>
     <message>
         <source>Drag either end to trim this word's audio clip; double-click to restore the default. Only this word is affected.</source>
@@ -9115,6 +9129,14 @@ Ihre installierten Ressourcen und Ihr Design bleiben erhalten.</translation>
         <translation>Wiedergabe</translation>
     </message>
     <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
         <translation>Die Videovorschau ist nicht verfügbar: Die integrierte Videokomponente (libmpv) konnte auf diesem PC nicht geladen werden. Versuchen Sie, Anki Miner neu zu installieren. Besteht das Problem weiterhin, melden Sie es und fügen Sie Ihr Protokoll aus %USERPROFILE%\.anki_miner\anki_miner.log bei.</translation>
     </message>
@@ -9555,6 +9577,22 @@ Ihre installierten Ressourcen und Ihr Design bleiben erhalten.</translation>
         <translation>Sprache-zu-Text</translation>
     </message>
     <message>
+        <source>Download transcription engine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the faster-whisper speech-to-text engine into Anki Miner's folder. Required before subtitle generation can run on a packaged install.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcription engine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Speech-to-text engine (faster-whisper), about %1 MB, downloaded once.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>ASR model</source>
         <translation>ASR-Modell</translation>
     </message>
@@ -9695,10 +9733,6 @@ Ihre installierten Ressourcen und Ihr Design bleiben erhalten.</translation>
         <translation>Auf dieser Plattform nicht verfügbar</translation>
     </message>
     <message>
-        <source>Subtitle generation needs the faster-whisper engine, which this build does not include. Install a copy with the command below and launch that one:</source>
-        <translation>Die Untertitelerstellung benötigt die faster-whisper-Engine, die in diesem Build nicht enthalten ist. Installieren Sie eine Kopie mit dem Befehl unten und starten Sie diese:</translation>
-    </message>
-    <message>
         <source>Subtitle generation needs the faster-whisper engine. Install it with:</source>
         <translation>Die Untertitel-Generierung benötigt die faster-whisper-Engine. Installieren Sie sie mit:</translation>
     </message>
@@ -9725,6 +9759,10 @@ Ihre installierten Ressourcen und Ihr Design bleiben erhalten.</translation>
     <message>
         <source>No NVIDIA GPU detected. This pack needs an NVIDIA card.</source>
         <translation>Keine NVIDIA-GPU erkannt. Dieses Paket benötigt eine NVIDIA-Grafikkarte.</translation>
+    </message>
+    <message>
+        <source>Local transcription is not available for this build.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Silence removal is available.</source>

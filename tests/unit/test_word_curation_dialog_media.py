@@ -28,6 +28,7 @@ from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     WordCurationDialog,
 )
 from anki_miner.models import TokenizedWord
+from anki_miner.services.media_extractor import resolve_screenshot_time
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -266,7 +267,10 @@ class TestPlayerSeek:
         _select_row(dlg, 0)
         _fire_timer(dlg)
 
-        mock_player.seek_seconds.assert_called_once_with(words[0].start_time)
+        # +screenshot_offset: the preview parks where the card's frame comes from, not the bare cue start.
+        mock_player.seek_seconds.assert_called_once_with(
+            resolve_screenshot_time(words[0], words[0].start_time, words[0].duration, 1.0)
+        )
 
     def test_pause_called_after_seek(self, qtbot, words, existing_video):
         """After seek, the player must be paused (show frame, don't autoplay)."""
@@ -292,7 +296,10 @@ class TestPlayerSeek:
         check_item = dlg.table.item(1, 0)
         original_index = check_item.data(Qt.ItemDataRole.UserRole)
         expected_time = words[original_index].start_time
-        mock_player.seek_seconds.assert_called_once_with(expected_time)
+        # +screenshot_offset: the preview parks where the card's frame comes from.
+        mock_player.seek_seconds.assert_called_once_with(
+            resolve_screenshot_time(words[original_index], expected_time, words[original_index].duration, 1.0)
+        )
 
 
 def _find_table_shortcut(dialog: WordCurationDialog, key_str: str):

@@ -738,6 +738,20 @@ Continue anyway?</source>
         <translation>%1 をダウンロードしました。</translation>
     </message>
 </context><context>
+    <name>AsrPackDownloadWorker</name>
+    <message>
+        <source>Transcription engine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading the transcription engine…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcription engine installed successfully.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AudioClipEditor</name>
     <message>
         <source>Drag either end to trim this word's audio clip; double-click to restore the default. Only this word is affected.</source>
@@ -9098,6 +9112,14 @@ Your installed resources and your theme are kept.</source>
         <translation>再生</translation>
     </message>
     <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
         <translation>動画プレビューを利用できません：このPCでは同梱の動画コンポーネント（libmpv）を読み込めませんでした。Anki Minerの再インストールをお試しください。問題が解決しない場合は、%USERPROFILE%\.anki_miner\anki_miner.log からログを添付して報告してください。</translation>
     </message>
@@ -9538,6 +9560,22 @@ Your installed resources and your theme are kept.</source>
         <translation>音声認識（Speech-to-text）</translation>
     </message>
     <message>
+        <source>Download transcription engine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the faster-whisper speech-to-text engine into Anki Miner's folder. Required before subtitle generation can run on a packaged install.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcription engine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Speech-to-text engine (faster-whisper), about %1 MB, downloaded once.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>ASR model</source>
         <translation>ASR モデル</translation>
     </message>
@@ -9678,10 +9716,6 @@ Your installed resources and your theme are kept.</source>
         <translation>このプラットフォームでは非対応</translation>
     </message>
     <message>
-        <source>Subtitle generation needs the faster-whisper engine, which this build does not include. Install a copy with the command below and launch that one:</source>
-        <translation>字幕生成には faster-whisper エンジンが必要ですが、このビルドには含まれていません。下記のコマンドでインストールし、そちらを起動してください:</translation>
-    </message>
-    <message>
         <source>Subtitle generation needs the faster-whisper engine. Install it with:</source>
         <translation>字幕生成には faster-whisper エンジンが必要です。次のコマンドでインストールしてください:</translation>
     </message>
@@ -9708,6 +9742,10 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>No NVIDIA GPU detected. This pack needs an NVIDIA card.</source>
         <translation>NVIDIA GPU が検出されませんでした。このパックには NVIDIA カードが必要です。</translation>
+    </message>
+    <message>
+        <source>Local transcription is not available for this build.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Silence removal is available.</source>

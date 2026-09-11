@@ -27,6 +27,10 @@ def _make_fake_player() -> MagicMock:
     player = MagicMock(name="mpv.MPV")
     player.pause = True
     player.track_list = []
+    # mpv answers None for time-pos while idle, and current_seconds reads the
+    # property directly — an attribute left as a MagicMock would be a number
+    # the real core never returns.
+    player.time_pos = None
     # event_callback is used as a decorator: player.event_callback("x")(fn)
     player.event_callback.return_value = lambda fn: fn
     return player
@@ -513,27 +517,142 @@ class TestObserverSlots:
 
 
 class TestCurrentSeconds:
-    """The position a caller grabs a frame at — the curator's frame pick."""
+    """The position a caller grabs a frame at — the curator's frame pick.
 
-    def test_follows_playback(self, qtbot, fake_mpv):
+    The contract is the DISPLAYED frame, so mpv's ``time_pos`` is the authority
+    and the slider is the mid-drag/no-player fallback. Values here are real
+    frame boundaries (15 fps = 1/15 s apart), not the round numbers that hid
+    the difference between the two sources.
+    """
+
+    def _loaded(self, qtbot, fake_mpv) -> SubtitlePlayerWidget:
         widget = _widget(qtbot)
         widget.set_source(VIDEO, ENTRIES)
         widget._on_duration(60.0)
+        return widget
+
+    def test_follows_playback(self, qtbot, fake_mpv):
+        widget = self._loaded(qtbot, fake_mpv)
+        fake_mpv["player"].time_pos = 12.5
         widget._on_time_pos(12.5)
         assert widget.current_seconds == 12.5
+
+    def test_prefers_the_live_time_pos_over_a_stale_slider(self, qtbot, fake_mpv):
+        """The bug: the slider is only as fresh as the last delivered tick.
+
+        ``time-pos`` is observed on mpv's event thread and marshalled to the
+        GUI thread by a queued signal, so under GUI load the slider trails the
+        picture. Picking a frame off it stamps one the viewer already watched
+        go past. Here the tick for frame 31 never arrives.
+        """
+        widget = self._loaded(qtbot, fake_mpv)
+        widget._on_time_pos(30 / 15)  # frame 30 = 2.0 s, the last tick delivered
+        fake_mpv["player"].time_pos = 31 / 15  # mpv has since moved on
+        assert widget.current_seconds == pytest.approx(31 / 15)
+        assert widget.position_slider.value() == 2000  # the slider is provably still stale
+
+    def test_the_slider_wins_while_the_handle_is_held(self, qtbot, fake_mpv):
+        """Mid-drag the slider IS the user's position — mpv is still catching up."""
+        widget = self._loaded(qtbot, fake_mpv)
+        widget.position_slider.setSliderDown(True)
+        widget.position_slider.setValue(1541)
+        fake_mpv["player"].time_pos = 9.0  # where mpv still is, not where the user points
+        assert widget.current_seconds == 1.541
+
+    def test_falls_back_to_the_slider_when_mpv_answers_none(self, qtbot, fake_mpv):
+        """None is mpv's normal answer while idle, not an error."""
+        widget = self._loaded(qtbot, fake_mpv)
+        widget._on_time_pos(31 / 15)
+        fake_mpv["player"].time_pos = None
+        assert widget.current_seconds == 2.066
+
+    def test_falls_back_to_the_slider_without_a_player(self, qtbot):
+        with patch(f"{MODULE}.mpv_available", return_value=False):
+            widget = _widget(qtbot)
+            widget.set_source(VIDEO, ENTRIES)
+        widget._on_duration(60.0)
+        widget.position_slider.setValue(2066)
+        assert widget.player is None
+        assert widget.current_seconds == 2.066
 
     def test_is_zero_before_the_first_tick(self, qtbot, fake_mpv):
         widget = _widget(qtbot)
         widget.set_source(VIDEO, ENTRIES)
         assert widget.current_seconds == 0.0
 
-    def test_follows_a_drag(self, qtbot, fake_mpv):
-        """Mid-drag the slider IS the user's position — that is the frame they see."""
+    @pytest.mark.parametrize("fps", [15, 24])
+    @pytest.mark.parametrize("frame", [1, 30, 31, 36, 37, 149])
+    def test_slider_truncation_never_selects_the_previous_frame(self, qtbot, fake_mpv, fps, frame):
+        """Why the ms-quantized fallback is safe rather than off by one.
+
+        ``_on_time_pos`` truncates to whole milliseconds, and both mpv's exact
+        seek and ``ffmpeg -ss`` resolve a timestamp to the first frame whose
+        pts is at or after it. Truncation therefore always lands inside the
+        displayed frame's own span, never in the one before it.
+        """
+        widget = self._loaded(qtbot, fake_mpv)
+        widget._on_time_pos(frame / fps)
+        quantized = widget.position_slider.value() / 1000.0
+        assert (frame - 1) / fps < quantized <= frame / fps
+
+
+class TestFrameStep:
+    """Reaching a single frame — the slider spans the whole file, so it cannot."""
+
+    def _loaded(self, qtbot, fake_mpv) -> SubtitlePlayerWidget:
         widget = _widget(qtbot)
         widget.set_source(VIDEO, ENTRIES)
-        widget._on_duration(60.0)
-        widget.position_slider.setValue(30_000)
-        assert widget.current_seconds == 30.0
+        widget._on_file_loaded()
+        fake_mpv["player"].command.reset_mock()
+        return widget
+
+    def test_forward_issues_mpvs_frame_step(self, qtbot, fake_mpv):
+        widget = self._loaded(qtbot, fake_mpv)
+        widget.step_frame(1)
+        fake_mpv["player"].command.assert_called_once_with("frame-step")
+
+    def test_back_issues_the_hyphenated_frame_back_step(self, qtbot, fake_mpv):
+        """python-mpv's own frame_back_step() helper sends an underscore, which
+        is not an mpv command name — the hyphen spelling is the command."""
+        widget = self._loaded(qtbot, fake_mpv)
+        widget.step_frame(-1)
+        fake_mpv["player"].command.assert_called_once_with("frame-back-step")
+
+    def test_a_step_cancels_a_pending_clip_preview_stop(self, qtbot, fake_mpv):
+        widget = self._loaded(qtbot, fake_mpv)
+        widget.play_range(1.0, 2.5)
+        with qtbot.waitSignal(widget.range_finished, timeout=100):
+            widget.step_frame(1)
+        assert widget._range_end is None
+
+    def test_noop_before_the_file_is_loaded(self, qtbot, fake_mpv_no_ctx):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        fake_mpv_no_ctx["player"].command.reset_mock()
+        widget.step_frame(1)
+        fake_mpv_no_ctx["player"].command.assert_not_called()
+
+    def test_noop_without_a_player(self, qtbot):
+        with patch(f"{MODULE}.mpv_available", return_value=False):
+            widget = _widget(qtbot)
+            widget.set_source(VIDEO, ENTRIES)
+        widget.step_frame(-1)  # must not raise
+
+    def test_the_buttons_drive_the_step(self, qtbot, fake_mpv):
+        widget = self._loaded(qtbot, fake_mpv)
+        widget.frame_forward_button.click()
+        fake_mpv["player"].command.assert_called_once_with("frame-step")
+        fake_mpv["player"].command.reset_mock()
+        widget.frame_back_button.click()
+        fake_mpv["player"].command.assert_called_once_with("frame-back-step")
+
+    def test_buttons_hidden_without_a_video_surface(self, qtbot, fake_mpv, monkeypatch):
+        """Audio-only: there is no frame to step to."""
+        monkeypatch.setattr(f"{MODULE}.video_preview.preview_enabled", lambda: False)
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        assert not widget.frame_back_button.isVisibleTo(widget)
+        assert not widget.frame_forward_button.isVisibleTo(widget)
 
 
 class TestLifecycleSignals:
