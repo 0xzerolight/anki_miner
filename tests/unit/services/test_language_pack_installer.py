@@ -28,6 +28,7 @@ import pytest
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.languages.pack_spec import ArtifactSpec, LanguagePack, PackComponent
 from anki_miner.services import language_pack_installer as installer
+from anki_miner.services import pack_installer as core
 from tests.unit._resume_key_assert import assert_stable_resume_key as _assert_stable_resume_key
 
 _THIS_PLATFORM = (sys.platform, platform.machine())
@@ -183,7 +184,7 @@ def downloader(monkeypatch) -> _Downloader:
     """Patched ``download_to_temp`` preloaded with the synthetic pack's artifacts."""
     fake = _Downloader()
     fake.register((_WHEEL_SPEC, _WHEEL_BYTES), (_SDIST_SPEC, _SDIST_BYTES), (_ROOT_WHEEL_SPEC, _ROOT_WHEEL_BYTES))
-    monkeypatch.setattr(installer, "download_to_temp", fake)
+    monkeypatch.setattr(core, "download_to_temp", fake)
     return fake
 
 
@@ -343,7 +344,7 @@ class TestComponentSatisfied:
         assert installer.component_satisfied("xx", comp) is True
 
     def test_component_path_answers_from_disk_alone(self, home, synthetic_pack, monkeypatch) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: object())
+        monkeypatch.setattr(core, "find_spec", lambda _name: object())
         assert installer.component_path("xx", "xxpkg") is None
 
         directory = _write_component(installer.language_pack_root("xx"), _WHEEL_COMPONENT)
@@ -423,7 +424,7 @@ class TestPackProvidedImportsStayGated:
         site_packages.mkdir(parents=True)
         (site_packages / "__init__.py").write_bytes(b"")
         monkeypatch.setattr(
-            installer,
+            core,
             "find_spec",
             lambda _name: SimpleNamespace(
                 origin=str(site_packages / "__init__.py"),
@@ -439,7 +440,7 @@ class TestPackProvidedImportsStayGated:
         legacy = _install_legacy_ko_model(home)
         (legacy / model.sentinels[0]).unlink()
         monkeypatch.setattr(
-            installer,
+            core,
             "find_spec",
             lambda _name: SimpleNamespace(
                 origin=str(legacy / "__init__.py"),
@@ -452,7 +453,7 @@ class TestPackProvidedImportsStayGated:
 
 class TestLegacyKoTier:
     def test_the_pre_pack_ko_model_dir_satisfies_the_model_component(self, home, monkeypatch) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         assert installer.component_satisfied("ko", _ko_model_component()) is False
 
         legacy = _install_legacy_ko_model(home)
@@ -460,14 +461,14 @@ class TestLegacyKoTier:
         assert installer.component_path("ko", "kiwipiepy_model") == legacy
 
     def test_the_new_pack_dir_wins_over_the_legacy_one(self, home, monkeypatch) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         _install_legacy_ko_model(home)
         fresh = _write_component(installer.language_pack_root("ko"), _ko_model_component())
 
         assert installer.component_path("ko", "kiwipiepy_model") == fresh
 
     def test_the_legacy_tier_is_ko_only(self, home, monkeypatch) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         _install_legacy_ko_model(home)
         model = _ko_model_component()
 
@@ -476,7 +477,7 @@ class TestLegacyKoTier:
 
 class TestIsInstalled:
     def test_false_while_a_required_sentinel_is_missing(self, home, synthetic_pack, monkeypatch) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         _write_component(installer.language_pack_root("xx"), _WHEEL_COMPONENT)
         partial = installer.language_pack_root("xx") / "xxmodel"
         partial.mkdir(parents=True)  # model.bin never landed
@@ -484,7 +485,7 @@ class TestIsInstalled:
         assert installer.is_installed("xx") is False
 
     def test_true_once_every_required_component_is_there(self, home, synthetic_pack, monkeypatch) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         for comp in _PACK.components:
             _write_component(installer.language_pack_root("xx"), comp)
 
@@ -494,7 +495,7 @@ class TestIsInstalled:
         optional = PackComponent(import_name="xxopt", required=False, sentinels=("__init__.py",), universal=_WHEEL_SPEC)
         pack = LanguagePack(code="xx", approx_download_mb=1, components=(_WHEEL_COMPONENT, optional))
         monkeypatch.setattr(installer, "load_pack", lambda _code: pack)
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         _write_component(installer.language_pack_root("xx"), _WHEEL_COMPONENT)
 
         assert installer.is_installed("xx") is True
@@ -505,7 +506,7 @@ class TestIsInstalled:
 
 class TestInstall:
     def test_both_archive_kinds_are_extracted_and_promoted(self, home, synthetic_pack, downloader, monkeypatch) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         root = installer.language_pack_root("xx")
 
         result = installer.install_language_pack("xx", root)
@@ -517,7 +518,7 @@ class TestInstall:
         assert installer.is_installed("xx") is True
 
     def test_excluded_and_out_of_prefix_members_never_land(self, home, synthetic_pack, downloader, monkeypatch) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         root = installer.language_pack_root("xx")
 
         installer.install_language_pack("xx", root)
@@ -535,7 +536,7 @@ class TestInstall:
         as prefixes those also matched the ``.py`` tables CPython imports, so an
         installed pack could not ``import jieba`` at all.
         """
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         root = installer.language_pack_root("xx")
 
         installer.install_language_pack("xx", root)
@@ -544,7 +545,7 @@ class TestInstall:
         assert (root / "xxpkg" / "table.py").read_bytes() == b"# the real table"
 
     def test_a_satisfied_component_is_not_downloaded_again(self, home, synthetic_pack, downloader, monkeypatch) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         root = installer.language_pack_root("xx")
 
         installer.install_language_pack("xx", root)
@@ -558,7 +559,7 @@ class TestInstall:
     def test_progress_is_labelled_with_the_pack_and_position(
         self, home, synthetic_pack, downloader, monkeypatch
     ) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         messages: list[str] = []
 
         installer.install_language_pack(
@@ -574,7 +575,7 @@ class TestInstall:
     ) -> None:
         # A pin bump changes the sha and therefore the key, so a stale partial
         # can never be resumed into the new artifact (D16-C).
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
 
         installer.install_language_pack("xx", installer.language_pack_root("xx"))
 
@@ -584,7 +585,7 @@ class TestInstall:
         ]
 
     def test_nothing_scratch_is_left_behind(self, home, synthetic_pack, downloader, monkeypatch) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         root = installer.language_pack_root("xx")
 
         installer.install_language_pack("xx", root)
@@ -593,7 +594,7 @@ class TestInstall:
         assert list(root.glob(".staging-*")) == []
 
     def test_orphans_from_a_crashed_run_are_swept(self, home, synthetic_pack, downloader, monkeypatch) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         root = installer.language_pack_root("xx")
         root.mkdir(parents=True)
         (root / "leftover.part").write_bytes(b"x" * 1024)
@@ -608,7 +609,7 @@ class TestInstall:
         assert installer.is_installed("xx") is True
 
     def test_reinstalling_replaces_the_existing_component(self, home, synthetic_pack, downloader, monkeypatch) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         root = installer.language_pack_root("xx")
         stale = root / "xxpkg"
         stale.mkdir(parents=True)
@@ -620,7 +621,7 @@ class TestInstall:
         assert (stale / "data.txt").read_bytes() == b"payload"
 
     def test_an_optional_component_with_no_artifact_here_is_skipped(self, home, downloader, monkeypatch) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         optional = PackComponent(
             import_name="xxopt",
             required=False,
@@ -643,7 +644,7 @@ class TestRefusals:
             installer.install_language_pack("ja", installer.language_pack_root("ja"))
 
     def test_a_required_component_with_no_artifact_here_refuses(self, home, downloader, monkeypatch) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         comp = PackComponent(
             import_name="xxpkg",
             required=True,
@@ -660,7 +661,7 @@ class TestRefusals:
         assert downloader.urls == []
 
     def test_a_checksum_mismatch_promotes_nothing(self, home, monkeypatch, downloader) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         wrong = ArtifactSpec(
             url=_WHEEL_SPEC.url, sha256="0" * 64, kind="wheel", member_prefix="xxpkg/", exclude=("tests/",)
         )
@@ -678,7 +679,7 @@ class TestRefusals:
 
     @pytest.mark.parametrize("kind,prefix", [("wheel", "xxpkg/"), ("sdist", "xxmodel-1.0/xxmodel/")])
     def test_a_corrupt_archive_refuses(self, home, monkeypatch, downloader, kind, prefix) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         payload = b"not an archive at all"
         spec = _spec(payload, kind=kind, member_prefix=prefix)
         downloader.register((spec, payload))
@@ -694,7 +695,7 @@ class TestRefusals:
         assert not (root / "xxpkg").exists()
 
     def test_an_archive_without_the_member_prefix_refuses(self, home, monkeypatch, downloader) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         payload = _make_wheel({"other/__init__.py": b"x"})
         spec = _spec(payload, kind="wheel", member_prefix="xxpkg/")
         downloader.register((spec, payload))
@@ -709,7 +710,7 @@ class TestRefusals:
     def test_an_archive_missing_a_sentinel_refuses(self, home, monkeypatch, downloader) -> None:
         # A wrong member_prefix or a repackaged artifact would otherwise promote
         # a directory the language cannot start from.
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         payload = _make_wheel({"xxpkg/__init__.py": b"x"})
         spec = _spec(payload, kind="wheel", member_prefix="xxpkg/")
         downloader.register((spec, payload))
@@ -730,7 +731,7 @@ class TestRefusals:
         payload = _make_wheel(members) if kind == "wheel" else _make_sdist(members)
         spec = _spec(payload, kind=kind, member_prefix="xxpkg/")
         downloader.register((spec, payload))
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         comp = PackComponent(import_name="xxpkg", required=True, sentinels=("__init__.py",), universal=spec)
         monkeypatch.setattr(
             installer, "load_pack", lambda _code: LanguagePack(code="xx", approx_download_mb=1, components=(comp,))
@@ -756,7 +757,7 @@ class TestRefusals:
     def test_cancelling_after_the_download_cleans_the_part_file(
         self, home, synthetic_pack, downloader, monkeypatch
     ) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         cancelled = {"value": False}
         downloader.after_download = lambda: cancelled.__setitem__("value", True)
         root = installer.language_pack_root("xx")
@@ -791,7 +792,7 @@ class TestRootMembers:
         assert not (root / "xxroot-1.0.dist-info").exists()
 
     def test_a_component_missing_its_root_member_is_not_satisfied(self, home, root_member_pack, monkeypatch) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         root = installer.language_pack_root("xx")
         _write_component(root, _ROOT_COMPONENT)
 
@@ -809,7 +810,7 @@ class TestRootMembers:
     ) -> None:
         # Without the disk-tier check the component would count as satisfied
         # forever and no retry could ever fetch the extension module.
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         root = installer.language_pack_root("xx")
         _write_component(root, _ROOT_COMPONENT)
 
@@ -819,7 +820,7 @@ class TestRootMembers:
         assert (root / "_xxroot.abi3.so").read_bytes() == b"native"
 
     def test_an_archive_without_the_declared_root_member_refuses(self, home, monkeypatch, downloader) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         payload = _make_wheel({"xxroot/__init__.py": b"x"})  # the .so never shipped
         spec = _spec(payload, kind="wheel", member_prefix="xxroot/", root_members=("_xxroot.",))
         downloader.register((spec, payload))
@@ -835,7 +836,7 @@ class TestRootMembers:
         assert not (root / "xxroot").exists()
 
     def test_a_traversing_root_member_refuses(self, home, monkeypatch, downloader) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         payload = _make_wheel({"xxroot/__init__.py": b"x", "_xxroot/../../escaped.so": b"pwned"})
         spec = _spec(payload, kind="wheel", member_prefix="xxroot/", root_members=("_xxroot",))
         downloader.register((spec, payload))
@@ -862,7 +863,7 @@ class TestCustomInstallRoot:
     """
 
     def test_satisfaction_reads_the_root_it_is_given(self, home, synthetic_pack, monkeypatch, tmp_path) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         seed = tmp_path / "seed"
         _write_component(installer.language_pack_root("xx"), _WHEEL_COMPONENT)
 
@@ -883,7 +884,7 @@ class TestCustomInstallRoot:
     def test_seeding_downloads_even_when_the_canonical_root_already_has_it(
         self, home, synthetic_pack, downloader, monkeypatch, tmp_path
     ) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         for comp in _PACK.components:
             _write_component(installer.language_pack_root("xx"), comp)
         seed = tmp_path / "seed"
@@ -897,7 +898,7 @@ class TestCustomInstallRoot:
     def test_a_second_seed_into_the_same_root_downloads_nothing(
         self, home, synthetic_pack, downloader, monkeypatch, tmp_path
     ) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         seed = tmp_path / "seed"
 
         installer.install_language_pack("xx", seed)
@@ -909,7 +910,7 @@ class TestCustomInstallRoot:
         assert downloader.urls == []
 
     def test_is_installed_stays_canonical(self, home, synthetic_pack, monkeypatch, tmp_path) -> None:
-        monkeypatch.setattr(installer, "find_spec", lambda _name: None)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
         for comp in _PACK.components:
             _write_component(tmp_path / "seed", comp)
 

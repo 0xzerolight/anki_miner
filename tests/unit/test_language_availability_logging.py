@@ -155,7 +155,7 @@ class TestSyspathInjection:
         monkeypatch.setattr(installer, "load_pack", lambda _code: _Pack())
         monkeypatch.setattr(installer, "pack_supported", lambda _code: True)
         monkeypatch.setattr(installer, "language_pack_root", lambda _code: root)
-        monkeypatch.setattr(installer, "_component_complete", explode)
+        monkeypatch.setattr(installer, "component_complete", explode)
 
         with caplog.at_level(logging.WARNING, logger="anki_miner.services.language_pack_installer"):
             installer.ensure_language_packs_on_syspath()

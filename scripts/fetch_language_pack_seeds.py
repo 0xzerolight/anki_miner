@@ -46,14 +46,14 @@ if str(_REPO_ROOT) not in sys.path:
 
 from anki_miner.exceptions import DownloadFailed, SetupError  # noqa: E402
 from anki_miner.languages.pack_spec import PackComponent  # noqa: E402
-from anki_miner.services.language_pack_installer import _artifact_for as artifact_for  # noqa: E402
 from anki_miner.services.language_pack_installer import (  # noqa: E402
     install_language_pack,
     load_pack,
     pack_supported,
 )
+from anki_miner.services.pack_installer import artifact_for  # noqa: E402
 
-# _artifact_for is the installer's own platform/ABI resolution, imported private
+# artifact_for is the installer core's own platform/ABI resolution, imported
 # rather than reimplemented: --print-manifest exists to answer "what would this
 # runner download?", and a second copy of that rule would answer a different
 # question the moment either drifts.
