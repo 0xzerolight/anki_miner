@@ -1,9 +1,11 @@
-"""Data shapes for per-language downloadable dependency packs.
+"""Data shapes for downloadable dependency packs.
 
 A language that needs third-party engines in frozen bundles ships a
 ``languages/<code>/pack.py`` exporting ``PACK: LanguagePack``. Japanese has
-none: its engine is bundled. These types are pure data so that importing a
-manifest can never pull an engine, a downloader, or Qt.
+none: its engine is bundled. These types are shared by the per-language packs
+(``languages/<code>/pack.py``) and the ASR engine pack (``services/asr/asr_pack.py``).
+They are pure data so that importing a manifest can never pull an engine, a
+downloader, or Qt.
 """
 
 from __future__ import annotations
@@ -32,6 +34,9 @@ class ArtifactSpec:
     #: ``_kiwipiepy.abi3.so``, which ``kiwipiepy/_wrap.py`` imports by name.
     #: The pack root is the ``sys.path`` entry, so that is where such a module
     #: has to land. Prefix form so one pin covers ``.abi3.so`` and ``.pyd``.
+    #: A prefix ending in "/" names a whole DIRECTORY promoted to the pack
+    #: root — the auditwheel/delvewheel ``<pkg>.libs/`` tree an extension
+    #: resolves by an ``$ORIGIN``-relative rpath (ctranslate2, av).
     root_members: tuple[str, ...] = ()
 
 
@@ -50,5 +55,20 @@ class PackComponent:
 @dataclass(frozen=True)
 class LanguagePack:
     code: str
+    approx_download_mb: int
+    components: tuple[PackComponent, ...] = field(default=())
+
+
+@dataclass(frozen=True)
+class DependencyPack:
+    """A named set of components installed together into one pack root.
+
+    The language packs keep :class:`LanguagePack` (keyed by language code);
+    every other pack — today the ASR engine pack — is one of these. The
+    installer core (``services/pack_installer.py``) reads only ``components``
+    and a label, so the two shapes share one implementation.
+    """
+
+    name: str
     approx_download_mb: int
     components: tuple[PackComponent, ...] = field(default=())
