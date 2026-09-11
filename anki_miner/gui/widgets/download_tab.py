@@ -56,6 +56,7 @@ from anki_miner.gui.utils.language_names import (
 from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
+from anki_miner.gui.widgets.base.ytdlp_availability import YtdlpAvailabilityMixin, YtdlpStrings
 from anki_miner.gui.widgets.dialogs.language_picker_dialog import LanguagePickerDialog
 from anki_miner.gui.widgets.dialogs.playlist_picker_dialog import PlaylistPickerDialog
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
@@ -75,12 +76,11 @@ from anki_miner.services.media_downloader import (
     UrlTracks,
 )
 from anki_miner.utils.i18n import tr_format
-from anki_miner.utils.ytdlp_resolver import ytdlp_available
 
 logger = logging.getLogger(__name__)
 
 
-class DownloadTab(_ToolTabBase):
+class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
     """Tab for downloading media from URLs via yt-dlp.
 
     Shared worker-signal slots, output-location slots, progress chrome, and the
@@ -109,6 +109,11 @@ class DownloadTab(_ToolTabBase):
     OUTPUT_HISTORY_KEY = "tools.download.output"
 
     config_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
+
+    #: The banner's "Download yt-dlp" repair. gui/app.py routes it to
+    #: BackgroundTaskController.start_ytdlp_update(force=True) — this screen owns
+    #: no worker of its own.
+    ytdlp_download_requested = pyqtSignal()
 
     def __init__(
         self,
@@ -143,9 +148,14 @@ class DownloadTab(_ToolTabBase):
         # while its last batch was truncated; session-only.
         self._playlist_cursor: dict[str, int] = {}
         # yt-dlp availability is cached per-config: resolving it re-hashes the
-        # managed binary, so it must not run on every read. Recomputed only
-        # here and in update_config().
-        self._ytdlp_is_available: bool = False
+        # managed binary, so it must not run on every read. Recomputed only in
+        # __init__ and update_config(); the copy lives here so each literal stays
+        # in this tab's tr-context.
+        self._ytdlp_strings = YtdlpStrings(
+            missing=self.tr("yt-dlp is not installed, so downloads cannot run."),
+            download_action=self.tr("Download yt-dlp"),
+            downloading=self.tr("Downloading yt-dlp…"),
+        )
         default_dir = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DownloadLocation)
         self._default_download_dir = Path(default_dir) if default_dir else Path.home()
         # Built here (not in the base) so each literal stays in this tab's
@@ -315,15 +325,6 @@ class DownloadTab(_ToolTabBase):
         configure_card_layout(layout)
 
         layout.addWidget(SectionHeader(self.tr("URLs")))
-
-        # yt-dlp notice (shown when the executable is unavailable)
-        self.engine_notice_label = QLabel(
-            self.tr("yt-dlp not found. Install or update it in Settings → YouTube to enable downloads.")
-        )
-        self.engine_notice_label.setObjectName("helper-text")
-        self.engine_notice_label.setWordWrap(True)
-        self.engine_notice_label.hide()
-        layout.addWidget(self.engine_notice_label)
 
         input_desc = QLabel(self.tr("Download videos or audio from any site yt-dlp supports, without mining."))
         input_desc.setObjectName("helper-text")
@@ -510,27 +511,20 @@ class DownloadTab(_ToolTabBase):
     def _apply_probe_result(self, result: object) -> None:
         """Apply an availability-probe outcome, never enabling Download mid-run.
 
-        A probe scheduled before a download started can land after it did —
-        the button is pinned disabled for the run's duration regardless of
-        what this probe found.
+        A probe scheduled before a download started can land after it did — the
+        button is pinned disabled for the run's duration regardless of what this
+        probe found. The banner itself is the mixin's.
         """
-        self._ytdlp_is_available = bool(result)
-        self.engine_notice_label.setVisible(not self._ytdlp_is_available)
-        self.download_button.setEnabled(self._ytdlp_is_available and not still_running(self.worker_thread))
+        super()._apply_probe_result(result)
+        self.download_button.setEnabled(self._ytdlp_ready() and not still_running(self.worker_thread))
 
-    def _ytdlp_ready(self) -> bool:
-        """Return the cached yt-dlp availability (probed once per config)."""
-        return self._ytdlp_is_available
+    def _refresh_ytdlp_state(self) -> None:
+        """Mixin hook: this tab's engine probe IS the yt-dlp probe."""
+        self._refresh_engine_state()
 
-    @staticmethod
-    def _compute_ytdlp_available(config: AnkiMinerConfig) -> bool:
-        """Probe whether a usable yt-dlp executable is reachable for *config*.
-
-        Runs the resolver (managed-binary re-hash included). Called only from
-        ``__init__`` and ``update_config`` — readers use the cached bool via
-        :meth:`_ytdlp_ready`.
-        """
-        return ytdlp_available(config)
+    def _emit_ytdlp_download_requested(self) -> None:
+        """Mixin hook: ask the window to run the updater."""
+        self.ytdlp_download_requested.emit()
 
     # ------------------------------------------------------------------
     # Run
