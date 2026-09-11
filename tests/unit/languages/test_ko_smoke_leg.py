@@ -125,6 +125,11 @@ def _fake_dist(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     ffmpeg.chmod(0o755)
+    # The encoders leg also runs ffprobe: since the shared ffmpeg build it has
+    # to resolve the libav*/libsw* libraries through its own rpath.
+    ffprobe = dist / "ffprobe"
+    ffprobe.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    ffprobe.chmod(0o755)
     for library in ("libggml-vulkan.so", "libggml-cpu.so", "libmpv.so.2"):
         (dist / library).touch()
     return dist

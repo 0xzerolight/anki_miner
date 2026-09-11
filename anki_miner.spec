@@ -44,17 +44,41 @@ if not os.path.exists(icon_file):
     else:
         icon_file = None
 
-# Bundle vendored ffmpeg/ffprobe binaries. CI populates vendor/ffmpeg/ with static
-# builds before invoking PyInstaller; local dev builds leave it absent (empty list →
-# unchanged behavior). The "bin" dest matches the runtime resolver's lookup at
+# Bundle vendored ffmpeg/ffprobe binaries. CI populates vendor/ffmpeg/ before
+# invoking PyInstaller; local dev builds leave it absent (empty list → unchanged
+# behavior). The "bin" dest matches the runtime resolver's lookup at
 # sys._MEIPASS/bin/ (see anki_miner/utils/ffmpeg_resolver.py).
-ffmpeg_binaries = []
+#
+# Linux and Windows vendor BtbN's SHARED build: two small executables plus the
+# libav*/libsw* sonames they load, and those must NOT go through Analysis.
+# PyInstaller dependency-walks every collected binary — and reclassifies a file
+# handed to `datas` as one first — so the walk resolves ffmpeg's NEEDED sonames
+# against the copies beside it and collects a SECOND set at the _internal root;
+# on a build host that has its own ffmpeg, that host build's whole dependency
+# closure comes with them (measured: +235 MiB of duplicates and ~150 host .so).
+# Appending the TOC entries after Analysis collects exactly these files and
+# nothing else. The executables carry an $ORIGIN rpath, set where they are
+# vendored (release.yml / scripts/release_preflight.sh), so they load the copies
+# that land beside them in _internal/bin/ rather than anything on the host.
+#
+# macOS vendors a STATIC build — no shared one is published for it — and stays
+# on the Analysis path: the .app layout and release.yml's ad-hoc codesign step
+# both expect these two at Contents/Frameworks/bin.
+ffmpeg_files = []
 vendor_ffmpeg = os.path.join(project_root, "vendor", "ffmpeg")
 if os.path.isdir(vendor_ffmpeg):
     for _fn in sorted(os.listdir(vendor_ffmpeg)):
         _full = os.path.join(vendor_ffmpeg, _fn)
         if os.path.isfile(_full):
-            ffmpeg_binaries.append((_full, "bin"))
+            ffmpeg_files.append(_full)
+
+_ffmpeg_is_static = sys.platform == "darwin"
+ffmpeg_binaries = [(_f, "bin") for _f in ffmpeg_files] if _ffmpeg_is_static else []
+ffmpeg_toc = (
+    []
+    if _ffmpeg_is_static
+    else [(os.path.join("bin", os.path.basename(_f)), _f, "BINARY") for _f in ffmpeg_files]
+)
 
 # Bundle vendored alass binary. CI populates vendor/alass/ with a static build
 # before invoking PyInstaller; local dev builds leave it absent (empty list →
@@ -410,6 +434,12 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+
+# Vendored ffmpeg/ffprobe and (Linux/Windows) the shared libraries they load,
+# attached after Analysis so its dependency walk never sees them — the reason is
+# in the vendor/ffmpeg block above. Empty on macOS, where they went in through
+# `binaries` instead.
+a.binaries += ffmpeg_toc
 
 # Drop host-audio client libraries bindepend may pull in through the vendored
 # libmpv (Linux). These must come from the host at runtime: a bundled libasound/
