@@ -403,10 +403,30 @@ jobs:
           # BtbN ships the DLLs in the same bin/ directory as the executables,
           # and Windows resolves imports from the executable's own directory, so
           # they travel with it into _internal/bin/. ffplay.exe is left behind.
-          # bin/ only, NOT -Recurse: lib/ holds build-time import libraries, and
-          # a future layout change must not ship stray DLLs unnoticed.
-          Get-ChildItem -Path extracted\*\bin -Filter *.dll |
+          # Copy from the directory ffmpeg.exe was found in, with NO wildcard in
+          # -Path: a wildcard path makes -Filter match the items the path resolves
+          # to (the bin directories) rather than their children, so the earlier
+          # glob over the extracted bin directories matched no DLL at all and
+          # shipped an ffmpeg.exe that could not start. Non-recursive, so lib/'s
+          # build-time import libraries stay behind and a future layout change
+          # cannot ship stray DLLs unnoticed.
+          $bin = Split-Path -Parent $ff.FullName
+          Get-ChildItem -Path $bin -Filter *.dll |
             ForEach-Object { Copy-Item $_.FullName vendor\ffmpeg\ -Force }
+          # Fail closed. The asset is sha256-pinned, so these seven names hold
+          # until the pin is bumped; a bump that changes a major version must
+          # update this list deliberately.
+          $expected = @(
+            "avcodec-62.dll", "avdevice-62.dll", "avfilter-11.dll", "avformat-62.dll",
+            "avutil-60.dll", "swresample-6.dll", "swscale-9.dll"
+          )
+          $missing = $expected | Where-Object {
+            -not (Test-Path -LiteralPath (Join-Path vendor\ffmpeg $_) -PathType Leaf)
+          }
+          if ($missing) {
+            Write-Error "vendor/ffmpeg is missing required ffmpeg DLL(s): $($missing -join ' ')"
+            exit 1
+          }
           Remove-Item -Recurse -Force extracted, ffmpeg-dl.zip
           Write-Host "Bundled ffmpeg landed in vendor/ffmpeg/:"
           Get-ChildItem vendor\ffmpeg
