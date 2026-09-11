@@ -596,6 +596,65 @@ class TestCurrentSeconds:
         assert (frame - 1) / fps < quantized <= frame / fps
 
 
+class TestFrameStep:
+    """Reaching a single frame — the slider spans the whole file, so it cannot."""
+
+    def _loaded(self, qtbot, fake_mpv) -> SubtitlePlayerWidget:
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget._on_file_loaded()
+        fake_mpv["player"].command.reset_mock()
+        return widget
+
+    def test_forward_issues_mpvs_frame_step(self, qtbot, fake_mpv):
+        widget = self._loaded(qtbot, fake_mpv)
+        widget.step_frame(1)
+        fake_mpv["player"].command.assert_called_once_with("frame-step")
+
+    def test_back_issues_the_hyphenated_frame_back_step(self, qtbot, fake_mpv):
+        """python-mpv's own frame_back_step() helper sends an underscore, which
+        is not an mpv command name — the hyphen spelling is the command."""
+        widget = self._loaded(qtbot, fake_mpv)
+        widget.step_frame(-1)
+        fake_mpv["player"].command.assert_called_once_with("frame-back-step")
+
+    def test_a_step_cancels_a_pending_clip_preview_stop(self, qtbot, fake_mpv):
+        widget = self._loaded(qtbot, fake_mpv)
+        widget.play_range(1.0, 2.5)
+        with qtbot.waitSignal(widget.range_finished, timeout=100):
+            widget.step_frame(1)
+        assert widget._range_end is None
+
+    def test_noop_before_the_file_is_loaded(self, qtbot, fake_mpv_no_ctx):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        fake_mpv_no_ctx["player"].command.reset_mock()
+        widget.step_frame(1)
+        fake_mpv_no_ctx["player"].command.assert_not_called()
+
+    def test_noop_without_a_player(self, qtbot):
+        with patch(f"{MODULE}.mpv_available", return_value=False):
+            widget = _widget(qtbot)
+            widget.set_source(VIDEO, ENTRIES)
+        widget.step_frame(-1)  # must not raise
+
+    def test_the_buttons_drive_the_step(self, qtbot, fake_mpv):
+        widget = self._loaded(qtbot, fake_mpv)
+        widget.frame_forward_button.click()
+        fake_mpv["player"].command.assert_called_once_with("frame-step")
+        fake_mpv["player"].command.reset_mock()
+        widget.frame_back_button.click()
+        fake_mpv["player"].command.assert_called_once_with("frame-back-step")
+
+    def test_buttons_hidden_without_a_video_surface(self, qtbot, fake_mpv, monkeypatch):
+        """Audio-only: there is no frame to step to."""
+        monkeypatch.setattr(f"{MODULE}.video_preview.preview_enabled", lambda: False)
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        assert not widget.frame_back_button.isVisibleTo(widget)
+        assert not widget.frame_forward_button.isVisibleTo(widget)
+
+
 class TestLifecycleSignals:
     """The public seam consumers build a loading/failed state on (D35)."""
 
