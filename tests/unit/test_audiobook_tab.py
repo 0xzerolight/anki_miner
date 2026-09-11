@@ -546,7 +546,7 @@ class TestPerItemSignals:
 
         assert item.status == ReadyItemStatus.COMPLETED
         assert item.cards_created == 5
-        assert tab._row_widgets[item].result_label.text() == "5 cards"
+        assert tab._row_widgets[item].result_label.text() == "Cards: 5"
         # Presenter is forwarded the result.
         tab._presenter.show_processing_result.assert_called_once_with(result)
 

@@ -75,7 +75,7 @@ class AudiobookQueueItemWidget(QueueRowWidget):
     def _resolve_result(self, item: AudiobookQueueItem) -> str:
         """Return the result count, which only a completed run has."""
         if item.status == ReadyItemStatus.COMPLETED:
-            return tr_format(self.tr("%1 cards"), item.cards_created)
+            return tr_format(self.tr("Cards: %1"), item.cards_created)
         return ""
 
     def _resolve_detail(self, item: AudiobookQueueItem) -> str:

@@ -105,7 +105,7 @@ def test_completed_shows_card_count(qtbot) -> None:
     item.cards_created = 42
     widget.update_from(item)
 
-    assert widget.result_label.text() == "42 cards"
+    assert widget.result_label.text() == "Cards: 42"
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +156,7 @@ def test_update_from_idempotent(qtbot) -> None:
     first = (widget.state_label.text(), widget.title_label.full_text, widget.result_label.text())
     widget.update_from(item)
     second = (widget.state_label.text(), widget.title_label.full_text, widget.result_label.text())
-    assert first == second == ("Complete", "novel_volume_1.m4b", "7 cards")
+    assert first == second == ("Complete", "novel_volume_1.m4b", "Cards: 7")
 
 
 def test_processing_then_ready_returns_to_the_ready_word(qtbot) -> None:

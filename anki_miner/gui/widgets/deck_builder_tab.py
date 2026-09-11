@@ -512,7 +512,7 @@ class DeckBuilderTab(MiningTabBase):
 
     def _on_item_started(self, name: str) -> None:
         self._current_item_label = tr_format(
-            self.tr("Episode %1/%2: %3"), self._items_done + 1, max(self._items_total, 1), name
+            self.tr("Mining episode %1 of %2: %3"), self._items_done + 1, max(self._items_total, 1), name
         )
         self.progress_widget.set_status(self._current_item_label)
         self.log_widget.append_info(tr_format(self.tr("Processing: %1"), name))

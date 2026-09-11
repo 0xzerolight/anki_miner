@@ -540,6 +540,29 @@ class TestItemSlots:
         assert "Done: 1 succeeded, 0 failed." in log
         assert "Finished 3 subtitle files" not in log
 
+    def test_a_cancelled_run_is_not_reported_as_done(self, tab, tmp_path):
+        """``queue_finished`` fires on the cancel break too.
+
+        Its counts cover only the files the loop reached, so the clean-path
+        lead claimed a three-file run finished after one.
+        """
+        _mine(
+            tab,
+            [
+                _sub_file(tmp_path, "a.srt"),
+                _sub_file(tmp_path, "b.srt"),
+                _sub_file(tmp_path, "c.srt"),
+            ],
+        )
+        tab._run_items[0].status = ReadyItemStatus.COMPLETED
+        tab._on_cancel_clicked()
+
+        tab._on_queue_finished()
+
+        log = tab.log_widget.text_edit.toPlainText()
+        assert "Stopped: 1 succeeded, 0 failed." in log
+        assert "Done:" not in log
+
 
 class TestCleanup:
     """Cleanup restores buttons/bar on every run-exit path."""

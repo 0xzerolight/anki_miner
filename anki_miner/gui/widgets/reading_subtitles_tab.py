@@ -641,13 +641,15 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
     def _on_queue_finished(self) -> None:
         """Log the whole-run outcome for a multi-file run.
 
-        Single-file outcomes are already logged by ``_on_item_finished``.
+        Single-file outcomes are already logged by ``_on_item_finished``. The
+        lead is chosen by ``_log_queue_summary``, which swaps it on a cancelled
+        run.
         """
         if len(self._run_items) <= 1:
             return
         succeeded = sum(1 for item in self._run_items if item.status == ReadyItemStatus.COMPLETED)
         failed = sum(1 for item in self._run_items if item.status == ReadyItemStatus.ERROR)
-        self.log_widget.append_info(tr_format(self.tr("Done: %1 succeeded, %2 failed."), succeeded, failed))
+        self._log_queue_summary(self.tr("Done: %1 succeeded, %2 failed."), succeeded, failed)
 
     def _after_run_cleanup(self) -> None:
         """Per-tab UI recovery after a run ends (called from the base cleanup slot).

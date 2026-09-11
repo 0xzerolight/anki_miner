@@ -222,11 +222,7 @@ def result_lines(summary: ResourceDownloadSummary) -> list[str]:
         if lines:
             lines.append("")
         if summary.succeeded:
-            lines.append(
-                QCoreApplication.translate(
-                    "ResourceDownloadDialog", "Some resources were installed before cancellation."
-                )
-            )
+            lines.append(QCoreApplication.translate("ResourceDownloadDialog", "Some resources were installed."))
         else:
             lines.append(QCoreApplication.translate("ResourceDownloadDialog", "No resources were installed."))
         if summary.not_processed_count:
