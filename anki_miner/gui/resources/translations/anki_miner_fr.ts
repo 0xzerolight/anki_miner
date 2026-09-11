@@ -20,8 +20,8 @@
         <translation>Guide d'utilisation</translation>
     </message>
     <message>
-        <source>Mine Japanese vocabulary cards from video into Anki — screenshots, audio, and definitions, automatically.</source>
-        <translation>Extraire des cartes de vocabulaire japonais depuis une vidéo vers Anki — captures d'écran, audio et définitions, automatiquement.</translation>
+        <source>Mine vocabulary cards from video, audio and books into Anki.</source>
+        <translation>Extraire des cartes de vocabulaire depuis la vidéo, l'audio et les livres vers Anki.</translation>
     </message>
     <message>
         <source>About Anki Miner</source>
@@ -50,8 +50,8 @@
         <translation>Téléchargement d'alass…</translation>
     </message>
     <message>
-        <source>alass installed successfully.</source>
-        <translation>alass installé avec succès.</translation>
+        <source>alass installed.</source>
+        <translation>alass installé.</translation>
     </message>
 </context><context>
     <name>AnalyticsTab</name>
@@ -232,6 +232,10 @@
         <translation>Sélectionnez un type de note avant de récupérer les champs</translation>
     </message>
     <message>
+        <source>The Anki field mapping is not usable: %1</source>
+        <translation>Le mappage des champs Anki n'est pas utilisable : %1</translation>
+    </message>
+    <message>
         <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
         <translation>Impossible de demander la liste des paquets. Vérifiez l’adresse AnkiConnect dans les paramètres.</translation>
     </message>
@@ -242,10 +246,6 @@
     <message>
         <source>The deck list could not be read from Anki.</source>
         <translation>Impossible de lire la liste des paquets depuis Anki.</translation>
-    </message>
-    <message>
-        <source>Cannot build AnkiService: %1</source>
-        <translation>Impossible de construire AnkiService : %1</translation>
     </message>
     <message>
         <source>Loading decks from Anki…</source>
@@ -277,6 +277,18 @@
     <message>
         <source>Note type '%1' is not in Anki — pick one below.</source>
         <translation>Le type de note « %1 » n’est pas dans Anki — choisissez-en un ci-dessous.</translation>
+    </message>
+    <message>
+        <source>Note types could not be read from Anki: </source>
+        <translation>Les types de note n'ont pas pu être lus depuis Anki : </translation>
+    </message>
+    <message>
+        <source>Note type fields could not be read from Anki: </source>
+        <translation>Les champs des types de note n'ont pas pu être lus depuis Anki : </translation>
+    </message>
+    <message>
+        <source>Decks could not be read from Anki: </source>
+        <translation>Les paquets n'ont pas pu être lus depuis Anki : </translation>
     </message>
 </context><context>
     <name>AnkiService</name>
@@ -325,6 +337,10 @@
     <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Absent d’Anki — l’extraction échouera jusqu’à ce que vous en choisissiez un véritable ou le créiez dans Anki.</translation>
+    </message>
+    <message>
+        <source>Cards &amp; Anki</source>
+        <translation>Cartes et Anki</translation>
     </message>
     <message>
         <source>AnkiConnect URL</source>
@@ -423,8 +439,8 @@
         <translation>Champ Expression</translation>
     </message>
     <message>
-        <source>Stores the mined Japanese word.</source>
-        <translation>Stocke le mot japonais extrait.</translation>
+        <source>Stores the mined word.</source>
+        <translation>Stocke le mot extrait.</translation>
     </message>
     <message>
         <source>Sentence Field</source>
@@ -439,8 +455,8 @@
         <translation>Champ Définition</translation>
     </message>
     <message>
-        <source>Stores the English definition from the dictionary chain.</source>
-        <translation>Stocke la définition anglaise issue de la chaîne de dictionnaires.</translation>
+        <source>Stores the first definition found in your dictionaries.</source>
+        <translation>Stocke la première définition trouvée dans vos dictionnaires.</translation>
     </message>
     <message>
         <source>Glossary Field</source>
@@ -719,8 +735,8 @@ Continuer quand même ?</translation>
         <translation>Téléchargement de %1…</translation>
     </message>
     <message>
-        <source>%1 downloaded successfully.</source>
-        <translation>%1 téléchargé avec succès.</translation>
+        <source>%1 downloaded.</source>
+        <translation>%1 téléchargé.</translation>
     </message>
 </context><context>
     <name>AudioClipEditor</name>
@@ -763,14 +779,16 @@ Continuer quand même ?</translation>
         <translation>Choisir le dossier du pack audio</translation>
     </message>
     <message>
-        <source>No recognisable audio packs were found in:
-%1
+        <source>No audio packs were found in that folder.</source>
+        <translation>Aucun pack audio trouvé dans ce dossier.</translation>
+    </message>
+    <message>
+        <source>Scanned: %1
 
 Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), Forvo (speaker subdirectories), JPod legacy ({reading} - {expression} stems).</source>
-        <translation>Aucun pack audio reconnaissable n'a été trouvé dans :
-%1
+        <translation>Analysé : %1
 
-Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/), Forvo (sous-dossiers de locuteurs), JPod hérité (racines {reading} - {expression}).</translation>
+Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/), Forvo (sous-dossiers par locuteur), JPod legacy (noms de fichiers {reading} - {expression}).</translation>
     </message>
     <message>
         <source>Pack %1 of %2: %3</source>
@@ -789,8 +807,8 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
         <translation>Annulé avant les packs restants.</translation>
     </message>
     <message>
-        <source>Done.</source>
-        <translation>Terminé.</translation>
+        <source>Nothing was imported.</source>
+        <translation>Rien n'a été importé.</translation>
     </message>
     <message>
         <source>Audio Packs Added</source>
@@ -809,8 +827,8 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
         <translation>Impossible d’importer le pack audio.</translation>
     </message>
     <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>Le processus d'importation s'est terminé sans résultat.</translation>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>L'import s'est arrêté avant la fin. Réessayez.</translation>
     </message>
     <message>
         <source>Choose Android audio database</source>
@@ -849,8 +867,8 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
         <translation>Choisir le dossier du pack audio à réimporter</translation>
     </message>
     <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Les ressources indexées sont utilisées par l'extraction, le préchauffage au démarrage ou la complétion des cartes. Attendez la fin de la tâche active, puis réessayez.</translation>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Une autre tâche utilise les ressources indexées — réessayez une fois qu'elle est terminée.</translation>
     </message>
     <message>
         <source>Re-importing Android audio database…</source>
@@ -865,8 +883,8 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
         <translation>Base de données audio Android réimportée</translation>
     </message>
     <message>
-        <source>Re-imported %1 successfully.</source>
-        <translation>%1 réimporté avec succès.</translation>
+        <source>Re-imported %1.</source>
+        <translation>%1 réimporté.</translation>
     </message>
     <message>
         <source>Re-importing audio pack…</source>
@@ -881,17 +899,13 @@ Formats pris en charge : AJT (index.json + media/), NHK16 (entries.json + audio/
         <translation>Pack audio réimporté</translation>
     </message>
     <message>
-        <source>The audio pack folder could not be scanned.</source>
-        <translation>Impossible d'analyser le dossier du pack audio.</translation>
+        <source>Installed audio packs could not be checked.</source>
+        <translation>Impossible de vérifier les packs audio installés.</translation>
     </message>
     <message>
-        <source>No audio packs eligible for automatic repair were found.
-
-Skipped (source folder or database not found; use per-row Re-import…):
+        <source>Skipped (source folder or database not found; use per-row Re-import…):
 </source>
-        <translation>Aucun pack audio éligible à la réparation automatique n'a été trouvé.
-
-Ignorés (dossier source ou base de données introuvable ; utilisez Réimporter… pour chaque ligne) :
+        <translation>Ignorés (dossier source ou base de données introuvable ; utilisez Réimporter… pour chaque ligne) :
 </translation>
     </message>
     <message>
@@ -923,8 +937,8 @@ Ignorés (dossier source ou base de données introuvable ; utilisez Réimporter�
         <translation>Annulé avant la fin du lot.</translation>
     </message>
     <message>
-        <source>Nothing to do.</source>
-        <translation>Rien à faire.</translation>
+        <source>Nothing was re-imported.</source>
+        <translation>Rien n'a été réimporté.</translation>
     </message>
     <message>
         <source>Audio Packs Re-imported</source>
@@ -936,6 +950,10 @@ Ignorés (dossier source ou base de données introuvable ; utilisez Réimporter�
     </message>
 </context><context>
     <name>AudioPackSettingsPanel</name>
+    <message>
+        <source>Audio</source>
+        <translation>Audio</translation>
+    </message>
     <message>
         <source>Loading…</source>
         <translation>Chargement…</translation>
@@ -949,20 +967,20 @@ Ignorés (dossier source ou base de données introuvable ; utilisez Réimporter�
         <translation>Impossible de vérifier les packs audio installés.</translation>
     </message>
     <message>
-        <source>The audio pack was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
-        <translation>Le pack audio a été retiré de la chaîne, mais ses fichiers ont été conservés car il n’a pas été possible de prouver que le dossier appartient à Anki Miner.</translation>
+        <source>The audio pack was removed from the chain; no files were deleted from disk.</source>
+        <translation>Le pack audio a été retiré de la chaîne ; aucun fichier n'a été supprimé du disque.</translation>
     </message>
     <message>
         <source>%1 could not be removed. Its files are intact — try again.</source>
         <translation>Impossible de supprimer %1. Ses fichiers sont intacts — réessayez.</translation>
     </message>
     <message>
-        <source>%1 was only partly removed. Re-import or repair this audio pack before retrying.</source>
-        <translation>%1 n’a été supprimé que partiellement. Réimportez ou réparez ce pack audio avant de réessayer.</translation>
+        <source>%1 was only partly removed. Re-import it before retrying.</source>
+        <translation>%1 n'a été que partiellement retiré. Réimportez-le avant de réessayer.</translation>
     </message>
     <message>
-        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
-        <translation>Impossible de restaurer %1 après l’échec de la mise à jour de ses paramètres. Redémarrez Anki Miner avant de réessayer.</translation>
+        <source>%1 could not be removed: its settings could not be saved. Restart Anki Miner and try again.</source>
+        <translation>%1 n'a pas pu être retiré : ses paramètres n'ont pas pu être enregistrés. Redémarrez Anki Miner et réessayez.</translation>
     </message>
     <message>
         <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
@@ -1127,24 +1145,22 @@ Ignorés (dossier source ou base de données introuvable ; utilisez Réimporter�
     <message>
         <source>Remove '%1' from the audio chain?
 
-Only the index files are deleted — your original audio files are untouched.
-This cannot be undone. You would need to re-import to use this pack again.</source>
+Only the index files are deleted; your audio files are untouched.</source>
         <translation>Retirer « %1 » de la chaîne audio ?
 
-Seuls les fichiers d'index sont supprimés — vos fichiers audio originaux ne sont pas touchés.
-Cette action est irréversible. Vous devriez réimporter pour réutiliser ce pack.</translation>
+Seuls les fichiers d'index sont supprimés ; vos fichiers audio restent intacts.</translation>
     </message>
     <message>
         <source>Remove '%1' from the audio chain?
 
-Index files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
-        <translation>Supprimer '%1' de la chaîne audio ?
+No index files are deleted.</source>
+        <translation>Retirer « %1 » de la chaîne audio ?
 
-Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été possible de prouver que le dossier appartient à Anki Miner.</translation>
+Aucun fichier d'index n'est supprimé.</translation>
     </message>
     <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Les ressources indexées sont utilisées par l'extraction, le préchauffage au démarrage ou la complétion des cartes. Attendez la fin de la tâche active, puis réessayez.</translation>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Une autre tâche utilise les ressources indexées — réessayez une fois qu'elle est terminée.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -1173,8 +1189,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Détection automatique (actuellement : piste %1 — %2)</translation>
     </message>
     <message>
-        <source>Auto-detect (no Japanese track found — will use first track)</source>
-        <translation>Détection automatique (aucune piste japonaise trouvée — la première piste sera utilisée)</translation>
+        <source>Auto-detect (no track in the mining language — will use the first track)</source>
+        <translation>Détection automatique (aucune piste dans la langue d'extraction — utilisera la première piste)</translation>
     </message>
     <message>
         <source>Apply</source>
@@ -1183,22 +1199,26 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
 </context><context>
     <name>AudiobookQueueItemWidget</name>
     <message>
-        <source>%1 cards</source>
-        <translation>%1 cartes</translation>
+        <source>Cards: %1</source>
+        <translation>Cartes : %1</translation>
     </message>
 </context><context>
     <name>AudiobookTab</name>
     <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation>Extraction indisponible — services non initialisés.</translation>
+        <source>Mining unavailable — restart Anki Miner.</source>
+        <translation>Extraction indisponible — redémarrez Anki Miner.</translation>
     </message>
     <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation>Exécution %1 en cours de démarrage — %2 éléments.</translation>
+        <source>%1 run starting — %2 queued.</source>
+        <translation>Démarrage de l'exécution « %1 » — %2 en file d'attente.</translation>
     </message>
     <message>
         <source>Mine</source>
         <translation>Extraire</translation>
+    </message>
+    <message>
+        <source>Stopped: %1 succeeded, %2 failed.</source>
+        <translation>Arrêté : %1 réussi(s), %2 échoué(s).</translation>
     </message>
     <message>
         <source>Audio queue</source>
@@ -1297,8 +1317,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Effacer</translation>
     </message>
     <message>
-        <source>Remove every queued item that is not currently mining.</source>
-        <translation>Retirer chaque élément en file d'attente qui n'est pas en cours d'extraction.</translation>
+        <source>Remove every item from the queue.</source>
+        <translation>Supprimer tous les éléments de la file d'attente.</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
@@ -1313,12 +1333,16 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>livres audio</translation>
     </message>
     <message>
+        <source>Choose an audio file first.</source>
+        <translation>Choisissez d'abord un fichier audio.</translation>
+    </message>
+    <message>
         <source>Audio file not found: %1</source>
         <translation>Fichier audio introuvable : %1</translation>
     </message>
     <message>
-        <source>(none selected)</source>
-        <translation>(aucun sélectionné)</translation>
+        <source>Choose a subtitle file first.</source>
+        <translation>Choisissez d'abord un fichier de sous-titres.</translation>
     </message>
     <message>
         <source>Subtitle file not found: %1</source>
@@ -1339,8 +1363,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Vérifier les mots avant l'extraction</translation>
     </message>
     <message>
-        <source>Show the word-selection popup once per series, covering every episode's words</source>
-        <translation>Afficher la fenêtre de sélection des mots une fois par série, couvrant les mots de chaque épisode</translation>
+        <source>Pick which words get cards, once per series.</source>
+        <translation>Choisissez les mots qui deviennent des cartes, une fois par série.</translation>
     </message>
     <message>
         <source>Overall Progress</source>
@@ -1407,12 +1431,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Ce dossier de sous-titres de traduction n'existe plus.</translation>
     </message>
     <message>
-        <source>The translation folder is the subtitle folder.</source>
-        <translation>Le dossier de traduction est le dossier des sous-titres.</translation>
-    </message>
-    <message>
-        <source>Pick a separate folder for the translation subtitles.</source>
-        <translation>Choisissez un dossier différent pour les sous-titres de traduction.</translation>
+        <source>The translation folder must be different from the subtitle folder.</source>
+        <translation>Le dossier de traduction doit être différent du dossier de sous-titres.</translation>
     </message>
     <message>
         <source>Choose existing video and subtitle folders.</source>
@@ -1443,12 +1463,16 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>%1 a été ignoré : il lui manque un dossier.</translation>
     </message>
     <message>
+        <source>%1 series were skipped: folders missing.</source>
+        <translation>%1 séries ont été ignorées : dossiers manquants.</translation>
+    </message>
+    <message>
         <source>series</source>
         <translation>séries</translation>
     </message>
     <message>
-        <source>Every series in the queue is already complete. Select the ones you want to mine again, then click Run selected.</source>
-        <translation>Toutes les séries de la file d'attente sont déjà terminées. Sélectionnez celles que vous souhaitez extraire à nouveau, puis cliquez sur Exécuter la sélection.</translation>
+        <source>Every series is already complete. Select rows, then Run selected.</source>
+        <translation>Chaque série est déjà terminée. Sélectionnez des lignes, puis Exécuter la sélection.</translation>
     </message>
     <message>
         <source>No valid series in the queue to process.</source>
@@ -1475,16 +1499,16 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Démarrage du traitement par lot...</translation>
     </message>
     <message>
-        <source>Episode %1/%2: %3</source>
-        <translation>Épisode %1/%2 : %3</translation>
+        <source>Mining episode %1 of %2: %3</source>
+        <translation>Extraction de l'épisode %1 sur %2 : %3</translation>
     </message>
     <message>
         <source>Processing series: %1</source>
         <translation>Traitement de la série : %1</translation>
     </message>
     <message>
-        <source>Series %1/%2: %3</source>
-        <translation>Série %1/%2 : %3</translation>
+        <source>Mining series %1 of %2: %3</source>
+        <translation>Extraction de la série %1 sur %2 : %3</translation>
     </message>
     <message>
         <source>Failed — see log</source>
@@ -1507,19 +1531,19 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Interrompu à la fermeture d’Anki Miner</translation>
     </message>
     <message>
-        <source>No Items to Retry</source>
-        <translation>Aucun élément à réessayer</translation>
-    </message>
-    <message>
-        <source>No failed items eligible for retry.</source>
-        <translation>Aucun élément en échec éligible à un nouvel essai.</translation>
-    </message>
-    <message>
         <source>Retrying %1 failed items...</source>
         <translation>Nouvel essai de %1 éléments en échec...</translation>
     </message>
 </context><context>
     <name>BatchQueueWorkerThread</name>
+    <message>
+        <source>No subtitle file could be matched to any video file in those folders.</source>
+        <translation>Aucun fichier de sous-titres n'a pu être associé à un fichier vidéo dans ces dossiers.</translation>
+    </message>
+    <message>
+        <source>%1 of %2 episodes failed, starting with %3.</source>
+        <translation>%1 épisode(s) sur %2 ont échoué, à commencer par %3.</translation>
+    </message>
     <message numerus="yes">
         <source>Collecting words from %n episode(s) for review...</source>
         <translation>
@@ -1654,8 +1678,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Extraire du texte collé</translation>
     </message>
     <message>
-        <source>Paste any Japanese text and mine it straight into Anki cards.</source>
-        <translation>Collez n'importe quel texte japonais et extrayez-le directement en cartes Anki.</translation>
+        <source>Paste text in your mining language and mine it into Anki cards.</source>
+        <translation>Collez du texte dans votre langue d'extraction et extrayez-le en cartes Anki.</translation>
     </message>
     <message>
         <source>Mine subtitle files without video</source>
@@ -1758,8 +1782,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Gardez yt-dlp à jour</translation>
     </message>
     <message>
-        <source>Auto-update the bundled yt-dlp downloader, update it on demand, or point at your own binary.</source>
-        <translation>Mettez automatiquement à jour le téléchargeur yt-dlp intégré, mettez-le à jour à la demande, ou pointez vers votre propre binaire.</translation>
+        <source>Keep the yt-dlp downloader up to date, update it on demand, or point at your own binary.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine Japanese, Korean or Chinese</source>
@@ -2256,8 +2280,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Complétion des cartes</translation>
     </message>
     <message>
-        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data. For very large collections, run per-deck. Overwrite mode may need a follow-up Restyle to refresh card styling.</source>
-        <translation>Remplissez les champs manquants des notes extraites précédemment en utilisant les dictionnaires, sources de fréquence et données d’accent de hauteur actuellement installés. Pour les très grandes collections, exécutez l’opération par paquet. Le mode d’écrasement peut nécessiter une mise à jour du style ultérieure pour actualiser le style des cartes.</translation>
+        <source>Fill missing fields on notes you mined earlier, using the currently installed dictionaries, frequency sources and pitch data.</source>
+        <translation>Complétez les champs manquants des notes que vous avez extraites précédemment, à l'aide des dictionnaires, sources de fréquence et données d'accent de hauteur actuellement installés.</translation>
     </message>
     <message>
         <source>Deck:</source>
@@ -2308,6 +2332,10 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Écraser les valeurs existantes</translation>
     </message>
     <message>
+        <source>Overwritten cards may need a Restyle to refresh their styling.</source>
+        <translation>Les cartes écrasées peuvent nécessiter un Restylage pour actualiser leur style.</translation>
+    </message>
+    <message>
         <source>Scan Anki (read-only)</source>
         <translation>Analyser Anki (lecture seule)</translation>
     </message>
@@ -2340,8 +2368,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Le remplissage des cartes fonctionne sur le paquet Anki sélectionné.</translation>
     </message>
     <message>
-        <source>Map this field in Settings → Anki</source>
-        <translation>Associez ce champ dans Paramètres → Anki</translation>
+        <source>Map this field in Settings → Cards &amp; Anki</source>
+        <translation>Mappez ce champ dans Paramètres → Cartes et Anki</translation>
     </message>
     <message>
         <source>Couldn't fetch deck names from Anki — scanning all decks.</source>
@@ -2368,12 +2396,12 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>(vidé)</translation>
     </message>
     <message>
-        <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Anki.</source>
-        <translation>Aucune note ne correspond — type de note « {note_type} » dans le paquet « {deck} ». Vérifiez Paramètres → Anki.</translation>
+        <source>No notes matched — note type "{note_type}" in deck "{deck}". Check Settings → Cards &amp; Anki.</source>
+        <translation>Aucune note ne correspond — type de note « {note_type} » dans le paquet « {deck} ». Vérifiez Paramètres → Cartes et Anki.</translation>
     </message>
     <message>
-        <source>No notes matched — note type "{note_type}". Check Settings → Anki.</source>
-        <translation>Aucune note ne correspond — type de note « {note_type} ». Vérifiez Paramètres → Anki.</translation>
+        <source>No notes matched — note type "{note_type}". Check Settings → Cards &amp; Anki.</source>
+        <translation>Aucune note ne correspond — type de note « {note_type} ». Vérifiez Paramètres → Cartes et Anki.</translation>
     </message>
     <message>
         <source>{fields} field(s) across {notes} note(s) will be filled.</source>
@@ -2388,24 +2416,24 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Aucune nouvelle valeur n’a été trouvée pour les champs sélectionnés.</translation>
     </message>
     <message>
-        <source>Nothing to overwrite — the freshly computed values are identical to the existing content.</source>
-        <translation>Rien à écraser — les valeurs nouvellement calculées sont identiques au contenu existant.</translation>
+        <source>Nothing to overwrite — every computed value already matches the note.</source>
+        <translation>Rien à écraser — chaque valeur calculée correspond déjà à la note.</translation>
     </message>
     <message>
-        <source>Nothing to overwrite — the existing pitch was kept, see below.</source>
-        <translation>Rien à écraser — l’accent de hauteur existant a été conservé, voir ci-dessous.</translation>
+        <source>Nothing to overwrite — the existing pitch was kept.</source>
+        <translation>Rien à écraser — l'accent existant a été conservé.</translation>
     </message>
     <message>
-        <source>{count} field value(s) already up to date (identical to the computed value).</source>
-        <translation>{count} valeur(s) de champ déjà à jour (identique(s) à la valeur calculée).</translation>
+        <source>{count} field value(s) already up to date.</source>
+        <translation>{count} valeur(s) de champ déjà à jour.</translation>
     </message>
     <message>
-        <source>{count} pitch field(s) kept — the reading could only be guessed from the word alone, so overwriting could have applied the wrong homograph's accent. Map an Expression Reading or Furigana field to overwrite them.</source>
-        <translation>{count} champ(s) d’accent de hauteur conservé(s) — la lecture ne pouvait être devinée qu’à partir du mot seul ; l’écrasement aurait donc pu appliquer l’accent de hauteur du mauvais homographe. Mappez un champ Lecture de l’expression ou Furigana pour les écraser.</translation>
+        <source>{count} pitch field(s) kept — the reading was guessed, so the accent could be the wrong homograph's. Map an Expression Reading or Furigana field to overwrite them.</source>
+        <translation>{count} champ(s) d'accent conservé(s) — la lecture a été devinée, l'accent pourrait donc correspondre au mauvais homographe. Mappez un champ Lecture de l'expression ou Furigana pour les écraser.</translation>
     </message>
     <message>
-        <source>Not on this note type (stale mapping): {fields}. Fix in Settings → Anki field mapping.</source>
-        <translation>Absents de ce type de note (mappage obsolète) : {fields}. Corrigez le mappage des champs dans Paramètres → Anki.</translation>
+        <source>These fields are not on the note type: {fields}. Fix them in Settings → Cards &amp; Anki.</source>
+        <translation>Ces champs ne figurent pas dans le type de note : {fields}. Corrigez-les dans Paramètres → Cartes et Anki.</translation>
     </message>
     <message>
         <source>Skipped (resource not loaded): {fields}.</source>
@@ -2556,6 +2584,10 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Échec — voir le journal</translation>
     </message>
     <message>
+        <source>Finished with errors — see log</source>
+        <translation>Terminé avec des erreurs — voir le journal</translation>
+    </message>
+    <message>
         <source>Some files could not be condensed.</source>
         <translation>Certains fichiers n’ont pas pu être condensés.</translation>
     </message>
@@ -2588,8 +2620,8 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Entrée</translation>
     </message>
     <message>
-        <source>ffmpeg not found; install it or set its path in Settings to enable condensing.</source>
-        <translation>ffmpeg introuvable ; installez-le ou définissez son chemin dans les Paramètres pour activer la condensation.</translation>
+        <source>ffmpeg not found; install it and put it on PATH to enable condensing.</source>
+        <translation>ffmpeg introuvable ; installez-le et ajoutez-le au PATH pour activer la condensation.</translation>
     </message>
     <message>
         <source>Condense a video or audio file down to just its spoken dialogue.</source>
@@ -2640,8 +2672,8 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Piste audio :</translation>
     </message>
     <message>
-        <source>Japanese (auto-detect)</source>
-        <translation>Japonais (détection automatique)</translation>
+        <source>Auto-detect</source>
+        <translation>Détection automatique</translation>
     </message>
     <message>
         <source>Choose…</source>
@@ -2656,8 +2688,8 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Piste de sous-titres :</translation>
     </message>
     <message>
-        <source>Auto (external → embedded Japanese)</source>
-        <translation>Auto (externe → japonais intégré)</translation>
+        <source>Auto (external file, else embedded)</source>
+        <translation>Auto (fichier externe, sinon intégré)</translation>
     </message>
     <message>
         <source>Choose which embedded subtitle track to condense against.</source>
@@ -2760,10 +2792,6 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Condenser l'audio</translation>
     </message>
     <message>
-        <source>Open Media Settings</source>
-        <translation>Ouvrir les paramètres multimédia</translation>
-    </message>
-    <message>
         <source>Choose a media file first.</source>
         <translation>Choisissez d’abord un fichier multimédia.</translation>
     </message>
@@ -2776,8 +2804,8 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Aucune piste audio</translation>
     </message>
     <message>
-        <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
-        <translation>Aucune piste audio détectée. Vérifiez que ffprobe est installé et que le fichier contient de l'audio.</translation>
+        <source>This file has no audio tracks.</source>
+        <translation>Ce fichier n'a aucune piste audio.</translation>
     </message>
     <message>
         <source>Track %1</source>
@@ -2808,8 +2836,8 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Plusieurs fichiers média écriraient dans le même fichier de sortie.</translation>
     </message>
     <message>
-        <source>Output directory is not writable: </source>
-        <translation>Le dossier de sortie n'est pas accessible en écriture : </translation>
+        <source>Output folder is not writable.</source>
+        <translation>Le dossier de sortie n'est pas accessible en écriture.</translation>
     </message>
     <message>
         <source>Choose a media file before condensing.</source>
@@ -2836,20 +2864,24 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Aucun fichier multimédia n’a été trouvé dans ce dossier.</translation>
     </message>
     <message>
-        <source>That media folder could not be read.</source>
-        <translation>Ce dossier de médias n’a pas pu être lu.</translation>
+        <source>That media folder could not be scanned.</source>
+        <translation>Impossible d’analyser ce dossier multimédia.</translation>
     </message>
     <message>
         <source>Matched %1 of %2 media files.</source>
         <translation>%1 fichiers multimédias sur %2 associés.</translation>
     </message>
     <message>
-        <source>Warning: %1 media file(s) could not be matched.</source>
-        <translation>Avertissement : %1 fichier(s) multimédia(s) n'ont pas pu être associés.</translation>
+        <source>Unmatched media files: %1.</source>
+        <translation>Fichiers multimédias non associés : %1.</translation>
     </message>
     <message>
         <source>No subtitle file could be matched to any media file in those folders.</source>
         <translation>Aucun fichier de sous-titres n’a pu être associé à un fichier multimédia dans ces dossiers.</translation>
+    </message>
+    <message>
+        <source>Those folders could not be scanned.</source>
+        <translation>Impossible d’analyser ces dossiers.</translation>
     </message>
     <message>
         <source>Condensing file %1 of %2</source>
@@ -2878,24 +2910,20 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Condensation : %1 %</translation>
     </message>
     <message>
-        <source>Audio done; subtitle write failed: %1; tagging failed: %2</source>
-        <translation>Audio terminé ; échec de l'écriture des sous-titres : %1 ; échec de l'étiquetage : %2</translation>
+        <source>Subtitle write failed: %1; tagging failed: %2</source>
+        <translation>Échec de l'écriture des sous-titres : %1 ; échec de l'étiquetage : %2</translation>
     </message>
     <message>
-        <source>Audio done; subtitle write failed: %1</source>
-        <translation>Audio terminé ; échec de l'écriture des sous-titres : %1</translation>
+        <source>Subtitle write failed: %1</source>
+        <translation>Échec de l'écriture des sous-titres : %1</translation>
     </message>
     <message>
-        <source>Audio done; tagging failed: %1</source>
-        <translation>Audio terminé ; échec de l'étiquetage : %1</translation>
+        <source>Tagging failed: %1</source>
+        <translation>Échec de l'étiquetage : %1</translation>
     </message>
     <message>
         <source>Done</source>
         <translation>Terminé</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Annulé</translation>
     </message>
     <message>
         <source>No subtitle source found for %1</source>
@@ -2932,8 +2960,8 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Téléchargement des bibliothèques GPU…</translation>
     </message>
     <message>
-        <source>GPU libraries installed successfully.</source>
-        <translation>Bibliothèques GPU installées avec succès.</translation>
+        <source>GPU libraries installed.</source>
+        <translation>Bibliothèques GPU installées.</translation>
     </message>
 </context><context>
     <name>CurrentJobStrip</name>
@@ -2952,6 +2980,10 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
     <message>
         <source>%1 / %2</source>
         <translation>%1 / %2</translation>
+    </message>
+    <message>
+        <source>Elapsed %1</source>
+        <translation>Écoulé : %1</translation>
     </message>
     <message>
         <source>%1 (%2 of %3)</source>
@@ -3052,10 +3084,6 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Annuler</translation>
     </message>
     <message>
-        <source>Cancel the current operation</source>
-        <translation>Annuler l'opération en cours</translation>
-    </message>
-    <message>
         <source>Results</source>
         <translation>Résultats</translation>
     </message>
@@ -3108,16 +3136,16 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Analyse du corpus…</translation>
     </message>
     <message>
-        <source>Preview ready — %1 cards, ~%2% coverage. Click 'Build Deck' to proceed.</source>
-        <translation>Aperçu prêt — %1 cartes, ~%2 % de couverture. Cliquez sur « Construire le paquet » pour continuer.</translation>
+        <source>Preview ready — %1 cards; the candidate words cover ~%2% of tokens.</source>
+        <translation>Aperçu prêt — %1 cartes ; les mots candidats couvrent ~%2 % des occurrences.</translation>
     </message>
     <message>
         <source>Building deck '%1'…</source>
         <translation>Construction du paquet « %1 »…</translation>
     </message>
     <message>
-        <source>Episode %1/%2: %3</source>
-        <translation>Épisode %1/%2 : %3</translation>
+        <source>Mining episode %1 of %2: %3</source>
+        <translation>Extraction de l'épisode %1 sur %2 : %3</translation>
     </message>
     <message>
         <source>Processing: %1</source>
@@ -3128,8 +3156,8 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>  %1 : %2 carte(s) créée(s)</translation>
     </message>
     <message>
-        <source>Done! Created %1 cards (~%2% target coverage) in deck '%3'.</source>
-        <translation>Terminé ! %1 cartes créées (~%2 % de couverture cible) dans le paquet « %3 ».</translation>
+        <source>Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens.</source>
+        <translation>%1 cartes créées dans le paquet « %3 » ; les mots candidats couvrent ~%2 % des occurrences.</translation>
     </message>
     <message>
         <source>Complete — %1 cards created</source>
@@ -3138,10 +3166,6 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
     <message>
         <source>Cancelling…</source>
         <translation>Annulation…</translation>
-    </message>
-    <message>
-        <source>Error: %1</source>
-        <translation>Erreur : %1</translation>
     </message>
     <message>
         <source>Failed — see log</source>
@@ -3158,8 +3182,8 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Filtre de paquet</translation>
     </message>
     <message>
-        <source>Copy the worth-learning part of a premade deck into a new deck. Notes are kept or dropped by your filters — known words, frequency band, blacklist, script type and name wordsets (Settings → Filtering). The source deck is not modified.</source>
-        <translation>Copiez la partie utile à apprendre d'un paquet préexistant vers un nouveau paquet. Les notes sont conservées ou rejetées selon vos filtres — mots connus, plage de fréquence, liste noire, type d'écriture et ensembles de noms (Paramètres → Filtrage). Le paquet source n'est pas modifié.</translation>
+        <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Filtering; the source deck is not modified.</source>
+        <translation>Copiez dans un nouveau paquet la partie utile à apprendre d'un paquet prêt à l'emploi. Les filtres proviennent de Paramètres → Filtrage ; le paquet source n'est pas modifié.</translation>
     </message>
     <message>
         <source>Source deck:</source>
@@ -3302,8 +3326,8 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>doublon dans le paquet</translation>
     </message>
     <message>
-        <source>already known or carded</source>
-        <translation>déjà connu ou déjà en carte</translation>
+        <source>already known or in Anki</source>
+        <translation>déjà connu ou dans Anki</translation>
     </message>
     <message>
         <source>no frequency rank</source>
@@ -3476,8 +3500,8 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Annulé avant les dictionnaires restants.</translation>
     </message>
     <message>
-        <source>Done.</source>
-        <translation>Terminé.</translation>
+        <source>Nothing was imported.</source>
+        <translation>Rien n'a été importé.</translation>
     </message>
     <message>
         <source>Dictionaries added</source>
@@ -3496,20 +3520,20 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Annulation…</translation>
     </message>
     <message>
-        <source>The import worker finished without a completion result.</source>
-        <translation>Le processus d'importation s'est terminé sans résultat.</translation>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>L'import s'est arrêté avant la fin. Réessayez.</translation>
     </message>
     <message>
-        <source>That folder could not be scanned.</source>
-        <translation>Impossible d’analyser ce dossier.</translation>
+        <source>Installed dictionaries could not be checked.</source>
+        <translation>Impossible de vérifier les dictionnaires installés.</translation>
     </message>
     <message>
-        <source>No recoverable source was found for '%1'. Restore its saved source.zip or configured JMdict XML and try again.</source>
-        <translation>Aucune source récupérable n'a été trouvée pour '%1'. Restaurez son fichier source.zip enregistré ou le XML JMdict configuré, puis réessayez.</translation>
+        <source>No saved copy of '%1' is left — add the dictionary again.</source>
+        <translation>Aucune copie enregistrée de « %1 » ne reste — ajoutez de nouveau le dictionnaire.</translation>
     </message>
     <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Les ressources indexées sont utilisées par l'extraction, le préchauffage au démarrage ou la complétion des cartes. Attendez la fin de la tâche active, puis réessayez.</translation>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Une autre tâche utilise les ressources indexées — réessayez une fois qu'elle est terminée.</translation>
     </message>
     <message>
         <source>Dictionary re-imported</source>
@@ -3544,13 +3568,9 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Impossible de réimporter les dictionnaires.</translation>
     </message>
     <message>
-        <source>No dictionaries eligible for automatic repair were found.
-
-Skipped (not eligible for automatic repair; use per-row Re-import…):
+        <source>Skipped (no usable saved copy — add each one again):
 </source>
-        <translation>Aucun dictionnaire éligible à la réparation automatique n'a été trouvé.
-
-Ignorés (non éligibles à la réparation automatique ; utilisez Réimporter… pour chaque ligne) :
+        <translation>Ignorés (aucune copie enregistrée utilisable — ajoutez chacun de nouveau) :
 </translation>
     </message>
     <message>
@@ -3562,12 +3582,16 @@ Ignorés (non éligibles à la réparation automatique ; utilisez Réimporter�
         <translation>Rien à réimporter</translation>
     </message>
     <message>
-        <source>Reimported %1 dictionary/dictionaries:</source>
-        <translation>%1 dictionnaire(s) réimporté(s) :</translation>
+        <source>Reimported dictionaries (%1):</source>
+        <translation>Dictionnaires réimportés (%1) :</translation>
     </message>
     <message>
-        <source>Skipped (not eligible for automatic repair; use per-row Re-import…):</source>
-        <translation>Ignorés (non éligibles à la réparation automatique ; utilisez Réimporter… pour chaque ligne) :</translation>
+        <source>Skipped (no usable saved copy — add each one again):</source>
+        <translation>Ignorés (aucune copie enregistrée utilisable — ajoutez chacun de nouveau) :</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>Rien n'a été réimporté.</translation>
     </message>
     <message>
         <source>Reimport All</source>
@@ -3600,6 +3624,10 @@ Ignorés (non éligibles à la réparation automatique ; utilisez Réimporter�
 </context><context>
     <name>DictionarySettingsPanel</name>
     <message>
+        <source>Dictionaries</source>
+        <translation>Dictionnaires</translation>
+    </message>
+    <message>
         <source>Loading…</source>
         <translation>Chargement…</translation>
     </message>
@@ -3612,20 +3640,20 @@ Ignorés (non éligibles à la réparation automatique ; utilisez Réimporter�
         <translation>Impossible de vérifier les dictionnaires installés.</translation>
     </message>
     <message>
-        <source>The dictionary was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
-        <translation>Le dictionnaire a été retiré de la chaîne, mais ses fichiers ont été conservés car il n’a pas été possible de prouver que le dossier appartient à Anki Miner.</translation>
+        <source>The dictionary was removed from the chain; no files were deleted from disk.</source>
+        <translation>Le dictionnaire a été retiré de la chaîne ; aucun fichier n'a été supprimé du disque.</translation>
     </message>
     <message>
         <source>%1 could not be removed. Its files are intact — try again.</source>
         <translation>Impossible de supprimer %1. Ses fichiers sont intacts — réessayez.</translation>
     </message>
     <message>
-        <source>%1 was only partly removed. Re-import or repair this dictionary before retrying.</source>
-        <translation>%1 n’a été supprimé que partiellement. Réimportez ou réparez ce dictionnaire avant de réessayer.</translation>
+        <source>%1 was only partly removed. Re-import it before retrying.</source>
+        <translation>%1 n'a été que partiellement retiré. Réimportez-le avant de réessayer.</translation>
     </message>
     <message>
-        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
-        <translation>Impossible de restaurer %1 après l’échec de la mise à jour de ses paramètres. Redémarrez Anki Miner avant de réessayer.</translation>
+        <source>%1 could not be removed: its settings could not be saved. Restart Anki Miner and try again.</source>
+        <translation>%1 n'a pas pu être retiré : ses paramètres n'ont pas pu être enregistrés. Redémarrez Anki Miner et réessayez.</translation>
     </message>
     <message>
         <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
@@ -3660,16 +3688,20 @@ Ignorés (non éligibles à la réparation automatique ; utilisez Réimporter�
         <translation>Tout réimporter</translation>
     </message>
     <message>
+        <source>Rebuild every dictionary in the list from the zip saved when it was imported. Needed after an app upgrade changes the index format.</source>
+        <translation>Reconstruit chaque dictionnaire de la liste à partir du zip enregistré lors de son importation. Nécessaire après qu'une mise à niveau de l'application modifie le format d'index.</translation>
+    </message>
+    <message>
         <source>Restore from Disk</source>
         <translation>Restaurer depuis le disque</translation>
     </message>
     <message>
-        <source>Re-add dictionaries found in the storage folder that aren't in the list above (e.g. after a settings reset). No re-import needed.</source>
-        <translation>Réajouter les dictionnaires trouvés dans le dossier de stockage qui ne figurent pas dans la liste ci-dessus (par ex. après une réinitialisation des paramètres). Aucune réimportation nécessaire.</translation>
+        <source>Re-add dictionaries found in the storage folder that aren't in the list above. No re-import needed.</source>
+        <translation>Rajoute les dictionnaires trouvés dans le dossier de stockage qui ne figurent pas dans la liste ci-dessus. Aucune réimportation nécessaire.</translation>
     </message>
     <message>
-        <source>Tried top to bottom — the first dictionary with an entry for a word wins and fills MainDefinition.</source>
-        <translation>Essayés de haut en bas — le premier dictionnaire possédant une entrée pour un mot l'emporte et remplit MainDefinition.</translation>
+        <source>Tried top to bottom — the first dictionary with an entry for a word wins.</source>
+        <translation>Essayés de haut en bas — le premier dictionnaire ayant une entrée pour un mot l'emporte.</translation>
     </message>
     <message>
         <source>Add dictionary…</source>
@@ -3680,8 +3712,8 @@ Ignorés (non éligibles à la réparation automatique ; utilisez Réimporter�
         <translation>Supprimer le dictionnaire</translation>
     </message>
     <message>
-        <source>Remove the selected dictionary and delete its files</source>
-        <translation>Supprimer le dictionnaire sélectionné et ses fichiers</translation>
+        <source>Remove the selected dictionary</source>
+        <translation>Retirer le dictionnaire sélectionné</translation>
     </message>
     <message>
         <source>Move up</source>
@@ -3708,8 +3740,8 @@ Ignorés (non éligibles à la réparation automatique ; utilisez Réimporter�
         <translation>non installé</translation>
     </message>
     <message>
-        <source>⚠ missing — re-import</source>
-        <translation>⚠ manquant — réimporter</translation>
+        <source>⚠ missing — add again</source>
+        <translation>⚠ manquant — ajoutez-le de nouveau</translation>
     </message>
     <message>
         <source>Jisho (online fallback)</source>
@@ -3724,8 +3756,8 @@ Ignorés (non éligibles à la réparation automatique ; utilisez Réimporter�
         <translation>⚠ débit limité, plus lent</translation>
     </message>
     <message>
-        <source>⚠ re-import to refresh</source>
-        <translation>⚠ réimporter pour actualiser</translation>
+        <source>⚠ re-import required (app upgrade)</source>
+        <translation>⚠ réimportation requise (mise à niveau de l'application)</translation>
     </message>
     <message>
         <source>Enabled</source>
@@ -3746,22 +3778,22 @@ Ignorés (non éligibles à la réparation automatique ; utilisez Réimporter�
     <message>
         <source>Remove '%1' and delete its files from disk?
 
-This cannot be undone. You would need to reimport from the source zip.</source>
-        <translation>Supprimer « %1 » et effacer ses fichiers du disque ?
+This cannot be undone. Adding it back needs the original zip.</source>
+        <translation>Retirer « %1 » et supprimer ses fichiers du disque ?
 
-Cette action est irréversible. Vous devriez réimporter depuis le zip source.</translation>
+Cette action est irréversible. Pour l'ajouter à nouveau, il faudra le zip d'origine.</translation>
     </message>
     <message>
         <source>Remove '%1' from the dictionary list?
 
-Files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
-        <translation>Supprimer '%1' de la liste des dictionnaires ?
+No files on disk are deleted.</source>
+        <translation>Retirer « %1 » de la liste des dictionnaires ?
 
-Les fichiers sur le disque seront laissés intacts, car il n'a pas été possible de prouver que le dossier appartient à Anki Miner.</translation>
+Aucun fichier sur le disque n'est supprimé.</translation>
     </message>
     <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Les ressources indexées sont utilisées par l'extraction, le préchauffage au démarrage ou la complétion des cartes. Attendez la fin de la tâche active, puis réessayez.</translation>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Une autre tâche utilise les ressources indexées — réessayez une fois qu'elle est terminée.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -3824,6 +3856,18 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
 </context><context>
     <name>DownloadTab</name>
     <message>
+        <source>yt-dlp is not installed, so downloads cannot run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download yt-dlp</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading yt-dlp…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Progress</source>
         <translation>Progression</translation>
     </message>
@@ -3860,6 +3904,10 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Échec — voir le journal</translation>
     </message>
     <message>
+        <source>Finished with errors — see log</source>
+        <translation>Terminé avec des erreurs — voir le journal</translation>
+    </message>
+    <message>
         <source>Some URLs could not be downloaded.</source>
         <translation>Certaines URL n’ont pas pu être téléchargées.</translation>
     </message>
@@ -3886,10 +3934,6 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     <message>
         <source>URLs</source>
         <translation>URL</translation>
-    </message>
-    <message>
-        <source>yt-dlp not found. Install or update it in Settings → YouTube to enable downloads.</source>
-        <translation>yt-dlp est introuvable. Installez-le ou mettez-le à jour dans Paramètres → YouTube pour activer les téléchargements.</translation>
     </message>
     <message>
         <source>Download videos or audio from any site yt-dlp supports, without mining.</source>
@@ -4064,10 +4108,6 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Placez le curseur sur la ligne d'URL de la liste de lecture.</translation>
     </message>
     <message>
-        <source>Expand Playlist works on the line the text cursor is on.</source>
-        <translation>Développer la liste de lecture agit sur la ligne où se trouve le curseur de texte.</translation>
-    </message>
-    <message>
         <source>Resolving playlist…</source>
         <translation>Résolution de la liste de lecture…</translation>
     </message>
@@ -4126,12 +4166,12 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
 </context><context>
     <name>EpisodeProcessor</name>
     <message>
-        <source>Audio pack '%1' is slow to read — audio skipped for those words. Its folder is probably on a cloud-synced, network or external drive: move it to a local drive, then re-import the pack (Settings -&gt; Audio -&gt; Re-import…).</source>
-        <translation>Le pack audio « %1 » est lent à lire — l'audio a été ignoré pour ces mots. Son dossier se trouve probablement sur un disque synchronisé dans le cloud, un disque réseau ou un disque externe : déplacez-le vers un disque local, puis réimportez le pack (Paramètres -&gt; Audio -&gt; Réimporter…).</translation>
+        <source>Audio pack '%1' reads too slowly — audio skipped; move its folder to a local drive and re-import it.</source>
+        <translation>Le pack audio « %1 » se lit trop lentement — audio ignoré ; déplacez son dossier vers un disque local et réimportez-le.</translation>
     </message>
     <message>
-        <source>Word-audio source is responding too slowly — audio skipped for those words. Reorder or disable it in Settings -&gt; Audio if this keeps happening.</source>
-        <translation>La source d'audio de mot répond trop lentement — audio ignoré pour ces mots. Réorganisez-la ou désactivez-la dans Paramètres -&gt; Audio si cela se reproduit.</translation>
+        <source>Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Audio.</source>
+        <translation>La source audio des mots est trop lente — audio ignoré ; réorganisez-la ou désactivez-la dans Paramètres → Audio.</translation>
     </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
@@ -4182,8 +4222,16 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Audio de phrase : %1/%2 phrases</translation>
     </message>
     <message>
+        <source>This document contains no %1 text</source>
+        <translation>Ce document ne contient aucun texte %1</translation>
+    </message>
+    <message>
         <source>Subtitles contain no %1 text</source>
         <translation>Le fichier de sous-titres ne contient aucun texte en %1</translation>
+    </message>
+    <message>
+        <source>No words found in this document</source>
+        <translation>Aucun mot trouvé dans ce document</translation>
     </message>
     <message>
         <source>No words found in subtitles</source>
@@ -4194,12 +4242,12 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Tous les %1 nouveau(x) mot(s) ont été supprimés par les filtres actifs — aucune carte créée</translation>
     </message>
     <message>
-        <source>No cards created. Every word is already in Anki.</source>
-        <translation>Aucune carte créée. Chaque mot est déjà dans Anki.</translation>
+        <source>No cards created. Every word is already known.</source>
+        <translation>Aucune carte créée. Chaque mot est déjà connu.</translation>
     </message>
     <message>
-        <source>Ambiguous reading review required for %1 word(s); current readings kept</source>
-        <translation>Révision des lectures ambiguës requise pour %1 mot(s) ; lectures actuelles conservées</translation>
+        <source>%1 word(s) have more than one reading — the parsed reading was kept.</source>
+        <translation>%1 mot(s) ont plusieurs lectures — la lecture analysée a été conservée.</translation>
     </message>
     <message>
         <source>Parsing subtitles</source>
@@ -4225,8 +4273,8 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Filtrage selon le vocabulaire connu</translation>
     </message>
     <message>
-        <source>Known-words filter bypassed (include everything mode)</source>
-        <translation>Filtre des mots connus contourné (mode tout inclure)</translation>
+        <source>Including words already known</source>
+        <translation>Y compris les mots déjà connus</translation>
     </message>
     <message>
         <source>Known word DB synced: %1 new words (%2 total)</source>
@@ -4244,23 +4292,31 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Compréhension : %1 % des mots déjà connus</translation>
     </message>
     <message numerus="yes">
-        <source>All %n word(s) from this subtitle are already in Anki — no new cards created</source>
+        <source>All %n word(s) from this run are already known — no new cards created</source>
         <translation>
-            <numerusform>%n mot de ce sous-titre est déjà dans Anki — aucune nouvelle carte créée</numerusform>
-            <numerusform>%n mots de ce sous-titre sont déjà dans Anki — aucune nouvelle carte créée</numerusform>
+            <numerusform>%n mot de cette exécution est déjà connu — aucune nouvelle carte créée</numerusform>
+            <numerusform>%n mots de cette exécution sont déjà connus — aucune nouvelle carte créée</numerusform>
         </translation>
     </message>
     <message>
-        <source>Skipped %1 words with no definition found: %2%3</source>
-        <translation>%1 mots ignorés sans définition trouvée : %2%3</translation>
+        <source>Skipped %1 words missing from your offline dictionaries: %2%3</source>
+        <translation>%1 mots manquants dans vos dictionnaires hors ligne ignorés : %2%3</translation>
     </message>
     <message>
-        <source>Frequency cutoff set but no frequency source is loaded — cutoff ignored (add a frequency source in Settings).</source>
-        <translation>Seuil de fréquence défini mais aucune source de fréquence n'est chargée — seuil ignoré (ajoutez une source de fréquence dans les Paramètres).</translation>
+        <source>Frequency cutoff ignored — no ranked frequency source is loaded (Settings → Frequency).</source>
+        <translation>Seuil de fréquence ignoré — aucune source de fréquence classée n'est chargée (Paramètres → Fréquence).</translation>
     </message>
     <message>
         <source>Word list filter: removed %1 words</source>
         <translation>Filtre de liste de mots : %1 mots supprimés</translation>
+    </message>
+    <message>
+        <source>hiragana-only</source>
+        <translation>uniquement en hiragana</translation>
+    </message>
+    <message>
+        <source>katakana-only</source>
+        <translation>uniquement en katakana</translation>
     </message>
     <message>
         <source>Script-type filter: removed %1 %2 words</source>
@@ -4310,12 +4366,12 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Extraction du média</translation>
     </message>
     <message>
-        <source>Using WebP for animated screenshots — this ffmpeg build has no AVIF (libsvtav1) encoder.</source>
-        <translation>Utilisation de WebP pour les captures d'écran animées — cette version de ffmpeg n'a pas d'encodeur AVIF (libsvtav1).</translation>
+        <source>Using WebP for animated screenshots — this ffmpeg build has no AVIF encoder.</source>
+        <translation>Utilisation de WebP pour les captures d'écran animées — cette version d'ffmpeg n'a pas d'encodeur AVIF.</translation>
     </message>
     <message>
-        <source>Animated screenshots unavailable — this ffmpeg build has no AVIF or WebP encoder; switch to static screenshots in Settings.</source>
-        <translation>Captures d'écran animées indisponibles — cette version de ffmpeg n'a pas d'encodeur AVIF ni WebP ; passez aux captures d'écran statiques dans les Paramètres.</translation>
+        <source>Animated screenshots unavailable — this ffmpeg build has no AVIF or WebP encoder (Settings → Card Media).</source>
+        <translation>Captures d'écran animées indisponibles — cette version d'ffmpeg n'a pas d'encodeur AVIF ni WebP (Paramètres → Médias des cartes).</translation>
     </message>
     <message>
         <source>Fetching definitions</source>
@@ -4336,11 +4392,15 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <source>Creating Anki cards</source>
         <translation>Création des cartes Anki</translation>
     </message>
+    <message>
+        <source>Skipped %1 words with no definition found: %2%3</source>
+        <translation>%1 mots ignorés sans définition trouvée : %2%3</translation>
+    </message>
     <message numerus="yes">
-        <source>Successfully created %n card(s)</source>
+        <source>Created %n card(s)</source>
         <translation>
-            <numerusform>%n carte créée avec succès</numerusform>
-            <numerusform>%n cartes créées avec succès</numerusform>
+            <numerusform>%n carte créée</numerusform>
+            <numerusform>%n cartes créées</numerusform>
         </translation>
     </message>
     <message numerus="yes">
@@ -4358,8 +4418,8 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         </translation>
     </message>
     <message>
-        <source>Error: %1</source>
-        <translation>Erreur : %1</translation>
+        <source>%1</source>
+        <translation>%1</translation>
     </message>
     <message>
         <source>No words selected for card creation</source>
@@ -4373,8 +4433,8 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         </translation>
     </message>
     <message>
-        <source>No media extracted successfully</source>
-        <translation>Aucun média extrait avec succès</translation>
+        <source>Could not extract media for any word — no cards created</source>
+        <translation>Les médias n'ont pu être extraits pour aucun mot — aucune carte créée</translation>
     </message>
     <message numerus="yes">
         <source>Extracted media for %n word(s)</source>
@@ -4413,6 +4473,10 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     <message>
         <source>Skipped unsafe image archive %1 — its cards have no page image</source>
         <translation>Archive d'images non sûre %1 ignorée — ses cartes n'ont pas d'image de page</translation>
+    </message>
+    <message>
+        <source>Could not open image archive %1 — its cards have no page image</source>
+        <translation>Impossible d'ouvrir l'archive d'images %1 — ses cartes n'ont pas d'image de page</translation>
     </message>
     <message>
         <source>Skipped corrupt image archive %1 — its cards have no page image</source>
@@ -4505,9 +4569,9 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Exportation terminée</translation>
     </message>
     <message>
-        <source>Successfully exported %1 words to:
+        <source>Exported %1 words to:
 %2</source>
-        <translation>%1 mots exportés avec succès vers :
+        <translation>%1 mots exportés vers :
 %2</translation>
     </message>
     <message>
@@ -4629,6 +4693,10 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     <message>
         <source>Skip words that contain any hanja character, keeping the deck to plain hangul vocabulary.</source>
         <translation>Ignorer les mots contenant un caractère hanja, en gardant dans le paquet le vocabulaire uniquement en hangul.</translation>
+    </message>
+    <message>
+        <source>Filtering</source>
+        <translation>Filtrage</translation>
     </message>
     <message>
         <source>Word Frequency</source>
@@ -4915,8 +4983,8 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Activer le filtre de longueur de phrase</translation>
     </message>
     <message>
-        <source>Drop words whose example sentence exceeds the audio-duration or character caps below. Either cap set to 0 means no limit for that dimension. Reduces deck size and speeds up reviews.</source>
-        <translation>Élimine les mots dont la phrase d'exemple dépasse les limites de durée audio ou de caractères ci-dessous. Une limite définie à 0 signifie aucune limite pour cette dimension. Réduit la taille du paquet et accélère les révisions.</translation>
+        <source>Drops words whose example sentence exceeds either cap below.</source>
+        <translation>Rejette les mots dont la phrase d'exemple dépasse l'une des limites ci-dessous.</translation>
     </message>
     <message>
         <source> s</source>
@@ -4947,8 +5015,8 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Extraire des phrases complètes sur plusieurs lignes de sous-titres</translation>
     </message>
     <message>
-        <source>Joins the neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence, its timings and its audio instead of a fragment. Every subtitle-timed run uses it — video, YouTube, batch, audiobook; reading sources have no subtitle timings and ignore it. The Word Curator's line buttons still adjust any card by hand.</source>
-        <translation>Joint les lignes de sous-titres voisines lorsqu'une ligne ne termine pas une phrase, afin que la carte porte la phrase entière, ses horodatages et son audio au lieu d'un fragment. Chaque extraction avec sous-titres l'utilise — vidéo, YouTube, lot, livre audio ; les sources de lecture n'ont pas d'horodatages de sous-titres et l'ignorent. Les boutons de ligne du Curateur de mots permettent toujours d'ajuster une carte à la main.</translation>
+        <source>Joins neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence instead of a fragment. Reading sources have no subtitle timings and ignore it.</source>
+        <translation>Fusionne les lignes de sous-titres voisines lorsqu'une ligne ne termine pas une phrase, afin que la carte porte la phrase entière plutôt qu'un fragment. Les sources de lecture n'ont pas de minutage de sous-titres et l'ignorent.</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -5009,6 +5077,10 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
 </context><context>
     <name>FrequencySettingsPanel</name>
     <message>
+        <source>Frequency</source>
+        <translation>Fréquence</translation>
+    </message>
+    <message>
         <source>Loading…</source>
         <translation>Chargement…</translation>
     </message>
@@ -5021,20 +5093,20 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Impossible de vérifier les sources de fréquence installées.</translation>
     </message>
     <message>
-        <source>The frequency source was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
-        <translation>La source de fréquence a été retirée de la chaîne, mais ses fichiers ont été conservés car il n’a pas été possible de prouver que le dossier appartient à Anki Miner.</translation>
+        <source>The frequency source was removed from the chain; no files were deleted from disk.</source>
+        <translation>La source de fréquence a été retirée de la chaîne ; aucun fichier n'a été supprimé du disque.</translation>
     </message>
     <message>
         <source>%1 could not be removed. Its files are intact — try again.</source>
         <translation>Impossible de supprimer %1. Ses fichiers sont intacts — réessayez.</translation>
     </message>
     <message>
-        <source>%1 was only partly removed. Re-import or repair this frequency source before retrying.</source>
-        <translation>%1 n’a été supprimée que partiellement. Réimportez ou réparez cette source de fréquence avant de réessayer.</translation>
+        <source>%1 was only partly removed. Re-import it before retrying.</source>
+        <translation>%1 n'a été que partiellement retiré. Réimportez-le avant de réessayer.</translation>
     </message>
     <message>
-        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
-        <translation>Impossible de restaurer %1 après l’échec de la mise à jour de ses paramètres. Redémarrez Anki Miner avant de réessayer.</translation>
+        <source>%1 could not be removed: its settings could not be saved. Restart Anki Miner and try again.</source>
+        <translation>%1 n'a pas pu être retiré : ses paramètres n'ont pas pu être enregistrés. Redémarrez Anki Miner et réessayez.</translation>
     </message>
     <message>
         <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
@@ -5093,6 +5165,10 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
         <translation>Descendre</translation>
     </message>
     <message>
+        <source>Move down in the card's source list</source>
+        <translation>Descendre dans la liste des sources de la carte</translation>
+    </message>
+    <message>
         <source>word-based</source>
         <translation>basé sur les mots</translation>
     </message>
@@ -5131,24 +5207,22 @@ Les fichiers sur le disque seront laissés intacts, car il n'a pas été possibl
     <message>
         <source>Remove '%1' from the frequency chain?
 
-Only the index files are deleted.
-This cannot be undone. You would need to re-import to use this source again.</source>
-        <translation>Supprimer « %1 » de la chaîne de fréquence ?
+Only the index files are deleted. Adding it back needs the source file.</source>
+        <translation>Retirer « %1 » de la chaîne de fréquence ?
 
-Seuls les fichiers d'index sont supprimés.
-Cette action est irréversible. Vous devrez réimporter pour réutiliser cette source.</translation>
+Seuls les fichiers d'index sont supprimés. Pour l'ajouter à nouveau, il faudra le fichier source.</translation>
     </message>
     <message>
         <source>Remove '%1' from the frequency chain?
 
-Index files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
-        <translation>Supprimer '%1' de la chaîne de fréquence ?
+No index files are deleted.</source>
+        <translation>Retirer « %1 » de la chaîne de fréquence ?
 
-Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été possible de prouver que le dossier appartient à Anki Miner.</translation>
+Aucun fichier d'index n'est supprimé.</translation>
     </message>
     <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Les ressources indexées sont utilisées par l'extraction, le préchauffage au démarrage ou la complétion des cartes. Attendez la fin de la tâche active, puis réessayez.</translation>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Une autre tâche utilise les ressources indexées — réessayez une fois qu'elle est terminée.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -5161,7 +5235,7 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
 </context><context>
     <name>GUIPresenter</name>
     <message>
-        <source>Step %1 of %2 — %3</source>
+        <source>Stage %1 of %2 — %3</source>
         <translation>Étape %1 sur %2 — %3</translation>
     </message>
 </context><context>
@@ -5179,8 +5253,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Bascule tous les paramètres d’Anki Miner vers le profil sélectionné.</translation>
     </message>
     <message>
-        <source>Active settings profile. Switching swaps every setting; pick 'Manage profiles…' to add, rename or remove them.</source>
-        <translation>Profil de paramètres actif. Le changement échange tous les paramètres ; choisissez « Gérer les profils… » pour les ajouter, renommer ou supprimer.</translation>
+        <source>Active settings profile. Switching swaps every setting.</source>
+        <translation>Profil de paramètres actif. Le changement remplace tous les paramètres.</translation>
     </message>
     <message>
         <source>Theme:</source>
@@ -5195,8 +5269,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Parcourir les %1 thèmes…</translation>
     </message>
     <message>
-        <source>Active theme. This list shows your favorites; pick 'Browse all themes…' to see previews.</source>
-        <translation>Thème actif. Cette liste affiche vos favoris ; choisissez « Parcourir tous les thèmes… » pour voir les aperçus.</translation>
+        <source>Active theme. Only your favorites are listed.</source>
+        <translation>Thème actif. Seuls vos favoris sont listés.</translation>
     </message>
     <message>
         <source>Manage profiles…</source>
@@ -5235,8 +5309,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Mots connus locaux</translation>
     </message>
     <message>
-        <source>Words you added from the Word Curator — ignored on every run, kept across cache rebuilds, exportable for re-import into jiten.moe. Import accepts jpdb, Migaku and AnkiMorphs exports or plain word lists.</source>
-        <translation>Mots ajoutés depuis le Curateur de mots — ignorés à chaque exécution, conservés lors des reconstructions du cache, exportables pour réimportation dans jiten.moe. L'import accepte les exports jpdb, Migaku et AnkiMorphs ainsi que les listes de mots simples.</translation>
+        <source>Words you added from the Word Curator. Ignored on every run and kept across cache rebuilds.</source>
+        <translation>Mots que vous avez ajoutés depuis le Curateur de mots. Ignorés à chaque exécution et conservés lors des reconstructions du cache.</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -5263,8 +5337,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Fermer</translation>
     </message>
     <message>
-        <source>%1 user word(s) · %2 cached from Anki</source>
-        <translation>%1 mot(s) utilisateur · %2 en cache depuis Anki</translation>
+        <source>User words: %1 · cached from Anki: %2</source>
+        <translation>Mots utilisateur : %1 · en cache depuis Anki : %2</translation>
     </message>
     <message>
         <source>jpdb review export</source>
@@ -5299,53 +5373,61 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Listes de mots connus (*.csv *.txt *.json);;Tous les fichiers (*)</translation>
     </message>
     <message>
-        <source>Detected: %1 — this file has no known/learning status; all %2 entries will be imported.
+        <source>Detected: %1 — every entry is imported.
 
-Add %3 word(s) to your known list?</source>
-        <translation>Détecté : %1 — ce fichier ne contient aucun statut connu/en apprentissage ; les %2 entrées seront toutes importées.
+Words to add: %2. Continue?</source>
+        <translation>Détecté : %1 — chaque entrée est importée.
 
-Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
+Mots à ajouter : %2. Continuer ?</translation>
     </message>
     <message>
         <source>Detected: %1 — %2 entries, %3 qualify as known.
 
-Add %3 word(s) to your known list?</source>
-        <translation>Détecté : %1 — %2 entrées, dont %3 considérées comme connues.
+Words to add: %3. Continue?</source>
+        <translation>Détecté : %1 — %2 entrées, %3 comptent comme connues.
 
-Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
+Mots à ajouter : %3. Continuer ?</translation>
     </message>
     <message>
         <source>Import Complete</source>
         <translation>Importation terminée</translation>
     </message>
     <message>
-        <source>Added %1 word(s) to your list. %2 were already in it.</source>
-        <translation>%1 mot(s) ajouté(s) à votre liste. %2 s'y trouvaient déjà.</translation>
+        <source>Added to your list: %1. Already in it: %2.</source>
+        <translation>Ajoutés à votre liste : %1. Déjà présents : %2.</translation>
     </message>
     <message>
         <source>Detected: %1 — but no entries in this file qualify as known.</source>
         <translation>Détecté : %1 — mais aucune entrée de ce fichier n'est considérée comme connue.</translation>
     </message>
     <message>
+        <source>That file is too large to import.</source>
+        <translation>Ce fichier est trop volumineux pour être importé.</translation>
+    </message>
+    <message>
         <source>The file could not be read.</source>
         <translation>Le fichier n'a pas pu être lu.</translation>
+    </message>
+    <message>
+        <source>That file's text encoding could not be read.</source>
+        <translation>L'encodage du texte de ce fichier n'a pas pu être lu.</translation>
     </message>
     <message>
         <source>File format not recognized. Supported: jpdb review export (JSON), Migaku word export (JSON/CSV), AnkiMorphs known morphs (CSV), plain word lists (one word per line).</source>
         <translation>Format de fichier non reconnu. Formats pris en charge : export de révisions jpdb (JSON), export de mots Migaku (JSON/CSV), morphèmes connus AnkiMorphs (CSV), listes de mots simples (un mot par ligne).</translation>
     </message>
     <message>
-        <source>That file could not be read.</source>
-        <translation>Impossible de lire ce fichier.</translation>
+        <source>That file could not be imported.</source>
+        <translation>Ce fichier n'a pas pu être importé.</translation>
     </message>
     <message>
         <source>Export Complete</source>
         <translation>Exportation terminée</translation>
     </message>
     <message>
-        <source>Exported %1 word(s) to:
+        <source>Exported %1 words to:
 %2</source>
-        <translation>%1 mot(s) exporté(s) vers :
+        <translation>%1 mots exportés vers :
 %2</translation>
     </message>
     <message>
@@ -5377,8 +5459,8 @@ Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
         <translation>Téléchargement du pack %1…</translation>
     </message>
     <message>
-        <source>%1 pack installed successfully.</source>
-        <translation>Pack %1 installé avec succès.</translation>
+        <source>%1 pack installed.</source>
+        <translation>Pack %1 installé.</translation>
     </message>
 </context><context>
     <name>LanguagePickerDialog</name>
@@ -5391,8 +5473,8 @@ Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
         <translation>Rechercher des langues…</translation>
     </message>
     <message>
-        <source>This URL also offers machine-translated captions. A ticked language that is not listed for this URL is fetched as a machine translation.</source>
-        <translation>Cette URL propose aussi des sous-titres traduits automatiquement. Une langue cochée qui ne figure pas dans la liste pour cette URL est récupérée sous forme de traduction automatique.</translation>
+        <source>A ticked language not listed for this URL is fetched as a machine translation.</source>
+        <translation>Une langue cochée non proposée pour cette URL est récupérée comme traduction automatique.</translation>
     </message>
     <message>
         <source>Advanced (raw yt-dlp language expression):</source>
@@ -5460,8 +5542,8 @@ Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
         <translation>Une extraction est en cours. Arrêtez-la, puis changez de langue.</translation>
     </message>
     <message>
-        <source>Could not switch to %1: %2. Nothing was switched.</source>
-        <translation>Impossible de passer à %1 : %2. Rien n'a été changé.</translation>
+        <source>Could not switch to %1. Nothing was switched.</source>
+        <translation>Impossible de passer à %1. Rien n'a été changé.</translation>
     </message>
 </context><context>
     <name>LogWidget</name>
@@ -5502,8 +5584,8 @@ Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
         <translation>Effacer</translation>
     </message>
     <message>
-        <source>Clear all log messages</source>
-        <translation>Effacer tous les messages du journal</translation>
+        <source>Discard every retained line.</source>
+        <translation>Effacer chaque ligne conservée.</translation>
     </message>
     <message>
         <source>All</source>
@@ -5620,8 +5702,8 @@ Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
         <translation>Fenêtre principale d'Anki Miner</translation>
     </message>
     <message>
-        <source>Japanese vocabulary mining tool for creating Anki flashcards from video subtitles</source>
-        <translation>Outil d'extraction de vocabulaire japonais pour créer des cartes Anki à partir de sous-titres vidéo</translation>
+        <source>Mines vocabulary from video, audio and text into Anki cards</source>
+        <translation>Extrait du vocabulaire depuis la vidéo, l'audio et le texte vers des cartes Anki</translation>
     </message>
     <message>
         <source>Main Tabs</source>
@@ -5680,10 +5762,6 @@ Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
         <translation>Rechercher des mises à jour</translation>
     </message>
     <message>
-        <source>Open the log folder in your file manager</source>
-        <translation>Ouvrir le dossier des journaux dans votre gestionnaire de fichiers</translation>
-    </message>
-    <message>
         <source>Export Diagnostics…</source>
         <translation>Exporter les diagnostics…</translation>
     </message>
@@ -5700,36 +5778,28 @@ Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
         <translation>Ouvrir le guide d'utilisation...</translation>
     </message>
     <message>
-        <source>Report a Bug / Suggest a Feature</source>
-        <translation>Signaler un bogue / Suggérer une fonctionnalité</translation>
+        <source>Send feedback</source>
+        <translation>Envoyer des commentaires</translation>
     </message>
     <message>
         <source>Report a bug or suggest a feature on GitHub</source>
         <translation>Signaler un bogue ou suggérer une fonctionnalité sur GitHub</translation>
     </message>
     <message>
-        <source>⭐ Star - help the project</source>
-        <translation>⭐ Star - soutenir le projet</translation>
-    </message>
-    <message>
-        <source>Star the project on GitHub</source>
-        <translation>Mettre une étoile au projet sur GitHub</translation>
+        <source>Star on GitHub</source>
+        <translation>Mettre une étoile sur GitHub</translation>
     </message>
     <message>
         <source>Join Discord</source>
         <translation>Rejoindre Discord</translation>
     </message>
     <message>
-        <source>Join the community on Discord</source>
-        <translation>Rejoindre la communauté sur Discord</translation>
-    </message>
-    <message>
         <source>The desktop shortcut could not be created.</source>
         <translation>Le raccourci sur le bureau n'a pas pu être créé.</translation>
     </message>
     <message>
-        <source>The startup JMdict migration is still stopping. Wait for it to finish and try again.</source>
-        <translation>La migration JMdict au démarrage est encore en cours d'arrêt. Attendez qu'elle se termine, puis réessayez.</translation>
+        <source>Wait for the startup dictionary setup to finish, then try again.</source>
+        <translation>Attendez la fin de la configuration des dictionnaires au démarrage, puis réessayez.</translation>
     </message>
     <message>
         <source>Export Diagnostics</source>
@@ -5772,14 +5842,14 @@ Ajouter %3 mot(s) à votre liste de mots connus ?</translation>
         <translation>Redéfinir le style des cartes extraites</translation>
     </message>
     <message>
-        <source>Re-apply the latest built-in styling to your mined cards so they match new ones. Safe to re-run; it never removes card content.
+        <source>Re-applies the current built-in styling to your mined cards.
 
-Close Anki's card browser and any open note editor first — editing an open note can lose unsaved edits.
+Close Anki's card browser and note editor first — an open note can lose unsaved edits.
 
 Continue?</source>
-        <translation>Réappliquez le dernier style intégré à vos cartes extraites pour qu'elles correspondent aux nouvelles. Réexécution sans risque ; le contenu des cartes n'est jamais supprimé.
+        <translation>Réapplique le style intégré actuel à vos cartes extraites.
 
-Fermez d'abord le navigateur de cartes d'Anki et tout éditeur de note ouvert — modifier une note ouverte peut faire perdre des modifications non enregistrées.
+Fermez d'abord le navigateur de cartes et l'éditeur de notes d'Anki — une note ouverte peut perdre des modifications non enregistrées.
 
 Continuer ?</translation>
     </message>
@@ -5808,8 +5878,8 @@ Continuer ?</translation>
         <translation>%1 mise(s) à jour de note n'ont pas été confirmées ; relancez le Restylage.</translation>
     </message>
     <message>
-        <source>Restyled %1 card(s). (%2 scanned; %3 already up to date.)</source>
-        <translation>%1 carte(s) restylée(s). (%2 analysées ; %3 déjà à jour.)</translation>
+        <source>Restyled %1 of %2 notes; %3 already up to date.</source>
+        <translation>%1 note(s) sur %2 restylée(s) ; %3 déjà à jour.</translation>
     </message>
     <message>
         <source>Restyle complete</source>
@@ -5860,32 +5930,32 @@ Continuer ?</translation>
         <translation>Plus tard</translation>
     </message>
     <message>
-        <source>System validation passed</source>
-        <translation>Validation du système réussie</translation>
+        <source>All system checks passed</source>
+        <translation>Tous les contrôles système ont réussi</translation>
     </message>
     <message>
         <source>Some system checks need attention.</source>
         <translation>Certains contrôles système nécessitent votre attention.</translation>
     </message>
     <message>
-        <source>Anki note-type fields are misconfigured; check Settings.</source>
-        <translation>Les champs du type de note Anki sont mal configurés ; vérifiez les Paramètres.</translation>
+        <source>The Anki field mapping is not usable. Open Settings → Cards &amp; Anki.</source>
+        <translation>Le mappage des champs Anki n'est pas utilisable. Ouvrez Paramètres → Cartes et Anki.</translation>
     </message>
     <message>
-        <source>Validation already running</source>
-        <translation>Validation déjà en cours</translation>
+        <source>System checks are already running.</source>
+        <translation>Les contrôles système sont déjà en cours.</translation>
     </message>
     <message>
-        <source>Running system validation...</source>
-        <translation>Validation du système en cours...</translation>
+        <source>Running system checks…</source>
+        <translation>Contrôles système en cours…</translation>
     </message>
     <message>
         <source>System check failed. Try again.</source>
         <translation>Le contrôle système a échoué. Réessayez.</translation>
     </message>
     <message>
-        <source>Migrating JMdict to SQLite…</source>
-        <translation>Migration de JMdict vers SQLite…</translation>
+        <source>Preparing the JMdict dictionary…</source>
+        <translation>Préparation du dictionnaire JMdict…</translation>
     </message>
     <message>
         <source>JMdict ready (%1 entries)</source>
@@ -5902,6 +5972,10 @@ Continuer ?</translation>
     <message>
         <source>The update check failed; try again later.</source>
         <translation>La vérification des mises à jour a échoué ; réessayez plus tard.</translation>
+    </message>
+    <message>
+        <source>Up to date (%1)</source>
+        <translation>À jour (%1)</translation>
     </message>
     <message>
         <source>Manga</source>
@@ -5960,8 +6034,20 @@ Continuer ?</translation>
         <translation>YouTube</translation>
     </message>
     <message>
-        <source>Failed to create desktop shortcut.</source>
-        <translation>Échec de la création du raccourci sur le bureau.</translation>
+        <source>'Anki Miner' should now appear in your application menu.</source>
+        <translation>« Anki Miner » devrait maintenant apparaître dans votre menu des applications.</translation>
+    </message>
+    <message>
+        <source>Windows did not report a Desktop folder.</source>
+        <translation>Windows n'a signalé aucun dossier Bureau.</translation>
+    </message>
+    <message>
+        <source>Desktop shortcut created.</source>
+        <translation>Raccourci Bureau créé.</translation>
+    </message>
+    <message>
+        <source>PowerShell returned no shortcut path.</source>
+        <translation>PowerShell n'a renvoyé aucun chemin de raccourci.</translation>
     </message>
 </context><context>
     <name>MediaDownloader</name>
@@ -6001,6 +6087,10 @@ Continuer ?</translation>
     </message>
 </context><context>
     <name>MediaSettingsPanel</name>
+    <message>
+        <source>Card Media</source>
+        <translation>Médias des cartes</translation>
+    </message>
     <message>
         <source>Audio Format</source>
         <translation>Format audio</translation>
@@ -6058,10 +6148,6 @@ Continuer ?</translation>
         <translation>Capturer un court clip vidéo au lieu d'une image fixe. Fichiers plus volumineux, encodage plus lent ; tous les clients Anki ne prennent pas en charge l'AVIF/WebP animé.</translation>
     </message>
     <message>
-        <source>Animated Screenshots</source>
-        <translation>Captures d'écran animées</translation>
-    </message>
-    <message>
         <source>Animated Format</source>
         <translation>Format animé</translation>
     </message>
@@ -6078,12 +6164,8 @@ Continuer ?</translation>
         <translation>Le clip animé couvre la plage de temps du clip audio. Remplace la durée du clip.</translation>
     </message>
     <message>
-        <source>Match Audio Duration</source>
-        <translation>Correspondre à la durée audio</translation>
-    </message>
-    <message>
-        <source>Clip length, capped by subtitle duration. Ignored if Match Audio Duration is on.</source>
-        <translation>Durée du clip, limitée par la durée du sous-titre. Ignorée si « Correspondre à la durée audio » est activé.</translation>
+        <source>Clip length, capped by subtitle duration. Ignored if Match audio duration is on.</source>
+        <translation>Durée du clip, plafonnée par la durée des sous-titres. Ignorée si Correspondre à la durée audio est activé.</translation>
     </message>
     <message>
         <source>Clip Duration</source>
@@ -6146,16 +6228,16 @@ Continuer ?</translation>
 </context><context>
     <name>MiningLanguageSettingsPanel</name>
     <message>
-        <source>Language</source>
-        <translation>Langue</translation>
-    </message>
-    <message>
         <source>Mining Language</source>
         <translation>Langue d'extraction</translation>
     </message>
     <message>
-        <source>The language you mine. Separate from the interface language (Settings -&gt; Appearance &amp; Language). Switching swaps dictionaries, filters, deck and card fields to that language's own settings.</source>
-        <translation>La langue que vous extrayez. Distincte de la langue de l'interface (Paramètres -&gt; Apparence et langue). Le changement remplace les dictionnaires, les filtres, le paquet et les champs de carte par les réglages propres à cette langue.</translation>
+        <source>Language</source>
+        <translation>Langue</translation>
+    </message>
+    <message>
+        <source>Switching swaps dictionaries, filters, deck and card fields to that language's own settings. The interface language is separate (Settings → Appearance &amp; Language).</source>
+        <translation>Le changement remplace les dictionnaires, filtres, paquet et champs de carte par les paramètres propres à cette langue. La langue de l'interface est distincte (Paramètres → Apparence et langue).</translation>
     </message>
     <message>
         <source>Download %1 pack</source>
@@ -6212,8 +6294,8 @@ Continuer ?</translation>
         <translation>Installation de mokuro…</translation>
     </message>
     <message>
-        <source>mokuro installed successfully.</source>
-        <translation>mokuro installé avec succès.</translation>
+        <source>mokuro installed.</source>
+        <translation>mokuro installé.</translation>
     </message>
 </context><context>
     <name>MokuroRunner</name>
@@ -6266,6 +6348,10 @@ Continuer ?</translation>
     <message>
         <source>Failed — see log</source>
         <translation>Échec — voir le journal</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>Terminé avec des erreurs — voir le journal</translation>
     </message>
     <message>
         <source>Some volumes could not be processed.</source>
@@ -6336,16 +6422,16 @@ Continuer ?</translation>
         <translation>Aucun volume de manga trouvé dans ce dossier.</translation>
     </message>
     <message>
-        <source>%1 volume(s) found, %2 already processed.</source>
-        <translation>%1 volume(s) trouvé(s), %2 déjà traité(s).</translation>
+        <source>Volumes found: %1, already processed: %2.</source>
+        <translation>Volumes trouvés : %1, déjà traités : %2.</translation>
     </message>
     <message>
-        <source>%1 volume(s) found.</source>
-        <translation>%1 volume(s) trouvé(s).</translation>
+        <source>Volumes found: %1.</source>
+        <translation>Volumes trouvés : %1.</translation>
     </message>
     <message>
-        <source>This folder could not be read.</source>
-        <translation>Ce dossier n'a pas pu être lu.</translation>
+        <source>This folder could not be scanned.</source>
+        <translation>Impossible d’analyser ce dossier.</translation>
     </message>
     <message>
         <source>Choose a manga folder before running OCR.</source>
@@ -6372,8 +6458,8 @@ Continuer ?</translation>
         <translation>Un volume est un dossier d'images de pages (.jpg, .png, .webp, .avif) ou une archive .cbz/.zip. Un dossier de série contient un de ces éléments par volume.</translation>
     </message>
     <message>
-        <source>That folder could not be read.</source>
-        <translation>Ce dossier n'a pas pu être lu.</translation>
+        <source>That folder could not be scanned.</source>
+        <translation>Impossible d’analyser ce dossier.</translation>
     </message>
     <message>
         <source> (already processed)</source>
@@ -6388,10 +6474,6 @@ Continuer ?</translation>
     <message>
         <source>Already processed — tick Redo to run OCR again</source>
         <translation>Déjà traité — activez Refaire pour exécuter de nouveau l'OCR</translation>
-    </message>
-    <message>
-        <source>%1: %2%</source>
-        <translation>%1 : %2%</translation>
     </message>
     <message>
         <source>Done</source>
@@ -6424,18 +6506,16 @@ Continuer ?</translation>
         <translation>Aucun champ trouvé. Vérifiez qu'Anki est lancé et que le nom du type de note est orthographié exactement comme dans Anki.</translation>
     </message>
     <message>
-        <source>This note type does not look set up for Japanese mining (no obvious word/sentence fields). Import a recommended mining note type in Anki, then &lt;a href="%1"&gt;recheck&lt;/a&gt;. See: &lt;a href="%1"&gt;recommended note type&lt;/a&gt;.</source>
-        <translation>Ce type de note ne semble pas configuré pour l'extraction japonaise (pas de champ mot/phrase évident). Importez un type de note d'extraction recommandé dans Anki, puis &lt;a href="%1"&gt;revérifiez&lt;/a&gt;. Voir : &lt;a href="%1"&gt;type de note recommandé&lt;/a&gt;.</translation>
+        <source>This note type has no obvious word or sentence fields. &lt;a href="%1"&gt;Recheck&lt;/a&gt; after importing a &lt;a href="%1"&gt;recommended note type&lt;/a&gt; in Anki.</source>
+        <translation>Ce type de note n'a pas de champs de mot ou de phrase évidents. &lt;a href="%1"&gt;Revérifier&lt;/a&gt; après avoir importé un &lt;a href="%1"&gt;type de note recommandé&lt;/a&gt; dans Anki.</translation>
     </message>
     <message>
-        <source>Recognized %1 — mapped %2 fields. You can fine-tune these later in Settings → Anki.</source>
-        <translation>%1 reconnu — %2 champs mappés. Vous pouvez les ajuster plus tard dans Paramètres → Anki.</translation>
+        <source>Recognized %1 — mapped %2 fields. Fine-tune them in Settings → Cards &amp; Anki.</source>
+        <translation>Reconnu %1 — %2 champs mappés. Affinez-les dans Paramètres → Cartes et Anki.</translation>
     </message>
     <message>
-        <source>Mapped: %1
-You can fine-tune these later in Settings → Anki.</source>
-        <translation>Mappé : %1
-Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
+        <source>Mapped %1 fields. Fine-tune them in Settings → Cards &amp; Anki.</source>
+        <translation>%1 champs mappés. Affinez-les dans Paramètres → Cartes et Anki.</translation>
     </message>
     <message>
         <source>No fields could be auto-mapped.</source>
@@ -6460,11 +6540,15 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
         <translation>Téléchargement de la bibliothèque de suppression des silences…</translation>
     </message>
     <message>
-        <source>Silence-removal library installed successfully.</source>
-        <translation>Bibliothèque de suppression des silences installée avec succès.</translation>
+        <source>Silence-removal library installed.</source>
+        <translation>Bibliothèque de suppression des silences installée.</translation>
     </message>
 </context><context>
     <name>PitchSettingsPanel</name>
+    <message>
+        <source>Pitch Accent</source>
+        <translation>Accent de hauteur</translation>
+    </message>
     <message>
         <source>Loading…</source>
         <translation>Chargement…</translation>
@@ -6478,20 +6562,20 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
         <translation>Les sources d'accent de hauteur installées n'ont pas pu être vérifiées.</translation>
     </message>
     <message>
-        <source>The pitch source was removed from the chain, but its files were left in place because the folder could not be proven to belong to Anki Miner.</source>
-        <translation>La source d'accent de hauteur a été retirée de la chaîne, mais ses fichiers ont été conservés, car il n'a pas été possible de prouver que le dossier appartient à Anki Miner.</translation>
+        <source>The pitch source was removed from the chain; no files were deleted from disk.</source>
+        <translation>La source d'accent de hauteur a été retirée de la chaîne ; aucun fichier n'a été supprimé du disque.</translation>
     </message>
     <message>
         <source>%1 could not be removed. Its files are intact — try again.</source>
         <translation>%1 n'a pas pu être supprimé. Ses fichiers sont intacts — réessayez.</translation>
     </message>
     <message>
-        <source>%1 was only partly removed. Re-import or repair this pitch source before retrying.</source>
-        <translation>%1 n'a été supprimé que partiellement. Réimportez ou réparez cette source d'accent de hauteur avant de réessayer.</translation>
+        <source>%1 was only partly removed. Re-import it before retrying.</source>
+        <translation>%1 n'a été que partiellement retiré. Réimportez-le avant de réessayer.</translation>
     </message>
     <message>
-        <source>%1 could not be restored after its settings update failed. Restart Anki Miner before retrying.</source>
-        <translation>%1 n'a pas pu être restauré après l'échec de la mise à jour de ses paramètres. Redémarrez Anki Miner avant de réessayer.</translation>
+        <source>%1 could not be removed: its settings could not be saved. Restart Anki Miner and try again.</source>
+        <translation>%1 n'a pas pu être retiré : ses paramètres n'ont pas pu être enregistrés. Redémarrez Anki Miner et réessayez.</translation>
     </message>
     <message>
         <source>%1 was removed, but Anki Miner could not refresh it. The removal is saved and will remain after a restart.</source>
@@ -6550,6 +6634,10 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
         <translation>Descendre</translation>
     </message>
     <message>
+        <source>Move down (checked after the rows above)</source>
+        <translation>Descendre (coché après les lignes ci-dessus)</translation>
+    </message>
+    <message>
         <source>%1 entries</source>
         <translation>%1 entrées</translation>
     </message>
@@ -6580,24 +6668,22 @@ Vous pourrez ajuster cela plus tard dans Paramètres → Anki.</translation>
     <message>
         <source>Remove '%1' from the pitch accent chain?
 
-Only the index files are deleted.
-This cannot be undone. You would need to re-import to use this source again.</source>
-        <translation>Supprimer « %1 » de la chaîne d'accent de hauteur ?
+Only the index files are deleted. Adding it back needs the source file.</source>
+        <translation>Retirer « %1 » de la chaîne d'accent de hauteur ?
 
-Seuls les fichiers d'index sont supprimés.
-Cette action est irréversible. Vous devrez réimporter cette source pour l'utiliser de nouveau.</translation>
+Seuls les fichiers d'index sont supprimés. Pour l'ajouter à nouveau, il faudra le fichier source.</translation>
     </message>
     <message>
         <source>Remove '%1' from the pitch accent chain?
 
-Index files on disk will be left untouched because the folder could not be proven to belong to Anki Miner.</source>
-        <translation>Supprimer '%1' de la chaîne d'accent de hauteur ?
+No index files are deleted.</source>
+        <translation>Retirer « %1 » de la chaîne d'accent de hauteur ?
 
-Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été possible de prouver que le dossier appartient à Anki Miner.</translation>
+Aucun fichier d'index n'est supprimé.</translation>
     </message>
     <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Les ressources indexées sont utilisées par l'extraction, le préchauffage au démarrage ou la complétion des cartes. Attendez la fin de la tâche active, puis réessayez.</translation>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Une autre tâche utilise les ressources indexées — réessayez une fois qu'elle est terminée.</translation>
     </message>
     <message>
         <source>Re-import…</source>
@@ -6638,8 +6724,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Ajouter une liste de lecture</translation>
     </message>
     <message>
-        <source>This video is part of the playlist '%1' (%2 videos). Add just this video or all of them?</source>
-        <translation>Cette vidéo fait partie de la liste de lecture « %1 » (%2 vidéos). Ajouter uniquement cette vidéo ou toutes ?</translation>
+        <source>This video is part of the playlist '%1' (%2 videos). Add just this video, or the playlist?</source>
+        <translation>Cette vidéo fait partie de la liste de lecture « %1 » (%2 vidéos). Ajouter seulement cette vidéo, ou la liste de lecture entière ?</translation>
     </message>
     <message>
         <source>Just this video</source>
@@ -6654,20 +6740,24 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Ajouter toutes les %1</translation>
     </message>
     <message>
-        <source>Playlist '%1' has %2 videos — more than the configured maximum (%3). Add the first %3?</source>
-        <translation>La liste de lecture « %1 » comporte %2 vidéos — plus que le maximum configuré (%3). Ajouter les %3 premières ?</translation>
+        <source>Playlist '%1' has %2 videos. Add the first %3?</source>
+        <translation>La liste de lecture « %1 » compte %2 vidéos. Ajouter les %3 premières ?</translation>
     </message>
     <message>
         <source>Add first %1</source>
         <translation>Ajouter les %1 premières</translation>
     </message>
     <message>
-        <source>Skipped %1 already-queued video(s).</source>
-        <translation>%1 vidéo(s) déjà en file d'attente ignorée(s).</translation>
+        <source>Skipped %1 already in the queue.</source>
+        <translation>%1 ignorés (déjà en file d'attente).</translation>
     </message>
     <message>
         <source>No new videos to add from playlist '%1'.</source>
         <translation>Aucune nouvelle vidéo à ajouter depuis la liste de lecture « %1 ».</translation>
+    </message>
+    <message>
+        <source>Added %1 video from playlist '%2'.</source>
+        <translation>%1 vidéo ajoutée depuis la liste de lecture « %2 ».</translation>
     </message>
     <message>
         <source>Added %1 videos from playlist '%2'.</source>
@@ -6684,12 +6774,12 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>« %1 » — vidéos %2-%3 sur %4</translation>
     </message>
     <message>
-        <source>'%1' — showing videos %2-%3 of at least %3</source>
-        <translation>« %1 » — vidéos %2-%3 sur au moins %3</translation>
+        <source>'%1' — showing videos %2-%3</source>
+        <translation>« %1 » — vidéos %2-%3</translation>
     </message>
     <message>
-        <source>This playlist has more videos. Paste its URL again and expand it for the next batch — it continues where this one stops.</source>
-        <translation>Cette liste de lecture contient plus de vidéos. Recollez son URL et développez-la pour le lot suivant — il reprend là où celui-ci s'arrête.</translation>
+        <source>This playlist has more videos. Paste the URL again to continue from here.</source>
+        <translation>Cette liste de lecture contient d'autres vidéos. Collez à nouveau l'URL pour continuer à partir d'ici.</translation>
     </message>
     <message>
         <source>Search this playlist…</source>
@@ -6720,8 +6810,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Ni un nombre ni une plage : %1</translation>
     </message>
     <message>
-        <source>There is no video %1.</source>
-        <translation>Il n'y a pas de vidéo %1.</translation>
+        <source>Video %1 is not on this page.</source>
+        <translation>La vidéo %1 n'est pas sur cette page.</translation>
     </message>
     <message>
         <source>A range needs at least one end.</source>
@@ -6732,18 +6822,22 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Les vidéos sont numérotées à partir de 1.</translation>
     </message>
     <message>
+        <source>Add %1 video</source>
+        <translation>Ajouter %1 vidéo</translation>
+    </message>
+    <message>
         <source>Add %1 videos</source>
         <translation>Ajouter %1 vidéos</translation>
     </message>
 </context><context>
     <name>ProfileController</name>
     <message>
-        <source>Language</source>
-        <translation>Langue</translation>
+        <source>Interface language</source>
+        <translation>Langue de l'interface</translation>
     </message>
     <message>
-        <source>Interface scale</source>
-        <translation>Échelle de l'interface</translation>
+        <source>Zoom</source>
+        <translation>Zoom</translation>
     </message>
     <message>
         <source>Text size</source>
@@ -6766,24 +6860,24 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Paramètres récupérés %1</translation>
     </message>
     <message>
-        <source>Could not create the profile '%1': %2</source>
-        <translation>Impossible de créer le profil « %1 » : %2</translation>
+        <source>Could not create the profile '%1'.</source>
+        <translation>Impossible de créer le profil « %1 ».</translation>
     </message>
     <message>
-        <source>The new profile '%1' (%2) remains because cleanup failed: %3. Delete it manually.</source>
-        <translation>Le nouveau profil '%1' (%2) subsiste car le nettoyage a échoué : %3. Supprimez-le manuellement.</translation>
+        <source>The new profile '%1' remains — delete it in Settings Profiles.</source>
+        <translation>Le nouveau profil « %1 » reste — supprimez-le dans Profils de paramètres.</translation>
     </message>
     <message>
-        <source>Could not save the current profile '%1': %2. Nothing was switched.</source>
-        <translation>Impossible d'enregistrer le profil actuel « %1 » : %2. Aucun changement de profil n'a eu lieu.</translation>
+        <source>Could not save the current profile '%1'. Nothing was switched.</source>
+        <translation>Impossible d'enregistrer le profil actuel « %1 ». Rien n'a été changé.</translation>
     </message>
     <message>
-        <source>Could not read the profile file %1: %2. Nothing was switched.</source>
-        <translation>Impossible de lire le fichier de profil %1 : %2. Aucun changement de profil n'a eu lieu.</translation>
+        <source>Could not read that profile's file. Nothing was switched.</source>
+        <translation>Impossible de lire le fichier de ce profil. Rien n'a été changé.</translation>
     </message>
     <message>
-        <source>Switched to '%1', but the running window could not be fully refreshed: %2. Restart Anki Miner if something looks wrong.</source>
-        <translation>Passage au profil « %1 », mais la fenêtre en cours n'a pas pu être entièrement actualisée : %2. Redémarrez Anki Miner si quelque chose semble incorrect.</translation>
+        <source>Switched to '%1', but the window could not be fully refreshed. Restart Anki Miner.</source>
+        <translation>Basculé vers « %1 », mais la fenêtre n'a pas pu être entièrement actualisée. Redémarrez Anki Miner.</translation>
     </message>
     <message>
         <source>Restart Anki Miner to apply: %1</source>
@@ -6802,8 +6896,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Ce profil extrait une autre langue et les files d'attente contiennent encore du travail. Rien n'a été changé.</translation>
     </message>
     <message>
-        <source>Could not apply the profile '%1': %2. Your current settings are unchanged.</source>
-        <translation>Impossible d'appliquer le profil « %1 » : %2. Vos paramètres actuels restent inchangés.</translation>
+        <source>Could not apply the profile '%1'. Your current settings are unchanged.</source>
+        <translation>Impossible d'appliquer le profil « %1 ». Vos paramètres actuels sont inchangés.</translation>
     </message>
 </context><context>
     <name>ProfileManagerDialog</name>
@@ -6882,13 +6976,13 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Prêt</translation>
     </message>
     <message>
-        <source>ETA ~</source>
-        <translation>Temps restant ~</translation>
+        <source>Elapsed %1</source>
+        <translation>Écoulé : %1</translation>
     </message>
 </context><context>
     <name>QueueControlsBar</name>
     <message>
-        <source>%1 queued · %2 ready · %3 failed · %4 complete</source>
+        <source>%1 in queue · %2 ready · %3 failed · %4 complete</source>
         <translation>%1 en file d'attente · %2 prêt(s) · %3 échoué(s) · %4 terminé(s)</translation>
     </message>
     <message>
@@ -6956,8 +7050,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Retirer les lignes sélectionnées de la file d'attente.</translation>
     </message>
     <message>
-        <source>Stop cleanly once the item being mined is finished.</source>
-        <translation>Arrêter proprement une fois l'élément en cours d'extraction terminé.</translation>
+        <source>The run is not cancelled — Resume continues with the next item.</source>
+        <translation>L'exécution n'est pas annulée — Reprendre continue avec l'élément suivant.</translation>
     </message>
     <message>
         <source>Finish current, then stop</source>
@@ -7118,16 +7212,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Décaler uniquement les sous-titres de traduction (positif = plus tard, négatif = plus tôt)</translation>
     </message>
     <message>
-        <source>The translation folder is the subtitle folder. Pick a separate folder for the translation subtitles.</source>
-        <translation>Le dossier de traduction est le dossier des sous-titres. Choisissez un dossier différent pour les sous-titres de traduction.</translation>
-    </message>
-    <message>
-        <source>Empty Queue</source>
-        <translation>Vider la file d'attente</translation>
-    </message>
-    <message>
-        <source>Queue is already empty.</source>
-        <translation>La file d'attente est déjà vide.</translation>
+        <source>The translation folder must be different from the subtitle folder.</source>
+        <translation>Le dossier de traduction doit être différent du dossier de sous-titres.</translation>
     </message>
     <message>
         <source>Clear Queue</source>
@@ -7226,8 +7312,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Extraire le dossier</translation>
     </message>
     <message>
-        <source>Mine the selected folder's volume(s) into Anki cards.</source>
-        <translation>Extrayez le(s) volume(s) du dossier sélectionné dans des cartes Anki.</translation>
+        <source>Mine every volume in the selected folder into Anki cards.</source>
+        <translation>Extraire chaque volume du dossier sélectionné en cartes Anki.</translation>
     </message>
     <message>
         <source>Cancel</source>
@@ -7246,20 +7332,20 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Les fichiers de sous-titres sont extraits dans l'onglet Sous-titres.</translation>
     </message>
     <message>
-        <source>Select a .mokuro, .cbz, or .zip volume first.</source>
-        <translation>Sélectionnez d'abord un volume .mokuro, .cbz ou .zip.</translation>
+        <source>Choose a .mokuro, .cbz, or .zip volume first.</source>
+        <translation>Choisissez d'abord un volume .mokuro, .cbz ou .zip.</translation>
     </message>
     <message>
-        <source>Select a manga folder first.</source>
-        <translation>Sélectionnez d'abord un dossier de manga.</translation>
+        <source>Choose a manga folder first.</source>
+        <translation>Choisissez d'abord un dossier de manga.</translation>
     </message>
     <message>
         <source>Could not process %1: %2</source>
         <translation>Impossible de traiter %1 : %2</translation>
     </message>
     <message>
-        <source>Skipped unreadable manga volume(s): %1</source>
-        <translation>Volume(s) de manga illisible(s) ignoré(s) : %1</translation>
+        <source>Skipped volumes: %1</source>
+        <translation>Volumes ignorés : %1</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -7320,10 +7406,6 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Livres</translation>
     </message>
     <message>
-        <source>Select an .epub or .txt book to mine.</source>
-        <translation>Sélectionnez un livre .epub ou .txt à extraire.</translation>
-    </message>
-    <message>
         <source>Mine</source>
         <translation>Extraire</translation>
     </message>
@@ -7368,12 +7450,12 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Les fichiers de sous-titres sont extraits dans l'onglet Sous-titres.</translation>
     </message>
     <message>
-        <source>Select a valid .epub or .txt book first.</source>
-        <translation>Sélectionnez d'abord un livre .epub ou .txt valide.</translation>
+        <source>Choose an .epub or .txt book first.</source>
+        <translation>Choisissez d'abord un livre .epub ou .txt.</translation>
     </message>
     <message>
-        <source>Select a folder containing .epub or .txt books first.</source>
-        <translation>Sélectionnez d'abord un dossier contenant des livres .epub ou .txt.</translation>
+        <source>Choose a folder of .epub or .txt books first.</source>
+        <translation>Choisissez d'abord un dossier de livres .epub ou .txt.</translation>
     </message>
     <message>
         <source>Starting…</source>
@@ -7528,16 +7610,20 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
 </context><context>
     <name>ReadingTab</name>
     <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation>Extraction indisponible — services non initialisés.</translation>
+        <source>Mining unavailable — restart Anki Miner.</source>
+        <translation>Extraction indisponible — redémarrez Anki Miner.</translation>
     </message>
     <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation>Démarrage de l'exécution %1 — %2 éléments.</translation>
+        <source>%1 run starting — %2 queued.</source>
+        <translation>Démarrage de l'exécution « %1 » — %2 en file d'attente.</translation>
     </message>
     <message>
         <source>Mine</source>
         <translation>Extraire</translation>
+    </message>
+    <message>
+        <source>Stopped: %1 succeeded, %2 failed.</source>
+        <translation>Arrêté : %1 réussi(s), %2 échoué(s).</translation>
     </message>
     <message>
         <source>Attempt %1 of %2 · retrying in %3s</source>
@@ -7554,6 +7640,10 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
     <message>
         <source>Cancelled</source>
         <translation>Annulé</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation>Terminé avec des erreurs — voir le journal</translation>
     </message>
     <message>
         <source>Failed — see log</source>
@@ -7602,8 +7692,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Texte collé</translation>
     </message>
     <message>
-        <source>Paste Japanese text and mine it into Anki cards — no audio is extracted.</source>
-        <translation>Collez du texte japonais et extrayez-le en cartes Anki — aucun audio n'est extrait.</translation>
+        <source>Paste text and mine it into Anki cards — no audio is extracted.</source>
+        <translation>Collez du texte et extrayez-le en cartes Anki — aucun audio n'est extrait.</translation>
     </message>
     <message>
         <source>Paste text here…</source>
@@ -7650,8 +7740,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Veuillez d'abord coller du texte.</translation>
     </message>
     <message>
-        <source>This card image has no Picture field to land in. Map one in Settings → Anki, or clear the image to mine without one.</source>
-        <translation>Cette image de carte n'a pas de champ Image pour la contenir. Configurez-en un dans Paramètres → Anki, ou supprimez l'image pour l'extraire sans celui-ci.</translation>
+        <source>This card image has no Picture field to land in. Map one in Settings → Cards &amp; Anki, or clear the image.</source>
+        <translation>Cette image de carte n'a pas de champ Image où atterrir. Mappez-en un dans Paramètres → Cartes et Anki, ou effacez l'image.</translation>
     </message>
     <message>
         <source>That image cannot be read. Pick another, or clear the field to mine without one.</source>
@@ -7688,8 +7778,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Reprendre là où vous vous étiez arrêté ?</translation>
     </message>
     <message>
-        <source>Nothing starts on its own — restored rows wait for you.</source>
-        <translation>Rien ne démarre tout seul — les lignes restaurées vous attendent.</translation>
+        <source>Nothing starts on its own — restored items wait for you.</source>
+        <translation>Rien ne démarre tout seul — les éléments restaurés vous attendent.</translation>
     </message>
     <message>
         <source>Restore</source>
@@ -7700,30 +7790,33 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Ignorer</translation>
     </message>
     <message>
-        <source>Resume %1? %2 already saved</source>
-        <translation>Reprendre %1 ? %2 déjà enregistré</translation>
+        <source>%1 — %2 already saved</source>
+        <translation>%1 — %2 déjà enregistré(s)</translation>
     </message>
-    <message>
-        <source>Restore previous queue? %1 items</source>
-        <translation>Restaurer la file d'attente précédente ? %1 éléments</translation>
+    <message numerus="yes">
+        <source>%n queued item(s) from your last session</source>
+        <translation>
+            <numerusform>%n élément en file d'attente de votre dernière session</numerusform>
+            <numerusform>%n éléments en file d'attente de votre dernière session</numerusform>
+        </translation>
     </message>
 </context><context>
     <name>ResourceChain</name>
     <message>
-        <source>Audio pack '%1' is for %2; skipped</source>
-        <translation>Le pack audio « %1 » est destiné à %2 ; ignoré</translation>
+        <source>Audio pack '%1' is indexed for %2 and was skipped.</source>
+        <translation>Le pack audio « %1 » est indexé pour %2 et a été ignoré.</translation>
     </message>
     <message>
-        <source>Dictionary '%1' is for %2; skipped</source>
-        <translation>Le dictionnaire « %1 » est destiné à %2 ; ignoré</translation>
+        <source>Dictionary '%1' is indexed for %2 and was skipped.</source>
+        <translation>Le dictionnaire « %1 » est indexé pour %2 et a été ignoré.</translation>
     </message>
     <message>
-        <source>Frequency source '%1' is for %2; skipped</source>
-        <translation>La source de fréquence « %1 » est destinée à %2 ; ignorée</translation>
+        <source>Frequency source '%1' is indexed for %2 and was skipped.</source>
+        <translation>La source de fréquence « %1 » est indexée pour %2 et a été ignorée.</translation>
     </message>
     <message>
-        <source>Pitch source '%1' is for %2; skipped</source>
-        <translation>La source d'accent de hauteur « %1 » est destinée à %2 ; ignorée</translation>
+        <source>Pitch source '%1' is indexed for %2 and was skipped.</source>
+        <translation>La source d'accent de hauteur « %1 » est indexée pour %2 et a été ignorée.</translation>
     </message>
 </context><context>
     <name>ResourceDownloadDialog</name>
@@ -7744,8 +7837,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Création de l'index · %1 entrées</translation>
     </message>
     <message>
-        <source>Activating</source>
-        <translation>Activation</translation>
+        <source>Activating…</source>
+        <translation>Activation…</translation>
     </message>
     <message>
         <source>Imported, but not active — Retry setup</source>
@@ -7790,8 +7883,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
    Téléchargez manuellement : %3</translation>
     </message>
     <message>
-        <source>Some resources were installed before cancellation.</source>
-        <translation>Certaines ressources ont été installées avant l'annulation.</translation>
+        <source>Some resources were installed.</source>
+        <translation>Certaines ressources ont été installées.</translation>
     </message>
     <message>
         <source>No resources were installed.</source>
@@ -7838,16 +7931,16 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Les paramètres de ressources sont occupés ou n'ont pas pu être enregistrés. Attendez la fin de la tâche active et réessayez.</translation>
     </message>
     <message>
-        <source>Indexed resources are in use by mining, startup prewarm, or card backfill. Wait for the active task to finish and try again.</source>
-        <translation>Les ressources indexées sont utilisées par l'extraction, le préchauffage au démarrage ou la complétion des cartes. Attendez la fin de la tâche active, puis réessayez.</translation>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Une autre tâche utilise les ressources indexées — réessayez une fois qu'elle est terminée.</translation>
     </message>
     <message>
         <source>Recommended resources</source>
         <translation>Ressources recommandées</translation>
     </message>
     <message>
-        <source>The download worker finished without a completion result.</source>
-        <translation>Le processus de téléchargement s'est terminé sans résultat.</translation>
+        <source>The download stopped before it finished. Try again.</source>
+        <translation>Le téléchargement s'est arrêté avant la fin. Réessayez.</translation>
     </message>
     <message>
         <source>Indexed resources became busy before installation; existing resources were left unchanged.</source>
@@ -7880,8 +7973,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Télécharger les ressources recommandées</translation>
     </message>
     <message>
-        <source>No downloadable resources are recommended for this language — import a Yomitan dictionary in Settings → Dictionaries and a frequency list in Settings → Frequency.</source>
-        <translation>Aucune ressource téléchargeable n'est recommandée pour cette langue — importez un dictionnaire Yomitan dans Paramètres → Dictionnaires et une liste de fréquence dans Paramètres → Fréquence.</translation>
+        <source>No recommended resources for this language. Import a dictionary in Settings → Dictionaries.</source>
+        <translation>Aucune ressource recommandée pour cette langue. Importez un dictionnaire dans Paramètres → Dictionnaires.</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -7904,8 +7997,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>%1 : non configuré (facultatif)</translation>
     </message>
     <message>
-        <source>Download cancelled. Some resources were installed before cancellation.</source>
-        <translation>Téléchargement annulé. Certaines ressources ont été installées avant l'annulation.</translation>
+        <source>Download cancelled. Some resources were installed.</source>
+        <translation>Téléchargement annulé. Certaines ressources ont été installées.</translation>
     </message>
     <message>
         <source>Download cancelled. No resources were installed.</source>
@@ -7916,8 +8009,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Importé, mais non actif — Réessayer la configuration</translation>
     </message>
     <message>
-        <source>Some resources were installed; some failed.</source>
-        <translation>Certaines ressources ont été installées ; d'autres ont échoué.</translation>
+        <source>%1 installed, %2 failed.</source>
+        <translation>%1 installé(s), %2 échoué(s).</translation>
     </message>
     <message>
         <source>No resources were installed.</source>
@@ -7950,8 +8043,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>%1 cartes créées</translation>
     </message>
     <message>
-        <source>No cards created. Every word is already in Anki.</source>
-        <translation>Aucune carte créée. Chaque mot est déjà dans Anki.</translation>
+        <source>No cards created. Every word is already known.</source>
+        <translation>Aucune carte créée. Chaque mot est déjà connu.</translation>
     </message>
     <message>
         <source>Copied</source>
@@ -8024,10 +8117,6 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Échec de l'extraction</translation>
     </message>
     <message>
-        <source>Completed with Errors</source>
-        <translation>Terminé avec des erreurs</translation>
-    </message>
-    <message>
         <source>Words Discovered</source>
         <translation>Mots découverts</translation>
     </message>
@@ -8056,24 +8145,32 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Des erreurs sont survenues</translation>
     </message>
     <message>
-        <source>Undo (%1 notes)</source>
-        <translation>Annuler (%1 notes)</translation>
-    </message>
-    <message>
         <source>Close</source>
         <translation>Fermer</translation>
+    </message>
+    <message>
+        <source>Undo (%1 note)</source>
+        <translation>Annuler (%1 note)</translation>
+    </message>
+    <message>
+        <source>Undo (%1 notes)</source>
+        <translation>Annuler (%1 notes)</translation>
     </message>
     <message>
         <source>Confirm Undo</source>
         <translation>Confirmer l'annulation</translation>
     </message>
     <message>
-        <source>Delete %1 notes from Anki? This cannot be undone.</source>
-        <translation>Supprimer %1 notes d'Anki ? Cette action est irréversible.</translation>
+        <source>Delete %1 notes from Anki? This cannot be undone; those words become mineable again.</source>
+        <translation>Supprimer %1 notes d'Anki ? Cette action est irréversible ; ces mots redeviennent extractibles.</translation>
     </message>
     <message>
         <source>Undoing…</source>
         <translation>Annulation…</translation>
+    </message>
+    <message>
+        <source>Undone (%1 note deleted)</source>
+        <translation>Annulé (%1 note supprimée)</translation>
     </message>
     <message>
         <source>Undone (%1 notes deleted)</source>
@@ -8114,8 +8211,16 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Alignement par rapport à la piste de sous-titres intégrée %1 (%2, %3 lignes).</translation>
     </message>
     <message>
-        <source>No Japanese-tagged audio track found; using the first audio track — on a dual-audio release this may be a dub.</source>
-        <translation>Aucune piste audio marquée en japonais trouvée ; utilisation de la première piste audio — sur une version bilingue, cela peut être un doublage.</translation>
+        <source>matching audio track</source>
+        <translation>piste audio correspondante</translation>
+    </message>
+    <message>
+        <source>first audio track (no match)</source>
+        <translation>première piste audio (aucune correspondance)</translation>
+    </message>
+    <message>
+        <source>No audio track matches the mining language; using the first track, which may be a dub.</source>
+        <translation>Aucune piste audio ne correspond à la langue d'extraction ; utilisation de la première piste, qui peut être un doublage.</translation>
     </message>
     <message>
         <source>Aligning against audio (%1).</source>
@@ -8224,8 +8329,8 @@ Les fichiers d'index sur le disque seront laissés intacts, car il n'a pas été
         <translation>Réinitialiser aux valeurs par défaut…</translation>
     </message>
     <message>
-        <source>Reset settings to defaults. Installed dictionaries, audio, frequency lists, and your theme are kept.</source>
-        <translation>Réinitialisez les paramètres aux valeurs par défaut. Les dictionnaires installés, l'audio, les listes de fréquence et votre thème sont conservés.</translation>
+        <source>Your installed resources and your theme are kept.</source>
+        <translation>Vos ressources installées et votre thème sont conservés.</translation>
     </message>
     <message>
         <source>Settings Profiles…</source>
@@ -8456,16 +8561,16 @@ Les valeurs importées remplacent vos paramètres actuels ; tout ce qui ne figur
         <translation>Le filtre regex de sous-titres importé a été rejeté ; votre filtre précédent a été conservé.</translation>
     </message>
     <message>
-        <source>Invalid imported fields were ignored; current values were kept: %1</source>
-        <translation>Les champs importés non valides ont été ignorés ; les valeurs actuelles ont été conservées : %1</translation>
+        <source>Some imported settings were invalid and kept their current values.</source>
+        <translation>Certains paramètres importés étaient invalides et ont conservé leurs valeurs actuelles.</translation>
     </message>
     <message>
         <source>Auto-update of yt-dlp was disabled (settings imported from an older version).</source>
         <translation>La mise à jour automatique de yt-dlp a été désactivée (paramètres importés depuis une version antérieure).</translation>
     </message>
     <message>
-        <source>Settings from version 2.8.3 were mapped conservatively to schema 2.</source>
-        <translation>Les paramètres de la version 2.8.3 ont été convertis de manière conservatrice vers le schéma 2.</translation>
+        <source>Settings from version 2.8.3 were applied conservatively.</source>
+        <translation>Les paramètres de la version 2.8.3 ont été appliqués avec prudence.</translation>
     </message>
     <message>
         <source>Settings Imported</source>
@@ -8482,10 +8587,10 @@ Les valeurs importées remplacent vos paramètres actuels ; tout ce qui ne figur
     <message>
         <source>Reset all settings to their defaults?
 
-Your installed dictionaries, audio, frequency lists, and theme are kept.</source>
-        <translation>Réinitialiser tous les paramètres à leurs valeurs par défaut ?
+Your installed resources and your theme are kept.</source>
+        <translation>Réinitialiser tous les paramètres à leurs valeurs par défaut ?
 
-Vos dictionnaires installés, l'audio, les listes de fréquence et le thème sont conservés.</translation>
+Vos ressources installées et votre thème sont conservés.</translation>
     </message>
     <message>
         <source>✓ Reset to defaults</source>
@@ -8496,8 +8601,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Réessayer l'audio d'expression manquant</translation>
     </message>
     <message>
-        <source>Cleared %1 missing-audio marker(s). Those words will be re-tried on the next mining run.</source>
-        <translation>%1 marqueur(s) d'audio manquant effacé(s). Ces mots seront réessayés lors de la prochaine extraction.</translation>
+        <source>Missing-audio markers cleared: %1. Those words are re-tried on the next run.</source>
+        <translation>Marqueurs d'audio manquant effacés : %1. Ces mots seront retentés lors de la prochaine exécution.</translation>
     </message>
     <message>
         <source>The missing-audio markers could not be cleared.</source>
@@ -8512,8 +8617,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Effacer le cache local des mots connus ? Il sera resynchronisé depuis Anki lors de la prochaine extraction, en appliquant vos exclusions de paquets actuelles. Les mots que vous avez ajoutés vous-même depuis le Curateur de mots sont conservés.</translation>
     </message>
     <message>
-        <source>Cleared %1 cached word(s). The cache will rebuild on the next run.</source>
-        <translation>%1 mot(s) en cache effacé(s). Le cache sera reconstruit lors de la prochaine exécution.</translation>
+        <source>Cached words cleared: %1. The cache rebuilds on the next run.</source>
+        <translation>Mots en cache effacés : %1. Le cache sera reconstruit à la prochaine exécution.</translation>
     </message>
     <message>
         <source>The known-words cache could not be cleared.</source>
@@ -8525,10 +8630,6 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     </message>
 </context><context>
     <name>SetupWizard</name>
-    <message>
-        <source>Download the recommended frequency list, pitch accent data, and dictionary now?</source>
-        <translation>Télécharger maintenant la liste de fréquence, les données d'accent de hauteur et le dictionnaire recommandés ?</translation>
-    </message>
     <message>
         <source>Dictionary</source>
         <translation>Dictionnaire</translation>
@@ -8672,20 +8773,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Ce fichier vidéo n'existe plus.</translation>
     </message>
     <message>
-        <source>No Audio Tracks</source>
-        <translation>Aucune piste audio</translation>
-    </message>
-    <message>
-        <source>No audio tracks detected. Check that ffprobe is installed and the file has audio.</source>
-        <translation>Aucune piste audio détectée. Vérifiez que ffprobe est installé et que le fichier contient de l'audio.</translation>
-    </message>
-    <message>
-        <source>Audio tracks could not be read.</source>
-        <translation>Les pistes audio n'ont pas pu être lues.</translation>
-    </message>
-    <message>
-        <source>Open Media Settings</source>
-        <translation>Ouvrir les paramètres multimédias</translation>
+        <source>No audio track found — check that ffmpeg is installed.</source>
+        <translation>Aucune piste audio trouvée — vérifiez que ffmpeg est installé.</translation>
     </message>
     <message>
         <source>Choose both a video file and a subtitle file.</source>
@@ -8696,12 +8785,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Ce fichier de sous-titres n'existe plus.</translation>
     </message>
     <message>
-        <source>No Subtitles</source>
-        <translation>Aucun sous-titre</translation>
-    </message>
-    <message>
-        <source>No subtitle entries found in the file.</source>
-        <translation>Aucune entrée de sous-titres trouvée dans le fichier.</translation>
+        <source>No subtitle lines to preview — check the filter in Settings → Filtering.</source>
+        <translation>Aucune ligne de sous-titres à prévisualiser — vérifiez le filtre dans Paramètres → Filtrage.</translation>
     </message>
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
@@ -8757,8 +8842,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         </translation>
     </message>
     <message>
-        <source>Click to view detailed system validation</source>
-        <translation>Cliquez pour afficher la validation détaillée du système</translation>
+        <source>Open System Health</source>
+        <translation>Ouvrir État du système</translation>
     </message>
     <message numerus="yes">
         <source>%n task(s)</source>
@@ -8766,6 +8851,10 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
             <numerusform>%n tâche</numerusform>
             <numerusform>%n tâches</numerusform>
         </translation>
+    </message>
+    <message>
+        <source>Elapsed %1</source>
+        <translation>Écoulé : %1</translation>
     </message>
     <message>
         <source>Open mini monitor</source>
@@ -8834,6 +8923,10 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Échec — voir le journal</translation>
     </message>
     <message>
+        <source>Finished with errors — see log</source>
+        <translation>Terminé avec des erreurs — voir le journal</translation>
+    </message>
+    <message>
         <source>Some files could not be transcribed.</source>
         <translation>Certains fichiers n'ont pas pu être transcrits.</translation>
     </message>
@@ -8846,8 +8939,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Terminé — %1 traités, %2 ignorés</translation>
     </message>
     <message>
-        <source>No subtitles generated — all %1 skipped because their output already exists. Enable Overwrite to regenerate.</source>
-        <translation>Aucun sous-titre généré — tous les %1 fichiers ont été ignorés car leur sortie existe déjà. Activez Écraser pour régénérer.</translation>
+        <source>No subtitles generated — all %1 skipped; see log.</source>
+        <translation>Aucun sous-titre généré — tous les %1 ignorés ; voir le journal.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
@@ -8950,12 +9043,12 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Générer les sous-titres</translation>
     </message>
     <message>
-        <source>Output directory is not writable: </source>
-        <translation>Le dossier de sortie n'est pas accessible en écriture : </translation>
+        <source>Output folder is not writable.</source>
+        <translation>Le dossier de sortie n'est pas accessible en écriture.</translation>
     </message>
     <message>
-        <source>The transcription model %1 is not installed. Open Settings → Transcription &amp; Alignment to install it.</source>
-        <translation>Le modèle de transcription %1 n'est pas installé. Ouvrez Paramètres → Transcription et alignement pour l'installer.</translation>
+        <source>The transcription model %1 is not ready.</source>
+        <translation>Le modèle de transcription %1 n'est pas prêt.</translation>
     </message>
     <message>
         <source>Open Transcription Settings</source>
@@ -8982,8 +9075,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Aucun fichier vidéo ou audio n'a été trouvé dans ce dossier.</translation>
     </message>
     <message>
-        <source>That folder could not be read.</source>
-        <translation>Ce dossier n'a pas pu être lu.</translation>
+        <source>That folder could not be scanned.</source>
+        <translation>Impossible d’analyser ce dossier.</translation>
     </message>
     <message>
         <source>Transcribing file %1 of %2</source>
@@ -9008,12 +9101,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Terminé</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>Annulé</translation>
-    </message>
-    <message>
-        <source>No speech detected in %1</source>
-        <translation>Aucune parole détectée dans %1</translation>
+        <source>No speech detected</source>
+        <translation>Aucune parole détectée</translation>
     </message>
     <message>
         <source>Audio extraction failed for %1</source>
@@ -9092,6 +9181,10 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Échec — voir le journal</translation>
     </message>
     <message>
+        <source>Finished with errors — see log</source>
+        <translation>Terminé avec des erreurs — voir le journal</translation>
+    </message>
+    <message>
         <source>Some files could not be retimed.</source>
         <translation>Certains fichiers n'ont pas pu être resynchronisés.</translation>
     </message>
@@ -9104,8 +9197,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Terminé — %1 traités, %2 ignorés</translation>
     </message>
     <message>
-        <source>No files retimed — all %1 skipped. Enable Overwrite to replace the existing retimed files, or choose a different output folder.</source>
-        <translation>Aucun fichier resynchronisé — tous les %1 fichiers ont été ignorés. Activez Écraser pour remplacer les fichiers resynchronisés existants, ou choisissez un autre dossier de sortie.</translation>
+        <source>No files retimed — all %1 skipped because their output already exists. Enable Overwrite to replace it.</source>
+        <translation>Aucun fichier resynchronisé — tous les %1 ignorés car leur sortie existe déjà. Activez Écraser pour la remplacer.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
@@ -9124,8 +9217,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Entrée</translation>
     </message>
     <message>
-        <source>alass not found; retiming uses ffsubsync only. Install alass in Settings for a fallback engine.</source>
-        <translation>alass introuvable ; la resynchronisation utilise uniquement ffsubsync. Installez alass dans les paramètres pour disposer d'un moteur de repli.</translation>
+        <source>alass not found; retiming uses ffsubsync only. Install it in Settings → Transcription &amp; Alignment.</source>
+        <translation>alass introuvable ; la resynchronisation utilise uniquement ffsubsync. Installez-le dans Paramètres → Transcription et alignement.</translation>
     </message>
     <message>
         <source>Resync a subtitle file to its video by matching audio.</source>
@@ -9216,16 +9309,16 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Réinitialiser</translation>
     </message>
     <message>
-        <source>Overwrite existing subtitle files</source>
-        <translation>Écraser les fichiers de sous-titres existants</translation>
+        <source>Overwrite existing retimed files</source>
+        <translation>Écraser les fichiers resynchronisés existants</translation>
     </message>
     <message>
         <source>When unchecked, pairs whose output subtitle already exists are skipped, not overwritten.</source>
         <translation>Lorsque cette case est décochée, les paires dont le sous-titre de sortie existe déjà sont ignorées, et non écrasées.</translation>
     </message>
     <message>
-        <source>Alignment is automatic; an untrustworthy result never replaces the original file.</source>
-        <translation>L'alignement est automatique ; un résultat non fiable ne remplace jamais le fichier d'origine.</translation>
+        <source>Alignment is automatic; the result is written to a separate _retimed file.</source>
+        <translation>L'alignement est automatique ; le résultat est écrit dans un fichier _retimed séparé.</translation>
     </message>
     <message>
         <source>Retime Subtitles</source>
@@ -9248,8 +9341,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Aucune piste</translation>
     </message>
     <message>
-        <source>No audio or subtitle tracks detected. Check that ffprobe is installed.</source>
-        <translation>Aucune piste audio ou de sous-titres détectée. Vérifiez que ffprobe est installé.</translation>
+        <source>This file has no audio or subtitle tracks.</source>
+        <translation>Ce fichier n'a aucune piste audio ou de sous-titres.</translation>
     </message>
     <message>
         <source>Subtitle track %1</source>
@@ -9264,12 +9357,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Les pistes n'ont pas pu être lues.</translation>
     </message>
     <message>
-        <source>Open Media Settings</source>
-        <translation>Ouvrir les paramètres multimédias</translation>
-    </message>
-    <message>
-        <source>Output directory is not writable: </source>
-        <translation>Le dossier de sortie n'est pas accessible en écriture : </translation>
+        <source>Output folder is not writable.</source>
+        <translation>Le dossier de sortie n'est pas accessible en écriture.</translation>
     </message>
     <message>
         <source>Choose a video file before retiming subtitles.</source>
@@ -9304,16 +9393,16 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>%1 sur %2 fichiers vidéo appariés.</translation>
     </message>
     <message>
-        <source>Warning: %1 video file(s) could not be matched.</source>
-        <translation>Avertissement : %1 fichier(s) vidéo n'ont pas pu être appariés.</translation>
+        <source>Unmatched video files: %1.</source>
+        <translation>Fichiers vidéo non associés : %1.</translation>
     </message>
     <message>
         <source>No subtitle file could be matched to any video file in those folders.</source>
         <translation>Aucun fichier de sous-titres n'a pu être associé à un fichier vidéo dans ces dossiers.</translation>
     </message>
     <message>
-        <source>That video folder could not be read.</source>
-        <translation>Ce dossier vidéo n'a pas pu être lu.</translation>
+        <source>Those folders could not be scanned.</source>
+        <translation>Impossible d’analyser ces dossiers.</translation>
     </message>
     <message>
         <source>Retiming file %1 of %2</source>
@@ -9334,12 +9423,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Réajusté avec %1</translation>
     </message>
     <message>
-        <source>Cancelled</source>
-        <translation>Annulé</translation>
-    </message>
-    <message>
-        <source>no trustworthy sync; original kept unchanged</source>
-        <translation>pas de synchronisation fiable ; original conservé inchangé</translation>
+        <source>no trustworthy alignment</source>
+        <translation>aucun alignement fiable</translation>
     </message>
     <message>
         <source>Retiming failed for %1: %2</source>
@@ -9360,8 +9445,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Résultat %1 rejeté : %2</translation>
     </message>
     <message>
-        <source>no engine produced a trustworthy sync; original left untouched</source>
-        <translation>aucun moteur n'a produit une synchronisation fiable ; original laissé inchangé</translation>
+        <source>no trustworthy alignment</source>
+        <translation>aucun alignement fiable</translation>
     </message>
     <message>
         <source>Retimed with %1 (offset %2).</source>
@@ -9394,8 +9479,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Détection automatique (actuellement : piste %1 — %2)</translation>
     </message>
     <message>
-        <source>Auto-detect (no Japanese subtitle track found — will use first text track)</source>
-        <translation>Détection automatique (aucune piste de sous-titres japonais trouvée — la première piste de texte sera utilisée)</translation>
+        <source>Auto-detect (no subtitle track in the mining language — will use the first text track)</source>
+        <translation>Détection automatique (aucune piste de sous-titres dans la langue d'extraction — utilisera la première piste de texte)</translation>
     </message>
     <message>
         <source>Apply</source>
@@ -9474,16 +9559,16 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Modèle ASR</translation>
     </message>
     <message>
-        <source>Select the Whisper model to use for subtitle generation. 'large-v3' gives the best accuracy; 'small' is faster but less accurate.</source>
-        <translation>Sélectionnez le modèle Whisper à utiliser pour la génération de sous-titres. « large-v3 » offre la meilleure précision ; « small » est plus rapide mais moins précis.</translation>
+        <source>large-v3 is the most accurate; small is much faster.</source>
+        <translation>large-v3 est le plus précis ; small est bien plus rapide.</translation>
     </message>
     <message>
         <source>ASR device</source>
         <translation>Périphérique ASR</translation>
     </message>
     <message>
-        <source>Auto uses the GPU when available, else CPU; GPU needs an NVIDIA card plus the acceleration pack.</source>
-        <translation>Auto utilise le GPU si disponible, sinon le CPU ; le GPU nécessite une carte NVIDIA ainsi que le pack d'accélération.</translation>
+        <source>Auto uses the GPU when available, else CPU. Each GPU option needs its own download below.</source>
+        <translation>Auto utilise le GPU si disponible, sinon le CPU. Chaque option GPU nécessite son propre téléchargement ci-dessous.</translation>
     </message>
     <message>
         <source>Download model</source>
@@ -9558,8 +9643,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Binaire alass</translation>
     </message>
     <message>
-        <source>Optional: path to the alass executable used for subtitle retiming. Leave blank to use a downloaded, bundled, or PATH alass.</source>
-        <translation>Facultatif : chemin vers l'exécutable alass utilisé pour la resynchronisation des sous-titres. Laissez vide pour utiliser un alass téléchargé, intégré ou présent dans le PATH.</translation>
+        <source>Leave blank to use the downloaded, bundled, or PATH alass.</source>
+        <translation>Laissez vide pour utiliser la version d'alass téléchargée, fournie avec l'application ou présente dans votre PATH.</translation>
     </message>
     <message>
         <source>Download alass</source>
@@ -9598,8 +9683,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Installer mokuro</translation>
     </message>
     <message>
-        <source>Download mokuro and its OCR engine into Anki Miner's folder (about 1 GB, up to 4 GB with NVIDIA GPU support). Needed for Utilities → Manga OCR unless mokuro is already installed.</source>
-        <translation>Téléchargez mokuro et son moteur OCR dans le dossier d'Anki Miner (environ 1 Go, jusqu'à 4 Go avec la prise en charge GPU NVIDIA). Nécessaire pour Utilitaires → OCR manga, sauf si mokuro est déjà installé.</translation>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <translation>Télécharge mokuro et son moteur OCR dans le dossier d'Anki Miner — environ 1 Go, jusqu'à 4 Go avec la prise en charge GPU NVIDIA.</translation>
     </message>
     <message>
         <source>mokuro install</source>
@@ -9610,8 +9695,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Non disponible sur cette plateforme</translation>
     </message>
     <message>
-        <source>Subtitle generation needs the faster-whisper engine. This packaged app cannot be extended with ASR. Use the ASR-capable AppImage, or run the command below and then launch the separate pipx-installed Anki Miner:</source>
-        <translation>La génération de sous-titres nécessite le moteur faster-whisper. Cette application packagée ne peut pas être étendue avec l'ASR. Utilisez l'AppImage compatible ASR, ou exécutez la commande ci-dessous puis lancez l'installation séparée d'Anki Miner via pipx :</translation>
+        <source>Subtitle generation needs the faster-whisper engine, which this build does not include. Install a copy with the command below and launch that one:</source>
+        <translation>La génération de sous-titres nécessite le moteur faster-whisper, que cette version n'inclut pas. Installez-en une copie avec la commande ci-dessous et lancez celle-ci :</translation>
     </message>
     <message>
         <source>Subtitle generation needs the faster-whisper engine. Install it with:</source>
@@ -9638,8 +9723,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>L'accélération GPU n'est pas disponible sur cette plateforme.</translation>
     </message>
     <message>
-        <source>No NVIDIA GPU detected. GPU acceleration needs an NVIDIA card.</source>
-        <translation>Aucun GPU NVIDIA détecté. L'accélération GPU nécessite une carte NVIDIA.</translation>
+        <source>No NVIDIA GPU detected. This pack needs an NVIDIA card.</source>
+        <translation>Aucun GPU NVIDIA détecté. Ce pack nécessite une carte NVIDIA.</translation>
     </message>
     <message>
         <source>Silence removal is available.</source>
@@ -9782,8 +9867,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Ajouter aux favoris</translation>
     </message>
     <message>
-        <source>Click to add to / remove from favorites.</source>
-        <translation>Cliquez pour ajouter aux / retirer des favoris.</translation>
+        <source>Add to or remove from favorites.</source>
+        <translation>Ajouter aux favoris ou en retirer.</translation>
     </message>
 </context><context>
     <name>ThemeGalleryWidget</name>
@@ -9796,8 +9881,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Retirer des favoris toutes les %1 variantes %2.</translation>
     </message>
     <message>
-        <source>%1 of %2 %3 variants favorited. Click to favorite all.</source>
-        <translation>%1 sur %2 variantes %3 en favori. Cliquez pour tout mettre en favori.</translation>
+        <source>Favorite all %2 %3 variants (%1 favorited).</source>
+        <translation>Mettre en favori toutes les %2 variantes %3 (%1 en favori).</translation>
     </message>
 </context><context>
     <name>ThemePage</name>
@@ -9816,8 +9901,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
 </context><context>
     <name>UISettingsPanel</name>
     <message>
-        <source>Language</source>
-        <translation>Langue</translation>
+        <source>Interface language</source>
+        <translation>Langue de l'interface</translation>
     </message>
     <message>
         <source>Restart to apply.</source>
@@ -9908,8 +9993,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Ouvrir %1 ; déposez des fichiers JSON de thème ici pour les installer au prochain lancement.</translation>
     </message>
     <message>
-        <source>The themes folder could not be opened.</source>
-        <translation>Le dossier des thèmes n'a pas pu être ouvert.</translation>
+        <source>The themes folder could not be created.</source>
+        <translation>Le dossier des thèmes n'a pas pu être créé.</translation>
     </message>
     <message>
         <source>Open Parent Folder</source>
@@ -9934,8 +10019,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Fermer</translation>
     </message>
     <message>
-        <source>Anki Miner v%1 is available!</source>
-        <translation>Anki Miner v%1 est disponible !</translation>
+        <source>Anki Miner v%1 is available</source>
+        <translation>Anki Miner v%1 est disponible</translation>
     </message>
     <message>
         <source>View release</source>
@@ -9968,8 +10053,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Téléchargement du modèle Vulkan…</translation>
     </message>
     <message>
-        <source>Vulkan model installed successfully.</source>
-        <translation>Modèle Vulkan installé avec succès.</translation>
+        <source>Vulkan model installed.</source>
+        <translation>Modèle Vulkan installé.</translation>
     </message>
 </context><context>
     <name>WordCurationDialog</name>
@@ -9984,6 +10069,10 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
     <message>
         <source>Cancel</source>
         <translation>Annuler</translation>
+    </message>
+    <message>
+        <source>Cancels the whole run, not just this item.</source>
+        <translation>Annule toute l'exécution, pas seulement cet élément.</translation>
     </message>
     <message>
         <source>Confirm Selection</source>
@@ -10002,8 +10091,8 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Mot (extrait)</translation>
     </message>
     <message>
-        <source>Form in subtitle</source>
-        <translation>Forme dans les sous-titres</translation>
+        <source>Form in text</source>
+        <translation>Forme dans le texte</translation>
     </message>
     <message>
         <source>Reading</source>
@@ -10038,20 +10127,20 @@ Vos dictionnaires installés, l'audio, les listes de fréquence et le thème son
         <translation>Audio</translation>
     </message>
     <message>
-        <source>How many times this word appears in this episode.
+        <source>How many times this word appears in the text being mined.
 
-The “Sentences” picker offers one option per subtitle line, so it usually lists fewer: repeats on the same line count once here, and lines where the word takes a form that would change the card’s Word are skipped.</source>
-        <translation>Nombre de fois où ce mot apparaît dans cet épisode.
+The “Sentences” picker usually lists fewer: one option per line, and only lines whose form matches the card’s Word.</source>
+        <translation>Le nombre de fois où ce mot apparaît dans le texte extrait.
 
-Le sélecteur « Phrases » propose une option par ligne de sous-titres et en liste donc généralement moins : les répétitions sur une même ligne ne comptent ici qu'une fois, et les lignes où le mot prend une forme qui changerait le « Mot (extrait) » de la carte sont ignorées.</translation>
+Le sélecteur « Phrases » en liste généralement moins : une option par ligne, et seulement les lignes dont la forme correspond au Mot de la carte.</translation>
     </message>
     <message>
-        <source>How many words you do not know yet appear on this word’s own subtitle line.
+        <source>How many words you do not know yet appear on this word’s own line.
 
 Sort ascending to put i+1 lines first — the ones whose only unknown word is this one. “-” means the line could not be counted.</source>
-        <translation>Nombre de mots que vous ne connaissez pas encore présents sur la ligne de sous-titre de ce mot.
+        <translation>Le nombre de mots que vous ne connaissez pas encore sur la ligne de ce mot.
 
-Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le seul mot inconnu est celui-ci. « - » signifie que la ligne n'a pas pu être comptée.</translation>
+Triez par ordre croissant pour placer les lignes i+1 en premier — celles dont le seul mot inconnu est celui-ci. « - » signifie que la ligne n'a pas pu être comptée.</translation>
     </message>
     <message>
         <source>Characters in the example sentence. Sort ascending for the shortest.</source>
@@ -10130,8 +10219,8 @@ Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le 
         <translation>Phrases</translation>
     </message>
     <message>
-        <source>Pick which sentence (and scene) gets mined for this word. Only shown when the word repeats.</source>
-        <translation>Choisissez quelle phrase (et quelle scène) est extraite pour ce mot. Affiché uniquement lorsque le mot se répète.</translation>
+        <source>Pick which sentence gets mined for this word.</source>
+        <translation>Choisissez la phrase extraite pour ce mot.</translation>
     </message>
     <message>
         <source>Pronunciation audio found</source>
@@ -10186,8 +10275,8 @@ Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le 
         <translation>Réinitialiser le mot et la phrase</translation>
     </message>
     <message>
-        <source>Your Known Words could not be saved, so no cards were created. Confirm again to retry, or Cancel to discard the pending marks.</source>
-        <translation>Vos mots connus n'ont pas pu être enregistrés, donc aucune carte n'a été créée. Confirmez de nouveau pour réessayer ou Annulez pour ignorer les marques en attente.</translation>
+        <source>Known Words could not be saved, so no cards were created. Confirm again to retry.</source>
+        <translation>Les mots connus n'ont pas pu être enregistrés, donc aucune carte n'a été créée. Confirmez à nouveau pour réessayer.</translation>
     </message>
     <message>
         <source>Known · pending</source>
@@ -10260,16 +10349,16 @@ Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le 
 </context><context>
     <name>YouTubeQueueItemWidget</name>
     <message>
-        <source>Manual JA subs</source>
-        <translation>Sous-titres JA manuels</translation>
+        <source>Manual subtitles</source>
+        <translation>Sous-titres manuels</translation>
     </message>
     <message>
-        <source>Auto JA subs</source>
-        <translation>Sous-titres JA automatiques</translation>
+        <source>Auto subtitles</source>
+        <translation>Sous-titres automatiques</translation>
     </message>
     <message>
-        <source>Auto JA subs (dub audio)</source>
-        <translation>Sous-titres JA automatiques (audio doublé)</translation>
+        <source>Auto subtitles (dub audio)</source>
+        <translation>Sous-titres automatiques (audio doublé)</translation>
     </message>
     <message>
         <source>Transcribed locally</source>
@@ -10280,8 +10369,8 @@ Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le 
         <translation>Vérification</translation>
     </message>
     <message>
-        <source>%1 cards</source>
-        <translation>%1 cartes</translation>
+        <source>Cards: %1</source>
+        <translation>Cartes : %1</translation>
     </message>
 </context><context>
     <name>YouTubeQueueWorker</name>
@@ -10295,6 +10384,10 @@ Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le 
     </message>
 </context><context>
     <name>YouTubeSettingsPanel</name>
+    <message>
+        <source>YouTube</source>
+        <translation>YouTube</translation>
+    </message>
     <message>
         <source>Cookies from browser</source>
         <translation>Cookies du navigateur</translation>
@@ -10340,20 +10433,12 @@ Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le 
         <translation>Maintenir yt-dlp automatiquement à jour</translation>
     </message>
     <message>
-        <source>Auto-update</source>
-        <translation>Mise à jour automatique</translation>
-    </message>
-    <message>
-        <source>Checks once a day on startup and downloads into Anki Miner's own folder. Leaving this off means YouTube mining will eventually stop working.</source>
-        <translation>Vérifie une fois par jour au démarrage et télécharge dans le dossier propre à Anki Miner. Si cette option est désactivée, l'extraction YouTube finira par ne plus fonctionner.</translation>
+        <source>Checks once a day on startup; off means YouTube mining eventually stops working.</source>
+        <translation>Vérifie une fois par jour au démarrage ; désactivé, l'extraction YouTube finit par ne plus fonctionner.</translation>
     </message>
     <message>
         <source>Use pre-release yt-dlp builds</source>
         <translation>Utiliser les versions préliminaires de yt-dlp</translation>
-    </message>
-    <message>
-        <source>Pre-release</source>
-        <translation>Pré-version</translation>
     </message>
     <message>
         <source>Updates install yt-dlp's nightly channel, which fixes YouTube breakage days before a stable release. Turning this off keeps the installed build until a newer stable version replaces it.</source>
@@ -10376,26 +10461,34 @@ Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le 
         <translation>Mettre à jour yt-dlp maintenant</translation>
     </message>
     <message>
-        <source>Download the latest yt-dlp into Anki Miner's own folder. Keeping yt-dlp current is what fixes most 'YouTube broke' errors.</source>
-        <translation>Téléchargez la dernière version de yt-dlp dans le dossier d'Anki Miner. Maintenir yt-dlp à jour corrige la plupart des erreurs « YouTube ne fonctionne plus ».</translation>
+        <source>Downloads the latest yt-dlp into Anki Miner's own folder.</source>
+        <translation>Télécharge la dernière version de yt-dlp dans le propre dossier d'Anki Miner.</translation>
     </message>
     <message>
         <source>yt-dlp</source>
         <translation>yt-dlp</translation>
     </message>
+    <message>
+        <source>Download yt-dlp (~40 MB)</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>YouTubeTab</name>
     <message>
-        <source>Mining unavailable — services not initialized.</source>
-        <translation>Extraction indisponible — services non initialisés.</translation>
+        <source>Mining unavailable — restart Anki Miner.</source>
+        <translation>Extraction indisponible — redémarrez Anki Miner.</translation>
     </message>
     <message>
-        <source>%1 run starting — %2 items.</source>
-        <translation>Démarrage de l'exécution %1 — %2 éléments.</translation>
+        <source>%1 run starting — %2 queued.</source>
+        <translation>Démarrage de l'exécution « %1 » — %2 en file d'attente.</translation>
     </message>
     <message>
         <source>Mine</source>
         <translation>Extraire</translation>
+    </message>
+    <message>
+        <source>Stopped: %1 succeeded, %2 failed.</source>
+        <translation>Arrêté : %1 réussi(s), %2 échoué(s).</translation>
     </message>
     <message>
         <source>YouTube queue</source>
@@ -10450,12 +10543,24 @@ Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le 
         <translation>Terminé — %1 réussi(s), %2 échoué(s)</translation>
     </message>
     <message>
+        <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download yt-dlp</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading yt-dlp…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Add</source>
         <translation>Ajouter</translation>
     </message>
     <message>
-        <source>Add the URL to the queue and probe its metadata.</source>
-        <translation>Ajouter l'URL à la file d'attente et analyser ses métadonnées.</translation>
+        <source>Add the URL to the queue and check the video.</source>
+        <translation>Ajouter l'URL à la file d'attente et vérifier la vidéo.</translation>
     </message>
     <message>
         <source>Paste a YouTube URL above and click Add.</source>
@@ -10466,8 +10571,8 @@ Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le 
         <translation>Réviser les mots avant l'extraction</translation>
     </message>
     <message>
-        <source>Show the word-selection popup for each video before creating cards.</source>
-        <translation>Afficher la fenêtre de sélection des mots pour chaque vidéo avant de créer les cartes.</translation>
+        <source>Pick which words get cards, once per video.</source>
+        <translation>Choisissez les mots qui deviennent des cartes, une fois par vidéo.</translation>
     </message>
     <message>
         <source>Subtitles:</source>
@@ -10498,16 +10603,16 @@ Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le 
         <translation>Recale les sous-titres YouTube sur l'audio de la vidéo avant l'extraction. Ignoré lorsque le sous-titre a été transcrit localement.</translation>
     </message>
     <message>
-        <source>Mine every READY item in the queue into Anki cards.</source>
-        <translation>Extraire chaque élément PRÊT de la file d'attente vers des cartes Anki.</translation>
+        <source>Mine every Ready item in the queue.</source>
+        <translation>Extraire chaque élément Prêt de la file d'attente.</translation>
     </message>
     <message>
         <source>Clear</source>
         <translation>Effacer</translation>
     </message>
     <message>
-        <source>Remove every queued item that is not currently mining.</source>
-        <translation>Retirer chaque élément en file d'attente qui n'est pas en cours d'extraction.</translation>
+        <source>Remove every item from the queue.</source>
+        <translation>Supprimer tous les éléments de la file d'attente.</translation>
     </message>
     <message>
         <source>Cancel the active run.</source>
@@ -10526,12 +10631,12 @@ Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le 
         <translation>Interrompu à la fermeture d'Anki Miner</translation>
     </message>
     <message>
-        <source>Drop a YouTube link here. Local files are mined from the Video and Audio tabs.</source>
-        <translation>Déposez un lien YouTube ici. Les fichiers locaux sont extraits depuis les onglets Vidéo et Audio.</translation>
+        <source>Drop a YouTube link here. Mine local files from the Video or Audiobooks tab.</source>
+        <translation>Déposez un lien YouTube ici. Extrayez les fichiers locaux depuis l'onglet Vidéo ou Livres audio.</translation>
     </message>
     <message>
-        <source>This run needs local transcription, but the model %1 is not installed. Install it in Settings, or set Subtitles to Captions only.</source>
-        <translation>Cette exécution nécessite une transcription locale, mais le modèle %1 n'est pas installé. Installez-le dans Paramètres, ou réglez Sous-titres sur Sous-titres uniquement.</translation>
+        <source>This run needs local transcription, but the model %1 is not installed.</source>
+        <translation>Cette exécution nécessite une transcription locale, mais le modèle %1 n'est pas installé.</translation>
     </message>
     <message>
         <source>Open Transcription Settings</source>
@@ -10558,10 +10663,20 @@ Triez par ordre croissant pour faire remonter les lignes i+1 — celles dont le 
         <translation>Corriger</translation>
     </message>
 </context><context>
+    <name>_ListQueueMiningTabBase</name>
+    <message>
+        <source>Mining failed</source>
+        <translation>Échec de l'extraction</translation>
+    </message>
+</context><context>
     <name>app</name>
     <message>
         <source>Anki Miner — Unexpected Error</source>
         <translation>Anki Miner — Erreur inattendue</translation>
+    </message>
+    <message>
+        <source>Anki Miner hit an unexpected error.</source>
+        <translation>Anki Miner a rencontré une erreur inattendue.</translation>
     </message>
     <message>
         <source>%1: %2
