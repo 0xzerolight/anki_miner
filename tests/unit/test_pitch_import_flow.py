@@ -289,7 +289,7 @@ class TestReimportSource:
 
         stub_worker.assert_not_called()
         stub_worker.repair_factory.assert_not_called()
-        assert any("Indexed resources are in use" in body for _title, body in warnings)
+        assert any("Another task is using the indexed resources" in body for _title, body in warnings)
         assert tab.pitch_panel._add_btn.isEnabled()
 
     def test_reimport_uses_stored_source_and_id(self, tab, monkeypatch, stub_worker):

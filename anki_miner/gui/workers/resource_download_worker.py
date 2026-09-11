@@ -410,7 +410,10 @@ class ResourceDownloadWorker(CancellableWorker):
                         **language_kwarg(self._language),
                     )
                     dict_id = result.dict_id
-                    detail = f"{result.entry_count} entries"
+                    detail = tr_format(
+                        QCoreApplication.translate("ResourceDownloadDialog", "%1 entries"),
+                        f"{result.entry_count:,}",
+                    )
                     # Remove pre-fix date-versioned duplicates now living in
                     # sibling dirs. Never fails the item — a broken sweep is
                     # reported, not raised (sweep is structurally total).
@@ -436,7 +439,10 @@ class ResourceDownloadWorker(CancellableWorker):
                         **language_kwarg(self._language),
                     )
                     source_id = freq_result.source_id
-                    detail = f"{freq_result.entry_count} entries"
+                    detail = tr_format(
+                        QCoreApplication.translate("ResourceDownloadDialog", "%1 entries"),
+                        f"{freq_result.entry_count:,}",
+                    )
                 elif spec.kind == "pitch":
                     # Same suffix re-typing as freq: import_pitch_source
                     # dispatches on suffix, but download_to_temp stages ``.part``.
@@ -457,7 +463,7 @@ class ResourceDownloadWorker(CancellableWorker):
                     source_id = pitch_result.source_id
                     detail = tr_format(
                         QCoreApplication.translate("ResourceDownloadDialog", "%1 entries"),
-                        pitch_result.entry_count,
+                        f"{pitch_result.entry_count:,}",
                     )
                 else:  # pragma: no cover — catalog kinds are constrained
                     raise ValueError(f"Unknown resource kind: {spec.kind!r}")

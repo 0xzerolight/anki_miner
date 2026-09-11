@@ -288,7 +288,7 @@ class TestBackfillScanWorker:
 
         assert errors == [
             "Backfill scan failed: Dictionary 'Old Dictionary' needs reimport "
-            "(schema upgrade) — Settings → Dictionaries → Reimport All"
+            "after the app upgrade — Settings → Dictionaries → Reimport All"
         ]
         scan.assert_not_called()
         shared_lookup.close.assert_called_once_with()

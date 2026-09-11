@@ -48,8 +48,8 @@ def _robust_rmtree(target: Path) -> RmtreeOutcome:
 
 # Human-readable format labels keyed by the importer's ``format`` value.
 _FORMAT_LABELS: dict[str, str] = {
-    "yomitan-pitch": "yomitan-pitch",
-    "csv": "csv",
+    "yomitan-pitch": "Yomitan",
+    "csv": "CSV",
 }
 
 
@@ -67,7 +67,7 @@ class PitchSettingsPanel(ChainSettingsPanelBase):
     _REMOVE_ERROR_NOUN = "pitch source folder"
 
     def __init__(self, pitch_root: Path, parent=None):
-        super().__init__("Pitch Accent Sources", parent=parent)
+        super().__init__(self.tr("Pitch Accent"), parent=parent)
         self._pitch_root = pitch_root
         # Optional callback invoked before destructive replacement/removal to
         # ask the rest of the app to close cached sqlite handles.
@@ -76,16 +76,11 @@ class PitchSettingsPanel(ChainSettingsPanelBase):
             loading=self.tr("Loading…"),
             retry_label=self.tr("Retry"),
             scan_failed_summary=self.tr("Installed pitch accent sources could not be checked."),
-            files_left_summary=self.tr(
-                "The pitch source was removed from the chain, but its files were left in place "
-                "because the folder could not be proven to belong to Anki Miner."
-            ),
+            files_left_summary=self.tr("The pitch source was removed from the chain; no files were deleted from disk."),
             intact_failure_summary=self.tr("%1 could not be removed. Its files are intact — try again."),
-            partial_failure_summary=self.tr(
-                "%1 was only partly removed. Re-import or repair this pitch source before retrying."
-            ),
+            partial_failure_summary=self.tr("%1 was only partly removed. Re-import it before retrying."),
             config_pending_failure_summary=self.tr(
-                "%1 could not be restored after its settings update failed. " "Restart Anki Miner before retrying."
+                "%1 could not be removed: its settings could not be saved. Restart Anki Miner and try again."
             ),
             post_save_summary=self.tr(
                 "%1 was removed, but Anki Miner could not refresh it. "
@@ -154,7 +149,7 @@ class PitchSettingsPanel(ChainSettingsPanelBase):
                 move_up=self.tr("Move up"),
                 move_up_tooltip=self.tr("Move up (wins lookups first)"),
                 move_down=self.tr("Move down"),
-                move_down_tooltip=self.tr("Move down"),
+                move_down_tooltip=self.tr("Move down (checked after the rows above)"),
             ),
             extra_actions=(self._reimport_btn, self._restore_btn),
         )
@@ -273,8 +268,8 @@ class PitchSettingsPanel(ChainSettingsPanelBase):
     def _confirm_remove(self, display: str, *, body: str | None = None) -> bool:
         if body is None:
             body = self.tr(
-                "Remove '%1' from the pitch accent chain?\n\nOnly the index files are deleted.\n"
-                "This cannot be undone. You would need to re-import to use this source again."
+                "Remove '%1' from the pitch accent chain?\n\n"
+                "Only the index files are deleted. Adding it back needs the source file."
             )
         reply = QMessageBox.question(
             self,
@@ -288,11 +283,7 @@ class PitchSettingsPanel(ChainSettingsPanelBase):
     def _confirm_chain_only_remove(self, display: str) -> bool:
         return self._confirm_remove(
             display,
-            body=self.tr(
-                "Remove '%1' from the pitch accent chain?\n\n"
-                "Index files on disk will be left untouched because the folder could not be proven "
-                "to belong to Anki Miner."
-            ),
+            body=self.tr("Remove '%1' from the pitch accent chain?\n\nNo index files are deleted."),
         )
 
     def _acquire_release_for_remove(self) -> bool:
@@ -301,10 +292,7 @@ class PitchSettingsPanel(ChainSettingsPanelBase):
         if not self.request_resource_release():
             self.show_screen_issue(
                 ScreenIssue(
-                    summary=self.tr(
-                        "Indexed resources are in use by mining, startup prewarm, or card backfill. "
-                        "Wait for the active task to finish and try again."
-                    )
+                    summary=self.tr("Another task is using the indexed resources — try again when it finishes.")
                 )
             )
             return False

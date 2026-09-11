@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.languages.registry import config_language
+from anki_miner.languages.registry import config_language, language_display_name
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
     log_resource_inventory,
@@ -209,9 +209,11 @@ class PitchSourceRegistry:
                 if load_result is not None:
                     load_result.warnings.append(
                         tr_format(
-                            QCoreApplication.translate("ResourceChain", "Pitch source '%1' is for %2; skipped"),
-                            entry.source_id,
-                            meta.language,
+                            QCoreApplication.translate(
+                                "ResourceChain", "Pitch source '%1' is indexed for %2 and was skipped."
+                            ),
+                            meta.source_name,
+                            language_display_name(meta.language),
                         )
                     )
                 continue

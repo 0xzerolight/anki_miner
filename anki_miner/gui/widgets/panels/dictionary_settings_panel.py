@@ -34,6 +34,13 @@ def _robust_rmtree(target: Path) -> RmtreeOutcome:
     return robust_rmtree(target, mode="outcome")
 
 
+# Human-readable format labels keyed by the importer's ``format`` value.
+_FORMAT_LABELS: dict[str, str] = {
+    "yomitan": "Yomitan",
+    "jmdict": "JMdict",
+}
+
+
 class DictionarySettingsPanel(ChainSettingsPanelBase):
     """Reorderable chain of dictionary providers."""
 
@@ -49,7 +56,7 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
     _REMOVE_ERROR_NOUN = "dictionary folder"
 
     def __init__(self, dicts_root: Path, parent=None):
-        super().__init__("Dictionary Settings", parent=parent)
+        super().__init__(self.tr("Dictionaries"), parent=parent)
         self._dicts_root = dicts_root
         # Optional callback invoked before destructive remove to ask the rest of
         # the app to close cached sqlite handles (Issue #30, Win11 lock).
@@ -59,16 +66,11 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             loading=self.tr("Loading…"),
             retry_label=self.tr("Retry"),
             scan_failed_summary=self.tr("Installed dictionaries could not be checked."),
-            files_left_summary=self.tr(
-                "The dictionary was removed from the chain, but its files were left in place "
-                "because the folder could not be proven to belong to Anki Miner."
-            ),
+            files_left_summary=self.tr("The dictionary was removed from the chain; no files were deleted from disk."),
             intact_failure_summary=self.tr("%1 could not be removed. Its files are intact — try again."),
-            partial_failure_summary=self.tr(
-                "%1 was only partly removed. Re-import or repair this dictionary before retrying."
-            ),
+            partial_failure_summary=self.tr("%1 was only partly removed. Re-import it before retrying."),
             config_pending_failure_summary=self.tr(
-                "%1 could not be restored after its settings update failed. " "Restart Anki Miner before retrying."
+                "%1 could not be removed: its settings could not be saved. Restart Anki Miner and try again."
             ),
             post_save_summary=self.tr(
                 "%1 was removed, but Anki Miner could not refresh it. "
@@ -188,26 +190,28 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         self.add_section(self.tr("Active Dictionaries"))
 
         self._reimport_btn = ModernButton(self.tr("Reimport All"), variant="secondary")
+        self._reimport_btn.setToolTip(
+            self.tr(
+                "Rebuild every dictionary in the list from the zip saved when it was "
+                "imported. Needed after an app upgrade changes the index format."
+            )
+        )
         self._reimport_btn.clicked.connect(self.reimport_all_requested.emit)
 
         self._restore_btn = ModernButton(self.tr("Restore from Disk"), variant="secondary")
         self._restore_btn.setToolTip(
             self.tr(
-                "Re-add dictionaries found in the storage folder that aren't in the "
-                "list above (e.g. after a settings reset). No re-import needed."
+                "Re-add dictionaries found in the storage folder that aren't in the " "list above. No re-import needed."
             )
         )
         self._restore_btn.clicked.connect(self.rescan_requested.emit)
 
         container = self._build_chain_container(
             ChainListLabels(
-                explanation=self.tr(
-                    "Tried top to bottom — the first dictionary with an entry for a word "
-                    "wins and fills MainDefinition."
-                ),
+                explanation=self.tr("Tried top to bottom — the first dictionary with an entry for a word wins."),
                 add=self.tr("Add dictionary…"),
                 remove=self.tr("Remove dictionary"),
-                remove_tooltip=self.tr("Remove the selected dictionary and delete its files"),
+                remove_tooltip=self.tr("Remove the selected dictionary"),
                 move_up=self.tr("Move up"),
                 move_up_tooltip=self.tr("Move up in priority"),
                 move_down=self.tr("Move down"),
@@ -268,17 +272,20 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             if meta is not None:
                 # Zero entries is a fact about an installed dictionary; unknown
                 # metadata is the absence of one, so it stays off the row.
-                metadata = (meta.format, tr_format(self.tr("%1 entries"), f"{meta.entry_count:,}"))
+                metadata = (
+                    _FORMAT_LABELS.get(meta.format, meta.format),
+                    tr_format(self.tr("%1 entries"), f"{meta.entry_count:,}"),
+                )
             else:
                 metadata = (self.tr("not installed"),)
-                warning = self.tr("⚠ missing — re-import")
+                warning = self.tr("⚠ missing — add again")
         else:
             display = self.tr("Jisho (online fallback)")
             metadata = (self.tr("online"),)
             warning = self.tr("⚠ rate-limited, slower")
         stale = meta is not None and not meta.schema_ok
         if stale:
-            warning = self.tr("⚠ re-import to refresh")
+            warning = self.tr("⚠ re-import required (app upgrade)")
         return ChainRowSpec(
             entry=entry,
             title=display,
@@ -325,7 +332,7 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             self.tr("Remove dictionary"),
             tr_format(
                 self.tr(
-                    "Remove '%1' and delete its files from disk?\n\nThis cannot be undone. You would need to reimport from the source zip."
+                    "Remove '%1' and delete its files from disk?\n\nThis cannot be undone. Adding it back needs the original zip."
                 ),
                 display,
             ),
@@ -339,9 +346,7 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
             self,
             self.tr("Remove dictionary"),
             tr_format(
-                self.tr(
-                    "Remove '%1' from the dictionary list?\n\nFiles on disk will be left untouched because the folder could not be proven to belong to Anki Miner."
-                ),
+                self.tr("Remove '%1' from the dictionary list?\n\nNo files on disk are deleted."),
                 display,
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -357,10 +362,7 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
         if self._release_callback is not None and not self._release_callback():
             self.show_screen_issue(
                 ScreenIssue(
-                    summary=self.tr(
-                        "Indexed resources are in use by mining, startup prewarm, or card backfill. "
-                        "Wait for the active task to finish and try again."
-                    )
+                    summary=self.tr("Another task is using the indexed resources — try again when it finishes.")
                 )
             )
             return False

@@ -656,8 +656,8 @@ class TestReimportSource:
 
         stub_worker.assert_not_called()
         stub_worker.repair_factory.assert_not_called()
-        assert any("Indexed resources are in use" in body for _title, body in warnings)
-        assert all(task in warnings[0][1] for task in ("mining", "startup prewarm", "card backfill"))
+        assert any("Another task is using the indexed resources" in body for _title, body in warnings)
+        assert warnings[0][1] == "Another task is using the indexed resources — try again when it finishes."
         assert tab.frequency_panel._add_btn.isEnabled()
 
     def test_wrong_typed_source_name_uses_normal_default(self, tab, monkeypatch, stub_worker):

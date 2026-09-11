@@ -11,7 +11,7 @@ from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.interfaces.dictionary_provider import DictionaryProvider
-from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.languages.registry import config_language, get_profile, language_display_name
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
     log_resource_inventory,
@@ -218,9 +218,11 @@ class DictionaryRegistry:
                     if load_result is not None:
                         load_result.warnings.append(
                             tr_format(
-                                QCoreApplication.translate("ResourceChain", "Dictionary '%1' is for %2; skipped"),
-                                entry.dict_id,
-                                meta.language,
+                                QCoreApplication.translate(
+                                    "ResourceChain", "Dictionary '%1' is indexed for %2 and was skipped."
+                                ),
+                                meta.source_name,
+                                language_display_name(meta.language),
                             )
                         )
                     continue

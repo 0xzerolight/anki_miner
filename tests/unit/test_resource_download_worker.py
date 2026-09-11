@@ -173,7 +173,7 @@ def test_happy_path_all_three_kinds(tmp_path, monkeypatch):
     assert dict_calls[0]["dict_id"] == "jitendex"
     dict_result = next(r for r in summary.results if r.spec_id == "jitendex")
     assert dict_result.dict_id == "jitendex-english"
-    assert "12345" in dict_result.detail
+    assert dict_result.detail == "12,345 entries"
 
     # freq routed to the configured freqs_root; result carries source_id.
     assert freq_calls[0]["dest_root"] == tmp_path / "freqs"
@@ -182,7 +182,7 @@ def test_happy_path_all_three_kinds(tmp_path, monkeypatch):
     assert freq_calls[0]["input_path"].suffix == ".zip"
     freq_result = next(r for r in summary.results if r.spec_id == "jpdb-freq")
     assert freq_result.source_id == "jpdb"
-    assert "6789" in freq_result.detail
+    assert freq_result.detail == "6,789 entries"
 
     # item_done emitted per item.
     assert [d[0] for d in done] == ["jitendex", "jpdb-freq", "kanjium-pitch"]

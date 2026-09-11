@@ -82,7 +82,7 @@ def test_no_saved_source_shows_warning_and_skips_worker(tab, monkeypatch, stub_w
 
     tab._dict_import_flow.reimport_dict("wrong-slot")
 
-    assert any("wrong-slot" in body and "recoverable source" in body for _, body in warnings)
+    assert any("wrong-slot" in body and "No saved copy" in body for _, body in warnings)
     stub_worker.assert_not_called()
     stub_worker.repair_factory.assert_not_called()
 
@@ -177,7 +177,7 @@ def test_resource_release_refusal_blocks_worker(tab, monkeypatch, stub_worker, t
 
     tab._dict_import_flow.reimport_dict("test-dict-v1")
 
-    assert any("Indexed resources are in use" in summary for summary, _ in warnings), warnings
+    assert any("Another task is using the indexed resources" in summary for summary, _ in warnings), warnings
     stub_worker.assert_not_called()
     stub_worker.repair_factory.assert_not_called()
 

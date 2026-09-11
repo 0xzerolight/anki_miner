@@ -173,8 +173,8 @@ class TestReporting:
 
         assert message is not None
         assert message.splitlines() == [
-            "Frequency source 'JPDB' needs reimport (schema upgrade) — Settings → Frequency → Reimport All",
-            "Pitch source 'NHK' needs reimport (schema upgrade) — Settings → Pitch Accent → Reimport All",
+            "Frequency source 'JPDB' needs reimport after the app upgrade — Settings → Frequency → Reimport All",
+            "Pitch source 'NHK' needs reimport after the app upgrade — Settings → Pitch Accent → Reimport All",
         ]
 
     def test_stale_audio_pack_names_the_pack_and_the_fix(self, config: AnkiMinerConfig) -> None:
@@ -188,7 +188,9 @@ class TestReporting:
         message = stale_resource_reimport_error(cfg)
 
         assert message is not None
-        assert message == ("Audio pack 'NHK 2016' needs reimport (schema upgrade) — Settings → Audio → Reimport All")
+        assert message == (
+            "Audio pack 'NHK 2016' needs reimport after the app upgrade — Settings → Audio → Reimport All"
+        )
 
     def test_stale_audio_pack_with_unmapped_field_does_not_gate(self, config: AnkiMinerConfig) -> None:
         """A pack is only ever consulted when expression_audio is mapped too.

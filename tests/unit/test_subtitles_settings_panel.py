@@ -1109,11 +1109,11 @@ def test_notify_vulkan_download_finished_updates_status_and_cache(qtbot, tmp_pat
     assert panel._vulkan_active
     assert not panel.download_vulkan_button.isEnabled()
 
-    panel.notify_vulkan_download_finished(True, "Vulkan model installed successfully.")
+    panel.notify_vulkan_download_finished(True, "Vulkan model installed.")
     _wait_state_settled(qtbot, panel)
 
     assert not panel._vulkan_active
-    assert panel.vulkan_status_label.text() == "Vulkan model installed successfully."
+    assert panel.vulkan_status_label.text() == "Vulkan model installed."
     assert panel._vulkan_installed_cache is True
     assert panel.download_vulkan_button.isEnabled()
 

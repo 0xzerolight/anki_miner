@@ -153,7 +153,7 @@ def resource_detail(
             locale.toString(event.entries or 0),
         )
 
-    return QCoreApplication.translate("ResourceDownloadDialog", "Activating")
+    return QCoreApplication.translate("ResourceDownloadDialog", "Activating…")
 
 
 def result_headline(summary: ResourceDownloadSummary, *, activated: bool) -> str:
@@ -492,8 +492,7 @@ class ResourceDownloadSession(QObject):
                 self._report_blocked(
                     QCoreApplication.translate(
                         "ResourceDownloadDialog",
-                        "Indexed resources are in use by mining, startup prewarm, or card backfill. "
-                        "Wait for the active task to finish and try again.",
+                        "Another task is using the indexed resources — try again when it finishes.",
                     )
                 )
                 return False
@@ -659,7 +658,7 @@ class ResourceDownloadSession(QObject):
                     [
                         QCoreApplication.translate(
                             "ResourceDownloadDialog",
-                            "The download worker finished without a completion result.",
+                            "The download stopped before it finished. Try again.",
                         )
                     ],
                     can_retry=False,
@@ -700,7 +699,7 @@ class ResourceDownloadSession(QObject):
         self._with_window(
             lambda window: window.show_activity(
                 QCoreApplication.translate("ResourceDownloadDialog", "Recommended resources"),
-                QCoreApplication.translate("ResourceDownloadDialog", "Activating"),
+                QCoreApplication.translate("ResourceDownloadDialog", "Activating…"),
                 None,
             )
         )

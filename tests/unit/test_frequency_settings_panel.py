@@ -154,7 +154,7 @@ def test_row_shows_format_and_entry_count(qapp, qtbot, tmp_path):
     assert row is not None
     texts = [lbl.text() for lbl in row.findChildren(QLabel)]
     assert any("JPDB" in t for t in texts), texts
-    assert any("yomitan-freq" in t for t in texts), texts
+    assert any("Yomitan" in t for t in texts), texts
     assert any("5,000" in t for t in texts), texts
     assert not any("word-based" in t for t in texts), texts  # numeric source: no badge
 
@@ -408,7 +408,7 @@ def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
 
     assert panel.get_chain() == ()
     assert payload.read_text(encoding="utf-8") == "foreign"
-    assert "left in place" in panel.issue_banner().current_issue().summary
+    assert "no files were deleted from disk" in panel.issue_banner().current_issue().summary
 
 
 def test_context_menu_bails_during_scan_placeholder(qapp, qtbot, tmp_path, monkeypatch):
@@ -471,8 +471,7 @@ def test_release_callback_blocks_remove(qapp, qtbot, tmp_path, confirm_remove, m
     assert len(panel.get_chain()) == 1
     assert (tmp_path / "jpdb").exists()
     summary = panel.issue_banner().current_issue().summary
-    assert "Indexed resources are in use" in summary
-    assert all(task in summary for task in ("mining", "startup prewarm", "card backfill"))
+    assert summary == "Another task is using the indexed resources — try again when it finishes."
 
 
 # ---------------------------------------------------------------------------

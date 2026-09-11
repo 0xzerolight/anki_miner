@@ -251,10 +251,10 @@ class TestControllerStarter:
         tasks.start_language_pack_download("ko", tmp_path, statuses.append, lambda ok, msg: results.append((ok, msg)))
 
         built[0].status.emit("한국어 pack (1/2): downloading")
-        built[0].result_ready.emit(True, "한국어 pack installed successfully.")
+        built[0].result_ready.emit(True, "한국어 pack installed.")
 
         assert statuses == ["한국어 pack (1/2): downloading"]
-        assert results == [(True, "한국어 pack installed successfully.")]
+        assert results == [(True, "한국어 pack installed.")]
 
     def test_the_handle_is_released_on_finished(self, controller, tmp_path) -> None:
         tasks, built = controller
@@ -465,12 +465,11 @@ class TestAppWiring:
             lambda code: order.append(f"notify:{code}"),
         )
 
-        captured["on_finished"](True, "한국어 pack installed successfully.")
+        captured["on_finished"](True, "한국어 pack installed.")
 
         assert order == ["inject", "notify:ko"]
         assert (
-            settings_tab.mining_language_panel.language_pack_rows["ko"].status_label.text()
-            == "한국어 pack installed successfully."
+            settings_tab.mining_language_panel.language_pack_rows["ko"].status_label.text() == "한국어 pack installed."
         )
 
     def test_the_finish_makes_the_revealed_row_searchable(self, wired, monkeypatch) -> None:
@@ -481,7 +480,7 @@ class TestAppWiring:
         rebuilt: list[bool] = []
         monkeypatch.setattr(settings_tab, "refresh_setting_search_index", lambda: rebuilt.append(True))
 
-        captured["on_finished"](True, "한국어 pack installed successfully.")
+        captured["on_finished"](True, "한국어 pack installed.")
 
         assert rebuilt == [True]
 

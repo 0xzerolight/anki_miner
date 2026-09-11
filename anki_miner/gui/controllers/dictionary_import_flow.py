@@ -261,7 +261,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                     if result.cancelled
                     else None
                 ),
-                empty=QCoreApplication.translate("DictionaryImportFlow", "Done."),
+                empty=QCoreApplication.translate("DictionaryImportFlow", "Nothing was imported."),
             )
             QMessageBox.information(
                 self._parent,
@@ -288,7 +288,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             failure_summary=QCoreApplication.translate("DictionaryImportFlow", "The dictionary could not be imported."),
             cancelling_label=QCoreApplication.translate("DictionaryImportFlow", "Cancelling…"),
             missing_result_message=QCoreApplication.translate(
-                "DictionaryImportFlow", "The import worker finished without a completion result."
+                "DictionaryImportFlow", "The import stopped before it finished. Try again."
             ),
             trace_id=trace_id,
             on_finished=on_finished,
@@ -351,7 +351,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         self,
         slot_id: str,
         *,
-        _scan_result: tuple[Path, str, bool] | None = None,
+        _scan_result: tuple[Path, str, bool, str] | None = None,
         _trace_id: str | None = None,
     ) -> None:
         """Re-import one slot from its saved source, preferring Yomitan."""
@@ -361,17 +361,23 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 return
             config = self._get_config()
 
-            def _scan() -> tuple[Path, str, bool]:
+            def _scan() -> tuple[Path, str, bool, str]:
+                # The registry read is what turns the slot id into the name the
+                # row shows, which is the only name the failure banner may use.
+                registry = DictionaryRegistry(config.dicts_root)
+                registry.load()
+                meta = registry.get(slot_id)
+                display = meta.source_name if meta is not None else slot_id
                 try:
                     slot = resolve_managed_slot(config.dicts_root, slot_id)
                 except ValueError:
-                    return config.dicts_root, "", False
+                    return config.dicts_root, "", False, display
                 source_zip = slot / "source.zip"
                 if source_zip.is_file() and self._saved_yomitan_source_matches(slot_id, source_zip):
-                    return source_zip, "yomitan", True
+                    return source_zip, "yomitan", True, display
                 if slot_id == "jmdict-english" and config.jmdict_path.is_file():
-                    return config.jmdict_path, "jmdict", True
-                return source_zip, "", False
+                    return config.jmdict_path, "jmdict", True, display
+                return source_zip, "", False, display
 
             def _on_done(result: object) -> None:
                 assert isinstance(result, tuple)
@@ -380,22 +386,22 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             def _on_error(message: str) -> None:
                 self._set_import_buttons_enabled(True)
                 self._report_import_issue(
-                    QCoreApplication.translate("DictionaryImportFlow", "That folder could not be scanned."),
+                    QCoreApplication.translate("DictionaryImportFlow", "Installed dictionaries could not be checked."),
                     message,
                 )
 
             self._run_latest_scan(_scan, _on_done, _on_error)
             return
 
-        source_path, source_kind, recoverable = _scan_result
+        source_path, source_kind, recoverable, display_name = _scan_result
         if not recoverable:
             self._report_import_issue(
                 tr_format(
                     QCoreApplication.translate(
                         "DictionaryImportFlow",
-                        "No recoverable source was found for '%1'. Restore its saved source.zip or configured JMdict XML and try again.",
+                        "No saved copy of '%1' is left — add the dictionary again.",
                     ),
-                    slot_id,
+                    display_name,
                 ),
             )
             self._set_import_buttons_enabled(True)
@@ -405,8 +411,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             self._report_import_issue(
                 QCoreApplication.translate(
                     "DictionaryImportFlow",
-                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
-                    "Wait for the active task to finish and try again.",
+                    "Another task is using the indexed resources — try again when it finishes.",
                 ),
             )
             self._set_import_buttons_enabled(True)
@@ -446,6 +451,15 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 + self._import_notes(meta),
             )
 
+        def on_success_error(exc: Exception) -> None:
+            self._report_import_issue(
+                QCoreApplication.translate(
+                    "DictionaryImportFlow",
+                    "The import finished, but the settings could not be updated.",
+                ),
+                str(exc),
+            )
+
         self._run_modal_import(
             worker=worker,
             progress_label=QCoreApplication.translate("DictionaryImportFlow", "Re-importing dictionary…"),
@@ -460,10 +474,11 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             ),
             cancelling_label=QCoreApplication.translate("DictionaryImportFlow", "Cancelling…"),
             missing_result_message=QCoreApplication.translate(
-                "DictionaryImportFlow", "The import worker finished without a completion result."
+                "DictionaryImportFlow", "The import stopped before it finished. Try again."
             ),
             trace_id=trace_id,
             on_success=on_success,
+            on_success_error=on_success_error,
         )
 
     def reimport_jmdict(self) -> None:
@@ -491,8 +506,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             self._report_import_issue(
                 QCoreApplication.translate(
                     "DictionaryImportFlow",
-                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
-                    "Wait for the active task to finish and try again.",
+                    "Another task is using the indexed resources — try again when it finishes.",
                 ),
             )
             self._set_import_buttons_enabled(True)
@@ -515,6 +529,15 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             self._notify_config_changed()
             _log_import_persist(trace_id, "done")
 
+        def on_success_error(exc: Exception) -> None:
+            self._report_import_issue(
+                QCoreApplication.translate(
+                    "DictionaryImportFlow",
+                    "The import finished, but the settings could not be updated.",
+                ),
+                str(exc),
+            )
+
         self._run_modal_import(
             worker=worker,
             progress_label=QCoreApplication.translate("DictionaryImportFlow", "Reimporting JMdict…"),
@@ -529,10 +552,11 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             ),
             cancelling_label=QCoreApplication.translate("DictionaryImportFlow", "Cancelling…"),
             missing_result_message=QCoreApplication.translate(
-                "DictionaryImportFlow", "The import worker finished without a completion result."
+                "DictionaryImportFlow", "The import stopped before it finished. Try again."
             ),
             trace_id=trace_id,
             on_success=on_success,
+            on_success_error=on_success_error,
         )
 
     def reimport_all(
@@ -623,7 +647,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             def _on_error(message: str) -> None:
                 self._set_import_buttons_enabled(True)
                 self._report_import_issue(
-                    QCoreApplication.translate("DictionaryImportFlow", "That folder could not be scanned."),
+                    QCoreApplication.translate("DictionaryImportFlow", "Installed dictionaries could not be checked."),
                     message,
                 )
                 done()
@@ -637,8 +661,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             if missing_legacy:
                 body = QCoreApplication.translate(
                     "DictionaryImportFlow",
-                    "No dictionaries eligible for automatic repair were found.\n\n"
-                    "Skipped (not eligible for automatic repair; use per-row Re-import…):\n",
+                    "Skipped (no usable saved copy — add each one again):\n",
                 ) + "\n".join(f"  • {n}" for n in missing_legacy)
             else:
                 body = QCoreApplication.translate("DictionaryImportFlow", "No dictionaries in the chain.")
@@ -657,8 +680,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             self._report_import_issue(
                 QCoreApplication.translate(
                     "DictionaryImportFlow",
-                    "Indexed resources are in use by mining, startup prewarm, or card backfill. "
-                    "Wait for the active task to finish and try again.",
+                    "Another task is using the indexed resources — try again when it finishes.",
                 ),
             )
             self._set_import_buttons_enabled(True)
@@ -715,9 +737,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 [
                     (
                         tr_format(
-                            QCoreApplication.translate(
-                                "DictionaryImportFlow", "Reimported %1 dictionary/dictionaries:"
-                            ),
+                            QCoreApplication.translate("DictionaryImportFlow", "Reimported dictionaries (%1):"),
                             len(reimported),
                         ),
                         [f"  • {n}" for n in reimported],
@@ -725,7 +745,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                     (
                         QCoreApplication.translate(
                             "DictionaryImportFlow",
-                            "Skipped (not eligible for automatic repair; use per-row Re-import…):",
+                            "Skipped (no usable saved copy — add each one again):",
                         ),
                         [f"  • {n}" for n in missing_legacy],
                     ),
@@ -739,7 +759,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                     if result.cancelled
                     else None
                 ),
-                empty=QCoreApplication.translate("DictionaryImportFlow", "Done."),
+                empty=QCoreApplication.translate("DictionaryImportFlow", "Nothing was re-imported."),
             )
 
             QMessageBox.information(
@@ -774,7 +794,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
                 "DictionaryImportFlow", "The dictionaries could not be re-imported."
             ),
             missing_result_message=QCoreApplication.translate(
-                "DictionaryImportFlow", "The import worker finished without a completion result."
+                "DictionaryImportFlow", "The import stopped before it finished. Try again."
             ),
             trace_id=trace_id,
             on_finished=on_finished,
@@ -808,7 +828,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             def _on_error(message: str) -> None:
                 self._set_import_buttons_enabled(True)
                 self._report_import_issue(
-                    QCoreApplication.translate("DictionaryImportFlow", "That folder could not be scanned."),
+                    QCoreApplication.translate("DictionaryImportFlow", "Installed dictionaries could not be checked."),
                     message,
                 )
 

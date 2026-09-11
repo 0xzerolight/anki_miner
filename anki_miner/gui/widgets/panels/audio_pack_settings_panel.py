@@ -46,6 +46,16 @@ shutil = robust_fs.shutil
 logger = logging.getLogger(__name__)
 
 
+# Human-readable format labels keyed by the importer's ``format`` value.
+_FORMAT_LABELS: dict[str, str] = {
+    "ajt": "AJT",
+    "nhk16": "NHK 2016",
+    "forvo": "Forvo",
+    "jpod": "JPod",
+    "android_db": "Android database",
+}
+
+
 def _robust_rmtree(target: Path) -> RmtreeOutcome:
     """Panel-local seam for post-commit cleanup."""
     return robust_rmtree(target, mode="outcome")
@@ -153,23 +163,18 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
     _REMOVE_ERROR_NOUN = "audio pack index folder"
 
     def __init__(self, packs_root: Path, parent=None):
-        super().__init__("Audio Pack Settings", parent=parent)
+        super().__init__(self.tr("Audio"), parent=parent)
         self._packs_root = packs_root
         self._release_callback: Callable[[], bool] | None = None
         self._strings = _ChainPanelStrings(
             loading=self.tr("Loading…"),
             retry_label=self.tr("Retry"),
             scan_failed_summary=self.tr("Installed audio packs could not be checked."),
-            files_left_summary=self.tr(
-                "The audio pack was removed from the chain, but its files were left in place "
-                "because the folder could not be proven to belong to Anki Miner."
-            ),
+            files_left_summary=self.tr("The audio pack was removed from the chain; no files were deleted from disk."),
             intact_failure_summary=self.tr("%1 could not be removed. Its files are intact — try again."),
-            partial_failure_summary=self.tr(
-                "%1 was only partly removed. Re-import or repair this audio pack before retrying."
-            ),
+            partial_failure_summary=self.tr("%1 was only partly removed. Re-import it before retrying."),
             config_pending_failure_summary=self.tr(
-                "%1 could not be restored after its settings update failed. " "Restart Anki Miner before retrying."
+                "%1 could not be removed: its settings could not be saved. Restart Anki Miner and try again."
             ),
             post_save_summary=self.tr(
                 "%1 was removed, but Anki Miner could not refresh it. "
@@ -506,7 +511,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         pack_missing = (
             entry.kind == "pack" and view is not None and (entry.pack_id is None or view.get(entry.pack_id) is None)
         )
-        metadata: tuple[str, ...] = (fmt,) if fmt else ()
+        metadata: tuple[str, ...] = (_FORMAT_LABELS.get(fmt, fmt),) if fmt else ()
         if count is not None:
             metadata = (*metadata, tr_format(self.tr("%1 entries"), f"{count:,}"))
         if schema_stale:
@@ -599,7 +604,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             self.tr("Remove audio pack"),
             tr_format(
                 self.tr(
-                    "Remove '%1' from the audio chain?\n\nOnly the index files are deleted — your original audio files are untouched.\nThis cannot be undone. You would need to re-import to use this pack again."
+                    "Remove '%1' from the audio chain?\n\nOnly the index files are deleted; your audio files are untouched."
                 ),
                 display,
             ),
@@ -613,9 +618,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             self,
             self.tr("Remove audio pack"),
             tr_format(
-                self.tr(
-                    "Remove '%1' from the audio chain?\n\nIndex files on disk will be left untouched because the folder could not be proven to belong to Anki Miner."
-                ),
+                self.tr("Remove '%1' from the audio chain?\n\nNo index files are deleted."),
                 display,
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
@@ -627,10 +630,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         if not self.request_resource_release():
             self.show_screen_issue(
                 ScreenIssue(
-                    summary=self.tr(
-                        "Indexed resources are in use by mining, startup prewarm, or card backfill. "
-                        "Wait for the active task to finish and try again."
-                    )
+                    summary=self.tr("Another task is using the indexed resources — try again when it finishes.")
                 )
             )
             return False

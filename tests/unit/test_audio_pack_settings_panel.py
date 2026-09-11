@@ -182,7 +182,7 @@ def test_pack_row_shows_format_and_entry_count(qapp, qtbot, tmp_path):
     assert row is not None
     labels = row.findChildren(QLabel)
     texts = [lbl.text() for lbl in labels]
-    assert any("ajt" in t for t in texts), texts
+    assert any("AJT" in t for t in texts), texts
     assert any("5,000" in t for t in texts), texts
 
 
@@ -546,8 +546,7 @@ def test_release_callback_blocks_remove(qapp, qtbot, tmp_path, confirm_remove, m
     assert pack_dir.exists()
     # Reported in place, not in a modal that would sit over the panel (D24).
     summary = panel.issue_banner().current_issue().summary
-    assert "Indexed resources are in use" in summary
-    assert all(task in summary for task in ("mining", "startup prewarm", "card backfill"))
+    assert summary == "Another task is using the indexed resources — try again when it finishes."
 
 
 def test_remove_cancelled_keeps_pack_and_chain(qapp, qtbot, monkeypatch, tmp_path):
@@ -612,7 +611,7 @@ def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
 
     assert panel.get_chain() == ()
     assert payload.read_text(encoding="utf-8") == "foreign"
-    assert "left in place" in panel.issue_banner().current_issue().summary
+    assert "no files were deleted from disk" in panel.issue_banner().current_issue().summary
 
 
 def test_remove_failed_tombstone_cleanup_keeps_durable_chain_change(qapp, qtbot, monkeypatch, tmp_path, confirm_remove):
@@ -950,8 +949,8 @@ def test_right_click_remove_pack_without_meta_uses_chain_only_prompt(
 
     assert len(prompts) == 1
     assert "from the audio chain" in prompts[0]
-    assert "left untouched" in prompts[0]
-    assert "index files are deleted" not in prompts[0]
+    assert prompts[0].endswith("No index files are deleted.")
+    assert "Only the index files are deleted" not in prompts[0]
     assert (target / "keep.txt").read_text(encoding="utf-8") == "foreign"
 
 
@@ -975,7 +974,7 @@ def test_set_chain_with_registry_meta_uses_injected_meta(qapp, qtbot, tmp_path):
     labels = row.findChildren(QLabel)
     texts = [lbl.text() for lbl in labels]
     assert any("NHK Daily" in t for t in texts), texts
-    assert any("nhk16" in t for t in texts), texts
+    assert any("NHK 2016" in t for t in texts), texts
     assert any("999" in t for t in texts), texts
 
 

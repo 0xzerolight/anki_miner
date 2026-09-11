@@ -360,7 +360,7 @@ def test_remove_foreign_same_name_is_chain_only(qtbot, monkeypatch, tmp_path):
 
     assert panel.get_chain() == ()
     assert payload.read_text(encoding="utf-8") == "foreign"
-    assert "left in place" in panel.issue_banner().current_issue().summary
+    assert "no files were deleted from disk" in panel.issue_banner().current_issue().summary
 
 
 def test_remove_symlink_slot_is_chain_only(qtbot, monkeypatch, tmp_path):
@@ -425,7 +425,7 @@ def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, qtbot, tmp_pa
     # the warning renders "⚠ re-import to refr…".
     assert row.title_label.full_text == "Stale Yomi"
     assert row.warning_label.full_text.startswith("⚠ ")
-    assert "re-import to refresh" in row.warning_label.full_text
+    assert "re-import required (app upgrade)" in row.warning_label.full_text
 
     emitted: list[str] = []
     panel.reimport_dict_requested.connect(emitted.append)
@@ -505,7 +505,7 @@ def test_current_schema_row_has_no_stale_ui(qapp, qtbot, tmp_path):
     labels = row.findChildren(QLabel)
     label_texts = [lbl.text() for lbl in labels]
     assert not any(t.startswith("⚠") for t in label_texts)
-    assert not any("re-import to refresh" in t for t in label_texts)
+    assert not any("re-import required (app upgrade)" in t for t in label_texts)
 
 
 def test_global_button_labeled_reimport_all(qapp, qtbot, tmp_path):
@@ -678,7 +678,7 @@ def test_right_click_remove_metadata_less_unproved_row_uses_chain_only_prompt(
 
     assert len(prompts) == 1
     assert "from the dictionary list" in prompts[0]
-    assert "left untouched" in prompts[0]
+    assert prompts[0].endswith("No files on disk are deleted.")
     assert "delete its files" not in prompts[0]
     assert (target / "keep.txt").read_text(encoding="utf-8") == "foreign"
 
@@ -871,8 +871,7 @@ def test_release_callback_returning_false_aborts_remove(qapp, qtbot, monkeypatch
     assert dict_dir.exists()
     # Reported in place, not in a modal that would sit over the panel (D24).
     summary = panel.issue_banner().current_issue().summary
-    assert "Indexed resources are in use" in summary
-    assert all(task in summary for task in ("mining", "startup prewarm", "card backfill"))
+    assert summary == "Another task is using the indexed resources — try again when it finishes."
     assert changed == []
     assert [e.dict_id for e in panel.get_chain()[:1]] == ["a"]
 
