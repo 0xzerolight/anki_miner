@@ -967,6 +967,16 @@ jobs:
         shell: bash
         run: python scripts/fetch_language_pack_seeds.py "$RUNNER_TEMP/lang_pack_seeds" zh ko
 
+      # Seed the app-managed yt-dlp the youtube smoke needs. The bundle ships no
+      # yt-dlp (it is an in-app download), so the leg has to be handed one. Drives
+      # the app's OWN updater against a pinned release: same download, digest check
+      # and .verified receipt the shipping app writes. FAIL-OPEN with a LOUD
+      # warning if the download fails (a GitHub outage must not red a release) —
+      # bundle_smoke.sh then skips the youtube leg. A digest mismatch fails closed.
+      - name: Seed the app-managed yt-dlp for the youtube smoke
+        shell: bash
+        run: python scripts/fetch_ytdlp_seed.py "$RUNNER_TEMP/ytdlp_seed"
+
       # Bundle-validation smokes, all three in one shared script so the local
       # preflight (scripts/release_preflight.sh) and CI assert identically and
       # cannot drift. The script runs, fail-closed:
@@ -1015,6 +1025,10 @@ jobs:
           # Mining-language tokenizer legs (opt-in in bundle_smoke.sh so the
           # local invocation-count test stays valid).
           BUNDLE_SMOKE_LANGS: zh ko
+          # yt-dlp seed from the step above: bundle_smoke.sh copies it into the
+          # isolated smoke home so the resolver's app-managed tier has something
+          # to find. No seed -> the youtube leg skips instead of failing.
+          BUNDLE_SMOKE_YTDLP_SEED: ${{ runner.temp }}/ytdlp_seed
         # macOS smokes the SIGNED .app, not the leftover COLLECT tree: it is the
         # artifact that ships, and running it here is what proves the codesign
         # step above did not break the Contents/Resources symlinks the relocated

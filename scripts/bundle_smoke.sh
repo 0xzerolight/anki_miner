@@ -10,6 +10,7 @@
 #
 # Smokes (all headless via QT_QPA_PLATFORM=offscreen; none touch the network):
 #   1. youtube   ANKI_MINER_SMOKE=youtube                  -> BUNDLED_SMOKE_PASS
+#                 (needs a seed under BUNDLE_SMOKE_YTDLP_SEED)
 #   2. asr       ANKI_MINER_SMOKE=asr  HF_HUB_OFFLINE=1     -> BUNDLED_SMOKE_PASS
 #   2c. mpv      ANKI_MINER_MPV_PROBE=1                     -> MPV_PROBE_OK
 #   2d. language  ANKI_MINER_SMOKE=<code> (opt-in: BUNDLE_SMOKE_LANGS) -> BUNDLED_SMOKE_PASS
@@ -51,14 +52,47 @@ export ANKI_MINER_HOME="$SMOKE_HOME"
 
 FAILED=()
 
-# --- 1. YouTube smoke: yt-dlp extractor registry survived PyInstaller ---------
+# --- 1. YouTube smoke: the app-managed yt-dlp resolves and runs ---------------
+# The bundle ships no yt-dlp — it is an in-app download into ANKI_MINER_HOME/bin/
+# (anki_miner/services/ytdlp_updater.py) — so the smoke has to be handed one.
+# BUNDLE_SMOKE_YTDLP_SEED points at a seed home filled by
+# scripts/fetch_ytdlp_seed.py, which drives the app's OWN updater against a
+# pinned release: the binary AND the .verified receipt the resolver requires.
+# Same fail-open shape as the language seeds: no seed means the FETCH did not
+# happen, which must skip the leg loudly rather than red a release over a bundle
+# that is correct. RUNNER_TEMP is a backslash path on Windows and this runs under
+# bash everywhere, so normalise the separators before testing the directory.
+#
+# Guarded on the FILES, not the directory: the updater creates <seed>/bin and its
+# staging temp file before the first byte arrives, so a failed fetch leaves an
+# empty bin/ behind and a directory test would run the leg with nothing seeded.
 echo "=== smoke: youtube ==="
-if ANKI_MINER_SMOKE=youtube QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke_youtube.log \
-  && grep -q "BUNDLED_SMOKE_PASS" smoke_youtube.log; then
-  echo "PASS youtube"
+YTDLP_SEED="${BUNDLE_SMOKE_YTDLP_SEED:-}"
+YTDLP_SEED="${YTDLP_SEED//\\//}"
+YTDLP_SEED_BIN=""
+if [ -n "$YTDLP_SEED" ]; then
+  for name in yt-dlp yt-dlp.exe; do
+    if [ -f "$YTDLP_SEED/bin/$name" ] && [ -f "$YTDLP_SEED/bin/$name.verified" ]; then
+      YTDLP_SEED_BIN="$YTDLP_SEED/bin/$name"
+      break
+    fi
+  done
+fi
+if [ -n "$YTDLP_SEED_BIN" ]; then
+  echo "Seeding the app-managed yt-dlp from $YTDLP_SEED/bin"
+  mkdir -p "$ANKI_MINER_HOME/bin"
+  cp -R "$YTDLP_SEED/bin/." "$ANKI_MINER_HOME/bin/"
+  chmod +x "$ANKI_MINER_HOME"/bin/yt-dlp* 2>/dev/null || true
+  if ANKI_MINER_SMOKE=youtube QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke_youtube.log \
+    && grep -q "BUNDLED_SMOKE_PASS" smoke_youtube.log; then
+    echo "PASS youtube"
+  else
+    echo "FAIL youtube"
+    FAILED+=("youtube")
+  fi
 else
-  echo "FAIL youtube"
-  FAILED+=("youtube")
+  echo "::warning::no yt-dlp binary + .verified receipt under BUNDLE_SMOKE_YTDLP_SEED — yt-dlp was not fetched, so the youtube leg cannot run"
+  echo "SKIP youtube"
 fi
 echo
 

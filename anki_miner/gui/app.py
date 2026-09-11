@@ -165,39 +165,47 @@ def available_impersonate_targets(stdout: str) -> list[str]:
 def _run_bundled_smoke() -> int:
     """Env-var-gated smoke path for PyInstaller bundle validation.
 
-    Triggered by ANKI_MINER_SMOKE=youtube. Verifies the vendored yt-dlp EXECUTABLE
-    landed in the bundle and runs, plus that the Pillow JPEG codec survived. No
-    network, no YoutubeDL, no bot challenge. Not a CLI surface — the flag is hidden,
-    env-var-only, and exits before any Qt init.
+    Triggered by ANKI_MINER_SMOKE=youtube. The app ships no yt-dlp: it arrives as
+    an in-app download into ``ANKI_MINER_HOME/bin/`` with a SHA-256 receipt beside
+    it (``services/ytdlp_updater.py``), and ``scripts/bundle_smoke.sh`` seeds
+    exactly that slot before running this. No network, no YoutubeDL, no bot
+    challenge. Not a CLI surface — the flag is hidden, env-var-only, and exits
+    before any Qt init.
 
-    This used to walk ``yt_dlp``'s extractor registry, which tested a Python package
-    the app never imports at runtime: every call site spawns yt-dlp as a subprocess.
-    The bundle now ships the standalone binary instead, so the smoke asserts the
-    artifact production actually uses.
-
-    The binary is checked at its absolute bundled path rather than through
-    ``ytdlp_resolver``: the resolver deliberately prefers PATH over the bundle (a
-    user's own yt-dlp is usually fresher than a build-time pin), and neither
-    ``bundle_smoke.sh`` nor ``release_preflight.sh`` scrubs PATH — so a
-    resolver-based assertion would fail on any machine that happens to have yt-dlp
-    installed, including a developer with this project's own venv activated.
-    Precedence is covered by unit tests, where PATH is patched deterministically.
+    The assertion goes THROUGH the resolver, because the managed slot is what
+    production uses and it outranks PATH: a machine with its own yt-dlp installed
+    cannot mask the seeded copy, so this is safe on a developer box too. It also
+    proves the receipt the updater wrote is one the resolver accepts, which a
+    literal-path check could not.
     """
     try:
         import subprocess
+        from types import SimpleNamespace
 
-        from anki_miner.utils.bundled_binary import bundled_name, frozen_state
+        from anki_miner.utils.bundled_binary import frozen_state
+        from anki_miner.utils.ytdlp_resolver import (
+            resolve_ytdlp,
+            ytdlp_binary_name,
+            ytdlp_download_dir,
+        )
 
-        frozen, meipass = frozen_state()
-        if not frozen or meipass is None:
+        # Kept from the old body: without it the leg passes from a source
+        # checkout, where the resolver would find a perfectly good yt-dlp and
+        # prove nothing about the artifact.
+        frozen, _meipass = frozen_state()
+        if not frozen:
             raise RuntimeError("not running from a PyInstaller bundle")
 
-        ytdlp = Path(meipass) / "bin" / bundled_name("yt-dlp")
-        if not ytdlp.is_file():
+        managed = ytdlp_download_dir() / ytdlp_binary_name()
+        # No config is loaded this early; the only field the resolver reads is the
+        # override, which a fresh smoke home never has.
+        resolved = Path(resolve_ytdlp(SimpleNamespace(ytdlp_location=None)))
+        if resolved != managed:
             raise RuntimeError(
-                f"vendored yt-dlp missing from the bundle at {ytdlp}. CI must populate "
-                "vendor/yt-dlp/ from .github/ytdlp-pin.json before PyInstaller runs."
+                f"resolver returned {resolved}, not the app-managed {managed}. "
+                "scripts/bundle_smoke.sh must seed the binary AND its .verified receipt."
             )
+        ytdlp = resolved
 
         version_proc = subprocess.run(
             [str(ytdlp), "--version"],
@@ -206,13 +214,13 @@ def _run_bundled_smoke() -> int:
             timeout=120,
         )
         if version_proc.returncode != 0:
-            raise RuntimeError(f"bundled yt-dlp --version exited {version_proc.returncode}: {version_proc.stderr}")
+            raise RuntimeError(f"app-managed yt-dlp --version exited {version_proc.returncode}: {version_proc.stderr}")
         lines = (version_proc.stdout or "").strip().splitlines()
         ytdlp_version = lines[0].strip() if lines else ""
         if not ytdlp_version:
-            raise RuntimeError("bundled yt-dlp --version printed nothing")
+            raise RuntimeError("app-managed yt-dlp --version printed nothing")
 
-        # Impersonation is why the standalone build is vendored rather than the 3 MB
+        # Impersonation is why the standalone build is installed rather than the 3 MB
         # zipapp: yt-dlp's own release builds embed curl_cffi, and YouTube
         # increasingly gates on it. Every target line ends in "(unavailable)" when
         # curl_cffi is absent, so an available target proves it came through.
@@ -224,13 +232,13 @@ def _run_bundled_smoke() -> int:
         )
         if targets_proc.returncode != 0:
             raise RuntimeError(
-                f"bundled yt-dlp --list-impersonate-targets exited {targets_proc.returncode}: {targets_proc.stderr}"
+                f"app-managed yt-dlp --list-impersonate-targets exited {targets_proc.returncode}: {targets_proc.stderr}"
             )
         available = available_impersonate_targets(targets_proc.stdout or "")
         if not available:
             raise RuntimeError(
-                "bundled yt-dlp reports no available impersonate targets — curl_cffi is "
-                "missing, which means a zipapp asset was vendored instead of a standalone build"
+                "app-managed yt-dlp reports no available impersonate targets — curl_cffi is "
+                "missing, which means the seed installed a zipapp asset instead of a standalone build"
             )
 
         # Prove the Pillow JPEG codec survived bundling — reading-tab cards encode
@@ -247,7 +255,7 @@ def _run_bundled_smoke() -> int:
     except Exception as exc:  # noqa: BLE001 — bucket C: pre-Qt smoke reports terminal failure to stderr.
         print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
-    print(f"BUNDLED_SMOKE_PASS: bundled yt-dlp {ytdlp_version}")
+    print(f"BUNDLED_SMOKE_PASS: app-managed yt-dlp {ytdlp_version}")
     return 0
 
 

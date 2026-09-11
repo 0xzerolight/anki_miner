@@ -179,7 +179,17 @@ echo
 # backend. scripts/release_dryrun.sh is what proves it, and it fails closed if
 # the leg reports SKIP on either the Linux or the Windows job.
 echo "=== bundle smokes ==="
-if BUNDLE_SMOKE_SKIP_WHISPERCPP=1 bash scripts/bundle_smoke.sh dist/AnkiMiner; then
+# The youtube leg needs an app-managed yt-dlp: the bundle ships none. Cached like
+# the vendor downloads — the seed is a pinned release, so a present one is current.
+# The cache test is the FILE pair, not the directory: a failed fetch leaves an
+# empty bin/ behind (the updater stages into it before downloading), and a
+# directory test would then never re-fetch.
+YTDLP_SEED="$CACHE/ytdlp_seed"
+if [ ! -f "$YTDLP_SEED/bin/yt-dlp" ] || [ ! -f "$YTDLP_SEED/bin/yt-dlp.verified" ]; then
+  "$VENV/bin/python" scripts/fetch_ytdlp_seed.py "$YTDLP_SEED" \
+    || echo "WARNING: yt-dlp seed fetch reported a problem (the youtube leg will skip)"
+fi
+if BUNDLE_SMOKE_SKIP_WHISPERCPP=1 BUNDLE_SMOKE_YTDLP_SEED="$YTDLP_SEED" bash scripts/bundle_smoke.sh dist/AnkiMiner; then
   echo "smokes: PASS"
 else
   echo "smokes: FAIL"
