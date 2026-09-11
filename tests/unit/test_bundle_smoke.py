@@ -279,6 +279,9 @@ def _write_smoke_dist(tmp_path: Path, record: Path) -> Path:
         encoding="utf-8",
     )
     ffmpeg.chmod(0o755)
+    # The encoders leg also runs ffprobe: since the shared ffmpeg build it has
+    # to prove the second executable resolves its libraries too.
+    _write_executable(dist / "ffprobe", "#!/usr/bin/env bash\nexit 0\n")
     for library in ("libggml-vulkan.so", "libggml-cpu.so", "libmpv.so.2"):
         (dist / library).touch()
     return dist
