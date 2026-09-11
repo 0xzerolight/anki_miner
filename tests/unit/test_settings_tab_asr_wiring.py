@@ -253,3 +253,46 @@ class TestSettingsTabVulkanWiring:
 
         tab.set_vulkan_status("Installed")
         assert panel.vulkan_status_label.text() == "Installed"
+
+
+class TestSettingsTabAsrPackWiring:
+    """Pin the transcription-engine pack wiring on the merged Subtitles panel."""
+
+    def test_panel_emits_makes_tab_emit_and_sets_status(self, test_config: AnkiMinerConfig, qtbot, monkeypatch):
+        """Panel's asr_pack_download_requested -> tab re-emits + sets 'Downloading…'."""
+        panel_mod = "anki_miner.gui.widgets.panels.subtitles_settings_panel"
+        monkeypatch.setattr(f"{panel_mod}._engine.available", lambda: False)
+        monkeypatch.setattr(f"{panel_mod}.asr_pack_installer.asr_pack_supported", lambda: True)
+        monkeypatch.setattr(f"{panel_mod}.asr_pack_installer.is_installed", lambda: False)
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        panel = tab.subtitles_panel
+        qtbot.waitUntil(lambda: not panel._state_in_flight, timeout=5000)
+
+        received: list[None] = []
+        tab.asr_pack_download_requested.connect(lambda: received.append(None))
+
+        panel.download_engine_button.click()
+
+        assert received == [None]
+        assert panel.engine_status_label.text() == "Downloading…"
+
+    def test_set_asr_pack_status_forwards_to_panel(self, test_config: AnkiMinerConfig, qtbot):
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+
+        tab.set_asr_pack_status("Installed")
+        assert tab.subtitles_panel.engine_status_label.text() == "Installed"
+
+    def test_notify_forwards_ok_and_reindexes_search(self, test_config: AnkiMinerConfig, qtbot, monkeypatch):
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        calls: list[object] = []
+        monkeypatch.setattr(
+            tab.subtitles_panel, "notify_asr_pack_download_finished", lambda ok: calls.append(("notify", ok))
+        )
+        monkeypatch.setattr(tab, "refresh_setting_search_index", lambda: calls.append("reindex"))
+
+        tab.notify_asr_pack_download_finished(False)
+
+        assert calls == [("notify", False), "reindex"]

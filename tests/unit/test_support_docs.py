@@ -6,31 +6,36 @@ from PyQt6.QtWidgets import QLabel, QLineEdit
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_asr_less_frozen_install_guidance_offers_only_executable_remedies(qtbot, monkeypatch) -> None:
+def test_frozen_builds_offer_the_engine_download_instead_of_a_pip_command(qtbot, monkeypatch) -> None:
+    """A packaged app can extend itself with ASR now: the engine is an in-app pack."""
     from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
 
     monkeypatch.setattr("sys.frozen", True, raising=False)
     monkeypatch.setattr("sys.platform", "linux")
+    monkeypatch.setattr(
+        "anki_miner.gui.widgets.panels.subtitles_settings_panel.asr_pack_installer.asr_pack_supported", lambda: True
+    )
     panel = SubtitlesSettingsPanel(suppress_optional_startup=True)
     qtbot.addWidget(panel)
+    panel._apply_engine_state(False, False)
 
+    assert panel.download_engine_button.text() == "Download transcription engine"
+    # The source-install block still exists, hidden. Scoped to that block: with
+    # suppress_optional_startup the alass section builds its own Homebrew
+    # command row (alass download unsupported -> macOS guidance).
     guidance = panel._asr_engine_guidance
-    message = " ".join(label.text() for label in guidance.findChildren(QLabel))
     commands = [field.text() for field in guidance.findChildren(QLineEdit) if field.objectName() == "command-text"]
-    assert "faster-whisper engine" in message
-    assert "this build does not include" in message
-    assert "launch that one" in message
-    assert commands == ['pipx install "anki-miner[asr]"']
-    assert "pip install" not in message + " ".join(commands)
+    assert commands == ['pip install "anki-miner[asr]"']
+    assert not guidance.isVisibleTo(panel)
+    labels = " ".join(label.text() for label in panel.findChildren(QLabel))
+    assert "cannot be extended" not in labels
+    assert "pipx" not in labels
 
     installation = (ROOT / "README.md").read_text(encoding="utf-8").split("## Installation", maxsplit=1)[1]
-    # The .deb ships the full bundle (ASR included) — the download table must
-    # not resurrect the pre-v2.10 "excludes local Whisper" footnote for it.
+    # The .deb ships the full bundle — the download table must not resurrect the
+    # pre-v2.10 "excludes local Whisper" footnote for it.
     assert "| Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |" in installation
     assert "² " not in installation
-    # The Intel-mac footnote (the one remaining ASR-less artifact) keeps the
-    # executable remedy the guidance block points at.
-    assert 'pipx install "anki-miner[asr]"' in installation
 
 
 def test_readme_exposes_first_install_recovery_and_troubleshooting() -> None:

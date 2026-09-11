@@ -85,10 +85,7 @@ from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.registry import config_language, get_profile
-from anki_miner.services.asr.asr_pack_installer import (  # noqa: F401 — asr_pack_root: wired by the Download button (a later commit)
-    asr_pack_root,
-    ensure_asr_pack_on_syspath,
-)
+from anki_miner.services.asr.asr_pack_installer import asr_pack_root, ensure_asr_pack_on_syspath
 from anki_miner.services.language_pack_installer import ensure_language_packs_on_syspath, language_pack_root
 from anki_miner.services.startup_store_recovery import run_startup_store_recovery
 from anki_miner.services.stats_service import StatsService
@@ -1380,6 +1377,34 @@ def _connect_vad_pack_download(window: MainWindow, settings_tab: SettingsTab) ->
     )
 
 
+def _connect_asr_pack_download(window: MainWindow, settings_tab: SettingsTab) -> None:
+    """Wire the Subtitles panel's "Download transcription engine" button to the worker.
+
+    Status flows back to the panel. On finish, order is load-bearing: the pack
+    root has to be on ``sys.path`` BEFORE the panel re-probes, because the probe
+    answers from find_spec (same rule as _connect_language_pack_download) —
+    otherwise the user downloads the engine and the row still says it is
+    missing. A successful install then re-propagates config so Utilities ->
+    Generate re-runs its own engine probe and enables (the alass precedent).
+    """
+
+    def _tail(request_arg: object, ok: bool, message: str) -> None:
+        ensure_asr_pack_on_syspath()
+        settings_tab.notify_asr_pack_download_finished(ok)
+        if ok:
+            window.config_refreshed.emit(window.get_config())
+
+    def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
+        window.background_tasks.start_asr_pack_download(asr_pack_root(), on_status, on_finished)
+
+    _connect_download(
+        settings_tab.asr_pack_download_requested,
+        set_status=settings_tab.set_asr_pack_status,
+        start=_start,
+        on_finished_tail=_tail,
+    )
+
+
 def _connect_vulkan_download(window: MainWindow, settings_tab: SettingsTab) -> None:
     """Wire the Subtitles panel's "Download Vulkan model" button to the worker.
 
@@ -1715,16 +1740,17 @@ def compose_main_window(
     window.background_tasks.ytdlp_update_result.connect(settings_tab.set_ytdlp_status_from_result)
 
     # Resource download buttons (ASR model, alass, mokuro, CUDA pack, VAD pack,
-    # Vulkan model, language packs): each button hands off to a background
-    # worker and refreshes its panel on finish. The six Subtitles-panel ones
-    # share the connect skeleton in _connect_download; the per-tool builders
-    # carry the differences. The language packs sit on Mining Language, beside
-    # the selector they unlock, and wire per language code.
+    # ASR engine pack, Vulkan model, language packs): each button hands off to a
+    # background worker and refreshes its panel on finish. The seven
+    # Subtitles-panel ones share the connect skeleton in _connect_download; the
+    # per-tool builders carry the differences. The language packs sit on Mining
+    # Language, beside the selector they unlock, and wire per language code.
     for _connect in (
         _connect_asr_download,
         _connect_alass_download,
         _connect_cuda_pack_download,
         _connect_vad_pack_download,
+        _connect_asr_pack_download,
         _connect_vulkan_download,
         _connect_language_pack_download,
     ):

@@ -150,6 +150,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             "Download GPU acceleration" button is clicked.
         vad_pack_download_requested: Emitted when the Subtitles panel's
             "Download silence removal" button is clicked.
+        asr_pack_download_requested: Emitted when the Subtitles panel's
+            "Download transcription engine" button is clicked.
         vulkan_model_download_requested: Emitted when the Subtitles panel's
             "Download Vulkan model" button is clicked. Carries the selected
             acoustic model name.
@@ -176,6 +178,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     mokuro_install_requested = pyqtSignal()
     cuda_pack_download_requested = pyqtSignal()
     vad_pack_download_requested = pyqtSignal()
+    asr_pack_download_requested = pyqtSignal()
     vulkan_model_download_requested = pyqtSignal(str)  # Emits model name
     manage_profiles_requested = pyqtSignal()
     mining_language_requested = pyqtSignal(str)  # Emits the requested language code
@@ -751,6 +754,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.subtitles_panel.mokuro_install_requested.connect(self._on_mokuro_install_clicked)
         self.subtitles_panel.cuda_pack_download_requested.connect(self._on_cuda_pack_download_clicked)
         self.subtitles_panel.vad_pack_download_requested.connect(self._on_vad_pack_download_clicked)
+        self.subtitles_panel.asr_pack_download_requested.connect(self._on_asr_pack_download_clicked)
         self.subtitles_panel.vulkan_model_download_requested.connect(self._on_vulkan_download_clicked)
 
     def _start_restore_scan(
@@ -1048,6 +1052,25 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.subtitles_panel.set_vad_pack_status(self.tr("Downloading…"))
         self.vad_pack_download_requested.emit()
 
+    def _on_asr_pack_download_clicked(self) -> None:
+        """Set a pending status and re-emit so the caller can start the download.
+
+        Mirrors :meth:`_on_vad_pack_download_clicked`: the download itself is
+        owned by the caller (MainWindow / background_tasks).
+        """
+        self.subtitles_panel.set_asr_pack_status(self.tr("Downloading…"))
+        self.asr_pack_download_requested.emit()
+
+    def notify_asr_pack_download_finished(self, ok: bool) -> None:
+        """Forward the finish (with its outcome) to the panel, then re-index search.
+
+        The engine button hides once the engine is importable and the model
+        row enables; search visibility is resolved when the index is built, so
+        it is rebuilt here like after a language pack.
+        """
+        self.subtitles_panel.notify_asr_pack_download_finished(ok)
+        self.refresh_setting_search_index()
+
     def _on_vulkan_download_clicked(self, model_name: str) -> None:
         """Set a pending status and re-emit so the caller can start the download.
 
@@ -1081,6 +1104,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     def set_vad_pack_status(self, text: str) -> None:
         """Forward a VAD-pack download status line to the Subtitles panel."""
         self.subtitles_panel.set_vad_pack_status(text)
+
+    def set_asr_pack_status(self, text: str) -> None:
+        """Forward an engine-pack download status line to the Subtitles panel."""
+        self.subtitles_panel.set_asr_pack_status(text)
 
     def set_vulkan_status(self, text: str) -> None:
         """Forward a Vulkan model download status line to the Subtitles panel."""

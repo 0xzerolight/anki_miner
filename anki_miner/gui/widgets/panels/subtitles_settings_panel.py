@@ -3,10 +3,10 @@
 One panel covering both halves of the Subtitles feature, mirroring the unified
 Subtitles main tab:
 
-- **Speech-to-text (ASR)** — Whisper model selection + in-app model download.
-  When the optional ``[asr]`` extra is not installed the engine is unavailable;
-  the panel says so plainly and shows a usable install route instead of one
-  that cannot modify a sealed bundle.
+- **Speech-to-text (ASR)** — in-app engine download (the faster-whisper pack a
+  bundled install fetches on demand), Whisper model selection + in-app model
+  download. Where the pack cannot be offered the panel says so plainly, and a
+  source install without the ``[asr]`` extra gets the pip command instead.
 - **Alignment (alass)** — optional binary-path override plus an in-app
   "Download alass" button on the platforms that ship a binary (Linux/Windows),
   and the three retiming knobs (split penalty, frame-rate correction,
@@ -43,12 +43,14 @@ from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
 from anki_miner.services import alass_installer, mokuro_installer
 from anki_miner.services.asr import (
     _engine,
+    asr_pack_installer,
     cuda_pack_installer,
     ggml_model_installer,
     model_manager,
     onnx_pack_installer,
 )
 from anki_miner.utils import alass_resolver, mokuro_resolver
+from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import suppressed
 
 logger = logging.getLogger(__name__)
@@ -89,8 +91,6 @@ def _device_options(vulkan_available: bool = False) -> list[tuple[str, str]]:
 # Exact command that installs the optional speech-to-text engine. Shown
 # verbatim (and copyable) when faster-whisper is not importable.
 _ASR_INSTALL_COMMAND = 'pip install "anki-miner[asr]"'
-# PyInstaller bundles are sealed; pipx creates a separate ASR-capable install.
-_ASR_FROZEN_INSTALL_COMMAND = 'pipx install "anki-miner[asr]"'
 
 # Homebrew command for alass on macOS, where no upstream binary is published.
 _ALASS_BREW_COMMAND = "brew install alass"
@@ -110,11 +110,14 @@ class _AsrState:
     (:meth:`SubtitlesSettingsPanel._on_state_ready`). ``cuda_libs_root`` is
     needed there to drive the CUDA-pack button; the other request inputs
     (``name``/``models_root``/``bin_root``) are read live from ``self`` on
-    re-dispatch and so are not carried on the snapshot.
+    re-dispatch and so are not carried on the snapshot. ``asr_pack_installed``
+    is the engine pack's on-disk state (``asr_pack_installer.is_installed``),
+    distinct from ``engine_available`` (importable right now).
     """
 
     cuda_libs_root: object
     engine_available: bool
+    asr_pack_installed: bool
     cuda_device_count: int
     model_downloaded: bool
     cuda_pack_installed: bool
@@ -142,6 +145,10 @@ class SubtitlesSettingsPanel(FormPanel):
     #: Emitted when the user clicks "Download silence removal"; the managed
     #: install target (``config.onnx_pack_root``) is resolved by the wiring.
     vad_pack_download_requested = pyqtSignal()
+    #: Emitted when the user clicks "Download transcription engine"; the managed
+    #: install target (``asr_pack_installer.asr_pack_root()``) is resolved by
+    #: the wiring.
+    asr_pack_download_requested = pyqtSignal()
     #: Emitted when the user clicks "Download Vulkan model"; carries the selected
     #: acoustic model name. The install root (``config.asr_models_root``) is
     #: resolved by the wiring. One action fetches BOTH the ggml acoustic model
@@ -196,6 +203,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._alass_download_active = False
         self._cuda_pack_active = False
         self._vad_pack_active = False
+        self._asr_pack_active = False
         self._vulkan_active = False
         self._mokuro_install_active = False
         # Off-thread state probe coordination. The heavy probes (ctranslate2
@@ -211,10 +219,17 @@ class SubtitlesSettingsPanel(FormPanel):
         # Process-lifetime caches: GPU hardware presence and faster-whisper
         # importability are stable, so the first successful probe is reused on
         # later reloads — re-importing ctranslate2 each time is the freeze we're
-        # fixing. The install/download flags are NOT cached (they change after a
-        # download) and are re-probed every refresh.
+        # fixing (dropped again by notify_asr_pack_download_finished, the one
+        # event that changes them). The install/download flags are NOT cached
+        # (they change after a download) and are re-probed every refresh.
         self._engine_available_cache: bool | None = None
         self._cuda_device_count_cache: int | None = None
+        # One-shot: set when a pack install finishes while a probe is still in
+        # flight. That probe was dispatched with the OLD caches (engine absent)
+        # and would re-store them on landing, and the queued re-dispatch would
+        # then read them back and never probe again. _on_state_ready honours the
+        # flag by not caching that one result; the re-dispatch probes afresh.
+        self._discard_next_probe_caches = False
         # Last-known install/download flags from the most recent SUCCESSFUL probe.
         # A probe *failure* (_on_state_error) must not claim an installed model /
         # pack is missing: forcing these to False mislabels an on-disk model as
@@ -223,6 +238,7 @@ class SubtitlesSettingsPanel(FormPanel):
         self._model_downloaded_cache = False
         self._cuda_pack_installed_cache = False
         self._vad_pack_installed_cache = False
+        self._asr_pack_installed_cache = False
         self._alass_installed_cache = False
         self._vulkan_installed_cache = False
         self._mokuro_installed_cache = False
@@ -254,8 +270,55 @@ class SubtitlesSettingsPanel(FormPanel):
         return label
 
     def _setup_asr_section(self) -> None:
-        """Whisper model dropdown, download button, and engine guidance."""
+        """Engine download row, Whisper model dropdown, download button, and engine guidance."""
         self.add_section(self.tr("Speech-to-text"))
+
+        # The engine itself. Bundled installs download it here — it is an
+        # on-demand pack (services/asr/asr_pack_installer.py), not bundle content;
+        # a pip install with the [asr] extra has it importable and never sees
+        # this row. Gated in _apply_engine_state on importability + support.
+        self.download_engine_button = ModernButton(self.tr("Download transcription engine"), variant="secondary")
+        self.download_engine_button.setToolTip(
+            self.tr(
+                "Download the faster-whisper speech-to-text engine into Anki Miner's folder. "
+                "Required before subtitle generation can run on a packaged install."
+            )
+        )
+        self.download_engine_button.clicked.connect(self._on_asr_pack_download_clicked)
+
+        self.engine_status_label = QLabel("")
+        self.engine_status_label.setObjectName("settings-save-status")
+
+        # Guidance shown when the pack cannot be offered on this build. Same HBox
+        # as the button/status so it renders in the field column; mutually
+        # exclusive with the button. Toggled in _apply_engine_state.
+        self._engine_guidance_label = QLabel("")
+        self._engine_guidance_label.setWordWrap(True)
+        self._engine_guidance_label.setVisible(False)
+
+        engine_container = QWidget()
+        engine_row = QHBoxLayout(engine_container)
+        engine_row.setContentsMargins(0, 0, 0, 0)
+        engine_row.addWidget(self.download_engine_button)
+        engine_row.addWidget(self.engine_status_label)
+        engine_row.addWidget(self._engine_guidance_label)
+        engine_row.addStretch()
+        self.add_field(
+            self.tr("Transcription engine"),
+            engine_container,
+            anchor="transcription_engine",
+            anchor_focus=self.download_engine_button,
+            anchor_text=lambda: (self.download_engine_button.text(), self.download_engine_button.toolTip()),
+        )
+        # Shown in lockstep with the button; see _apply_engine_state. The row's
+        # label itself never hides: the settings-search index is built once at
+        # construction and must keep pointing at a visible row (the VAD precedent).
+        self._engine_help_label = self._add_help(
+            tr_format(
+                self.tr("Speech-to-text engine (faster-whisper), about %1 MB, downloaded once."),
+                str(asr_pack_installer.PACK.approx_download_mb),
+            )
+        )
 
         self.model_combo = QComboBox()
         for label, _value in _MODEL_OPTIONS:
@@ -301,10 +364,10 @@ class SubtitlesSettingsPanel(FormPanel):
             anchor_text=lambda: (self.download_model_button.text(), self.download_model_button.toolTip()),
         )
 
-        # Guidance shown only when faster-whisper is not installed. The engine is
-        # a Python package (not a downloadable binary), so the app can't fetch it
-        # for the user — point them at an executable remedy instead of surfacing
-        # a cryptic ImportError after a dead "Download model" click.
+        # Guidance shown only when faster-whisper is not installed AND the engine
+        # pack cannot be offered here (a source install on a Python the pack does
+        # not pin) — point them at the pip extra instead of surfacing a cryptic
+        # ImportError after a dead "Download model" click.
         self._asr_engine_guidance = self._build_engine_guidance()
         self.add_field(
             "",
@@ -547,17 +610,15 @@ class SubtitlesSettingsPanel(FormPanel):
             self.set_mokuro_status(self.tr("Not available on this platform"))
 
     def _build_engine_guidance(self) -> QWidget:
-        """Build the (initially hidden) 'install the ASR engine' guidance block."""
-        if getattr(sys, "frozen", False):
-            message = self.tr(
-                "Subtitle generation needs the faster-whisper engine, which this build does not "
-                "include. Install a copy with the command below and launch that one:"
-            )
-            command = _ASR_FROZEN_INSTALL_COMMAND
-        else:
-            message = self.tr("Subtitle generation needs the faster-whisper engine. Install it with:")
-            command = _ASR_INSTALL_COMMAND
-        guidance = self._build_guidance(message, command)
+        """Build the (initially hidden) source-install guidance block.
+
+        Shown only on a source install whose Python the engine pack does not
+        pin (the pack ships the bundle's cp312 wheels): the remedy there is the
+        pip extra. A packaged app gets the download row above instead.
+        """
+        guidance = self._build_guidance(
+            self.tr("Subtitle generation needs the faster-whisper engine. Install it with:"), _ASR_INSTALL_COMMAND
+        )
         guidance.setVisible(False)
         return guidance
 
@@ -967,6 +1028,19 @@ class SubtitlesSettingsPanel(FormPanel):
                     )
                     engine_available = False
 
+            # The pack's on-disk state: cheap dir checks plus a find_spec per
+            # component (installer.is_installed), off-thread with the rest.
+            asr_pack_installed = False
+            try:
+                asr_pack_installed = asr_pack_installer.is_installed()
+            except Exception as exc:  # noqa: BLE001 — bucket A: pack state falls back to missing.
+                logger.warning(
+                    "ASR probe degraded: service=%s error=%s",
+                    "asr_pack",
+                    type(exc).__name__,
+                )
+                asr_pack_installed = False
+
             if cuda_cache is not None:
                 cuda_device_count = cuda_cache
             else:
@@ -1072,6 +1146,7 @@ class SubtitlesSettingsPanel(FormPanel):
             return _AsrState(
                 cuda_libs_root=cuda_libs_root,
                 engine_available=engine_available,
+                asr_pack_installed=asr_pack_installed,
                 cuda_device_count=cuda_device_count,
                 model_downloaded=model_downloaded,
                 cuda_pack_installed=cuda_pack_installed,
@@ -1092,6 +1167,8 @@ class SubtitlesSettingsPanel(FormPanel):
             self.download_cuda_button.setEnabled(False)
         if not self._vad_pack_active:
             self.download_vad_button.setEnabled(False)
+        if not self._asr_pack_active:
+            self.download_engine_button.setEnabled(False)
         if self.download_vulkan_button is not None and not self._vulkan_active:
             self.download_vulkan_button.setEnabled(False)
         if self._alass_supported and not self._alass_download_active:
@@ -1106,18 +1183,25 @@ class SubtitlesSettingsPanel(FormPanel):
 
         # Cache the stable probes for later reloads (avoids re-importing
         # ctranslate2 / re-running find_spec each time).
-        self._engine_available_cache = result.engine_available
-        self._cuda_device_count_cache = result.cuda_device_count
+        if self._discard_next_probe_caches:
+            # This probe was dispatched before the pack landed (see
+            # notify_asr_pack_download_finished); its engine/CUDA answers are
+            # stale, and the re-dispatch below probes with the caches empty.
+            self._discard_next_probe_caches = False
+        else:
+            self._engine_available_cache = result.engine_available
+            self._cuda_device_count_cache = result.cuda_device_count
         # Remember the install/download flags so a later probe FAILURE can fall
         # back to this last-known-good state instead of asserting "missing".
         self._model_downloaded_cache = result.model_downloaded
         self._cuda_pack_installed_cache = result.cuda_pack_installed
         self._vad_pack_installed_cache = result.vad_pack_installed
+        self._asr_pack_installed_cache = result.asr_pack_installed
         self._alass_installed_cache = result.alass_installed
         self._vulkan_installed_cache = result.vulkan_installed
         self._mokuro_installed_cache = result.mokuro_installed
 
-        self._apply_engine_state(result.engine_available)
+        self._apply_engine_state(result.engine_available, result.asr_pack_installed)
         self._apply_model_state(result.engine_available, result.model_downloaded)
         self._apply_cuda_pack_state(result.cuda_libs_root, result.cuda_device_count, result.cuda_pack_installed)
         self._apply_vad_pack_state(result.onnxruntime_importable, result.vad_pack_installed)
@@ -1130,12 +1214,16 @@ class SubtitlesSettingsPanel(FormPanel):
     def _on_state_error(self, msg: str) -> None:
         """Surface a probe failure without leaving the panel stuck on Checking…."""
         self._state_in_flight = False
+        # A probe that FAILS after notify_asr_pack_download_finished(True) stores
+        # nothing, so the one-shot flag must not survive to discard the next
+        # (good) probe's caches.
+        self._discard_next_probe_caches = False
         logger.warning("ASR state probe failed: %s", msg)
         # Fall back to the last-known-good install/download flags rather than
         # forcing False — a probe failure is not evidence that an installed
         # model/pack disappeared, and asserting "missing" would mislabel them and
         # lock their buttons until a later probe succeeds.
-        self._apply_engine_state(self._engine_available_now())
+        self._apply_engine_state(self._engine_available_now(), self._asr_pack_installed_cache)
         self._apply_model_state(self._engine_available_now(), self._model_downloaded_cache)
         self._apply_cuda_pack_state(
             self._cuda_libs_root, self._cuda_device_count_cache or 0, self._cuda_pack_installed_cache
@@ -1159,9 +1247,57 @@ class SubtitlesSettingsPanel(FormPanel):
         self._pending_state_request = None
         self._refresh_state_async(name, models_root, cuda_libs_root)
 
-    def _apply_engine_state(self, engine_available: bool) -> None:
-        """Toggle the engine-missing guidance based on faster-whisper availability."""
-        self._asr_engine_guidance.setVisible(not engine_available)
+    def _apply_engine_state(self, engine_available: bool, pack_installed: bool) -> None:
+        """Gate the engine row's button/help/guidance and the source-install block.
+
+        Applies pre-probed values (gathered off-thread). The row label never
+        hides (the settings-search index built at construction points at it);
+        the button, its help line and the guidance toggle, as on the VAD row:
+
+        * engine importable (pip [asr], or the pack already on sys.path) → no
+          button, no help line, status "Installed": there is nothing to install;
+        * a download in flight keeps the button disabled and the status intact;
+        * pack supported here (the bundle's CPython on a pinned platform) → the
+          button shows enabled with the installed state;
+        * unsupported: a frozen build says so beside the label; a source install
+          shows the pip command block instead (the pack pins cp312 wheels, so a
+          dev on another Python installs the extra).
+        """
+        if engine_available:
+            self.download_engine_button.setVisible(False)
+            self.download_engine_button.setEnabled(False)
+            self._engine_help_label.setVisible(False)
+            self._engine_guidance_label.setVisible(False)
+            self.set_asr_pack_status(self.tr("Installed"))
+            self._asr_engine_guidance.setVisible(False)
+            return
+        if self._asr_pack_active:
+            # A download is in flight: keep the button disabled and leave the
+            # "Downloading…" status untouched, regardless of config reloads.
+            self.download_engine_button.setEnabled(False)
+            return
+
+        # asr_pack_supported() is cheap (sys.platform/version) — fine on the GUI thread.
+        supported = asr_pack_installer.asr_pack_supported()
+        frozen = bool(getattr(sys, "frozen", False))
+        self._asr_engine_guidance.setVisible(not supported and not frozen)
+        if not supported:
+            self.download_engine_button.setEnabled(False)
+            self.download_engine_button.setVisible(False)
+            self._engine_help_label.setVisible(False)
+            self.set_asr_pack_status("")
+            self._engine_guidance_label.setText(self.tr("Local transcription is not available for this build."))
+            self._engine_guidance_label.setVisible(frozen)
+            return
+
+        self._engine_guidance_label.setVisible(False)
+        self._engine_help_label.setVisible(True)
+        self.download_engine_button.setVisible(True)
+        self.download_engine_button.setEnabled(True)
+        if pack_installed:
+            self.set_asr_pack_status(self.tr("Installed"))
+        else:
+            self.set_asr_pack_status(self.tr("Not installed"))
 
     def _apply_model_state(self, engine_available: bool, model_downloaded: bool) -> None:
         """Reflect download state and gate the button on engine availability.
@@ -1182,6 +1318,52 @@ class SubtitlesSettingsPanel(FormPanel):
             self.set_model_status(self.tr("Installed"))
         else:
             self.set_model_status(self.tr("Not installed"))
+
+    # ------------------------------------------------------------------
+    # Transcription engine (ASR pack) download flow
+    # ------------------------------------------------------------------
+
+    def _on_asr_pack_download_clicked(self) -> None:
+        """Disable the button in flight and request the engine pack download.
+
+        A click while the pack is unsupported is a no-op (the button is hidden
+        in that state, but guard so a stray call never starts a doomed worker).
+        """
+        if not asr_pack_installer.asr_pack_supported():
+            self._refresh_state_async(self.get_model(), self._models_root, self._cuda_libs_root)
+            return
+        self._asr_pack_active = True
+        self.download_engine_button.setEnabled(False)
+        self.asr_pack_download_requested.emit()
+
+    def set_asr_pack_status(self, text: str) -> None:
+        """Set the engine-pack status label text (shown next to the Download button)."""
+        self.engine_status_label.setText(text)
+
+    def notify_asr_pack_download_finished(self, ok: bool) -> None:
+        """Clear the in-flight guard after an engine pack download; re-probe on success.
+
+        Wired to the download worker's finish callback, AFTER the wiring put the
+        pack root on ``sys.path``. On success the two process-lifetime caches
+        are dropped first — engine importability is exactly what just changed,
+        and the CUDA probe imports ctranslate2 — and if a probe is still in
+        flight it is told not to re-store its stale answers. On failure
+        (``ok=False``) nothing is re-probed: the worker's error message was just
+        written to the status label, and a re-probe would overwrite it with
+        "Not installed" within milliseconds — the user sees the click "do
+        nothing" (the same rule as ``notify_asr_download_finished``). A failed
+        download cannot have changed on-disk state, so only the button is
+        restored.
+        """
+        self._asr_pack_active = False
+        if not ok:
+            self.download_engine_button.setEnabled(asr_pack_installer.asr_pack_supported())
+            return
+        self._engine_available_cache = None
+        self._cuda_device_count_cache = None
+        if self._state_in_flight:
+            self._discard_next_probe_caches = True
+        self._refresh_state_async(self.get_model(), self._models_root, self._cuda_libs_root)
 
     # ------------------------------------------------------------------
     # Silence-removal (VAD) pack download flow
