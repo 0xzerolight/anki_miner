@@ -345,8 +345,13 @@ def test_two_file_queue_retries_cpp_after_fallback_and_reuses_ct2(qapp, tmp_path
     assert all(error is None for _idx, _out, error in cap["finished"])
 
 
-def test_no_speech_reports_warning_and_writes_no_srt(qapp, tmp_path, monkeypatch):
-    """Empty transcription surfaces a 'no speech' outcome, not a clean Done (C5)."""
+def test_no_speech_is_a_skip_not_a_failure(qapp, tmp_path, monkeypatch):
+    """A silent file was read and transcribed, so it is a skip, not an error.
+
+    As an error it logged an ERROR line, which raises "Some files could not be
+    transcribed.", and counted as a failed item — so an all-silent run ended on
+    "Failed — see log".
+    """
     config = _make_config(tmp_path)
     config.media_temp_folder.mkdir(parents=True, exist_ok=True)
 
@@ -364,15 +369,19 @@ def test_no_speech_reports_warning_and_writes_no_srt(qapp, tmp_path, monkeypatch
     cap = _capture(worker)
     worker.run()
 
-    assert len(cap["finished"]) == 1
-    _idx, out_path, err = cap["finished"][0]
-    assert out_path is None
-    assert err is not None and "No speech" in err
+    assert cap["finished"] == []
+    assert cap["skipped"] == [(0, v, "No speech detected")]
     assert srt_calls == []  # blank SRT must not be written
 
 
-def test_cancel_during_transcribe_emits_cancelled(qapp, tmp_path, monkeypatch):
-    """Cancel landing during transcription is caught post-transcribe, no SRT (T4)."""
+def test_cancel_during_transcribe_emits_no_per_item_outcome(qapp, tmp_path, monkeypatch):
+    """Cancel landing during transcription reports no per-item outcome at all.
+
+    A per-item error string logged an ERROR ("Cancelled"), which raises "Some
+    files could not be transcribed." while the same run's status said
+    "Cancelled", and it counted the item as failed. The run-level CANCELLED
+    outcome is the whole report (T4).
+    """
     config = _make_config(tmp_path)
     config.media_temp_folder.mkdir(parents=True, exist_ok=True)
 
@@ -409,9 +418,9 @@ def test_cancel_during_transcribe_emits_cancelled(qapp, tmp_path, monkeypatch):
     cap = _capture(worker)
     worker.run()
 
-    _idx, out_path, err = cap["finished"][0]
-    assert out_path is None
-    assert err == "Cancelled"
+    assert cap["finished"] == []
+    assert cap["skipped"] == []
+    assert worker._failed_count == 0
     assert srt_calls == []  # no SRT written after cancel
 
 
@@ -715,11 +724,11 @@ def test_cancel_between_files(qapp, tmp_path, monkeypatch):
     assert 0 in cap["started"]
     # Second file must NOT have started (cancel set mid-first-file).
     assert 1 not in cap["started"]
-    # File 0 must have finished with a Cancelled error (no out_path).
-    finished_map = {item[0]: item for item in cap["finished"]}
-    assert 0 in finished_map, "file_finished was not emitted for file 0"
-    assert finished_map[0][1] is None  # no out_path on cancel
-    assert "Cancelled" in (finished_map[0][2] or "")
+    # No per-item outcome for the cancelled file: the run-level CANCELLED
+    # outcome is the whole report, and an error string here counted it as
+    # failed while raising "Some files could not be transcribed."
+    assert cap["finished"] == []
+    assert worker._failed_count == 0
     # queue_finished still emitted.
     assert cap["queue_finished"] == [True]
 

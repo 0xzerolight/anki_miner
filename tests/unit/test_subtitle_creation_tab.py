@@ -346,8 +346,12 @@ def test_writable_check_precedes_model_check(qtbot, tmp_path):
     assert tab.worker_thread is None
 
 
-def test_unwritable_output_dir_logs_error(qtbot, tmp_path):
-    """When output dir is not writable, an error appears in the log widget."""
+def test_unwritable_output_dir_raises_screen_issue(qtbot, tmp_path):
+    """When output dir is not writable, the refusal is its own banner.
+
+    Not a logged ERROR: that raises the generic run_problem banner ("Some files
+    could not be transcribed.") about a run that never started.
+    """
     config = _make_config(tmp_path)
     video = tmp_path / "test.mp4"
     video.write_bytes(b"fake")
@@ -355,15 +359,19 @@ def test_unwritable_output_dir_logs_error(qtbot, tmp_path):
     tab = _make_tab(config, qtbot)
     tab.file_selector.set_path(str(video))
 
+    issues: list[object] = []
     with (
         patch(_ENGINE_AVAILABLE, return_value=True),
         patch(_OS_ACCESS, return_value=False),
         patch(_IS_DOWNLOADED, return_value=True),
+        patch.object(tab, "show_screen_issue", side_effect=issues.append),
     ):
         tab.generate_button.click()
 
-    log_text = tab.log_widget.text_edit.toPlainText()
-    assert "not writable" in log_text or str(video.parent) in log_text
+    assert issues, "refusal must raise a ScreenIssue, not a log line"
+    assert issues[0].summary == "Output folder is not writable."
+    assert issues[0].summary != tab._strings.run_problem
+    assert issues[0].details == str(video.parent)
 
 
 # ---------------------------------------------------------------------------
@@ -763,7 +771,12 @@ def test_iter_close_workers_returns_active_worker(qtbot, tmp_path):
 
 
 def test_model_not_downloaded_reports_an_issue_on_generate(qtbot, tmp_path):
-    """A model that is not installed names the real Settings destination (D24, string 2)."""
+    """An unusable model raises a banner whose repair is the button (D24).
+
+    The summary no longer spells the destination out: the banner carries "Open
+    Transcription Settings", and repeating it in the sentence is the button
+    written twice.
+    """
     config = _make_config(tmp_path)
     video = tmp_path / "episode.mp4"
     video.write_bytes(b"fake")
@@ -780,9 +793,8 @@ def test_model_not_downloaded_reports_an_issue_on_generate(qtbot, tmp_path):
 
     issue = tab.issue_banner().current_issue()
     assert issue is not None
-    assert "is not installed" in issue.summary
-    assert "Settings → Transcription & Alignment" in issue.summary
-    assert "assert tab.issue_banner().current_issue() is not None"
+    assert issue.summary == f"The transcription model {config.asr_model} is not ready."
+    assert issue.action_text == "Open Transcription Settings"
     # Worker must NOT be started
     assert tab.worker_thread is None
 
@@ -1140,3 +1152,33 @@ def test_all_files_failed_shows_failure_not_complete(qtbot, tmp_path):
     assert worker.wait(5000)
     assert tab.progress_widget.progress_bar.value() == 0
     assert tab.progress_widget.status_label.text() == "Failed — see log"
+
+
+def test_partial_run_reports_finished_with_errors_and_keeps_the_counts(qtbot, tmp_path):
+    """A run where one file worked and one failed is PARTIAL, not FAILED.
+
+    Both outcomes used to land on "Failed — see log" after a reset() that wiped
+    the bar holding the counts (A8-27). PARTIAL now names itself and the bar
+    keeps the position the run reached.
+    """
+
+    class _OneFailedWorker(FileQueueWorker):
+        def _queue_items(self):
+            return ["first", "second"]
+
+        def _process_item(self, idx, item):
+            self.file_finished.emit(idx, None, f"{item} failed" if idx else None)
+
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    tab._total_files = 2
+    tab._cancelled = False
+    worker = _OneFailedWorker()
+    worker.file_finished.connect(tab._on_file_finished)
+    worker.queue_finished.connect(tab._on_queue_finished)
+
+    with qtbot.waitSignal(worker.finished, timeout=5000):
+        worker.start()
+
+    assert worker.wait(5000)
+    assert tab.progress_widget.progress_bar.value() == 100
+    assert tab.progress_widget.status_label.text() == "Finished with errors — see log"

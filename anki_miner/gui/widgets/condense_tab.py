@@ -15,7 +15,7 @@ track probing, output-location row, worker lifecycle) — this tab is a sibling.
 
 Guard contract:
 - ffmpeg/ffprobe not found → Condense disabled, notice visible.
-- Output directory not writable → Condense aborts, error logged.
+- Output directory not writable → Condense aborts with a screen issue.
 
 Worker contract:
 - Worker stored on ``self.worker_thread``.
@@ -52,7 +52,6 @@ from PyQt6.QtWidgets import (
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.resources.styles import SPACING
-from anki_miner.gui.utils.qt_helpers import reveal_settings
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets._tool_tab_base import _ToolTabBase, _ToolTabStrings
 from anki_miner.gui.widgets.base import PageWidth, ScreenIssue, configure_card_layout
@@ -176,6 +175,7 @@ class CondenseTab(_ToolTabBase):
             cancelling=self.tr("Cancelling…"),
             cancelled=self.tr("Cancelled"),
             failed=self.tr("Failed — see log"),
+            partial=self.tr("Finished with errors — see log"),
             run_problem=self.tr("Some files could not be condensed."),
             complete_template=self.tr("Complete — %1 files processed"),
             complete_skipped_template=self.tr("Complete — %1 processed, %2 skipped"),
@@ -305,7 +305,7 @@ class CondenseTab(_ToolTabBase):
 
         # ffmpeg notice (shown when ffmpeg/ffprobe unavailable)
         self.engine_notice_label = QLabel(
-            self.tr("ffmpeg not found; install it or set its path in Settings to enable condensing.")
+            self.tr("ffmpeg not found; install it and put it on PATH to enable condensing.")
         )
         self.engine_notice_label.setObjectName("helper-text")
         self.engine_notice_label.setWordWrap(True)
@@ -377,7 +377,7 @@ class CondenseTab(_ToolTabBase):
         audio_row.setContentsMargins(0, 0, 0, 0)
         audio_row.setSpacing(SPACING.xs)
         audio_row.addWidget(QLabel(self.tr("Audio track:")))
-        self.audio_track_label = QLabel(self.tr("Japanese (auto-detect)"))
+        self.audio_track_label = QLabel(self.tr("Auto-detect"))
         self.audio_track_label.setObjectName("output-location-value")
         audio_row.addWidget(self.audio_track_label, 1)
         self.audio_tracks_button = ModernButton(self.tr("Choose…"), variant="secondary")
@@ -392,7 +392,7 @@ class CondenseTab(_ToolTabBase):
         sub_row.setContentsMargins(0, 0, 0, 0)
         sub_row.setSpacing(SPACING.xs)
         sub_row.addWidget(QLabel(self.tr("Subtitle track:")))
-        self.subtitle_track_label = QLabel(self.tr("Auto (external → embedded Japanese)"))
+        self.subtitle_track_label = QLabel(self.tr("Auto (external file, else embedded)"))
         self.subtitle_track_label.setObjectName("output-location-value")
         sub_row.addWidget(self.subtitle_track_label, 1)
         self.subtitle_tracks_button = ModernButton(self.tr("Choose…"), variant="secondary")
@@ -663,24 +663,22 @@ class CondenseTab(_ToolTabBase):
         """Reset both track overrides when the media file changes."""
         self._audio_track_override = None
         self._subtitle_track_override = None
-        self.audio_track_label.setText(self.tr("Japanese (auto-detect)"))
-        self.subtitle_track_label.setText(self.tr("Auto (external → embedded Japanese)"))
+        self.audio_track_label.setText(self.tr("Auto-detect"))
+        self.subtitle_track_label.setText(self.tr("Auto (external file, else embedded)"))
 
     def _on_subtitle_path_changed(self, new_path: str) -> None:
         """Disable the embedded-subtitle-track row when an explicit sub is picked."""
         self.subtitle_track_row_widget.setEnabled(not new_path.strip())
 
     def _report_probe_failure(self, summary: str, details: str) -> None:
-        """One shape for both ffprobe failures: sentence here, ffprobe output in Details."""
-        self.show_screen_issue(
-            ScreenIssue(
-                summary=summary,
-                details=details,
-                action_id="settings.media",
-                action_text=self.tr("Open Media Settings"),
-            ),
-            action=lambda: reveal_settings(self, "media"),
-        )
+        """One shape for both ffprobe failures: sentence here, ffprobe output in Details.
+
+        No repair button: ffmpeg/ffprobe are PATH-or-bundle only and no settings
+        panel writes ``config.ffmpeg_location``, so "Open Media Settings" landed
+        on a page of card audio/screenshot fields. A banner without a plausible
+        repair omits the button.
+        """
+        self.show_screen_issue(ScreenIssue(summary=summary, details=details))
 
     def _on_audio_tracks_clicked(self) -> None:
         """Open AudioTracksDialog to pick which audio track to condense."""
@@ -720,7 +718,7 @@ class CondenseTab(_ToolTabBase):
                 QMessageBox.information(
                     self,
                     self.tr("No Audio Tracks"),
-                    self.tr("No audio tracks detected. Check that ffprobe is installed and the file has audio."),
+                    self.tr("This file has no audio tracks."),
                 )
                 return
 
@@ -737,7 +735,7 @@ class CondenseTab(_ToolTabBase):
                     return
                 self._audio_track_override = dialog.selected_override()
                 if self._audio_track_override is None:
-                    self.audio_track_label.setText(self.tr("Japanese (auto-detect)"))
+                    self.audio_track_label.setText(self.tr("Auto-detect"))
                 else:
                     self.audio_track_label.setText(tr_format(self.tr("Track %1"), str(self._audio_track_override + 1)))
 
@@ -802,7 +800,7 @@ class CondenseTab(_ToolTabBase):
             if dialog.exec() == SubtitleTracksDialog.DialogCode.Accepted:
                 self._subtitle_track_override = dialog.selected_override()
                 if self._subtitle_track_override is None:
-                    self.subtitle_track_label.setText(self.tr("Auto (external → embedded Japanese)"))
+                    self.subtitle_track_label.setText(self.tr("Auto (external file, else embedded)"))
                 else:
                     self.subtitle_track_label.setText(
                         tr_format(self.tr("Track %1"), str(self._subtitle_track_override + 1))
@@ -930,7 +928,12 @@ class CondenseTab(_ToolTabBase):
         # its source media, so check the first item's parent.
         check_dir = out_dir if out_dir is not None else items[0].media.parent
         if not os.access(check_dir, os.W_OK):
-            self.log_widget.append_error(self.tr("Output directory is not writable: ") + str(check_dir))
+            # Its own banner, not a logged ERROR: nothing was condensed, so the
+            # generic run_problem banner _on_log_problem raises would say "Some
+            # files could not be condensed." about a run that never started.
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("Output folder is not writable."), details=str(check_dir))
+            )
             self.condense_button.setEnabled(True)
             return
 
@@ -992,6 +995,7 @@ class CondenseTab(_ToolTabBase):
 
         worker.file_started.connect(self._on_file_started)
         worker.file_progress.connect(self._on_file_progress)
+        worker.file_note.connect(self._on_file_note)
         worker.file_finished.connect(self._on_file_finished)
         worker.file_skipped.connect(self._on_file_skipped)
         worker.queue_finished.connect(self._on_queue_finished)
@@ -1083,10 +1087,10 @@ class CondenseTab(_ToolTabBase):
                 return
             on_items([CondenseItem(m, None) for m in media_files])
 
-        def _on_error(_msg: str) -> None:
-            self.show_screen_issue(
-                ScreenIssue(summary=self.tr("That media folder could not be read."), details=media_folder_str)
-            )
+        def _on_error(msg: str) -> None:
+            # The path is what the user just picked; what they cannot see is
+            # why the scan failed, so that message is the Details.
+            self.show_screen_issue(ScreenIssue(summary=self.tr("That media folder could not be scanned."), details=msg))
             on_items([])
 
         run_off_thread(self, _scan, _apply, _on_error)
@@ -1118,9 +1122,11 @@ class CondenseTab(_ToolTabBase):
             if n_matched < total_media:
                 matched_media = {fp.video for fp in file_pairs}
                 n_unmatched = sum(1 for m in all_media if m not in matched_media)
-                self.log_widget.append_error(
-                    tr_format(self.tr("Warning: %1 media file(s) could not be matched."), str(n_unmatched))
-                )
+                # WARNING, not ERROR: this fires while collecting items, before
+                # the run. An ERROR here raises the run_problem banner, which
+                # never self-dismisses, so a fully successful run still ended
+                # showing "Some files could not be condensed."
+                self.log_widget.append_warning(tr_format(self.tr("Unmatched media files: %1."), str(n_unmatched)))
 
             if not file_pairs:
                 self.show_screen_issue(
@@ -1133,10 +1139,11 @@ class CondenseTab(_ToolTabBase):
 
             on_items([CondenseItem(fp.video, fp.subtitle) for fp in file_pairs])
 
-        def _on_error(_msg: str) -> None:
-            self.show_screen_issue(
-                ScreenIssue(summary=self.tr("That media folder could not be read."), details=str(media_folder))
-            )
+        def _on_error(msg: str) -> None:
+            # _scan lists the media folder AND pairs across both, so a failure
+            # here is not necessarily the media folder's, and both folders
+            # already passed is_dir(). The real message is the Details.
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Those folders could not be scanned."), details=msg))
             on_items([])
 
         run_off_thread(self, _scan, _apply, _on_error)
@@ -1149,3 +1156,11 @@ class CondenseTab(_ToolTabBase):
         self.progress_widget.set_status(
             tr_format(self.tr("Condensing file %1 of %2"), str(idx + 1), str(self._total_files))
         )
+
+    def _on_file_note(self, idx: int, note: str) -> None:
+        """Durable per-file detail: a sidecar write or tagging failure.
+
+        Unlike ``file_progress``, this always lands in the run log, so it
+        survives past the moment the next file overwrites the transient label.
+        """
+        self.log_widget.append_warning(note)

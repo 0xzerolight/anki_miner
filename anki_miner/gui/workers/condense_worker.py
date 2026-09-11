@@ -18,6 +18,8 @@ import tempfile
 from dataclasses import dataclass, replace
 from pathlib import Path
 
+from PyQt6.QtCore import pyqtSignal
+
 from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 from anki_miner.services.audio_condenser import (
     CondensedPart,
@@ -126,8 +128,8 @@ class CondenseWorker(FileQueueWorker):
        ffmpeg, and optionally writes sidecars.
     4. Maps the returned :class:`~anki_miner.services.audio_condenser.CondenseStatus`
        to a translated ``file_finished`` / ``file_progress`` message. On a
-       successful audio write whose optional sidecar write failed, the warning is
-       surfaced through the final progress message — never as a ``file_finished``
+       successful audio write whose optional sidecar write or tagging failed, the
+       warning is surfaced through ``file_note`` — never as a ``file_finished``
        error (the audio is already good).
 
     :class:`~anki_miner.services.audio_condenser.EncoderUnavailableError` and
@@ -169,6 +171,11 @@ class CondenseWorker(FileQueueWorker):
             one is built from *config* if omitted (injected by tests).
         parent: Optional parent QObject.
     """
+
+    #: One durable fact about a just-finished file, for the run log — NOT for
+    #: the transient status label, which the next file overwrites. Verbatim
+    #: reuse of retiming's channel (``subtitle_retime_worker.file_note``).
+    file_note = pyqtSignal(int, str)
 
     #: A missing encoder, or an ffmpeg whose ``aselect`` does not filter, dooms
     #: every remaining file — stop the queue (see base loop).
@@ -360,20 +367,28 @@ class CondenseWorker(FileQueueWorker):
         if status is CondenseStatus.SUCCESS:
             if result.sidecar_error and result.tag_error:
                 warning = tr_format(
-                    self.tr("Audio done; subtitle write failed: %1; tagging failed: %2"),
+                    self.tr("Subtitle write failed: %1; tagging failed: %2"),
                     result.sidecar_error,
                     result.tag_error,
                 )
             elif result.sidecar_error:
-                warning = tr_format(self.tr("Audio done; subtitle write failed: %1"), result.sidecar_error)
+                warning = tr_format(self.tr("Subtitle write failed: %1"), result.sidecar_error)
             elif result.tag_error:
-                warning = tr_format(self.tr("Audio done; tagging failed: %1"), result.tag_error)
+                warning = tr_format(self.tr("Tagging failed: %1"), result.tag_error)
             else:
                 warning = None
-            self.file_progress.emit(idx, 100, warning or self.tr("Done"))
+            self.file_progress.emit(idx, 100, self.tr("Done"))
+            if warning is not None:
+                # Durable: on file_progress the next file overwrote it, so the
+                # one thing that partly failed left no trace after the run.
+                self.file_note.emit(idx, warning)
             self.file_finished.emit(idx, result.out_audio, None)
         elif status is CondenseStatus.CANCELLED:
-            self.file_finished.emit(idx, None, self.tr("Cancelled"))
+            # Nothing: a cancel is a run-level outcome, and the tab's status
+            # label already says "Cancelled". A per-item error string logged an
+            # ERROR line, which raises "Some files could not be condensed.",
+            # and counted the file as failed.
+            pass
         elif status is CondenseStatus.NO_SOURCE:
             self.file_finished.emit(idx, None, tr_format(self.tr("No subtitle source found for %1"), name))
         elif status is CondenseStatus.SUBTITLE_TRACK_NOT_FOUND:

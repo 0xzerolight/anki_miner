@@ -608,11 +608,10 @@ class AudioCondenserService:
             # "does its aselect actually select". See _audio_filter_capability.
             filter_flag, aselect_ok = self.extractor._audio_filter_capability()
             if not aselect_ok:
-                raise FilterUnavailableError(
-                    "This ffmpeg build's 'aselect' filter does not filter, so condensing would "
-                    "write the full-length track instead of a condensed one. Use the bundled "
-                    "ffmpeg, or set a working one in Settings → Media."
-                )
+                # The user reads this line verbatim in the run log, so it states
+                # the outcome and one action. The cause (an inert 'aselect' that
+                # would write the full-length track) is above and in the log.
+                raise FilterUnavailableError("This ffmpeg build cannot condense audio; install a different ffmpeg.")
 
             try:
                 with atomic_write_path(out_audio) as staged_audio:

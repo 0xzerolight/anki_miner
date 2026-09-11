@@ -39,10 +39,15 @@ class TestTranscriptionCopy:
         assert "Settings → ASR" not in source
         assert "[asr] extra" not in source
 
-    def test_a_missing_model_names_the_page_that_exists(self):
+    def test_a_missing_model_leaves_the_repair_to_the_button(self):
+        """The banner carries "Open Transcription Settings"; the sentence must
+        not write that button out again (D24). "not installed" is also more than
+        the guard established — a ggml model on disk that no engine can load
+        fails it too (model_availability.py:45-58)."""
         source = _source(subtitle_creation_tab)
-        assert "The transcription model %1 is not installed. " in source
-        assert "Open Settings → Transcription & Alignment to install it." in source
+        assert "The transcription model %1 is not ready." in source
+        assert "Open Settings → Transcription & Alignment to install it." not in source
+        assert "Open Transcription Settings" in source
 
 
 class TestSystemChecks:
@@ -72,7 +77,8 @@ class TestSettingsTransfer:
 class TestTrackProbes:
     @pytest.mark.parametrize("module", [single_episode_tab, condense_tab])
     def test_audio_track_failure_stops_blaming_ffprobe(self, module):
-        """The user cannot verify an ffprobe install from a dialog; the repair button can."""
+        """The user cannot verify an ffprobe install from a dialog, so the
+        sentence stops asking them to."""
         source = _source(module)
         assert "Audio tracks could not be read." in source
         assert "Failed to detect audio tracks. Check that ffprobe is installed." not in source

@@ -362,7 +362,12 @@ def test_pairing_summary_survives_log_clear_on_start(qtbot, tmp_path):
 
 
 def test_folder_mode_unmatched_logs_warning(qtbot, tmp_path):
-    """Folder mode with fewer matches than videos logs a warning."""
+    """Folder mode with fewer matches than videos logs a WARNING, not an ERROR.
+
+    An ERROR here raised the never-self-dismissing run_problem banner ("Some
+    files could not be retimed.") before the run had even started, so a run
+    whose every matched pair succeeded still ended showing a failure.
+    """
     config = _make_config(tmp_path)
     video_folder = tmp_path / "videos"
     sub_folder = tmp_path / "subs"
@@ -391,7 +396,8 @@ def test_folder_mode_unmatched_logs_warning(qtbot, tmp_path):
     log_text = tab.log_widget.text_edit.toPlainText()
     assert "Matched 1 of 2" in log_text
     # Independent assertion against the unmatched-warning message text.
-    assert "could not be matched" in log_text
+    assert "Unmatched video files: 1." in log_text
+    assert tab.issue_banner().current_issue() is None
 
 
 def test_folder_mode_no_pairs_warns(qtbot, tmp_path):
@@ -684,7 +690,11 @@ def test_retime_starts_worker_and_disables_button(qtbot, tmp_path):
 
 
 def test_unwritable_output_aborts_no_worker(qtbot, tmp_path):
-    """Unwritable output dir aborts before a worker is created."""
+    """Unwritable output dir aborts before a worker is created, with its own banner.
+
+    Not a logged ERROR: that raises the generic run_problem banner ("Some files
+    could not be retimed.") about a run that never started.
+    """
     config = _make_config(tmp_path)
     video = tmp_path / "episode.mp4"
     sub = tmp_path / "episode.srt"
@@ -695,16 +705,20 @@ def test_unwritable_output_aborts_no_worker(qtbot, tmp_path):
     tab.video_file_selector.set_path(str(video))
     tab.subtitle_file_selector.set_path(str(sub))
 
+    issues: list[object] = []
     with (
         patch(_AVAILABLE, return_value=True),
         patch(_OS_ACCESS, return_value=False),
         patch(_WORKER_CLS, side_effect=AssertionError("worker must not be created")),
+        patch.object(tab, "show_screen_issue", side_effect=issues.append),
     ):
         tab.retime_button.click()
 
     assert tab.worker_thread is None
-    log_text = tab.log_widget.text_edit.toPlainText()
-    assert "not writable" in log_text
+    assert issues, "refusal must raise a ScreenIssue, not a log line"
+    assert issues[0].summary == "Output folder is not writable."
+    assert issues[0].summary != tab._strings.run_problem
+    assert issues[0].details == str(video.parent)
 
 
 def test_queue_finished_re_enables_retime(qtbot, tmp_path):

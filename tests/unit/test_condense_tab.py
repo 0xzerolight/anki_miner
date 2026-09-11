@@ -74,6 +74,7 @@ class _FakeWorker:
         self.kwargs = kwargs
         self.file_started = MagicMock()
         self.file_progress = MagicMock()
+        self.file_note = MagicMock()
         self.file_finished = MagicMock()
         self.file_skipped = MagicMock()
         self.queue_finished = MagicMock()
@@ -458,7 +459,11 @@ def test_folder_mode_with_subfolder_pairs_and_logs(qtbot, tmp_path):
 
 
 def test_folder_mode_subfolder_unmatched_logs_warning(qtbot, tmp_path):
-    """Fewer matches than media files logs a warning line."""
+    """Fewer matches than media files logs a WARNING, not an ERROR.
+
+    An ERROR here raised the never-self-dismissing run_problem banner ("Some
+    files could not be condensed.") before the run had even started.
+    """
     config = _make_config(tmp_path)
     media_folder = tmp_path / "media"
     sub_folder = tmp_path / "subs"
@@ -484,7 +489,8 @@ def test_folder_mode_subfolder_unmatched_logs_warning(qtbot, tmp_path):
     assert result[0] == [CondenseItem(m1, s1)]
     log_text = tab.log_widget.text_edit.toPlainText()
     assert "Matched 1 of 2" in log_text
-    assert "could not be matched" in log_text
+    assert "Unmatched media files: 1." in log_text
+    assert tab.issue_banner().current_issue() is None
 
 
 def test_folder_mode_subfolder_no_pairs_warns(qtbot, tmp_path):
@@ -683,7 +689,11 @@ def test_custom_output_dir_forwarded(qtbot, tmp_path):
 
 
 def test_unwritable_output_aborts_no_worker(qtbot, tmp_path):
-    """Unwritable output dir aborts before a worker is created."""
+    """Unwritable output dir aborts before a worker is created, with its own banner.
+
+    Not a logged ERROR: that raises the generic run_problem banner ("Some files
+    could not be condensed.") about a run that never started.
+    """
     config = _make_config(tmp_path)
     media = tmp_path / "episode.mkv"
     media.write_bytes(b"fake")
@@ -691,15 +701,20 @@ def test_unwritable_output_aborts_no_worker(qtbot, tmp_path):
     tab = _make_tab(config, qtbot)
     tab.media_file_selector.set_path(str(media))
 
+    issues: list[object] = []
     with (
         patch(_AVAILABLE, return_value=True),
         patch(_OS_ACCESS, return_value=False),
         patch(_WORKER_CLS, side_effect=AssertionError("worker must not be created")),
+        patch.object(tab, "show_screen_issue", side_effect=issues.append),
     ):
         tab.condense_button.click()
 
     assert tab.worker_thread is None
-    assert "not writable" in tab.log_widget.text_edit.toPlainText()
+    assert issues, "refusal must raise a ScreenIssue, not a log line"
+    assert issues[0].summary == "Output folder is not writable."
+    assert issues[0].summary != tab._strings.run_problem
+    assert issues[0].details == str(media.parent)
 
 
 def test_second_condense_refused_while_running(qtbot, tmp_path):

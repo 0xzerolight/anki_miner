@@ -263,9 +263,10 @@ def retime_subtitle(
                 tr_format(QCoreApplication.translate("SubtitleRetimer", "%1 result rejected: %2"), label, reason),
             )
 
-        reason = QCoreApplication.translate(
-            "SubtitleRetimer", "no engine produced a trustworthy sync; original left untouched"
-        )
+        # No reassurance clause: the original can never be the file written
+        # (the output always carries the _retimed suffix), so "original left
+        # untouched" answered a question the code never raised.
+        reason = QCoreApplication.translate("SubtitleRetimer", "no trustworthy alignment")
         logger.warning(
             "retime: kept original for %s (reference %s). Attempts: %s",
             video.name,

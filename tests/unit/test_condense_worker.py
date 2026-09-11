@@ -162,10 +162,18 @@ def _make_worker(items, config, *, service=None, **kwargs) -> CondenseWorker:
 
 
 def _capture(worker: CondenseWorker) -> dict:
-    cap: dict = {"started": [], "progress": [], "finished": [], "skipped": [], "queue_finished": []}
+    cap: dict = {
+        "started": [],
+        "progress": [],
+        "finished": [],
+        "notes": [],
+        "skipped": [],
+        "queue_finished": [],
+    }
     worker.file_started.connect(lambda idx: cap["started"].append(idx))
     worker.file_progress.connect(lambda idx, pct, msg: cap["progress"].append((idx, pct, msg)))
     worker.file_finished.connect(lambda idx, out, err: cap["finished"].append((idx, out, err)))
+    worker.file_note.connect(lambda idx, note: cap["notes"].append((idx, note)))
     worker.file_skipped.connect(lambda idx, out, reason: cap["skipped"].append((idx, out, reason)))
     worker.queue_finished.connect(lambda _outcome: cap["queue_finished"].append(True))
     return cap
@@ -592,9 +600,11 @@ def test_cancel_between_files_still_emits_queue_finished(qapp, tmp_path):
 
     assert 0 in cap["started"]
     assert 1 not in cap["started"]
-    finished = {item[0]: item for item in cap["finished"]}
-    assert finished[0][1] is None
-    assert finished[0][2] == "Cancelled"
+    # No per-item outcome on cancel: an error string logged an ERROR
+    # ("Cancelled"), which raises "Some files could not be condensed." while
+    # the same run's status said "Cancelled", and counted the file as failed.
+    assert cap["finished"] == []
+    assert worker._failed_count == 0
     assert cap["queue_finished"] == [True]
     assert worker.is_cancelled is True
 
@@ -977,9 +987,8 @@ def test_sub_write_failure_does_not_fail_audio(qapp, tmp_path, monkeypatch):
     idx, out, err = cap["finished"][0]
     assert out == tmp_path / "ep01_condensed.mp3"  # audio still succeeded
     assert err is None
-    # Warning surfaced through the final progress message.
-    final_msg = [p for p in cap["progress"] if p[0] == 0][-1][2]
-    assert "disk full" in final_msg
+    # Warning surfaced through the durable note channel.
+    assert cap["notes"] == [(0, "Subtitle write failed: disk full")]
 
 
 def test_sub_write_non_oserror_does_not_fail_audio(qapp, tmp_path, monkeypatch):
@@ -1004,8 +1013,7 @@ def test_sub_write_non_oserror_does_not_fail_audio(qapp, tmp_path, monkeypatch):
     idx, out, err = cap["finished"][0]
     assert out == tmp_path / "ep01_condensed.mp3"  # audio still succeeded
     assert err is None
-    final_msg = [p for p in cap["progress"] if p[0] == 0][-1][2]
-    assert "bad cue" in final_msg
+    assert cap["notes"] == [(0, "Subtitle write failed: bad cue")]
 
 
 # ---------------------------------------------------------------------------
@@ -1101,8 +1109,13 @@ def test_default_item_has_no_metadata(qapp, tmp_path, monkeypatch):
     assert captured["metadata"] is None
 
 
-def test_tag_error_surfaces_as_warning(qapp, tmp_path, monkeypatch):
-    """A tag failure is non-fatal: audio succeeds, warning surfaced in progress."""
+def test_tag_error_surfaces_as_a_durable_note(qapp, tmp_path, monkeypatch):
+    """A tag failure is non-fatal, and its record outlives the status label.
+
+    It used to ride file_progress, which the next file overwrites, so the one
+    thing that partly failed left no trace after the run. file_note is the
+    durable channel (the same one retiming uses).
+    """
     config = _make_config(tmp_path)
     media = tmp_path / "ep01.mkv"
     media.write_bytes(b"")
@@ -1119,12 +1132,13 @@ def test_tag_error_surfaces_as_warning(qapp, tmp_path, monkeypatch):
     idx, out, err = cap["finished"][0]
     assert out == tmp_path / "ep01_condensed.mp3"  # audio still succeeded
     assert err is None
-    final_msg = [p for p in cap["progress"] if p[0] == 0][-1][2]
-    assert "no header" in final_msg
+    assert cap["notes"] == [(0, "Tagging failed: no header")]
+    # The transient status label stays a plain completion (A8-25).
+    assert [p for p in cap["progress"] if p[0] == 0][-1] == (0, 100, "Done")
 
 
 def test_sidecar_and_tag_errors_both_surfaced(qapp, tmp_path, monkeypatch):
-    """Both best-effort failures land in one warning message."""
+    """Both best-effort failures land in one durable note."""
     config = _make_config(tmp_path)
     media = tmp_path / "ep01.mkv"
     media.write_bytes(b"")
@@ -1148,8 +1162,8 @@ def test_sidecar_and_tag_errors_both_surfaced(qapp, tmp_path, monkeypatch):
 
     idx, out, err = cap["finished"][0]
     assert err is None
-    final_msg = [p for p in cap["progress"] if p[0] == 0][-1][2]
-    assert "disk full" in final_msg and "no header" in final_msg
+    assert cap["notes"] == [(0, "Subtitle write failed: disk full; tagging failed: no header")]
+    assert [p for p in cap["progress"] if p[0] == 0][-1] == (0, 100, "Done")
 
 
 # ---------------------------------------------------------------------------
