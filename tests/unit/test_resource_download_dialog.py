@@ -957,7 +957,7 @@ def test_cancelled_partial_wording_reports_prior_install_and_unprocessed_count()
     body = "\n".join(result_lines(summary))
 
     assert headline == "Resource Download Cancelled (Some Resources Installed)"
-    assert "Some resources were installed before cancellation" in body
+    assert "Some resources were installed." in body
     assert "Resource items not processed: 2" in body
 
 
