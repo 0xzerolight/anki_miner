@@ -738,6 +738,20 @@ Continue anyway?</source>
         <translation>已下載 %1。</translation>
     </message>
 </context><context>
+    <name>AsrPackDownloadWorker</name>
+    <message>
+        <source>Transcription engine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading the transcription engine…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcription engine installed successfully.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AudioClipEditor</name>
     <message>
         <source>Drag either end to trim this word's audio clip; double-click to restore the default. Only this word is affected.</source>
@@ -9098,6 +9112,14 @@ Your installed resources and your theme are kept.</source>
         <translation>播放</translation>
     </message>
     <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
         <translation>無法使用影片預覽：此電腦無法載入內建的影片元件（libmpv）。請嘗試重新安裝 Anki Miner；如果問題持續發生，請回報問題並附上您位於 %USERPROFILE%\.anki_miner\anki_miner.log 的記錄檔。</translation>
     </message>
@@ -9538,6 +9560,22 @@ Your installed resources and your theme are kept.</source>
         <translation>語音轉文字</translation>
     </message>
     <message>
+        <source>Download transcription engine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the faster-whisper speech-to-text engine into Anki Miner's folder. Required before subtitle generation can run on a packaged install.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcription engine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Speech-to-text engine (faster-whisper), about %1 MB, downloaded once.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>ASR model</source>
         <translation>ASR 模型</translation>
     </message>
@@ -9678,10 +9716,6 @@ Your installed resources and your theme are kept.</source>
         <translation>此平台無法使用</translation>
     </message>
     <message>
-        <source>Subtitle generation needs the faster-whisper engine, which this build does not include. Install a copy with the command below and launch that one:</source>
-        <translation>字幕生成功能需要 faster-whisper 引擎，而此版本未包含它。請用下方指令安裝一份，並改用該安裝來啟動：</translation>
-    </message>
-    <message>
         <source>Subtitle generation needs the faster-whisper engine. Install it with:</source>
         <translation>字幕生成功能需要 faster-whisper 引擎。請使用以下指令安裝：</translation>
     </message>
@@ -9708,6 +9742,10 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>No NVIDIA GPU detected. This pack needs an NVIDIA card.</source>
         <translation>未偵測到 NVIDIA GPU。此套件需要 NVIDIA 顯示卡。</translation>
+    </message>
+    <message>
+        <source>Local transcription is not available for this build.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Silence removal is available.</source>

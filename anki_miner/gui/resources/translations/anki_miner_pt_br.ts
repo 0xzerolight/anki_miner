@@ -739,6 +739,20 @@ Continuar mesmo assim?</translation>
         <translation>%1 baixado.</translation>
     </message>
 </context><context>
+    <name>AsrPackDownloadWorker</name>
+    <message>
+        <source>Transcription engine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloading the transcription engine…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcription engine installed successfully.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>AudioClipEditor</name>
     <message>
         <source>Drag either end to trim this word's audio clip; double-click to restore the default. Only this word is affected.</source>
@@ -9115,6 +9129,14 @@ Seus recursos instalados e seu tema são mantidos.</translation>
         <translation>Reproduzir</translation>
     </message>
     <message>
+        <source>Step one frame back</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Step one frame forward</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
         <translation>A pré-visualização de vídeo não está disponível: o componente de vídeo incluído (libmpv) não pôde ser carregado neste PC. Tente reinstalar o Anki Miner; se o problema persistir, relate-o e anexe seu log de %USERPROFILE%\.anki_miner\anki_miner.log.</translation>
     </message>
@@ -9555,6 +9577,22 @@ Seus recursos instalados e seu tema são mantidos.</translation>
         <translation>Fala em texto</translation>
     </message>
     <message>
+        <source>Download transcription engine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the faster-whisper speech-to-text engine into Anki Miner's folder. Required before subtitle generation can run on a packaged install.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcription engine</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Speech-to-text engine (faster-whisper), about %1 MB, downloaded once.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>ASR model</source>
         <translation>Modelo de ASR</translation>
     </message>
@@ -9695,10 +9733,6 @@ Seus recursos instalados e seu tema são mantidos.</translation>
         <translation>Não disponível nesta plataforma</translation>
     </message>
     <message>
-        <source>Subtitle generation needs the faster-whisper engine, which this build does not include. Install a copy with the command below and launch that one:</source>
-        <translation>A geração de legendas precisa do mecanismo faster-whisper, que esta versão não inclui. Instale uma cópia com o comando abaixo e inicie essa versão:</translation>
-    </message>
-    <message>
         <source>Subtitle generation needs the faster-whisper engine. Install it with:</source>
         <translation>A geração de legendas exige o mecanismo faster-whisper. Instale-o com:</translation>
     </message>
@@ -9725,6 +9759,10 @@ Seus recursos instalados e seu tema são mantidos.</translation>
     <message>
         <source>No NVIDIA GPU detected. This pack needs an NVIDIA card.</source>
         <translation>Nenhuma GPU NVIDIA detectada. Este pacote requer uma placa NVIDIA.</translation>
+    </message>
+    <message>
+        <source>Local transcription is not available for this build.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Silence removal is available.</source>
