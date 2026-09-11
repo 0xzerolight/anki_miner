@@ -47,7 +47,7 @@ class YtdlpNotFoundError(YouTubeFetchError):
     """Raised when the yt-dlp executable cannot be located/executed.
 
     A specific subclass so callers can catch the "binary missing" case and
-    steer the user to Settings → YouTube → Update yt-dlp now.
+    steer the user to Settings → YouTube → Download yt-dlp.
     """
 
     pass

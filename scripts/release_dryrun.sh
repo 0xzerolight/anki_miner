@@ -221,6 +221,44 @@ assert_mpv_ran "windows-latest"
 assert_mpv_ran "macos-latest"
 assert_mpv_ran "macos-15-intel"
 
+# Same executed-not-skipped defense for the youtube smoke, on every leg in the
+# selection. The bundle ships no yt-dlp any more — it arrives via the app's own
+# updater, seeded for CI by scripts/fetch_ytdlp_seed.py — and that seed step
+# FAILS OPEN on a GitHub outage, so bundle_smoke.sh's youtube leg can SKIP and
+# still exit 0. A dry-run must still prove the artifact can mine YouTube.
+# bundle_smoke.sh prints "PASS youtube" only on the ran-and-passed path and
+# "SKIP youtube" only on skip; assert PASS present + SKIP absent.
+assert_youtube_ran() { # $1 = os label present in the leg's job name
+  local os="$1"
+  local job_id
+  job_id="$(echo "$JOBS_JSON" | jq -r --arg os "$os" \
+    'first(.jobs[] | select((.name | startswith("build")) and (.name | contains($os))) | .databaseId) // empty')"
+  if [ -z "$job_id" ]; then
+    return 0 # leg not in this selection; nothing to assert
+  fi
+  local jlog="$LOG_DIR/job-$job_id.log"
+  for _ in $(seq 1 30); do
+    gh run view "$RUN_ID" --job "$job_id" --log >"$jlog" 2>/dev/null || true
+    if grep -qE "PASS youtube|SKIP youtube" "$jlog" 2>/dev/null; then
+      break
+    fi
+    sleep 6
+  done
+  if grep -q "SKIP youtube" "$jlog" 2>/dev/null; then
+    echo "ERROR: youtube smoke was SKIPPED on the '$os' leg (expected to execute)." >&2
+    exit 1
+  fi
+  if ! grep -q "PASS youtube" "$jlog" 2>/dev/null; then
+    echo "ERROR: youtube smoke pass-marker absent for the '$os' leg (smoke may not have executed)." >&2
+    exit 1
+  fi
+  echo "    youtube smoke executed+passed on '$os'."
+}
+assert_youtube_ran "ubuntu-22.04"
+assert_youtube_ran "windows-latest"
+assert_youtube_ran "macos-latest"
+assert_youtube_ran "macos-15-intel"
+
 count_log_matches() { # $1 = ERE, $2 = log path
   local pattern="$1"
   local log_path="$2"
@@ -279,5 +317,5 @@ fi
 echo "############################################"
 echo "RELEASE DRY-RUN GREEN (run $RUN_ID, platforms=$PLATFORMS)"
 echo "  build matrix + bundle smokes passed; release + ci-gate jobs skipped;"
-echo "  no GitHub Release created; Vulkan + mpv + Windows installer smokes verified."
+echo "  no GitHub Release created; Vulkan + mpv + youtube + Windows installer smokes verified."
 echo "############################################"

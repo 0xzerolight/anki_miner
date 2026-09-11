@@ -3,7 +3,6 @@ import importlib.util
 import os
 import platform
 import re
-import sys
 
 import budoux
 import unidic_lite
@@ -92,35 +91,6 @@ if os.path.isdir(vendor_alass):
         if os.path.isfile(_full):
             alass_binaries.append((_full, "bin"))
 
-# Bundle the vendored yt-dlp standalone binary. CI and scripts/release_preflight.sh
-# populate vendor/yt-dlp/ from the pin in .github/ytdlp-pin.json before invoking
-# PyInstaller; local dev builds leave it absent (empty list → unchanged behavior).
-# The "bin" dest matches sys._MEIPASS/bin/, the tier anki_miner/utils/ytdlp_resolver.py
-# checks after PATH. Without this the resolver fell through to the bare literal
-# "yt-dlp" and a fresh packaged install could not mine YouTube at all.
-#
-# Must be a standalone build, never the bare "yt-dlp" zipapp asset: that one shebangs
-# the system python3 (which a packaged app does not ship) and carries no curl_cffi, so
-# --list-impersonate-targets would come back empty.
-#
-# NOT collected on macOS. yt-dlp_macos is itself a PyInstaller onefile: its
-# payload is a PKG archive appended after the Mach-O image. Anything that
-# rewrites the Mach-O -- which is exactly what PyInstaller does to every entry
-# in `binaries` on macOS (arch thinning, install_name_tool, ad-hoc re-signing)
-# -- drops that trailing payload, and the result runs only far enough to say
-#     [PYI-12119:ERROR] Could not load PyInstaller's embedded PKG archive
-# The macOS legs therefore copy the binary into _internal/bin AFTER the build,
-# byte for byte; see the "Vendor yt-dlp into the bundle (macOS)" step in
-# release.yml. Caught by the Intel bundle smoke, which is why the release
-# dry-run runs `all` and not just linux-windows.
-ytdlp_binaries = []
-vendor_ytdlp = os.path.join(project_root, "vendor", "yt-dlp")
-if os.path.isdir(vendor_ytdlp) and sys.platform != "darwin":
-    for _fn in sorted(os.listdir(vendor_ytdlp)):
-        _full = os.path.join(vendor_ytdlp, _fn)
-        if os.path.isfile(_full):
-            ytdlp_binaries.append((_full, "bin"))
-
 # Bundle the vendored libmpv shared library. CI populates vendor/libmpv/ from the
 # repo-owned vendor-libmpv-* release before invoking PyInstaller; local dev builds
 # leave it absent (empty list → unchanged behavior). Dest is "." (the _MEIPASS
@@ -150,19 +120,6 @@ alass_license_dir = os.path.join(project_root, "licenses", "alass")
 alass_license_datas = []
 if os.path.isdir(alass_license_dir):
     alass_license_datas.append((alass_license_dir, os.path.join("licenses", "alass")))
-
-# Bundle the yt-dlp license texts if present (populated by a sibling CI task, and by
-# release_preflight.sh locally). Conditional so local builds don't hard-fail before
-# the license dir exists. Lands at sys._MEIPASS/licenses/yt-dlp/ in the bundle.
-#
-# This is `datas`, not `binaries`, so unlike ytdlp_binaries above it is NOT skipped on
-# macOS: PyInstaller copies data files verbatim, and only the Mach-O rewriting that
-# corrupts the vendored executable forced the post-build copy there. Every OS that
-# ships the binary therefore ships its license alongside, as ffmpeg/alass/libmpv do.
-ytdlp_license_dir = os.path.join(project_root, "licenses", "yt-dlp")
-ytdlp_license_datas = []
-if os.path.isdir(ytdlp_license_dir):
-    ytdlp_license_datas.append((ytdlp_license_dir, os.path.join("licenses", "yt-dlp")))
 
 # Bundle the libmpv license/source-offer files (committed README/COPYING plus the
 # per-artifact Copyright/SOURCES.txt the CI fetch step drops in). Lands at
@@ -307,7 +264,7 @@ for _code in AVAILABLE_LANGUAGES:
 a = Analysis(
     [os.path.join(project_root, "anki_miner", "gui", "launch.py")],
     pathex=[project_root],
-    binaries=ffmpeg_binaries + alass_binaries + libmpv_binaries + ytdlp_binaries,
+    binaries=ffmpeg_binaries + alass_binaries + libmpv_binaries,
     datas=[
         # GUI resources (stylesheets, icons, translations, and the bundled
         # Japanese fallback font under resources/fonts — the whole tree is
@@ -336,7 +293,6 @@ a = Analysis(
     ]
     + ffmpeg_license_datas
     + alass_license_datas
-    + ytdlp_license_datas
     + libmpv_license_datas
     + local_audio_license_datas
     + vulkan_loader_license_datas
@@ -416,10 +372,11 @@ a = Analysis(
         "opencc",
         "kiwipiepy",
         "kiwipiepy_model",
-        # yt-dlp ships as the vendored standalone EXECUTABLE (vendor/yt-dlp above),
-        # which is the only form the app ever uses — every call site spawns it as a
-        # subprocess. The Python package was collected wholesale for no runtime
-        # benefit (~16 MB, 13 MB of it extractors) and is dropped here.
+        # yt-dlp is a SUBPROCESS, never an import: every call site spawns the
+        # executable, so the Python package was collected wholesale for no runtime
+        # benefit (~16 MB, 13 MB of it extractors) and is dropped here. The frozen
+        # app ships no yt-dlp at all — it arrives as an in-app download into
+        # ANKI_MINER_HOME/bin/ (services/ytdlp_updater.py).
         #
         # Kept as a pip dependency on purpose: non-frozen installs (pip/pipx/source)
         # get its console script, which ytdlp_resolver's interpreter-sibling tier

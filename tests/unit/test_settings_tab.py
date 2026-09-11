@@ -1250,3 +1250,14 @@ def test_rebuild_known_words_does_not_block_gui_and_reenables_action(tab, tmp_pa
             worker.wait(6000)
 
     qtbot.waitUntil(lambda: tab.filtering_panel.rebuild_known_words_button.isEnabled(), timeout=1000)
+
+
+def test_a_completed_install_turns_the_button_back_into_an_update(tab):
+    """A finished yt-dlp download relabels the button without a validation sweep."""
+    from types import SimpleNamespace
+
+    tab.youtube_panel.set_ytdlp_present(False)
+
+    tab.set_ytdlp_status_from_result(SimpleNamespace(action="installed", message="Updated yt-dlp to 2026.08.19."))
+
+    assert tab.youtube_panel.update_ytdlp_button.text() == "Update yt-dlp now"

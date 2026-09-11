@@ -23,6 +23,7 @@ from PyQt6.QtGui import QTextCursor
 from PyQt6.QtWidgets import QDialog
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.widgets.base.ytdlp_availability import YTDLP_DOWNLOAD_ACTION
 from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.services.media_downloader import (
     PLAYLIST_PROBE_MAX,
@@ -128,13 +129,23 @@ class TestConstruction:
         assert tab._custom_output_dir is None
         assert tab.url_input.tabChangesFocus() is True
 
-    def test_unavailable_ytdlp_disables_primary(self, qtbot, tmp_path: Path) -> None:
+    def test_unavailable_ytdlp_disables_primary_and_offers_a_download(self, qtbot, tmp_path: Path) -> None:
         with patch(_COMPUTE_AVAILABLE, return_value=False):
             tab = DownloadTab(_make_config(tmp_path))
             qtbot.addWidget(tab)
             assert tab._availability_worker.wait(3000)
-            qtbot.waitUntil(lambda: tab.engine_notice_label.isVisibleTo(tab), timeout=3000)
+            qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
         assert not tab.download_button.isEnabled()
+        assert tab.issue_banner().current_issue().action_id == YTDLP_DOWNLOAD_ACTION
+
+    def test_the_banner_action_asks_the_window_for_a_download(self, qtbot, tmp_path: Path) -> None:
+        with patch(_COMPUTE_AVAILABLE, return_value=False):
+            tab = DownloadTab(_make_config(tmp_path))
+            qtbot.addWidget(tab)
+            assert tab._availability_worker.wait(3000)
+            qtbot.waitUntil(lambda: tab.issue_banner().current_issue() is not None, timeout=3000)
+        with qtbot.waitSignal(tab.ytdlp_download_requested, timeout=1000):
+            tab.issue_banner().action_button.click()
 
     def test_suppress_optional_startup_skips_probe(self, qtbot, tmp_path: Path) -> None:
         tab = DownloadTab(_make_config(tmp_path), suppress_optional_startup=True)

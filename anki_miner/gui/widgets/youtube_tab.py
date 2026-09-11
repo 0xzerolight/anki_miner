@@ -31,11 +31,12 @@ fully determine the UI.
 
 from __future__ import annotations
 
+import contextlib
 import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -57,6 +58,7 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import queue_state_store
 from anki_miner.gui.utils.qt_helpers import reveal_settings, urls_from_event
 from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.utils.service_factory import create_episode_processor, create_youtube_fetcher
 from anki_miner.gui.widgets._queue_mining_tab_base import (
     _ListQueueMiningTabBase,
@@ -69,6 +71,7 @@ from anki_miner.gui.widgets.base import (
     configure_card_layout,
     page_filler,
 )
+from anki_miner.gui.widgets.base.ytdlp_availability import YtdlpAvailabilityMixin, YtdlpStrings
 from anki_miner.gui.widgets.current_job_strip import CurrentJobStrip
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -92,7 +95,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class YouTubeTab(_ListQueueMiningTabBase):
+class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
     """Multi-URL YouTube queue mining tab.
 
     The tab owns a :class:`YouTubeQueue`, a :class:`PlaylistAddController`
@@ -115,6 +118,11 @@ class YouTubeTab(_ListQueueMiningTabBase):
 
     #: Stable filename for this queue's recovery snapshot (D16-C).
     QUEUE_STATE_KEY = "queue.youtube"
+
+    #: The banner's "Download yt-dlp" repair. gui/app.py routes it to
+    #: BackgroundTaskController.start_ytdlp_update(force=True) — this screen owns
+    #: no worker of its own.
+    ytdlp_download_requested = pyqtSignal()
 
     def __init__(
         self,
@@ -172,6 +180,16 @@ class YouTubeTab(_ListQueueMiningTabBase):
             complete_succeeded=self.tr("Complete — %1 succeeded"),
             complete_with_failures=self.tr("Complete — %1 succeeded, %2 failed"),
         )
+        # yt-dlp copy, built here so each literal stays in this tab's tr-context.
+        self._ytdlp_strings = YtdlpStrings(
+            missing=self.tr("yt-dlp is not installed, so YouTube mining cannot run."),
+            download_action=self.tr("Download yt-dlp"),
+            downloading=self.tr("Downloading yt-dlp…"),
+        )
+        # Probed on first show, not here: resolving re-hashes the managed binary
+        # and this tab is constructed long before anyone looks at it.
+        self._ytdlp_probe_needed = True
+        self._ytdlp_probe_generation = 0
 
         self._setup_ui()
 
@@ -550,6 +568,57 @@ class YouTubeTab(_ListQueueMiningTabBase):
         event.acceptProposedAction()
 
     # ------------------------------------------------------------------
+    # yt-dlp availability (YtdlpAvailabilityMixin hooks)
+    # ------------------------------------------------------------------
+
+    def _refresh_ytdlp_state(self) -> None:
+        """Probe yt-dlp availability off the GUI thread (mixin hook).
+
+        Generation-guarded like ``_ToolTabBase._run_availability_scan``: a probe
+        dispatched before a config change must not overwrite a newer answer. The
+        worker is not retained — ``run_off_thread`` owns it and joins it at
+        shutdown, and a retained handle would only dangle after it finished.
+        """
+        config = self.config
+        # Answered here, not only in showEvent: a probe dispatched from
+        # update_config or from an update result must not leave the next show
+        # re-hashing the binary a second time.
+        self._ytdlp_probe_needed = False
+        self._ytdlp_probe_generation += 1
+        generation = self._ytdlp_probe_generation
+
+        def _on_done(result: object) -> None:
+            if generation == self._ytdlp_probe_generation:
+                with contextlib.suppress(RuntimeError):
+                    self._apply_probe_result(result)
+
+        def _on_error(message: str) -> None:
+            logger.warning("yt-dlp availability probe failed: %s", message)
+            if generation == self._ytdlp_probe_generation:
+                with contextlib.suppress(RuntimeError):
+                    self._apply_probe_result(False)
+
+        run_off_thread(self, lambda: self._compute_ytdlp_available(config), _on_done, _on_error)
+
+    def _emit_ytdlp_download_requested(self) -> None:
+        """Mixin hook: ask the window to run the updater."""
+        self.ytdlp_download_requested.emit()
+
+    def _queue_ytdlp_probe(self) -> None:
+        """Probe now if this screen is on show, otherwise at its next show."""
+        if self.isVisible():
+            self._refresh_ytdlp_state()
+        else:
+            self._ytdlp_probe_needed = True
+
+    def showEvent(self, a0) -> None:  # noqa: N802 - Qt override
+        """Probe yt-dlp the first time this screen is actually looked at."""
+        super().showEvent(a0)
+        if self._ytdlp_probe_needed:
+            self._ytdlp_probe_needed = False
+            self._refresh_ytdlp_state()
+
+    # ------------------------------------------------------------------
     # Per-tab adapters for the shared list-queue lifecycle
     # ------------------------------------------------------------------
 
@@ -581,6 +650,11 @@ class YouTubeTab(_ListQueueMiningTabBase):
         download per row followed by a raw ctranslate2 exception.
         """
         self.clear_screen_issue()
+        if self._ytdlp_known_missing():
+            # No fetcher, no run: refuse before the queue starts rather than
+            # letting every item fail with YtdlpNotFoundError in turn.
+            self._render_ytdlp_issue()
+            return
         candidates = items if items is not None else self._queue.all_items()
         if any(i.resolved_sub_mode == "transcribe" for i in candidates) and not usable_model_installed(self.config):
             self.show_screen_issue(
@@ -699,6 +773,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
         self._fetcher = create_youtube_fetcher(config)
         self._add_flow.update_config(config, self._fetcher)
         super().update_config(config)
+        self._queue_ytdlp_probe()
         self._seed_caption_controls()
 
     def shutdown(self) -> None:

@@ -159,6 +159,19 @@ class YouTubeSettingsPanel(FormPanel):
         """Set the yt-dlp status line (shown next to the Update button)."""
         self.ytdlp_status_label.setText(text)
 
+    def set_ytdlp_present(self, present: bool) -> None:
+        """Say what the button will do, from the validation verdict.
+
+        The app ships no yt-dlp, so on a fresh install this button is an install
+        button; calling it "Update" there described something the user does not
+        have. The verdict comes from startup validation (MainWindow), which
+        already resolves and probes off the GUI thread — the panel must never
+        run the resolver itself.
+        """
+        self.update_ytdlp_button.setText(
+            self.tr("Update yt-dlp now") if present else self.tr("Download yt-dlp (~40 MB)")
+        )
+
     # ------------------------------------------------------------------
     # Value helpers (config <-> widget conversion)
     # ------------------------------------------------------------------

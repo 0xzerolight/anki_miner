@@ -30,10 +30,6 @@ def test_clean_release_preflight_fetches_verified_libmpv_before_pyinstaller(tmp_
     (repo / ".github").mkdir()
     shutil.copy2(PROJECT_ROOT / "scripts" / "release_preflight.sh", repo / "scripts" / "release_preflight.sh")
     (repo / "anki_miner" / "__init__.py").write_text('__version__ = "9.9.9"\n', encoding="utf-8")
-    (repo / ".github" / "ytdlp-pin.json").write_text(
-        '{"version":"test","assets":{"linux":{"asset":"yt-dlp_linux","sha256":"feedface","install_as":"yt-dlp"}}}\n',
-        encoding="utf-8",
-    )
     (repo / "requirements.lock").touch()
     (repo / "pyproject.toml").touch()
     (repo / "anki_miner.spec").touch()
@@ -66,9 +62,6 @@ def test_clean_release_preflight_fetches_verified_libmpv_before_pyinstaller(tmp_
         'case "$*" in\n'
         '  *"__version__"*) echo 9.9.9 ;;\n'
         "  *'[\"version\"]'*) echo test ;;\n"
-        "  *'[\"asset\"]'*) echo yt-dlp_linux ;;\n"
-        "  *'[\"sha256\"]'*) echo feedface ;;\n"
-        "  *'[\"install_as\"]'*) echo yt-dlp ;;\n"
         "esac\n",
     )
     _write_executable(
@@ -216,10 +209,16 @@ def test_bundle_smoke_uses_one_temporary_anki_miner_home(tmp_path: Path) -> None
     for library in ("libggml-vulkan.so", "libggml-cpu.so", "libmpv.so.2"):
         (dist / library).touch()
 
+    seed = tmp_path / "ytdlp-seed" / "bin"
+    seed.mkdir(parents=True)
+    (seed / "yt-dlp").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    (seed / "yt-dlp.verified").write_text("0" * 64 + "\n", encoding="utf-8")
+
     env = os.environ.copy()
     env.update(
         {
             "ANKI_MINER_HOME": str(caller_home),
+            "BUNDLE_SMOKE_YTDLP_SEED": str(tmp_path / "ytdlp-seed"),
             "BUNDLE_SMOKE_SKIP_ASR": "0",
             "BUNDLE_SMOKE_SKIP_MPV": "0",
             "BUNDLE_SMOKE_SKIP_WHISPERCPP": "0",
@@ -246,6 +245,158 @@ def test_bundle_smoke_uses_one_temporary_anki_miner_home(tmp_path: Path) -> None
     assert not Path(homes[0]).exists()
     assert not (caller_home / "probe-touch").exists()
     assert (caller_home / "sentinel").read_text(encoding="utf-8") == "keep"
+
+
+def _write_smoke_dist(tmp_path: Path) -> Path:
+    """A fake onedir whose AnkiMiner records ANKI_MINER_HOME and the seeded slot."""
+    dist = tmp_path / "dist" / "AnkiMiner"
+    dist.mkdir(parents=True)
+    app = dist / "AnkiMiner"
+    app.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        'printf \'%s\\n\' "$ANKI_MINER_HOME" >> "$SMOKE_HOME_RECORD"\n'
+        'if [ "${ANKI_MINER_ASR_VULKAN_PROBE:-}" = 1 ]; then\n'
+        "  echo 0\n"
+        'elif [ "${ANKI_MINER_MPV_PROBE:-}" = 1 ]; then\n'
+        "  echo MPV_PROBE_OK\n"
+        "else\n"
+        '  case "${ANKI_MINER_SMOKE:-}" in\n'
+        "    youtube)\n"
+        '      test -x "$ANKI_MINER_HOME/bin/yt-dlp"\n'
+        '      test -f "$ANKI_MINER_HOME/bin/yt-dlp.verified"\n'
+        "      echo BUNDLED_SMOKE_PASS ;;\n"
+        "    asr|whispercpp) echo BUNDLED_SMOKE_PASS ;;\n"
+        "    *) exit 3 ;;\n"
+        "  esac\n"
+        "fi\n",
+        encoding="utf-8",
+    )
+    app.chmod(0o755)
+    ffmpeg = dist / "ffmpeg"
+    ffmpeg.write_text(
+        "#!/usr/bin/env bash\necho 'libmp3lame libopus libsvtav1 libwebp libwebp_anim'\n",
+        encoding="utf-8",
+    )
+    ffmpeg.chmod(0o755)
+    # The encoders leg also runs ffprobe: since the shared ffmpeg build it has
+    # to prove the second executable resolves its libraries too.
+    _write_executable(dist / "ffprobe", "#!/usr/bin/env bash\nexit 0\n")
+    for library in ("libggml-vulkan.so", "libggml-cpu.so", "libmpv.so.2"):
+        (dist / library).touch()
+    return dist
+
+
+def _smoke_env(tmp_path: Path, record: Path, **extra: str) -> dict[str, str]:
+    env = os.environ.copy()
+    env.update(
+        {
+            "ANKI_MINER_HOME": str(tmp_path / "caller-home"),
+            "BUNDLE_SMOKE_SKIP_ASR": "0",
+            "BUNDLE_SMOKE_SKIP_MPV": "0",
+            "BUNDLE_SMOKE_SKIP_WHISPERCPP": "0",
+            "SMOKE_HOME_RECORD": str(record),
+        }
+    )
+    env.pop("BUNDLE_SMOKE_GGML_MODEL", None)
+    env.update(extra)
+    return env
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")
+def test_bundle_smoke_seeds_the_managed_ytdlp_before_the_youtube_leg(tmp_path: Path) -> None:
+    """The bundle ships no yt-dlp: the youtube leg only runs on a seeded slot."""
+    record = tmp_path / "probe-homes.txt"
+    (tmp_path / "caller-home").mkdir()
+    dist = _write_smoke_dist(tmp_path)
+    seed = tmp_path / "ytdlp-seed" / "bin"
+    seed.mkdir(parents=True)
+    (seed / "yt-dlp").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+    (seed / "yt-dlp.verified").write_text("0" * 64 + "\n", encoding="utf-8")
+
+    result = subprocess.run(
+        ["bash", str(PROJECT_ROOT / "scripts" / "bundle_smoke.sh"), str(dist)],
+        cwd=tmp_path,
+        env=_smoke_env(tmp_path, record, BUNDLE_SMOKE_YTDLP_SEED=str(tmp_path / "ytdlp-seed")),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "PASS youtube" in result.stdout
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")
+def test_bundle_smoke_skips_the_youtube_leg_without_a_seed(tmp_path: Path) -> None:
+    """A failed seed fetch skips the leg loudly — it never reds a correct bundle."""
+    record = tmp_path / "probe-homes.txt"
+    (tmp_path / "caller-home").mkdir()
+    dist = _write_smoke_dist(tmp_path)
+
+    result = subprocess.run(
+        ["bash", str(PROJECT_ROOT / "scripts" / "bundle_smoke.sh"), str(dist)],
+        cwd=tmp_path,
+        env=_smoke_env(tmp_path, record),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "SKIP youtube" in result.stdout
+    assert "PASS youtube" not in result.stdout
+    assert "::warning::" in result.stdout
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")
+def test_bundle_smoke_skips_the_youtube_leg_on_an_empty_seed_dir(tmp_path: Path) -> None:
+    """The updater creates <seed>/bin before it downloads, so an outage leaves it empty."""
+    record = tmp_path / "probe-homes.txt"
+    (tmp_path / "caller-home").mkdir()
+    dist = _write_smoke_dist(tmp_path)
+    (tmp_path / "ytdlp-seed" / "bin").mkdir(parents=True)
+
+    result = subprocess.run(
+        ["bash", str(PROJECT_ROOT / "scripts" / "bundle_smoke.sh"), str(dist)],
+        cwd=tmp_path,
+        env=_smoke_env(tmp_path, record, BUNDLE_SMOKE_YTDLP_SEED=str(tmp_path / "ytdlp-seed")),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "SKIP youtube" in result.stdout
+    assert "::warning::" in result.stdout
+
+
+@pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")
+def test_bundle_smoke_skips_the_youtube_leg_without_a_receipt(tmp_path: Path) -> None:
+    """A binary with no .verified receipt is one the resolver would refuse anyway."""
+    record = tmp_path / "probe-homes.txt"
+    (tmp_path / "caller-home").mkdir()
+    dist = _write_smoke_dist(tmp_path)
+    seed = tmp_path / "ytdlp-seed" / "bin"
+    seed.mkdir(parents=True)
+    (seed / "yt-dlp").write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
+
+    result = subprocess.run(
+        ["bash", str(PROJECT_ROOT / "scripts" / "bundle_smoke.sh"), str(dist)],
+        cwd=tmp_path,
+        env=_smoke_env(tmp_path, record, BUNDLE_SMOKE_YTDLP_SEED=str(tmp_path / "ytdlp-seed")),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "SKIP youtube" in result.stdout
+    assert "::warning::" in result.stdout
 
 
 @pytest.mark.skipif(shutil.which("bash") is None, reason="bash is unavailable")

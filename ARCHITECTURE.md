@@ -452,11 +452,28 @@ The subtitle flags carry one load-bearing invariant. `auto_only` passes `--write
 
 Progress is parsed from a custom `--progress-template`, with post-download phases detected from the `ytdlp_invocation.POSTPROCESS_MARKERS` line signatures. Optional `--cookies-from-browser` or `--cookies` bypasses bot-detection prompts and age restrictions.
 
-### Bundling yt-dlp
+### Installing yt-dlp
 
-The standalone **binary** is vendored, not the Python package. Every call site spawns yt-dlp as a subprocess, so the importable `yt_dlp` module was never used at runtime; `anki_miner.spec` excludes it. It stays a pip dependency, which is how non-frozen installs get the console script that the resolver's interpreter-sibling tier finds. `.github/ytdlp-pin.json` holds the pinned version and per-OS digests, and `scripts/check_ytdlp_pin.py` gates their freshness at build time.
+The app ships **no yt-dlp at all**. Every call site spawns it as a subprocess, so the importable
+`yt_dlp` package was never used at runtime and `anki_miner.spec` excludes it; it stays a pip
+dependency, which is how non-frozen installs get the console script the resolver's
+interpreter-sibling tier finds. A frozen install gets its yt-dlp from
+**`services/ytdlp_updater.py`**, which downloads the latest GitHub standalone into
+`~/.anki_miner/bin/` behind a URL allowlist and a never-raises contract, verifies it against that
+release's `SHA2-256SUMS`, and records the digest in a `.verified` receipt beside it
+(`ytdlp_resolver.ytdlp_verification_receipt_path`). The same path serves the first install and
+every later self-update; `config.auto_update_ytdlp` (on by default) runs it at launch, and
+Settings → YouTube, Utilities → Download and Video → YouTube all offer it on demand with
+`force=True`, which is what bypasses the 24 h throttle.
 
-Installs with no bundled binary — and bundles whose pinned copy has aged out — are covered at runtime by **`services/ytdlp_updater.py`**, which auto-downloads and self-updates yt-dlp into `~/.anki_miner/bin/` behind a GitHub URL allowlist and a never-raises contract, throttled by a timestamp file and run off the GUI thread by `YtdlpUpdateWorker`. Each managed binary is written with a SHA-256 verification receipt beside it (`ytdlp_resolver.ytdlp_verification_receipt_path`) and is selected only while that receipt still matches the file's bytes; legacy pre-receipt files are never selected. Resolution order in `_compute`: config override → **receipt-verified managed copy** → PATH → bundled binary → (non-frozen) interpreter sibling, with a fail-closed raise for a PATH entry pointing at an unverified managed copy. The managed copy sits above PATH deliberately, so a completed self-update actually takes effect; PATH still outranks the build-time-pinned bundled binary.
+Resolution order in `_compute`: config override → **receipt-verified managed copy** → PATH →
+(non-frozen) interpreter sibling, with a fail-closed raise for a PATH entry pointing at an
+unverified managed copy. A managed copy is selected only while its receipt still matches the
+file's bytes; legacy pre-receipt files are never selected. The managed copy sits above PATH
+deliberately, so a completed self-update actually takes effect.
+
+The release's youtube bundle smoke seeds that managed slot (`scripts/fetch_ytdlp_seed.py`, driving
+the updater itself against a pinned release) and asserts the resolver picks it.
 
 ### libmpv (video preview)
 

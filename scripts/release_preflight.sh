@@ -3,7 +3,7 @@
 #
 # Mirrors the Linux build job of .github/workflows/release.yml as faithfully as
 # a Linux box allows: isolated venv (pinned PyInstaller), SHA-verified
-# vendor fetch (ffmpeg + alass + yt-dlp + libmpv), PyInstaller build, the three bundle smokes
+# vendor fetch (ffmpeg + alass + libmpv), PyInstaller build, the three bundle smokes
 # (via scripts/bundle_smoke.sh — the same script CI runs), then AppImage + .deb.
 #
 # ONE deliberate divergence: this venv installs .[asr,zh,ko] where the release
@@ -98,11 +98,11 @@ echo "pyinstaller: $("$VENV/bin/pyinstaller" --version)"
 echo
 
 # --- 3. vendor fetch (SHA-verified, cached) -----------------------------------
-echo "=== vendor ffmpeg + alass + yt-dlp + libmpv ==="
-mkdir -p "$CACHE" vendor/ffmpeg vendor/alass vendor/yt-dlp vendor/libmpv \
-  licenses/alass licenses/yt-dlp licenses/libmpv
+echo "=== vendor ffmpeg + alass + libmpv ==="
+mkdir -p "$CACHE" vendor/ffmpeg vendor/alass vendor/libmpv \
+  licenses/alass licenses/libmpv
 if [ "$CLEAN" = "1" ]; then
-  rm -f vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe vendor/ffmpeg/lib*.so.* vendor/alass/alass vendor/yt-dlp/yt-dlp \
+  rm -f vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe vendor/ffmpeg/lib*.so.* vendor/alass/alass \
     vendor/libmpv/libmpv.so.2 licenses/libmpv/Copyright licenses/libmpv/SOURCES.txt
 fi
 
@@ -160,36 +160,6 @@ if [ ! -f vendor/alass/alass ]; then
   [ -f licenses/alass/LICENSE ] || curl -fL "https://raw.githubusercontent.com/kaegi/alass/v2.0.0/LICENSE" -o licenses/alass/LICENSE || true
 fi
 echo "vendor/alass: $(ls vendor/alass)"
-
-# yt-dlp: version + digest come from .github/ytdlp-pin.json, the same file
-# release.yml reads, so a bump cannot land in one place only. Vendoring it here is
-# not optional bookkeeping — step 5's bundled smoke asserts the binary is present at
-# sys._MEIPASS/bin/, so without this the youtube leg fails.
-YTDLP_PIN=".github/ytdlp-pin.json"
-YTDLP_VERSION="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$YTDLP_PIN")"
-YTDLP_ASSET="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["assets"]["linux"]["asset"])' "$YTDLP_PIN")"
-YTDLP_SHA256="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["assets"]["linux"]["sha256"])' "$YTDLP_PIN")"
-YTDLP_INSTALL_AS="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["assets"]["linux"]["install_as"])' "$YTDLP_PIN")"
-YTDLP_URL="https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/${YTDLP_ASSET}"
-
-# Warn-only: a stale pin must not block a local preflight, and the gate itself
-# already degrades to a warning when the GitHub API is unreachable.
-"$VENV/bin/python" scripts/check_ytdlp_pin.py || echo "WARNING: yt-dlp pin check reported a problem (continuing)"
-
-if [ ! -f "vendor/yt-dlp/${YTDLP_INSTALL_AS}" ]; then
-  YTDLP_DL="$CACHE/${YTDLP_ASSET}-${YTDLP_VERSION}"
-  if [ ! -f "$YTDLP_DL" ] || ! verify_sha "$YTDLP_DL" "$YTDLP_SHA256"; then
-    curl -fL "$YTDLP_URL" -o "$YTDLP_DL" || die "yt-dlp download failed"
-  fi
-  verify_sha "$YTDLP_DL" "$YTDLP_SHA256" || die "yt-dlp SHA256 mismatch"
-  cp "$YTDLP_DL" "vendor/yt-dlp/${YTDLP_INSTALL_AS}"
-  chmod +x "vendor/yt-dlp/${YTDLP_INSTALL_AS}"
-  [ -f licenses/yt-dlp/LICENSE ] || curl -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/${YTDLP_VERSION}/LICENSE" -o licenses/yt-dlp/LICENSE || true
-  # Same pair release.yml fetches — the spec bundles the whole directory, so the
-  # local preflight build must not produce a bundle the real matrix would not.
-  [ -f licenses/yt-dlp/THIRD_PARTY_LICENSES.txt ] || curl -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/${YTDLP_VERSION}/THIRD_PARTY_LICENSES.txt" -o licenses/yt-dlp/THIRD_PARTY_LICENSES.txt || true
-fi
-echo "vendor/yt-dlp: $(ls vendor/yt-dlp)"
 echo
 
 # --- 4. PyInstaller build -----------------------------------------------------
@@ -209,7 +179,17 @@ echo
 # backend. scripts/release_dryrun.sh is what proves it, and it fails closed if
 # the leg reports SKIP on either the Linux or the Windows job.
 echo "=== bundle smokes ==="
-if BUNDLE_SMOKE_SKIP_WHISPERCPP=1 bash scripts/bundle_smoke.sh dist/AnkiMiner; then
+# The youtube leg needs an app-managed yt-dlp: the bundle ships none. Cached like
+# the vendor downloads — the seed is a pinned release, so a present one is current.
+# The cache test is the FILE pair, not the directory: a failed fetch leaves an
+# empty bin/ behind (the updater stages into it before downloading), and a
+# directory test would then never re-fetch.
+YTDLP_SEED="$CACHE/ytdlp_seed"
+if [ ! -f "$YTDLP_SEED/bin/yt-dlp" ] || [ ! -f "$YTDLP_SEED/bin/yt-dlp.verified" ]; then
+  "$VENV/bin/python" scripts/fetch_ytdlp_seed.py "$YTDLP_SEED" \
+    || echo "WARNING: yt-dlp seed fetch reported a problem (the youtube leg will skip)"
+fi
+if BUNDLE_SMOKE_SKIP_WHISPERCPP=1 BUNDLE_SMOKE_YTDLP_SEED="$YTDLP_SEED" bash scripts/bundle_smoke.sh dist/AnkiMiner; then
   echo "smokes: PASS"
 else
   echo "smokes: FAIL"

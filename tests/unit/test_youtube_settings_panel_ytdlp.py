@@ -48,3 +48,14 @@ def test_button_label(qtbot):
     panel = YouTubeSettingsPanel()
     qtbot.addWidget(panel)
     assert panel.update_ytdlp_button.text() == "Update yt-dlp now"
+
+
+def test_absent_ytdlp_turns_the_button_into_a_download(qtbot):
+    panel = YouTubeSettingsPanel()
+    qtbot.addWidget(panel)
+
+    panel.set_ytdlp_present(False)
+    assert panel.update_ytdlp_button.text() == "Download yt-dlp (~40 MB)"
+
+    panel.set_ytdlp_present(True)
+    assert panel.update_ytdlp_button.text() == "Update yt-dlp now"

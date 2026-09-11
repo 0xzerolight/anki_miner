@@ -7,11 +7,10 @@ Resolution order (first hit wins):
    (``~/.anki_miner/bin/``) when executable and covered by a matching SHA-256
    receipt. Legacy pre-receipt files are never selected.
 3. **PATH** — the executable returned by ``shutil.which("yt-dlp")``.
-4. **Bundled** — inside a PyInstaller frozen bundle, ``sys._MEIPASS/bin/<name>``.
-5. **Fail closed** — raise when PATH resolved the *unverified* managed slot.
-6. **Interpreter sibling** — non-frozen only: ``Path(sys.executable).parent/<name>``,
+4. **Fail closed** — raise when PATH resolved the *unverified* managed slot.
+5. **Interpreter sibling** — non-frozen only: ``Path(sys.executable).parent/<name>``,
    the console script a ``pip``/``pipx`` install puts next to the interpreter.
-7. **Fallback** — the bare literal ``"yt-dlp"``.
+6. **Fallback** — the bare literal ``"yt-dlp"``.
 
 **Why the managed copy outranks PATH (tier 2 before 3).** A managed copy only
 exists because the user pressed "Update yt-dlp now" or enabled auto-update, so it
@@ -19,26 +18,23 @@ is both deliberate and the freshest binary on the machine. With PATH first, a
 successful update was inert: the app kept running the stale PATH binary, and the
 next check compared against that stale version and re-downloaded every 24h forever.
 
-**Why PATH still outranks the bundle (tier 3 before 4), unlike**
-:mod:`anki_miner.utils.ffmpeg_resolver` **and** :mod:`anki_miner.utils.alass_resolver`,
-which both check the bundle first. This asymmetry is deliberate, not an oversight —
-do not "fix" it for consistency. ffmpeg and alass have no self-updater and are not
-version-sensitive, so a bundled-first order costs them nothing. yt-dlp breaks
-whenever YouTube changes something, so a user's own package-manager or pip binary is
-usually *fresher* than a build-time pin. Bundled-first would silently downgrade
-users who already have a working yt-dlp on PATH — the one population that never had
-this bug — to a pinned binary that ages for the whole release cycle. The bundle's
-job is to make a fresh install work at all, which it does from tier 4.
+**Why there is no bundled tier, unlike** :mod:`anki_miner.utils.ffmpeg_resolver`
+**and** :mod:`anki_miner.utils.alass_resolver`. The app ships no yt-dlp on any
+platform: it arrives as an in-app download into the managed slot
+(:mod:`anki_miner.services.ytdlp_updater`), which is also how it stays fresh.
+ffmpeg and alass have no self-updater and are not version-sensitive, so shipping
+them costs nothing; yt-dlp breaks whenever YouTube changes something, so a
+build-time pin ages for the whole release cycle and every install downloaded a
+newer one on day one anyway.
 
-**Why the interpreter sibling comes after the fail-closed raise (6 after 5).**
+**Why the interpreter sibling comes after the fail-closed raise (5 after 4).**
 ``yt-dlp`` is a hard runtime dependency, so its console script sits next to
 ``sys.executable`` in any venv — including during the test suite. Placing this tier
 before the raise would let a rejected receiptless managed binary fall through to a
 real executable, quietly defeating the containment the raise exists for.
 
 Mirrors :mod:`anki_miner.utils.ffmpeg_resolver`: module-level ``_CACHE`` dict,
-``_clear_cache()`` test/updater hook, and the shared ``frozen_state()`` /
-``bundled_name()`` bundle helpers.
+``_clear_cache()`` test/updater hook, and the shared ``frozen_state()`` helper.
 
 Returning the bare literal (rather than an absolute ``shutil.which`` path) in the
 no-override / non-frozen / no-download case is intentional: it preserves the
@@ -62,7 +58,7 @@ from pathlib import Path
 from typing import Any
 
 from anki_miner.config import paths
-from anki_miner.utils.bundled_binary import bundled_name, frozen_state
+from anki_miner.utils.bundled_binary import frozen_state
 from anki_miner.utils.logging_ext import log_summary
 from anki_miner.utils.resolver_log import log_resolution, log_resolution_refused
 
@@ -76,10 +72,10 @@ __all__ = [
     "ytdlp_verification_receipt_path",
 ]
 
-# Cache keyed by (override-as-str, frozen-state, meipass, download-dir-str,
-# PATH-hit) so a changed override, bundle state, or PATH resolution is never
-# masked. Cached concrete paths are rechecked before every return, with managed
-# paths also re-verified against their receipt.
+# Cache keyed by (override-as-str, frozen-state, download-dir-str, PATH-hit) so a
+# changed override, frozen state, or PATH resolution is never masked. Cached
+# concrete paths are rechecked before every return, with managed paths also
+# re-verified against their receipt.
 _CACHE: dict[tuple, str] = {}
 
 logger = logging.getLogger(__name__)
@@ -272,7 +268,7 @@ def ytdlp_generation_lock() -> Iterator[Callable[[str | Path], None]]:
       caller has built argv naming it, and on Windows a running image cannot be
       replaced. NEVER release and re-acquire around the spawn instead — that
       reopens exactly the TOCTOU window this closes.
-    - **Anything else** (config override, PATH, bundle, interpreter sibling) —
+    - **Anything else** (config override, PATH, interpreter sibling) —
       the lock is dropped before the subprocess starts. Those binaries are not
       the updater's to swap, and a transfer can run for hours; holding the lock
       across one starved every other resolver caller in-session (System Health
@@ -302,10 +298,10 @@ def resolve_ytdlp(config) -> str:
     with managed_ytdlp_lock():
         override = getattr(config, "ytdlp_location", None)
         override_key = str(override) if override else None
-        frozen, meipass = frozen_state()
+        frozen, _meipass = frozen_state()
         download_dir = ytdlp_download_dir()
         path_ytdlp = shutil.which("yt-dlp")
-        cache_key = (override_key, frozen, meipass, str(download_dir), path_ytdlp)
+        cache_key = (override_key, frozen, str(download_dir), path_ytdlp)
         cached = _CACHE.get(cache_key)
         if cached is not None:
             managed = download_dir / ytdlp_binary_name()
@@ -321,7 +317,7 @@ def resolve_ytdlp(config) -> str:
             else:
                 del _CACHE[cache_key]
 
-        resolved = _compute(override, frozen, meipass, download_dir, path_ytdlp)
+        resolved = _compute(override, frozen, download_dir, path_ytdlp)
         _CACHE[cache_key] = resolved
         return resolved
 
@@ -362,7 +358,6 @@ def ytdlp_available(config) -> bool:
 def _compute(
     override: Any,
     frozen: bool,
-    meipass: str | None,
     download_dir: Path,
     path_ytdlp: str | None,
 ) -> str:
@@ -410,23 +405,12 @@ def _compute(
         log_resolution(logger, "yt-dlp", "managed", str(downloaded), verified=True)
         return str(downloaded)
 
-    # 3. An executable that actually exists on PATH. Do not return the bare
-    #    literal here: it would shadow the bundled tier below.
+    # 3. An executable that actually exists on PATH.
     if path_ytdlp is not None and not managed_path_hit:
         log_resolution(logger, "yt-dlp", "path", path_ytdlp)
         return path_ytdlp
 
-    # 4. Bundled binary inside the frozen distributable. Deliberately after PATH
-    #    (unlike ffmpeg/alass) — see the module docstring.
-    if frozen and meipass is not None:
-        bundled = Path(meipass) / "bin" / bundled_name("yt-dlp")
-        if _is_runnable(bundled):
-            log_resolution(logger, "yt-dlp", "bundled", str(bundled))
-            return str(bundled)
-        if bundled.is_file():
-            log_resolution_refused(logger, "yt-dlp", "bundled_not_executable", bundled=bundled)
-
-    # 5. Fail closed on a rejected managed PATH hit. This MUST stay ahead of the
+    # 4. Fail closed on a rejected managed PATH hit. This MUST stay ahead of the
     #    sibling tier and the bare fallback: both would otherwise hand back a
     #    working executable and defeat the rejection.
     if managed_path_hit:
@@ -441,7 +425,7 @@ def _compute(
         )
         raise FileNotFoundError("Refusing unverified managed yt-dlp executable on PATH")
 
-    # 6. The console script a pip/pipx install drops next to the interpreter.
+    # 5. The console script a pip/pipx install drops next to the interpreter.
     #    `pipx install anki_miner` puts a working yt-dlp in the pipx venv's bin/,
     #    which is not on PATH, so without this tier it is never found. Frozen
     #    builds skip it: there sys.executable is the app itself, not an interpreter.

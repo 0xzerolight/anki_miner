@@ -1215,7 +1215,7 @@ class TestCheckYtdlp:
             ok, message = service._check_ytdlp()
 
         assert ok is False
-        assert "Update yt-dlp now" in message
+        assert "Download yt-dlp" in message
 
     def test_unverified_managed_binary_reports_instead_of_raising(self, test_config):
         """resolve_ytdlp can raise; validate_setup documents itself as never raising.
@@ -1235,6 +1235,7 @@ class TestCheckYtdlp:
 
         assert ok is False
         assert "unverified" in message.lower()
+        assert "Download yt-dlp" in message
 
     def test_busy_lock_reports_instead_of_waiting(self, test_config, monkeypatch):
         """A running yt-dlp task must not park the validation worker for hours.

@@ -471,107 +471,6 @@ jobs:
           Get-ChildItem vendor\alass
 
       # =====================================================================
-      # yt-dlp — the standalone BINARY, vendored into vendor/yt-dlp/ so the spec
-      # bundles it at sys._MEIPASS/bin/. Without this a fresh packaged install
-      # cannot mine YouTube at all: the resolver falls through to the bare literal
-      # "yt-dlp" and CreateProcess fails.
-      #
-      # Version + digests come from .github/ytdlp-pin.json, shared with
-      # scripts/release_preflight.sh so the two cannot drift. Digests are pinned
-      # rather than read from the release's own SHA2-256SUMS (same-origin — the
-      # weaker property the alass steps avoid). yt-dlp is Unlicense; its bundled
-      # executables also carry ISC/MIT and others, so THIRD_PARTY_LICENSES.txt
-      # ships alongside.
-      #
-      # The freshness gate runs first: yt-dlp ships roughly monthly and dependabot
-      # cannot see a curl'd release URL, so a forgotten bump would otherwise ship a
-      # stale extractor silently.
-      # =====================================================================
-      - name: Check the yt-dlp pin is fresh
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python scripts/check_ytdlp_pin.py
-
-      - name: Fetch yt-dlp binary (Linux)
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          set -euo pipefail
-          PIN=.github/ytdlp-pin.json
-          VERSION="$(jq -r '.version' "$PIN")"
-          ASSET="$(jq -r '.assets.linux.asset' "$PIN")"
-          SHA256="$(jq -r '.assets.linux.sha256' "$PIN")"
-          INSTALL_AS="$(jq -r '.assets.linux.install_as' "$PIN")"
-          curl -fL "https://github.com/yt-dlp/yt-dlp/releases/download/${VERSION}/${ASSET}" -o ytdlp-dl
-          echo "${SHA256}  ytdlp-dl" | sha256sum -c -
-          mkdir -p vendor/yt-dlp
-          cp ytdlp-dl "vendor/yt-dlp/${INSTALL_AS}"
-          chmod +x "vendor/yt-dlp/${INSTALL_AS}"
-          rm -f ytdlp-dl
-          mkdir -p licenses/yt-dlp
-          curl -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/${VERSION}/LICENSE" \
-            -o licenses/yt-dlp/LICENSE
-          curl -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/${VERSION}/THIRD_PARTY_LICENSES.txt" \
-            -o licenses/yt-dlp/THIRD_PARTY_LICENSES.txt
-          echo "Bundled yt-dlp ${VERSION} landed in vendor/yt-dlp/:"
-          ls -la vendor/yt-dlp/
-
-      - name: Fetch yt-dlp binary (macOS)
-        if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          set -euo pipefail
-          PIN=.github/ytdlp-pin.json
-          VERSION="$(jq -r '.version' "$PIN")"
-          ASSET="$(jq -r '.assets.macos.asset' "$PIN")"
-          SHA256="$(jq -r '.assets.macos.sha256' "$PIN")"
-          INSTALL_AS="$(jq -r '.assets.macos.install_as' "$PIN")"
-          # yt-dlp_macos is universal2, so this one asset serves both the arm64 and
-          # Intel legs.
-          curl -fL "https://github.com/yt-dlp/yt-dlp/releases/download/${VERSION}/${ASSET}" -o ytdlp-dl
-          echo "${SHA256}  ytdlp-dl" | shasum -a 256 -c -
-          mkdir -p vendor/yt-dlp
-          cp ytdlp-dl "vendor/yt-dlp/${INSTALL_AS}"
-          chmod +x "vendor/yt-dlp/${INSTALL_AS}"
-          rm -f ytdlp-dl
-          mkdir -p licenses/yt-dlp
-          curl -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/${VERSION}/LICENSE" \
-            -o licenses/yt-dlp/LICENSE
-          curl -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/${VERSION}/THIRD_PARTY_LICENSES.txt" \
-            -o licenses/yt-dlp/THIRD_PARTY_LICENSES.txt
-          echo "Bundled yt-dlp ${VERSION} landed in vendor/yt-dlp/:"
-          ls -la vendor/yt-dlp/
-
-      - name: Fetch yt-dlp binary (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          $pin = Get-Content .github/ytdlp-pin.json -Raw | ConvertFrom-Json
-          $version = $pin.version
-          $asset = $pin.assets.windows.asset
-          $sha256 = $pin.assets.windows.sha256
-          $installAs = $pin.assets.windows.install_as
-          $url = "https://github.com/yt-dlp/yt-dlp/releases/download/$version/$asset"
-          curl.exe -fL $url -o ytdlp-dl.exe
-          $actual = (Get-FileHash ytdlp-dl.exe -Algorithm SHA256).Hash.ToLower()
-          if ($actual -ne $sha256) {
-            Write-Error "SHA256 mismatch for ${asset}: expected $sha256 got $actual"
-            exit 1
-          }
-          New-Item -ItemType Directory -Force -Path vendor\yt-dlp | Out-Null
-          Copy-Item ytdlp-dl.exe "vendor\yt-dlp\$installAs" -Force
-          Remove-Item ytdlp-dl.exe -Force
-          New-Item -ItemType Directory -Force -Path licenses\yt-dlp | Out-Null
-          curl.exe -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/$version/LICENSE" `
-            -o licenses\yt-dlp\LICENSE
-          curl.exe -fL "https://raw.githubusercontent.com/yt-dlp/yt-dlp/$version/THIRD_PARTY_LICENSES.txt" `
-            -o licenses\yt-dlp\THIRD_PARTY_LICENSES.txt
-          Write-Host "Bundled yt-dlp $version landed in vendor/yt-dlp/:"
-          Get-ChildItem vendor\yt-dlp
-
-      # =====================================================================
       # libmpv — fetched from the repo-owned vendor-libmpv-* release (produced
       # by .github/workflows/vendor-libmpv.yml, which is the source of truth for
       # how these are produced). Pinned URL + SHA256, fail-closed, like every
@@ -977,31 +876,6 @@ jobs:
       - name: Build with PyInstaller
         run: pyinstaller anki_miner.spec
 
-      # macOS only, and it must run AFTER the build. yt-dlp_macos is a
-      # PyInstaller onefile whose payload is a PKG archive appended past the end
-      # of the Mach-O image, so every Mach-O rewrite PyInstaller performs on a
-      # collected binary (arch thinning, install_name_tool, ad-hoc re-signing)
-      # truncates it -- the binary then starts and dies with
-      #   [PYI-12119:ERROR] Could not load PyInstaller's embedded PKG archive
-      # anki_miner.spec skips it on darwin for that reason; this copies it in
-      # byte for byte instead. Fails closed: the bundle smoke's youtube leg
-      # execs this exact path, and the Intel leg is what caught the regression.
-      - name: Vendor yt-dlp into the bundle (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          set -euo pipefail
-          src="vendor/yt-dlp/yt-dlp"
-          # The .app is what ships; sys._MEIPASS inside it is Contents/Frameworks,
-          # so the resolver's bundled tier looks for bin/ under there.
-          dest="dist/AnkiMiner.app/Contents/Frameworks/bin"
-          test -f "$src" || { echo "::error::$src missing — the vendor step did not run"; exit 1; }
-          test -d "dist/AnkiMiner.app" || { echo "::error::dist/AnkiMiner.app missing — the spec's BUNDLE() did not run"; exit 1; }
-          mkdir -p "$dest"
-          cp "$src" "$dest/yt-dlp"
-          chmod +x "$dest/yt-dlp"
-          cmp "$src" "$dest/yt-dlp" || { echo "::error::vendored yt-dlp differs from its source"; exit 1; }
-          "$dest/yt-dlp" --version
-
       # macOS only, after every file is in place and before anything reads the
       # bundle. Ad-hoc signing needs no Apple account and is not notarization —
       # what it buys is the difference between the two Gatekeeper outcomes for a
@@ -1010,14 +884,6 @@ jobs:
       # "is damaged and can't be opened", which has no override at all and which
       # `xattr -dr com.apple.quarantine` does not even repair. macOS 15 removed
       # the old Control-click bypass, so that GUI route is the only one left.
-      #
-      # yt-dlp is deliberately NOT re-signed. yt-dlp_macos is a PyInstaller
-      # onefile whose payload is a PKG archive appended past the end of the
-      # Mach-O image; codesign writes its signature at the end of __LINKEDIT and
-      # would truncate it, reproducing the exact "Could not load PyInstaller's
-      # embedded PKG archive" failure anki_miner.spec's darwin guard exists to
-      # avoid. It arrives ad-hoc signed by yt-dlp's own CI; the outer bundle
-      # seals it by hash into CodeResources without touching its bytes.
       - name: Ad-hoc code sign the app bundle (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -1033,7 +899,7 @@ jobs:
           done
           codesign --force --sign - "$APP"
           # --strict, NOT --deep --strict: deep verification walks nested code and
-          # would object to the deliberately untouched yt-dlp.
+          # is not what this gate is for — the nested binaries are signed above.
           codesign --verify --strict --verbose=2 "$APP"
 
       # Fetch a tiny ggml acoustic model so the whispercpp smoke can do a REAL
@@ -1101,10 +967,21 @@ jobs:
         shell: bash
         run: python scripts/fetch_language_pack_seeds.py "$RUNNER_TEMP/lang_pack_seeds" zh ko
 
+      # Seed the app-managed yt-dlp the youtube smoke needs. The bundle ships no
+      # yt-dlp (it is an in-app download), so the leg has to be handed one. Drives
+      # the app's OWN updater against a pinned release: same download, digest check
+      # and .verified receipt the shipping app writes. FAIL-OPEN with a LOUD
+      # warning if the download fails (a GitHub outage must not red a release) —
+      # bundle_smoke.sh then skips the youtube leg. A digest mismatch fails closed.
+      - name: Seed the app-managed yt-dlp for the youtube smoke
+        shell: bash
+        run: python scripts/fetch_ytdlp_seed.py "$RUNNER_TEMP/ytdlp_seed"
+
       # Bundle-validation smokes, all three in one shared script so the local
       # preflight (scripts/release_preflight.sh) and CI assert identically and
       # cannot drift. The script runs, fail-closed:
-      #   - youtube : yt-dlp extractor registry survived collect_all (no network)
+      #   - youtube : the app-managed yt-dlp (seeded above) resolves through the
+      #               resolver and runs --version + impersonate targets (no network)
       #   - asr     : faster-whisper + ctranslate2 + av native libs resolve, no
       #               model download (HF_HUB_OFFLINE=1 set inside the script). A
       #               model download in CI is never acceptable (150 MB+, runtime-
@@ -1148,10 +1025,14 @@ jobs:
           # Mining-language tokenizer legs (opt-in in bundle_smoke.sh so the
           # local invocation-count test stays valid).
           BUNDLE_SMOKE_LANGS: zh ko
+          # yt-dlp seed from the step above: bundle_smoke.sh copies it into the
+          # isolated smoke home so the resolver's app-managed tier has something
+          # to find. No seed -> the youtube leg skips instead of failing.
+          BUNDLE_SMOKE_YTDLP_SEED: ${{ runner.temp }}/ytdlp_seed
         # macOS smokes the SIGNED .app, not the leftover COLLECT tree: it is the
         # artifact that ships, and running it here is what proves the codesign
-        # step above broke neither the bundled yt-dlp nor the Contents/Resources
-        # symlinks the relocated data files are reached through.
+        # step above did not break the Contents/Resources symlinks the relocated
+        # data files are reached through.
         run: scripts/bundle_smoke.sh ${{ runner.os == 'macOS' && 'dist/AnkiMiner.app' || 'dist/AnkiMiner' }}
 
       # packaging/linux-launcher.sh became the AppImage's AppRun and the .deb's

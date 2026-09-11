@@ -2804,7 +2804,7 @@ class TestYtdlpNotFound:
         missing = SupervisedResult(SupervisedState.FAILED, None, "", "", FileNotFoundError())
         with (
             patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=missing),
-            pytest.raises(YtdlpNotFoundError, match="Update yt-dlp now"),
+            pytest.raises(YtdlpNotFoundError, match="Download yt-dlp"),
         ):
             service.probe_metadata("https://youtu.be/abc123")
 
@@ -2812,7 +2812,7 @@ class TestYtdlpNotFound:
         missing = SupervisedResult(SupervisedState.FAILED, None, "", "", FileNotFoundError())
         with (
             patch("anki_miner.services.youtube_fetcher.run_supervised", return_value=missing),
-            pytest.raises(YtdlpNotFoundError, match="Update yt-dlp now"),
+            pytest.raises(YtdlpNotFoundError, match="Download yt-dlp"),
         ):
             service.probe_playlist("https://youtu.be/abc123", limit=5)
 
@@ -2820,7 +2820,7 @@ class TestYtdlpNotFound:
         with (
             patch("anki_miner.services.youtube_fetcher.shutil.which", return_value="/usr/bin/ffmpeg"),
             patch("subprocess.Popen", side_effect=FileNotFoundError()),
-            pytest.raises(YtdlpNotFoundError, match="Update yt-dlp now"),
+            pytest.raises(YtdlpNotFoundError, match="Download yt-dlp"),
         ):
             service.fetch_video("https://youtu.be/abc123", "abc123", tmp_path, "manual_only")
 

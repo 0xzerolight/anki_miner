@@ -1848,13 +1848,19 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if setter is None:
             return
 
+        present = getattr(tab, "set_ytdlp_present", None)
         issues = getattr(result, "issues", None) or []
         problems = [issue.message for issue in issues if getattr(issue, "component", "") == "yt-dlp"]
         if problems:
             setter(problems[0])
+            if present is not None:
+                present(False)
             return
         versions = getattr(result, "tool_versions", None) or {}
-        setter(versions.get("yt-dlp", ""))
+        version = versions.get("yt-dlp", "")
+        setter(version)
+        if present is not None:
+            present(bool(version))
 
     def reload_settings_panels(self) -> None:
         """Repaint the Settings tab's panels from the live config.
