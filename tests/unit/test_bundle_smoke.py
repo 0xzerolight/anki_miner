@@ -210,6 +210,9 @@ def test_bundle_smoke_uses_one_temporary_anki_miner_home(tmp_path: Path) -> None
         encoding="utf-8",
     )
     ffmpeg.chmod(0o755)
+    # The encoders leg also runs ffprobe: since the shared ffmpeg build it has
+    # to resolve the libav*/libsw* libraries through its own rpath.
+    _write_executable(dist / "ffprobe", "#!/usr/bin/env bash\nexit 0\n")
     for library in ("libggml-vulkan.so", "libggml-cpu.so", "libmpv.so.2"):
         (dist / library).touch()
 
@@ -278,6 +281,7 @@ def test_smoke_graph_matches_build_aselect_graph(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     ffmpeg.chmod(0o755)
+    _write_executable(dist / "ffprobe", "#!/usr/bin/env bash\nexit 0\n")
     for library in ("libggml-vulkan.so", "libggml-cpu.so", "libmpv.so.2"):
         (dist / library).touch()
 

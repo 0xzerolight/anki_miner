@@ -67,11 +67,6 @@ die() { echo "::error::$*" >&2; exit 1; }
 if [ "$SKIP_PACKAGE" = "0" ] && ! command -v appstreamcli >/dev/null 2>&1; then
   die "appstreamcli not found — install it with: apt install appstream (or pass --skip-package)"
 fi
-# patchelf rewrites the vendored ffmpeg/ffprobe rpath (see the ffmpeg fetch
-# below). The fetch is not skippable, so this is checked unconditionally.
-if ! command -v patchelf >/dev/null 2>&1; then
-  die "patchelf not found — install it with: apt install patchelf"
-fi
 
 echo "############################################################"
 echo "# release preflight (Linux mirror of release.yml build job)"
@@ -114,6 +109,8 @@ fi
 verify_sha() { echo "$2  $1" | sha256sum -c - >/dev/null 2>&1; }
 
 if [ ! -f vendor/ffmpeg/ffmpeg ] || [ ! -f vendor/ffmpeg/ffprobe ] || ! ls vendor/ffmpeg/lib*.so.* >/dev/null 2>&1; then
+  # Only the fetch needs patchelf, and a populated vendor/ffmpeg skips it.
+  command -v patchelf >/dev/null 2>&1 || die "patchelf not found — install it with: apt install patchelf"
   TARBALL="$CACHE/ffmpeg-linux64.tar.xz"
   if [ ! -f "$TARBALL" ] || ! verify_sha "$TARBALL" "$FFMPEG_SHA256"; then
     curl -fL "$FFMPEG_URL" -o "$TARBALL" || die "ffmpeg download failed"
@@ -127,12 +124,14 @@ if [ ! -f vendor/ffmpeg/ffmpeg ] || [ ! -f vendor/ffmpeg/ffprobe ] || ! ls vendo
   # name is the same bytes and would ship twice. Mirrors release.yml.
   for _lib in "$CACHE"/ff-extract/*/lib/*.so.*; do
     case "${_lib##*/}" in *.so.*.*) continue ;; esac
-    cp -L "$_lib" vendor/ffmpeg/
+    cp -L "$_lib" vendor/ffmpeg/ || die "ffmpeg shared library copy failed: $_lib"
   done
-  # BtbN's rpath is a malformed literal; $ORIGIN finds the libraries that land
-  # beside the executables in _internal/bin/. Mirrors release.yml.
+  # BtbN's rpath is a malformed literal ("-Wl:../lib"), so nothing resolves;
+  # $ORIGIN finds the libraries that land beside the executables in
+  # _internal/bin/. Mirrors release.yml.
   # shellcheck disable=SC2016  # $ORIGIN is resolved by the loader, not the shell
-  patchelf --force-rpath --set-rpath '$ORIGIN' vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe
+  patchelf --force-rpath --set-rpath '$ORIGIN' vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe \
+    || die "patchelf failed to set the ffmpeg rpath"
   chmod +x vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe
 fi
 echo "vendor/ffmpeg: $(ls vendor/ffmpeg)"

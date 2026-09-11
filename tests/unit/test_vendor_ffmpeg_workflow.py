@@ -41,9 +41,20 @@ def test_linux_and_windows_fetch_the_shared_variant() -> None:
         )
 
 
+def _linux_step() -> str:
+    """Just the Linux fetch step.
+
+    alass and libmpv are fetched by later steps with the same ``URL=``/``SHA256=``
+    variable names, so a repo-wide search would match whichever comes first. The
+    anchor carries its ``- name:`` because the step is named in a comment earlier
+    in the file too.
+    """
+    return _release().split("- name: Fetch shared ffmpeg (Linux)", 1)[1].split("- name:", 1)[0]
+
+
 def test_the_linux_pin_matches_the_preflight_mirror() -> None:
-    workflow_url = re.search(r'URL="(https://github\.com/BtbN/[^"]+)"', _release())
-    workflow_sha = re.search(r'SHA256="([0-9a-f]{64})"', _release())
+    workflow_url = re.search(r'URL="(https://github\.com/BtbN/[^"]+)"', _linux_step())
+    workflow_sha = re.search(r'SHA256="([0-9a-f]{64})"', _linux_step())
     preflight_url = re.search(r'FFMPEG_URL="([^"]+)"', _preflight())
     preflight_sha = re.search(r'FFMPEG_SHA256="([0-9a-f]{64})"', _preflight())
 
@@ -77,9 +88,13 @@ def test_patchelf_is_available_to_both_fetchers() -> None:
 
 
 def test_windows_vendors_the_dlls_beside_the_executables() -> None:
-    windows_step = _release().split("Fetch shared ffmpeg (Windows)", 1)[1].split("# ----", 1)[0]
+    windows_step = _release().split("- name: Fetch shared ffmpeg (Windows)", 1)[1].split("# ----", 1)[0]
 
     assert "-Filter *.dll" in windows_step
+    assert "-Recurse -Filter *.dll" not in windows_step, (
+        "copy bin/*.dll only: lib/ holds build-time import libraries, and a recursive "
+        "sweep would ship whatever a future layout puts elsewhere in the archive."
+    )
 
 
 def test_licence_notice_names_the_shared_variant() -> None:

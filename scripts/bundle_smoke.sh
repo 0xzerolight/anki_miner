@@ -354,8 +354,21 @@ else
     echo "::error::Bundled ffmpeg is missing required encoder(s):$MISSING"
     FAILED+=("ffmpeg-encoders")
   else
-    echo "BUNDLED_FFMPEG_ENCODERS_PASS: $REQUIRED_ENCODERS"
-    echo "PASS ffmpeg-encoders"
+    # ffprobe is the other half of the vendored pair and nothing else in CI
+    # executes it. Since the shared build it has to find the libav*/libsw*
+    # libraries through its own rpath, so run it here: a rewrite that reached
+    # ffmpeg but missed ffprobe leaves the encoder check green and every probe
+    # call site in the app broken.
+    FP="$(dirname "$FF")/ffprobe"
+    [ -f "$FP" ] || FP="$(dirname "$FF")/ffprobe.exe"
+    chmod +x "$FP" 2>/dev/null || true
+    if ! "$FP" -hide_banner -version >/dev/null 2>&1; then
+      echo "::error::Bundled ffprobe did not run: $FP"
+      FAILED+=("ffmpeg-encoders")
+    else
+      echo "BUNDLED_FFMPEG_ENCODERS_PASS: $REQUIRED_ENCODERS"
+      echo "PASS ffmpeg-encoders"
+    fi
   fi
 fi
 echo

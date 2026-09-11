@@ -322,9 +322,11 @@ jobs:
           done
           # BtbN links the executables with a malformed rpath ("-Wl:../lib"), so
           # nothing resolves; $ORIGIN points them at the copies that land beside
-          # them in _internal/bin/. --force-rpath writes DT_RPATH, which outranks
-          # the LD_LIBRARY_PATH the PyInstaller bootloader exports to child
-          # processes — DT_RUNPATH would lose to it.
+          # them in _internal/bin/. --force-rpath writes DT_RPATH rather than
+          # DT_RUNPATH because DT_RPATH is searched BEFORE LD_LIBRARY_PATH: on a
+          # host that exports one carrying its own libavcodec.so.62 — same major
+          # soname, none of the GPL encoders the smoke requires — these load
+          # their own libraries anyway.
           patchelf --force-rpath --set-rpath '$ORIGIN' vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe
           chmod +x vendor/ffmpeg/ffmpeg vendor/ffmpeg/ffprobe
           rm -rf extracted ffmpeg-dl.tar.xz
@@ -401,7 +403,9 @@ jobs:
           # BtbN ships the DLLs in the same bin/ directory as the executables,
           # and Windows resolves imports from the executable's own directory, so
           # they travel with it into _internal/bin/. ffplay.exe is left behind.
-          Get-ChildItem -Path extracted -Recurse -Filter *.dll |
+          # bin/ only, NOT -Recurse: lib/ holds build-time import libraries, and
+          # a future layout change must not ship stray DLLs unnoticed.
+          Get-ChildItem -Path extracted\*\bin -Filter *.dll |
             ForEach-Object { Copy-Item $_.FullName vendor\ffmpeg\ -Force }
           Remove-Item -Recurse -Force extracted, ffmpeg-dl.zip
           Write-Host "Bundled ffmpeg landed in vendor/ffmpeg/:"
