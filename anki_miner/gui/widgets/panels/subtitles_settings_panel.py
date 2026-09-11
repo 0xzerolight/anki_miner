@@ -716,6 +716,15 @@ class SubtitlesSettingsPanel(FormPanel):
         """
         return bool(self._engine_available_cache)
 
+    @staticmethod
+    def _asr_pack_offerable() -> bool:
+        """True when this build can download the engine pack: a frozen bundle on a pinned platform/Python.
+
+        A source install never gets the row, whatever its Python: its remedy is
+        the pip extra, and the pack pins the bundle's cp312 wheels only.
+        """
+        return bool(getattr(sys, "frozen", False)) and asr_pack_installer.asr_pack_supported()
+
     def _onnxruntime_importable_now(self) -> bool:
         """Best-effort onnxruntime importability for the probe-error fallback.
 
@@ -1257,7 +1266,7 @@ class SubtitlesSettingsPanel(FormPanel):
         * engine importable (pip [asr], or the pack already on sys.path) → no
           button, no help line, status "Installed": there is nothing to install;
         * a download in flight keeps the button disabled and the status intact;
-        * pack supported here (the bundle's CPython on a pinned platform) → the
+        * pack supported here (a frozen bundle on a pinned platform/Python) → the
           button shows enabled with the installed state;
         * unsupported: a frozen build says so beside the label; a source install
           shows the pip command block instead (the pack pins cp312 wheels, so a
@@ -1278,8 +1287,8 @@ class SubtitlesSettingsPanel(FormPanel):
             return
 
         # asr_pack_supported() is cheap (sys.platform/version) — fine on the GUI thread.
-        supported = asr_pack_installer.asr_pack_supported()
         frozen = bool(getattr(sys, "frozen", False))
+        supported = self._asr_pack_offerable()
         self._asr_engine_guidance.setVisible(not supported and not frozen)
         if not supported:
             self.download_engine_button.setEnabled(False)
@@ -1329,7 +1338,7 @@ class SubtitlesSettingsPanel(FormPanel):
         A click while the pack is unsupported is a no-op (the button is hidden
         in that state, but guard so a stray call never starts a doomed worker).
         """
-        if not asr_pack_installer.asr_pack_supported():
+        if not self._asr_pack_offerable():
             self._refresh_state_async(self.get_model(), self._models_root, self._cuda_libs_root)
             return
         self._asr_pack_active = True
@@ -1357,7 +1366,7 @@ class SubtitlesSettingsPanel(FormPanel):
         """
         self._asr_pack_active = False
         if not ok:
-            self.download_engine_button.setEnabled(asr_pack_installer.asr_pack_supported())
+            self.download_engine_button.setEnabled(self._asr_pack_offerable())
             return
         self._engine_available_cache = None
         self._cuda_device_count_cache = None

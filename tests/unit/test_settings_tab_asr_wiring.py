@@ -264,6 +264,7 @@ class TestSettingsTabAsrPackWiring:
         monkeypatch.setattr(f"{panel_mod}._engine.available", lambda: False)
         monkeypatch.setattr(f"{panel_mod}.asr_pack_installer.asr_pack_supported", lambda: True)
         monkeypatch.setattr(f"{panel_mod}.asr_pack_installer.is_installed", lambda: False)
+        monkeypatch.setattr("sys.frozen", True, raising=False)
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
         panel = tab.subtitles_panel

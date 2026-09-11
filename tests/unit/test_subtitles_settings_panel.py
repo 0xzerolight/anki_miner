@@ -1444,7 +1444,7 @@ def test_engine_button_hidden_and_status_installed_when_the_engine_is_importable
 
 
 def test_engine_row_offers_the_download_when_supported_and_not_installed(qtbot, tmp_path, monkeypatch):
-    _patch_engine_pack(monkeypatch, available=False, supported=True, installed=False)
+    _patch_engine_pack(monkeypatch, available=False, supported=True, installed=False, frozen=True)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
@@ -1459,18 +1459,18 @@ def test_engine_row_offers_the_download_when_supported_and_not_installed(qtbot, 
 
 
 def test_engine_row_says_installed_when_the_pack_is_on_disk_but_not_yet_importable(qtbot, tmp_path, monkeypatch):
-    _patch_engine_pack(monkeypatch, available=False, supported=True, installed=True)
+    _patch_engine_pack(monkeypatch, available=False, supported=True, installed=True, frozen=True)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
     _wait_state_settled(qtbot, panel)
 
     assert panel.download_engine_button.isEnabled()
-    assert "installed" in panel.engine_status_label.text().lower()
+    assert panel.engine_status_label.text() == "Installed"
 
 
 def test_engine_download_click_emits_and_disables_in_flight(qtbot, tmp_path, monkeypatch):
-    _patch_engine_pack(monkeypatch, available=False, supported=True)
+    _patch_engine_pack(monkeypatch, available=False, supported=True, frozen=True)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
@@ -1504,7 +1504,7 @@ def test_engine_download_click_noop_when_unsupported(qtbot, tmp_path, monkeypatc
 
 
 def test_engine_notify_success_clears_the_guard_and_forgets_the_cached_probes(qtbot, tmp_path, monkeypatch):
-    _patch_engine_pack(monkeypatch, available=False, supported=True)
+    _patch_engine_pack(monkeypatch, available=False, supported=True, frozen=True)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
@@ -1527,7 +1527,7 @@ def test_engine_notify_success_clears_the_guard_and_forgets_the_cached_probes(qt
 def test_engine_notify_failure_keeps_the_error_text_and_does_not_reprobe(qtbot, tmp_path, monkeypatch):
     """The documented 'click did nothing' bug (judge M4): a re-probe would
     overwrite the worker's error with 'Not installed' milliseconds later."""
-    _patch_engine_pack(monkeypatch, available=False, supported=True)
+    _patch_engine_pack(monkeypatch, available=False, supported=True, frozen=True)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
@@ -1559,6 +1559,7 @@ def test_engine_notify_while_a_probe_is_in_flight_does_not_restore_a_stale_cache
     monkeypatch.setattr(f"{_PANEL_MOD}.asr_pack_installer.asr_pack_supported", lambda: True)
     monkeypatch.setattr(f"{_PANEL_MOD}.asr_pack_installer.is_installed", lambda: False)
     monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", lambda name, root: False)
+    monkeypatch.setattr("sys.frozen", True, raising=False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))  # probe 1 in flight, blocked on gate
@@ -1602,6 +1603,7 @@ def test_engine_notify_while_a_probe_is_in_flight_and_that_probe_fails_keeps_the
     monkeypatch.setattr(f"{_PANEL_MOD}.asr_pack_installer.asr_pack_supported", lambda: True)
     monkeypatch.setattr(f"{_PANEL_MOD}.asr_pack_installer.is_installed", lambda: False)
     monkeypatch.setattr(f"{_PANEL_MOD}.model_manager.is_downloaded", lambda name, root: False)
+    monkeypatch.setattr("sys.frozen", True, raising=False)
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
     errors: list[str] = []
@@ -1646,6 +1648,25 @@ def test_source_install_without_pack_support_keeps_the_pip_guidance(qtbot, tmp_p
     assert not panel._engine_guidance_label.isVisibleTo(panel)
     assert panel.engine_status_label.text() == ""
     assert panel._asr_engine_guidance.isVisibleTo(panel)
+
+
+def test_source_install_with_pack_support_still_gets_the_pip_guidance(qtbot, tmp_path, monkeypatch):
+    """A pip install on the bundle's Python without [asr] is offered the extra, not the pack."""
+    _patch_engine_pack(monkeypatch, available=False, supported=True, frozen=False)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(AnkiMinerConfig(asr_models_root=tmp_path))
+    _wait_state_settled(qtbot, panel)
+
+    assert not panel.download_engine_button.isVisibleTo(panel)
+    assert not panel._engine_help_label.isVisibleTo(panel)
+    assert panel._asr_engine_guidance.isVisibleTo(panel)
+
+    received: list[None] = []
+    panel.asr_pack_download_requested.connect(lambda: received.append(None))
+    panel._on_asr_pack_download_clicked()
+    _wait_state_settled(qtbot, panel)
+    assert received == []
 
 
 def test_set_asr_pack_status_sets_label(qtbot):
