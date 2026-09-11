@@ -209,3 +209,13 @@ def test_changelog_records_the_logging_overhaul() -> None:
     fixed = sections["Fixed"]
     assert "audio" in fixed.lower()
     assert "video id" in fixed.lower() or "video ids" in fixed.lower()
+
+
+def test_readme_no_longer_promises_a_pipx_remedy_for_intel_mac() -> None:
+    """Intel mac downloads the engine in-app like every other build; the old
+    footnote promised a pipx [asr] install that onnxruntime made unresolvable there."""
+    installation = (ROOT / "README.md").read_text(encoding="utf-8").split("## Installation", maxsplit=1)[1]
+    visible = installation.split("<details>", maxsplit=1)[0]
+    assert "Whisper subtitle generation" not in visible
+    assert "pipx install" not in visible
+    assert "¹ Excludes AVIF screenshots" in visible

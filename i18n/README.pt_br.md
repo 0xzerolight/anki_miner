@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:9325d0b0e576e9a4 -->
+<!-- i18n-source: README.md sha256:3bdd638d22b50e04 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -72,7 +72,7 @@ Pegue o download para sua plataforma na [versão mais recente](https://github.co
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (outro) | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
-¹ Exclui a geração local de legendas com Whisper e capturas de tela em AVIF. Para funcionalidade completa: `pipx install "anki-miner[asr]"`.
+¹ Sem capturas AVIF nem remoção de silêncio nas legendas geradas.
 
 ### Notas de primeira execução (compilações não assinadas)
 

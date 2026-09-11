@@ -70,7 +70,7 @@ Grab the download for your platform from the [latest release](https://github.com
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (other) | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
-¹ Excludes local Whisper subtitle generation and AVIF screenshots. For full functionality: `pipx install "anki-miner[asr]"`.
+¹ Excludes AVIF screenshots and silence removal for generated subtitles.
 
 ### First-run notes (unsigned builds)
 

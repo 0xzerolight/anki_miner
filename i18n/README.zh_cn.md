@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:9325d0b0e576e9a4 -->
+<!-- i18n-source: README.md sha256:3bdd638d22b50e04 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -72,7 +72,7 @@ Android 上也可用 - <a href="https://github.com/0xzerolight/anki_miner_androi
 | Linux（Debian/Ubuntu） | `anki-miner_*_amd64.deb` |
 | Linux（其他） | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
-¹ 不含本地 Whisper 字幕生成和 AVIF 截图。如需完整功能：`pipx install "anki-miner[asr]"`。
+¹ 不含 AVIF 截图，也不含生成字幕的静音去除。
 
 ### 首次运行说明（未签名版本）
 

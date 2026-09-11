@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:9325d0b0e576e9a4 -->
+<!-- i18n-source: README.md sha256:3bdd638d22b50e04 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -72,7 +72,7 @@ Anki Miner が役に立ったら ⭐ スターをお願いします - 他の人�
 | Linux（Debian/Ubuntu） | `anki-miner_*_amd64.deb` |
 | Linux（その他） | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
-¹ ローカル Whisper による字幕生成と AVIF スクリーンショットは含まれません。すべての機能を使うには: `pipx install "anki-miner[asr]"`。
+¹ AVIF スクリーンショットと、生成字幕の無音除去は非対応。
 
 ### 初回起動時の注意（未署名ビルド）
 
