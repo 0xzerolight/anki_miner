@@ -1,8 +1,9 @@
-"""One parametrized install/download worker + the seven per-resource tasks.
+"""One parametrized install/download worker + the eight per-resource tasks.
 
 Collapses the ex-quintuplet of near-identical worker modules (alass install,
-ASR model download, CUDA pack, onnxruntime/VAD pack, Vulkan ggml model) into a
-single :class:`InstallWorker` driven by a per-tool *task* callable. The workers
+ASR model download, CUDA pack, onnxruntime/VAD pack, Vulkan ggml model, ASR
+engine pack) into a single :class:`InstallWorker` driven by a per-tool *task*
+callable. The workers
 shared a byte-identical run() skeleton (status → install → result_ready) and, for
 the three progress-reporting tools, a byte-identical ``_on_progress`` adapter;
 only the starting status line, the install call(s), and the success message
@@ -280,6 +281,33 @@ def onnx_pack_task(onnx_pack_root: Path) -> InstallTask:
         worker.status.emit(QCoreApplication.translate("OnnxPackDownloadWorker", "Downloading silence-removal library…"))
         install_onnx_pack(onnx_pack_root, progress=worker._on_progress, cancel_event=worker.cancel_event)
         return QCoreApplication.translate("OnnxPackDownloadWorker", "Silence-removal library installed.")
+
+    return _task
+
+
+def asr_pack_task(root: Path) -> InstallTask:
+    """Task: download + install the ASR engine pack (percentage progress).
+
+    The installer is GUI-free and prefixes its progress lines with the pack
+    code — ``"ASR pack (3/11): downloading"`` — so the prefix is swapped for the
+    translated engine name here; the ``(i/n)`` count is kept verbatim because
+    only the installer knows it.
+    """
+
+    def _task(worker: InstallWorker) -> str:
+        from anki_miner.services.asr.asr_pack_installer import install_asr_pack
+
+        engine = QCoreApplication.translate("AsrPackDownloadWorker", "Transcription engine")
+
+        def _on_progress(downloaded: int, total: int, message: str) -> None:
+            # "ASR pack (3/11): downloading" -> "Transcription engine pack (3/11): downloading"
+            if message.startswith("ASR "):
+                message = engine + message[len("ASR") :]
+            worker._on_progress(downloaded, total, message)
+
+        worker.status.emit(QCoreApplication.translate("AsrPackDownloadWorker", "Downloading the transcription engine…"))
+        install_asr_pack(root, progress=_on_progress, cancelled_check=worker.cancel_event.is_set)
+        return QCoreApplication.translate("AsrPackDownloadWorker", "Transcription engine installed successfully.")
 
     return _task
 
