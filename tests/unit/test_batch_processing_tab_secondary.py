@@ -178,4 +178,4 @@ def test_the_subtitle_folder_as_translation_folder_refuses_the_run(qtbot, test_c
 
     matcher.assert_not_called()
     assert shown
-    assert "is the subtitle folder" in shown[0].summary
+    assert shown[0].summary == "The translation folder must be different from the subtitle folder."

@@ -281,6 +281,28 @@ class TestClearPlacement:
         assert surviving is not None
         assert "Frieren S1" in surviving
 
+    def test_several_skipped_series_are_reported_in_one_banner(self, batch_tab):
+        """One banner replaces the last, so a per-row call reported one name.
+
+        Three bad rows used to leave the user looking at the third name with no
+        sign the other two had been skipped.
+        """
+        skipped = []
+        for name in ("Frieren S1", "Monster S1", "Mushishi S1"):
+            widget = MagicMock(name="QueueItemWidget")
+            widget.display_name = name
+            skipped.append((widget, "invalid"))
+        batch_tab.queue_panel.runnable_items = MagicMock(return_value=[MagicMock(name="QueueItem")])
+        batch_tab.queue_panel.get_incomplete_items = MagicMock(return_value=skipped)
+
+        with patch.object(batch_tab, "_start_queue_worker"):
+            batch_tab._process_queue()
+
+        issue = batch_tab.issue_banner().current_issue()
+        assert issue is not None
+        assert issue.summary == "3 series were skipped: folders missing."
+        assert issue.details == "Frieren S1\nMonster S1\nMushishi S1"
+
     def test_a_click_during_a_live_run_keeps_that_runs_problem(self, batch_tab):
         """The clear sits *after* the reentrancy guard, so a second press while
         a run is in flight cannot wipe the problem that run is reporting."""

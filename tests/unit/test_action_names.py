@@ -59,13 +59,32 @@ class TestUndoCountsNotes:
 
     def test_a_failed_undo_restores_the_note_wording(self, qtbot, monkeypatch):
         monkeypatch.setattr(
-            "anki_miner.gui.widgets.dialogs.results_dialog.QMessageBox.critical",
+            "anki_miner.gui.widgets.dialogs.results_dialog.QMessageBox.exec",
             lambda *a, **k: None,
         )
         dialog = ResultsDialog(_result_with_notes(7), undo_callback=lambda ids: len(ids))
         qtbot.addWidget(dialog)
         dialog._on_undo_error("boom")
         assert dialog._undo_button.text() == "Undo (7 notes)"
+
+    def test_a_single_note_reads_in_the_singular(self, qtbot):
+        dialog = ResultsDialog(_result_with_notes(1), undo_callback=lambda ids: len(ids))
+        qtbot.addWidget(dialog)
+        assert dialog._undo_button.text() == "Undo (1 note)"
+        dialog._on_undo_done(1)
+        assert dialog._undo_button.text() == "Undone (1 note deleted)"
+
+    def test_a_failed_undo_keeps_the_diagnostic_behind_details(self, qtbot, monkeypatch):
+        """A8-34: the AnkiConnect text names causes the sentence cannot."""
+        seen: list[str] = []
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.dialogs.results_dialog.QMessageBox.exec",
+            lambda box: seen.append(box.detailedText()),
+        )
+        dialog = ResultsDialog(_result_with_notes(2), undo_callback=lambda ids: len(ids))
+        qtbot.addWidget(dialog)
+        dialog._on_undo_error("note type 'Vocab' has no field 'Expression'")
+        assert seen == ["note type 'Vocab' has no field 'Expression'"]
 
     def test_undo_still_hands_the_callback_the_note_ids(self, qtbot, monkeypatch):
         seen: list[list[int]] = []

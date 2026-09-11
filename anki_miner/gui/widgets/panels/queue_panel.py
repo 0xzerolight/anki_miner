@@ -493,12 +493,7 @@ class QueuePanel(QFrame):
                 and secondary_folder is not None
                 and is_same_folder(secondary_folder, folders[1])
             ):
-                folder_error.setText(
-                    self.tr(
-                        "The translation folder is the subtitle folder. "
-                        "Pick a separate folder for the translation subtitles."
-                    )
-                )
+                folder_error.setText(self.tr("The translation folder must be different from the subtitle folder."))
                 folder_error.show()
                 return
             folder_error.hide()
@@ -547,7 +542,8 @@ class QueuePanel(QFrame):
         if self._locked:
             return
         if not self.queue_item_widgets:
-            QMessageBox.information(self, self.tr("Empty Queue"), self.tr("Queue is already empty."))
+            # Clearing nothing changes nothing; the counter above already reads
+            # "Queue is empty" (D24 keeps modals for destructive confirmation).
             return
 
         # A confirmation, not an error report: this is destructive and

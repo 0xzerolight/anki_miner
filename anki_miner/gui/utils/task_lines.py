@@ -89,7 +89,9 @@ def format_task_line(snapshot: TaskSnapshot) -> str:
                     snapshot.total,
                 )
             )
-        parts.append(format_clock(snapshot.elapsed_s))
+        parts.append(
+            tr_format(QCoreApplication.translate("CurrentJobStrip", "Elapsed %1"), format_clock(snapshot.elapsed_s))
+        )
         return " · ".join(parts)
 
     if snapshot.stage_name:
@@ -120,7 +122,9 @@ def format_task_line(snapshot: TaskSnapshot) -> str:
             )
         )
 
-    parts.append(format_clock(snapshot.elapsed_s))
+    parts.append(
+        tr_format(QCoreApplication.translate("CurrentJobStrip", "Elapsed %1"), format_clock(snapshot.elapsed_s))
+    )
     return " · ".join(parts)
 
 

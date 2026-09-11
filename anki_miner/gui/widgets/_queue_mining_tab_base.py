@@ -103,9 +103,12 @@ class _QueueRunStrings:
     ``self.tr``) so the translated payload stays in that context.
     """
 
-    unavailable: str  # "Mining unavailable — services not initialized."
-    run_starting: str  # "%1 run starting — %2 items."
+    unavailable: str  # "Mining unavailable — restart Anki Miner."
+    run_starting: str  # "%1 run starting — %2 queued."
     mine_label: str  # "Mine"
+    # "Stopped: %1 succeeded, %2 failed." — the summary a cancelled run gets
+    # instead of its family's clean lead (see _log_queue_summary).
+    stopped: str
     # Name the run carries in the task registry and the current-job strip.
     # Only the list-queue tabs publish runs, so it defaults to empty.
     task_title: str = ""
@@ -625,6 +628,21 @@ class _QueueMiningTabBase(MiningTabBase):
         """Worker ``queue_finished`` slot. Subclass MUST override."""
         raise NotImplementedError
 
+    def _log_queue_summary(self, clean_lead: str, succeeded: int, failed: int) -> None:
+        """Log one run's summary line, or nothing when there is no run to sum.
+
+        ``queue_finished`` is emitted on every worker exit — the cancel
+        ``break`` and each pre-loop refusal included — and the counts only
+        cover the items the loop reached. So *clean_lead* is reserved for a
+        queue that got to the end: a run the user stopped says so instead of
+        claiming twelve items finished after four, and a refusal (which has
+        already logged its own error) says nothing a second time.
+        """
+        if getattr(self, "_run_failed", False):
+            return
+        lead = self._run_strings.stopped if getattr(self, "_cancel_requested", False) else clean_lead
+        self.log_widget.append_info(tr_format(lead, succeeded, failed))
+
     def _on_clear_clicked(self) -> None:
         """Clear button slot. Every tab with a queue to clear overrides it."""
         raise NotImplementedError
@@ -967,7 +985,9 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
             item.error_message = None
             self.log_widget.append_info(tr_format(self._queue_list_strings.cancelled_item, label))
         else:
-            message = str(error) if error is not None else result_error_text(result)
+            # The model's default is untranslated (it has no tr context); the
+            # row and the log are UI, so the fallback is translated here.
+            message = str(error) if error is not None else result_error_text(result, default=self.tr("Mining failed"))
             item.status = self._status_error
             item.cards_created = cards
             item.error_message = message
@@ -981,11 +1001,12 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         self._recompute_buttons()
 
     def _on_queue_finished(self) -> None:
-        """Success-path summary log. State cleanup runs in ``_on_worker_finished``.
+        """Summary log for one run. State cleanup runs in ``_on_worker_finished``.
 
         ``queue_finished`` is emitted from inside ``run()``; ``QThread.finished``
         fires later on every exit path. Splitting the two keeps cleanup on the
-        single converged path while still logging a per-run summary.
+        single converged path while still logging a per-run summary — which
+        :meth:`_log_queue_summary` words for the exit path the run took.
         """
         # Count THIS run only (the frozen _run_items snapshot) — self._queue
         # retains prior runs' finished rows, so counting there over-reports.
@@ -993,7 +1014,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
         # QThread.finished clears it).
         succeeded = sum(1 for i in self._run_items if i.status == self._status_completed)
         failed = sum(1 for i in self._run_items if i.status == self._status_error)
-        self.log_widget.append_info(tr_format(self._queue_list_strings.queue_done, succeeded, failed))
+        self._log_queue_summary(self._queue_list_strings.queue_done, succeeded, failed)
 
     def _after_run_cleanup(self) -> None:
         """Restore the Stop button and paint the terminal bar state.

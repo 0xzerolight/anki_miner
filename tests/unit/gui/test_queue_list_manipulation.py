@@ -232,7 +232,7 @@ def test_counter_reports_the_whole_queue(queue) -> None:
     done.status = tab._status_completed
     tab._refresh_queue_counts()
 
-    assert tab.queue_controls.counter_label.text() == "3 queued · 1 ready · 1 failed · 1 complete"
+    assert tab.queue_controls.counter_label.text() == "3 in queue · 1 ready · 1 failed · 1 complete"
 
 
 def test_counter_ignores_the_active_filter(queue) -> None:
@@ -243,7 +243,7 @@ def test_counter_ignores_the_active_filter(queue) -> None:
 
     tab._on_queue_filter_changed("ready")
 
-    assert tab.queue_controls.counter_label.text().startswith("2 queued")
+    assert tab.queue_controls.counter_label.text().startswith("2 in queue")
 
 
 # ---------------------------------------------------------------------------

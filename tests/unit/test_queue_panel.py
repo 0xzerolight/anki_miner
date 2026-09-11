@@ -305,6 +305,25 @@ class TestListMinHeightFitsCardRows:
         assert collapsed >= panel._list_items[id(widget)].sizeHint().height() + self._frame(panel)
 
 
+class TestClearOnAnEmptyQueue:
+    def test_it_says_nothing_at_all(self, panel):
+        """Clearing nothing is neither a failure nor a change (D24, finding -26).
+
+        The counter above the list already reads "Queue is empty".
+        """
+        from unittest.mock import patch
+
+        assert panel.queue_item_widgets == []
+        with (
+            patch("PyQt6.QtWidgets.QMessageBox.information") as info,
+            patch("PyQt6.QtWidgets.QMessageBox.question") as question,
+        ):
+            panel._clear_queue()
+
+        info.assert_not_called()
+        question.assert_not_called()
+
+
 class TestSecondarySubtitleFolder:
     """A queued series can carry its own translation-subtitle folder (F7)."""
 
@@ -445,7 +464,7 @@ class TestSecondarySubtitleFolder:
             dialog.findChild(QDialogButtonBox).button(QDialogButtonBox.StandardButton.Ok).click()
             assert dialog.result() != QDialog.DialogCode.Accepted
             shown = [lbl.text() for lbl in dialog.findChildren(QLabel) if not lbl.isHidden()]
-            assert any("is the subtitle folder" in text for text in shown)
+            assert "The translation folder must be different from the subtitle folder." in shown
             return QDialog.DialogCode.Rejected
 
         monkeypatch.setattr(QDialog, "exec", point_at_subtitles_and_try_accept)

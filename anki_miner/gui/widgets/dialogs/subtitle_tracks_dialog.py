@@ -54,7 +54,7 @@ class SubtitleTracksDialog(_TrackPickerDialog):
         return self.tr("Auto-detect (currently: Track %1 — %2)")
 
     def _auto_none_text(self) -> str:
-        return self.tr("Auto-detect (no Japanese subtitle track found — will use first text track)")
+        return self.tr("Auto-detect (no subtitle track in the mining language — will use the first text track)")
 
     def _apply_button_text(self) -> str:
         return self.tr("Apply")

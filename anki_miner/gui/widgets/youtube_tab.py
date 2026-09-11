@@ -152,9 +152,10 @@ class YouTubeTab(_ListQueueMiningTabBase):
         # like _ToolTabBase's _ToolTabStrings. The mined/failed_item templates
         # carry an attempts=%3 suffix unique to YouTube.
         self._run_strings = _QueueRunStrings(
-            unavailable=self.tr("Mining unavailable — services not initialized."),
-            run_starting=self.tr("%1 run starting — %2 items."),
+            unavailable=self.tr("Mining unavailable — restart Anki Miner."),
+            run_starting=self.tr("%1 run starting — %2 queued."),
             mine_label=self.tr("Mine"),
+            stopped=self.tr("Stopped: %1 succeeded, %2 failed."),
             task_title=self.tr("YouTube queue"),
             retrying=self.tr("Attempt %1 of %2 · retrying in %3s"),
         )
@@ -245,7 +246,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
         url_row.addWidget(self.url_edit, 1)
 
         self.add_button = ModernButton(self.tr("Add"), variant="secondary")
-        self.add_button.setToolTip(self.tr("Add the URL to the queue and probe its metadata."))
+        self.add_button.setToolTip(self.tr("Add the URL to the queue and check the video."))
         self.add_button.clicked.connect(self._on_add_clicked)
         url_row.addWidget(self.add_button)
         queue_layout.addLayout(url_row)
@@ -280,9 +281,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
         # Issue #65: opt-in per-video word curation popup (default off).
         self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
         self._bind_review_words_checkbox()
-        self.review_words_checkbox.setToolTip(
-            self.tr("Show the word-selection popup for each video before creating cards.")
-        )
+        self.review_words_checkbox.setToolTip(self.tr("Pick which words get cards, once per video."))
         queue_layout.addWidget(self.review_words_checkbox)
 
         # Per-run subtitle source. Session-only like the checkbox above: it is a
@@ -327,11 +326,11 @@ class YouTubeTab(_ListQueueMiningTabBase):
         button_row.setSpacing(SPACING.xs)
 
         self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
-        self.mine_button.setToolTip(self.tr("Mine every READY item in the queue into Anki cards."))
+        self.mine_button.setToolTip(self.tr("Mine every Ready item in the queue."))
         self.mine_button.clicked.connect(self._on_mine_clicked)
 
         self.clear_button = ModernButton(self.tr("Clear"), variant="ghost")
-        self.clear_button.setToolTip(self.tr("Remove every queued item that is not currently mining."))
+        self.clear_button.setToolTip(self.tr("Remove every item from the queue."))
         self.clear_button.clicked.connect(self._on_clear_clicked)
 
         self.stop_button = ModernButton(self.tr("Cancel"), variant="secondary")
@@ -542,7 +541,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
                 reason="invalid_payload",
             )
             self.log_widget.append_warning(
-                self.tr("Drop a YouTube link here. Local files are mined from the Video and Audio tabs.")
+                self.tr("Drop a YouTube link here. Mine local files from the Video or Audiobooks tab.")
             )
             event.ignore()
             return
@@ -587,10 +586,7 @@ class YouTubeTab(_ListQueueMiningTabBase):
             self.show_screen_issue(
                 ScreenIssue(
                     summary=tr_format(
-                        self.tr(
-                            "This run needs local transcription, but the model %1 is not installed. "
-                            "Install it in Settings, or set Subtitles to Captions only."
-                        ),
+                        self.tr("This run needs local transcription, but the model %1 is not installed."),
                         self.config.asr_model,
                     ),
                     action_id="settings.subtitles",

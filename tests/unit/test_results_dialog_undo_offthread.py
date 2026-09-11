@@ -72,8 +72,8 @@ def test_undo_error_reenables_button_and_surfaces(qtbot, monkeypatch, result):
     from anki_miner.gui.widgets.dialogs import results_dialog as rd_module
 
     monkeypatch.setattr(rd_module.QMessageBox, "question", lambda *a, **k: QMessageBox.StandardButton.Yes)
-    crit: list = []
-    monkeypatch.setattr(rd_module.QMessageBox, "critical", lambda *a, **k: crit.append(a))
+    shown: list[str] = []
+    monkeypatch.setattr(rd_module.QMessageBox, "exec", lambda box: shown.append(box.detailedText()))
 
     def undo_callback(note_ids):
         raise RuntimeError("anki down")
@@ -83,4 +83,4 @@ def test_undo_error_reenables_button_and_surfaces(qtbot, monkeypatch, result):
 
     qtbot.waitUntil(lambda: dialog._undo_button.isEnabled(), timeout=3000)
     assert dialog.undo_completed is False
-    assert crit, "error surfaced via QMessageBox.critical"
+    assert shown == ["anki down"], "the failure text survives behind Details"

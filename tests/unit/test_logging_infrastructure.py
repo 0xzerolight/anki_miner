@@ -830,7 +830,7 @@ class TestWorkerExceptionLogging:
         failures = [r for r in records if r.levelno >= logging.WARNING]
         assert [r.levelno for r in failures] == [logging.WARNING]
         assert failures[0].exc_info is None
-        assert seen == ["Error processing episode: Cannot connect to AnkiConnect. Is Anki running?"]
+        assert seen == ["Cannot connect to AnkiConnect. Is Anki running?"]
 
     def test_import_worker_cancel_logs_no_traceback(self, qapp, caplog):
         """A user cancel routes to ``cancelled`` at INFO, whatever the cancel message says."""

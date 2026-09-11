@@ -15,7 +15,6 @@ from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QMessageBox,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -171,9 +170,7 @@ class BatchProcessingTab(MiningTabBase):
         # this tab: one popup per series (queue) / per run (quick pairs).
         self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
         self._bind_review_words_checkbox()
-        self.review_words_checkbox.setToolTip(
-            self.tr("Show the word-selection popup once per series, covering every episode's words")
-        )
+        self.review_words_checkbox.setToolTip(self.tr("Pick which words get cards, once per series."))
         layout.addWidget(self.review_words_checkbox)
 
         # Overall Progress (for queue processing)
@@ -441,10 +438,7 @@ class BatchProcessingTab(MiningTabBase):
         secondary_folder = Path(secondary_path)
         if is_same_folder(secondary_folder, subtitle_folder):
             self.show_screen_issue(
-                ScreenIssue(
-                    summary=self.tr("The translation folder is the subtitle folder."),
-                    details=self.tr("Pick a separate folder for the translation subtitles."),
-                )
+                ScreenIssue(summary=self.tr("The translation folder must be different from the subtitle folder."))
             )
             return False, None
         return True, secondary_folder
@@ -599,21 +593,31 @@ class BatchProcessingTab(MiningTabBase):
         self.worker_thread.start()
 
     def _warn_incomplete_items(self) -> None:
-        """Show warnings for incomplete queue items."""
+        """Report every series this run skipped, in ONE banner.
+
+        ``show_issue`` replaces whatever the banner held, so one call per row
+        left the user with the last name only and no sign the others were
+        skipped too. Several skips state the count and put the names in
+        ``details``; a lone skip keeps saying which folder is wrong.
+        """
         incomplete = self.queue_panel.get_incomplete_items()
-        for widget, issue_type in incomplete:
-            if issue_type == "invalid":
-                self.show_screen_issue(
-                    ScreenIssue(
-                        summary=tr_format(self.tr("%1 was skipped: its folders no longer exist."), widget.display_name)
-                    )
-                )
-            else:
-                self.show_screen_issue(
-                    ScreenIssue(
-                        summary=tr_format(self.tr("%1 was skipped: it is missing a folder."), widget.display_name)
-                    )
-                )
+        if not incomplete:
+            return
+        if len(incomplete) == 1:
+            widget, issue_type = incomplete[0]
+            summary = (
+                tr_format(self.tr("%1 was skipped: its folders no longer exist."), widget.display_name)
+                if issue_type == "invalid"
+                else tr_format(self.tr("%1 was skipped: it is missing a folder."), widget.display_name)
+            )
+            self.show_screen_issue(ScreenIssue(summary=summary))
+            return
+        self.show_screen_issue(
+            ScreenIssue(
+                summary=tr_format(self.tr("%1 series were skipped: folders missing."), len(incomplete)),
+                details="\n".join(widget.display_name for widget, _ in incomplete),
+            )
+        )
 
     def _start_queue_worker(self) -> None:
         """Create and start the queue worker thread."""
@@ -736,10 +740,7 @@ class BatchProcessingTab(MiningTabBase):
     def _empty_run_summary(self) -> str:
         """Why a Process Queue click found nothing to mine."""
         if self.queue_panel.has_only_completed_rows():
-            return self.tr(
-                "Every series in the queue is already complete. "
-                "Select the ones you want to mine again, then click Run selected."
-            )
+            return self.tr("Every series is already complete. Select rows, then Run selected.")
         return self.tr("No valid series in the queue to process.")
 
     def _process_queue(self) -> None:
@@ -938,7 +939,7 @@ class BatchProcessingTab(MiningTabBase):
             index: 1-based pair index
             name: Display name (video file name)
         """
-        self._current_item_label = tr_format(self.tr("Episode %1/%2: %3"), index, self._items_total, name)
+        self._current_item_label = tr_format(self.tr("Mining episode %1 of %2: %3"), index, self._items_total, name)
         self.overall_progress_widget.set_status(self._current_item_label)
 
     def _on_pair_finished(self, completed: int, total: int) -> None:
@@ -967,7 +968,7 @@ class BatchProcessingTab(MiningTabBase):
         """
         self.presenter.show_info(tr_format(self.tr("Processing series: %1"), display_name))
         self._current_item_label = tr_format(
-            self.tr("Series %1/%2: %3"), self._items_done + 1, self._items_total, display_name
+            self.tr("Mining series %1 of %2: %3"), self._items_done + 1, self._items_total, display_name
         )
         self.overall_progress_widget.set_status(self._current_item_label)
         self.queue_panel.set_item_status(item_id, "processing")
@@ -1205,7 +1206,8 @@ class BatchProcessingTab(MiningTabBase):
 
         reset_count = self.batch_queue.reset_failed_for_retry()
         if reset_count == 0:
-            QMessageBox.information(self, self.tr("No Items to Retry"), self.tr("No failed items eligible for retry."))
+            # Nothing to retry is not a failure and not a change: the button
+            # hides itself on the next line, which is the whole answer (D24).
             self.retry_button.setVisible(False)
             return
 

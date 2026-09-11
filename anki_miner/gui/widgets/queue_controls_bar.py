@@ -107,7 +107,7 @@ class QueueControlsBar(QWidget):
         """
         self.counter_label.setText(
             tr_format(
-                self.tr("%1 queued · %2 ready · %3 failed · %4 complete"),
+                self.tr("%1 in queue · %2 ready · %3 failed · %4 complete"),
                 total,
                 ready,
                 failed,
@@ -274,7 +274,7 @@ class QueueControlsBar(QWidget):
         row.addWidget(self.lock_label)
 
         self.pause_button = ModernButton(self.tr("Pause after current item"), variant="secondary")
-        self.pause_button.setToolTip(self.tr("Stop cleanly once the item being mined is finished."))
+        self.pause_button.setToolTip(self.tr("The run is not cancelled — Resume continues with the next item."))
         self.pause_button.clicked.connect(self._on_pause_clicked)
 
         self.finish_button = ModernButton(self.tr("Finish current, then stop"), variant="ghost")

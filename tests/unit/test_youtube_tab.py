@@ -903,6 +903,40 @@ class TestQueueFinished:
         assert "1 succeeded" in last_line
         assert "0 failed" in last_line
 
+    def test_a_cancelled_queue_is_not_reported_as_done(self, tab):
+        """``queue_finished`` fires on the cancel break too.
+
+        Its counts cover only the items the loop reached, so the clean-path
+        lead claimed a two-item queue finished after one.
+        """
+        _add_ready_item(tab, "https://youtu.be/ok")
+        _add_ready_item(tab, "https://youtu.be/never")
+        tab._on_mine_clicked()
+        tab._on_item_started(0)
+        tab._on_item_finished(0, MagicMock(cards_created=2), None, 1)
+        tab._on_stop_all_clicked()
+        tab._on_queue_finished()
+
+        text = tab.log_widget.text_edit.toPlainText()
+        assert "Stopped: 1 succeeded, 0 failed." in text
+        assert "Queue done" not in text
+
+    def test_a_refused_run_logs_no_summary_at_all(self, tab):
+        """A pre-loop refusal emits ``error`` then ``queue_finished``.
+
+        The refusal already said what happened; a "0 succeeded, 0 failed"
+        summary on top of it only claims the queue ran.
+        """
+        _add_ready_item(tab)
+        tab._on_mine_clicked()
+        tab._on_run_error("Reimport the stale dictionary first.")
+        tab._on_queue_finished()
+
+        text = tab.log_widget.text_edit.toPlainText()
+        assert "Reimport the stale dictionary first." in text
+        assert "Queue done" not in text
+        assert "Stopped:" not in text
+
     def test_queue_finished_does_not_mutate_state(self, tab):
         """``_on_queue_finished`` only logs — state cleanup is wired to ``QThread.finished``."""
         _add_ready_item(tab)
@@ -1576,7 +1610,7 @@ class TestPlaylistDedupe:
 
         new_items = tab._queue.all_items()[1:]
         assert [i.video_id for i in new_items] == [pl.entries[1].video_id, pl.entries[2].video_id]
-        assert "Skipped 1 already-queued video(s)." in tab.log_widget.text_edit.toPlainText()
+        assert "Skipped 1 already in the queue." in tab.log_widget.text_edit.toPlainText()
 
     def test_dedupe_within_batch(self, tab):
         entry = _make_playlist_entry(video_id="vid00000000", title="Dup")
@@ -1624,7 +1658,7 @@ class TestPlaylistDedupe:
         # The bare-id item should survive; the playlist duplicate must be skipped.
         items = tab._queue.all_items()
         assert len(items) == 1, "Duplicate playlist entry must have been deduped"
-        assert "Skipped 1 already-queued video(s)." in tab.log_widget.text_edit.toPlainText()
+        assert "Skipped 1 already in the queue." in tab.log_widget.text_edit.toPlainText()
 
     def test_all_duplicates_skips_probe_worker(self, tab):
         pl = _make_playlist_info(n=2)

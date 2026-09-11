@@ -115,8 +115,6 @@ LEDGER: dict[str, str] = {
     # The answer to a button the user is standing in front of, and after a
     # schema bump the *usual* answer. Silence here read as a dead button.
     "gui/widgets/settings_tab.py::SettingsTab._show_nothing_to_restore": "notice",
-    "gui/widgets/single_episode_tab.py::SingleEpisodeTab._on_timing_clicked._on_parsed": "notice",
-    "gui/widgets/single_episode_tab.py::SingleEpisodeTab._on_tracks_clicked._on_streams": "notice",
     "gui/widgets/subtitle_retime_tab.py::SubtitleRetimeTab._on_tracks_clicked._on_choices": "notice",
     # --- Owned by another workstream's surface ------------------------------
     "gui/widgets/dialogs/results_dialog.py::ResultsDialog._on_undo_error": "w5-queue",
@@ -127,7 +125,6 @@ LEDGER: dict[str, str] = {
     # `_process_queue`'s "No valid series in the queue to process." was the last
     # of the three terminal/refusal boxes here; W5-T7 made it a screen issue when
     # it froze the running queue. The category is down to the two below.
-    "gui/widgets/batch_processing_tab.py::BatchProcessingTab._retry_failed_items": "w5-queue",
     "gui/widgets/panels/queue_panel.py::QueuePanel._clear_queue": "w5-queue",
     # --- No "recoverable" entry may ever be added here. See the module docstring.
 }

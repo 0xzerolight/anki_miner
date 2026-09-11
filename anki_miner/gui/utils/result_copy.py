@@ -64,7 +64,7 @@ def nothing_new_to_mine() -> str:
     Saying the outcome first and the reason second is what stops a user
     hunting for the setting they broke.
     """
-    return QCoreApplication.translate("ResultCopy", "No cards created. Every word is already in Anki.")
+    return QCoreApplication.translate("ResultCopy", "No cards created. Every word is already known.")
 
 
 def copied() -> str:

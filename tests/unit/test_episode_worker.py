@@ -265,7 +265,7 @@ def test_error_emitted_with_prefix_when_process_episode_raises(qapp):
 
     assert results == []
     assert len(errors) == 1
-    assert errors[0] == "Error processing episode: disk full"
+    assert errors[0] == "disk full"
 
 
 def test_error_suppressed_when_cancelled_during_failure(qapp):

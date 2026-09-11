@@ -20,9 +20,9 @@ from anki_miner.utils.i18n import tr_format
 
 # Sub-mode label keys (translated at use site via QCoreApplication.translate)
 _SUB_MODE_LABEL: dict[str, str] = {
-    "manual_only": QT_TRANSLATE_NOOP("YouTubeQueueItemWidget", "Manual JA subs"),
-    "auto_only": QT_TRANSLATE_NOOP("YouTubeQueueItemWidget", "Auto JA subs"),
-    "auto_dub": QT_TRANSLATE_NOOP("YouTubeQueueItemWidget", "Auto JA subs (dub audio)"),
+    "manual_only": QT_TRANSLATE_NOOP("YouTubeQueueItemWidget", "Manual subtitles"),
+    "auto_only": QT_TRANSLATE_NOOP("YouTubeQueueItemWidget", "Auto subtitles"),
+    "auto_dub": QT_TRANSLATE_NOOP("YouTubeQueueItemWidget", "Auto subtitles (dub audio)"),
     "transcribe": QT_TRANSLATE_NOOP("YouTubeQueueItemWidget", "Transcribed locally"),
 }
 
@@ -144,7 +144,7 @@ class YouTubeQueueItemWidget(QueueRowWidget):
     def _resolve_result(self, item: YouTubeQueueItem) -> str:
         """Return the result count, which only a completed run has."""
         if item.status == YouTubeItemStatus.COMPLETED:
-            return tr_format(self.tr("%1 cards"), item.cards_created)
+            return tr_format(self.tr("Cards: %1"), item.cards_created)
         return ""
 
     def _resolve_detail(self, item: YouTubeQueueItem) -> str:
