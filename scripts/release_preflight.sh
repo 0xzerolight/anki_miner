@@ -17,6 +17,9 @@
 # from-source bootloader, macOS arch-native ffmpeg. The three smokes are pure
 # Python import checks, so import/collection failures (like the av miss that
 # broke v2.7.1) surface here on Linux exactly as they did on Windows/macOS.
+# The SEEDED asr smoke needs a Python 3.12 build venv (the pack pins cp312
+# wheels): on any other python3 the seed step reports it unsupported and only
+# the bare-absent asr leg runs here.
 #
 # Usage:
 #   scripts/release_preflight.sh [--clean] [--skip-package] [--version X.Y.Z]
@@ -169,6 +172,16 @@ rm -rf build dist/AnkiMiner
 [ -d dist/AnkiMiner ] || die "dist/AnkiMiner not produced"
 echo
 
+# --- 4b. pack seeds for the smokes --------------------------------------------
+# The ASR engine is an in-app pack, so the seeded asr leg has to be handed one,
+# fetched by the app's own installer (same pins, same extraction). Warn-only:
+# the seed is skipped when this venv's Python is not the bundle's 3.12, and the
+# smoke then skips that leg loudly; the bare-absent leg needs no seed.
+echo "=== pack seeds ==="
+"$PY" scripts/fetch_language_pack_seeds.py "$CACHE/pack_seeds" asr \
+  || echo "WARNING: pack seed step reported a problem (continuing; the seeded asr smoke will skip)"
+echo
+
 # --- 5. smokes (shared with CI) ----------------------------------------------
 # The whispercpp-vulkan leg is skipped here and ONLY here. It asserts that a
 # Vulkan-enabled pywhispercpp loads out of the bundle, and pywhispercpp lives in
@@ -189,7 +202,7 @@ if [ ! -f "$YTDLP_SEED/bin/yt-dlp" ] || [ ! -f "$YTDLP_SEED/bin/yt-dlp.verified"
   "$VENV/bin/python" scripts/fetch_ytdlp_seed.py "$YTDLP_SEED" \
     || echo "WARNING: yt-dlp seed fetch reported a problem (the youtube leg will skip)"
 fi
-if BUNDLE_SMOKE_SKIP_WHISPERCPP=1 BUNDLE_SMOKE_YTDLP_SEED="$YTDLP_SEED" bash scripts/bundle_smoke.sh dist/AnkiMiner; then
+if BUNDLE_SMOKE_SKIP_WHISPERCPP=1 BUNDLE_SMOKE_YTDLP_SEED="$YTDLP_SEED" BUNDLE_SMOKE_PACK_SEEDS="$CACHE/pack_seeds" bash scripts/bundle_smoke.sh dist/AnkiMiner; then
   echo "smokes: PASS"
 else
   echo "smokes: FAIL"

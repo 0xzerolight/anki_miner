@@ -189,7 +189,7 @@ def test_bundle_smoke_uses_one_temporary_anki_miner_home(tmp_path: Path) -> None
         "  echo MPV_PROBE_OK\n"
         "else\n"
         '  case "${ANKI_MINER_SMOKE:-}" in\n'
-        "    youtube|asr|whispercpp) echo BUNDLED_SMOKE_PASS ;;\n"
+        "    youtube|asr|asr-absent|whispercpp) echo BUNDLED_SMOKE_PASS ;;\n"
         "    *) exit 3 ;;\n"
         "  esac\n"
         "fi\n",
@@ -226,6 +226,8 @@ def test_bundle_smoke_uses_one_temporary_anki_miner_home(tmp_path: Path) -> None
         }
     )
     env.pop("BUNDLE_SMOKE_GGML_MODEL", None)
+    env.pop("BUNDLE_SMOKE_PACK_SEEDS", None)
+    env.pop("BUNDLE_SMOKE_LANGS", None)
 
     result = subprocess.run(
         ["bash", str(PROJECT_ROOT / "scripts" / "bundle_smoke.sh"), str(dist)],
@@ -266,7 +268,7 @@ def _write_smoke_dist(tmp_path: Path) -> Path:
         '      test -x "$ANKI_MINER_HOME/bin/yt-dlp"\n'
         '      test -f "$ANKI_MINER_HOME/bin/yt-dlp.verified"\n'
         "      echo BUNDLED_SMOKE_PASS ;;\n"
-        "    asr|whispercpp) echo BUNDLED_SMOKE_PASS ;;\n"
+        "    asr|asr-absent|whispercpp) echo BUNDLED_SMOKE_PASS ;;\n"
         "    *) exit 3 ;;\n"
         "  esac\n"
         "fi\n",
@@ -299,6 +301,8 @@ def _smoke_env(tmp_path: Path, record: Path, **extra: str) -> dict[str, str]:
         }
     )
     env.pop("BUNDLE_SMOKE_GGML_MODEL", None)
+    env.pop("BUNDLE_SMOKE_PACK_SEEDS", None)
+    env.pop("BUNDLE_SMOKE_LANGS", None)
     env.update(extra)
     return env
 
@@ -450,6 +454,8 @@ def test_smoke_graph_matches_build_aselect_graph(tmp_path: Path) -> None:
         }
     )
     env.pop("BUNDLE_SMOKE_GGML_MODEL", None)
+    env.pop("BUNDLE_SMOKE_PACK_SEEDS", None)
+    env.pop("BUNDLE_SMOKE_LANGS", None)
 
     subprocess.run(
         ["bash", str(PROJECT_ROOT / "scripts" / "bundle_smoke.sh"), str(dist)],

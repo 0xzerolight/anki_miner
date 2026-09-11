@@ -109,7 +109,7 @@ def _fake_dist(tmp_path: Path) -> Path:
         '    test -f "$ANKI_MINER_HOME/language_packs/zh/jieba/__init__.py"\n'
         "    printf '%s\\n' zh >> \"$SEED_RECORD\"\n"
         "    echo BUNDLED_SMOKE_PASS ;;\n"
-        "  youtube|asr|whispercpp) echo BUNDLED_SMOKE_PASS ;;\n"
+        "  youtube|asr|asr-absent|whispercpp) echo BUNDLED_SMOKE_PASS ;;\n"
         "  *)\n"
         '    if [ "${ANKI_MINER_ASR_VULKAN_PROBE:-}" = 1 ]; then echo 0\n'
         '    elif [ "${ANKI_MINER_MPV_PROBE:-}" = 1 ]; then echo MPV_PROBE_OK\n'
