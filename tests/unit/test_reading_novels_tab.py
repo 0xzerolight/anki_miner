@@ -325,6 +325,24 @@ class TestFolderRunSignals:
         tab._on_queue_finished()
         assert "2 succeeded, 1 failed" in tab.log_widget.text_edit.toPlainText()
 
+    def test_a_cancelled_run_is_not_reported_as_done(self, tmp_path, tab):
+        """``queue_finished`` fires on the cancel break too.
+
+        Its counts cover only the books the loop reached, so the clean-path
+        lead claimed a three-book run finished after one.
+        """
+        from anki_miner.models.mining_queue import ReadyItemStatus
+
+        self._folder_run(tab, tmp_path)
+        tab._run_items[0].status = ReadyItemStatus.COMPLETED
+        tab._on_cancel_clicked()
+
+        tab._on_queue_finished()
+
+        log = tab.log_widget.text_edit.toPlainText()
+        assert "Stopped: 1 succeeded, 0 failed." in log
+        assert "Done:" not in log
+
     def test_queue_finished_single_stays_silent(self, tmp_path, tab):
         _run(tab, _book_file(tmp_path), [_make_ref()])
         tab._on_queue_finished()

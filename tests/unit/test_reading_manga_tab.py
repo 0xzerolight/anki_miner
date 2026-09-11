@@ -358,6 +358,22 @@ class TestMineSeries:
         assert "1 succeeded" in text
         assert "1 failed" in text
 
+    def test_a_cancelled_run_is_not_reported_as_done(self, tab):
+        """``queue_finished`` fires on the cancel break too.
+
+        Its counts cover only the volumes the loop reached, so the clean-path
+        lead claimed a three-volume run finished after one.
+        """
+        _mine(tab, _series(3))
+        tab._run_items[0].status = ReadyItemStatus.COMPLETED
+        tab._on_cancel_clicked()
+
+        tab._on_queue_finished()
+
+        text = tab.log_widget.text_edit.toPlainText()
+        assert "Stopped: 1 succeeded, 0 failed." in text
+        assert "Done:" not in text
+
     def test_lazy_factory_when_no_processor(self, qtbot, test_config):
         """No cached processor → the base hands the worker a factory (off-thread)."""
         with (

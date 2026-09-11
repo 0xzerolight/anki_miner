@@ -588,19 +588,20 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         self.overall_progress_widget.set_composed(done, 0, len(self._run_items))
 
     def _on_queue_finished(self) -> None:
-        """Success-path summary log over the run snapshot. Cleanup is elsewhere.
+        """Run summary log over the run snapshot. Cleanup is elsewhere.
 
         ``queue_finished`` is emitted from inside ``run()`` while ``_run_items``
         is still intact; ``QThread.finished`` fires later on every exit path and
         clears it. A single-volume run's outcome is already covered by
-        ``_on_item_finished``, so only summarize a multi-volume run.
+        ``_on_item_finished``, so only summarize a multi-volume run. The lead is
+        chosen by ``_log_queue_summary``, which swaps it on a cancelled run.
         """
         total = len(self._run_items)
         if total <= 1:
             return
         succeeded = sum(1 for i in self._run_items if i.status == ReadyItemStatus.COMPLETED)
         failed = sum(1 for i in self._run_items if i.status == ReadyItemStatus.ERROR)
-        self.log_widget.append_info(tr_format(self.tr("Done: %1 succeeded, %2 failed."), succeeded, failed))
+        self._log_queue_summary(self.tr("Done: %1 succeeded, %2 failed."), succeeded, failed)
 
     def _after_run_cleanup(self) -> None:
         """Per-tab UI recovery after a run ends (called from the base cleanup slot).
