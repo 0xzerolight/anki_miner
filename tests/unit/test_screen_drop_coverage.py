@@ -135,7 +135,7 @@ class TestYouTubeTakesALink:
         _drop(youtube_tab, _mime(urls=(_local(episode),)))
 
         logged = youtube_tab.log_widget.text_edit.toPlainText()
-        assert "Video and Audio tabs" in logged
+        assert "Mine local files from the Video or Audiobooks tab." in logged
         youtube_tab._add_flow.begin.assert_not_called()
 
     def test_a_queue_reorder_drag_is_left_to_the_list(self, youtube_tab):

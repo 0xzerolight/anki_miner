@@ -87,12 +87,18 @@ def test_all_success_reads_as_a_complete_run(tab, clock):
 
 
 def test_no_dialog_is_opened_on_either_path(tab, clock):
+    """Both paths end in a receipt, and the module has no modal left to open.
+
+    This used to patch ``batch_processing_tab.QMessageBox`` and assert it was
+    never called; the attribute is gone, which is the same claim for every
+    path at once.
+    """
+    from anki_miner.gui.widgets import batch_processing_tab as module
+
     failed = ProcessingResult(total_words_found=0, new_words_found=0, cards_created=0, errors=["boom"])
     succeeded = ProcessingResult(total_words_found=8, new_words_found=4, cards_created=2)
 
-    with patch("anki_miner.gui.widgets.batch_processing_tab.QMessageBox") as message_box:
-        _finish(tab, [failed, succeeded], pairs=2)
-        _finish(tab, [succeeded], pairs=1)
+    _finish(tab, [failed, succeeded], pairs=2)
+    _finish(tab, [succeeded], pairs=1)
 
-    message_box.warning.assert_not_called()
-    message_box.information.assert_not_called()
+    assert not hasattr(module, "QMessageBox")
