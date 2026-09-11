@@ -1783,7 +1783,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Keep the yt-dlp downloader up to date, update it on demand, or point at your own binary.</source>
-        <translation type="unfinished" />
+        <translation>Den yt-dlp-Downloader aktuell halten, bei Bedarf aktualisieren oder auf Ihre eigene Binärdatei verweisen.</translation>
     </message>
     <message>
         <source>Mine Japanese, Korean or Chinese</source>
@@ -3857,15 +3857,15 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     <name>DownloadTab</name>
     <message>
         <source>yt-dlp is not installed, so downloads cannot run.</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp ist nicht installiert, daher können keine Downloads ausgeführt werden.</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp herunterladen</translation>
     </message>
     <message>
         <source>Downloading yt-dlp…</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp wird heruntergeladen…</translation>
     </message>
     <message>
         <source>Progress</source>
@@ -10470,7 +10470,7 @@ Aufsteigend sortieren, um i+1-Zeilen zuerst anzuzeigen — die, deren einziges u
     </message>
     <message>
         <source>Download yt-dlp (~40 MB)</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp herunterladen (~40 MB)</translation>
     </message>
 </context><context>
     <name>YouTubeTab</name>
@@ -10544,15 +10544,15 @@ Aufsteigend sortieren, um i+1-Zeilen zuerst anzuzeigen — die, deren einziges u
     </message>
     <message>
         <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp ist nicht installiert, daher kann kein YouTube-Mining ausgeführt werden.</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp herunterladen</translation>
     </message>
     <message>
         <source>Downloading yt-dlp…</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp wird heruntergeladen…</translation>
     </message>
     <message>
         <source>Add</source>

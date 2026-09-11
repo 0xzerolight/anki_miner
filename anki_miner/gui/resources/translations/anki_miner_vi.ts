@@ -1781,7 +1781,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Keep the yt-dlp downloader up to date, update it on demand, or point at your own binary.</source>
-        <translation type="unfinished" />
+        <translation>Giữ trình tải xuống yt-dlp luôn cập nhật, cập nhật khi cần, hoặc trỏ đến tệp thực thi riêng của bạn.</translation>
     </message>
     <message>
         <source>Mine Japanese, Korean or Chinese</source>
@@ -3855,15 +3855,15 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     <name>DownloadTab</name>
     <message>
         <source>yt-dlp is not installed, so downloads cannot run.</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp chưa được cài đặt nên không thể thực hiện tải xuống.</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
-        <translation type="unfinished" />
+        <translation>Tải yt-dlp</translation>
     </message>
     <message>
         <source>Downloading yt-dlp…</source>
-        <translation type="unfinished" />
+        <translation>Đang tải yt-dlp…</translation>
     </message>
     <message>
         <source>Progress</source>
@@ -10453,7 +10453,7 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên đầu — những dòng
     </message>
     <message>
         <source>Download yt-dlp (~40 MB)</source>
-        <translation type="unfinished" />
+        <translation>Tải yt-dlp (~40 MB)</translation>
     </message>
 </context><context>
     <name>YouTubeTab</name>
@@ -10527,15 +10527,15 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên đầu — những dòng
     </message>
     <message>
         <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp chưa được cài đặt nên không thể khai thác YouTube.</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
-        <translation type="unfinished" />
+        <translation>Tải yt-dlp</translation>
     </message>
     <message>
         <source>Downloading yt-dlp…</source>
-        <translation type="unfinished" />
+        <translation>Đang tải yt-dlp…</translation>
     </message>
     <message>
         <source>Add</source>

@@ -1781,7 +1781,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Keep the yt-dlp downloader up to date, update it on demand, or point at your own binary.</source>
-        <translation type="unfinished" />
+        <translation>ダウンローダー yt-dlp を最新に保ち、必要に応じて更新したり、独自の実行ファイルを指定したりできます。</translation>
     </message>
     <message>
         <source>Mine Japanese, Korean or Chinese</source>
@@ -3855,15 +3855,15 @@ No files on disk are deleted.</source>
     <name>DownloadTab</name>
     <message>
         <source>yt-dlp is not installed, so downloads cannot run.</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp がインストールされていないため、ダウンロードを実行できません。</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp をダウンロード</translation>
     </message>
     <message>
         <source>Downloading yt-dlp…</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp をダウンロード中…</translation>
     </message>
     <message>
         <source>Progress</source>
@@ -10453,7 +10453,7 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Download yt-dlp (~40 MB)</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp をダウンロード（約 40 MB）</translation>
     </message>
 </context><context>
     <name>YouTubeTab</name>
@@ -10527,15 +10527,15 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp がインストールされていないため、YouTube マイニングを実行できません。</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp をダウンロード</translation>
     </message>
     <message>
         <source>Downloading yt-dlp…</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp をダウンロード中…</translation>
     </message>
     <message>
         <source>Add</source>

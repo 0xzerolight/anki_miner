@@ -1781,7 +1781,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Keep the yt-dlp downloader up to date, update it on demand, or point at your own binary.</source>
-        <translation type="unfinished" />
+        <translation>保持 yt-dlp 下载器为最新版本，按需更新，或指向你自己的可执行文件。</translation>
     </message>
     <message>
         <source>Mine Japanese, Korean or Chinese</source>
@@ -3855,15 +3855,15 @@ No files on disk are deleted.</source>
     <name>DownloadTab</name>
     <message>
         <source>yt-dlp is not installed, so downloads cannot run.</source>
-        <translation type="unfinished" />
+        <translation>未安装 yt-dlp，因此无法执行下载。</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
-        <translation type="unfinished" />
+        <translation>下载 yt-dlp</translation>
     </message>
     <message>
         <source>Downloading yt-dlp…</source>
-        <translation type="unfinished" />
+        <translation>正在下载 yt-dlp…</translation>
     </message>
     <message>
         <source>Progress</source>
@@ -10453,7 +10453,7 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Download yt-dlp (~40 MB)</source>
-        <translation type="unfinished" />
+        <translation>下载 yt-dlp（约 40 MB）</translation>
     </message>
 </context><context>
     <name>YouTubeTab</name>
@@ -10527,15 +10527,15 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
-        <translation type="unfinished" />
+        <translation>未安装 yt-dlp，因此无法进行 YouTube 挖词。</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
-        <translation type="unfinished" />
+        <translation>下载 yt-dlp</translation>
     </message>
     <message>
         <source>Downloading yt-dlp…</source>
-        <translation type="unfinished" />
+        <translation>正在下载 yt-dlp…</translation>
     </message>
     <message>
         <source>Add</source>

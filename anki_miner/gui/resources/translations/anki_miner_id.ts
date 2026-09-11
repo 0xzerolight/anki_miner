@@ -1781,7 +1781,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Keep the yt-dlp downloader up to date, update it on demand, or point at your own binary.</source>
-        <translation type="unfinished" />
+        <translation>Jaga pengunduh yt-dlp tetap terkini, perbarui sesuai kebutuhan, atau arahkan ke eksekutabel Anda sendiri.</translation>
     </message>
     <message>
         <source>Mine Japanese, Korean or Chinese</source>
@@ -3855,15 +3855,15 @@ Tidak ada berkas di disk yang dihapus.</translation>
     <name>DownloadTab</name>
     <message>
         <source>yt-dlp is not installed, so downloads cannot run.</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp belum terpasang, sehingga unduhan tidak dapat dijalankan.</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
-        <translation type="unfinished" />
+        <translation>Unduh yt-dlp</translation>
     </message>
     <message>
         <source>Downloading yt-dlp…</source>
-        <translation type="unfinished" />
+        <translation>Mengunduh yt-dlp…</translation>
     </message>
     <message>
         <source>Progress</source>
@@ -10453,7 +10453,7 @@ Urutkan menaik untuk menempatkan baris i+1 di awal — yaitu baris yang satu-sat
     </message>
     <message>
         <source>Download yt-dlp (~40 MB)</source>
-        <translation type="unfinished" />
+        <translation>Unduh yt-dlp (~40 MB)</translation>
     </message>
 </context><context>
     <name>YouTubeTab</name>
@@ -10527,15 +10527,15 @@ Urutkan menaik untuk menempatkan baris i+1 di awal — yaitu baris yang satu-sat
     </message>
     <message>
         <source>yt-dlp is not installed, so YouTube mining cannot run.</source>
-        <translation type="unfinished" />
+        <translation>yt-dlp belum terpasang, sehingga mining YouTube tidak dapat dijalankan.</translation>
     </message>
     <message>
         <source>Download yt-dlp</source>
-        <translation type="unfinished" />
+        <translation>Unduh yt-dlp</translation>
     </message>
     <message>
         <source>Downloading yt-dlp…</source>
-        <translation type="unfinished" />
+        <translation>Mengunduh yt-dlp…</translation>
     </message>
     <message>
         <source>Add</source>
