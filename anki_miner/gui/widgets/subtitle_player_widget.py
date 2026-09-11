@@ -525,11 +525,26 @@ class SubtitlePlayerWidget(QWidget):
     def current_seconds(self) -> float:
         """The position the viewer is currently looking at, in seconds.
 
-        Read off the slider rather than mpv's ``time_pos`` on purpose: the
-        slider is what the user sees, and while the handle is held down it
-        holds the drag target that mpv is still catching up to. Zero until the
-        first position tick lands.
+        mpv's ``time_pos`` is the authority, read here and now: it is the
+        DISPLAYED frame's own pts, and it is the same instant ``ffmpeg -ss``
+        resolves to the same frame (both take the first frame whose pts is at
+        or after the target -- measured on a 15 fps source, an exact seek to
+        5.1 reports 5.133333 and ffmpeg hands back that frame). The slider is
+        only as fresh as the last ``time-pos`` observer tick that crossed into
+        the GUI thread, and under GUI load that is arbitrarily far behind the
+        picture -- a frame read off it is one the viewer already watched go
+        past.
+
+        The slider still wins mid-drag: while the handle is held down it holds
+        the drag target mpv is still catching up to, which IS the frame the
+        user is asking for. It is also the fallback when there is no player
+        (audio-only, or libmpv absent) and when mpv answers ``None``, the
+        normal reply while idle. Zero until the first position tick lands.
         """
+        if not self.position_slider.isSliderDown() and self.player is not None:
+            position = self.player.time_pos
+            if isinstance(position, (int, float)):
+                return max(0.0, float(position))
         return self.position_slider.value() / 1000.0
 
     def seek_seconds(self, seconds: float) -> None:
