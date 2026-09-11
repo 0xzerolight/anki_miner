@@ -261,7 +261,7 @@ for _code in AVAILABLE_LANGUAGES:
         if importlib.util.find_spec(_module) is not None:
             language_hiddenimports.append(_module)
 
-a = Analysis(
+a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     [os.path.join(project_root, "anki_miner", "gui", "launch.py")],
     pathex=[project_root],
     binaries=ffmpeg_binaries + alass_binaries + libmpv_binaries,
@@ -432,9 +432,9 @@ a.binaries += ffmpeg_toc
 _HOST_ONLY_LIB_RE = re.compile(r"^lib(asound|pulse(-simple)?|pulsecommon-[0-9.]+|jack|pipewire-0\.3|vulkan)\.so(\.|$)")
 a.binaries = [entry for entry in a.binaries if not _HOST_ONLY_LIB_RE.match(os.path.basename(entry[0]))]
 
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)  # noqa: F821 - injected into the spec namespace by PyInstaller
 
-exe = EXE(
+exe = EXE(  # noqa: F821 - injected into the spec namespace by PyInstaller
     pyz,
     a.scripts,
     [],
@@ -453,7 +453,7 @@ exe = EXE(
     version=version_info,
 )
 
-coll = COLLECT(
+coll = COLLECT(  # noqa: F821 - injected into the spec namespace by PyInstaller
     exe,
     a.binaries,
     a.datas,
