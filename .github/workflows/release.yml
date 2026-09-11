@@ -134,15 +134,16 @@ jobs:
 
   # The matrix VALUES live in .github/release-matrix.json (emitted+filtered by the
   # setup job). Per-OS rationale for those values:
-  #   install_target / skip_asr_smoke drive the per-OS ASR handling. Every
-  #   platform bundles local Whisper ASR via the [asr] extra EXCEPT Intel macOS:
-  #   faster-whisper hard-requires onnxruntime, and onnxruntime dropped all macOS
-  #   x86_64 wheels at 1.20 (the last Intel-mac builds need numpy<2, but the lock
-  #   pins numpy 2.x), so [asr] is unresolvable there. The Intel build installs the
-  #   base package only (skip_asr_smoke then skips the asr smoke, which would fail
-  #   with no faster-whisper); the app degrades gracefully (ASR probes via
-  #   find_spec → unavailable). This onnxruntime Intel-mac gap is a DESIGN
-  #   exclusion the dry-run gate cannot re-catch.
+  #   install_target drives the per-OS [asr] install. The CTranslate2 engine is
+  #   NOT bundle content any more — it ships as the ASR engine pack
+  #   (anki_miner/services/asr/asr_pack.py) and anki_miner.spec excludes it — but
+  #   every platform that CAN install [asr] still does, because an exclude is
+  #   only proven by freezing on a machine that has the package. Intel macOS
+  #   installs the base package only: faster-whisper hard-requires onnxruntime,
+  #   which dropped all macOS x86_64 wheels at 1.20, so [asr] is unresolvable
+  #   there; the PACK does not need onnxruntime, so Intel users download the
+  #   engine in-app like everyone else and the asr smokes run on every leg
+  #   (skip_asr_smoke is empty everywhere; the flag is the escape hatch only).
   #   build_vulkan drives the from-source Vulkan pywhispercpp wheel build and its
   #   loadability smoke. "1" only on Linux + Windows: macOS stays on the CT2/Metal
   #   path (no official Vulkan artifact for macOS, and no value in MoltenVK here),
@@ -193,16 +194,15 @@ jobs:
           # it is "." (no [asr] — onnxruntime has no x86_64-mac wheel; see the
           # matrix note). No [zh]/[ko]: those engines are excluded from the frozen
           # graph and arrive as in-app language packs, so installing them here
-          # would only slow the build. The [asr] extra lands faster-whisper + ctranslate2
-          # in the PyInstaller tree for Windows, macOS-arm64, and the AppImage
-          # (Linux). requirements.lock pins transitive deps to known-good
-          # versions. Version-constraint form (no --require-hashes): cross-
-          # platform safe because an incomplete lock never fails the build on
-          # unlisted packages, and a constraint never force-installs a package
-          # the target doesn't require (so "." won't pull onnxruntime on Intel).
-          # NOTE: the .deb package is system-managed and does NOT bundle
-          # faster-whisper. Frozen-app guidance sends users to the ASR-capable
-          # AppImage or a separate pipx install; pip cannot extend this bundle.
+          # would only slow the build.
+          # The [asr] extra is installed so the spec's excludes are exercised
+          # against a real install (the engine ships as the ASR pack, not in the
+          # tree); requirements.lock pins transitive deps to known-good versions
+          # and the pack manifest pins the same ones. Version-constraint form (no
+          # --require-hashes): cross-platform safe because an incomplete lock
+          # never fails the build on unlisted packages, and a constraint never
+          # force-installs a package the target doesn't require (so "." won't pull
+          # onnxruntime on Intel).
           pip install "${{ matrix.install_target }}" -c requirements.lock
 
       # PyInstaller bootloader handling. The prebuilt PyPI wheel ships a bootloader
@@ -971,21 +971,27 @@ jobs:
           "SMOKE_GGML_MODEL_PATH=$dest" | Out-File -FilePath $env:GITHUB_ENV -Append
           Write-Host "Fetched ggml-tiny.bin for decode smoke: $dest"
 
-      # Seed the language dependency packs the language smokes need. No mining
-      # engine other than Japanese is bundle content: each is an in-app download
-      # pack (anki_miner/services/language_pack_installer.py), so the smoke has to
-      # be handed one or the leg cannot run at all. Every platform needs them —
-      # BUNDLE_SMOKE_LANGS carries "zh ko" on all legs.
+      # Seed the dependency packs the bundle smokes need: the zh/ko language
+      # packs and the ASR engine pack. No mining engine other than Japanese, and
+      # no CTranslate2 engine, is bundle content: each is an in-app download
+      # pack (anki_miner/services/language_pack_installer.py,
+      # anki_miner/services/asr/asr_pack_installer.py), so the smoke has to be
+      # handed one or the leg cannot run at all. Every platform needs them —
+      # BUNDLE_SMOKE_LANGS carries "zh ko" on all legs and the asr leg runs on
+      # all four.
       #
-      # One step for every OS (shell: bash), driving the app's OWN installer
-      # against the manifests in anki_miner/languages/<code>/pack.py: no URL or
-      # checksum is duplicated here, and the platform/ABI choice is the same code
-      # the app runs. FAIL-OPEN with a LOUD warning if a download fails (a PyPI
-      # outage must not red a release) — bundle_smoke.sh then skips that
-      # language's leg. A checksum mismatch still fails the step closed.
-      - name: Seed the language packs for the language smokes
+      # One step for every OS (shell: bash), driving the app's OWN installers
+      # against the manifests in anki_miner/languages/<code>/pack.py and
+      # anki_miner/services/asr/asr_pack.py: no URL or checksum is duplicated
+      # here, and the platform/ABI choice is the same code the app runs.
+      # FAIL-OPEN with a LOUD warning if a download fails on the network (a PyPI
+      # outage must not red a release) — bundle_smoke.sh then skips that pack's
+      # leg, and scripts/release_dryrun.sh refuses a release whose asr leg
+      # skipped. An HTTP 4xx (a wrong pin) and a checksum mismatch still fail
+      # the step closed.
+      - name: Seed the language packs and the ASR pack for the smokes
         shell: bash
-        run: python scripts/fetch_language_pack_seeds.py "$RUNNER_TEMP/lang_pack_seeds" zh ko
+        run: python scripts/fetch_language_pack_seeds.py "$RUNNER_TEMP/lang_pack_seeds" zh ko asr
 
       # Seed the app-managed yt-dlp the youtube smoke needs. The bundle ships no
       # yt-dlp (it is an in-app download), so the leg has to be handed one. Drives
@@ -1002,12 +1008,14 @@ jobs:
       # cannot drift. The script runs, fail-closed:
       #   - youtube : the app-managed yt-dlp (seeded above) resolves through the
       #               resolver and runs --version + impersonate targets (no network)
-      #   - asr     : faster-whisper + ctranslate2 + av native libs resolve, no
-      #               model download (HF_HUB_OFFLINE=1 set inside the script). A
-      #               model download in CI is never acceptable (150 MB+, runtime-
-      #               provided). This is the smoke that caught the v2.7.1 av miss.
-      #               SKIPPED on Intel macOS (BUNDLE_SMOKE_SKIP_ASR=1) — that
-      #               build ships no [asr] extra, so the smoke would fail.
+      #   - asr-absent : the BARE bundle reports every ASR pack package absent
+      #               (find_spec None) — the guard against stripping that leaves
+      #               pure-Python halves in the PYZ. Runs on every leg.
+      #   - asr     : faster-whisper + ctranslate2 + av import FROM the seeded
+      #               pack ($ANKI_MINER_HOME/asr_pack), no model download
+      #               (HF_HUB_OFFLINE=1 set inside the script). This is the smoke
+      #               that caught the v2.7.1 av miss. Skips loudly if the seed
+      #               fetch fell open.
       #   - ffmpeg  : bundled ffmpeg ships libmp3lame/libopus/libsvtav1/libwebp/
       #               libwebp_anim (anim asserted separately so a still-only webp
       #               build can't pass while animated screenshots fail at runtime).
@@ -1036,11 +1044,11 @@ jobs:
           # whispercpp construct+decode smoke (DEFECT 1/2 coverage). Empty on macOS
           # and when the HF download fell open, so the smoke stays import-only there.
           BUNDLE_SMOKE_GGML_MODEL: ${{ env.SMOKE_GGML_MODEL_PATH }}
-          # Language-pack seeds from the step above, one <code>/ dir per language.
-          # The bundle excludes every non-Japanese engine (they download in-app),
-          # so the smoke copies these into its isolated home before each language
-          # leg. A language whose download fell open has no seed dir, and its leg
-          # then skips instead of failing.
+          # Pack seeds from the step above, one <code>/ dir per language plus
+          # asr/. The bundle excludes every non-Japanese engine and the ASR engine
+          # (they download in-app), so the smoke copies these into its isolated
+          # home before each leg. A pack whose download fell open has no seed dir,
+          # and its leg then skips instead of failing.
           BUNDLE_SMOKE_PACK_SEEDS: ${{ runner.temp }}/lang_pack_seeds
           # Mining-language tokenizer legs (opt-in in bundle_smoke.sh so the
           # local invocation-count test stays valid).
@@ -1207,8 +1215,9 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           # The .deb packages the SAME full PyInstaller tree as the AppImage:
-          # bundled GPL ffmpeg, libmpv, and both ASR backends (faster-whisper/
-          # ctranslate2 + pywhispercpp/ggml-vulkan). The app is GPL-3.0-or-later,
+          # bundled GPL ffmpeg, libmpv, and the whisper.cpp/ggml-vulkan ASR
+          # backend (the CTranslate2 engine is an in-app pack on every artifact,
+          # excluded at Analysis time in anki_miner.spec). The app is GPL-3.0-or-later,
           # so the bundled GPL components are covered by the source offers in
           # licenses/ffmpeg/README.md and licenses/libmpv/README.md — same as
           # every other artifact. The pre-v2.10 lean deb (stripped ASR/ffmpeg/
@@ -1216,7 +1225,8 @@ jobs:
           # pure-Python halves from the PYZ inside the executable, so find_spec
           # probes reported ASR as present and the app offered a Download button
           # that could never work. Bundle-parity with the AppImage means the
-          # bundled smokes above cover exactly what .deb users run.
+          # bundled smokes above cover exactly what .deb users run. That failure
+          # is now guarded on every leg by the asr-absent smoke.
           set -euo pipefail
           # nfpm reads dist/anki-miner.metainfo.xml. The AppImage build already
           # wrote it; rendering again keeps the .deb from depending on that

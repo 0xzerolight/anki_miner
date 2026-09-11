@@ -320,22 +320,43 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         # startup. Bytecode analysis should find the IMPORT opcode; pinned
         # here like mpv/ffsubsync so the graph never loses it.
         "budoux",
+        # Modules the ASR engine pack imports at package load that nothing in
+        # the BASE graph reaches once the pack packages are excluded below. The
+        # base imports bare `tqdm` (ffsubsync/speech_transformers.py,
+        # pywhispercpp/utils.py) and tqdm/__init__ never imports .auto/.asyncio/
+        # .contrib; secrets has no base importer. Each is named by its pack
+        # importer:
+        #   tqdm.auto               faster_whisper/utils.py, huggingface_hub/file_download.py
+        #   tqdm.contrib.concurrent huggingface_hub/_snapshot_download.py, _commit_api.py
+        #   tqdm.autonotebook, tqdm.asyncio  pulled by tqdm.auto
+        #   secrets                 huggingface_hub
+        #   asyncio                 anyio, httpx, httpcore — belt-and-braces only:
+        #                           typing_extensions imports asyncio.coroutines
+        #                           function-locally, which the analysis follows,
+        #                           so the base keeps it; pinned so that never
+        #                           silently stops being true.
+        # A missing one is a ModuleNotFoundError from the seeded pack on every
+        # platform; the seeded asr smoke (scripts/bundle_smoke.sh) is the gate,
+        # tests/unit/test_asr_pack_bundling.py pins the list.
+        "asyncio",
+        "secrets",
+        "tqdm.auto",
+        "tqdm.autonotebook",
+        "tqdm.asyncio",
+        "tqdm.contrib.concurrent",
         # Per-language tokenizer + pack manifest modules; see the generator
         # above for why bytecode analysis cannot find them.
         *language_hiddenimports,
     ],
-    # PyInstaller-Hooks/ holds hook-faster_whisper.py (faster_whisper + ctranslate2
-    # + av) and hook-pywhispercpp.py (the whisper.cpp/ggml Vulkan ASR backend).
-    # Both target packages are imported function-locally in services/asr/_engine.py,
-    # but PyInstaller's bytecode analysis finds those IMPORT opcodes and pulls the
-    # packages into the graph, so the matching hooks auto-run from here — no
-    # hiddenimports entry needed.  Each hook collects nothing when its package is
-    # absent (collect_all returns empty lists; hook-pywhispercpp also short-circuits
-    # its explicit ggml/whisper-lib collection on a missing find_spec), so the
-    # Intel-mac / no-[asr] build (which installs neither faster_whisper nor
-    # pywhispercpp) is unaffected: nothing is forced onto macOS.  The Linux/Windows
-    # release jobs install the from-source Vulkan pywhispercpp wheel before this
-    # spec runs (see release.yml).
+    # PyInstaller-Hooks/ holds hook-pywhispercpp.py (the whisper.cpp/ggml Vulkan
+    # ASR backend). pywhispercpp is imported function-locally in
+    # services/asr/_engine.py, but PyInstaller's bytecode analysis finds that
+    # IMPORT opcode and pulls the package into the graph, so the hook auto-runs
+    # from here — no hiddenimports entry needed. It collects nothing when the
+    # package is absent (the macOS legs install no Vulkan wheel), so nothing is
+    # forced onto macOS. The CTranslate2 stack (faster_whisper + ctranslate2 + av
+    # + their exclusive deps) is NOT collected any more: it ships as the ASR
+    # engine pack (services/asr/asr_pack.py) and is excluded below.
     hookspath=[os.path.join(project_root, "PyInstaller-Hooks")],
     hooksconfig={},
     runtime_hooks=[],
@@ -351,12 +372,42 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "PySide6",
         "PyQt5",
         # onnxruntime (Whisper VAD backend) ships as an on-demand downloadable
-        # pack (gui/workers/onnx_pack_download_worker.py), not in the bundle, to
-        # keep it lean — availability is probed at runtime via find_spec.  av,
-        # however, is a HARD import of faster_whisper (faster_whisper/audio.py
-        # does `import av` at package load), so it MUST be bundled or the offline
-        # ASR bundle smoke fails with ModuleNotFoundError: No module named 'av'.
+        # pack (services/asr/onnx_pack_installer.py), not in the bundle —
+        # availability is probed at runtime via find_spec.
         "onnxruntime",
+        # The CTranslate2 ASR stack ships as the ASR engine pack
+        # (services/asr/asr_pack.py + asr_pack_installer.py): ~80 MB compressed
+        # that most users never needed, downloaded once from Settings ->
+        # Transcription & Alignment by those who generate subtitles. Every entry
+        # but hf_xet is a pack component — the set is the Requires-Dist closure
+        # of faster-whisper that nothing else in the bundle imports, filtered to
+        # what the ASR runtime path actually imports; tests/unit/
+        # test_asr_pack_bundling.py reads it from the manifest so the two cannot
+        # drift. hf_xet is excluded but NOT shipped: huggingface_hub activates
+        # xet only on a dist-info the pack does not carry (and the bundle never
+        # did), so the wheel would be inert bytes. yaml: its only other importer,
+        # numpy/__config__.py, imports it FUNCTION-locally inside show(mode=
+        # "dicts"), which nothing calls — do not "repair" this by keeping yaml.
+        # Excluding at Analysis time is the ONLY safe way out: the pre-v2.10 lean
+        # .deb stripped package dirs after the build, the pure-Python halves
+        # stayed in the PYZ, find_spec reported the engine present and the
+        # Download button could never work (release.yml, .deb step). The
+        # bare-bundle smoke (ANKI_MINER_SMOKE=asr-absent) asserts every name
+        # below is absent; the hiddenimports block above keeps what these
+        # packages needed FROM the base (tqdm.auto, asyncio, secrets).
+        # numpy/tqdm/certifi/idna/packaging/rich/click stay: core dependencies.
+        "faster_whisper",
+        "ctranslate2",
+        "av",
+        "tokenizers",
+        "huggingface_hub",
+        "yaml",
+        "filelock",
+        "httpx",
+        "httpcore",
+        "h11",
+        "anyio",
+        "hf_xet",
         # Mining-language engines: every non-Japanese engine ships as an
         # on-demand download pack (services/language_pack_installer.py), not in
         # the bundle. Bundling them grew the artifacts ~20% on Linux and ~30% on
@@ -417,10 +468,10 @@ a.binaries += ffmpeg_toc
 # the host GPU driver's own ICD loader (ggml's Vulkan backend degrades to a
 # graceful dlopen skip when no loader is present, same as the CPU fallback).
 #
-# PLAIN SONAMES ONLY: auditwheel-mangled wheel-vendored copies (e.g. PyAV's
-# libasound-c7818c60.so.2.0.0) are a hard NEEDED of their wheel's extension and
-# MUST stay bundled — filtering one broke the asr smoke (ImportError on av).
-# The mangled names have a -<hash> before ".so", so anchoring "lib<name>.so"
+# PLAIN SONAMES ONLY: auditwheel-mangled wheel-vendored copies (a
+# lib<name>-<hash>.so.N beside a wheel's extension) are a hard NEEDED of that
+# extension and MUST stay bundled — the filter must never match them. The
+# mangled names have a -<hash> before ".so", so anchoring "lib<name>.so"
 # matches only the plain system sonames bindepend picked up via libmpv (and,
 # for vulkan, the plain "libvulkan.so.1" the runner's system package
 # provides — never a hash-mangled wheel-vendored copy).

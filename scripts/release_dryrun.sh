@@ -259,6 +259,49 @@ assert_youtube_ran "windows-latest"
 assert_youtube_ran "macos-latest"
 assert_youtube_ran "macos-15-intel"
 
+# Same executed-not-skipped defense for the two ASR legs, on every leg. The
+# engine is an in-app pack: bundle_smoke.sh proves the BARE bundle has none of
+# its packages (BUNDLED_ASR_ABSENT_PASS) and then imports the engine FROM the
+# seeded pack (BUNDLED_ASR_PACK_PASS). The seed is fetched by
+# scripts/fetch_language_pack_seeds.py, which falls open on a transport
+# failure and prints "SKIP asr" downstream — so a release with a dead PyPI
+# would otherwise look green with zero ASR proof. Both markers only print on
+# the ran-and-passed path; "SKIP asr" only on skip.
+assert_asr_ran() { # $1 = os label present in the leg's job name
+  local os="$1"
+  local job_id
+  job_id="$(echo "$JOBS_JSON" | jq -r --arg os "$os" \
+    'first(.jobs[] | select((.name | startswith("build")) and (.name | contains($os))) | .databaseId) // empty')"
+  if [ -z "$job_id" ]; then
+    return 0 # leg not in this selection; nothing to assert
+  fi
+  local jlog="$LOG_DIR/job-$job_id.log"
+  for _ in $(seq 1 30); do
+    gh run view "$RUN_ID" --job "$job_id" --log >"$jlog" 2>/dev/null || true
+    if grep -qE "BUNDLED_ASR_PACK_PASS|SKIP asr" "$jlog" 2>/dev/null; then
+      break
+    fi
+    sleep 6
+  done
+  if grep -q "SKIP asr" "$jlog" 2>/dev/null; then
+    echo "ERROR: seeded asr smoke was SKIPPED on the '$os' leg (seed fetch fell open, or the escape hatch is set)." >&2
+    exit 1
+  fi
+  if ! grep -q "BUNDLED_ASR_ABSENT_PASS" "$jlog" 2>/dev/null; then
+    echo "ERROR: bare-bundle asr smoke pass-marker absent for the '$os' leg." >&2
+    exit 1
+  fi
+  if ! grep -q "BUNDLED_ASR_PACK_PASS" "$jlog" 2>/dev/null; then
+    echo "ERROR: seeded asr smoke pass-marker absent for the '$os' leg (smoke may not have executed)." >&2
+    exit 1
+  fi
+  echo "    asr smokes executed+passed on '$os'."
+}
+assert_asr_ran "ubuntu-22.04"
+assert_asr_ran "windows-latest"
+assert_asr_ran "macos-latest"
+assert_asr_ran "macos-15-intel"
+
 count_log_matches() { # $1 = ERE, $2 = log path
   local pattern="$1"
   local log_path="$2"
@@ -317,5 +360,5 @@ fi
 echo "############################################"
 echo "RELEASE DRY-RUN GREEN (run $RUN_ID, platforms=$PLATFORMS)"
 echo "  build matrix + bundle smokes passed; release + ci-gate jobs skipped;"
-echo "  no GitHub Release created; Vulkan + mpv + youtube + Windows installer smokes verified."
+echo "  no GitHub Release created; Vulkan + mpv + youtube + ASR + Windows installer smokes verified."
 echo "############################################"

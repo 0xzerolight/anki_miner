@@ -4,6 +4,8 @@ Hidden ``ANKI_MINER_SMOKE`` modes:
 
 * ``youtube``, ``asr``, ``whispercpp`` and ``ja``/``ko``/``zh`` validate frozen
   dependencies before Qt starts.
+* ``asr-absent`` asserts the opposite of ``asr``: the bare bundle reports every
+  ASR pack package absent.
 * ``installer`` runs full GUI composition while suppressing optional startup
   work, validates installed-runtime invariants, and writes an atomic result
   marker before exiting.
@@ -12,6 +14,7 @@ Hidden ``ANKI_MINER_SMOKE`` modes:
 import atexit
 import contextlib
 import faulthandler
+import importlib.util
 import locale
 import logging
 import os
@@ -82,6 +85,7 @@ from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.widgets.video_tab import VideoTab
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.services.asr.asr_pack_installer import asr_pack_root, ensure_asr_pack_on_syspath
 from anki_miner.services.language_pack_installer import ensure_language_packs_on_syspath, language_pack_root
 from anki_miner.services.startup_store_recovery import run_startup_store_recovery
 from anki_miner.services.stats_service import StatsService
@@ -263,10 +267,11 @@ def _run_asr_bundled_smoke() -> int:
     """Env-var-gated smoke path for PyInstaller ASR bundle validation.
 
     Triggered by ANKI_MINER_SMOKE=asr. Verifies faster-whisper and ctranslate2
-    survived PyInstaller's collection by calling available() and importing
-    WhisperModel. No model download — HF_HUB_OFFLINE is honoured by the caller.
-    Not a CLI surface — the flag is hidden, env-var-only, and exits before any
-    Qt init.
+    import from the seeded ASR pack (``$ANKI_MINER_HOME/asr_pack``, put on
+    sys.path by ensure_asr_pack_on_syspath at the top of main) by calling
+    available() and importing WhisperModel. No model download — HF_HUB_OFFLINE
+    is honoured by the caller. Not a CLI surface — the flag is hidden,
+    env-var-only, and exits before any Qt init.
     """
     from anki_miner.services.asr import _engine
 
@@ -279,6 +284,38 @@ def _run_asr_bundled_smoke() -> int:
         print(f"BUNDLED_SMOKE_FAIL: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
     print("BUNDLED_SMOKE_PASS: asr faster_whisper+ctranslate2 resolved")
+    return 0
+
+
+def _run_asr_pack_absent_bundled_smoke() -> int:
+    """Env-var-gated smoke: the BARE bundle must report the ASR engine absent.
+
+    Triggered by ANKI_MINER_SMOKE=asr-absent, in an isolated home with no pack.
+    The engine ships as the ASR pack (services/asr/asr_pack.py) and the spec
+    excludes every one of its packages — plus hf_xet, excluded but never
+    shipped — at Analysis time; this asserts that exclusion held for each of
+    them (find_spec None) AND that _engine.available(), the probe the app
+    trusts, agrees. It is the guard against the PYZ-halves failure documented
+    in release.yml's .deb step: a package stripped after the build leaves its
+    pure-Python half in the PYZ, find_spec lies, and the Download button can
+    never work. Not a CLI surface — hidden, env-var-only, exits before any Qt
+    init.
+    """
+    from anki_miner.services.asr import _engine
+    from anki_miner.services.asr.asr_pack import PACK
+
+    names = [comp.import_name for comp in PACK.components] + ["hf_xet"]
+    present = [name for name in names if importlib.util.find_spec(name) is not None]
+    if present:
+        print(
+            f"BUNDLED_SMOKE_FAIL: ASR pack packages importable from the bare bundle: {' '.join(present)}",
+            file=sys.stderr,
+        )
+        return 1
+    if _engine.available():
+        print("BUNDLED_SMOKE_FAIL: _engine.available() is True in the bare bundle", file=sys.stderr)
+        return 1
+    print("BUNDLED_SMOKE_PASS: asr pack packages absent from the bare bundle")
     return 0
 
 
@@ -1340,6 +1377,34 @@ def _connect_vad_pack_download(window: MainWindow, settings_tab: SettingsTab) ->
     )
 
 
+def _connect_asr_pack_download(window: MainWindow, settings_tab: SettingsTab) -> None:
+    """Wire the Subtitles panel's "Download transcription engine" button to the worker.
+
+    Status flows back to the panel. On finish, order is load-bearing: the pack
+    root has to be on ``sys.path`` BEFORE the panel re-probes, because the probe
+    answers from find_spec (same rule as _connect_language_pack_download) —
+    otherwise the user downloads the engine and the row still says it is
+    missing. A successful install then re-propagates config so Utilities ->
+    Generate re-runs its own engine probe and enables (the alass precedent).
+    """
+
+    def _tail(request_arg: object, ok: bool, message: str) -> None:
+        ensure_asr_pack_on_syspath()
+        settings_tab.notify_asr_pack_download_finished(ok)
+        if ok:
+            window.config_refreshed.emit(window.get_config())
+
+    def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
+        window.background_tasks.start_asr_pack_download(asr_pack_root(), on_status, on_finished)
+
+    _connect_download(
+        settings_tab.asr_pack_download_requested,
+        set_status=settings_tab.set_asr_pack_status,
+        start=_start,
+        on_finished_tail=_tail,
+    )
+
+
 def _connect_vulkan_download(window: MainWindow, settings_tab: SettingsTab) -> None:
     """Wire the Subtitles panel's "Download Vulkan model" button to the worker.
 
@@ -1675,16 +1740,17 @@ def compose_main_window(
     window.background_tasks.ytdlp_update_result.connect(settings_tab.set_ytdlp_status_from_result)
 
     # Resource download buttons (ASR model, alass, mokuro, CUDA pack, VAD pack,
-    # Vulkan model, language packs): each button hands off to a background
-    # worker and refreshes its panel on finish. The six Subtitles-panel ones
-    # share the connect skeleton in _connect_download; the per-tool builders
-    # carry the differences. The language packs sit on Mining Language, beside
-    # the selector they unlock, and wire per language code.
+    # ASR engine pack, Vulkan model, language packs): each button hands off to a
+    # background worker and refreshes its panel on finish. The seven
+    # Subtitles-panel ones share the connect skeleton in _connect_download; the
+    # per-tool builders carry the differences. The language packs sit on Mining
+    # Language, beside the selector they unlock, and wire per language code.
     for _connect in (
         _connect_asr_download,
         _connect_alass_download,
         _connect_cuda_pack_download,
         _connect_vad_pack_download,
+        _connect_asr_pack_download,
         _connect_vulkan_download,
         _connect_language_pack_download,
     ):
@@ -2047,6 +2113,12 @@ def main():
     # with nothing else set up yet.
     ensure_language_packs_on_syspath()
 
+    # Same rule for the ASR engine pack, and the same position: _engine.available()
+    # is a find_spec probe run by the asr smoke dispatch below, by Settings
+    # construction (the Transcription & Alignment panel probes on build) and by
+    # Utilities -> Generate. Idempotent, never raises.
+    ensure_asr_pack_on_syspath()
+
     installer_smoke = os.environ.get("ANKI_MINER_SMOKE") == "installer"
 
     # Env-var-gated smoke path (PyInstaller bundled-binary validation).
@@ -2057,6 +2129,9 @@ def main():
 
     if os.environ.get("ANKI_MINER_SMOKE") == "asr":
         sys.exit(_run_asr_bundled_smoke())
+
+    if os.environ.get("ANKI_MINER_SMOKE") == "asr-absent":
+        sys.exit(_run_asr_pack_absent_bundled_smoke())
 
     if os.environ.get("ANKI_MINER_SMOKE") == "whispercpp":
         sys.exit(_run_whispercpp_bundled_smoke())

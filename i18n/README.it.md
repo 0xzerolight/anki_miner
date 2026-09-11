@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:9325d0b0e576e9a4 -->
+<!-- i18n-source: README.md sha256:3bdd638d22b50e04 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -72,7 +72,7 @@ Scarica il pacchetto per la tua piattaforma dall'[ultima versione](https://githu
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (altro) | `AnkiMiner-*-Linux-x86_64.AppImage` |
 
-¹ Esclude la generazione locale di sottotitoli con Whisper e le schermate AVIF. Per la piena funzionalità: `pipx install "anki-miner[asr]"`.
+¹ Senza screenshot AVIF né rimozione dei silenzi per i sottotitoli generati.
 
 ### Note sul primo avvio (build non firmate)
 

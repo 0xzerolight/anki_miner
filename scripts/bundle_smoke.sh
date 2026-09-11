@@ -11,7 +11,12 @@
 # Smokes (all headless via QT_QPA_PLATFORM=offscreen; none touch the network):
 #   1. youtube   ANKI_MINER_SMOKE=youtube                  -> BUNDLED_SMOKE_PASS
 #                 (needs a seed under BUNDLE_SMOKE_YTDLP_SEED)
+#   2a. asr-absent ANKI_MINER_SMOKE=asr-absent               -> BUNDLED_SMOKE_PASS
+#                  (bare bundle: every ASR pack package must be absent)
 #   2. asr       ANKI_MINER_SMOKE=asr  HF_HUB_OFFLINE=1     -> BUNDLED_SMOKE_PASS
+#                 needs the pack seed under BUNDLE_SMOKE_PACK_SEEDS/asr (the
+#                 engine is an in-app download, not bundle content); without one
+#                 the leg skips.
 #   2c. mpv      ANKI_MINER_MPV_PROBE=1                     -> MPV_PROBE_OK
 #   2d. language  ANKI_MINER_SMOKE=<code> (opt-in: BUNDLE_SMOKE_LANGS) -> BUNDLED_SMOKE_PASS
 #                 each leg needs a pack seed under BUNDLE_SMOKE_PACK_SEEDS/<code>
@@ -96,19 +101,61 @@ else
 fi
 echo
 
-# --- 2. ASR smoke: faster-whisper + ctranslate2 + av resolve (no download) ----
-# Skipped on builds without the [asr] extra (Intel macOS: onnxruntime has no
-# x86_64-mac wheel). BUNDLE_SMOKE_SKIP_ASR=1 -> skip; the bundle ships no
-# faster-whisper, so the smoke would (correctly) fail.
+# --- 2a. ASR bare-bundle smoke: every engine-pack package is ABSENT ------------
+# The CTranslate2 stack (faster_whisper, ctranslate2, av, ...) ships as the ASR
+# engine pack (anki_miner/services/asr/asr_pack.py) and anki_miner.spec excludes
+# each of its packages at Analysis time. This leg runs the frozen binary in an
+# EMPTY home and asserts find_spec is None for every one of them: the guard
+# against the PYZ-halves failure (release.yml, .deb step) where a package
+# stripped after the build kept its pure-Python half in the PYZ, find_spec lied,
+# and the app offered a Download button that could never work. Needs no seed and
+# no [asr] extra, so it runs on every leg and is never skipped.
+echo "=== smoke: asr-absent ==="
+if ANKI_MINER_SMOKE=asr-absent QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke_asr_absent.log \
+  && grep -q "BUNDLED_SMOKE_PASS" smoke_asr_absent.log; then
+  # Marker read by scripts/release_dryrun.sh: printed ONLY on the ran-and-passed path.
+  echo "BUNDLED_ASR_ABSENT_PASS"
+  echo "PASS asr-absent"
+else
+  echo "FAIL asr-absent"
+  FAILED+=("asr-absent")
+fi
+echo
+
+# --- 2. ASR seeded smoke: the engine runs FROM the pack (no download) ----------
+# The seed under BUNDLE_SMOKE_PACK_SEEDS/asr is what the app's own installer
+# would download (scripts/fetch_language_pack_seeds.py); it is copied into the
+# isolated home's asr_pack/, which app.main() appends to sys.path before the
+# dispatch. Same fail-open shape as the language legs: no seed means the FETCH
+# did not happen (PyPI outage), which skips loudly rather than reds a release
+# over a correct bundle. BUNDLE_SMOKE_SKIP_ASR=1 is the explicit escape hatch.
 echo "=== smoke: asr ==="
 if [ "${BUNDLE_SMOKE_SKIP_ASR:-}" = "1" ]; then
-  echo "SKIP asr (BUNDLE_SMOKE_SKIP_ASR=1 — build has no [asr] extra)"
-elif ANKI_MINER_SMOKE=asr HF_HUB_OFFLINE=1 QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke_asr.log \
-  && grep -q "BUNDLED_SMOKE_PASS" smoke_asr.log; then
-  echo "PASS asr"
+  echo "SKIP asr (BUNDLE_SMOKE_SKIP_ASR=1)"
 else
-  echo "FAIL asr"
-  FAILED+=("asr")
+  # RUNNER_TEMP is a backslash path on Windows (D:\a\_temp) and this runs under
+  # bash on every OS; normalise the separators or the seed silently goes unfound.
+  ASR_SEED="${BUNDLE_SMOKE_PACK_SEEDS:-}"
+  ASR_SEED="${ASR_SEED//\\//}/asr"
+  if [ -n "${BUNDLE_SMOKE_PACK_SEEDS:-}" ] && [ -d "$ASR_SEED" ]; then
+    echo "Seeding the ASR engine pack from $ASR_SEED"
+    cp -R "$ASR_SEED" "$ANKI_MINER_HOME/asr_pack"
+    if ANKI_MINER_SMOKE=asr HF_HUB_OFFLINE=1 QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke_asr.log \
+      && grep -q "BUNDLED_SMOKE_PASS" smoke_asr.log; then
+      # Marker read by scripts/release_dryrun.sh: printed ONLY on the
+      # ran-and-passed path; "SKIP asr" below only on skip. That gate is what
+      # keeps a fell-open seed from turning into a green release with no ASR
+      # proof on any leg.
+      echo "BUNDLED_ASR_PACK_PASS"
+      echo "PASS asr"
+    else
+      echo "FAIL asr"
+      FAILED+=("asr")
+    fi
+  else
+    echo "::warning::no asr seed under BUNDLE_SMOKE_PACK_SEEDS — the ASR engine pack was not fetched, so the seeded asr leg cannot run"
+    echo "SKIP asr"
+  fi
 fi
 echo
 
@@ -317,8 +364,9 @@ echo
 # OPT-IN, empty by default. BUNDLE_SMOKE_LANGS is a space-separated list of
 # mining language codes; release.yml sets it to "zh ko". Empty means the loop runs
 # zero times, which is what keeps the app-invocation count (and therefore
-# tests/unit/test_bundle_smoke.py's len(homes) == 5) unchanged for every caller
-# that does not opt in.
+# tests/unit/test_bundle_smoke.py's len(homes) == 5: youtube, asr-absent, the
+# Vulkan probe, whispercpp, mpv — the seeded asr leg skips without a seed)
+# unchanged for every caller that does not opt in.
 if [ -n "${BUNDLE_SMOKE_LANGS:-}" ]; then
   read -r -a SMOKE_LANGS <<<"${BUNDLE_SMOKE_LANGS}"
   for lang in "${SMOKE_LANGS[@]}"; do

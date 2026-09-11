@@ -161,7 +161,7 @@ class BackgroundTaskController(QObject):
         self.jmdict_migration_worker: ImportWorker | None = None
         self._dictionary_mutation_panel: ChainSettingsPanelBase | None = None
         self._jmdict_migration_lease: tuple[ImportWorker, ChainSettingsPanelBase, MutationToken] | None = None
-        # The six resource install/download handles are all InstallWorker now
+        # The seven resource install/download handles are all InstallWorker now
         # (ARC-010), but stay separate attributes so each releases independently
         # and the shutdown join can address them by name.
         self.asr_model_download_worker: InstallWorker | None = None
@@ -169,6 +169,7 @@ class BackgroundTaskController(QObject):
         self.mokuro_install_worker: InstallWorker | None = None
         self.cuda_pack_download_worker: InstallWorker | None = None
         self.onnx_pack_download_worker: InstallWorker | None = None
+        self.asr_pack_download_worker: InstallWorker | None = None
         self.vulkan_model_download_worker: InstallWorker | None = None
         self.language_pack_workers = {}
         self.restyle_cards_worker: RestyleCardsWorker | None = None
@@ -481,6 +482,31 @@ class BackgroundTaskController(QObject):
             on_finished,
         )
 
+    def start_asr_pack_download(
+        self,
+        root: Path,
+        on_status: Callable[[str], None],
+        on_finished: Callable[[bool, str], None],
+    ) -> None:
+        """Start the ASR engine pack download worker unless one is running.
+
+        Args:
+            root: Directory the pack is placed in;
+                ``services.asr.asr_pack_installer.asr_pack_root()``.
+            on_status: Slot for ``status(str)`` — typically
+                ``SettingsTab.set_asr_pack_status``.
+            on_finished: Slot for ``result_ready(bool, str)`` — called with
+                ``(ok, message)`` when the install completes or fails.
+        """
+        from anki_miner.gui.workers.install_worker import InstallWorker, asr_pack_task
+
+        self._start_install(
+            "asr_pack_download_worker",
+            lambda: InstallWorker(asr_pack_task(root), parent=self),
+            on_status,
+            on_finished,
+        )
+
     def start_vulkan_download(
         self,
         asr_model: str,
@@ -518,7 +544,7 @@ class BackgroundTaskController(QObject):
         on_status: Callable[[str], None],
         on_finished: Callable[[bool, str], None],
     ) -> None:
-        """Shared starter for the six resource install/download workers.
+        """Shared starter for the seven resource install/download workers.
 
         Guards against a concurrent run on ``attr``, builds the worker via
         ``factory`` (deferred so a refused start constructs nothing), stores it
@@ -713,8 +739,9 @@ class BackgroundTaskController(QObject):
 
         # Controller-owned workers: validation, update check, yt-dlp update,
         # JMdict migration, ASR model download, alass install, mokuro install,
-        # CUDA pack download, onnxruntime (VAD) pack download, Vulkan model
-        # download, and every in-flight language-pack download.
+        # CUDA pack download, onnxruntime (VAD) pack download, ASR engine pack
+        # download, Vulkan model download, and every in-flight language-pack
+        # download.
         join(self.validation_worker)
         join(self.update_worker)
         join(self.ytdlp_update_worker)
@@ -724,6 +751,7 @@ class BackgroundTaskController(QObject):
         join(self.mokuro_install_worker)
         join(self.cuda_pack_download_worker)
         join(self.onnx_pack_download_worker)
+        join(self.asr_pack_download_worker)
         join(self.vulkan_model_download_worker)
         # Dict-keyed, so the join has to iterate rather than name a handle: a
         # language missed here is a QThread Qt destroys mid-download, which hangs

@@ -218,6 +218,7 @@ class TestShutdownJoinsOffThreadWorkers:
             "mokuro_install_worker",
             "cuda_pack_download_worker",
             "onnx_pack_download_worker",
+            "asr_pack_download_worker",
             "vulkan_model_download_worker",
             "restyle_cards_worker",
             "resource_download_worker",
@@ -890,6 +891,54 @@ class TestStartVulkanDownload:
 
         assert controller.vulkan_model_download_worker is None
         worker.deleteLater.assert_called_once()
+
+
+def test_start_asr_pack_download_builds_an_install_worker_on_its_own_handle(monkeypatch, tmp_path):
+    """The starter goes through _start_install: handle set, factory ran, slots wired, worker started."""
+    from anki_miner.gui.controllers.background_tasks import BackgroundTaskController
+    from anki_miner.gui.workers import install_worker as iw
+
+    class _Signal:
+        def __init__(self):
+            self.slots: list[object] = []
+
+        def connect(self, slot):
+            self.slots.append(slot)
+
+    built: list[tuple[object, object]] = []
+
+    class _FakeWorker:
+        def __init__(self, task, parent=None):
+            built.append((task, parent))
+            self.status = _Signal()
+            self.result_ready = _Signal()
+            self.finished = _Signal()
+            self.started = False
+
+        def start(self):
+            self.started = True
+
+        def isRunning(self):
+            return self.started
+
+    monkeypatch.setattr(iw, "InstallWorker", _FakeWorker)
+    ctrl = BackgroundTaskController.__new__(BackgroundTaskController)
+    ctrl.asr_pack_download_worker = None
+    on_status = lambda _s: None  # noqa: E731
+    on_finished = lambda _ok, _m: None  # noqa: E731
+
+    ctrl.start_asr_pack_download(tmp_path, on_status, on_finished)
+
+    worker = ctrl.asr_pack_download_worker
+    assert isinstance(worker, _FakeWorker) and worker.started
+    assert len(built) == 1 and callable(built[0][0]) and built[0][1] is ctrl
+    assert worker.status.slots == [on_status]
+    assert worker.result_ready.slots == [on_finished]
+    assert len(worker.finished.slots) == 1
+
+    # A second start while the first runs is refused (isRunning is True).
+    ctrl.start_asr_pack_download(tmp_path, on_status, on_finished)
+    assert len(built) == 1
 
 
 class _FakeRestyleWorker(QObject):
