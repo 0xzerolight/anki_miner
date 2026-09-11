@@ -18,6 +18,7 @@ from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     WordCurationDialog,
 )
 from anki_miner.models import TokenizedWord
+from anki_miner.services.media_extractor import resolve_screenshot_time
 
 ENTRIES = [(5.0, 7.0, "食べる"), (20.0, 22.0, "走る")]
 
@@ -99,6 +100,73 @@ class TestButtonPresence:
         """The buttons live inside the player pane, so saved layouts survive."""
         dlg, _ = _dialog(qtbot, words, existing_video)
         assert dlg._side_key == "player"
+
+
+class TestPreviewAgreement:
+    """The preview parks on the frame the card's screenshot will be grabbed at.
+
+    It used to park on the line's start while extraction grabbed
+    ``screenshot_offset`` seconds later, so the frame the user judged and the
+    frame they got were never the same picture. Expected values come from the
+    extraction phase's own resolver, never from a number restated here.
+    """
+
+    def test_an_unpicked_word_previews_the_frame_the_card_gets(self, qtbot, words, existing_video):
+        dlg, mock_player = _dialog(qtbot, words, existing_video, screenshot_offset=1.0)
+        _focus(dlg, 0)
+        expected = resolve_screenshot_time(words[0], 5.0, 2.0, 1.0)
+        assert expected == 6.0  # the offset the card uses, not the cue start
+        mock_player.seek_seconds.assert_called_once_with(expected)
+
+    def test_a_short_cue_previews_the_capped_offset(self, qtbot, existing_video):
+        """A cue shorter than twice the offset cannot overshoot its own window."""
+        short = TokenizedWord(
+            surface="走った",
+            lemma="走る",
+            reading="ハシル",
+            sentence="走るのテスト",
+            start_time=10.0,
+            end_time=10.4,
+            duration=0.4,
+            pos="動詞",
+        )
+        dlg, mock_player = _dialog(qtbot, [short], existing_video, screenshot_offset=1.0)
+        _focus(dlg, 0)
+        expected = resolve_screenshot_time(short, 10.0, 0.4, 1.0)
+        assert expected == pytest.approx(10.2)
+        mock_player.seek_seconds.assert_called_once_with(expected)
+
+    def test_a_picked_word_previews_its_picked_frame(self, qtbot, words, existing_video):
+        dlg, mock_player = _dialog(qtbot, words, existing_video, seconds=12.5, screenshot_offset=1.0)
+        _focus(dlg, 0)
+        dlg.use_frame_button.click()
+        mock_player.seek_seconds.reset_mock()
+        _focus(dlg, 0)
+        mock_player.seek_seconds.assert_called_once_with(12.5)
+
+    def test_reset_reparks_on_the_computed_frame(self, qtbot, words, existing_video):
+        dlg, mock_player = _dialog(qtbot, words, existing_video, seconds=12.5, screenshot_offset=1.0)
+        _focus(dlg, 0)
+        dlg.use_frame_button.click()
+        mock_player.seek_seconds.reset_mock()
+        dlg.frame_reset_button.click()
+        qtbot.wait(20)  # the re-park is deferred out of the clicked handler
+        mock_player.seek_seconds.assert_called_once_with(resolve_screenshot_time(words[0], 5.0, 2.0, 1.0))
+
+    def test_the_preview_goes_through_the_shared_resolver(self, qtbot, words, existing_video, monkeypatch):
+        """Not a re-derived formula: the dialog calls the extractor's resolver."""
+        monkeypatch.setattr(
+            "anki_miner.gui.widgets.dialogs.word_curation_dialog.resolve_screenshot_time",
+            lambda *a, **k: 123.0,
+        )
+        dlg, mock_player = _dialog(qtbot, words, existing_video)
+        _focus(dlg, 0)
+        mock_player.seek_seconds.assert_called_once_with(123.0)
+
+    def test_the_context_offset_is_honoured(self, qtbot, words, existing_video):
+        dlg, mock_player = _dialog(qtbot, words, existing_video, screenshot_offset=0.25)
+        _focus(dlg, 0)
+        mock_player.seek_seconds.assert_called_once_with(5.25)
 
 
 class TestPauseOnPick:

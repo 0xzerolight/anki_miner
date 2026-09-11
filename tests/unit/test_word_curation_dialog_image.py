@@ -181,6 +181,21 @@ class TestFocusShowsPage:
         assert dlg.page_image_view.caption_text == "p.3"
         assert dlg.page_image_view.current_box == units[5].block_box
 
+    def test_a_frame_time_never_reaches_the_page_index(self, qtbot, sync_off_thread):
+        """``start_time`` is a unit index here, not a time.
+
+        The screenshot frame the video preview parks on rides a separate keyword
+        precisely so no second-adjusted value can land in ``int(start_time)``
+        and request the wrong page.
+        """
+        units = _make_units((0, "001.png", "p.1"), (5, "003.png", "p.3"))
+        dlg = WordCurationDialog([_make_word("食べる", 0)], media_context=_image_context(units))
+        qtbot.addWidget(dlg)
+
+        dlg._preview_scene(5.0, frame_time=6.0)
+        assert dlg.page_image_view.caption_text == "p.3"
+        assert dlg.page_image_view.current_box == units[5].block_box
+
 
 # ---------------------------------------------------------------------------
 # Placeholders

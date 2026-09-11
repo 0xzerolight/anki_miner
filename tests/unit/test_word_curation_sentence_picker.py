@@ -329,7 +329,8 @@ class TestPickerPlayerSeek:
         # synchronous currentRowChanged emission), so drive the loop before
         # asserting — a single click must land the preview.
         qtbot.waitUntil(lambda: mock_player.seek_seconds.called, timeout=1000)
-        mock_player.seek_seconds.assert_called_with(9.0)
+        # 9.0 + screenshot_offset: the preview parks where the card's frame comes from.
+        mock_player.seek_seconds.assert_called_with(10.0)
         mock_player.pause.assert_called()
 
 

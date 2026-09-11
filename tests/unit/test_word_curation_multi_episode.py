@@ -14,6 +14,7 @@ from anki_miner.gui.widgets.dialogs.word_curation_dialog import (
     WordCurationDialog,
 )
 from anki_miner.models import TokenizedWord
+from anki_miner.services.media_extractor import resolve_screenshot_time
 
 
 def _word(
@@ -111,7 +112,10 @@ class TestLazyEpisodeSwitch:
         _focus_row(dlg, 0)
         resolver.assert_not_called()
         player.set_source.assert_not_called()
-        player.seek_seconds.assert_called_with(words[0].start_time)
+        # +screenshot_offset: the preview parks where the card's frame comes from.
+        player.seek_seconds.assert_called_with(
+            resolve_screenshot_time(words[0], words[0].start_time, words[0].duration, 1.0)
+        )
 
     def test_cross_episode_focus_resolves_and_swaps(self, qtbot, ep1, ep2, sync_off_thread):
         ep2_ctx = _ctx_for(ep2)
@@ -129,7 +133,8 @@ class TestLazyEpisodeSwitch:
             secondary_offset=0.0,
         )
         # Seek re-fired after the swap; seek_seconds self-defers until loaded.
-        player.seek_seconds.assert_called_with(7.0)
+        # 7.0 + screenshot_offset: the preview parks where the card's frame comes from.
+        player.seek_seconds.assert_called_with(8.0)
         assert dlg._displayed_media_video == ep2
 
     def test_second_visit_uses_cache(self, qtbot, ep1, ep2, sync_off_thread):
@@ -189,7 +194,8 @@ class TestLazyEpisodeSwitch:
         dlg, player = _build_dialog(qtbot, words, _ctx_for(ep1, resolver=None))
         _focus_row(dlg, 1)
         player.set_source.assert_not_called()
-        player.seek_seconds.assert_called_with(7.0)
+        # 7.0 + screenshot_offset: the preview parks where the card's frame comes from.
+        player.seek_seconds.assert_called_with(8.0)
 
 
 class TestClipPlayGate:

@@ -292,6 +292,42 @@ class TestExtractScreenshot:
         assert cmd[cmd.index("-q:v") + 1] == "2"
         assert cmd[-1] == str(output_path)
 
+    def test_ss_precedes_the_input_for_an_exact_input_seek(self, service, video_file, tmp_path):
+        """The whole argv, in order, because the ORDER decides which frame lands.
+
+        ``-ss`` before ``-i`` is an input seek: ffmpeg seeks, then decodes and
+        drops frames until the target, so the emitted frame is the first whose
+        pts is at or after it -- the same frame mpv's exact seek displays, which
+        is what makes the curator's pick land on the card. After ``-i`` it is an
+        output seek, a different contract. And the timestamp goes in via plain
+        ``str()``: formatting it to fewer decimals would round onto a different
+        frame on a high-frame-rate source.
+        """
+        output_path = tmp_path / "output.jpg"
+        mock_proc = _popen_mock()
+
+        with (
+            patch(f"{MODULE}.subprocess.Popen", return_value=mock_proc) as mock_popen,
+            patch.object(Path, "exists", return_value=True),
+        ):
+            service._extract_screenshot(video_file, 2.0, 2.0, output_path, screenshot_time=31 / 15)
+
+        cmd = mock_popen.call_args[0][0]
+        assert cmd[1:] == [
+            "-y",
+            "-ss",
+            str(31 / 15),  # 15 fps frame 31, unrounded
+            "-i",
+            str(video_file),
+            "-frames:v",
+            "1",
+            "-q:v",
+            "2",
+            str(output_path),
+        ]
+        assert cmd.index("-ss") < cmd.index("-i"), "-ss after -i is an output seek"
+        assert cmd.count("-ss") == 1
+
     def test_resolved_time_reaches_the_ss_flag(self, service, video_file, tmp_path):
         """A time resolved by the caller replaces the computed offset."""
         output_path = tmp_path / "output.jpg"

@@ -76,6 +76,7 @@ from anki_miner.languages.registry import get_profile
 from anki_miner.models import SentenceEdit, TokenizedWord
 from anki_miner.services.cue_merge import auto_line_expansion, merge_budget_seconds
 from anki_miner.services.dictionary.preview_html import PREVIEW_CSS, to_preview_html
+from anki_miner.services.media_extractor import resolve_screenshot_time
 from anki_miner.services.secondary_subtitles import match_secondary_line
 from anki_miner.services.word_filter import MergedLineWindow, find_cue_index, merge_cue_window
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
@@ -135,6 +136,11 @@ class CurationMediaContext:
     #: True, because an animated screenshot's window comes from the audio clip
     #: (which the strip already edits), not from a single instant.
     screenshot_animated: bool = False
+    #: ``config.screenshot_offset`` — how far after the line's start the static
+    #: screenshot is grabbed. Carried for the same reason as ``audio_padding``:
+    #: the dialog is built without a config. The preview parks on the frame this
+    #: resolves to, so what the pane shows is the frame the card gets.
+    screenshot_offset: float = 1.0
     #: The mining language's sentence rules when the full-sentence merge is on
     #: (``config.merge_incomplete_cues``), else None. One field carries both
     #: facts: a sentence pick re-runs ``auto_line_expansion`` for the cue it
@@ -1382,8 +1388,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             window = self._expanded_window(chosen, idx)
             start = window.start if window is not None else chosen.start_time
             video = chosen.video_file
+            frame = self._screenshot_instant(chosen, idx, window)
             # Defer: clicked handlers run mid-event — see _on_candidate_chosen.
-            QTimer.singleShot(0, lambda: self._preview_scene(start, video))
+            QTimer.singleShot(0, lambda: self._preview_scene(start, video, frame_time=frame))
 
     def _refresh_expansion_buttons(self) -> None:
         """Recompute the three expansion buttons' enabled states.
@@ -1452,6 +1459,17 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             return
         self._screenshot_overrides.pop(idx, None)
         self._refresh_frame_buttons()
+        # The word is unpicked again, so the preview has to move back to its
+        # computed frame or the pane shows one thing and the card gets another.
+        # Deferred for the reason _on_candidate_chosen documents: this runs
+        # inside a clicked handler, where an in-event seek does not reliably
+        # present the new frame.
+        chosen = self._chosen.get(idx, word)
+        window = self._expanded_window(chosen, idx)
+        start = chosen.start_time if window is None else window.start
+        video = chosen.video_file
+        frame = self._screenshot_instant(chosen, idx, window)
+        QTimer.singleShot(0, lambda: self._preview_scene(start, video, frame_time=frame))
 
     def _refresh_frame_buttons(self) -> None:
         """Recompute the frame buttons' enabled states and the reset tooltip.
@@ -1472,6 +1490,27 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             if picked is None
             else tr_format(self.tr("Restore this word's default screenshot frame (now %1 s)."), f"{picked:.2f}")
         )
+
+    def _screenshot_instant(self, chosen: TokenizedWord, idx: int | None, window: MergedLineWindow | None) -> float:
+        """The second the card's screenshot will be grabbed at, for the preview.
+
+        The preview used to park on the line's start while extraction grabbed
+        ``screenshot_offset`` seconds later, so the frame on screen and the frame
+        on the card were never the same picture. Both branches route through
+        ``media_extractor.resolve_screenshot_time`` — the extraction phase's own
+        resolver — rather than restating the rule here, and the merged window is
+        what is measured when a line expansion is active, because
+        ``expand_word_lines`` rewrites the word's timings to that window before
+        extraction ever sees it.
+        """
+        ctx = self._media_context
+        if ctx is None:
+            return chosen.start_time
+        start = chosen.start_time if window is None else window.start
+        end = chosen.end_time if window is None else window.end
+        picked = None if idx is None else self._screenshot_overrides.get(idx)
+        stamped = chosen if picked is None else dataclasses.replace(chosen, screenshot_override=picked)
+        return resolve_screenshot_time(stamped, start, max(0.0, end - start), ctx.screenshot_offset)
 
     def _build_sentence_pane(self) -> QWidget:
         """Build the "Sentences" picker pane (label + candidate list).
@@ -2079,7 +2118,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # so the seek can be issued directly — see _on_candidate_chosen. An
         # active line expansion previews its merged window's start instead.
         window = self._expanded_window(chosen, idx)
-        self._preview_scene(window.start if window is not None else chosen.start_time, chosen.video_file)
+        self._preview_scene(
+            window.start if window is not None else chosen.start_time,
+            chosen.video_file,
+            frame_time=self._screenshot_instant(chosen, idx, window),
+        )
 
         # Audio clip strip: the CHOSEN variant's window, for the same reason the
         # dictionary follows the pick — the strip edits the clip this row will
@@ -2365,7 +2408,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         window = self._expanded_window(chosen, idx)
         start_time = chosen.start_time if window is None else window.start
         chosen_video = chosen.video_file
-        QTimer.singleShot(0, lambda: self._preview_scene(start_time, chosen_video))
+        frame_time = self._screenshot_instant(chosen, idx, window)
+        QTimer.singleShot(0, lambda: self._preview_scene(start_time, chosen_video, frame_time=frame_time))
 
     def set_expression_audio_state(self, index: int, found: bool) -> None:
         """Repaint one row's Audio cell from the background prefetch (GUI thread).
@@ -2468,12 +2512,21 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 self.table.scrollToItem(anchor, QAbstractItemView.ScrollHint.EnsureVisible)
         self._refresh_summary()
 
-    def _preview_scene(self, start_time: float, video_file: Path | None = None) -> None:
+    def _preview_scene(
+        self, start_time: float, video_file: Path | None = None, *, frame_time: float | None = None
+    ) -> None:
         """Preview the scene for ``start_time``: seek the player / show the page.
 
         The single funnel for both the debounced focus path and the sentence
         candidate pick path — for manga, ``int(start_time)`` is the reading
         unit index (the parser stamps ``start_time = float(unit.index)``).
+
+        ``frame_time`` is the instant the player parks on: the frame the card's
+        screenshot will be grabbed at (:meth:`_screenshot_instant`). A separate
+        keyword rather than a pre-adjusted ``start_time`` ON PURPOSE — the page
+        path below reads ``int(start_time)`` as a unit index, not a time, so no
+        screenshot arithmetic may ever reach it. A caller that omits it parks on
+        ``start_time``, which is the old behaviour, never a broken page index.
 
         ``video_file`` is the chosen variant's episode (season curation): when
         it differs from the displayed one the player source is swapped first.
@@ -2483,7 +2536,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         if self._closing:
             return
         if self._show_player and hasattr(self, "player_widget") and self._ensure_player_source(video_file):
-            self.player_widget.seek_seconds(start_time)
+            self.player_widget.seek_seconds(start_time if frame_time is None else frame_time)
             self.player_widget.pause()
         if self._show_image:
             self._request_page_image(int(start_time))
@@ -2530,7 +2583,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 chosen = self._chosen.get(idx, word)
                 if chosen.video_file == video_file:
                     window = self._expanded_window(chosen, idx)
-                    self._preview_scene(chosen.start_time if window is None else window.start, video_file)
+                    self._preview_scene(
+                        chosen.start_time if window is None else window.start,
+                        video_file,
+                        frame_time=self._screenshot_instant(chosen, idx, window),
+                    )
 
         def on_error(message: str) -> None:
             logger.warning(

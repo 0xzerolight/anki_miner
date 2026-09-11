@@ -465,6 +465,30 @@ def test_reject_without_worker_thread_does_not_raise(qapp, qtbot):
     assert tab._curation_event.is_set()
 
 
+def test_make_curation_media_context_threads_the_screenshot_offset(test_config, tmp_path):
+    """The curator previews the frame the card gets, so it needs the run's offset.
+
+    Defaulting it in the carrier would silently preview at 1.0s for a user who
+    configured something else — the mismatch this field exists to remove.
+    """
+    import dataclasses
+
+    from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
+
+    video = tmp_path / "ep.mkv"
+    video.write_bytes(b"\x00")
+    sub = tmp_path / "ep.srt"
+    sub.write_text("1\n00:00:01,000 --> 00:00:03,000\n食べるのテスト\n", encoding="utf-8")
+
+    ctx = MiningTabBase._make_curation_media_context(test_config, video, sub, 0.0)
+    assert ctx is not None and ctx.screenshot_offset == test_config.screenshot_offset
+
+    tuned = MiningTabBase._make_curation_media_context(
+        dataclasses.replace(test_config, screenshot_offset=0.25), video, sub, 0.0
+    )
+    assert tuned is not None and tuned.screenshot_offset == 0.25
+
+
 def test_make_curation_media_context_parses_the_second_track(test_config, tmp_path):
     from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 
