@@ -189,7 +189,7 @@ def _log_tail(text: str, lines: int = _LOG_TAIL_LINES) -> str:
 
 # Log markers guaranteed to appear in every run. The pipeline announces its
 # stage position through ``PresenterProtocol.show_stage``, which GUIPresenter
-# renders as "Step <n> of 5 — <name>"; stage 1 opens _phase1_parse and stage 2
+# renders as "Stage <n> of 5 — <name>"; stage 1 opens _phase1_parse and stage 2
 # opens the known-vocabulary filter.
 _LOG_MARKERS_COMMON = ("Stage 1 of 5", "Stage 2 of 5")
 

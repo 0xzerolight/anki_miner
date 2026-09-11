@@ -42,7 +42,7 @@ def test_show_stage_names_the_stage_and_the_total():
 
     presenter.show_stage(3, 5, "Extracting media")
 
-    assert seen == ["Step 3 of 5 — Extracting media"]
+    assert seen == ["Stage 3 of 5 — Extracting media"]
 
 
 def test_null_presenter_show_stage_is_silent():
