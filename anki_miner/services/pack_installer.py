@@ -54,7 +54,7 @@ from urllib.parse import urlsplit
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
 from anki_miner.languages.pack_spec import ArtifactSpec, PackComponent
-from anki_miner.services._install_common import cleanup_part, sweep_stale, verify_sha256
+from anki_miner.services._install_common import cleanup_part, macos_floor_met, sweep_stale, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
 from anki_miner.utils.atomic_io import atomic_replace_dir, reconcile_dir
 from anki_miner.utils.logging_ext import log_summary
@@ -84,8 +84,10 @@ def artifact_for(comp: PackComponent) -> ArtifactSpec | None:
     """Return the artifact to download for *comp* here, or None.
 
     ``None`` when the component pins a CPython ABI this interpreter is not (the
-    wheel would be ABI-incompatible) or no artifact is pinned for this
-    platform/arch.
+    wheel would be ABI-incompatible), no artifact is pinned for this
+    platform/arch, or the pinned wheel's macOS tag demands a newer macOS than
+    this machine runs (``ArtifactSpec.min_macos``) — a wheel dyld will refuse is
+    no more installable than a missing one.
     """
     if comp.abi is not None and sys.version_info[:2] != comp.abi:
         return None
@@ -93,7 +95,16 @@ def artifact_for(comp: PackComponent) -> ArtifactSpec | None:
         return comp.universal
     if comp.per_platform is None:
         return None
-    return comp.per_platform.get((sys.platform, platform.machine()))
+    spec = comp.per_platform.get((sys.platform, platform.machine()))
+    if spec is not None and not macos_floor_met(spec.min_macos):
+        logger.debug(
+            "Pack component %s: pinned wheel needs macOS %s, host reports %s; not offered",
+            comp.import_name,
+            spec.min_macos,
+            platform.mac_ver()[0] or "?",
+        )
+        return None
+    return spec
 
 
 def components_supported(components: Iterable[PackComponent]) -> bool:
@@ -283,10 +294,15 @@ def install_components(
         spec = artifact_for(comp)
         if spec is None:
             if comp.required:
+                # The macOS release is in the parenthetical because a declined
+                # macOS floor (ArtifactSpec.min_macos) is the one reason this
+                # fires on a platform/Python combination we DO pin a wheel for.
+                where = f"{sys.platform}/{platform.machine()}"
+                if platform.system() == "Darwin" and platform.mac_ver()[0]:
+                    where += f"/macOS {platform.mac_ver()[0]}"
                 raise SetupError(
                     f"The {display_noun} is not supported on this platform/Python "
-                    f"({sys.platform}/{platform.machine()}/"
-                    f"{sys.version_info[0]}.{sys.version_info[1]})."
+                    f"({where}/{sys.version_info[0]}.{sys.version_info[1]})."
                 )
             logger.info("Pack %s: no %s artifact for this platform; skipping", label, comp.import_name)
             continue

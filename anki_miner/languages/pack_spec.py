@@ -10,9 +10,27 @@ downloader, or Qt.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Literal
+
+#: ``…-macosx_11_0_arm64.whl`` -> (11, 0). macOS is the only platform whose
+#: wheel tag encodes an OS floor, and dyld enforces it absolutely: a wheel built
+#: against a newer SDK fails to load on an older release, taking the import with
+#: it. A tag can name several platforms (``macosx_10_9_x86_64.macosx_11_0_arm64``),
+#: so the LOWEST floor in the name wins — that is the release the artifact as a
+#: whole still loads on.
+_MACOS_TAG_RE = re.compile(r"macosx_(\d+)_(\d+)_")
+
+
+def macos_floor_from_url(url: str) -> tuple[int, int] | None:
+    """Return the macOS floor a pinned artifact's platform tag demands, or None.
+
+    None for every non-macOS artifact (and for an sdist, which has no tag).
+    """
+    found = [(int(major), int(minor)) for major, minor in _MACOS_TAG_RE.findall(url.rsplit("/", 1)[-1])]
+    return min(found) if found else None
 
 
 @dataclass(frozen=True)
@@ -38,6 +56,18 @@ class ArtifactSpec:
     #: root — the auditwheel/delvewheel ``<pkg>.libs/`` tree an extension
     #: resolves by an ``$ORIGIN``-relative rpath (ctranslate2, av).
     root_members: tuple[str, ...] = ()
+
+    @property
+    def min_macos(self) -> tuple[int, int] | None:
+        """The macOS release this artifact's platform tag demands, or None.
+
+        Read off the pinned filename rather than declared beside it, so it can
+        never drift from the wheel actually being downloaded — a hand-written
+        floor is exactly what nobody updated when av's arm64 wheel moved from
+        ``macosx_11_0`` to ``macosx_14_0`` and Apple Silicon Macs below macOS 14
+        started failing to load the engine at all.
+        """
+        return macos_floor_from_url(self.url)
 
 
 @dataclass(frozen=True)

@@ -12,11 +12,13 @@ shared libs and ``dlopen``s them, onnxruntime is a *Python package*: the whole
 ``onnx_pack_root/onnxruntime/``, and ``transcriber._ensure_onnx_pack_on_syspath``
 adds ``onnx_pack_root`` to ``sys.path`` so ``import onnxruntime`` resolves.
 
-The wheels are Python-ABI + platform specific. The release bundle ships CPython
-3.12, so only ``cp312`` wheels are pinned; ``onnx_pack_supported`` returns False
-on any other interpreter (where the pack would be ABI-incompatible — and where
-onnxruntime is anyway present from pip). Bumping a version means updating its
-url AND sha256 together (alass-style).
+The wheels are Python-ABI + platform + (on macOS) OS-version specific. The
+release bundle ships CPython 3.12, so only ``cp312`` wheels are pinned;
+``onnx_pack_supported`` returns False on any other interpreter (where the pack
+would be ABI-incompatible — and where onnxruntime is anyway present from pip),
+and on a macOS older than the pinned wheel's own ``macosx_*`` tag, which dyld
+enforces absolutely. Bumping a version means updating that entry's url AND
+sha256 together (alass-style).
 
 Placement mirrors the atomic-staging idiom in ``cuda_pack_installer`` and
 ``model_manager.download``: members are extracted into a private staging dir
@@ -39,7 +41,8 @@ from urllib.parse import urlsplit
 
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
-from anki_miner.services._install_common import cleanup_part, sweep_stale, verify_sha256
+from anki_miner.languages.pack_spec import macos_floor_from_url
+from anki_miner.services._install_common import cleanup_part, macos_floor_met, sweep_stale, verify_sha256
 from anki_miner.services.resource_downloader import download_to_temp
 from anki_miner.utils.atomic_io import atomic_replace_dir, reconcile_dir
 from anki_miner.utils.logging_ext import log_summary
@@ -68,9 +71,27 @@ class _OnnxWheelSpec:
     url: str
     sha256: str
 
+    @property
+    def min_macos(self) -> tuple[int, int] | None:
+        """The macOS release this wheel's tag demands, read off the filename.
 
-# onnxruntime 1.27.0 cp312 wheels, keyed by (sys.platform, platform.machine()).
-# Bumping the version means updating BOTH url and sha256 for every entry.
+        Same rule and same reason as ``ArtifactSpec.min_macos``: a wheel tagged
+        ``macosx_14_0`` cannot load below macOS 14, so ``_current_spec`` declines
+        it rather than offering a ~30 MB download that ends in an ImportError.
+        """
+        return macos_floor_from_url(self.url)
+
+
+# onnxruntime cp312 wheels, keyed by (sys.platform, platform.machine()).
+# Bumping a version means updating BOTH url and sha256 for that entry.
+#
+# The table is VERSIONED PER PLATFORM on purpose. 1.27.0's arm64 macOS wheel is
+# tagged macosx_14_0, which is a hard dyld floor, so Apple Silicon stays on
+# 1.23.2 (macosx_13_0) — the newest release that still loads on Ventura. The
+# table cannot be downpinned wholesale to match: 1.23.2 publishes no win_arm64
+# cp312 wheel, so Windows ARM64 would lose silence removal entirely. macOS 11
+# and 12 get no VAD either way (onnxruntime has shipped no arm64 wheel that low
+# for years) and, thanks to min_macos, are no longer offered one.
 _WHEELS: dict[tuple[str, str], _OnnxWheelSpec] = {
     ("linux", "x86_64"): _OnnxWheelSpec(
         url=(
@@ -106,13 +127,15 @@ _WHEELS: dict[tuple[str, str], _OnnxWheelSpec] = {
     ),
     ("darwin", "arm64"): _OnnxWheelSpec(
         url=(
-            "https://files.pythonhosted.org/packages/c3/b7/"
-            "dd3a524ed93a820dff1af902d0412957ab12499953333e9daa01af5bc480/"
-            "onnxruntime-1.27.0-cp312-cp312-macosx_14_0_arm64.whl"
+            "https://files.pythonhosted.org/packages/1b/9e/"
+            "f748cd64161213adeef83d0cb16cb8ace1e62fa501033acdd9f9341fff57/"
+            "onnxruntime-1.23.2-cp312-cp312-macosx_13_0_arm64.whl"
         ),
-        sha256="a14c2ce45312def86b77aea651f46565e45960cf5f0721bfdff449165086ab76",
+        sha256="b8f029a6b98d3cf5be564d52802bb50a8489ab73409fa9db0bf583eabb7c2321",
     ),
-    # No cp312 1.27.0 Intel-mac wheel exists → ("darwin", "x86_64") unsupported.
+    # ("darwin", "x86_64") stays unsupported: 1.27.0 ships no cp312 Intel-mac
+    # wheel, and Intel-mac silence removal is a feature to add deliberately, not
+    # a side effect of the arm64 downpin (1.23.2 does publish one).
 }
 
 
@@ -120,19 +143,31 @@ def _current_spec() -> _OnnxWheelSpec | None:
     """Return the wheel spec for this platform/arch/Python, or ``None``.
 
     ``None`` when the interpreter is not the bundle's CPython (the wheel would be
-    ABI-incompatible) or no wheel is pinned for the platform/arch.
+    ABI-incompatible), no wheel is pinned for the platform/arch, or the pinned
+    wheel's macOS tag demands a newer macOS than this machine runs — dyld would
+    refuse it, so the row is hidden exactly as it is on Intel macOS rather than
+    offering a download that ends in an ImportError.
     """
     if sys.version_info[:2] != _BUNDLE_PYTHON:
         return None
-    return _WHEELS.get((sys.platform, platform.machine()))
+    spec = _WHEELS.get((sys.platform, platform.machine()))
+    if spec is not None and not macos_floor_met(spec.min_macos):
+        logger.debug(
+            "onnxruntime pack: pinned wheel needs macOS %s, host reports %s; not offered",
+            spec.min_macos,
+            platform.mac_ver()[0] or "?",
+        )
+        return None
+    return spec
 
 
 def onnx_pack_supported() -> bool:
     """Return True when in-app onnxruntime-pack download is supported here.
 
-    True only on the bundle's CPython and a platform/arch with a pinned wheel.
-    False elsewhere (other Python versions — where onnxruntime is already
-    importable from pip — and unsupported arches like Intel macOS).
+    True only on the bundle's CPython and a platform/arch with a pinned wheel
+    this machine can load. False elsewhere (other Python versions — where
+    onnxruntime is already importable from pip — unsupported arches like Intel
+    macOS, and an Apple Silicon Mac below the pinned wheel's macOS floor).
     """
     return _current_spec() is not None
 
