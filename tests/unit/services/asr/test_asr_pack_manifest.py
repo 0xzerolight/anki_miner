@@ -14,7 +14,7 @@ _RELEASE_PLATFORMS = (("linux", "x86_64"), ("win32", "AMD64"), ("darwin", "arm64
 #: downloads the pack runs byte-identical packages).
 _LOCK_VERSIONS = {
     "ctranslate2": "4.8.0",
-    "av": "17.1.0",
+    "av": "13.1.0",
     "tokenizers": "0.23.1",
     "yaml": "6.0.3",
     "huggingface_hub": "1.16.1",
@@ -73,14 +73,13 @@ def test_per_platform_tables_cover_the_release_matrix() -> None:
 
 def test_cp312_pins_match_the_bundle_python_and_abi3_pins_do_not_pin() -> None:
     by_name = {c.import_name: c for c in PACK.components}
-    for name in ("ctranslate2", "yaml"):
+    for name in ("ctranslate2", "av", "yaml"):
         assert by_name[name].abi == _BUNDLE_PYTHON
         for spec in _specs(by_name[name]):
             assert "-cp312-cp312-" in spec.url
-    for name in ("av", "tokenizers"):
-        assert by_name[name].abi is None
-        for spec in _specs(by_name[name]):
-            assert "-abi3-" in spec.url
+    assert by_name["tokenizers"].abi is None
+    for spec in _specs(by_name["tokenizers"]):
+        assert "-abi3-" in spec.url
     for name in ("huggingface_hub", "filelock", "httpx", "httpcore", "h11", "anyio", "faster_whisper"):
         assert by_name[name].abi is None and by_name[name].universal is not None
         assert by_name[name].universal.url.endswith("-py3-none-any.whl")

@@ -35,9 +35,10 @@ directory, see docs/superpowers/plans/2026-09-10-asr-pack.md §1): the Linux
 ctranslate2 and the Linux/Windows av wheels carry an auditwheel/delvewheel
 ``<pkg>.libs/`` tree beside the package that the extension resolves by an
 ``$ORIGIN``-relative rpath, declared as a directory root member; every other
-compiled component keeps its libraries inside the package dir. cp312 pins
-(ctranslate2, yaml) mirror ``onnx_pack_installer._BUNDLE_PYTHON``; av and
-tokenizers ship stable-ABI wheels (``abi=None``).
+compiled component keeps its libraries inside the package dir (the macOS av
+wheels put theirs in ``av/.dylibs/``). cp312 pins (ctranslate2, av, yaml)
+mirror ``onnx_pack_installer._BUNDLE_PYTHON``; tokenizers ships a stable-ABI
+wheel (``abi=None``).
 """
 
 from __future__ import annotations
@@ -87,32 +88,46 @@ _CTRANSLATE2 = PackComponent(
     },
 )
 
+# PyAV is held at 13.1.0, the newest release whose macOS arm64 wheel is still
+# tagged ``macosx_11_0``. 15.x moved that tag to 13_0 and 16.x to 14_0, and a
+# wheel's macOS tag is a hard dyld floor: 17.1.0 shipped in v3.1.0 and every
+# Apple Silicon user below macOS 14 got
+# ``dlopen(av/_core…so): Symbol not found … Expected in: AVFoundation.framework``
+# the moment anything imported faster-whisper. Every other arm64 binary here
+# (PyQt6-Qt6, ctranslate2, tokenizers, pyyaml) is macosx_11_0, and macOS has no
+# whisper.cpp leg, so a raised av floor takes transcription away outright rather
+# than degrading it. faster-whisper only asks for ``av>=11`` and touches four
+# APIs stable since av 9 (``av.open``, ``AudioResampler``, ``AudioFifo``,
+# ``av.error.InvalidDataError``), so there is nothing to gain from the newer
+# pin. Before bumping: check the arm64 wheel's tag, not just the version.
+# 13.1.0 publishes no abi3 wheel, hence the cp312 pins.
 _AV = PackComponent(
     import_name="av",
     required=True,
     sentinels=("__init__.py",),
-    abi=None,
+    abi=(3, 12),
     per_platform={
         _LINUX: _wheel(
-            "77/43/96b35170bf2e64e00a41748c6400ff73232dc0fc62ded283679fb07c7fe0/av-17.1.0-cp311-abi3-manylinux_2_28_x86_64.whl",
-            "f9a65d1f48b818323fb411e80358f89d77dec340b01d27c6b2dfbb9cbf4b779f",
+            "7f/22/0dd8d1d5cad415772bb707d16aea8b81cf75d340d11d3668eea43468c730/"
+            "av-13.1.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+            "d8aaec2c0bfd024359db3821d679009d4e637e1bee0321d20f61c54ed6b20f41",
             "av/",
             root_members=("av.libs/",),
         ),
         _WINDOWS: _wheel(
-            "6b/f2/53a7cd34adb6a971d7e6d99663e74db286966c9db8afdca17472fdf0f98e/av-17.1.0-cp311-abi3-win_amd64.whl",
-            "5df5c1172ef1cf65a1529d612f7da7798ce2cf82c1ff7212466b538a6cc7214c",
+            "7b/ff/48fa68888b8d5bae36d915556ff18f9e5fdc6b5ff5ae23dc4904c9713168/av-13.1.0-cp312-cp312-win_amd64.whl",
+            "5ea0deab0e6a739cb742fba2a3983d8102f7516a3cdf3c46669f3cac0ed1f351",
             "av/",
             root_members=("av.libs/",),
         ),
         _MAC_ARM: _wheel(
-            "6d/af/dfdf6fc7b17814b50d0aa9e7a7e37b87be91be3890f44b0d525433cd1fd1/av-17.1.0-cp311-abi3-macosx_14_0_arm64.whl",
-            "43ebbe977f19a7f2d2bd1a4e119675a0b15e05852cf7309846b6ab922ba7ffe9",
+            "17/b4/b267dd5bad99eed49ec6731827c6bcb5ab03864bf732a7ebb81e3df79911/av-13.1.0-cp312-cp312-macosx_11_0_arm64.whl",
+            "83d259ef86b9054eb914bc7c6a7f6092a6d75cb939295e70ee979cfd92a67b99",
             "av/",
         ),
         _MAC_INTEL: _wheel(
-            "ec/87/8036b5c781bc3639ea04ef42d4e26da253bd4bd4311d8705b6a1c8824047/av-17.1.0-cp311-abi3-macosx_11_0_x86_64.whl",
-            "ad7b4aa011093324b7118245f50ac6db244cfe9900d4072508a5245a2b0d3f41",
+            "9b/aa/4bdd8ce59173574fc6e0c282c71ee6f96fca82643d97bf172bc4cb5a5674/av-13.1.0-cp312-cp312-macosx_10_13_x86_64.whl",
+            "261dbc3f4b55f4f8f3375b10b2258fca7f2ab7a6365c01bc65e77a0d5327a195",
             "av/",
         ),
     },

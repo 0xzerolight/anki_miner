@@ -37,11 +37,16 @@
 #   /tmp/lock-env/bin/pip freeze | grep -ivE '^-e |^anki[-_]miner==' > /tmp/pins
 #   # then replace everything under "Direct runtime dependencies" with /tmp/pins
 #
+# HELD BACK BY HAND — a regeneration will raise it and must be corrected: `av` stays
+# at 13.1.0, the newest release whose macOS arm64 wheel is tagged macosx_11_0 (15.x
+# moved to 13_0, 16.x to 14_0). That tag is a hard dyld floor, and the ASR pack pins
+# the version this file names. Full rationale: anki_miner/services/asr/asr_pack.py.
+#
 # Direct runtime dependencies
 annotated-doc==0.0.4
 anyio==4.14.0
 auditok==0.1.5
-av==17.1.0
+av==13.1.0
 budoux==0.9.0
 certifi==2026.6.17
 chardet==7.6.0
