@@ -1566,6 +1566,254 @@ No se elimina ningún archivo de índice.</translation>
         </translation>
     </message>
 </context><context>
+    <name>BookSyncTab</name>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">Progreso</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">Listo</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation type="unfinished">Hecho: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation type="unfinished">Omitido</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation type="unfinished">Omitido: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">Cancelar</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">Cancelando…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">Cancelado</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">Falló — consulte el registro</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation type="unfinished">Finalizó con errores — vea el registro</translation>
+    </message>
+    <message>
+        <source>Some audio files could not be synced.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 file(s) synced</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 synced, %2 skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No subtitles written — all %1 skipped; see log.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation type="unfinished">Seleccionar carpeta de salida</translation>
+    </message>
+    <message>
+        <source>Next to the audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audiobook sync</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audiobook</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>
+        <translation type="unfinished">La transcripción no está lista. Abra Ajustes → Transcripción y alineación para terminar la configuración.</translation>
+    </message>
+    <message>
+        <source>Transcribes the audiobook and times the book's own sentences to it, writing an .srt beside each audio file. A folder is read as one book in file-name order.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation type="unfinished">Modo:</translation>
+    </message>
+    <message>
+        <source>Single File</source>
+        <translation type="unfinished">Archivo único</translation>
+    </message>
+    <message>
+        <source>Sync one audio file to the book.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation type="unfinished">Carpeta</translation>
+    </message>
+    <message>
+        <source>Every audio file in the folder, in file-name order, one .srt each.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>EPUB or Text File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio File:</source>
+        <translation type="unfinished">Archivo de audio:</translation>
+    </message>
+    <message>
+        <source>This field takes an audio file.</source>
+        <translation type="unfinished">Este campo admite un archivo de audio.</translation>
+    </message>
+    <message>
+        <source>Audio Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Book</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This field takes an .epub or .txt file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output</source>
+        <translation type="unfinished">Salida</translation>
+    </message>
+    <message>
+        <source>Each .srt is saved next to its audio file unless you choose a folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation type="unfinished">Salida:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation type="unfinished">Elegir carpeta…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation type="unfinished">Restablecer</translation>
+    </message>
+    <message>
+        <source>Overwrite existing SRT files</source>
+        <translation type="unfinished">Sobrescribir los archivos SRT existentes</translation>
+    </message>
+    <message>
+        <source>When unchecked, audio files that already have an .srt file are skipped, not overwritten.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sync Audiobook</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose the book (.epub or .txt) before syncing.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick an .epub or .txt file for the book.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That book file no longer exists.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose an audio file before syncing.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That audio file no longer exists.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose a folder before syncing.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That folder no longer exists.</source>
+        <translation type="unfinished">Esa carpeta ya no existe.</translation>
+    </message>
+    <message>
+        <source>No audio files were found in that folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation type="unfinished">No se pudo analizar esa carpeta.</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation type="unfinished">No se puede escribir en la carpeta de salida.</translation>
+    </message>
+    <message>
+        <source>The transcription model %1 is not ready.</source>
+        <translation type="unfinished">El modelo de transcripción %1 no está listo.</translation>
+    </message>
+    <message>
+        <source>Open Transcription Settings</source>
+        <translation type="unfinished">Abrir configuración de transcripción</translation>
+    </message>
+    <message>
+        <source>Book: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Syncing file %1 of %2</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>BookSyncWorker</name>
+    <message>
+        <source>Skipped, exists</source>
+        <translation type="unfinished">Omitido, ya existe</translation>
+    </message>
+    <message>
+        <source>Extracting audio: %1</source>
+        <translation type="unfinished">Extrayendo audio: %1</translation>
+    </message>
+    <message>
+        <source>Transcribing: %1%</source>
+        <translation type="unfinished">Transcribiendo: %1%</translation>
+    </message>
+    <message>
+        <source>Aligning to the book…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 sentences timed, %2 in between had no audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No speech detected</source>
+        <translation type="unfinished">No se detectó habla</translation>
+    </message>
+    <message>
+        <source>Nothing in %1 matched the book</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio extraction failed for %1</source>
+        <translation type="unfinished">Falló la extracción de audio para %1</translation>
+    </message>
+</context><context>
     <name>Capabilities</name>
     <message>
         <source>Mining workflows</source>
@@ -2206,6 +2454,14 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Run mokuro's OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
         <translation>Ejecute el OCR de mokuro en una carpeta de volumen o en una serie entera para que Lectura -&gt; Manga pueda minarlo. Instale mokuro desde Ajustes -&gt; Transcripción y alineación.</translation>
+    </message>
+    <message>
+        <source>Sync an audiobook to its EPUB</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitles or a reader can use.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -6034,6 +6290,10 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
     <message>
         <source>Manga OCR</source>
         <translation>OCR de manga</translation>
+    </message>
+    <message>
+        <source>Audiobook Sync</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Single</source>

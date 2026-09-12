@@ -1564,6 +1564,254 @@ No index files are deleted.</source>
         </translation>
     </message>
 </context><context>
+    <name>BookSyncTab</name>
+    <message>
+        <source>Progress</source>
+        <translation type="unfinished">進捗</translation>
+    </message>
+    <message>
+        <source>Done</source>
+        <translation type="unfinished">完了</translation>
+    </message>
+    <message>
+        <source>Done: </source>
+        <translation type="unfinished">完了: </translation>
+    </message>
+    <message>
+        <source>Skipped</source>
+        <translation type="unfinished">スキップ</translation>
+    </message>
+    <message>
+        <source>Skipped: </source>
+        <translation type="unfinished">スキップ: </translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished">キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished">キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation type="unfinished">キャンセルされました</translation>
+    </message>
+    <message>
+        <source>Failed — see log</source>
+        <translation type="unfinished">失敗しました — ログを確認してください</translation>
+    </message>
+    <message>
+        <source>Finished with errors — see log</source>
+        <translation type="unfinished">エラーが発生して完了しました — ログを確認してください</translation>
+    </message>
+    <message>
+        <source>Some audio files could not be synced.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 file(s) synced</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Complete — %1 synced, %2 skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No subtitles written — all %1 skipped; see log.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Select Output Folder</source>
+        <translation type="unfinished">出力フォルダを選択</translation>
+    </message>
+    <message>
+        <source>Next to the audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audiobook sync</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audiobook</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>
+        <translation type="unfinished">文字起こしの準備ができていません。設定 → 文字起こしとアラインメントを開き、セットアップを完了してください。</translation>
+    </message>
+    <message>
+        <source>Transcribes the audiobook and times the book's own sentences to it, writing an .srt beside each audio file. A folder is read as one book in file-name order.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mode:</source>
+        <translation type="unfinished">モード:</translation>
+    </message>
+    <message>
+        <source>Single File</source>
+        <translation type="unfinished">単一ファイル</translation>
+    </message>
+    <message>
+        <source>Sync one audio file to the book.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Folder</source>
+        <translation type="unfinished">フォルダ</translation>
+    </message>
+    <message>
+        <source>Every audio file in the folder, in file-name order, one .srt each.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>EPUB or Text File:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio File:</source>
+        <translation type="unfinished">音声ファイル:</translation>
+    </message>
+    <message>
+        <source>This field takes an audio file.</source>
+        <translation type="unfinished">このフィールドには音声ファイルを指定します。</translation>
+    </message>
+    <message>
+        <source>Audio Folder:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Book</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>This field takes an .epub or .txt file.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output</source>
+        <translation type="unfinished">出力</translation>
+    </message>
+    <message>
+        <source>Each .srt is saved next to its audio file unless you choose a folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Output:</source>
+        <translation type="unfinished">出力:</translation>
+    </message>
+    <message>
+        <source>Choose Folder…</source>
+        <translation type="unfinished">フォルダを選択…</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation type="unfinished">リセット</translation>
+    </message>
+    <message>
+        <source>Overwrite existing SRT files</source>
+        <translation type="unfinished">既存の SRT ファイルを上書きする</translation>
+    </message>
+    <message>
+        <source>When unchecked, audio files that already have an .srt file are skipped, not overwritten.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sync Audiobook</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose the book (.epub or .txt) before syncing.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pick an .epub or .txt file for the book.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That book file no longer exists.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose an audio file before syncing.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That audio file no longer exists.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose a folder before syncing.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That folder no longer exists.</source>
+        <translation type="unfinished">そのフォルダは存在しなくなっています。</translation>
+    </message>
+    <message>
+        <source>No audio files were found in that folder.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>That folder could not be scanned.</source>
+        <translation type="unfinished">そのフォルダをスキャンできませんでした。</translation>
+    </message>
+    <message>
+        <source>Output folder is not writable.</source>
+        <translation type="unfinished">出力フォルダに書き込めません。</translation>
+    </message>
+    <message>
+        <source>The transcription model %1 is not ready.</source>
+        <translation type="unfinished">文字起こしモデル %1 の準備ができていません。</translation>
+    </message>
+    <message>
+        <source>Open Transcription Settings</source>
+        <translation type="unfinished">文字起こし設定を開く</translation>
+    </message>
+    <message>
+        <source>Book: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Syncing file %1 of %2</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>BookSyncWorker</name>
+    <message>
+        <source>Skipped, exists</source>
+        <translation type="unfinished">スキップしました（既に存在）</translation>
+    </message>
+    <message>
+        <source>Extracting audio: %1</source>
+        <translation type="unfinished">音声を抽出中: %1</translation>
+    </message>
+    <message>
+        <source>Transcribing: %1%</source>
+        <translation type="unfinished">文字起こし中: %1%</translation>
+    </message>
+    <message>
+        <source>Aligning to the book…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 sentences timed, %2 in between had no audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No speech detected</source>
+        <translation type="unfinished">音声が検出されませんでした</translation>
+    </message>
+    <message>
+        <source>Nothing in %1 matched the book</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio extraction failed for %1</source>
+        <translation type="unfinished">%1 の音声抽出に失敗しました</translation>
+    </message>
+</context><context>
     <name>Capabilities</name>
     <message>
         <source>Mining workflows</source>
@@ -2204,6 +2452,14 @@ No index files are deleted.</source>
     <message>
         <source>Run mokuro's OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
         <translation>巻フォルダまたはシリーズ全体に対して mokuro の OCR を実行すると、読み -&gt; マンガでマイニングできるようになります。mokuro は設定 -&gt; 文字起こしとアラインメントからインストールしてください。</translation>
+    </message>
+    <message>
+        <source>Sync an audiobook to its EPUB</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitles or a reader can use.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -6020,6 +6276,10 @@ Continue?</source>
     <message>
         <source>Manga OCR</source>
         <translation>マンガ OCR</translation>
+    </message>
+    <message>
+        <source>Audiobook Sync</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Single</source>
