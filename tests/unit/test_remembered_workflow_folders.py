@@ -37,10 +37,17 @@ _INPUT_KEYS = frozenset(
         "tools.retime.inputs",
         "tools.condense.inputs",
         "tools.mokuro.inputs",
+        "tools.booksync.inputs",
     }
 )
 _OUTPUT_KEYS = frozenset(
-    {"tools.generate.output", "tools.retime.output", "tools.condense.output", "tools.download.output"}
+    {
+        "tools.generate.output",
+        "tools.retime.output",
+        "tools.condense.output",
+        "tools.download.output",
+        "tools.booksync.output",
+    }
 )
 _ALL_KEYS = _INPUT_KEYS | _OUTPUT_KEYS
 
@@ -124,8 +131,9 @@ def test_dropping_subtitle_files_records_nothing(reading_subtitles_tab, tmp_path
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(params=["generate", "retime", "condense", "download"])
+@pytest.fixture(params=["generate", "retime", "condense", "download", "booksync"])
 def tool_tab(request, qtbot, test_config: AnkiMinerConfig):
+    from anki_miner.gui.widgets.booksync_tab import BookSyncTab
     from anki_miner.gui.widgets.condense_tab import CondenseTab
     from anki_miner.gui.widgets.download_tab import DownloadTab
     from anki_miner.gui.widgets.subtitle_creation_tab import SubtitleCreationTab
@@ -136,6 +144,7 @@ def tool_tab(request, qtbot, test_config: AnkiMinerConfig):
         "retime": SubtitleRetimeTab,
         "condense": CondenseTab,
         "download": DownloadTab,
+        "booksync": BookSyncTab,
     }[request.param]
     tab = cls(test_config, suppress_optional_startup=True)
     qtbot.addWidget(tab)

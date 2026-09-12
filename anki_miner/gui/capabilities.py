@@ -55,7 +55,9 @@ SUBTAB_KEYS: dict[str, frozenset[str]] = {
     "settings": SETTINGS_SUBTABS,
     "video": frozenset({"single", "batch", "youtube"}),
     "reading": frozenset({"manga", "novels", "subtitles", "text"}),
-    "subtitles": frozenset({"generate", "retime", "condense", "backfill", "deckfilter", "download", "mokuro"}),
+    "subtitles": frozenset(
+        {"generate", "retime", "condense", "backfill", "deckfilter", "download", "mokuro", "booksync"}
+    ),
 }
 
 # Display categories (deduped; translated at display time).
@@ -989,6 +991,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_TOOLS,
         target=CapabilityTarget("subtitles", "mokuro"),
         keywords=("mokuro", "manga", "ocr", "cbz", "page images", "text detection", "manga-ocr"),
+    ),
+    Capability(
+        id="audiobook-sync",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Sync an audiobook to its EPUB"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Transcribe an audiobook and time the book's own sentences to it, writing an .srt the "
+            "Audiobook tab, Reading -> Subtitles or a reader can use.",
+        ),
+        category=_CAT_TOOLS,
+        target=CapabilityTarget("subtitles", "booksync"),
+        keywords=("audiobook", "epub", "sync", "align", "subplz", "immersion reading", "srt", "whisper"),
     ),
     Capability(
         id="restyle-mined-cards",

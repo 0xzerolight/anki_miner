@@ -14,6 +14,7 @@ from PyQt6.QtWidgets import QScrollArea, QWidget
 
 from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.widgets.base import WorkflowActionBar
+from anki_miner.gui.widgets.booksync_tab import BookSyncTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.gui.widgets.mokuro_tab import MokuroTab
@@ -27,6 +28,7 @@ _TOOLS = {
     "condense": (CondenseTab, "condense_button"),
     "download": (DownloadTab, "download_button"),
     "mokuro": (MokuroTab, "run_button"),
+    "booksync": (BookSyncTab, "sync_button"),
 }
 
 

@@ -30,6 +30,7 @@ pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.gui.widgets.base.screen_issue_banner import ScreenIssue
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
+from anki_miner.gui.widgets.booksync_tab import BookSyncTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.gui.widgets.mokuro_tab import MokuroTab
@@ -124,6 +125,17 @@ def creation_tab(qapp, qtbot, test_config):
     return tab
 
 
+@pytest.fixture
+def booksync_tab(qapp, qtbot, test_config):
+    with patch(_ENGINE_AVAILABLE, return_value=True):
+        tab = BookSyncTab(test_config)
+        qtbot.addWidget(tab)
+        assert tab._availability_worker is not None
+        assert tab._availability_worker.wait(3000)
+        qtbot.waitUntil(tab.sync_button.isEnabled, timeout=3000)
+    return tab
+
+
 def _surviving_summary(tab) -> str | None:
     issue = tab.issue_banner().current_issue()
     return None if issue is None else issue.summary
@@ -148,6 +160,7 @@ RUN_ENTRY_POINTS = [
     ("creation: generate", "creation_tab", "_on_generate", lambda t: t, "_collect_single_video_file", []),
     ("download: download", "download_tab", "_on_download", lambda t: t.log_widget, "clear_log", None),
     ("mokuro: run", "mokuro_tab", "_on_run", lambda t: t.log_widget, "clear_log", None),
+    ("booksync: sync", "booksync_tab", "_on_sync", lambda t: t, "_collect_book", None),
 ]
 
 #: The same shape as ``RUN_ENTRY_POINTS``, but for the probe entry points --
