@@ -289,7 +289,7 @@ class MiningLanguageSettingsPanel(FormPanel):
         """
         row = self.language_pack_rows.get(code)
         if row is not None:
-            row.status_label.setText(text)
+            self.set_status_text(row.status_label, text)
 
     def notify_language_pack_download_finished(self, code: str) -> None:
         """Clear *code*'s in-flight guard and re-read what the download left behind.

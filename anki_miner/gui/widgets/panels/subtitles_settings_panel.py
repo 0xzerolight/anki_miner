@@ -675,7 +675,7 @@ class SubtitlesSettingsPanel(FormPanel):
 
     def set_model_status(self, text: str) -> None:
         """Set the ASR status label text (shown next to the Download button)."""
-        self.model_status_label.setText(text)
+        self.set_status_text(self.model_status_label, text)
 
     def set_model(self, value: str) -> None:
         """Select the dropdown entry matching *value*; falls back to 'large-v3'."""
@@ -777,7 +777,7 @@ class SubtitlesSettingsPanel(FormPanel):
     def set_alass_status(self, text: str) -> None:
         """Set the alass status label text (no-op on unsupported platforms)."""
         if self._alass_supported:
-            self.alass_status_label.setText(text)
+            self.set_status_text(self.alass_status_label, text)
 
     def _apply_alass_state(self, installed: bool) -> None:
         """Reflect whether the managed alass binary is present; re-enable the button.
@@ -821,7 +821,7 @@ class SubtitlesSettingsPanel(FormPanel):
 
     def set_mokuro_status(self, text: str) -> None:
         """Set the mokuro status label text (shown beside the Install button)."""
-        self.mokuro_status_label.setText(text)
+        self.set_status_text(self.mokuro_status_label, text)
 
     def _apply_mokuro_state(self, installed: bool) -> None:
         """Reflect whether mokuro is reachable; re-enable the install button.
@@ -866,7 +866,7 @@ class SubtitlesSettingsPanel(FormPanel):
 
     def set_cuda_pack_status(self, text: str) -> None:
         """Set the GPU-pack status label text (shown next to the Download button)."""
-        self.cuda_status_label.setText(text)
+        self.set_status_text(self.cuda_status_label, text)
 
     def notify_cuda_pack_download_finished(self, cuda_libs_root) -> None:
         """Clear the in-flight guard and refresh the GPU-pack button after a download.
@@ -947,7 +947,7 @@ class SubtitlesSettingsPanel(FormPanel):
     def set_vulkan_status(self, text: str) -> None:
         """Set the Vulkan status label text (no-op when the button is omitted)."""
         if self.vulkan_status_label is not None:
-            self.vulkan_status_label.setText(text)
+            self.set_status_text(self.vulkan_status_label, text)
 
     def notify_vulkan_download_finished(self, ok: bool, msg: str) -> None:
         """Clear the in-flight guard, set the status label + installed cache,
@@ -1347,7 +1347,7 @@ class SubtitlesSettingsPanel(FormPanel):
 
     def set_asr_pack_status(self, text: str) -> None:
         """Set the engine-pack status label text (shown next to the Download button)."""
-        self.engine_status_label.setText(text)
+        self.set_status_text(self.engine_status_label, text)
 
     def notify_asr_pack_download_finished(self, ok: bool) -> None:
         """Clear the in-flight guard after an engine pack download; re-probe on success.
@@ -1395,7 +1395,7 @@ class SubtitlesSettingsPanel(FormPanel):
 
     def set_vad_pack_status(self, text: str) -> None:
         """Set the VAD-pack status label text (shown next to the Download button)."""
-        self.vad_status_label.setText(text)
+        self.set_status_text(self.vad_status_label, text)
 
     def notify_vad_pack_download_finished(self, onnx_pack_root) -> None:
         """Clear the in-flight guard and refresh the VAD-pack button after a download.

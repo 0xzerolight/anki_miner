@@ -157,7 +157,7 @@ class YouTubeSettingsPanel(FormPanel):
 
     def set_ytdlp_status(self, text: str) -> None:
         """Set the yt-dlp status line (shown next to the Update button)."""
-        self.ytdlp_status_label.setText(text)
+        self.set_status_text(self.ytdlp_status_label, text)
 
     def set_ytdlp_present(self, present: bool) -> None:
         """Say what the button will do, from the validation verdict.
