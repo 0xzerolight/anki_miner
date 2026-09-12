@@ -71,6 +71,11 @@ dependencies = [
     # installs use the system copy, and the preview widget degrades to a
     # notice when it is absent.
     "mpv>=1.0.8",
+    # Runtime: services/book_sync/aligner.py aligns a Whisper transcript to a
+    # book's sentences with rapidfuzz's bit-parallel Levenshtein opcodes
+    # (Utilities → Audiobook Sync). C++ extension, no deps, wheels for every
+    # release target; imported at module level so the PyInstaller graph sees it.
+    "rapidfuzz>=3.14",
 ]
 
 [project.optional-dependencies]

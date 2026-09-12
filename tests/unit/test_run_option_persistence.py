@@ -280,6 +280,7 @@ _TRANSIENT_OVERWRITE_SCREENS = (
     "SubtitleCreationTab",
     "SubtitleRetimeTab",
     "CardBackfillTab",
+    "BookSyncTab",
 )
 
 

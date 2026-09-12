@@ -200,6 +200,8 @@ ALLOWLIST: dict[str, set[str]] = {
     r"usable_model_installed\(": {
         "widgets/subtitle_creation_tab.py",
         "widgets/youtube_tab.py",
+        # Audiobook Sync: same pre-run guard, same on-purpose GUI-thread call.
+        "widgets/booksync_tab.py",
     },
 }
 

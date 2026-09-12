@@ -3276,3 +3276,75 @@ class TestProgressLinesNameTheCardForm:
         labels = [label for _current, label in recording_progress.progresses]
         assert any(word.mined_form in label for label in labels), labels
         assert [item for item, _msg in recording_progress.errors] == [word.mined_form]
+
+
+class TestExtractAudioWindow:
+    """extract_audio_window seeks before -i and bounds with -t; everything else mirrors extract_full_audio."""
+
+    def test_window_argv_has_input_seek_and_duration(self, service, tmp_path):
+        out_wav = tmp_path / "win.wav"
+        captured: list[list[str]] = []
+
+        def fake_run(cmd, op_name, timeout, context="", proc_registry=None):
+            captured.append(list(cmd))
+            _write_min_wav(out_wav)
+            return True
+
+        with (
+            patch.object(service, "_run_ffmpeg", side_effect=fake_run),
+            patch.object(service, "_resolve_audio_track_global_index", return_value=None),
+        ):
+            ok = service.extract_audio_window(tmp_path / "book.m4b", out_wav, start_s=1800.0, duration_s=1820.0)
+
+        assert ok is True
+        cmd = captured[0]
+        i_index = cmd.index("-i")
+        assert cmd[i_index - 2 : i_index] == ["-ss", "1800.000"]
+        assert cmd[cmd.index("-t") + 1] == "1820.000"
+        assert cmd.index("-t") > cmd.index("-map")
+        assert cmd[-1] == str(out_wav)
+        assert "pcm_s16le" in cmd and "16000" in cmd
+
+    def test_full_audio_argv_has_no_seek(self, service, tmp_path):
+        out_wav = tmp_path / "full.wav"
+        captured: list[list[str]] = []
+
+        def fake_run(cmd, op_name, timeout, context="", proc_registry=None):
+            captured.append(list(cmd))
+            _write_min_wav(out_wav)
+            return True
+
+        with (
+            patch.object(service, "_run_ffmpeg", side_effect=fake_run),
+            patch.object(service, "_resolve_audio_track_global_index", return_value=None),
+        ):
+            assert service.extract_full_audio(tmp_path / "book.m4b", out_wav) is True
+
+        assert "-ss" not in captured[0] and "-t" not in captured[0]
+
+    def test_window_zero_frames_is_failure(self, service, tmp_path):
+        out_wav = tmp_path / "empty.wav"
+
+        def fake_run(cmd, op_name, timeout, context="", proc_registry=None):
+            _write_s16_wav(out_wav, 0)
+            return True
+
+        with (
+            patch.object(service, "_run_ffmpeg", side_effect=fake_run),
+            patch.object(service, "_resolve_audio_track_global_index", return_value=None),
+        ):
+            assert service.extract_audio_window(tmp_path / "book.m4b", out_wav, start_s=0.0, duration_s=5.0) is False
+
+    def test_window_respects_cancel_before_spawn(self, service, tmp_path):
+        import threading
+
+        event = threading.Event()
+        event.set()
+        with patch.object(service, "_run_ffmpeg") as run:
+            assert (
+                service.extract_audio_window(
+                    tmp_path / "book.m4b", tmp_path / "x.wav", start_s=0.0, duration_s=5.0, cancel_event=event
+                )
+                is False
+            )
+        run.assert_not_called()

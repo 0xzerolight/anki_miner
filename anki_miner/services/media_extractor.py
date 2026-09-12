@@ -774,6 +774,67 @@ class MediaExtractorService:
             ``True`` on success (ffmpeg exited 0 and *out_wav* exists on disk);
             ``False`` on any failure or cancellation.
         """
+        # Flat 30-minute ceiling. Audio-only decode + 16 kHz resample runs far
+        # faster than realtime, so this comfortably covers multi-hour sources
+        # (the old 300 s could time out a long film on slow I/O). A flat value
+        # avoids an extra ffprobe round-trip; it is a ceiling, not a target.
+        return self._extract_pcm16k(
+            video_file,
+            out_wav,
+            track_override=track_override,
+            cancel_event=cancel_event,
+            seek=None,
+            op_name="Full audio extraction",
+            timeout=1800,
+        )
+
+    def extract_audio_window(
+        self,
+        video_file: Path,
+        out_wav: Path,
+        *,
+        start_s: float,
+        duration_s: float,
+        track_override: int | None = None,
+        cancel_event: "threading.Event | None" = None,
+    ) -> bool:
+        """Extract ``[start_s, start_s + duration_s)`` of the audio as 16 kHz mono pcm_s16le.
+
+        The window form of :meth:`extract_full_audio`, for tracks longer than
+        :data:`anki_miner.services.asr.long_audio.WINDOW_SECONDS`: ``-ss`` is
+        placed BEFORE ``-i`` (input seeking — ffmpeg decodes from the nearest
+        seek point and discards up to the target, so a window near the end of
+        a 7 h book does not decode the 7 h before it) and ``-t`` after the
+        stream map. Same track resolution, cancel wiring and zero-frame guard.
+        Timeout is per window, not per file.
+        """
+        return self._extract_pcm16k(
+            video_file,
+            out_wav,
+            track_override=track_override,
+            cancel_event=cancel_event,
+            seek=(start_s, duration_s),
+            op_name="Audio window extraction",
+            timeout=900,
+        )
+
+    def _extract_pcm16k(
+        self,
+        video_file: Path,
+        out_wav: Path,
+        *,
+        track_override: int | None,
+        cancel_event: "threading.Event | None",
+        seek: tuple[float, float] | None,
+        op_name: str,
+        timeout: int,
+    ) -> bool:
+        """Shared body of :meth:`extract_full_audio` / :meth:`extract_audio_window`.
+
+        ``seek=None`` produces the historical whole-file argv byte for byte;
+        ``seek=(start_s, duration_s)`` adds ``-ss`` before ``-i`` and ``-t``
+        after the stream map.
+        """
         if cancel_event is not None and cancel_event.is_set():
             return False
 
@@ -807,20 +868,20 @@ class MediaExtractorService:
             cancel_thread = threading.Thread(target=_watch, daemon=True)
             cancel_thread.start()
 
-        cmd = [
-            resolve_ffmpeg(self.config),
-            "-y",
-            "-i",
-            str(video_file),
-        ]
+        cmd = [resolve_ffmpeg(self.config), "-y"]
+        if seek is not None:
+            cmd.extend(["-ss", f"{seek[0]:.3f}"])
+        cmd.extend(["-i", str(video_file)])
 
         if global_index is not None:
             cmd.extend(["-map", f"0:{global_index}"])
-            logger.debug("extract_full_audio: using audio stream %d", global_index)
+            logger.debug("%s: using audio stream %d", op_name, global_index)
         else:
             cmd.extend(["-map", "0:a:0"])
             self._warn_no_japanese_audio_once(video_file)
 
+        if seek is not None:
+            cmd.extend(["-t", f"{seek[1]:.3f}"])
         cmd.extend(
             [
                 "-vn",
@@ -834,16 +895,10 @@ class MediaExtractorService:
             ]
         )
 
-        # Flat 30-minute ceiling. Audio-only decode + 16 kHz resample runs far
-        # faster than realtime, so this comfortably covers multi-hour sources
-        # (the old 300 s could time out a long film on slow I/O). A flat value
-        # avoids an extra ffprobe round-trip; it is a ceiling, not a target.
-        timeout = 1800
-
         started = time.monotonic()
         success = self._run_ffmpeg(
             cmd,
-            "Full audio extraction",
+            op_name,
             timeout=timeout,
             context=out_wav.name,
             proc_registry=proc_registry,
@@ -862,10 +917,10 @@ class MediaExtractorService:
         try:
             with wave.open(str(out_wav), "rb") as wf:
                 if wf.getnframes() == 0:
-                    logger.warning("extract_full_audio: %s has no audio frames (no audio stream?)", out_wav.name)
+                    logger.warning("%s: %s has no audio frames (no audio stream?)", op_name, out_wav.name)
                     return False
         except (wave.Error, OSError) as exc:
-            logger.warning("extract_full_audio: could not verify %s: %s", out_wav.name, exc)
+            logger.warning("%s: could not verify %s: %s", op_name, out_wav.name, exc)
             return False
         # The only line this stage leaves on success. Subtitle generation runs
         # this, then a WAV load, then model construction, before it has a segment
@@ -873,7 +928,7 @@ class MediaExtractorService:
         # ffmpeg from one after it.
         log_summary(
             logger,
-            "Full audio extraction done",
+            f"{op_name} done",
             file=video_file,
             seconds=f"{time.monotonic() - started:.1f}",
         )

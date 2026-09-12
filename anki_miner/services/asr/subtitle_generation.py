@@ -1,26 +1,27 @@
 """Per-file subtitle-generation pipeline (ARC-015).
 
-Product policy that used to live on ``SubtitleGenWorker`` — the temp-WAV
-lifecycle, the extract → load → transcribe → write orchestration, and the
-"no recognised speech is a surfaced outcome, not a blank SRT" decision — lives
-here as :func:`generate_subtitle_one`. It returns a STRUCTURED
-:class:`SubtitleGenResult` (a status code plus the output path) rather than a
-user-facing string; i18n stays in the GUI worker, which maps each
-:class:`SubtitleGenStatus` back to a translated message. This keeps the pipeline
-unit-testable without a QThread.
+Product policy that used to live on ``SubtitleGenWorker`` — the status
+mapping of the transcription outcome and the "no recognised speech is a
+surfaced outcome, not a blank SRT" decision — lives here as
+:func:`generate_subtitle_one`. The temp-WAV lifecycle and the extract → load →
+transcribe orchestration live one level down in
+:func:`anki_miner.services.asr.long_audio.transcribe_media`, which windows
+tracks longer than 2 h so the old 6 h ceiling no longer applies. This module
+returns a STRUCTURED :class:`SubtitleGenResult` (a status code plus the output
+path) rather than a user-facing string; i18n stays in the GUI worker, which
+maps each :class:`SubtitleGenStatus` back to a translated message. This keeps
+the pipeline unit-testable without a QThread.
 """
 
 from __future__ import annotations
 
 import logging
-import os
-import tempfile
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from anki_miner.config.config import AnkiMinerConfig
@@ -67,16 +68,17 @@ def generate_subtitle_one(
 ) -> SubtitleGenResult:
     """Transcribe one video to an SRT at *out_srt*.
 
-    Pipeline: extract full audio to a temp WAV → load to float32 → transcribe →
-    write SRT. The temp WAV is always deleted before returning. Empty
-    transcription yields :attr:`SubtitleGenStatus.NO_SPEECH` (a surfaced outcome,
-    never a blank SRT). A cancel checked after each stage yields
+    Pipeline: :func:`long_audio.transcribe_media` (extract to a temp WAV → load
+    to float32 → transcribe, in 2 h windows for longer tracks; the temp WAV is
+    always deleted) → write SRT. Empty transcription yields
+    :attr:`SubtitleGenStatus.NO_SPEECH` (a surfaced outcome, never a blank
+    SRT). A cancel checked after each stage yields
     :attr:`SubtitleGenStatus.CANCELLED`.
 
     Args:
         config: Frozen application config (ASR model / device / roots).
         extractor: A ``MediaExtractorService`` (or stand-in) exposing
-            ``extract_full_audio(video, out_wav, *, cancel_event=...)``.
+            ``extract_full_audio`` and ``extract_audio_window``.
         video_path: Source video to transcribe.
         out_srt: Destination SRT path (its parent is created if missing).
         on_extract_start: Called once right before extraction begins (the worker
@@ -92,83 +94,37 @@ def generate_subtitle_one(
             transcriber; the default keeps every existing caller on Japanese.
 
     Unexpected exceptions propagate to the caller (the worker isolates them
-    per-file); only the temp-WAV cleanup is guaranteed here.
+    per-file); the temp-WAV cleanup is guaranteed by ``transcribe_media``.
     """
     # Lazy imports keep the heavy ASR / media-extractor modules off this module's
     # import path and let tests patch them at their canonical location.
-    from anki_miner.services.asr import srt_writer, transcriber
-    from anki_miner.services.media_extractor import wav_to_float32
+    from anki_miner.services.asr import long_audio, srt_writer
 
-    temp_dir = config.media_temp_folder
-    temp_dir.mkdir(parents=True, exist_ok=True)
+    # --- Stages 1–3: extract → load → transcribe (windowed past 2 h) ---
+    result = long_audio.transcribe_media(
+        config,
+        extractor,
+        video_path,
+        cancel_event=cancel_event,
+        progress_cb=transcribe_progress_cb,
+        on_extract_start=on_extract_start,
+        on_transcribe_start=on_transcribe_start,
+        ct2_model_session=ct2_model_session,
+        language=language,
+    )
+    if result.status is long_audio.LongAudioStatus.CANCELLED:
+        return SubtitleGenResult(SubtitleGenStatus.CANCELLED)
+    if result.status is long_audio.LongAudioStatus.EXTRACTION_FAILED:
+        return SubtitleGenResult(SubtitleGenStatus.EXTRACTION_FAILED)
 
-    # mkstemp gives a unique fd; close it and keep the path for ffmpeg to write.
-    fd, tmp_wav_str = tempfile.mkstemp(prefix="asr_", suffix=".wav", dir=temp_dir)
-    os.close(fd)
-    tmp_wav = Path(tmp_wav_str)
+    # No recognised speech: surface it rather than writing a blank SRT and
+    # reporting a clean "Done". Empty audio is already rejected upstream by
+    # the extractor; this catches silence / music-only tracks.
+    if not srt_writer.writable_segments(result.segments):
+        logger.info("subtitle_generation: no speech detected in %s", video_path)
+        return SubtitleGenResult(SubtitleGenStatus.NO_SPEECH)
 
-    try:
-        # --- Stage 1: extract audio ---
-        if on_extract_start is not None:
-            on_extract_start()
-
-        ok = extractor.extract_full_audio(video_path, tmp_wav, cancel_event=cancel_event)
-        if _is_cancelled(cancel_event):
-            return SubtitleGenResult(SubtitleGenStatus.CANCELLED)
-        if not ok:
-            return SubtitleGenResult(SubtitleGenStatus.EXTRACTION_FAILED)
-
-        # --- Stage 2: load audio ---
-        audio, sample_rate, duration_s = wav_to_float32(tmp_wav)
-        if _is_cancelled(cancel_event):
-            return SubtitleGenResult(SubtitleGenStatus.CANCELLED)
-
-        # --- Stage 3: transcribe ---
-        if on_transcribe_start is not None:
-            on_transcribe_start()
-        transcribe_kwargs: dict[str, Any] = {}
-        if ct2_model_session is not None:
-            transcribe_kwargs["ct2_model_session"] = ct2_model_session
-        # Omit-when-ja: the transcriber already defaults to Japanese, so the ja
-        # call shape into it stays exactly what it was before languages existed.
-        if language != "ja":
-            transcribe_kwargs["language"] = language
-        segments = transcriber.transcribe(
-            audio,
-            model_name=config.asr_model,
-            models_root=config.asr_models_root,
-            sample_rate=sample_rate,
-            duration_s=duration_s,
-            cancel_event=cancel_event,
-            progress_cb=transcribe_progress_cb,
-            device=config.asr_device,
-            cuda_libs_root=config.cuda_libs_root,
-            onnx_pack_root=config.onnx_pack_root,
-            **transcribe_kwargs,
-        )
-        if _is_cancelled(cancel_event):
-            return SubtitleGenResult(SubtitleGenStatus.CANCELLED)
-
-        # No recognised speech: surface it rather than writing a blank SRT and
-        # reporting a clean "Done". Empty audio is already rejected upstream by
-        # extract_full_audio; this catches silence / music-only tracks.
-        if not srt_writer.writable_segments(segments):
-            logger.info("subtitle_generation: no speech detected in %s", video_path)
-            return SubtitleGenResult(SubtitleGenStatus.NO_SPEECH)
-
-        # --- Stage 4: write SRT ---
-        out_srt.parent.mkdir(parents=True, exist_ok=True)
-        srt_writer.segments_to_srt(segments, out_srt)
-        return SubtitleGenResult(SubtitleGenStatus.SUCCESS, out_srt=out_srt)
-    finally:
-        # Always clean up the temp WAV.
-        try:
-            if tmp_wav.exists():
-                tmp_wav.unlink()
-        except OSError:
-            logger.warning("subtitle_generation: could not delete temp WAV %s", tmp_wav)
-
-
-def _is_cancelled(cancel_event: threading.Event | None) -> bool:
-    """True when *cancel_event* is present and set."""
-    return cancel_event is not None and cancel_event.is_set()
+    # --- Stage 4: write SRT ---
+    out_srt.parent.mkdir(parents=True, exist_ok=True)
+    srt_writer.segments_to_srt(result.segments, out_srt)
+    return SubtitleGenResult(SubtitleGenStatus.SUCCESS, out_srt=out_srt)

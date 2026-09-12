@@ -42,6 +42,7 @@ from anki_miner.gui.widgets.base.sizing import (
     page_width_cap,
 )
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
+from anki_miner.gui.widgets.booksync_tab import BookSyncTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
@@ -84,6 +85,7 @@ PAGES = (
     DeckBuilderTab,
     DownloadTab,
     MokuroTab,
+    BookSyncTab,
 )
 
 PAGE_NAMES = sorted(cls.__name__ for cls in PAGES)
@@ -111,6 +113,7 @@ def _build_page(name: str, config):
         "DeckBuilderTab": lambda: DeckBuilderTab(config, MagicMock(), MagicMock()),
         "DownloadTab": lambda: DownloadTab(config, suppress_optional_startup=True),
         "MokuroTab": lambda: MokuroTab(config, suppress_optional_startup=True),
+        "BookSyncTab": lambda: BookSyncTab(config, suppress_optional_startup=True),
     }
     return builders[name]()
 

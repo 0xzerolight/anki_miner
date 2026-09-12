@@ -98,6 +98,11 @@ def _patch_pipeline(monkeypatch, *, segments=None, transcribe_exc=None, cancel_o
     import anki_miner.services.media_extractor as me
 
     monkeypatch.setattr(me, "wav_to_float32", lambda path: (object(), 16000, 2.0))
+    # The windowed path probes the duration with ffprobe first; "unknown" keeps
+    # every test on the whole-file path without spawning a process.
+    monkeypatch.setattr(
+        "anki_miner.services.asr.long_audio.get_media_duration_seconds", lambda path, ffprobe_cmd="ffprobe": None
+    )
 
     def _fake_transcribe(audio, *, progress_cb=None, cancel_event=None, **kwargs):
         if transcribe_exc is not None:
@@ -237,3 +242,53 @@ def test_on_extract_start_and_progress_callbacks(tmp_path, monkeypatch):
 
     assert events == ["extract", "transcribe"]
     assert fractions == [1.0]
+
+
+def test_generate_delegates_to_transcribe_media(tmp_path, monkeypatch):
+    """Stages 1–3 live in long_audio now; the SRT write and the status mapping stay here."""
+    import anki_miner.services.asr.long_audio as la
+    import anki_miner.services.asr.srt_writer as sw
+
+    seen: dict = {}
+
+    def fake_transcribe_media(config, extractor, media_path, **kwargs):
+        seen["media"] = media_path
+        seen["kwargs"] = kwargs
+        return la.LongAudioResult(la.LongAudioStatus.OK, list(_FAKE_SEGMENTS))
+
+    monkeypatch.setattr(la, "transcribe_media", fake_transcribe_media)
+    written: dict = {}
+    monkeypatch.setattr(sw, "segments_to_srt", lambda segs, out: written.update(segs=segs, out=out))
+
+    out = tmp_path / "ep.srt"
+    result = generate_subtitle_one(_make_config(tmp_path), _FakeExtractor(), tmp_path / "ep.mkv", out, language="ko")
+
+    assert result.status is SubtitleGenStatus.SUCCESS and result.out_srt == out
+    assert seen["media"] == tmp_path / "ep.mkv"
+    assert seen["kwargs"]["language"] == "ko"
+    assert written["segs"] == _FAKE_SEGMENTS
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        ("EXTRACTION_FAILED", SubtitleGenStatus.EXTRACTION_FAILED),
+        ("CANCELLED", SubtitleGenStatus.CANCELLED),
+    ],
+)
+def test_generate_maps_long_audio_statuses(tmp_path, monkeypatch, status, expected):
+    import anki_miner.services.asr.long_audio as la
+
+    monkeypatch.setattr(
+        la, "transcribe_media", lambda *a, **k: la.LongAudioResult(getattr(la.LongAudioStatus, status), [])
+    )
+    result = generate_subtitle_one(_make_config(tmp_path), _FakeExtractor(), tmp_path / "ep.mkv", tmp_path / "ep.srt")
+    assert result.status is expected
+
+
+def test_generate_reports_no_speech_for_empty_transcript(tmp_path, monkeypatch):
+    import anki_miner.services.asr.long_audio as la
+
+    monkeypatch.setattr(la, "transcribe_media", lambda *a, **k: la.LongAudioResult(la.LongAudioStatus.OK, []))
+    result = generate_subtitle_one(_make_config(tmp_path), _FakeExtractor(), tmp_path / "ep.mkv", tmp_path / "ep.srt")
+    assert result.status is SubtitleGenStatus.NO_SPEECH

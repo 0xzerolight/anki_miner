@@ -102,7 +102,7 @@ def test_choosing_records_target_and_accepts(dialog, qtbot):
 
 
 def test_clicking_open_button_selects_that_row(dialog, qtbot):
-    dialog.search_box.setText("audiobook")  # narrows to a single row
+    dialog.search_box.setText("mine from an audiobook")  # one row: bare "audiobook" also hits Audiobook Sync
     visible = dialog._current
     assert len(visible) == 1
     button = next(b for b in dialog.findChildren(QPushButton) if b.objectName() == "capability-open")

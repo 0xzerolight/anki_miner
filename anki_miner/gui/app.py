@@ -1825,6 +1825,7 @@ def compose_main_window(
         subtitles_tab.deck_filter_tab,
         subtitles_tab.download_tab,
         subtitles_tab.mokuro_tab,
+        subtitles_tab.booksync_tab,
     ):
         screen.bind_task_registry(window.task_registry)
     # --- end task-registry publication ------------------------------------

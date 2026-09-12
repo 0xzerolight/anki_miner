@@ -6,6 +6,7 @@ import re
 
 import budoux
 import unidic_lite
+from PyInstaller.utils.hooks import collect_submodules
 
 from anki_miner.languages import AVAILABLE_LANGUAGES
 
@@ -320,6 +321,13 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         # startup. Bytecode analysis should find the IMPORT opcode; pinned
         # here like mpv/ffsubsync so the graph never loses it.
         "budoux",
+        # rapidfuzz (Utilities → Audiobook Sync aligner): the wrappers pick their
+        # compiled *_cpp / *_cpp_avx2 backends behind suppress(ImportError) at
+        # import time. Neither hooks-contrib nor the wheel ships a hook (its
+        # `pyinstaller40` entry point registers only a packaging test), so
+        # collect every submodule and the bundle never silently falls back to
+        # the pure-Python implementation.
+        *collect_submodules("rapidfuzz"),
         # Modules the ASR engine pack imports at package load that nothing in
         # the BASE graph reaches once the pack packages are excluded below. The
         # base imports bare `tqdm` (ffsubsync/speech_transformers.py,

@@ -104,7 +104,7 @@ def test_stable_keys_did_not_move_with_the_labels():
     assert set(MAIN_TABS) == {"video", "deckbuilder", "audiobook", "reading", "analytics", "subtitles", "settings"}
     assert SUBTAB_KEYS["reading"] == frozenset({"manga", "novels", "subtitles", "text"})
     assert SUBTAB_KEYS["subtitles"] == frozenset(
-        {"generate", "retime", "condense", "backfill", "deckfilter", "download", "mokuro"}
+        {"generate", "retime", "condense", "backfill", "deckfilter", "download", "mokuro", "booksync"}
     )
     assert "audio" in SETTINGS_SUBTABS
     assert "subtitles" in SETTINGS_SUBTABS

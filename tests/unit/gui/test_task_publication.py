@@ -21,6 +21,7 @@ from anki_miner.gui.capabilities import MAIN_TABS, SUBTAB_KEYS
 from anki_miner.gui.controllers.task_registry import TaskOutcome, TaskRegistry
 from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
+from anki_miner.gui.widgets.booksync_tab import BookSyncTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
@@ -48,6 +49,7 @@ PUBLISHING_SCREENS = [
     (DeckFilterTab, "tools.deckfilter", ("subtitles", "deckfilter")),
     (DownloadTab, "tools.download", ("subtitles", "download")),
     (MokuroTab, "tools.mokuro", ("subtitles", "mokuro")),
+    (BookSyncTab, "tools.booksync", ("subtitles", "booksync")),
 ]
 
 

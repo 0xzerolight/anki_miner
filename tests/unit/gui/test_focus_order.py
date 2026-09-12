@@ -27,6 +27,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
+from anki_miner.gui.widgets.booksync_tab import BookSyncTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
 from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
@@ -76,6 +77,8 @@ def _build(name: str, config: AnkiMinerConfig) -> QWidget:
         return DownloadTab(config, suppress_optional_startup=True)
     if name == "mokuro":
         return MokuroTab(config, suppress_optional_startup=True)
+    if name == "booksync":
+        return BookSyncTab(config, suppress_optional_startup=True)
     if name in {"condense", "generate", "retime"}:
         return {"condense": CondenseTab, "generate": SubtitleCreationTab, "retime": SubtitleRetimeTab}[name](config)
     return {
@@ -102,6 +105,7 @@ SCREENS = [
     "deckfilter",
     "download",
     "mokuro",
+    "booksync",
 ]
 
 

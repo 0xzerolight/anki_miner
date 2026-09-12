@@ -1,7 +1,8 @@
 """Tests for SubtitlesTab container.
 
 Covers:
-- Inner QTabWidget has exactly four tabs: "Generate" (0), "Retime" (1), "Condense" (2), "Backfill" (3).
+- Inner QTabWidget has exactly eight tabs: Generate (0), Retime (1), Condense (2), Card Backfill (3),
+  Deck Filter (4), Download (5), Manga OCR (6), Audiobook Sync (7).
 - update_config fans out to all child tabs.
 - iter_close_workers yields workers from all children.
 - SubtitlesTab has no worker_thread attribute (or it is None-safe via getattr).
@@ -58,13 +59,22 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
     ):
         tab = SubtitlesTab(config)
         qtbot.addWidget(tab)
-        for child in (tab.generate_tab, tab.retime_tab, tab.condense_tab, tab.download_tab, tab.mokuro_tab):
+        for child in (
+            tab.generate_tab,
+            tab.retime_tab,
+            tab.condense_tab,
+            tab.download_tab,
+            tab.mokuro_tab,
+            tab.booksync_tab,
+        ):
             assert child._availability_worker.wait(3000)
         qtbot.waitUntil(tab.generate_tab.generate_button.isEnabled, timeout=3000)
         qtbot.waitUntil(tab.retime_tab.retime_button.isEnabled, timeout=3000)
         qtbot.waitUntil(tab.condense_tab.condense_button.isEnabled, timeout=3000)
         qtbot.waitUntil(tab.download_tab.download_button.isEnabled, timeout=3000)
         qtbot.waitUntil(tab.mokuro_tab.run_button.isEnabled, timeout=3000)
+        # Audiobook Sync probes the same ASR engine as Generate (already patched).
+        qtbot.waitUntil(tab.booksync_tab.sync_button.isEnabled, timeout=3000)
     return tab
 
 
@@ -74,9 +84,9 @@ def _make_tab(config: AnkiMinerConfig, qtbot) -> SubtitlesTab:
 
 
 def test_inner_tab_count(qtbot, tmp_path):
-    """Inner QTabWidget must have exactly seven tabs."""
+    """Inner QTabWidget must have exactly eight tabs."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    assert tab._inner_tabs.count() == 7
+    assert tab._inner_tabs.count() == 8
 
 
 def test_inner_tab_labels(qtbot, tmp_path):
@@ -89,6 +99,7 @@ def test_inner_tab_labels(qtbot, tmp_path):
     assert tab._inner_tabs.tabText(4) == "Deck Filter"
     assert tab._inner_tabs.tabText(5) == "Download"
     assert tab._inner_tabs.tabText(6) == "Manga OCR"
+    assert tab._inner_tabs.tabText(7) == "Audiobook Sync"
 
 
 def test_generate_tab_is_first(qtbot, tmp_path):
@@ -133,6 +144,12 @@ def test_mokuro_tab_is_seventh(qtbot, tmp_path):
     assert tab._inner_tabs.widget(6) is tab.mokuro_tab
 
 
+def test_booksync_tab_is_eighth(qtbot, tmp_path):
+    """booksync_tab is the widget at index 7."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    assert tab._inner_tabs.widget(7) is tab.booksync_tab
+
+
 def test_the_sub_tab_underline_slides(qtbot, tmp_path):
     """Sub-tabs are navigation too -- see tests/unit/gui/test_animated_tab_bar.py."""
     tab = _make_tab(_make_config(tmp_path), qtbot)
@@ -146,7 +163,15 @@ def test_the_sub_tab_underline_slides(qtbot, tmp_path):
 
 @pytest.mark.parametrize(
     ("key", "expected_index"),
-    [("generate", 0), ("retime", 1), ("backfill", 3), ("deckfilter", 4), ("download", 5), ("mokuro", 6)],
+    [
+        ("generate", 0),
+        ("retime", 1),
+        ("backfill", 3),
+        ("deckfilter", 4),
+        ("download", 5),
+        ("mokuro", 6),
+        ("booksync", 7),
+    ],
 )
 def test_open_subtab_switches_inner_tab(qtbot, tmp_path, key, expected_index):
     tab = _make_tab(_make_config(tmp_path), qtbot)
@@ -171,7 +196,9 @@ def test_open_subtab_unknown_key_is_ignored(qtbot, tmp_path):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("key", ["generate", "retime", "condense", "backfill", "deckfilter", "download", "mokuro"])
+@pytest.mark.parametrize(
+    "key", ["generate", "retime", "condense", "backfill", "deckfilter", "download", "mokuro", "booksync"]
+)
 def test_current_subtab_key_round_trips_with_open_subtab(qtbot, tmp_path, key):
     tab = _make_tab(_make_config(tmp_path), qtbot)
 
@@ -205,6 +232,7 @@ def test_update_config_propagates_to_generate_tab(qtbot, tmp_path):
     tab.backfill_tab.update_config = MagicMock()
     tab.download_tab.update_config = MagicMock()
     tab.mokuro_tab.update_config = MagicMock()
+    tab.booksync_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -225,6 +253,7 @@ def test_update_config_propagates_to_retime_tab(qtbot, tmp_path):
     tab.backfill_tab.update_config = MagicMock()
     tab.download_tab.update_config = MagicMock()
     tab.mokuro_tab.update_config = MagicMock()
+    tab.booksync_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -245,6 +274,7 @@ def test_update_config_propagates_to_condense_tab(qtbot, tmp_path):
     tab.backfill_tab.update_config = MagicMock()
     tab.download_tab.update_config = MagicMock()
     tab.mokuro_tab.update_config = MagicMock()
+    tab.booksync_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -265,6 +295,7 @@ def test_update_config_propagates_to_backfill_tab(qtbot, tmp_path):
     tab.backfill_tab.update_config = MagicMock()
     tab.download_tab.update_config = MagicMock()
     tab.mokuro_tab.update_config = MagicMock()
+    tab.booksync_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -285,6 +316,7 @@ def test_update_config_propagates_to_download_tab(qtbot, tmp_path):
     tab.backfill_tab.update_config = MagicMock()
     tab.download_tab.update_config = MagicMock()
     tab.mokuro_tab.update_config = MagicMock()
+    tab.booksync_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
@@ -305,10 +337,32 @@ def test_update_config_propagates_to_mokuro_tab(qtbot, tmp_path):
     tab.backfill_tab.update_config = MagicMock()
     tab.download_tab.update_config = MagicMock()
     tab.mokuro_tab.update_config = MagicMock()
+    tab.booksync_tab.update_config = MagicMock()
 
     tab.update_config(new_config)
 
     tab.mokuro_tab.update_config.assert_called_once_with(new_config)
+
+
+def test_update_config_propagates_to_booksync_tab(qtbot, tmp_path):
+    """update_config must call booksync_tab.update_config with the new config."""
+    import dataclasses
+
+    config = _make_config(tmp_path)
+    tab = _make_tab(config, qtbot)
+
+    new_config = dataclasses.replace(config, asr_model="small")
+    tab.generate_tab.update_config = MagicMock()
+    tab.retime_tab.update_config = MagicMock()
+    tab.condense_tab.update_config = MagicMock()
+    tab.backfill_tab.update_config = MagicMock()
+    tab.download_tab.update_config = MagicMock()
+    tab.mokuro_tab.update_config = MagicMock()
+    tab.booksync_tab.update_config = MagicMock()
+
+    tab.update_config(new_config)
+
+    tab.booksync_tab.update_config.assert_called_once_with(new_config)
 
 
 def test_update_config_stores_config(qtbot, tmp_path):
@@ -350,6 +404,7 @@ def test_iter_close_workers_yields_generate_worker(qtbot, tmp_path):
     tab.backfill_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.download_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.mokuro_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.booksync_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_gen_worker in workers
@@ -366,6 +421,7 @@ def test_iter_close_workers_yields_retime_worker(qtbot, tmp_path):
     tab.backfill_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.download_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.mokuro_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.booksync_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_retime_worker in workers
@@ -382,6 +438,7 @@ def test_iter_close_workers_yields_condense_worker(qtbot, tmp_path):
     tab.backfill_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.download_tab.iter_close_workers = MagicMock(return_value=iter([]))
     tab.mokuro_tab.iter_close_workers = MagicMock(return_value=iter([]))
+    tab.booksync_tab.iter_close_workers = MagicMock(return_value=iter([]))
 
     workers = list(tab.iter_close_workers())
     assert fake_condense_worker in workers
@@ -397,12 +454,14 @@ def test_iter_close_workers_yields_all_when_all_active(qtbot, tmp_path):
     fake_backfill_worker = MagicMock(name="backfill_worker")
     fake_download_worker = MagicMock(name="download_worker")
     fake_mokuro_worker = MagicMock(name="mokuro_worker")
+    fake_booksync_worker = MagicMock(name="booksync_worker")
     tab.generate_tab.iter_close_workers = MagicMock(return_value=iter([fake_gen_worker]))
     tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([fake_retime_worker]))
     tab.condense_tab.iter_close_workers = MagicMock(return_value=iter([fake_condense_worker]))
     tab.backfill_tab.iter_close_workers = MagicMock(return_value=iter([fake_backfill_worker]))
     tab.download_tab.iter_close_workers = MagicMock(return_value=iter([fake_download_worker]))
     tab.mokuro_tab.iter_close_workers = MagicMock(return_value=iter([fake_mokuro_worker]))
+    tab.booksync_tab.iter_close_workers = MagicMock(return_value=iter([fake_booksync_worker]))
 
     workers = list(tab.iter_close_workers())
     assert fake_gen_worker in workers
@@ -411,7 +470,8 @@ def test_iter_close_workers_yields_all_when_all_active(qtbot, tmp_path):
     assert fake_backfill_worker in workers
     assert fake_download_worker in workers
     assert fake_mokuro_worker in workers
-    assert len(workers) == 6
+    assert fake_booksync_worker in workers
+    assert len(workers) == 7
 
 
 # ---------------------------------------------------------------------------
