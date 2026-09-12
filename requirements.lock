@@ -81,6 +81,7 @@ PyQt6==6.11.0
 PyQt6_sip==13.11.1
 pysubs2==1.8.1
 PyYAML==6.0.3
+rapidfuzz==3.14.6
 requests==2.34.2
 rich==15.0.0
 setuptools==82.0.1
