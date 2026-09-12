@@ -132,12 +132,16 @@ def transcribe_media(
     if language != "ja":  # omit-when-ja keeps the historical call shape
         transcribe_kwargs["language"] = language
 
+    reported = 0.0  # last fraction handed to progress_cb
+
     def _decode(
         audio: Any, sample_rate: int, seconds: float, window_start: float, total: float
     ) -> list[tuple[float, float, str]]:
         def _scaled(fraction: float) -> None:
+            nonlocal reported
             if progress_cb is not None:
-                progress_cb(min((window_start + fraction * seconds) / total, 1.0) if total > 0 else fraction)
+                reported = min((window_start + fraction * seconds) / total, 1.0) if total > 0 else fraction
+                progress_cb(reported)
 
         return transcriber.transcribe(
             audio,
@@ -220,7 +224,10 @@ def transcribe_media(
         if final:
             break
 
-    if progress_cb is not None:
+    # A container whose duration overstated the audio leaves the scaled
+    # fraction short of 1.0; close it. The whole-file path already reported
+    # 1.0 from the transcriber and gets no duplicate.
+    if progress_cb is not None and reported < 1.0:
         progress_cb(1.0)
     log_summary(
         logger,

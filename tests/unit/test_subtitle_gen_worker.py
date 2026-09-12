@@ -119,6 +119,11 @@ def _patch_wav_to_float32(monkeypatch, *, audio=None, sample_rate=16000, duratio
     import anki_miner.services.media_extractor as me
 
     monkeypatch.setattr(me, "wav_to_float32", lambda path: (samples, sample_rate, duration_s))
+    # The windowed path probes the duration with ffprobe first; "unknown" keeps
+    # every test on the whole-file path without spawning a process.
+    monkeypatch.setattr(
+        "anki_miner.services.asr.long_audio.get_media_duration_seconds", lambda path, ffprobe_cmd="ffprobe": None
+    )
 
 
 def _patch_transcribe(monkeypatch, *, segments=None, raise_exc=None):
