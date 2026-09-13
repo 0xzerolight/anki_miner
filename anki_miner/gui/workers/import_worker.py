@@ -24,6 +24,7 @@ from anki_miner.services._sqlite_index import language_kwarg
 from anki_miner.services.audio_packs.importer import import_android_audio_db, import_audio_pack, repair_audio_pack
 from anki_miner.services.dictionary.importers.jmdict_importer import import_jmdict_xml, repair_jmdict_xml
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip, repair_yomitan_zip
+from anki_miner.services.frequency.lemmatize import Lemmatizer, lemmatize_kwarg
 from anki_miner.services.frequency.source_importer import import_frequency_source, repair_frequency_source
 from anki_miner.services.pitch_accent.source_importer import import_pitch_source, repair_pitch_source
 
@@ -231,13 +232,15 @@ class ImportWorker(CancellableWorker):
         source_name: str | None = None,
         overwrite: bool = False,
         language: str = "ja",
+        lemmatize: Lemmatizer | None = None,
     ) -> ImportWorker:
         """Build a worker that imports a frequency source file.
 
         ``source_name`` is forwarded so reimport can preserve the existing
         display name (see ``import_frequency_source``). ``language`` is the
         stamp the new index carries; the repair path never takes one, so a
-        rebuild keeps the slot's own.
+        rebuild keeps the slot's own. ``lemmatize`` (S17) is forwarded only when
+        given, so every other import keeps its pre-S17 call shape.
         """
 
         def runner(progress_fn: ProgressFn, cancel_fn: CancelFn) -> tuple[str, dict[str, Any]]:
@@ -250,6 +253,7 @@ class ImportWorker(CancellableWorker):
                 cancel_check=cancel_fn,
                 overwrite=overwrite,
                 **language_kwarg(language),
+                **lemmatize_kwarg(lemmatize),
             )
             meta: dict[str, Any] = {
                 "entry_count": getattr(result, "entry_count", 0),

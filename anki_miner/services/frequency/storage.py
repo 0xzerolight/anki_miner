@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import sqlite3
 import unicodedata
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 import anki_miner.services._sqlite_index as _sqlite_index
@@ -73,12 +73,27 @@ def create_index(db_path: Path) -> None:
         conn.close()
 
 
-def bulk_insert(db_path: Path, rows: Iterable[FreqRow], batch_size: int = 5000) -> int:
+def _nfc(value: str) -> str:
+    return unicodedata.normalize("NFC", value)
+
+
+def bulk_insert(
+    db_path: Path,
+    rows: Iterable[FreqRow],
+    batch_size: int = 5000,
+    *,
+    fold_term: Callable[[str], str] | None = None,
+) -> int:
     """Insert ``(term, reading, rank, display_value)`` rows in batched transactions.
 
     Returns the total number inserted. Closes the connection explicitly so the
     db file is not held open across the importer's staging-dir cleanup.
+
+    ``fold_term`` is the stamped language's key fold (``None`` = NFC, the
+    ja/ko/zh fold); readings go through the same function so both columns match
+    the query side byte for byte.
     """
+    fold = fold_term or _nfc
     total = 0
     conn = sqlite3.connect(db_path, timeout=5.0)
     try:
@@ -86,8 +101,8 @@ def bulk_insert(db_path: Path, rows: Iterable[FreqRow], batch_size: int = 5000) 
         for term, reading, rank, display_value in rows:
             batch.append(
                 (
-                    unicodedata.normalize("NFC", term),
-                    unicodedata.normalize("NFC", reading) if reading is not None else None,
+                    fold(term),
+                    fold(reading) if reading is not None else None,
                     rank,
                     display_value,
                 )
@@ -111,7 +126,13 @@ def bulk_insert(db_path: Path, rows: Iterable[FreqRow], batch_size: int = 5000) 
     return total
 
 
-def build_index(db_path: Path, rows: Iterable[FreqRow], meta: dict[str, str]) -> int:
+def build_index(
+    db_path: Path,
+    rows: Iterable[FreqRow],
+    meta: dict[str, str],
+    *,
+    fold_term: Callable[[str], str] | None = None,
+) -> int:
     """Create the index at ``db_path``, insert ``rows``, then write ``meta``.
 
     Convenience over ``create_index`` + ``bulk_insert`` + ``write_meta`` so the
@@ -119,7 +140,7 @@ def build_index(db_path: Path, rows: Iterable[FreqRow], meta: dict[str, str]) ->
     sidecar via :func:`write_meta`. Returns the inserted entry count.
     """
     create_index(db_path)
-    total = bulk_insert(db_path, rows)
+    total = bulk_insert(db_path, rows, fold_term=fold_term)
     write_meta(db_path, meta)
     return total
 

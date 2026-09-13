@@ -717,10 +717,10 @@ class TestCsvImport:
         rows_were_streamed = False
         real_build_index = storage.build_index
 
-        def _build_index(db_path, rows, meta):
+        def _build_index(db_path, rows, meta, **kwargs):
             nonlocal rows_were_streamed
             rows_were_streamed = not isinstance(rows, list)
-            return real_build_index(db_path, rows, meta)
+            return real_build_index(db_path, rows, meta, **kwargs)
 
         monkeypatch.setattr(storage, "build_index", _build_index)
         tracemalloc.start()

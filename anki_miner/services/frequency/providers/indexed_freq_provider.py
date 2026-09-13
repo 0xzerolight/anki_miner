@@ -21,10 +21,14 @@ import logging
 import sqlite3
 import unicodedata
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from anki_miner.services._sqlite_index import open_readonly
 from anki_miner.services.frequency.storage import SCHEMA_VERSION, read_meta_cached
 from anki_miner.utils.text_utils import katakana_to_hiragana
+
+if TYPE_CHECKING:  # pragma: no cover - typing only; profile imports services
+    from anki_miner.languages.profile import DictKeyFolding
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +36,10 @@ logger = logging.getLogger(__name__)
 # is 999 on older SQLite builds, so stay under it with headroom (the dictionary-side
 # batch, dictionary/storage.py's _BIND_CHUNK, binds 2 vars per term and uses 450).
 _BIND_CHUNK = 900
+
+
+def _nfc(value: str) -> str:
+    return unicodedata.normalize("NFC", value)
 
 
 # Ported semantics from Yomitan Translator (ext/js/language/translator.js, the
@@ -72,7 +80,15 @@ class IndexedFreqProvider:
     a bad source without aborting the chain.
     """
 
-    def __init__(self, source_id: str, db_path: Path, display_name: str, is_categorical: bool = False):
+    def __init__(
+        self,
+        source_id: str,
+        db_path: Path,
+        display_name: str,
+        is_categorical: bool = False,
+        *,
+        keys: DictKeyFolding | None = None,
+    ):
         self.source_id = source_id
         self._db_path = db_path
         self._display_name = display_name
@@ -81,6 +97,9 @@ class IndexedFreqProvider:
         # FreqSourceMeta so MultiFrequencyService.has_numeric_source can keep the
         # max_frequency_rank cutoff inert on a categorical-only chain.
         self.is_categorical = is_categorical
+        # The index's own key fold (S4), applied to every query term and reading
+        # exactly as the importer applied it to the stored rows. None = NFC.
+        self._fold_term = keys.fold_term if keys is not None else _nfc
         self._conn: sqlite3.Connection | None = None
         # Set at load() from PRAGMA table_info so a physical schema mismatch
         # cannot mis-shape detail queries.
@@ -166,8 +185,8 @@ class IndexedFreqProvider:
         """
         if self._conn is None:
             return None
-        term = unicodedata.normalize("NFC", term)
-        reading = unicodedata.normalize("NFC", reading) if reading is not None else None
+        term = self._fold_term(term)
+        reading = self._fold_term(reading) if reading is not None else None
         display_col = "display_value" if self._has_display_value else "NULL"
         try:
             rows = self._conn.execute(
@@ -206,8 +225,8 @@ class IndexedFreqProvider:
             return [None] * len(pairs)
         pairs = [
             (
-                unicodedata.normalize("NFC", term),
-                unicodedata.normalize("NFC", reading) if reading is not None else None,
+                self._fold_term(term),
+                self._fold_term(reading) if reading is not None else None,
             )
             for term, reading in pairs
         ]

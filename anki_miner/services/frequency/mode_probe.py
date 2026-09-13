@@ -50,6 +50,18 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     # granularity languages/ko/morphology.py mines). Every term is in the top 31
     # of that survey once its homograph indices are merged.
     "ko": ["하다", "있다", "되다", "없다", "같다", "보다", "사람", "우리", "일", "말"],
+    # Western 8 (Stage S, S16): lowercase surface forms as hermitdave/FrequencyWords'
+    # OpenSubtitles 2018 *_50k.txt lists spell them (the default catalogue source,
+    # imported before lemmatisation). Common terms sit in each list's top 25.
+    # pt terms occur in both the pt and pt_br lists.
+    "en": ["you", "i", "the", "to", "a", "it", "and", "that", "of", "is"],
+    "de": ["ich", "sie", "das", "ist", "du", "nicht", "die", "es", "und", "der"],
+    "fr": ["de", "je", "est", "pas", "le", "que", "la", "vous", "tu", "un"],
+    "es": ["de", "que", "no", "a", "la", "el", "y", "es", "en", "lo"],
+    "it": ["e", "non", "che", "di", "la", "il", "un", "a", "per", "è"],
+    "pt": ["que", "o", "não", "de", "a", "é", "e", "um", "para", "eu"],
+    "nl": ["ik", "je", "het", "de", "dat", "is", "een", "niet", "en", "van"],
+    "ca": ["que", "no", "de", "la", "el", "a", "i", "és", "un", "per"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -75,6 +87,60 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
     # dropped from an earlier draft of this list: the survey carries only
     # 물레방아 and 갈무리하다, so neither term could ever have voted.
     "ko": ["노새", "자맥질", "여울", "두레박", "삿갓", "옹기", "맷돌", "나룻배", "멍석", "미나리"],
+    # Western 8: rare-but-real nouns present in the same lists at ranks 7,700-50,000
+    # (only pt_br puts two below 9,000: farol 7,706, esquilo 8,654).
+    "en": [
+        "hedgehog",
+        "lighthouse",
+        "thimble",
+        "walrus",
+        "anvil",
+        "kiln",
+        "sundial",
+        "chisel",
+        "beehive",
+        "wheelbarrow",
+    ],
+    "de": [
+        "igel",
+        "leuchtturm",
+        "fingerhut",
+        "walross",
+        "amboss",
+        "laterne",
+        "meißel",
+        "dachs",
+        "fernrohr",
+        "schubkarre",
+    ],
+    "fr": ["hérisson", "phare", "morse", "enclume", "cadran", "lanterne", "ciseau", "blaireau", "brouette", "canoë"],
+    "es": ["erizo", "faro", "dedal", "morsa", "yunque", "cincel", "tejón", "colmena", "carretilla", "canoa"],
+    "it": [
+        "riccio",
+        "tricheco",
+        "incudine",
+        "lanterna",
+        "scalpello",
+        "telescopio",
+        "alveare",
+        "carriola",
+        "canoa",
+        "bussola",
+    ],
+    "pt": ["ouriço", "farol", "morsa", "bigorna", "texugo", "telescópio", "bússola", "colmeia", "canoa", "esquilo"],
+    "nl": [
+        "egel",
+        "vuurtoren",
+        "walrus",
+        "aambeeld",
+        "lantaarn",
+        "beitel",
+        "bijenkorf",
+        "kruiwagen",
+        "kano",
+        "telescoop",
+    ],
+    "ca": ["didal", "enclusa", "llanterna", "teixó", "telescopi", "rusc", "sella", "canoa", "carretó", "esquirol"],
 }
 
 
