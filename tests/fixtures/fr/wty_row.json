@@ -1,0 +1,289 @@
+{
+ "source": "wty-fr-en revision 2026.08.29 (huggingface.co/datasets/daxida/wty-release); rows chaise, élève",
+ "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0. Attribution: https://en.wiktionary.org/wiki/chaise#French, https://en.wiktionary.org/wiki/%C3%A9l%C3%A8ve#French",
+ "index": {
+  "title": "wty-fr-en",
+  "format": 3,
+  "revision": "2026.08.29",
+  "sequenced": true,
+  "sourceLanguage": "fr",
+  "targetLanguage": "en",
+  "attribution": "https://kaikki.org/"
+ },
+ "tag_bank": [
+  [
+   "fem",
+   "gender-feminine",
+   -1,
+   "feminine",
+   1
+  ],
+  [
+   "masc",
+   "gender-masculine",
+   -1,
+   "masculine",
+   1
+  ],
+  [
+   "n",
+   "partOfSpeech",
+   -2,
+   "noun",
+   2
+  ]
+ ],
+ "term_rows": [
+  [
+   "élève",
+   "",
+   "n fem masc",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "élève m or f by sense (plural élèves)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Deverbal from élever (“to raise, bring up, elevate”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "schoolboy, pupil, student"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "schoolchild, pupil, student"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "schoolgirl, pupil, student"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/élève#French",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/French/meaning/é/él/élève.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "chaise",
+   "",
+   "n fem",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "chaise f (plural chaises)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Originally, simply a variant of chaire. From Middle French chaire, inherited from Latin cathedra (“seat”), a borrowing from Ancient Greek καθέδρα (kathédra). The change -r- > -s-, while being common in the past, has been only preserved on this word and besicles. Doublet of chaire and cathèdre."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "chair, seat"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/chaise#French",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/French/meaning/c/ch/chaise.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ]
+ ],
+ "rendered_html": {
+  "chaise": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-fr-en\" data-dictionary-id=\"wty-fr-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><i>(wty-fr-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">chaise f (plural chaises)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Originally, simply a variant of chaire. From Middle French chaire, inherited from Latin cathedra (“seat”), a borrowing from Ancient Greek καθέδρα (kathédra). The change -r- &gt; -s-, while being common in the past, has been only preserved on this word and besicles. Doublet of chaire and cathèdre.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">chair, seat</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/chaise#French\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/French/meaning/c/ch/chaise.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "élève": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-fr-en\" data-dictionary-id=\"wty-fr-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><i>(wty-fr-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">élève m or f by sense (plural élèves)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Deverbal from élever (“to raise, bring up, elevate”).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">schoolboy, pupil, student</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">schoolchild, pupil, student</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">schoolgirl, pupil, student</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/élève#French\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/French/meaning/é/él/élève.html\">Kaikki</a></div></div></li></ul></li></ol></div>"
+ },
+ "expected_gender": {
+  "chaise": "la"
+ }
+}
