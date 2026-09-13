@@ -38,6 +38,23 @@ LANGUAGE_SCOPED_FIELDS: tuple[str, ...] = (
     "excluded_decks",
     "script_variant",
     "reading_tone_color",
+    # Stage S (S10): the subtitle cleanup regex is caption-convention data
+    # (brackets, music marks, a script's speaker prefix), so it follows the
+    # language. These three were GLOBAL before; see _FORMERLY_GLOBAL_FIELDS.
+    "use_subtitle_regex_filter",
+    "subtitle_regex_filter",
+    "subtitle_regex_replacement",
+)
+
+#: Scoped names that were global config fields before Stage S. Snapshots parked
+#: before then carry no key for them; at the first switch after the upgrade the
+#: live value is the one every language shared, so switch_language completes
+#: those snapshots with it once (otherwise a filter the user set would silently
+#: become the profile default). A first visit still gets the profile default.
+_FORMERLY_GLOBAL_FIELDS: tuple[str, ...] = (
+    "use_subtitle_regex_filter",
+    "subtitle_regex_filter",
+    "subtitle_regex_replacement",
 )
 
 
@@ -114,6 +131,14 @@ def switch_language(config: AnkiMinerConfig, new_code: str) -> AnkiMinerConfig:
     # Any, not object: the values are heterogeneous config-field values, and
     # dataclasses.replace type-checks the **kwargs against each field.
     stash: dict[str, dict[str, Any]] = {c: dict(v) for c, v in config.language_stash.items()}
+    # First switch since the formerly global fields became scoped: no parked
+    # snapshot carries them yet, and the live values are the ones EVERY language
+    # shared, so each old snapshot is completed with them once. Every snapshot
+    # parked from here on carries its own, so no language's value can reach
+    # another afterwards (a missing key then takes the profile default).
+    if not any(name in snapshot for snapshot in stash.values() for name in _FORMERLY_GLOBAL_FIELDS):
+        shared = {name: getattr(config, name) for name in _FORMERLY_GLOBAL_FIELDS}
+        stash = {parked: {**shared, **snapshot} for parked, snapshot in stash.items()}
     if config.language in stash:
         logger.debug("Overwriting the stale %r language_stash entry with its live values", config.language)
     stash[config.language] = {name: getattr(config, name) for name in LANGUAGE_SCOPED_FIELDS}

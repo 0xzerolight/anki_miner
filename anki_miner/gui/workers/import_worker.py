@@ -131,6 +131,8 @@ class ImportWorker(CancellableWorker):
                 "source_name": getattr(result, "source_name", getattr(result, "dict_id", "")),
                 "skipped_malformed": getattr(result, "skipped_malformed", 0),
                 "media_warnings": list(getattr(result, "media_warnings", ())),
+                "source_language": getattr(result, "source_language", ""),
+                "source_language_mismatch": getattr(result, "source_language_mismatch", False),
             }
             return result.dict_id, meta
 
@@ -159,6 +161,8 @@ class ImportWorker(CancellableWorker):
                 "source_name": result.source_name,
                 "skipped_malformed": result.skipped_malformed,
                 "media_warnings": list(result.media_warnings),
+                "source_language": getattr(result, "source_language", ""),
+                "source_language_mismatch": getattr(result, "source_language_mismatch", False),
             }
             return result.dict_id, meta
 

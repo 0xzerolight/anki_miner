@@ -12,6 +12,10 @@ from .paths import ANKI_MINER_HOME
 # not import that package. A sync-assertion test pins the two identical.
 _LANGUAGE_CODES: tuple[str, ...] = ("ja", "ko", "zh")
 
+# Deliberate duplicate of anki_miner.languages.SCRIPT_VARIANT_IDS, for the same
+# reason as _LANGUAGE_CODES; test_stage_s_contract.py pins the two identical.
+_SCRIPT_VARIANT_IDS: tuple[str, ...] = ("", "simplified", "traditional", "br", "pt")
+
 
 @dataclass(frozen=True)
 class ChainEntry:
@@ -415,7 +419,7 @@ class AnkiMinerConfig:
     # Deliberately generic rather than zh-prefixed: they are carried per
     # language by LANGUAGE_SCOPED_FIELDS, so ja/ko keep "" / False and zh gets
     # "simplified" / True from its profile's scoped_defaults.
-    script_variant: str = ""  # "" | "simplified" | "traditional"
+    script_variant: str = ""  # "" | "simplified" | "traditional" | "br" | "pt"
     reading_tone_color: bool = False
 
     # Word list settings
@@ -674,8 +678,8 @@ class AnkiMinerConfig:
         ):
             raise ValueError("max_parallel_workers must be an integer from 1 to 20")
 
-        if self.script_variant not in ("", "simplified", "traditional"):
-            raise ValueError('script_variant must be "", "simplified" or "traditional"')
+        if self.script_variant not in _SCRIPT_VARIANT_IDS:
+            raise ValueError("script_variant must be one of " + ", ".join(repr(v) for v in _SCRIPT_VARIANT_IDS))
 
         # Convert paths to Path objects (handles both str and Path inputs)
         if isinstance(self.media_temp_folder, str):

@@ -167,13 +167,26 @@ class AudioDefaults:
     ``languages/`` (there is no ``service_factory.sentence_cache_stem_prefix``).
     """
 
-    gtts_lang: str
+    #: gTTS language code, or a callable resolving it from the running config
+    #: (pt picks ``pt``/``pt-PT`` by variety). "" means the language has no
+    #: Google voice: service_factory builds neither Google leg.
+    gtts_lang: str | Callable[[AnkiMinerConfig], str]
     cache_stem_prefix: str
     sentence_cache_stem_prefix: str
     custom_fetcher_language: str
     papago_speaker: str | None = None
     default_chain: tuple[AudioSourceEntry, ...] = ()
     candidates: Callable[[Any], list[tuple[str, str]]] | None = None
+    #: What the synthetic and custom word-audio sources may speak for a
+    #: ``(term, reading)`` ladder pair: the text, or None to skip the pair (R5).
+    #: ``None`` is Japanese — the reading, only when it is kana (a kanji reading
+    #: is the tokenizer's OOV fallback and would let the voice guess a homograph).
+    #: JPod101 keeps its own kana gate: its endpoint only answers Japanese.
+    speakable: Callable[[str, str], str | None] | None = None
+
+    def resolved_gtts_lang(self, config: AnkiMinerConfig) -> str:
+        """The gTTS code for *config*; "" when the language has no Google voice."""
+        return self.gtts_lang(config) if callable(self.gtts_lang) else self.gtts_lang
 
 
 @dataclass(frozen=True)
@@ -196,6 +209,12 @@ class CaptionLangs:
 
 @dataclass(frozen=True)
 class PosDefaults:
+    """POS gate defaults and human labels for a language's tagset.
+
+    ``labels`` has no consumer yet (S20): the settings POS editor still shows
+    raw tags. It is populated so a label-aware editor is a later, cheap change.
+    """
+
     allowed_pos: tuple[str, ...]
     excluded_subtypes: tuple[str, ...]
     labels: Mapping[str, str] = field(default_factory=dict)
@@ -282,6 +301,11 @@ class LanguageProfile:
     #: English display name, for surfaces that cannot render the native script
     #: (log lines, ASCII-only widgets). ``display_name`` stays the native form.
     english_name: str = ""
+    #: The en.wiktionary section / wty edition code when it differs from
+    #: ``code`` (R28: hr reads ``sh``). "" means ``code``. Consumers: the
+    #: dictionary import's sourceLanguage note (S19) and, from Stage W, the
+    #: Wiktionary REST provider's section pick.
+    wiktionary_code: str = ""
     #: The known-words comparison fold (R6, S3): applied to every stored and
     #: probed form at the known-words DB, the Anki vocabulary boundary, the word
     #: filter, the word lists and the Deck Builder preview. Must be idempotent.

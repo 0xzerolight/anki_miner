@@ -97,6 +97,7 @@ class CustomAudioFetcher:
         file_prefix: str,
         delay: float = 0.2,
         language: str = "ja",
+        speakable: Callable[[str, str], str | None] | None = None,
     ) -> None:
         """Initialize the fetcher.
 
@@ -109,7 +110,11 @@ class CustomAudioFetcher:
                 globally unique across sources (the factory uses
                 ``custom_<slug>``).
             delay: Seconds to wait before the first network request per word.
-            language: Value substituted for ``{language}`` (fixed "ja" here).
+            language: Value substituted for ``{language}``
+                (``AudioDefaults.custom_fetcher_language``).
+            speakable: ``AudioDefaults.speakable``, used here as the gate only:
+                a pair it returns nothing for is skipped. The URL still carries
+                ``{term}``/``{reading}``. ``None`` keeps the Japanese kana gate.
         """
         self._url_template = url_template
         self._kind = kind
@@ -119,8 +124,18 @@ class CustomAudioFetcher:
         # False for nan, so the else branch handles it.
         self._delay = delay if delay >= 0.0 else 0.0
         self._language = language
+        self._speakable = speakable
         self._session = _new_browser_session()
         self._failure_counts = _new_failure_counts()
+
+    def _accepts(self, mined_form: str, reading: str) -> bool:
+        """Whether the input guard lets this pair through to the cache or the network."""
+        if not mined_form.strip():
+            return False
+        if self._speakable is None:
+            return is_kana_only(reading.strip())
+        text = self._speakable(mined_form, reading)
+        return bool(text and text.strip())
 
     def fetch(
         self,
@@ -137,9 +152,10 @@ class CustomAudioFetcher:
         surface (``models/word.py``), and a reading-agnostic local-audio-yomichan
         source answers a kanji ``reading=`` anyway, so 辛い would fetch からい
         audio for a つらい card and cache it permanently. Empty readings are
-        covered by the same check.
+        covered by the same check. A profile ``speakable`` replaces the kana
+        check for languages whose reading slot is not kana.
         """
-        if not mined_form.strip() or not is_kana_only(reading.strip()):
+        if not self._accepts(mined_form, reading):
             return None
         if cancelled_check is not None and cancelled_check():
             return None
@@ -274,7 +290,7 @@ class CustomAudioFetcher:
         Duck-typed like :meth:`stats` and :meth:`close` — see the chain's
         ``has_cached_candidates``.
         """
-        if not mined_form.strip() or not is_kana_only(reading.strip()):
+        if not self._accepts(mined_form, reading):
             return False
         stem = safe_filename(f"{self._file_prefix}_{mined_form}_{reading}")
         return True if _find_cached_by_stem(self._cache_dir, stem) is not None else None

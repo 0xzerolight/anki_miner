@@ -195,6 +195,7 @@ class GoogleTranslateAudioFetcher:
         *,
         gtts_lang: str = "ja",
         cache_stem_prefix: str = "googletts",
+        speakable: Callable[[str, str], str | None] | None = None,
     ):
         """Initialize with cache directory and rate-limiting delay.
 
@@ -205,6 +206,9 @@ class GoogleTranslateAudioFetcher:
             gtts_lang: gTTS language code (``AudioDefaults.gtts_lang``).
             cache_stem_prefix: Cache/media filename prefix
                 (``AudioDefaults.cache_stem_prefix``).
+            speakable: The text to synthesise for a ``(mined_form, reading)``
+                pair, or None to skip it (``AudioDefaults.speakable``). ``None``
+                keeps the Japanese gate: the reading, only when it is kana.
         """
         self._cache_dir = cache_dir
         # NaN must clamp to 0.0 (time.sleep(nan) raises); the >= comparison
@@ -214,10 +218,20 @@ class GoogleTranslateAudioFetcher:
         # Stems double as Anki media filenames: without the language namespace a
         # zh and a ja card for one shared hanzi reuse each other's audio.
         self._cache_stem_prefix = cache_stem_prefix
+        self._speakable = speakable
         # Per-run failure-cause tally (see FAILURE_KEYS). Synthetic TTS keeps no
         # negative markers, so every non-hit is a transient failure; bumped only
         # in the branches below. Read via stats().
         self._failure_counts = _new_failure_counts()
+
+    def _speakable_text(self, mined_form: str, reading: str) -> str | None:
+        """The text to synthesise for this pair, or None when the pair is skipped."""
+        if not mined_form.strip():
+            return None
+        if self._speakable is None:
+            return reading if is_kana_only(reading.strip()) else None
+        text = self._speakable(mined_form, reading)
+        return text if text and text.strip() else None
 
     def fetch(
         self,
@@ -228,15 +242,17 @@ class GoogleTranslateAudioFetcher:
         """Synthesize pronunciation audio for a word.
 
         Args:
-            mined_form: Word as mined onto the card (kanji/surface form). Used
-                only to key the cache filename; never sent to the synthesizer.
+            mined_form: Word as mined onto the card (kanji/surface form). Keys
+                the cache filename; sent to the synthesizer only when the
+                profile's ``speakable`` returns it (zh characters).
             reading: Kana reading of the word. This is what is fed to gTTS so
-                the pronunciation is correct and homograph-safe. A reading that
-                is empty, whitespace-only, or not pure kana (the tokenizer's
-                OOV fallback is the kanji surface) skips synthesis entirely —
-                feeding kanji to gTTS would make Google guess the reading,
-                trading correct-by-luck audio on non-homographs for wrong
-                audio on homographs, which this fetcher's design forbids.
+                the pronunciation is correct and homograph-safe, or what the
+                profile's ``speakable`` returns for the pair. Without one, a
+                reading that is empty, whitespace-only, or not pure kana (the
+                tokenizer's OOV fallback is the kanji surface) skips synthesis
+                entirely — feeding kanji to gTTS would make Google guess the
+                reading, trading correct-by-luck audio on non-homographs for
+                wrong audio on homographs, which this fetcher's design forbids.
             cancelled_check: Optional zero-argument callable that returns True
                 when the caller has requested cancellation. Consulted after the
                 input guards, again immediately before ``time.sleep``, and once
@@ -246,18 +262,19 @@ class GoogleTranslateAudioFetcher:
         Returns:
             Path to a cached mp3, or None if unavailable. Never raises.
         """
-        if not mined_form.strip() or not is_kana_only(reading.strip()):
+        text = self._speakable_text(mined_form, reading)
+        if text is None:
             return None
 
         if cancelled_check is not None and cancelled_check():
             return None
 
-        # Synthesize from the kana reading (homograph-safe); mined_form only
-        # keys the cache filename. The shared leaf owns cache-hit, sleep,
-        # synthesis, validation, and the atomic write.
+        # Synthesize from the speakable text (for ja the kana reading,
+        # homograph-safe); mined_form only keys the cache filename. The shared
+        # leaf owns cache-hit, sleep, synthesis, validation, and the atomic write.
         return _synthesize_gtts_to_cache(
             self._cache_dir,
-            text=reading,
+            text=text,
             stem=safe_filename(f"{self._cache_stem_prefix}_{mined_form}_{reading}"),
             delay=self._delay,
             failure_counts=self._failure_counts,
@@ -280,7 +297,8 @@ class GoogleTranslateAudioFetcher:
 
         Zero network, never raises. ``True`` for a non-empty cached mp3;
         ``False`` only where the input guards refuse synthesis outright (a
-        non-kana reading is never synthesized); otherwise ``None``. There is
+        pair with nothing speakable, such as a Japanese non-kana reading, is
+        never synthesized); otherwise ``None``. There is
         deliberately no definitive-miss answer: this fetcher writes no
         ``.miss`` markers because synthesis failures are transient, so an
         uncached word is "unknown", never "no".
@@ -288,7 +306,7 @@ class GoogleTranslateAudioFetcher:
         Duck-typed like :meth:`stats` and :meth:`close` — see the chain's
         ``has_cached_candidates``.
         """
-        if not mined_form.strip() or not is_kana_only(reading.strip()):
+        if self._speakable_text(mined_form, reading) is None:
             return False
         stem = safe_filename(f"{self._cache_stem_prefix}_{mined_form}_{reading}")
         try:

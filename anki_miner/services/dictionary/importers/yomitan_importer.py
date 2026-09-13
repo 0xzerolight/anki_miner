@@ -141,6 +141,11 @@ class YomitanImportResult:
     # (unsupported type / failed image decode), surfaced instead of silently
     # dropped.
     media_warnings: tuple[str, ...] = ()
+    # The dictionary's declared ``sourceLanguage`` (S19) and whether it names a
+    # language other than the one this import is stamped for; surfaced as a
+    # receipt note, never a refusal.
+    source_language: str = ""
+    source_language_mismatch: bool = False
 
 
 def import_yomitan_zip(
@@ -432,12 +437,13 @@ def import_yomitan_zip(
         # would make that a load-order question for no benefit.
         from anki_miner.languages.registry import get_profile
 
+        profile = get_profile(language)
         bulk_insert(
             db_path,
             rows(),
             progress=on_insert_progress if progress else None,
             cancel_check=cancel_check,
-            keys=get_profile(language).dict_keys,
+            keys=profile.dict_keys,
         )
 
         if progress:
@@ -525,6 +531,7 @@ def import_yomitan_zip(
             before_promote=before_promote,
         )
 
+        source_language = _read_source_language(index)
         result = YomitanImportResult(
             dict_id=dict_id,
             source_name=title,
@@ -532,6 +539,8 @@ def import_yomitan_zip(
             entry_count=total_entries,
             skipped_malformed=skipped_malformed,
             media_warnings=tuple(media_warnings),
+            source_language=source_language,
+            source_language_mismatch=declares_other_language(source_language, profile.code, profile.wiktionary_code),
         )
 
         media_rejected = sum(count for kind, count in skipped.items() if kind.startswith("media_"))
@@ -592,6 +601,22 @@ def repair_yomitan_zip(
             language=language,
         ),
     )
+
+
+def declares_other_language(source_language: str, code: str, wiktionary_code: str) -> bool:
+    """Whether an ``index.json`` ``sourceLanguage`` names another language.
+
+    Compares the primary subtag, casefolded, with the active profile's ``code``
+    and ``wiktionary_code`` (an hr import declaring ``sh`` is hr's own). An
+    undeclared language is never a mismatch: most dictionaries declare nothing.
+    """
+    primary = source_language.strip().split("-", 1)[0].casefold()
+    return bool(primary) and primary not in {code, wiktionary_code} - {""}
+
+
+def _read_source_language(index: dict) -> str:
+    value = index.get("sourceLanguage")
+    return value.strip() if isinstance(value, str) else ""
 
 
 # Informational index.json fields surfaced verbatim to the user. Stored when
