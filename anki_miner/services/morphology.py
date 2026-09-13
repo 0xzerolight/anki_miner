@@ -97,6 +97,16 @@ def resolve_attested_reading(
 # pass, so nothing unattested survives to the output.
 AttestLookup = Callable[[list[str]], set[str]]
 
+# Folded term -> (content, tags) rows from the enabled offline chain (spec R36).
+# Only the type lives here: the he stage adds the parser's ``form_lookup`` seam
+# that builds one; every other stage passes None in its place.
+FormLookup = Callable[[list[str]], dict[str, list[tuple[str, str]]]]
+
+# A language's parser-side token pass (spec §4.3 item 2(b)): the raw tagger
+# tokens, the parser's memoised attestation probe (None without a dictionary)
+# and a form lookup (None until R36 lands), returning the tokens the line mines.
+TokenPostPass = Callable[[list[Any], AttestLookup | None, FormLookup | None], list[Any]]
+
 _NOMINAL_SUFFIX_POS2 = {"名詞的", "形状詞的", "副詞的"}
 
 

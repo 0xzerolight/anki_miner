@@ -36,6 +36,7 @@ from anki_miner.services.morphology import (
     ReadingLookup,
     SyntheticToken,
     TokenInclusionRule,
+    TokenPostPass,
     _edit_distance,
     apply_special_readings,
     attest_merged_readings,
@@ -364,6 +365,7 @@ class SubtitleParserService:
         script_gate: Callable[[str], bool] | None = None,
         token_merger: "TokenMerger | None" = None,
         compound_matching: bool = True,
+        token_post_pass: TokenPostPass | None = None,
     ):
         """Initialize the subtitle parser.
 
@@ -441,6 +443,14 @@ class SubtitleParserService:
                 print ``NewYork``). ``True`` — every ja path, and ko/zh today —
                 keeps the pre-seam gate exactly: built whenever a term lookup is
                 wired.
+            token_post_pass: Optional language post-pass over the RAW tagger
+                tokens (spec §4.3 item 2(b): separable-verb reattachment gated on
+                dictionary attestation). Called once per line as
+                ``token_post_pass(raw_tokens, attest, None)`` — ``attest`` is the
+                parser's memoised existence probe (None without a dictionary),
+                the third argument is reserved for R36's form lookup — before
+                every merge pass, and its result IS the line's raw token list.
+                ``None`` — every ja/ko/zh path — runs nothing.
         """
         self.config = config
         # Perf-audit counters (Task 28): cumulative wall-clock spent in offline-
@@ -462,6 +472,9 @@ class SubtitleParserService:
         # 공부하다). Runs only when an offline existence probe exists (see
         # _build_line_state); None ⇒ JA/ZH behaviour verbatim.
         self._token_merger = token_merger
+        # Language post-pass over the raw tagger tokens (§4.3 item 2(b)); None ⇒
+        # the tagger output is the raw token list, verbatim.
+        self._token_post_pass = token_post_pass
         self._reading_lookup = reading_lookup
         # Shared process-wide tagger (see services/tagger.py for the single-flight
         # invariant). __init__ may block ~2-3s on the lazy build if a user triggers
@@ -1016,6 +1029,8 @@ class SubtitleParserService:
         tokenize_start = time.perf_counter()
         raw_tokens = list(self.tagger(text))
         self._tokenize_time_s += time.perf_counter() - tokenize_start
+        if self._token_post_pass is not None:
+            raw_tokens = list(self._token_post_pass(raw_tokens, self._attest, None))
         merged_tokens = self._merge_compound_suffixes(raw_tokens)
         # Language-specific merge (ko: 공부 + 하 → 공부하다). Placed with the other
         # merge passes and gated on the same probe; no probe ⇒ no merge.
