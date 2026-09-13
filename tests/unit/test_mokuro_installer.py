@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import re
 import tarfile
 import threading
 import zipfile
@@ -79,6 +80,14 @@ def test_supported_on_known_targets(monkeypatch):
     monkeypatch.setattr(mi.sys, "platform", "linux")
     monkeypatch.setattr(mi.platform, "machine", lambda: "riscv64")
     assert not mi.mokuro_install_supported()
+
+
+def test_python_request_is_an_exact_patch_version():
+    """A minor-only request (``3.12``) makes uv reach the interpreter through its
+    ``cpython-3.12-<platform>`` minor-version link, a junction on Windows that the
+    OS can refuse with os error 448 (untrusted mount point) on every install after
+    the first. An exact patch makes uv use the real install directory."""
+    assert re.fullmatch(r"\d+\.\d+\.\d+", mi.MOKURO_PYTHON), mi.MOKURO_PYTHON
 
 
 def test_every_pinned_spec_is_well_formed():

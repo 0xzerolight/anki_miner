@@ -8,7 +8,7 @@ hand) is unmaintainable for torch. Instead:
 1. download uv (~20 MB, sha256-pinned per platform) into ``bin_root`` — the
    only artifact this module vouches for; ``uv.version`` beside it is the
    receipt that lets a later install skip the download;
-2. ``uv venv --python 3.12 --clear uv_root/mokuro`` with a uv-managed CPython
+2. ``uv venv --python 3.12.14 --clear uv_root/mokuro`` with a uv-managed CPython
    (``UV_PYTHON_PREFERENCE=only-managed``) so the host's Python — absent in
    the frozen app, or too new for torch — is never involved;
 3. ``uv pip install --torch-backend=auto mokuro==0.2.5`` — uv's own
@@ -50,7 +50,12 @@ logger = logging.getLogger(__name__)
 
 UV_VERSION = "0.12.10"
 MOKURO_REQUIREMENT = "mokuro==0.2.5"
-MOKURO_PYTHON = "3.12"
+#: An exact patch, never minor-only: for ``3.12`` uv reaches the interpreter
+#: through its ``cpython-3.12-<platform>`` minor-version link (a junction on
+#: Windows, refused with os error 448 "untrusted mount point" on some hosts) and
+#: points the venv at it. The newest 3.12 in ``UV_VERSION``'s download list; bump
+#: the two together.
+MOKURO_PYTHON = "3.12.14"
 
 #: Phase lines handed to ``status``. Exact strings, so the GUI worker can map
 #: each to its translation; everything else it receives is raw uv output.
