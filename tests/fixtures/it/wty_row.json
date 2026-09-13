@@ -1,0 +1,2186 @@
+{
+ "source": "wty-it-en revision 2026.08.29 (huggingface.co/datasets/daxida/wty-release), rows copied unmodified",
+ "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). Attribution: each row's backlink, e.g. https://en.wiktionary.org/wiki/zio#Italian",
+ "lo_rule_source": "No wty-it-en noun row marks the lo article (tags are n + masc/fem; head lines read 'zio m (plural zii, ...)'). The rule is stated only by the gloss of the lo article row included here.",
+ "index": {
+  "title": "wty-it-en",
+  "format": 3,
+  "revision": "2026.08.29",
+  "sequenced": true,
+  "attribution": "https://kaikki.org/",
+  "sourceLanguage": "it",
+  "targetLanguage": "en"
+ },
+ "tag_bank": [
+  [
+   "obs",
+   "archaism",
+   4,
+   "obsolete",
+   -4
+  ],
+  [
+   "fem",
+   "gender-feminine",
+   -1,
+   "feminine",
+   1
+  ],
+  [
+   "masc",
+   "gender-masculine",
+   -1,
+   "masculine",
+   1
+  ],
+  [
+   "sg",
+   "number",
+   0,
+   "singular",
+   0
+  ],
+  [
+   "adj",
+   "partOfSpeech",
+   -2,
+   "adjective",
+   2
+  ],
+  [
+   "artic",
+   "partOfSpeech",
+   -2,
+   "article",
+   2
+  ],
+  [
+   "n",
+   "partOfSpeech",
+   -2,
+   "noun",
+   2
+  ],
+  [
+   "pron",
+   "partOfSpeech",
+   -2,
+   "pronoun",
+   2
+  ],
+  [
+   "non-lemma",
+   "",
+   10,
+   "non-lemma",
+   -10
+  ]
+ ],
+ "term_rows": [
+  [
+   "zio",
+   "",
+   "n masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "zio m (plural zii, feminine zia, augmentative (uncommon) zióne, diminutive-endearing ziétto or (less common) ziìno or ziùccio)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Late Latin thius, from Ancient Greek θεῖος (theîos). Compare Spanish tío, Portuguese tio, Sicilian ziu, Sardinian tiu or tziu, Venetan sio."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "uncle (male relative)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "slang",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "sl"
+              }
+             ]
+            },
+            "dude"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "synonyms"
+       },
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "synonyms-label"
+         },
+         "content": "Synonyms"
+        },
+        {
+         "tag": "ul",
+         "data": {
+          "content": "synonyms-list"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "barba"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/zio#Italian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Italian/meaning/z/zi/zio.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "zio",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "ziano",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "ziano",
+     [
+      "alternative"
+     ]
+    ],
+    [
+     "ziano",
+     [
+      "masculine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "psicologo",
+   "",
+   "n masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "psicologo m (plural psicologi, feminine psicologa)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From psico- + -logo."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "psychologist"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/psicologo#Italian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Italian/meaning/p/ps/psicologo.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "gatto",
+   "",
+   "n masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "gatto m (plural gatti, feminine gatta, diminutive gattìno, augmentative gattóne, pejorative gattàccio or gattonàccio, derogatory gattùccio)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Late Latin cattum."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "cat"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "tom, tomcat"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/gatto#Italian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Italian/meaning/g/ga/gatto.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "gatto",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "gatta",
+     [
+      "masculine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "sedia",
+   "",
+   "n fem",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "sedia f (plural sedie)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From sedere.\nThe initial auto-gemination found in some regional Italian varieties seems to be unetymological."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "chair"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/sedia#Italian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Italian/meaning/s/se/sedia.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "sedia",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "seggia",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "seggia",
+     [
+      "alternative"
+     ]
+    ],
+    [
+     "seggia",
+     [
+      "archaic"
+     ]
+    ],
+    [
+     "seggia",
+     [
+      "feminine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "albero",
+   "",
+   "n masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "albero m (plural alberi, diminutive alberèllo or alberétto or alberìno, augmentative alberóne, pejorative alberàccio, derogatory alberùccio)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From older alboro m (via dissimilation), from albore m (via masculinization of the ending), from Latin arborem f."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "tree (all senses)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "nautical",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "🚢"
+              }
+             ]
+            },
+            "mast"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "shaft, spindle"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/albero#Italian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Italian/meaning/a/al/albero.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "albero",
+   "",
+   "n masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "albero m (plural alberi)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Possibly from a Vulgar Latin *albarus, a derivative of Latin albus (“white”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "poplar tree"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/albero#Italian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Italian/meaning/a/al/albero.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "albero",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "alberare",
+     [
+      "first-person singular present indicative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "albero",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "albore",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "albore",
+     [
+      "alternative"
+     ]
+    ],
+    [
+     "albore",
+     [
+      "archaic"
+     ]
+    ],
+    [
+     "albore",
+     [
+      "masculine/feminine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "acqua",
+   "",
+   "n fem",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "acqua f (plural acque, diminutive acquerèlla or acquétta or acquicèlla or acquolìna)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Latin aqua."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "water",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "acqua"
+                   },
+                   " distillata"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "distilled ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "water"
+                   }
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "stretch or expanse of water; body of water"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "sports",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "sports"
+              }
+             ]
+            },
+            "lane"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/acqua#Italian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Italian/meaning/a/ac/acqua.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "acqua",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "aqua",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "aqua",
+     [
+      "alternative"
+     ]
+    ],
+    [
+     "aqua",
+     [
+      "archaic"
+     ]
+    ],
+    [
+     "aqua",
+     [
+      "dialectal"
+     ]
+    ],
+    [
+     "aqua",
+     [
+      "feminine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "acqua",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "acquare",
+     [
+      "second-person singular imperative"
+     ]
+    ],
+    [
+     "acquare",
+     [
+      "third-person singular present indicative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "artista",
+   "",
+   "n fem masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "artista m or f by sense (masculine plural artisti, feminine plural artiste)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From arte + -ista."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "artist"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/artista#Italian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Italian/meaning/a/ar/artista.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "giornale",
+   "",
+   "n masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "giornale m (plural giornali)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Latin diurnālis (with influence from giorno (“day”)), from Latin diurnus, from Latin diēs, ultimately from Proto-Indo-European *dyḗws (“heaven, sky”). Originally an adjective meaning \"daily\" (modern giornaliero) as a modifier for foglio giornale."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "newspaper (publication)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "newspaper office"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "journal, review"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/giornale#Italian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Italian/meaning/g/gi/giornale.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "giornale",
+   "",
+   "adj fem masc obs",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "giornale m or f by sense (plural giornali)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Latin diurnālis (with influence from giorno (“day”)), from Latin diurnus, from Latin diēs, ultimately from Proto-Indo-European *dyḗws (“heaven, sky”). Originally an adjective meaning \"daily\" (modern giornaliero) as a modifier for foglio giornale."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "daily, everyday"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/giornale#Italian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Italian/meaning/g/gi/giornale.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "lo",
+   "",
+   "artic masc sg",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "lo m sg (plural gli)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Vulgar Latin *(il)lu, from Latin illum, illud, by dropping il- and -m. Cognate with Sicilian lu."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "the form of il that is used before the so-called impure consonants, that is, s+consonant (impure s), gn, pn, ps, x, y, or z, and before i+vocal, bd, cn, ct, dm, ft, mn, pt, tm and also ts; before a vowel it becomes l'; the",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "l’"
+                   },
+                   "osso"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "the"
+                   },
+                   " bone"
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "lo"
+                   },
+                   " stato"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "the"
+                   },
+                   " state"
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "lo"
+                   },
+                   " zio"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "the"
+                   },
+                   " uncle"
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/lo#Italian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Italian/meaning/l/lo/lo.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "lo",
+   "",
+   "pron masc sg",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "lo m sg (plural li, female la)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Latin illum."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "him",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Lo"
+                   },
+                   " conosci?"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "Do you know ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "him"
+                   },
+                   "?"
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "it, this or that thing",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Quando te ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "lo"
+                   },
+                   " diedi."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "When I gave ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "it"
+                   },
+                   " to you."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/lo#Italian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Italian/meaning/l/lo/lo.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "lo",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "-lo",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "-lo",
+     [
+      "alternative"
+     ]
+    ],
+    [
+     "-lo",
+     [
+      "enclitic"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "lo",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "la",
+     [
+      "masculine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ]
+ ],
+ "rendered_html": {
+  "zio": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-it-en\" data-dictionary-id=\"wty-it-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-it-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">zio m (plural zii, feminine zia, augmentative (uncommon) zióne, diminutive-endearing ziétto or (less common) ziìno or ziùccio)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Late Latin thius, from Ancient Greek θεῖος (theîos). Compare Spanish tío, Portuguese tio, Sicilian ziu, Sardinian tiu or tziu, Venetan sio.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">uncle (male relative)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"slang\">sl</span></div>dude</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"synonyms\"><div class=\"gloss-sc-div\" data-sc-content=\"synonyms-label\">Synonyms</div><ul class=\"gloss-sc-ul\" data-sc-content=\"synonyms-list\"><li class=\"gloss-sc-li\" data-sc-content=\"synonym-item\">barba</li></ul></div><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/zio#Italian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Italian/meaning/z/zi/zio.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">ziano</li><li class=\"gloss-sc-li\">ziano</li><li class=\"gloss-sc-li\">ziano</li></ul></div></li></ul></li></ol></div>",
+  "psicologo": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-it-en\" data-dictionary-id=\"wty-it-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><i>(wty-it-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">psicologo m (plural psicologi, feminine psicologa)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From psico- + -logo.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">psychologist</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/psicologo#Italian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Italian/meaning/p/ps/psicologo.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "gatto": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-it-en\" data-dictionary-id=\"wty-it-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-it-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">gatto m (plural gatti, feminine gatta, diminutive gattìno, augmentative gattóne, pejorative gattàccio or gattonàccio, derogatory gattùccio)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Late Latin cattum.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">cat</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">tom, tomcat</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/gatto#Italian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Italian/meaning/g/ga/gatto.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">gatta</div></li></ul></li></ol></div>",
+  "sedia": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-it-en\" data-dictionary-id=\"wty-it-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-it-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">sedia f (plural sedie)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From sedere.<br>The initial auto-gemination found in some regional Italian varieties seems to be unetymological.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">chair</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/sedia#Italian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Italian/meaning/s/se/sedia.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">seggia</li><li class=\"gloss-sc-li\">seggia</li><li class=\"gloss-sc-li\">seggia</li><li class=\"gloss-sc-li\">seggia</li></ul></div></li></ul></li></ol></div>",
+  "albero": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-it-en\" data-dictionary-id=\"wty-it-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-it-en)</i><ul class=\"gloss-list\" data-count=\"4\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">albero m (plural alberi, diminutive alberèllo or alberétto or alberìno, augmentative alberóne, pejorative alberàccio, derogatory alberùccio)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From older alboro m (via dissimilation), from albore m (via masculinization of the ending), from Latin arborem f.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">tree (all senses)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"nautical\">🚢</span></div>mast</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">shaft, spindle</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/albero#Italian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Italian/meaning/a/al/albero.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">albero m (plural alberi)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Possibly from a Vulgar Latin *albarus, a derivative of Latin albus (“white”).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">poplar tree</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/albero#Italian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Italian/meaning/a/al/albero.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">alberare</div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">albore</li><li class=\"gloss-sc-li\">albore</li><li class=\"gloss-sc-li\">albore</li><li class=\"gloss-sc-li\">albore</li></ul></div></li></ul></li></ol></div>",
+  "acqua": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-it-en\" data-dictionary-id=\"wty-it-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-it-en)</i><ul class=\"gloss-list\" data-count=\"3\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">acqua f (plural acque, diminutive acquerèlla or acquétta or acquicèlla or acquolìna)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Latin aqua.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">water<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">acqua</span> distillata</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">distilled <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">water</span></div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">stretch or expanse of water; body of water</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"sports\">sports</span></div>lane</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/acqua#Italian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Italian/meaning/a/ac/acqua.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">aqua</li><li class=\"gloss-sc-li\">aqua</li><li class=\"gloss-sc-li\">aqua</li><li class=\"gloss-sc-li\">aqua</li><li class=\"gloss-sc-li\">aqua</li></ul></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">acquare</li><li class=\"gloss-sc-li\">acquare</li></ul></div></li></ul></li></ol></div>",
+  "artista": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-it-en\" data-dictionary-id=\"wty-it-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><i>(wty-it-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">artista m or f by sense (masculine plural artisti, feminine plural artiste)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From arte + -ista.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">artist</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/artista#Italian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Italian/meaning/a/ar/artista.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "giornale": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-it-en\" data-dictionary-id=\"wty-it-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"adjective\">adj</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"archaism\" title=\"obsolete\">obs</span><i>(wty-it-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">giornale m (plural giornali)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From Latin diurnālis (with influence from giorno (“day”)), from Latin diurnus, from Latin diēs, ultimately from Proto-Indo-European *dyḗws (“heaven, sky”). Originally an adjective meaning &quot;daily&quot; (modern giornaliero) as a modifier for foglio giornale.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">newspaper (publication)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">newspaper office</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">journal, review</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/giornale#Italian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Italian/meaning/g/gi/giornale.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">giornale m or f by sense (plural giornali)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From Latin diurnālis (with influence from giorno (“day”)), from Latin diurnus, from Latin diēs, ultimately from Proto-Indo-European *dyḗws (“heaven, sky”). Originally an adjective meaning &quot;daily&quot; (modern giornaliero) as a modifier for foglio giornale.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">daily, everyday</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/giornale#Italian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Italian/meaning/g/gi/giornale.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "lo": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-it-en\" data-dictionary-id=\"wty-it-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"article\">artic</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"pronoun\">pron</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"number\" title=\"singular\">sg</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-it-en)</i><ul class=\"gloss-list\" data-count=\"4\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">lo m sg (plural gli)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Vulgar Latin *(il)lu, from Latin illum, illud, by dropping il- and -m. Cognate with Sicilian lu.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">the form of il that is used before the so-called impure consonants, that is, s+consonant (impure s), gn, pn, ps, x, y, or z, and before i+vocal, bd, cn, ct, dm, ft, mn, pt, tm and also ts; before a vowel it becomes l&#x27;; the<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">3 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">l’</span>osso</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">the</span> bone</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">lo</span> stato</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">the</span> state</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">lo</span> zio</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">the</span> uncle</div></div></div></details></div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/lo#Italian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Italian/meaning/l/lo/lo.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">lo m sg (plural li, female la)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Latin illum.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">him<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Lo</span> conosci?</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Do you know <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">him</span>?</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">it, this or that thing<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Quando te <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">lo</span> diedi.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">When I gave <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">it</span> to you.</div></div></div></details></div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/lo#Italian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Italian/meaning/l/lo/lo.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">-lo</li><li class=\"gloss-sc-li\">-lo</li><li class=\"gloss-sc-li\">-lo</li></ul></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">la</div></li></ul></li></ol></div>"
+ }
+}

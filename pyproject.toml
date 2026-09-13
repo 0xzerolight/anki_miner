@@ -150,9 +150,14 @@ fr = [
 es = [
     "spacy>=3.8,<3.8.15",
 ]
+# Italian mining engine: the same spaCy pin as English (R3). The it_core_news_sm
+# model wheel is a GitHub release asset, downloaded in Settings -> Mining Language.
+it = [
+    "spacy>=3.8,<3.8.15",
+]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
-languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]"]
+languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]"]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
