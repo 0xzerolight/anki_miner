@@ -9,9 +9,9 @@ import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages.nl.morphology import NL_ALLOWED_POS, NL_EXCLUDED_SUBTYPES
+from anki_miner.languages.nl.tokenizer import build_tagger
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
-from anki_miner.languages.tagger_provider import get_tagger
 from anki_miner.models.reading import ReadingUnit
 
 CORPUS = Path(__file__).resolve().parents[2] / "fixtures" / "nl" / "pos_corpus.jsonl"
@@ -24,6 +24,12 @@ EXPECTED_FINE_TAGS = {
     "TW|rang|nom|zonder-n", "TW|rang|prenom|stan", "VNW|aanw|adv-pron|stan|red|3|getal", "WW|inf|vrij|zonder",
     "WW|pv|tgw|ev", "WW|pv|tgw|met-t", "WW|pv|tgw|mv", "WW|pv|verl|ev", "WW|pv|verl|mv", "WW|vd|vrij|zonder",
 }  # fmt: skip
+
+
+@pytest.fixture(scope="module")
+def tagger():
+    """Built once: the autouse conftest fixture clears the tagger cache around every test."""
+    return build_tagger()
 
 
 @pytest.fixture(scope="module")
@@ -47,16 +53,16 @@ def test_corpus_sentences_mine_the_expected_fronts(parser, record):
 
 
 @pytest.mark.parametrize("record", RECORDS, ids=[record["id"] for record in RECORDS])
-def test_tokenizer_surfaces_cover_the_line(record):
-    tokens = get_tagger("nl")(record["sentence"])
+def test_tokenizer_surfaces_cover_the_line(tagger, record):
+    tokens = tagger(record["sentence"])
     assert "".join(token.surface for token in tokens) == record["sentence"].replace(" ", "")
 
 
-def test_the_excluded_subtypes_pin_matches_real_output():
+def test_the_excluded_subtypes_pin_matches_real_output(tagger):
     seen = {
         token.feature.pos2
         for record in RECORDS
-        for token in get_tagger("nl")(record["sentence"])
+        for token in tagger(record["sentence"])
         if token.feature.pos1 in NL_ALLOWED_POS and token.feature.pos2
     }
     assert seen == EXPECTED_FINE_TAGS
