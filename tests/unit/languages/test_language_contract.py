@@ -38,6 +38,7 @@ PROBE = {
     "de": "sah",
     "pt": "livros",
     "fr": "mangé",
+    "es": "comió",
 }
 
 #: Every capability name any profile is allowed to declare. A typo'd flag is a

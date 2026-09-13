@@ -169,6 +169,25 @@ ca_model_license_datas = []
 if os.path.isdir(ca_model_license_dir):
     ca_model_license_datas.append((ca_model_license_dir, os.path.join("licenses", "ca_core_news_sm")))
 
+# en_core_web_sm (English spaCy model) MIT notice: shipped whenever the license
+# dir exists. Lands at sys._MEIPASS/licenses/en_core_web_sm/. The model itself is
+# excluded below and arrives as a language pack the app downloads; the MIT notice
+# travels with the app that delivers it.
+en_model_license_dir = os.path.join(project_root, "licenses", "en_core_web_sm")
+en_model_license_datas = []
+if os.path.isdir(en_model_license_dir):
+    en_model_license_datas.append((en_model_license_dir, os.path.join("licenses", "en_core_web_sm")))
+
+# es_core_news_sm (Spanish spaCy model) GPL-3.0 notice: shipped whenever the
+# license dir exists. Lands at sys._MEIPASS/licenses/es_core_news_sm/. The model
+# itself is excluded below and arrives as a language pack the app downloads;
+# the notice ships because the app is what delivers the model (the kiwipiepy
+# precedent).
+es_model_license_dir = os.path.join(project_root, "licenses", "es_core_news_sm")
+es_model_license_datas = []
+if os.path.isdir(es_model_license_dir):
+    es_model_license_datas.append((es_model_license_dir, os.path.join("licenses", "es_core_news_sm")))
+
 # pt_core_news_sm (Portuguese spaCy model) CC BY-SA 4.0 attribution: shipped
 # whenever the license dir exists. Lands at sys._MEIPASS/licenses/pt_core_news_sm/.
 # The model is excluded from the graph and arrives as a language pack; the notice
@@ -343,7 +362,9 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + kiwipiepy_license_datas
     + ca_model_license_datas
     + pt_core_news_sm_license_datas
-    + fr_model_license_datas,
+    + fr_model_license_datas
+    + en_model_license_datas
+    + es_model_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",
