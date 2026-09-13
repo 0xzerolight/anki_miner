@@ -27,9 +27,11 @@ count first) before storage, so downstream rank filtering/sorting stays correct.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import shutil
+import sqlite3
 import tempfile
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
@@ -226,6 +228,13 @@ def repair_frequency_source(
     # Read the stamp before the rebuild: repair_managed_slot may quarantine the
     # slot, and a re-import would otherwise fall back to the "ja" default.
     language = read_slot_language(dest_root / source_id)
+    # The same holds for how the list was built (S17): a rebuild without them
+    # would re-rank a lemmatised list from its raw surface counts.
+    declared_mode, lemmatised = _slot_import_options(dest_root / source_id)
+    # Function-local like _term_fold: the lemmatizer resolves the tagger lazily.
+    from anki_miner.services.frequency.lemmatize import build_frequency_lemmatizer
+
+    lemmatize = build_frequency_lemmatizer(language) if lemmatised else None
     return repair_managed_slot(
         input_path,
         dest_root,
@@ -240,8 +249,38 @@ def repair_frequency_source(
             cancel_check=cancel_check,
             overwrite=overwrite,
             language=language,
+            declared_mode=declared_mode,
+            lemmatize=lemmatize,
         ),
     )
+
+
+def _slot_import_options(slot_dir: Path) -> tuple[str, bool]:
+    """The declared mode and lemmatisation a slot's import recorded (S17), or ("", False).
+
+    The ``meta.json`` sidecar answers first, fresh or not, as
+    :func:`read_slot_language` reads the stamp: the slot being repaired may be
+    the one whose index is unreadable, and a stale sidecar beside it still
+    holds how the list was built. The sidecar mirrors every meta row, so one
+    without either key records a default import. The index is read only when
+    the sidecar is missing or unreadable. Never raises: with no answer the slot
+    rebuilds the way every pre-S17 import was built.
+    """
+    try:
+        payload = json.loads((slot_dir / "meta.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        payload = None
+    if isinstance(payload, dict):
+        meta = payload
+    else:
+        try:
+            meta = storage.read_meta(slot_dir / "index.sqlite")
+        except (OSError, ValueError, sqlite3.Error) as exc:
+            logger.warning(
+                "Frequency repair could not read the import options of %s (%s)", slot_dir, type(exc).__name__
+            )
+            return "", False
+    return str(meta.get("declared_mode", "")), meta.get("lemmatised") == "1"
 
 
 def _import_zip(

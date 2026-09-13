@@ -40,6 +40,8 @@ from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.services._sqlite_index import language_kwarg
 from anki_miner.services.dictionary.importers.yomitan_importer import import_yomitan_zip
 from anki_miner.services.dictionary.superseded import sweep_superseded_dicts
+from anki_miner.services.frequency import mode_probe
+from anki_miner.services.frequency.lemmatize import LemmatizeKwarg, build_frequency_lemmatizer
 from anki_miner.services.frequency.source_importer import import_frequency_source
 from anki_miner.services.pitch_accent.source_importer import import_pitch_source
 from anki_miner.services.resource_downloader import download_to_temp
@@ -57,6 +59,22 @@ logger = logging.getLogger(__name__)
 # Suffixes the freq/pitch source importers dispatch on; anything else falls
 # back to .zip (the recommended zip-shaped resources are Yomitan zips).
 _FREQ_SUFFIXES = {".zip", ".csv", ".tsv", ".txt"}
+
+
+class _LemmatiseKwargs(LemmatizeKwarg, total=False):
+    declared_mode: str
+
+
+def _lemmatise_kwargs(spec: ResourceSpec, language: str) -> _LemmatiseKwargs:
+    """Keywords for a catalogue list the importer must aggregate per lemma.
+
+    Only a word-count list is lemmatised, and summing per lemma is only defined
+    for occurrence counts, so such a spec declares its mode outright (D11).
+    Empty for every other spec, keeping the pre-S17 call shape.
+    """
+    if not spec.lemmatise:
+        return {}
+    return {"declared_mode": mode_probe.OCCURRENCE_BASED, "lemmatize": build_frequency_lemmatizer(language)}
 
 
 def _resume_key(spec: ResourceSpec) -> str:
@@ -437,6 +455,7 @@ class ResourceDownloadWorker(CancellableWorker):
                         overwrite=True,
                         before_promote=self._require_promotion_allowed,
                         **language_kwarg(self._language),
+                        **_lemmatise_kwargs(spec, self._language),
                     )
                     source_id = freq_result.source_id
                     detail = tr_format(

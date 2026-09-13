@@ -24,6 +24,8 @@ class ResourceSpec:
         display_name: Human-facing name shown in the UI.
         url: Direct download URL for the resource artifact.
         license_note: Short human string about source/license.
+        lemmatise: Import a word-count list as occurrence counts aggregated
+            per lemma with the language's tagger (S17).
     """
 
     id: str
@@ -31,6 +33,7 @@ class ResourceSpec:
     display_name: str
     url: str
     license_note: str
+    lemmatise: bool = False
 
 
 # For dict resources, ``id`` is the PINNED on-disk slot the importer writes to
