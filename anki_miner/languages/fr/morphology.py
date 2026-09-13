@@ -14,6 +14,14 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
 from anki_miner.languages._spaced.morphology import APOSTROPHE_FOLD
+from anki_miner.languages._spaced.pos import UPOS_ALLOWED
+from anki_miner.languages._spaced.script import (
+    BRACKETS_PATTERN,
+    DIALOGUE_DASH_PATTERN,
+    MUSIC_PATTERN,
+    PARENS_PATTERN,
+    nfc_normalize,
+)
 
 if TYPE_CHECKING:  # annotation-only: no services import at profile build
     from anki_miner.services.morphology import AttestLookup, FormLookup
@@ -98,6 +106,43 @@ _APOSTROPHE_TABLE = str.maketrans(dict(APOSTROPHE_FOLD))
 def fold_apostrophes(text: str) -> str:
     """``’ ‘ ʼ ´`` → ``'``, one character for one: wty spells ``aujourd'hui`` with ASCII."""
     return text.translate(_APOSTROPHE_TABLE)
+
+
+FR_ALLOWED_POS: tuple[str, ...] = UPOS_ALLOWED
+#: Empty on evidence: fr_core_news_sm has no tagger, tag_ == pos_ on every token,
+#: so pos2 is always "" and a subtype list would be dead config
+#: (tests/unit/languages/test_fr_pos_corpus.py pins it).
+FR_EXCLUDED_SUBTYPES: tuple[str, ...] = ()
+
+#: Leading words a deck front carries that the mined lemma never does (S3):
+#: ``le chat``, ``se lever``, and the elided ``l'homme``/``s'appeler``, which
+#: ``spaced_dedup_fold`` strips when glued to the first token (``’`` compares equal).
+FR_LEADING_WORDS: frozenset[str] = frozenset({"le", "la", "les", "un", "une", "des", "se", "l'", "s'"})
+
+#: noun_gender prints the article (A.3): le/la.
+FR_GENDER_LABELS: Mapping[str, str] = MappingProxyType({"masc": "le", "fem": "la"})
+
+#: ``JEAN :``, ``NARRATEUR :`` — the Latin speaker rule, plus the space French
+#: typography puts before a colon (``clean_subtitle_text`` has already turned the
+#: no-break space into a plain one).
+FR_SPEAKER_PATTERN = r"^[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ0-9 .'-]*[A-ZÀ-ÖØ-Þ] ?:\s*"
+#: The S10 default for French: en's Latin parts with the French speaker rule. No inline flags.
+FR_SUBTITLE_REGEX = "|".join(
+    (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, FR_SPEAKER_PATTERN, DIALOGUE_DASH_PATTERN)
+)
+
+_NO_BREAK_SPACES = str.maketrans({"\u00a0": " ", "\u202f": " "})
+
+
+def fr_normalize(text: str) -> str:
+    """``LanguageProfile.normalize`` (S5): NFC, then NBSP/NNBSP → space, one character for one.
+
+    French typography puts a no-break space before ``: ; ? ! »`` and after ``«``.
+    ``clean_subtitle_text``'s whitespace flattening already turns both into
+    spaces on the subtitle path; this makes a book or a pasted text store and
+    tag the same line. Same length, so offsets never move.
+    """
+    return nfc_normalize(text).translate(_NO_BREAK_SPACES)
 
 
 def _needs_infinitive(token: Any) -> bool:

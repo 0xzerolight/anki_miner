@@ -140,9 +140,14 @@ de = [
 pt = [
     "spacy>=3.8,<3.8.15",
 ]
+# French mining engine: same spaCy pin as en (R3); the fr_core_news_sm wheel is a
+# GitHub release asset, downloaded in Settings -> Mining Language.
+fr = [
+    "spacy>=3.8,<3.8.15",
+]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
-languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]"]
+languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]"]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
