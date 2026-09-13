@@ -170,6 +170,7 @@ def load(
     encodings: tuple[str, ...] | None = None,
     rules: SentenceRules | None = None,
     script_check: Callable[[str], bool] | None = None,
+    normalize: Callable[[str], str] | None = None,
 ) -> ReadingDocument:
     """Dispatch a ref to its source loader and return the loaded document.
 
@@ -188,6 +189,9 @@ def load(
     loaders that call ``split_sentences``. ``subtitle`` is the odd one out the
     other way round: it splits nothing, so it takes the ladder but not the
     rules.
+
+    ``normalize`` reaches the subtitle loader only — the other kinds are
+    normalised per unit by the parser.
 
     Each optional argument is built as its own fragment and omitted when
     ``None``, so a call that supplies none is the pre-transition
@@ -217,7 +221,8 @@ def load(
     if ref.kind == "subtitle":
         from . import subtitle_source
 
-        return subtitle_source.load(ref, **common, **sniffing)
+        cleaning: dict[str, Any] = {} if normalize is None else {"normalize": normalize}
+        return subtitle_source.load(ref, **common, **sniffing, **cleaning)
     if ref.kind == "text":
         from . import text_source
 

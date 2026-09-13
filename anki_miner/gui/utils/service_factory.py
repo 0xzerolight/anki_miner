@@ -12,6 +12,7 @@ first.
 
 import contextlib
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TypedDict, cast
@@ -700,6 +701,22 @@ def _create_subtitle_parser(config: AnkiMinerConfig, **lookups: Any) -> Subtitle
     if factory is get_profile("ja").create_parser:
         return SubtitleParserService(config, **lookups)
     return cast(SubtitleParserService, factory(config, **lookups))
+
+
+def create_profile_parser(
+    config: AnkiMinerConfig, ja_parser_cls: Callable[..., SubtitleParserService]
+) -> SubtitleParserService:
+    """A parser for display-only parsing (``parse_raw_entries``), built like the run's.
+
+    Cue text shown in the curator and matched by a line expansion must be cleaned
+    exactly as mining cleans it, so a non-ja language gets its profile factory's
+    seams. ja keeps the caller's own class and call shape: the display sites
+    import ``SubtitleParserService`` themselves and their tests patch that name.
+    """
+    factory = get_profile(config_language(config)).create_parser
+    if factory is get_profile("ja").create_parser:
+        return ja_parser_cls(config)
+    return cast(SubtitleParserService, factory(config))
 
 
 def create_services(

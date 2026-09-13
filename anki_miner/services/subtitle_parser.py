@@ -366,6 +366,7 @@ class SubtitleParserService:
         token_merger: "TokenMerger | None" = None,
         compound_matching: bool = True,
         token_post_pass: TokenPostPass | None = None,
+        normalize: Callable[[str], str] | None = None,
     ):
         """Initialize the subtitle parser.
 
@@ -451,6 +452,10 @@ class SubtitleParserService:
                 the third argument is reserved for R36's form lookup — before
                 every merge pass, and its result IS the line's raw token list.
                 ``None`` — every ja/ko/zh path — runs nothing.
+            normalize: The mining language's text normaliser for cue text and
+                reading units (``LanguageProfile.normalize``), replacing the
+                Japanese pair in :func:`clean_subtitle_text`. ``None`` — every
+                ja/ko/zh parser — keeps the Japanese pair.
         """
         self.config = config
         # Perf-audit counters (Task 28): cumulative wall-clock spent in offline-
@@ -475,6 +480,8 @@ class SubtitleParserService:
         # Language post-pass over the raw tagger tokens (§4.3 item 2(b)); None ⇒
         # the tagger output is the raw token list, verbatim.
         self._token_post_pass = token_post_pass
+        # Cue/unit text normaliser (spec S5); None ⇒ the Japanese pair verbatim.
+        self._normalize = normalize
         self._reading_lookup = reading_lookup
         # Shared process-wide tagger (see services/tagger.py for the single-flight
         # invariant). __init__ may block ~2-3s on the lazy build if a user triggers
@@ -725,6 +732,11 @@ class SubtitleParserService:
         )
 
     @property
+    def normalize(self) -> Callable[[str], str] | None:
+        """The injected normaliser (None = the Japanese pair). Read by the reading worker."""
+        return self._normalize
+
+    @property
     def ambiguous_reading_count(self) -> int:
         """Number of distinct real-token card fronts needing reading review."""
         return len(self._ambiguous_readings)
@@ -843,7 +855,7 @@ class SubtitleParserService:
         to empty is skipped by each caller's existing ``if not text: continue``
         guard.
         """
-        cleaned = clean_subtitle_text(raw_text)
+        cleaned = clean_subtitle_text(raw_text, normalize=self._normalize)
         return self._apply_text_filter(cleaned)
 
     def _load_subs(self, subtitle_file: Path, *, encodings: tuple[str, ...] | None = None):
@@ -1770,8 +1782,13 @@ class SubtitleParserService:
             # was mined (as on the subtitle path). Order mirrors clean_subtitle_text
             # (normalize_for_tokenization then standardize_kanji_variants); the
             # markup strip / regex filter it also runs are applied just below,
-            # subtitle-cue kind only (subtitle_cleanup).
-            text = standardize_kanji_variants(normalize_for_tokenization(unit.text))
+            # subtitle-cue kind only (subtitle_cleanup). An injected normaliser
+            # replaces exactly that pair, as it does in clean_subtitle_text.
+            text = (
+                standardize_kanji_variants(normalize_for_tokenization(unit.text))
+                if self._normalize is None
+                else self._normalize(unit.text)
+            )
             if subtitle_cleanup:
                 # Reading→Subtitles per-cue cleanup remains here for synthetic
                 # ReadingUnit callers and is idempotent when the loader already

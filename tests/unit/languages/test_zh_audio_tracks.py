@@ -73,7 +73,9 @@ def test_curation_media_context_carries_the_profile_codes(tmp_path, monkeypatch)
     subtitle.touch()
     parser = MagicMock()
     parser.return_value.parse_raw_entries.return_value = [(0.0, 1.0, "我去银行。")]
-    monkeypatch.setattr("anki_miner.gui.widgets._mining_tab_base.SubtitleParserService", parser)
+    # A zh display parse is built by the zh profile factory (create_profile_parser),
+    # which constructs the class from its home module.
+    monkeypatch.setattr("anki_miner.services.subtitle_parser.SubtitleParserService", parser)
     zh_config = dataclasses.replace(AnkiMinerConfig(), language="zh")
     context = MiningTabBase._make_curation_media_context(zh_config, video, subtitle, 0.0)
     assert context.audio_track_codes == ZH_CODES
@@ -101,7 +103,8 @@ def test_the_timing_preview_hands_the_viewer_the_profile_codes(qtbot, test_confi
     viewer_instance.exec.return_value = viewer_instance.DialogCode.Rejected
     with (
         patch("anki_miner.gui.widgets.subtitle_viewer.SubtitleViewer", return_value=viewer_instance) as viewer_cls,
-        patch("anki_miner.gui.widgets.single_episode_tab.SubtitleParserService", parser),
+        # Built by the zh profile factory, which constructs the class from its home module.
+        patch("anki_miner.services.subtitle_parser.SubtitleParserService", parser),
     ):
         tab._on_timing_clicked()
         qtbot.waitUntil(lambda: viewer_cls.called, timeout=3000)

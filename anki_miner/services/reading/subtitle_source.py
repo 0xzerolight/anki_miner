@@ -65,6 +65,7 @@ def load(
     cancel_check: Callable[[], bool] | None = None,
     encodings: tuple[str, ...] | None = None,
     script_check: Callable[[str], bool] | None = None,
+    normalize: Callable[[str], str] | None = None,
 ) -> ReadingDocument:
     """Load a subtitle file into a per-cue :class:`ReadingDocument`.
 
@@ -72,6 +73,8 @@ def load(
     episode = file stem. ``encodings`` is the mining language's decode ladder;
     ``None`` keeps the built-in Japanese sniffing path (see ``_util._decode``).
     ``script_check`` validates a single-byte ladder leg (``_util._decode``).
+    ``normalize`` is the run parser's text normaliser, so each cue is cleaned
+    exactly as the parser cleans a subtitle line (``None`` = the Japanese pair).
 
     Raises:
         SetupError: unreadable file or unparseable subtitle content.
@@ -112,7 +115,7 @@ def load(
         # Skip ASS/SSA Comment events (same guard as parse_raw_entries).
         if getattr(event, "is_comment", None) is True:
             continue
-        cue_text = clean_subtitle_text(event.text)
+        cue_text = clean_subtitle_text(event.text, normalize=normalize)
         if not cue_text:
             continue
         units.append(

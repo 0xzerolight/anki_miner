@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from typing import Any
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import OperationCancelled, SetupError
@@ -198,12 +199,20 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
         """
         ladder = reading_decode_ladder(self._config)
         profile = get_profile(self._config.language)
+        # The loader cleans cues with the SAME normaliser the run's parser applies
+        # to every unit, so the two can never disagree (None = the Japanese pair).
+        parser = getattr(self._processor, "subtitle_parser", None)
+        normalize = getattr(parser, "normalize", None)
+        # One bundle: omitted keywords keep detector.load's pre-seam call shape.
+        loader_kwargs: dict[str, Any] = {**script_check_kwarg(ladder, profile.script)}
+        if normalize is not None:
+            loader_kwargs["normalize"] = normalize
         document = detector.load(
             item.source,
             cancel_check=self.check_cancelled,
             encodings=ladder,
             rules=profile.sentence_rules,
-            **script_check_kwarg(ladder, profile.script),
+            **loader_kwargs,
         )
         # Published for the manga tab's curation context (page images). Set
         # before process_reading so it is always the in-flight item's document

@@ -37,7 +37,7 @@ from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.recent_files import RecentFilesManager
 from anki_miner.gui.utils.run_off_thread import run_off_thread
-from anki_miner.gui.utils.service_factory import create_episode_processor
+from anki_miner.gui.utils.service_factory import create_episode_processor, create_profile_parser
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import (
     PageWidth,
@@ -593,7 +593,7 @@ class SingleEpisodeTab(MiningTabBase):
         generation = self._teardown_generation
 
         def _parse() -> object:
-            return SubtitleParserService(config_no_offset).parse_raw_entries(subtitle_file)
+            return create_profile_parser(config_no_offset, SubtitleParserService).parse_raw_entries(subtitle_file)
 
         def _on_parsed(result: object) -> None:
             if generation != self._teardown_generation:

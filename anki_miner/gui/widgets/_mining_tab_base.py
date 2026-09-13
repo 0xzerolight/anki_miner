@@ -956,7 +956,9 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         if video is None or subtitle is None:
             return None
         try:
-            parser = SubtitleParserService(replace(config, subtitle_offset=0.0))
+            from anki_miner.gui.utils.service_factory import create_profile_parser
+
+            parser = create_profile_parser(replace(config, subtitle_offset=0.0), SubtitleParserService)
             entries = parser.parse_raw_entries(subtitle)
             secondary_entries: list[tuple[float, float, str]] = []
             if secondary_subtitle is not None:
