@@ -147,6 +147,7 @@ def test_the_panel_anchors_the_selector_and_every_pack_row(qtbot):
         "mining_language.language_pack_zh",
         "mining_language.language_pack_en",
         "mining_language.language_pack_ca",
+        "mining_language.language_pack_de",
     }
 
 
@@ -163,6 +164,7 @@ def test_a_pack_row_is_searchable_by_its_english_name(qtbot):
 
     assert "Korean" in text["mining_language.language_pack_ko"]
     assert "Chinese" in text["mining_language.language_pack_zh"]
+    assert "German" in text["mining_language.language_pack_de"]
 
 
 def test_repopulating_keeps_the_selection_and_proposes_nothing(qtbot, test_config):
