@@ -104,7 +104,11 @@ def _synthesize_gtts_to_cache(
         # timeout=10 bounds the synthesis HTTP request; the default None lets
         # write_to_fp block forever on a stalled connection, and cancelled_check
         # is only consulted before the call (matches the 10s cap other fetchers use).
-        tts = gtts.gTTS(text=text, lang=lang, timeout=10)
+        # lang_check=False: gTTS 2.5.4 otherwise rewrites a "deprecated" code
+        # before synthesis — pt-PT silently becomes pt (the Brazilian voice). The
+        # code is a profile constant, and the rewrite table is identity for every
+        # other code a profile uses (tests/unit/test_gtts_regional_voice.py).
+        tts = gtts.gTTS(text=text, lang=lang, timeout=10, lang_check=False)
         tts.write_to_fp(buffer)
         body = buffer.getvalue()
 
