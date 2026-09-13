@@ -1,0 +1,70 @@
+{"id":"ptc01","sentence":"Dá-me o guarda-chuva, por favor.","enclitic":"Dá-me","infinitive":"dar","front":"dar","correct":true}
+{"id":"ptc02","sentence":"Ela levantou-se cedo.","enclitic":"levantou-se","infinitive":"levantar","front":"levantar","correct":true}
+{"id":"ptc03","sentence":"Chama-se João.","enclitic":"Chama-se","infinitive":"chamar","front":"chamar","correct":true}
+{"id":"ptc04","sentence":"Diga-lhe que eu volto amanhã.","enclitic":"Diga-lhe","infinitive":"dizer","front":"digar","correct":false}
+{"id":"ptc05","sentence":"Vou vendê-lo amanhã.","enclitic":"vendê-lo","infinitive":"vender","front":"vender","correct":true}
+{"id":"ptc06","sentence":"Quero comprá-la hoje.","enclitic":"comprá-la","infinitive":"comprar","front":"comprar","correct":true}
+{"id":"ptc07","sentence":"Temos de parti-lo em dois.","enclitic":"parti-lo","infinitive":"partir","front":"partir","correct":true}
+{"id":"ptc08","sentence":"Eu vi-a ontem no mercado.","enclitic":"vi-a","infinitive":"ver","front":"ver","correct":true}
+{"id":"ptc09","sentence":"Ela deu-lhe um presente bonito.","enclitic":"deu-lhe","infinitive":"dar","front":"dar","correct":true}
+{"id":"ptc10","sentence":"Ele pediu-me desculpa.","enclitic":"pediu-me","infinitive":"pedir","front":"pedir","correct":true}
+{"id":"ptc11","sentence":"Encontramo-nos às oito.","enclitic":"Encontramo-nos","infinitive":"encontrar","front":"encontramo","correct":false}
+{"id":"ptc12","sentence":"Fizeram-no rir muito.","enclitic":"Fizeram-no","infinitive":"fazer","front":"fazer","correct":true}
+{"id":"ptc13","sentence":"Fala-se português aqui.","enclitic":"Fala-se","infinitive":"falar","front":"falar","correct":true}
+{"id":"ptc14","sentence":"Sente-te à vontade.","enclitic":"Sente-te","infinitive":"sentir","front":"sentir","correct":true}
+{"id":"ptc15","sentence":"Lembras-te daquele dia?","enclitic":"Lembras-te","infinitive":"lembrar","front":"lembra","correct":false}
+{"id":"ptc16","sentence":"Ajudem-nos, por favor!","enclitic":"Ajudem-nos","infinitive":"ajudar","front":"ajudar","correct":true}
+{"id":"ptc17","sentence":"Deixa-o em paz.","enclitic":"Deixa-o","infinitive":"deixar","front":"deixar","correct":true}
+{"id":"ptc18","sentence":"Conheço-os desde crianças.","enclitic":"Conheço-os","infinitive":"conhecer","front":"conhecer","correct":true}
+{"id":"ptc19","sentence":"Espera-a lá fora.","enclitic":"Espera-a","infinitive":"esperar","front":"esperar","correct":true}
+{"id":"ptc20","sentence":"Eu disse-lhe a verdade.","enclitic":"disse-lhe","infinitive":"dizer","front":"dizer","correct":true}
+{"id":"ptc21","sentence":"O João sentou-se na cadeira.","enclitic":"sentou-se","infinitive":"sentar","front":"sentar","correct":true}
+{"id":"ptc22","sentence":"Nós perdemo-nos na cidade.","enclitic":"perdemo-nos","infinitive":"perder","front":"perdemo","correct":false}
+{"id":"ptc23","sentence":"Tu esqueceste-te das chaves.","enclitic":"esqueceste-te","infinitive":"esquecer","front":"esquecestar","correct":false}
+{"id":"ptc24","sentence":"A professora explicou-nos a lição.","enclitic":"explicou-nos","infinitive":"explicar","front":"explicar","correct":true}
+{"id":"ptc25","sentence":"Ele mandou-me uma mensagem.","enclitic":"mandou-me","infinitive":"mandar","front":"mandar","correct":true}
+{"id":"ptc26","sentence":"Ela preocupa-se muito com os filhos.","enclitic":"preocupa-se","infinitive":"preocupar","front":"preocupar","correct":true}
+{"id":"ptc27","sentence":"Eles casaram-se no verão.","enclitic":"casaram-se","infinitive":"casar","front":"casar","correct":true}
+{"id":"ptc28","sentence":"Vamos encontrar-nos amanhã.","enclitic":"encontrar-nos","infinitive":"encontrar","front":"encontrar","correct":true}
+{"id":"ptc29","sentence":"Não consigo ouvi-lo.","enclitic":"ouvi-lo","infinitive":"ouvir","front":"ouvir","correct":true}
+{"id":"ptc30","sentence":"Tens de fazê-lo agora.","enclitic":"fazê-lo","infinitive":"fazer","front":"fazer","correct":true}
+{"id":"ptc31","sentence":"Quero conhecê-la melhor.","enclitic":"conhecê-la","infinitive":"conhecer","front":"conhecer","correct":true}
+{"id":"ptc32","sentence":"Ela abraçou-o com força.","enclitic":"abraçou-o","infinitive":"abraçar","front":"abraçar","correct":true}
+{"id":"ptc33","sentence":"O médico examinou-a com cuidado.","enclitic":"examinou-a","infinitive":"examinar","front":"examinar","correct":true}
+{"id":"ptc34","sentence":"Traz-me um café, por favor.","enclitic":"Traz-me","infinitive":"trazer","front":"trazer","correct":true}
+{"id":"ptc35","sentence":"Mostra-me o caminho.","enclitic":"Mostra-me","infinitive":"mostrar","front":"mostrar","correct":true}
+{"id":"ptc36","sentence":"Desculpa-me pelo atraso.","enclitic":"Desculpa-me","infinitive":"desculpar","front":"desculpa","correct":false}
+{"id":"ptc37","sentence":"Ele vestiu-se rapidamente.","enclitic":"vestiu-se","infinitive":"vestir","front":"vestir","correct":true}
+{"id":"ptc38","sentence":"A porta abriu-se sozinha.","enclitic":"abriu-se","infinitive":"abrir","front":"abrir","correct":true}
+{"id":"ptc39","sentence":"Eu lembro-me bem dessa noite.","enclitic":"lembro-me","infinitive":"lembrar","front":"","correct":false}
+{"id":"ptc40","sentence":"Ela chamou-lhes mentirosos.","enclitic":"chamou-lhes","infinitive":"chamar","front":"chamar","correct":true}
+{"id":"ptc41","sentence":"Os alunos portaram-se bem.","enclitic":"portaram-se","infinitive":"portar","front":"portar","correct":true}
+{"id":"ptc42","sentence":"Ele despediu-se de todos.","enclitic":"despediu-se","infinitive":"despedir","front":"despedir","correct":true}
+{"id":"ptc43","sentence":"Pode ajudar-me com isto?","enclitic":"ajudar-me","infinitive":"ajudar","front":"ajudar","correct":true}
+{"id":"ptc44","sentence":"Preciso de falar-te sobre isso.","enclitic":"falar-te","infinitive":"falar","front":"falar","correct":true}
+{"id":"ptc45","sentence":"Ela deitou-se tarde ontem.","enclitic":"deitou-se","infinitive":"deitar","front":"deitar","correct":true}
+{"id":"ptc46","sentence":"Enviei-lhe uma carta.","enclitic":"Enviei-lhe","infinitive":"enviar","front":"","correct":false}
+{"id":"ptc47","sentence":"Ele queixou-se do barulho.","enclitic":"queixou-se","infinitive":"queixar","front":"queixar","correct":true}
+{"id":"ptc48","sentence":"Deram-nos um livro.","enclitic":"Deram-nos","infinitive":"dar","front":"dar","correct":true}
+{"id":"ptc49","sentence":"Põe-no em cima da mesa.","enclitic":"Põe-no","infinitive":"pôr","front":"pôr","correct":true}
+{"id":"ptc50","sentence":"Tu viste-o?","enclitic":"viste-o","infinitive":"ver","front":"viste","correct":false}
+{"id":"ptc51","sentence":"Vou vê-lo amanhã.","enclitic":"vê-lo","infinitive":"ver","front":"ver","correct":true}
+{"id":"ptc52","sentence":"Não consigo dizê-lo.","enclitic":"dizê-lo","infinitive":"dizer","front":"dizer","correct":true}
+{"id":"ptc53","sentence":"Posso ajudá-lo?","enclitic":"ajudá-lo","infinitive":"ajudar","front":"ajudar","correct":true}
+{"id":"ptc54","sentence":"Quero comprá-lo hoje.","enclitic":"comprá-lo","infinitive":"comprar","front":"comprar","correct":true}
+{"id":"ptc55","sentence":"Vou vendê-la amanhã.","enclitic":"vendê-la","infinitive":"vender","front":"vender","correct":true}
+{"id":"ptc56","sentence":"Precisamos de encontrá-lo.","enclitic":"encontrá-lo","infinitive":"encontrar","front":"encontrar","correct":true}
+{"id":"ptc57","sentence":"Vou trazê-los comigo.","enclitic":"trazê-los","infinitive":"trazer","front":"trazer","correct":true}
+{"id":"ptc58","sentence":"Tenho de levá-la ao médico.","enclitic":"levá-la","infinitive":"levar","front":"levar","correct":true}
+{"id":"ptc59","sentence":"Ninguém conseguiu salvá-la.","enclitic":"salvá-la","infinitive":"salvar","front":"salvar","correct":true}
+{"id":"ptc60","sentence":"Gosto de ouvi-la cantar.","enclitic":"ouvi-la","infinitive":"ouvir","front":"ouvir","correct":true}
+{"id":"ptc61","sentence":"Vamos segui-lo de perto.","enclitic":"segui-lo","infinitive":"seguir","front":"seguir","correct":true}
+{"id":"ptc62","sentence":"Tens de abri-lo com cuidado.","enclitic":"abri-lo","infinitive":"abrir","front":"abrir","correct":true}
+{"id":"ptc63","sentence":"Onde vais pô-lo?","enclitic":"pô-lo","infinitive":"pôr","front":"pôr","correct":true}
+{"id":"ptc64","sentence":"Ele quer matá-lo.","enclitic":"matá-lo","infinitive":"matar","front":"matar","correct":true}
+{"id":"ptc65","sentence":"Ela fá-lo todos os dias.","enclitic":"fá-lo","infinitive":"fazer","front":"fazer","correct":true}
+{"id":"ptc66","sentence":"Eu fi-lo ontem.","enclitic":"fi-lo","infinitive":"fazer","front":"fazer","correct":true}
+{"id":"ptc67","sentence":"Ele di-lo sempre.","enclitic":"di-lo","infinitive":"dizer","front":"dizer","correct":true}
+{"id":"ptc68","sentence":"Ele pô-lo na mesa.","enclitic":"pô-lo","infinitive":"pôr","front":"pôr","correct":true}
+{"id":"ptc69","sentence":"Ela trá-lo sempre consigo.","enclitic":"trá-lo","infinitive":"trazer","front":"trazer","correct":true}
+{"id":"ptc70","sentence":"Nós comemo-lo todo.","enclitic":"comemo-lo","infinitive":"comer","front":"comemo","correct":false}
