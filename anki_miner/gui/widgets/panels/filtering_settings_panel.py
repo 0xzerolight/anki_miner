@@ -113,6 +113,9 @@ SUBTITLE_REGEX_PRESETS: tuple[tuple[str, str], ...] = (
     ("Brackets [SFX]", r"\[[^\]]*\]|［[^］]*］"),
     ("Music ♪♬", r"[♪♬♫#～〜]+"),
     ("Speaker: prefix", r"^[^「『:：]+[:：]\s*"),
+    # A dash that opens a speaker turn ("- Hi. - Hello."): at the line start or after
+    # a sentence terminator. Hyphenated words and a mid-sentence dash are untouched.
+    ("Dialogue dash", r"(?:^|(?<=[.!?…]\s))[-–—]\s+"),
 )
 
 
@@ -410,6 +413,7 @@ class FilteringSettingsPanel(FormPanel):
             self.tr("Brackets [SFX]"),
             self.tr("Music ♪♬"),
             self.tr("Speaker: prefix"),
+            self.tr("Dialogue dash"),
         ]
         for (_, pattern), translated_label in zip(SUBTITLE_REGEX_PRESETS, _preset_labels, strict=True):
             btn = QPushButton(translated_label)
