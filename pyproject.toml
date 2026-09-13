@@ -117,9 +117,16 @@ ko = [
     "kiwipiepy>=0.20",
     "kiwipiepy-model>=0.20",
 ]
+# English mining engine. spaCy is capped below 3.8.15: gTTS (a core dependency)
+# caps click<8.2 and spaCy >=3.8.15 needs click>=8.2.1 (R3). The model wheel is a
+# GitHub release asset, not a PyPI package, so no extra can name it: pip users
+# download it in Settings -> Mining Language (or pip install the wheel URL).
+en = [
+    "spacy>=3.8,<3.8.15",
+]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
-languages = ["anki-miner[zh]", "anki-miner[ko]"]
+languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]"]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",

@@ -15,6 +15,7 @@ import pytest
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils import language_choices
 from anki_miner.gui.widgets.panels.mining_language_settings_panel import MiningLanguageSettingsPanel
+from anki_miner.languages._spaced import availability as spaced_availability
 from anki_miner.languages.ko import availability as ko_availability
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.zh import availability
@@ -32,6 +33,8 @@ def ko_stack_absent(monkeypatch):
     ``tests/unit/languages/test_ko_availability.py``.
     """
     monkeypatch.setattr(ko_availability, "find_spec", lambda _name: None)
+    # Same for every spaCy language: the shared probe reads spaCy and its model.
+    monkeypatch.setattr(spaced_availability, "find_spec", lambda _name: None)
 
 
 def _panel(qtbot, config: AnkiMinerConfig) -> MiningLanguageSettingsPanel:
