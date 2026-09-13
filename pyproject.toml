@@ -130,9 +130,14 @@ en = [
 ca = [
     "spacy>=3.8,<3.8.15",
 ]
+# German mining engine: the same spaCy cap as en (R3). The de_core_news_sm model
+# wheel is a GitHub release asset, downloaded in Settings -> Mining Language.
+de = [
+    "spacy>=3.8,<3.8.15",
+]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
-languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]"]
+languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]"]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
