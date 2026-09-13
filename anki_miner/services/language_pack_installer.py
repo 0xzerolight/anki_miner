@@ -38,10 +38,11 @@ from pathlib import Path
 from anki_miner.config import paths
 from anki_miner.exceptions import SetupError
 from anki_miner.interfaces.progress import DownloadProgressFn
-from anki_miner.languages import AVAILABLE_LANGUAGES
+from anki_miner.languages import AVAILABLE_LANGUAGES, SHARED_PACK_CODES
 from anki_miner.languages.pack_spec import LanguagePack, PackComponent
 from anki_miner.services.pack_installer import (
     append_to_syspath,
+    artifact_for,
     component_complete,
     components_supported,
     importable_outside,
@@ -53,6 +54,7 @@ from anki_miner.utils.logging_ext import log_summary
 logger = logging.getLogger(__name__)
 
 __all__ = [
+    "combined_download_mb",
     "component_path",
     "component_satisfied",
     "ensure_language_packs_on_syspath",
@@ -61,7 +63,9 @@ __all__ = [
     "language_pack_root",
     "legacy_ko_model_root",
     "load_pack",
+    "pack_codes",
     "pack_supported",
+    "requirement_satisfied",
 ]
 
 #: The one component with a pre-pack home on disk (``ko_model/``), read as a
@@ -106,11 +110,16 @@ def load_pack(code: str) -> LanguagePack | None:
     probes call this on every refresh. ``None`` covers both "this language needs
     no pack" (ja) and any code without an importable manifest.
     """
-    module_name = f"anki_miner.languages.{code}.pack"
+    package_name = f"anki_miner.languages.{code}"
+    module_name = f"{package_name}.pack"
     try:
-        if find_spec(module_name) is None:
-            # A clean absence: this language ships no pack (ja) or the code is
-            # not one of ours. Nothing is wrong, so nothing is warned about.
+        # The package is probed before its ``.pack`` leaf: ``find_spec`` on a
+        # leaf of an absent package RAISES, which the branch below would log as
+        # a broken manifest on every boot for a shared engine pack not yet landed.
+        if find_spec(package_name) is None or find_spec(module_name) is None:
+            # A clean absence: this language ships no pack (ja), the code is not
+            # one of ours, or a shared engine pack's package has not landed yet.
+            # Nothing is wrong, so nothing is warned about.
             logger.debug("Language pack manifest absent: code=%s", code)
             return None
         module = importlib.import_module(module_name)
@@ -130,12 +139,31 @@ def load_pack(code: str) -> LanguagePack | None:
     return pack if isinstance(pack, LanguagePack) else None
 
 
+def pack_codes() -> tuple[str, ...]:
+    """Every code a pack consumer walks: the mining languages, then the shared engine packs."""
+    return (*AVAILABLE_LANGUAGES, *SHARED_PACK_CODES)
+
+
 def pack_supported(code: str) -> bool:
-    """Return True when every REQUIRED component of *code*'s pack resolves here."""
+    """Return True when every REQUIRED component of *code*'s pack resolves here.
+
+    A pack that ``requires`` another is supported only when each requirement is
+    available too: already satisfied, or downloadable here.
+    """
     pack = load_pack(code)
     if pack is None:
         return False
-    return components_supported(pack.components)
+    return components_supported(pack.components) and all(_requirement_available(req) for req in pack.requires)
+
+
+def _requirement_available(code: str) -> bool:
+    """Return True when this machine has *code*'s required components, or can download them."""
+    pack = load_pack(code)
+    if pack is None:
+        return False
+    return all(
+        component_satisfied(code, comp) or artifact_for(comp) is not None for comp in pack.components if comp.required
+    )
 
 
 def _pack_roots(code: str) -> tuple[Path, ...]:
@@ -205,12 +233,64 @@ def is_installed(code: str) -> bool:
     The CANONICAL root only — this is the app's own "is Korean ready?" question,
     and a seeded directory somewhere else is not an answer to it. False for a
     language with no pack manifest: there is nothing to install and nothing
-    installed.
+    installed. Every pack the manifest ``requires`` must be satisfied too.
     """
     pack = load_pack(code)
     if pack is None:
         return False
-    return all(component_satisfied(code, comp) for comp in pack.components if comp.required)
+    own = all(component_satisfied(code, comp) for comp in pack.components if comp.required)
+    return own and all(requirement_satisfied(req) for req in pack.requires)
+
+
+def requirement_satisfied(code: str, root: Path | None = None) -> bool:
+    """Return True when every REQUIRED component of *code*'s pack needs no download into *root*.
+
+    Per component (:func:`component_satisfied`), never :func:`pack_supported`:
+    an engine pack pins a CPython ABI, and an importable engine from a pip
+    install must satisfy it on any interpreter.
+    """
+    pack = load_pack(code)
+    if pack is None:
+        return False
+    return all(component_satisfied(code, comp, root) for comp in pack.components if comp.required)
+
+
+def combined_download_mb(code: str) -> int:
+    """Return the size one download button fetches: this pack plus each requirement still missing."""
+    pack = load_pack(code)
+    if pack is None:
+        return 0
+    total = pack.approx_download_mb
+    for req in pack.requires:
+        req_pack = load_pack(req)
+        if req_pack is not None and not requirement_satisfied(req):
+            total += req_pack.approx_download_mb
+    return total
+
+
+def _requirement_root(code: str, requirement: str, root: Path) -> Path:
+    """Return where *requirement* is installed when *code* is installed into *root*.
+
+    Its canonical home when *root* is *code*'s canonical home; otherwise a
+    sibling of *root*, the seeder's ``<dest>/<code>/`` layout.
+    """
+    return language_pack_root(requirement) if root == language_pack_root(code) else root.parent / requirement
+
+
+def _relabelled(progress: DownloadProgressFn | None, requirement: str, code: str) -> DownloadProgressFn | None:
+    """Report a prerequisite's progress under the requesting pack's label.
+
+    The settings row runs one task per button, and its progress lines are
+    prefixed with the requesting code; ``_SPACY pack`` would reach the user.
+    """
+    if progress is None:
+        return None
+    old, new = f"{requirement.upper()} ", f"{code.upper()} "
+
+    def _progress(downloaded: int, total: int, message: str) -> None:
+        progress(downloaded, total, new + message[len(old) :] if message.startswith(old) else message)
+
+    return _progress
 
 
 def install_language_pack(
@@ -227,6 +307,10 @@ def install_language_pack(
     a bundled install that ships an engine downloads only what it lacks. The
     download/verify/extract/promote contract is ``pack_installer.install_components``'.
 
+    Every code the pack ``requires`` is installed first — into its canonical
+    home when *root* is this pack's canonical home, or as a sibling of a seed
+    root — and a requirement still unsatisfied afterwards refuses the install.
+
     Args:
         code: Language code with a ``languages/<code>/pack.py`` manifest.
         root: Managed directory for the pack; created if missing. Usually
@@ -241,13 +325,25 @@ def install_language_pack(
 
     Raises:
         SetupError: When the language has no pack, when a required component has
-            no artifact for this platform/Python, or on download failure, sha256
-            mismatch, or a bad/empty archive.
+            no artifact for this platform/Python, on download failure, sha256
+            mismatch, or a bad/empty archive, or when a required pack is still
+            not installed after its own install.
         OperationCancelled: When *cancelled_check* returns True.
     """
     pack = load_pack(code)
     if pack is None:
         raise SetupError(f"{code} has no downloadable language pack.")
+    for requirement in pack.requires:
+        requirement_root = _requirement_root(code, requirement, root)
+        if not requirement_satisfied(requirement, requirement_root):
+            install_language_pack(
+                requirement,
+                requirement_root,
+                progress=_relabelled(progress, requirement, code),
+                cancelled_check=cancelled_check,
+            )
+        if not requirement_satisfied(requirement, requirement_root):
+            raise SetupError(f"The {code} language pack needs the {requirement} pack, which is not installed.")
     return install_components(
         code,
         pack.components,
@@ -267,6 +363,7 @@ def install_language_pack(
 def ensure_language_packs_on_syspath() -> None:
     """Make every installed language pack importable, once, at boot.
 
+    Walks the mining languages and the shared engine packs (:func:`pack_codes`).
     A pack root holding at least one sentinel-complete component is appended to
     ``sys.path`` so ``import jieba`` / ``import kiwipiepy`` resolve against the
     extracted copy; the legacy ``ko_model/`` directory is appended on the same
@@ -279,7 +376,7 @@ def ensure_language_packs_on_syspath() -> None:
     # unanswerable without knowing which folder was being injected.
     current_root: Path | None = None
     try:
-        for code in AVAILABLE_LANGUAGES:
+        for code in pack_codes():
             current_root = None
             pack = load_pack(code)
             if pack is None or not pack_supported(code):

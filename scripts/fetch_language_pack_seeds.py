@@ -116,6 +116,11 @@ def _pack_manifest(code: str, root: Path) -> dict[str, Any]:
         "dest": str(root),
         "supported": pack_supported(code),
         "approx_download_mb": language_pack.approx_download_mb,
+        # Seeding a code also installs what it requires beside it under dest (the
+        # installer's prerequisite rule). scripts/bundle_smoke.sh copies only the
+        # seeded code's own directory, so a smoke leg for a pack that requires
+        # another has to copy the requirement's directory as well.
+        "requires": list(language_pack.requires),
         "components": [_component_manifest(comp) for comp in language_pack.components],
     }
 

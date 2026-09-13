@@ -1,18 +1,23 @@
 """The pack manifests are the single source of truth for pack pins."""
 
+import importlib
 from importlib.util import find_spec
+from pathlib import Path
 
-from anki_miner.languages import AVAILABLE_LANGUAGES
+import anki_miner.languages
+from anki_miner.languages import AVAILABLE_LANGUAGES, SHARED_PACK_CODES
 from anki_miner.languages.pack_spec import ArtifactSpec, LanguagePack
 
 _RELEASE_PLATFORMS = (("linux", "x86_64"), ("win32", "AMD64"), ("darwin", "arm64"), ("darwin", "x86_64"))
+#: Every host a pinned artifact may come from: PyPI, and the spaCy model releases.
+_URL_PREFIXES = ("https://files.pythonhosted.org/", "https://github.com/explosion/spacy-models/releases/download/")
 
 
 def _packs():
-    import importlib
-
     out = {}
-    for code in AVAILABLE_LANGUAGES:
+    for code in (*AVAILABLE_LANGUAGES, *SHARED_PACK_CODES):
+        if find_spec(f"anki_miner.languages.{code}") is None:
+            continue
         if find_spec(f"anki_miner.languages.{code}.pack") is not None:
             out[code] = importlib.import_module(f"anki_miner.languages.{code}.pack").PACK
     return out
@@ -24,7 +29,10 @@ def test_ja_has_no_pack():
 
 def test_every_pack_is_well_formed():
     packs = _packs()
-    assert set(packs) == {"zh", "ko"}
+    # Derived, not hand-listed: every pack.py on disk must be reachable from the
+    # two code tuples, which is what load_pack and the .spec derivation walk.
+    on_disk = {path.parent.name for path in Path(anki_miner.languages.__file__).parent.glob("*/pack.py")}
+    assert set(packs) == on_disk
     for code, pack in packs.items():
         assert isinstance(pack, LanguagePack) and pack.code == code
         assert pack.approx_download_mb > 0
@@ -33,7 +41,7 @@ def test_every_pack_is_well_formed():
             assert comp.sentinels
             for spec in ([comp.universal] if comp.universal else list(comp.per_platform.values())):
                 assert isinstance(spec, ArtifactSpec)
-                assert spec.url.startswith("https://files.pythonhosted.org/")
+                assert spec.url.startswith(_URL_PREFIXES)
                 assert len(spec.sha256) == 64
                 assert spec.member_prefix.endswith("/")
 

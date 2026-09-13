@@ -8,7 +8,7 @@ import budoux
 import unidic_lite
 from PyInstaller.utils.hooks import collect_submodules
 
-from anki_miner.languages import AVAILABLE_LANGUAGES
+from anki_miner.languages import AVAILABLE_LANGUAGES, SHARED_PACK_CODES
 
 block_cipher = None
 
@@ -261,6 +261,19 @@ for _code in AVAILABLE_LANGUAGES:
         _module = f"anki_miner.languages.{_code}.{_leaf}"
         if importlib.util.find_spec(_module) is not None:
             language_hiddenimports.append(_module)
+
+# Shared engine packs (languages.SHARED_PACK_CODES, e.g. "_spacy") are not mining
+# languages, so the loop above never sees them, yet load_pack reaches their
+# manifests by f-string exactly like a language's: without these pins a frozen
+# build's load_pack("_spacy") is None and the engine can never be installed from
+# a bundle (S18). Its own block because such a package has no tokenizer leaf and
+# find_spec on a leaf of an absent package raises, so the package is probed first.
+_shared_pack_hiddenimports: list[str] = []
+for _code in SHARED_PACK_CODES:
+    _package = f"anki_miner.languages.{_code}"
+    if importlib.util.find_spec(_package) is not None:
+        _shared_pack_hiddenimports += [_package, f"{_package}.pack"]
+language_hiddenimports += _shared_pack_hiddenimports
 
 a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     [os.path.join(project_root, "anki_miner", "gui", "launch.py")],
