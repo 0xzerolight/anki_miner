@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Changed
 
 ### Fixed
+- **Installing mokuro a second time no longer fails on Windows with "untrusted mount point" (os error 448).** The installer asked uv for Python `3.12`, and for a minor-only request uv reaches the interpreter through its `cpython-3.12-windows-x86_64-none` minor-version link, a junction created by the first install; Windows can refuse to traverse a junction a non-admin process created, uv treats the failed query as fatal, and every retry or reinstall stopped at `uv venv` until `~/.anki_miner/uv/python/` was deleted by hand. The request is now the exact patch uv 0.12.10 already resolved to (`3.12.14`), so discovery uses the real install directory and the venv's `python.exe`/`mokuro.exe` point at it too. Existing installs are reused as they are, with no new download; a machine already in the failing state installs without deleting anything.
 
 ### Removed
 
