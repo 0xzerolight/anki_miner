@@ -43,7 +43,7 @@ def no_first_visit_prompt(monkeypatch):
     real first-visit modal - and ``_FakeWindow`` is not a QWidget, so it opens
     parentless and blocks in ``exec``. Answer "no thanks" and get out of the way.
     """
-    monkeypatch.setattr(language_switch, "_first_visit_choice", lambda *a, **k: language_switch.FIRST_VISIT_NONE)
+    monkeypatch.setattr(language_switch, "_first_visit_choice", lambda *a, **k: (language_switch.FIRST_VISIT_NONE, ()))
 
 
 class _FakeScreen:

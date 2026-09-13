@@ -1,0 +1,30 @@
+{
+  "approx_download_mb": 13,
+  "code": "en",
+  "components": [
+    {
+      "abi": null,
+      "import_name": "en_core_web_sm",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py",
+        "en_core_web_sm-3.8.0/config.cfg",
+        "en_core_web_sm-3.8.0/meta.json"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "en_core_web_sm-3.8.0-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "en_core_web_sm/",
+        "root_members": [],
+        "sha256": "1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85",
+        "size": 12806118,
+        "url": "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
+      }
+    }
+  ],
+  "requires": [
+    "_spacy"
+  ]
+}

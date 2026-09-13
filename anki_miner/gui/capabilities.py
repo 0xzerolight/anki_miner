@@ -411,7 +411,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         id="mining-language",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Mine Japanese, Korean or Chinese"),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Mine another language"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.",
@@ -424,11 +424,13 @@ CAPABILITIES: tuple[Capability, ...] = (
             "korean",
             "chinese",
             "mandarin",
+            "english",
             "hangul",
             "switch language",
             "ja",
             "ko",
             "zh",
+            "en",
         ),
     ),
     # --- Filtering ---------------------------------------------------------

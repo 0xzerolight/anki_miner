@@ -26,6 +26,7 @@ HOOK_ROWS = [
     ("ko", "hanja", "hanja_field_input", "hanja"),
     ("zh", "expression_pinyin", "expression_pinyin_field_input", "pinyin"),
     ("zh", "expression_traditional", "expression_traditional_field_input", "script_variants"),
+    ("en", "pos", "pos_field_input", "pos_tag"),
 ]
 
 
@@ -97,7 +98,7 @@ def test_every_hook_field_key_has_a_row(qtbot, test_config):
     hook_keys = {
         name for code in available_languages() for hook in get_profile(code).render_hooks for name in hook.field_names()
     } | {"measure_word"}
-    assert hook_keys <= OPTIONAL_FIELD_KEYS
+    assert hook_keys <= OPTIONAL_FIELD_KEYS | {spec.key for spec in profile_card_field_specs()}
     panel = _anki(qtbot, test_config)
     covered = {key for _, key, _, _ in HOOK_ROWS} | {"measure_word"}
     assert covered == hook_keys

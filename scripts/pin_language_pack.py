@@ -208,18 +208,17 @@ def _wheel_for(
 
 
 def read_top_level(artifact: Mapping[str, Any], cache: Path = PIN_CACHE) -> list[str]:
-    """Top-level import package directories of one wheel, from its RECORD."""
+    """Top-level import package directories of one wheel, from its RECORD.
+
+    Only a directory whose name is a Python identifier can be imported, so any
+    other is not a package: ``*.dist-info``/``*.data``/``*.libs`` and PEP 561
+    stub-only directories (wrapt 2.x ships ``wrapt-stubs/`` beside ``wrapt/``).
+    """
     local = _cached_download(str(artifact["url"]), cache / str(artifact["filename"]))
     with zipfile.ZipFile(local) as zf:
         record = next(name for name in zf.namelist() if name.endswith(".dist-info/RECORD"))
         paths = [line.split(",", 1)[0] for line in zf.read(record).decode().splitlines() if line]
-    return sorted(
-        {
-            path.split("/", 1)[0]
-            for path in paths
-            if "/" in path and not path.split("/", 1)[0].endswith((".dist-info", ".data", ".libs"))
-        }
-    )
+    return sorted({path.split("/", 1)[0] for path in paths if "/" in path and path.split("/", 1)[0].isidentifier()})
 
 
 def resolve_runtime(

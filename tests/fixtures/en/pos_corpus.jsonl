@@ -1,0 +1,18 @@
+{"id":"en01","sentence":"She went to the market and bought three apples.","must_mine":["go","market","buy","apple"],"must_not_mine":["she","to","the","and","three","went","bought","apples"],"note":"irregular past tenses and plurals mine as lemmas; function words and numerals do not"}
+{"id":"en02","sentence":"I don't think we're ready for this.","must_mine":["think","ready"],"must_not_mine":["do","n't","not","be","we","this","'re"],"note":"ASCII contraction halves are AUX/PART"}
+{"id":"en03","sentence":"I don’t think we’re ready for this.","must_mine":["think","ready"],"must_not_mine":["do","n’t","not","be","’re","’m"],"note":"curly apostrophes tag through the folded copy (D2)"}
+{"id":"en04","sentence":"You can’t leave now, it’s raining.","must_mine":["leave","now","rain"],"must_not_mine":["can","ca","n’t","not","it","be","’s"],"note":"curly can’t / it’s"}
+{"id":"en05","sentence":"It's a well-known fact that e-mail is faster.","must_mine":["well-known","fact","e-mail","fast"],"must_not_mine":["well","known","e","mail","-"],"note":"hyphen compounds stay whole"}
+{"id":"en06","sentence":"My mother-in-law cooked a delicious dinner.","must_mine":["mother-in-law","cook","delicious","dinner"],"must_not_mine":["mother","law","in","my"],"note":"multi-hyphen compound"}
+{"id":"en07","sentence":"THE END","must_mine":["end"],"must_not_mine":["END","the","THE"],"note":"all-caps cue tagged lowercased; surface stays END (span assertion in the test)"}
+{"id":"en08","sentence":"I DON'T KNOW WHAT YOU MEAN","must_mine":["know","mean"],"must_not_mine":["don't","DON'T","what","you","i"],"note":"shouted cue"}
+{"id":"en09","sentence":"We met Sarah in London last Tuesday.","must_mine":["meet","last"],"must_not_mine":["Sarah","London","Tuesday","sarah","london","tuesday"],"note":"PROPN excluded"}
+{"id":"en10","sentence":"Check www.example.com or write to help@example.com today.","must_mine":["check","write","today"],"must_not_mine":["www.example.com","help@example.com"],"note":"URLs and e-mail addresses are X (D3)"}
+{"id":"en11","sentence":"The children were running through the fields.","must_mine":["child","run","field"],"must_not_mine":["be","the","through"],"note":"irregular plural"}
+{"id":"en12","sentence":"He's gonna look it up later.","must_mine":["go","look","later"],"must_not_mine":["up","it","he","na"],"note":"gonna = gon + na; the phrasal particle is not the front (§9 deferral)"}
+{"id":"en13","sentence":"Where did you put my keys?","must_mine":["put","key"],"must_not_mine":["do","you","my"],"note":"do-support is AUX"}
+{"id":"en14","sentence":"She sings beautifully.","must_mine":["sing","beautifully"],"must_not_mine":["she"],"note":"adverb kept"}
+{"id":"en15","sentence":"Twenty-two students passed the exam.","must_mine":["student","pass","exam"],"must_not_mine":["twenty-two","Twenty-two"],"note":"the model tags the capitalised hyphenated numeral PROPN (probe), so it stays out"}
+{"id":"en16","sentence":"To go or not to go, that is the question.","must_mine":["go","question"],"must_not_mine":["to","not","that","be","or"],"note":"infinitive marker excluded; the known-word front to go folds to go"}
+{"id":"en17","sentence":"Mr. Smith arrived at 3 p.m. yesterday.","must_mine":["arrive","yesterday"],"must_not_mine":["Mr.","mr.","Smith","smith","3","p.m.","p.m"],"note":"title + name are PROPN; p.m. is tagged NOUN and demoted to X as a dotted abbreviation (D3)"}
+{"id":"en18","sentence":"Uh-huh, that's exactly what happened.","must_mine":["exactly","happen"],"must_not_mine":["uh-huh","Uh-huh","that"],"note":"interjection excluded"}

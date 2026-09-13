@@ -1,0 +1,1731 @@
+{
+ "source": "wty-en-en revision 2026.08.29 (huggingface.co/datasets/daxida/wty-release), first 'dog' noun row",
+ "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0. Attribution: https://en.wiktionary.org/wiki/dog#English",
+ "index": {
+  "title": "wty-en-en",
+  "format": 3,
+  "revision": "2026.08.29",
+  "sequenced": true,
+  "sourceLanguage": "en",
+  "targetLanguage": "en",
+  "attribution": "https://kaikki.org/"
+ },
+ "tag_bank": [
+  [
+   "uncount",
+   "grammar",
+   0,
+   "uncountable",
+   0
+  ],
+  [
+   "n",
+   "partOfSpeech",
+   -2,
+   "noun",
+   2
+  ]
+ ],
+ "term_rows": [
+  [
+   "dog",
+   "",
+   "n uncount",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "dog (countable and uncountable, plural dogs)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Etymology tree\nOld English [Term?]?\nProto-Germanic *-gô\nProto-West Germanic *-gō\nOld English -ga\nOld English dogga\nMiddle English dogge\nEnglish dog\nInherited from Middle English dogge (akin to Scots dug), from Old English dogga, docga, of uncertain origin.\nThe original meaning seems to have been a common dog, as opposed to a well-bred one, or something like 'cur', and perhaps later came to be used for stocky dogs. Possibly a pet-form diminutive with suffix -ga (compare frocga (“frog”), *picga (“pig”)), appended to a base *dog-, *doc- of unclear origin and meaning. One possibility is Old English dox (“dark, swarthy”) (compare frocga from frox). Another proposal is that it derives from Proto-West Germanic *dugan (“to be suitable”), the origin of Old English dugan (“to be good, worthy, useful”), English dow, Dutch deugen, German taugen. The theory goes that it could have been an epithet for dogs, commonly used by children, meaning \"good/useful animal\". Another one is that it is related to *docce (“stock, muscle”), from Proto-West Germanic *dokkā (“round mass, ball, muscle, doll”), whence English dock (“stumpy tail”).\nIn 14th-century England, hound (from Old English hund) was the general word for all domestic canines, and dog referred to a subtype resembling the modern mastiff and bulldog. By the 16th century, dog had become the general word, and hound had begun to refer only to breeds used for hunting. In the 16th century, the word dog was adopted by several continental European languages as their word for mastiff.\nDespite similarities in forms and meaning, it is not related to Mbabaram dog."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "countable",
+               "data": {
+                "content": "tag",
+                "category": "grammar"
+               },
+               "content": "count"
+              }
+             ]
+            },
+            "A mammal of the family Canidae:"
+           ]
+          },
+          {
+           "tag": "ul",
+           "content": [
+            {
+             "tag": "li",
+             "content": [
+              "The species Canis familiaris (sometimes designated Canis lupus familiaris), domesticated for thousands of years and of highly variable appearance because of human breeding.",
+              {
+               "tag": "details",
+               "data": {
+                "content": "details-entry-examples"
+               },
+               "content": [
+                {
+                 "tag": "summary",
+                 "data": {
+                  "content": "summary-entry"
+                 },
+                 "content": "1 example"
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     "The ",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "dog"
+                     },
+                     " barked all night long."
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              "Any member of the family Canidae, including domestic dogs, wolves, coyotes, jackals, and their relatives (extant and extinct)."
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              "A male dog, wolf, or fox, as opposed to a bitch or vixen."
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "rare",
+               "data": {
+                "content": "tag",
+                "category": "archaism"
+               },
+               "content": "rare"
+              }
+             ]
+            },
+            "The meat of this animal, eaten as food.",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Did you know that they eat ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "dog"
+                   },
+                   " in parts of Asia?"
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "countable",
+               "data": {
+                "content": "tag",
+                "category": "grammar"
+               },
+               "content": "count"
+              },
+              {
+               "tag": "span",
+               "title": "figurative",
+               "data": {
+                "content": "tag",
+                "category": "usage"
+               },
+               "content": "fig"
+              }
+             ]
+            },
+            "A person:"
+           ]
+          },
+          {
+           "tag": "ul",
+           "content": [
+            {
+             "tag": "li",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "derogatory",
+                 "data": {
+                  "content": "tag",
+                  "category": "register"
+                 },
+                 "content": "derog"
+                },
+                {
+                 "tag": "span",
+                 "title": "slang",
+                 "data": {
+                  "content": "tag",
+                  "category": "register"
+                 },
+                 "content": "sl"
+                }
+               ]
+              },
+              "A dull, unattractive girl or woman.",
+              {
+               "tag": "details",
+               "data": {
+                "content": "details-entry-examples"
+               },
+               "content": [
+                {
+                 "tag": "summary",
+                 "data": {
+                  "content": "summary-entry"
+                 },
+                 "content": "1 example"
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     "She’s a real ",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "dog"
+                     },
+                     "."
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "slang",
+                 "data": {
+                  "content": "tag",
+                  "category": "register"
+                 },
+                 "content": "sl"
+                }
+               ]
+              },
+              "A man, guy, chap.",
+              {
+               "tag": "details",
+               "data": {
+                "content": "details-entry-examples"
+               },
+               "content": [
+                {
+                 "tag": "summary",
+                 "data": {
+                  "content": "summary-entry"
+                 },
+                 "content": "1 example"
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     "You lucky ",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "dog"
+                     },
+                     "!"
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "derogatory",
+                 "data": {
+                  "content": "tag",
+                  "category": "register"
+                 },
+                 "content": "derog"
+                }
+               ]
+              },
+              "Someone who overeats or eats rapidly and noisily."
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "derogatory",
+                 "data": {
+                  "content": "tag",
+                  "category": "register"
+                 },
+                 "content": "derog"
+                }
+               ]
+              },
+              "Someone who is cowardly, worthless, or morally reprehensible.",
+              {
+               "tag": "details",
+               "data": {
+                "content": "details-entry-examples"
+               },
+               "content": [
+                {
+                 "tag": "summary",
+                 "data": {
+                  "content": "summary-entry"
+                 },
+                 "content": "3 examples"
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     "Come back and fight, you ",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "dogs"
+                     },
+                     "!"
+                    ]
+                   }
+                  ]
+                 }
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     "You dirty ",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "dog"
+                     },
+                     "."
+                    ]
+                   }
+                  ]
+                 }
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     "And Hazael ſaid, But what, is thy ſeruant a ",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "dogge"
+                     },
+                     ", that he ſhould doe this great thing?"
+                    ]
+                   },
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-c"
+                    },
+                    "content": "1611, The Holy Bible, […] (King James Version), London: […] Robert Barker, […], →OCLC, 2 Kings 8:13, column 1"
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "slang",
+                 "data": {
+                  "content": "tag",
+                  "category": "register"
+                 },
+                 "content": "sl"
+                }
+               ]
+              },
+              "A sexually aggressive man.",
+              {
+               "tag": "details",
+               "data": {
+                "content": "details-entry-examples"
+               },
+               "content": [
+                {
+                 "tag": "summary",
+                 "data": {
+                  "content": "summary-entry"
+                 },
+                 "content": "1 example"
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     "DJ Paul is a ",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "dog"
+                     },
+                     "; one you do not trust."
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "countable",
+               "data": {
+                "content": "tag",
+                "category": "grammar"
+               },
+               "content": "count"
+              }
+             ]
+            },
+            "A mechanical device or support:"
+           ]
+          },
+          {
+           "tag": "ul",
+           "content": [
+            {
+             "tag": "li",
+             "content": [
+              "Any of various mechanical devices for holding, gripping, or fastening something, particularly with a tooth-like projection."
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              "A click or pallet adapted to engage the teeth of a ratchet wheel, to restrain the back action."
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              "A metal support for logs in a fireplace.",
+              {
+               "tag": "details",
+               "data": {
+                "content": "details-entry-examples"
+               },
+               "content": [
+                {
+                 "tag": "summary",
+                 "data": {
+                  "content": "summary-entry"
+                 },
+                 "content": "2 examples"
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     "The ",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "dogs"
+                     },
+                     " were too hot to touch."
+                    ]
+                   }
+                  ]
+                 }
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     "In the great old-fashioned fireplace behind the high iron ",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "dogs"
+                     },
+                     " a log-fire crackled and snapped."
+                    ]
+                   },
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-c"
+                    },
+                    "content": "1902, Arthur Conan Doyle, The Hound of the Baskervilles"
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "historical",
+                 "data": {
+                  "content": "tag",
+                  "category": "topic"
+                 },
+                 "content": "hist"
+                }
+               ]
+              },
+              "A double-ended side spike driven through a hole in the flange of a rail on a tramway."
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "countable",
+               "data": {
+                "content": "tag",
+                "category": "grammar"
+               },
+               "content": "count"
+              },
+              {
+               "tag": "span",
+               "title": "philosophy",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "philos"
+              }
+             ]
+            },
+            "The eighteenth Lenormand card."
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "countable",
+               "data": {
+                "content": "tag",
+                "category": "grammar"
+               },
+               "content": "count"
+              }
+             ]
+            },
+            "A hot dog: a frankfurter, wiener, or similar sausage; or a sandwich made from this."
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "countable",
+               "data": {
+                "content": "tag",
+                "category": "grammar"
+               },
+               "content": "count"
+              },
+              {
+               "tag": "span",
+               "title": "slang",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "sl"
+              },
+              {
+               "tag": "span",
+               "title": "poker",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "poker"
+              }
+             ]
+            },
+            "An underdog."
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "countable",
+               "data": {
+                "content": "tag",
+                "category": "grammar"
+               },
+               "content": "count"
+              },
+              {
+               "tag": "span",
+               "title": "slang",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "sl"
+              }
+             ]
+            },
+            "Foot; toe.",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "My ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "dogs"
+                   },
+                   " are barking!"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "My feet hurt!"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "You look good in those shoes with your ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "dogs"
+                   },
+                   " out!"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "You look good wearing shoes that show your toes!"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "countable",
+               "data": {
+                "content": "tag",
+                "category": "grammar"
+               },
+               "content": "count"
+              },
+              {
+               "tag": "span",
+               "title": "slang",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "sl"
+              }
+             ]
+            },
+            "(from \"dog and bone\") Phone or mobile phone.",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "My ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "dog"
+                   },
+                   " is dead."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "My mobile-phone battery has run out of charge."
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "countable",
+               "data": {
+                "content": "tag",
+                "category": "grammar"
+               },
+               "content": "count"
+              }
+             ]
+            },
+            "One of the cones used to divide up a racetrack when training horses."
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "countable",
+               "data": {
+                "content": "tag",
+                "category": "grammar"
+               },
+               "content": "count"
+              },
+              {
+               "tag": "span",
+               "title": "informal",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "inf"
+              }
+             ]
+            },
+            "Something that performs poorly.",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "He gives his ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "dog"
+                   },
+                   "-Mota or ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "dog"
+                   },
+                   "-Fiji in exchange for Pigeon English."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-c"
+                  },
+                  "content": "1885, Robert H. Codrington, The Melanesian Languages, page 143"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "That modification turned his Dodge hemi into a ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "dog"
+                   },
+                   "."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "ul",
+           "content": [
+            {
+             "tag": "li",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "film",
+                 "data": {
+                  "content": "tag",
+                  "category": "topic"
+                 },
+                 "content": "film"
+                },
+                {
+                 "tag": "span",
+                 "title": "television",
+                 "data": {
+                  "content": "tag",
+                  "category": "topic"
+                 },
+                 "content": "tv"
+                }
+               ]
+              },
+              "A flop; a film that performs poorly at the box office.",
+              {
+               "tag": "details",
+               "data": {
+                "content": "details-entry-examples"
+               },
+               "content": [
+                {
+                 "tag": "summary",
+                 "data": {
+                  "content": "summary-entry"
+                 },
+                 "content": "2 examples"
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     "Blue was released, and as Redford had predicted, it was a ",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "dog"
+                     },
+                     "."
+                    ]
+                   },
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-c"
+                    },
+                    "content": "1969, Ski, volume 34, number 4, page 121"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     "\"When The Alamo was coming out, the word of mouth on it was that it was a ",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "dog"
+                     },
+                     ",\" Chase said."
+                    ]
+                   },
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-c"
+                    },
+                    "content": "2012, Ronald L. Davis, Duke: The Life and Image of John Wayne"
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "countable",
+               "data": {
+                "content": "tag",
+                "category": "grammar"
+               },
+               "content": "count"
+              },
+              {
+               "tag": "span",
+               "title": "engineering",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "eng"
+              },
+              {
+               "tag": "span",
+               "title": "firearms",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "firearm"
+              },
+              {
+               "tag": "span",
+               "title": "military",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "mil"
+              },
+              {
+               "tag": "span",
+               "title": "politics",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "polit"
+              },
+              {
+               "tag": "span",
+               "title": "archaic",
+               "data": {
+                "content": "tag",
+                "category": "archaism"
+               },
+               "content": "arch"
+              }
+             ]
+            },
+            "A cock, as of a gun."
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "countable",
+               "data": {
+                "content": "tag",
+                "category": "grammar"
+               },
+               "content": "count"
+              }
+             ]
+            },
+            "A dance having a brief vogue in the 1960s in which the actions of a dog were mimicked.",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Hmm, see the girl with the red dress on\nShe can do the ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "dog"
+                   },
+                   " all night long."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-c"
+                  },
+                  "content": "1964, “What'd I Say”, Ray Charles (lyrics), performed by Elvis Presley"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Just like the ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "dog"
+                   },
+                   " but not so low\n Like the hully gully but not so slow\n Now baby swim, baby do the swim."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-c"
+                  },
+                  "content": "1964, “C'mon and Swim”, Thomas Coman and Sylvester Stewart (Sly Stone) (lyrics), performed by Bobby Freeman"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "synonyms"
+       },
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "synonyms-label"
+         },
+         "content": "Synonyms"
+        },
+        {
+         "tag": "ul",
+         "data": {
+          "content": "synonyms-list"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "taxonomic names: Canis familiaris"
+          },
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "Canis domesticus"
+          },
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "Canis familiarus domesticus"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/dog#English",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/English/meaning/d/do/dog.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ]
+ ],
+ "expected_plural": "dogs",
+ "rendered_html": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-en-en\" data-dictionary-id=\"wty-en-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"grammar\" title=\"uncountable\">uncount</span><i>(wty-en-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">dog (countable and uncountable, plural dogs)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Etymology tree<br>Old English [Term?]?<br>Proto-Germanic *-gô<br>Proto-West Germanic *-gō<br>Old English -ga<br>Old English dogga<br>Middle English dogge<br>English dog<br>Inherited from Middle English dogge (akin to Scots dug), from Old English dogga, docga, of uncertain origin.<br>The original meaning seems to have been a common dog, as opposed to a well-bred one, or something like &#x27;cur&#x27;, and perhaps later came to be used for stocky dogs. Possibly a pet-form diminutive with suffix -ga (compare frocga (“frog”), *picga (“pig”)), appended to a base *dog-, *doc- of unclear origin and meaning. One possibility is Old English dox (“dark, swarthy”) (compare frocga from frox). Another proposal is that it derives from Proto-West Germanic *dugan (“to be suitable”), the origin of Old English dugan (“to be good, worthy, useful”), English dow, Dutch deugen, German taugen. The theory goes that it could have been an epithet for dogs, commonly used by children, meaning &quot;good/useful animal&quot;. Another one is that it is related to *docce (“stock, muscle”), from Proto-West Germanic *dokkā (“round mass, ball, muscle, doll”), whence English dock (“stumpy tail”).<br>In 14th-century England, hound (from Old English hund) was the general word for all domestic canines, and dog referred to a subtype resembling the modern mastiff and bulldog. By the 16th century, dog had become the general word, and hound had begun to refer only to breeds used for hunting. In the 16th century, the word dog was adopted by several continental European languages as their word for mastiff.<br>Despite similarities in forms and meaning, it is not related to Mbabaram dog.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"grammar\" title=\"countable\">count</span></div>A mammal of the family Canidae:</div><ul class=\"gloss-sc-ul\"><li class=\"gloss-sc-li\">The species Canis familiaris (sometimes designated Canis lupus familiaris), domesticated for thousands of years and of highly variable appearance because of human breeding.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">The <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span> barked all night long.</div></div></div></details></li><li class=\"gloss-sc-li\">Any member of the family Canidae, including domestic dogs, wolves, coyotes, jackals, and their relatives (extant and extinct).</li><li class=\"gloss-sc-li\">A male dog, wolf, or fox, as opposed to a bitch or vixen.</li></ul></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"archaism\" title=\"rare\">rare</span></div>The meat of this animal, eaten as food.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Did you know that they eat <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span> in parts of Asia?</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"grammar\" title=\"countable\">count</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"usage\" title=\"figurative\">fig</span></div>A person:</div><ul class=\"gloss-sc-ul\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"derogatory\">derog</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"slang\">sl</span></div>A dull, unattractive girl or woman.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">She’s a real <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span>.</div></div></div></details></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"slang\">sl</span></div>A man, guy, chap.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">You lucky <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span>!</div></div></div></details></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"derogatory\">derog</span></div>Someone who overeats or eats rapidly and noisily.</li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"derogatory\">derog</span></div>Someone who is cowardly, worthless, or morally reprehensible.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">3 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Come back and fight, you <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dogs</span>!</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">You dirty <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span>.</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">And Hazael ſaid, But what, is thy ſeruant a <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dogge</span>, that he ſhould doe this great thing?</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-c\">1611, The Holy Bible, […] (King James Version), London: […] Robert Barker, […], →OCLC, 2 Kings 8:13, column 1</div></div></div></details></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"slang\">sl</span></div>A sexually aggressive man.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">DJ Paul is a <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span>; one you do not trust.</div></div></div></details></li></ul></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"grammar\" title=\"countable\">count</span></div>A mechanical device or support:</div><ul class=\"gloss-sc-ul\"><li class=\"gloss-sc-li\">Any of various mechanical devices for holding, gripping, or fastening something, particularly with a tooth-like projection.</li><li class=\"gloss-sc-li\">A click or pallet adapted to engage the teeth of a ratchet wheel, to restrain the back action.</li><li class=\"gloss-sc-li\">A metal support for logs in a fireplace.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">2 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">The <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dogs</span> were too hot to touch.</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">In the great old-fashioned fireplace behind the high iron <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dogs</span> a log-fire crackled and snapped.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-c\">1902, Arthur Conan Doyle, The Hound of the Baskervilles</div></div></div></details></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"historical\">hist</span></div>A double-ended side spike driven through a hole in the flange of a rail on a tramway.</li></ul></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"grammar\" title=\"countable\">count</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"philosophy\">philos</span></div>The eighteenth Lenormand card.</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"grammar\" title=\"countable\">count</span></div>A hot dog: a frankfurter, wiener, or similar sausage; or a sandwich made from this.</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"grammar\" title=\"countable\">count</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"slang\">sl</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"poker\">poker</span></div>An underdog.</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"grammar\" title=\"countable\">count</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"slang\">sl</span></div>Foot; toe.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">2 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">My <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dogs</span> are barking!</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">My feet hurt!</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">You look good in those shoes with your <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dogs</span> out!</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">You look good wearing shoes that show your toes!</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"grammar\" title=\"countable\">count</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"slang\">sl</span></div>(from &quot;dog and bone&quot;) Phone or mobile phone.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">My <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span> is dead.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">My mobile-phone battery has run out of charge.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"grammar\" title=\"countable\">count</span></div>One of the cones used to divide up a racetrack when training horses.</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"grammar\" title=\"countable\">count</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"informal\">inf</span></div>Something that performs poorly.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">2 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">He gives his <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span>-Mota or <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span>-Fiji in exchange for Pigeon English.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-c\">1885, Robert H. Codrington, The Melanesian Languages, page 143</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">That modification turned his Dodge hemi into a <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span>.</div></div></div></details></div><ul class=\"gloss-sc-ul\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"film\">film</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"television\">tv</span></div>A flop; a film that performs poorly at the box office.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">2 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Blue was released, and as Redford had predicted, it was a <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-c\">1969, Ski, volume 34, number 4, page 121</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">&quot;When The Alamo was coming out, the word of mouth on it was that it was a <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span>,&quot; Chase said.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-c\">2012, Ronald L. Davis, Duke: The Life and Image of John Wayne</div></div></div></details></li></ul></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"grammar\" title=\"countable\">count</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"engineering\">eng</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"firearms\">firearm</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"military\">mil</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"politics\">polit</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"archaism\" title=\"archaic\">arch</span></div>A cock, as of a gun.</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"grammar\" title=\"countable\">count</span></div>A dance having a brief vogue in the 1960s in which the actions of a dog were mimicked.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">2 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Hmm, see the girl with the red dress on<br>She can do the <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span> all night long.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-c\">1964, “What&#x27;d I Say”, Ray Charles (lyrics), performed by Elvis Presley</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Just like the <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span> but not so low<br> Like the hully gully but not so slow<br> Now baby swim, baby do the swim.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-c\">1964, “C&#x27;mon and Swim”, Thomas Coman and Sylvester Stewart (Sly Stone) (lyrics), performed by Bobby Freeman</div></div></div></details></div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"synonyms\"><div class=\"gloss-sc-div\" data-sc-content=\"synonyms-label\">Synonyms</div><ul class=\"gloss-sc-ul\" data-sc-content=\"synonyms-list\"><li class=\"gloss-sc-li\" data-sc-content=\"synonym-item\">taxonomic names: Canis familiaris</li><li class=\"gloss-sc-li\" data-sc-content=\"synonym-item\">Canis domesticus</li><li class=\"gloss-sc-li\" data-sc-content=\"synonym-item\">Canis familiarus domesticus</li></ul></div><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/dog#English\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/English/meaning/d/do/dog.html\">Kaikki</a></div></div></li></ul></li></ol></div>"
+}

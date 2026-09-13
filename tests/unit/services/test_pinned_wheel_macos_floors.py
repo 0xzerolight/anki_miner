@@ -27,6 +27,7 @@ from anki_miner.languages.zh.pack import PACK as ZH_PACK
 from anki_miner.services._install_common import macos_floor_met
 from anki_miner.services.asr import onnx_pack_installer
 from anki_miner.services.asr.asr_pack import PACK as ASR_PACK
+from anki_miner.services.language_pack_installer import load_pack
 from anki_miner.services.pack_installer import artifact_for
 
 #: The macOS the app itself requires: the floor of the arm64 wheel of the one
@@ -34,7 +35,7 @@ from anki_miner.services.pack_installer import artifact_for
 #: wheel above this is a feature the app offers and cannot deliver.
 _APP_MACOS_FLOOR = (11, 0)
 
-_PACKS = {"asr": ASR_PACK, "zh": ZH_PACK, "ko": KO_PACK}
+_PACKS = {"asr": ASR_PACK, "zh": ZH_PACK, "ko": KO_PACK, "_spacy": load_pack("_spacy")}
 
 
 def _mac_specs(pack) -> list[tuple[str, str, ArtifactSpec]]:

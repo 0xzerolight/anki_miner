@@ -18,12 +18,14 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from PyQt6.QtCore import QCoreApplication
+from PyQt6.QtCore import QCoreApplication, QObject
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
 from anki_miner.gui.utils import queue_state_store
+from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.languages.switching import switch_language
+from anki_miner.services.anki_service import AnkiService
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -101,72 +103,82 @@ def other_language_decks(config: Any) -> tuple[str, ...]:
     return tuple(seen)
 
 
-def _first_visit_choice(parent: QWidget | None, display_name: str, decks: tuple[str, ...], offer_setup: bool) -> str:
-    """One modal, one decision. Returns a FIRST_VISIT_* constant."""
-    box = QMessageBox(parent)
-    box.setWindowTitle(QCoreApplication.translate("LanguageSwitch", "First time mining this language"))
-    box.setText(
-        tr_format(
-            QCoreApplication.translate("LanguageSwitch", "You have not mined %1 before."),
-            display_name,
-        )
+def _first_visit_choice(
+    parent: QWidget | None, display_name: str, decks: tuple[str, ...], ticked: tuple[str, ...], offer_setup: bool
+) -> tuple[str, tuple[str, ...]]:
+    """One modal, one decision: (FIRST_VISIT_* constant, the decks left ticked)."""
+    from anki_miner.gui.widgets.dialogs.first_visit_decks_dialog import FirstVisitDecksDialog
+
+    dialog = FirstVisitDecksDialog(
+        parent, display_name=display_name, decks=decks, ticked=ticked, offer_setup=offer_setup
     )
-    box.setInformativeText(
-        tr_format(
-            QCoreApplication.translate(
-                "LanguageSwitch",
-                "The known-words scan reads every deck that is not excluded, so words in "
-                "%1 would count as already known. Exclude them from this language?",
-            ),
-            ", ".join(decks),
-        )
-    )
-    exclude = box.addButton(
-        QCoreApplication.translate("LanguageSwitch", "Exclude these decks"), QMessageBox.ButtonRole.AcceptRole
-    )
-    setup = (
-        box.addButton(
-            QCoreApplication.translate("LanguageSwitch", "Set up resources…"), QMessageBox.ButtonRole.ActionRole
-        )
-        if offer_setup
-        else None
-    )
-    box.addButton(QMessageBox.StandardButton.Close)
-    box.setDefaultButton(exclude)
-    box.exec()
-    clicked = box.clickedButton()
-    if clicked is exclude:
-        return FIRST_VISIT_EXCLUDE
-    if setup is not None and clicked is setup:
-        return FIRST_VISIT_SETUP
-    return FIRST_VISIT_NONE
+    dialog.exec()
+    return dialog.choice, dialog.ticked_decks()
 
 
-def offer_first_visit_setup(window: Any, previous_config: Any) -> None:
-    """Offer the deck exclusions (and the wizard) on a first visit to a language.
+def offer_first_visit_setup(
+    window: Any, previous_config: Any, *, deck_names: list[str] | None = None, language: str | None = None
+) -> None:
+    """Offer the deck checklist (and the wizard) on a first visit to a language (S15).
 
-    Runs AFTER the switch is durable, so the config it edits is already the new
-    language's - the exclusions land in that language's scoped values and are
-    stashed with them when the user switches away.
+    Runs AFTER the switch is durable. A Qt window first fetches Anki's deck
+    names off the GUI thread and comes back here with them and the language
+    the fetch was for; if the user switched language again meanwhile (the call
+    can take the 15 s AnkiConnect timeout), the result is dropped, so no
+    exclusion is written into the wrong language. Anki closed (or a non-Qt
+    caller) leaves the config-derived other-language decks. Every listed deck
+    is ticked except the new language's own deck and its subdecks; the ticked
+    ones land in that language's scoped exclusions. The dialog is skipped only
+    when there is neither a deck to list nor a setup to offer.
     """
     from dataclasses import replace
 
     config = window.get_config()
-    decks = tuple(name for name in other_language_decks(previous_config) if name not in config.excluded_decks)
-    if not decks:
+    if language is not None and config.language != language:
+        logger.info(
+            "Dropped the first-visit deck list for %s: the mining language is now %s", language, config.language
+        )
         return
+    if deck_names is None and isinstance(window, QObject):
+        fetched_for = config.language
+        run_off_thread(
+            window,
+            lambda: AnkiService(config).get_deck_names(),
+            on_done=lambda names: _offer_with_names(
+                window, previous_config, [str(name) for name in names] if isinstance(names, list) else [], fetched_for
+            ),
+            on_error=lambda _message: _offer_with_names(window, previous_config, [], fetched_for),
+            error_prefix="Could not read deck names for the first-visit prompt: ",
+        )
+        return
+    excluded = set(config.excluded_decks)
+    decks = tuple(
+        name
+        for name in dict.fromkeys([*(deck_names or []), *other_language_decks(previous_config)])
+        if name and name not in excluded
+    )
+    offer_setup = not config.dictionary_chain
+    if not decks and not offer_setup:
+        return
+    target = config.anki_deck_name
+    ticked = tuple(name for name in decks if name != target and not name.startswith(f"{target}::"))
     display_name = getattr(get_profile(config_language(config)), "display_name", config.language)
-    # QMessageBox rejects a non-QWidget parent with a TypeError, and the caller
-    # wraps this in a try/except - so an unparentable window would not crash,
-    # it would silently skip the prompt. Parentless is the honest fallback.
     parent = window if isinstance(window, QWidget) else None
-    choice = _first_visit_choice(parent, display_name, decks, offer_setup=not config.dictionary_chain)
-    if choice == FIRST_VISIT_EXCLUDE:
-        window.update_config(replace(config, excluded_decks=(*config.excluded_decks, *decks)))
+    choice, chosen = _first_visit_choice(parent, display_name, decks, ticked, offer_setup)
+    if choice == FIRST_VISIT_EXCLUDE and chosen:
+        window.update_config(replace(config, excluded_decks=(*config.excluded_decks, *chosen)))
     elif choice == FIRST_VISIT_SETUP:
         wizard = getattr(window, "_run_setup_wizard_tool", None)
         if callable(wizard):
             wizard()
+
+
+def _offer_with_names(window: Any, previous_config: Any, names: list[str], language: str) -> None:
+    """Delivered on the GUI thread; a failure here must not escape a Qt slot."""
+    try:
+        offer_first_visit_setup(window, previous_config, deck_names=names, language=language)
+    except Exception:
+        logger.exception("The first-visit prompt failed after switching to %s", window.get_config().language)
 
 
 def commit_language_change(window: Any, previous_config: Any, *, flush: bool, first_visit: bool) -> None:

@@ -216,6 +216,46 @@ def test_read_top_level_caches_only_a_complete_wheel(tmp_path, monkeypatch):
     assert pin.read_top_level(artifact, cache=tmp_path) == ["zz"]
 
 
+def _cached_wheel(cache: Path, filename: str, members: list[str]) -> dict[str, object]:
+    """A wheel already in the pin cache (so nothing is downloaded), its RECORD listing *members*."""
+    dist_info = filename.split("-")[0] + "-1.0.dist-info"
+    with zipfile.ZipFile(cache / filename, "w") as zf:
+        for member in members:
+            zf.writestr(member, "")
+        zf.writestr(f"{dist_info}/RECORD", "".join(f"{m},,\n" for m in [*members, f"{dist_info}/RECORD"]))
+    return {"filename": filename, "url": f"https://files.pythonhosted.org/p/{filename}"}
+
+
+def test_a_stub_only_directory_beside_the_package_is_not_an_import_package(tmp_path):
+    """wrapt 2.x ships PEP 561 ``wrapt-stubs/`` next to ``wrapt/``: not importable, so not a package."""
+    artifact = _cached_wheel(
+        tmp_path,
+        "wrapt-1.0-py3-none-any.whl",
+        ["wrapt/__init__.py", "wrapt-stubs/__init__.pyi", "wrapt-1.0.data/purelib/x.txt"],
+    )
+    assert pin.read_top_level(artifact, cache=tmp_path) == ["wrapt"]
+
+
+def test_two_importable_top_level_directories_are_still_refused(tmp_path):
+    lock = tmp_path / "requirements.lock"
+    lock.write_text("", encoding="utf-8")
+    artifact = _cached_wheel(tmp_path, "twin-1.0-py3-none-any.whl", ["alpha/__init__.py", "beta/__init__.py"])
+    index = {"urls": [{**artifact, "digests": {"sha256": "0" * 64}, "size": 1, "packagetype": "bdist_wheel"}]}
+
+    with pytest.raises(
+        SystemExit, match=r"twin==1.0: expected one top-level package directory, found \['alpha', 'beta'\]"
+    ):
+        pin.resolve_runtime(
+            "_x",
+            ["twin"],
+            "3.12",
+            lock,
+            run_compile=lambda args, stdin: "twin==1.0\n",
+            fetch_json=lambda url: index,
+            read_top_level=lambda artifact: pin.read_top_level(artifact, cache=tmp_path),
+        )
+
+
 def test_the_black_mode_is_the_projects_own():
     config, mode = _project_black_mode()
 

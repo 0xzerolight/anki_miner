@@ -887,6 +887,25 @@ class EpisodeProcessor:
             word.frequency_harmonic_rank = harmonic_rank(sources)
         return sum(1 for w in words if w.frequency_rank is not None)
 
+    def _lookup_alternate(self, word: TokenizedWord) -> str:
+        """The ``orth_base`` a lookup-miss ladder receives for *word* (phase-2 probe and phase-5 context).
+
+        A mined-form policy may name it (``lookup_alternate``, read by getattr
+        like ``expression_tracks_surface``): a lemma-fronted language hands the
+        ladder the token SURFACE, the only place its surface rungs (casefolded
+        surface, an enclitic strip) can start. Without the attribute - ja, ko,
+        zh - this is the pre-existing safe alternate verbatim: the lemma when it
+        equals the front or changes only trailing okurigana over the same kanji
+        stem, else ``""`` (a different-kanji lemma can name another homograph).
+        """
+        policy_alternate = getattr(self.profile.mined_form, "lookup_alternate", None)
+        if policy_alternate is not None:
+            return str(policy_alternate(word) or "")
+        lemma = word.lemma
+        if lemma and (lemma == word.mined_form or _differs_by_okurigana_only(word.mined_form, lemma)):
+            return lemma
+        return ""
+
     def _phase2_filter(
         self,
         ctx: _EpisodeContext,
@@ -1081,14 +1100,7 @@ class EpisodeProcessor:
         # accepted on purpose so Phase 2 never blocks on network I/O. Do not
         # "fix" this by calling online providers here.
         if not self.config.bypass_optional_filters and unknown_words:
-            safe_alternates = [
-                (
-                    w.lemma
-                    if w.lemma and (w.lemma == w.mined_form or _differs_by_okurigana_only(w.mined_form, w.lemma))
-                    else ""
-                )
-                for w in unknown_words
-            ]
+            safe_alternates = [self._lookup_alternate(w) for w in unknown_words]
             probe_terms = list(
                 {
                     term
@@ -1610,12 +1622,11 @@ class EpisodeProcessor:
         # as 帰れる→帰る. cType is unavailable on TokenizedWord post-parse, so the
         # deinflection mask stays inert here and the rules-column POS check does
         # the gating. First-seen alternate wins, mirroring the batch's dedup.
+        # The alternate comes from _lookup_alternate, shared with the phase-2 probe:
+        # a mined-form policy may hand the ladder the token surface instead.
         fallback_context: dict[str, tuple[str, str | None]] = {}
         for w in words_with_media:
-            alternate = w.lemma
-            if alternate != w.mined_form and not _differs_by_okurigana_only(w.mined_form, alternate):
-                alternate = ""
-            fallback_context.setdefault(w.mined_form, (alternate, None))
+            fallback_context.setdefault(w.mined_form, (self._lookup_alternate(w), None))
         # Rule A′ lemma scope: a kana front's lemma names its lexeme so the
         # lookup keeps 言う's rows for ゆう instead of the highest-scored
         # same-reading homograph (有/夕/結う). Passed only when non-empty —

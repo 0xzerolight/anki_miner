@@ -2380,7 +2380,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             db = KnownWordDB(resolve_known_words_db_path(self.config), language=config_language(self.config))
             language = config_language(self.config)
             KnownWordsManagerDialog(
-                db, self, language=language, content_style=get_profile(language).content_style
+                db,
+                self,
+                language=language,
+                content_style=get_profile(language).content_style,
+                excluded_decks=tuple(self.config.excluded_decks),
             ).exec()
         except Exception as e:  # noqa: BLE001 — surface any DB failure to the user
             self.show_screen_issue(

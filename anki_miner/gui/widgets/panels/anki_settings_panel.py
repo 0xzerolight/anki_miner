@@ -75,6 +75,25 @@ _HOOK_FIELD_ROW_TEXTS: dict[str, tuple[str, str]] = {
             "Stores the hanja characters contained in the word. Blank = skip.",
         ),
     ),
+    "pos": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Part of Speech Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the word's part of speech (noun, verb, adjective, adverb). Blank = skip.",
+        ),
+    ),
+    "noun_gender": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Gender Field"),
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Stores a noun's grammatical gender. Blank = skip."),
+    ),
+    "noun_article": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Article Field"),
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Stores the article that goes with a noun. Blank = skip."),
+    ),
+    "noun_plural": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Plural Field"),
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Stores a noun's plural form from the dictionary entry. Blank = skip."),
+    ),
 }
 
 # Keywords used by populate_from_field_list to auto-map Anki field names.
