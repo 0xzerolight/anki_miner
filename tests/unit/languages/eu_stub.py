@@ -44,12 +44,11 @@ closed on purpose (a typo'd capability is a silently-off feature): ``PROBE``,
 ``CAPABILITY_VOCABULARY`` and ``EXTRA_HOOK_FIELDS``. They gate the *test matrix*,
 not the runtime.
 
-**One residual ja-ism, pinned rather than papered over**: ``extract_lemma``
-strips a hyphen tail whose text contains an ASCII letter (unidic's
-``スクランブル-scramble`` disambiguator). For a Latin-script language that also
-truncates a genuine hyphenated compound. It is not on the injectable list above;
-``test_eu_boundary_stub.py`` pins the behaviour so the gap is recorded, not
-assumed away.
+**The one residual ja-ism this stub recorded is closed**: ``extract_lemma`` used
+to strip a hyphen tail whose text contains an ASCII letter (unidic's
+``スクランブル-scramble`` disambiguator) from every token, which truncated
+"well-known" to "well". Stage S (S6) gates it on the token type;
+``test_eu_boundary_stub.py`` pins that the compound now survives.
 """
 
 from __future__ import annotations
