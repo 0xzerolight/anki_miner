@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from PyQt6.QtWidgets import QMessageBox
-
 from anki_miner.gui.controllers import language_switch
+from anki_miner.gui.widgets.dialogs.first_visit_decks_dialog import FirstVisitDecksDialog
 
 
 class _Window:
@@ -34,7 +33,11 @@ def test_other_language_decks_covers_live_and_stashed(test_config):
 
 
 def test_accepting_adds_them_to_the_new_languages_exclusions(monkeypatch, test_config):
-    monkeypatch.setattr(language_switch, "_first_visit_choice", lambda *a, **k: language_switch.FIRST_VISIT_EXCLUDE)
+    monkeypatch.setattr(
+        language_switch,
+        "_first_visit_choice",
+        lambda *a, **k: (language_switch.FIRST_VISIT_EXCLUDE, ("Japanese Mining",)),
+    )
     previous = replace(test_config, anki_deck_name="Japanese Mining")
     window = _Window(replace(previous, language="zh", excluded_decks=(), anki_deck_name="Chinese Mining"))
 
@@ -44,7 +47,7 @@ def test_accepting_adds_them_to_the_new_languages_exclusions(monkeypatch, test_c
 
 
 def test_declining_changes_nothing(monkeypatch, test_config):
-    monkeypatch.setattr(language_switch, "_first_visit_choice", lambda *a, **k: language_switch.FIRST_VISIT_NONE)
+    monkeypatch.setattr(language_switch, "_first_visit_choice", lambda *a, **k: (language_switch.FIRST_VISIT_NONE, ()))
     previous = replace(test_config, anki_deck_name="Japanese Mining")
     window = _Window(replace(previous, language="zh", excluded_decks=()))
 
@@ -55,7 +58,7 @@ def test_declining_changes_nothing(monkeypatch, test_config):
 
 
 def test_the_wizard_button_runs_the_wizard(monkeypatch, test_config):
-    monkeypatch.setattr(language_switch, "_first_visit_choice", lambda *a, **k: language_switch.FIRST_VISIT_SETUP)
+    monkeypatch.setattr(language_switch, "_first_visit_choice", lambda *a, **k: (language_switch.FIRST_VISIT_SETUP, ()))
     previous = replace(test_config, anki_deck_name="Japanese Mining")
     window = _Window(replace(previous, language="zh", excluded_decks=()))
 
@@ -65,7 +68,7 @@ def test_the_wizard_button_runs_the_wizard(monkeypatch, test_config):
 
 
 def test_nothing_is_asked_when_the_decks_are_already_excluded(monkeypatch, test_config):
-    monkeypatch.setattr(QMessageBox, "exec", lambda self: (_ for _ in ()).throw(AssertionError("asked")))
+    monkeypatch.setattr(FirstVisitDecksDialog, "exec", lambda self: (_ for _ in ()).throw(AssertionError("asked")))
     previous = replace(test_config, anki_deck_name="Japanese Mining")
     window = _Window(replace(previous, language="zh", excluded_decks=("Japanese Mining",)))
 
@@ -75,14 +78,14 @@ def test_nothing_is_asked_when_the_decks_are_already_excluded(monkeypatch, test_
 
 
 def test_a_non_widget_window_still_gets_the_prompt(qtbot, monkeypatch, test_config):
-    """``QMessageBox`` rejects a non-QWidget parent with a TypeError.
+    """A Qt dialog rejects a non-QWidget parent with a TypeError.
 
     ``commit_language_change`` wraps this call in a try/except, so the raise
     would not crash - it would silently skip the prompt, which is worse. The
     parent is guarded instead, and the modal opens parentless.
     """
-    seen: list[QMessageBox] = []
-    monkeypatch.setattr(QMessageBox, "exec", lambda self: seen.append(self) or 0)
+    seen: list[FirstVisitDecksDialog] = []
+    monkeypatch.setattr(FirstVisitDecksDialog, "exec", lambda self: seen.append(self) or 0)
     previous = replace(test_config, anki_deck_name="Japanese Mining")
     window = _Window(replace(previous, language="zh", excluded_decks=(), anki_deck_name="Chinese Mining"))
 
@@ -98,8 +101,8 @@ def test_an_unregistered_language_still_gets_the_prompt(qtbot, monkeypatch, test
     ``get_profile`` raises on it, and ``commit_language_change`` swallows the
     raise - so the prompt would silently never appear. Degrade to ja instead.
     """
-    seen: list[QMessageBox] = []
-    monkeypatch.setattr(QMessageBox, "exec", lambda self: seen.append(self) or 0)
+    seen: list[FirstVisitDecksDialog] = []
+    monkeypatch.setattr(FirstVisitDecksDialog, "exec", lambda self: seen.append(self) or 0)
     previous = replace(test_config, anki_deck_name="Japanese Mining")
     window = _Window(replace(previous, language="ko", excluded_decks=(), anki_deck_name="Korean Mining"))
 
