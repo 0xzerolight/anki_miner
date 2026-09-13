@@ -1,18 +1,24 @@
 """Language post-passes for spaCy languages (spec §4.3) — generic, driven by per-language data.
 
 Item 1 casing (``case_lemma``, ``tagging_copy``); item 2 separable-verb
-reattachment (``SeparableVerbPass``, Task 6; the tokenizer stash is
+reattachment (``SeparableVerbPass``; the tokenizer stash is
 ``tokens.to_duck_tokens``); item 3 the enclitic ladder rung (``EncliticRung``);
 the mined-form policy and the Latin lookup ladder (A §4.6, E.2.8).
 """
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:  # annotation-only: services must not load at profile build
+    from anki_miner.services.morphology import AttestLookup, FormLookup
+
+logger = logging.getLogger(__name__)
 
 EMPTY_MAP: Mapping[str, str] = MappingProxyType({})
 
@@ -157,3 +163,31 @@ class EncliticRung:
                 if self.relemmatize is not None:
                     out.extend(self.relemmatize(stem))
         return out
+
+
+class SeparableVerbPass:
+    """§4.3 item 2(b): ``lemma := particle + lemma`` when the dictionary knows the headword.
+
+    A ``token_post_pass`` (Stage S seam), injected by a language's
+    ``parser.py`` through ``create_spaced_parser``. One attestation call per
+    line, over the distinct candidates. ``attest is None`` (no offline
+    dictionary wired) reattaches unconditionally, mirroring the ungated merge
+    passes; a miss keeps the bare verb and is logged at debug. The stash is
+    cleared either way, so running the pass twice cannot prefix twice. The
+    third argument (R36's form lookup) is ignored.
+    """
+
+    def __call__(self, tokens: list[Any], attest: AttestLookup | None, forms: FormLookup | None) -> list[Any]:
+        del forms
+        heads = [token for token in tokens if getattr(token.feature, "particle", "")]
+        if not heads:
+            return tokens
+        candidates = [token.feature.particle + token.feature.lemma for token in heads]
+        attested = None if attest is None else attest(list(dict.fromkeys(candidates)))
+        for token, candidate in zip(heads, candidates, strict=True):
+            if attested is None or candidate in attested:
+                token.feature.lemma = candidate
+            else:
+                logger.debug("Separable verb %r not attested; keeping %r", candidate, token.feature.lemma)
+            token.feature.particle = ""
+        return tokens
