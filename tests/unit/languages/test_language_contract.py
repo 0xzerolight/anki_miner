@@ -46,13 +46,29 @@ CAPABILITY_VOCABULARY = frozenset(
         "tone_color",
         "script_variants",
         "measure_word",
+        # Shared spaCy (_spaced) capabilities, admitted once for the whole wave (§4.7).
+        "pos_tag",
+        "noun_gender",
+        "noun_article",
+        "noun_plural",
+        "lemmatised_frequency",
     }
 )
 
 #: Logical card-field keys later languages' render hooks may add on top of the
 #: config's own ``anki_fields`` keys. Spelled exactly as the hook tasks emit
 #: them — "expression_pinyin", never a bare "pinyin".
-EXTRA_HOOK_FIELDS = {"measure_word", "expression_traditional", "expression_pinyin", "hanja"}
+EXTRA_HOOK_FIELDS = {
+    "measure_word",
+    "expression_traditional",
+    "expression_pinyin",
+    "hanja",
+    # Shared spaCy (_spaced) field keys, admitted once for the whole wave (§4.7).
+    "pos",
+    "noun_gender",
+    "noun_article",
+    "noun_plural",
+}
 
 
 @pytest.mark.parametrize("code", CODES)
