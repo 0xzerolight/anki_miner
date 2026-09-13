@@ -5,9 +5,10 @@ from __future__ import annotations
 from anki_miner.services.frequency import mode_probe, source_importer
 
 # Mining languages that plausibly gain a probe table later; the ones still
-# without one are the real-code cases ruling R6a is about. "vi" is never a
-# mining language, so this list can never filter down to empty.
-_CANDIDATE_LANGUAGES = ("ko", "zh", "vi")
+# without one are the real-code cases ruling R6a is about. "xx" is never a
+# mining language (the spec renamed "vi" before vi lands), so this list can
+# never filter down to empty.
+_CANDIDATE_LANGUAGES = ("ko", "zh", "xx")
 
 
 def _ranks() -> dict[tuple[str, str | None], int]:
