@@ -1,0 +1,3329 @@
+{
+ "source": "wty-de-en revision 2026.08.29 (huggingface.co/datasets/daxida/wty-release); rows for Fuchs, Hund, Kiefer, E-Mail, Ferien, Straße, Hardware, Oma, ansehen",
+ "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). Attribution: https://en.wiktionary.org/ entries for the listed German terms.",
+ "index": {
+  "title": "wty-de-en",
+  "format": 3,
+  "revision": "2026.08.29",
+  "sequenced": true,
+  "sourceLanguage": "de",
+  "targetLanguage": "en",
+  "attribution": "https://kaikki.org/"
+ },
+ "tag_bank": [
+  [
+   "fem",
+   "gender-feminine",
+   -1,
+   "feminine",
+   1
+  ],
+  [
+   "masc",
+   "gender-masculine",
+   -1,
+   "masculine",
+   1
+  ],
+  [
+   "neut",
+   "gender-neuter",
+   -1,
+   "neuter",
+   1
+  ],
+  [
+   "pl",
+   "number",
+   0,
+   "plural",
+   0
+  ],
+  [
+   "pl-only",
+   "number",
+   0,
+   "plural only",
+   0
+  ],
+  [
+   "n",
+   "partOfSpeech",
+   -2,
+   "noun",
+   2
+  ],
+  [
+   "prop-n",
+   "partOfSpeech",
+   -2,
+   "proper noun",
+   2
+  ],
+  [
+   "v",
+   "partOfSpeech",
+   -2,
+   "verb",
+   2
+  ],
+  [
+   "name",
+   "partOfSpeech",
+   -1,
+   "name",
+   1
+  ],
+  [
+   "surn",
+   "partOfSpeech",
+   -1,
+   "surname",
+   1
+  ],
+  [
+   "regio",
+   "usage",
+   0,
+   "regional",
+   0
+  ],
+  [
+   "🇦🇹",
+   "variety",
+   0,
+   "Austria",
+   0
+  ],
+  [
+   "🇨🇭",
+   "variety",
+   0,
+   "Switzerland",
+   0
+  ],
+  [
+   "strong",
+   "",
+   0,
+   "strong",
+   0
+  ],
+  [
+   "non-lemma",
+   "",
+   10,
+   "non-lemma",
+   -10
+  ]
+ ],
+ "term_rows": [
+  [
+   "Straße",
+   "",
+   "n fem",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "Straße f (genitive Straße, plural Straßen, diminutive Sträßchen n or Sträßlein n)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Etymology tree\nProto-Indo-European *ster-\nProto-Indo-European *sterh₃-\nProto-Indo-European *-tós\nProto-Indo-European *str̥h₃tós\nProto-Italic *strātos\nLatin strātus\nLatin via strātaellip.\nLate Latin strātabor.\nProto-West Germanic *strātu\nOld High German strāȥa\nMiddle High German strāȥe\nGerman Straße\nInherited from Middle High German strāȥe, from Old High German strāȥa, from Proto-West Germanic *strātu (“street”), from Latin (via) strata.\nSense 6 (“strait”) is a calque of Middle Low German strâte, itself a phono-semantic matching of Middle English streit, from Old French estreit (“narrow”), from unrelated Latin strictus."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "street; road (a way wide enough to be passable for vehicles, generally paved, in or outside a settlement)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Das Kind überquerte die ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Straße"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "The child crossed the ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "street"
+                   },
+                   "."
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Diese ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Straße"
+                   },
+                   " führt nach Kirchdorf."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "This ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "road"
+                   },
+                   " goes to Kirchdorf."
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Die ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Straße"
+                   },
+                   " ist für den Verkehr gesperrt."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "The ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "street"
+                   },
+                   " is closed for traffic."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "carriageway (the part of a road or street used by vehicles, excluding the pavement, etc.)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "figurative",
+               "data": {
+                "content": "tag",
+                "category": "usage"
+               },
+               "content": "fig"
+              }
+             ]
+            },
+            "public, any area accessible to anyone"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "figurative",
+               "data": {
+                "content": "tag",
+                "category": "usage"
+               },
+               "content": "fig"
+              }
+             ]
+            },
+            "general public, using the locale to describe people not part of a specific group"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "the streets, areas or groups of people of no income or criminal affiliation, or the leading of a life associated with these"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "strait (channel of water)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "poker",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "poker"
+              }
+             ]
+            },
+            "straight"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/Straße#German",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/German/meaning/S/St/Straße.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "Fuchs",
+   "",
+   "n masc strong",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "Fuchs m (strong, genitive Fuchses, plural Füchse, diminutive Füchslein n or Füchschen n, feminine Füchsin)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Middle High German vuhs, from Old High German fuhs, from Proto-West Germanic *fuhs, from Proto-Germanic *fuhsaz, from Proto-Indo-European *púḱsos (“the tailed one”), from *puḱ- (“tail”). Cognate with English fox, Sanskrit पुच्छ (púccha)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "fox (animal)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Fuchs"
+                   },
+                   ", du hast die Gans gestohlen. Gib sie wieder her!"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Fox"
+                   },
+                   ", you've stolen the goose. Give it back here!"
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "informal",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "inf"
+              }
+             ]
+            },
+            "a clever or cunning person, sly fox",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Er ist ein ganz schöner ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Fuchs"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "He is quite the ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "sly fox"
+                   },
+                   "."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "informal",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "inf"
+              }
+             ]
+            },
+            "redhead (a red-haired person)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Unser Paul ist ja ein kleiner ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Fuchs"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "Our Paul is a little ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "redhead"
+                   },
+                   "."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "sports",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "sports"
+              }
+             ]
+            },
+            "chestnut, sorrel horse (horse with a reddish-brown coat, mane and tail)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "pledge (prospective member of a fraternity)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "slang",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "sl"
+              },
+              {
+               "tag": "span",
+               "title": "military",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "mil"
+              },
+              {
+               "tag": "span",
+               "title": "politics",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "polit"
+              }
+             ]
+            },
+            "a new recruit"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "the ace of diamonds in Doppelkopf, where it earns a side of players an extra point if they win it from the other side",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Ich hatte nur vier Trümpfe und darunter beide ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Füchse"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "I had only four trumps and among them were both ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "aces of diamonds"
+                   },
+                   "."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "military",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "mil"
+              },
+              {
+               "tag": "span",
+               "title": "politics",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "polit"
+              }
+             ]
+            },
+            "a tank Transportpanzer Fuchs"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "archaic",
+               "data": {
+                "content": "tag",
+                "category": "archaism"
+               },
+               "content": "arch"
+              }
+             ]
+            },
+            "a form of sunscald on hops"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "a fox in radiosport foxhunt"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "obsolete",
+               "data": {
+                "content": "tag",
+                "category": "archaism"
+               },
+               "content": "obs"
+              }
+             ]
+            },
+            "any gold coin"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "biology",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "biol"
+              },
+              {
+               "tag": "span",
+               "title": "entomology",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "entom"
+              }
+             ]
+            },
+            "tortoiseshell"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/Fuchs#German",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/German/meaning/F/Fu/Fuchs.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "Fuchs",
+   "",
+   "n masc strong",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "Fuchs m (strong, genitive Fuchses, plural Füchse)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Probably from an alteration of archaic Feist (“fat”). Compare the older variants Feix, Feits."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "a member of a student fraternity in his first year"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "beginner; fresher"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/Fuchs#German",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/German/meaning/F/Fu/Fuchs.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "Fuchs",
+   "",
+   "name fem masc prop-n surn",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "Fuchs m or f (proper noun, surname, masculine genitive Fuchs' or (with an article) Fuchs, feminine genitive Fuchs, plural Fuchs or Fuchsens)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Middle High German vuhs, from Old High German fuhs, from Proto-West Germanic *fuhs, from Proto-Germanic *fuhsaz, from Proto-Indo-European *púḱsos (“the tailed one”), from *puḱ- (“tail”). Cognate with English fox, Sanskrit पुच्छ (púccha)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "a common surname transferred from the nickname"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "a German Jewish surname"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/Fuchs#German",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/German/meaning/F/Fu/Fuchs.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "Hardware",
+   "",
+   "n fem",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "Hardware f (genitive Hardware, plural (uncommon) Hardwares)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Borrowed from English hardware."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "computing",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "comp"
+              },
+              {
+               "tag": "span",
+               "title": "engineering",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "eng"
+              },
+              {
+               "tag": "span",
+               "title": "mathematics",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "math"
+              }
+             ]
+            },
+            "hardware"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/Hardware#German",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/German/meaning/H/Ha/Hardware.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "Hund",
+   "",
+   "n masc strong",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "Hund m (strong, genitive Hundes or Hunds, plural Hunde or (regionally) Hünde, diminutive Hündchen n or Hündlein n or Hundchen n or Hunderl n or Hundi n or Hundilein n, masculine (for the animal) Rüde, feminine (for the animal) Hündin or Petze or Zaupe or Zibbe)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Etymology tree\nProto-Indo-European *ḱwṓder.\nProto-Germanic *hundaz\nProto-West Germanic *hund\nOld High German hunt\nMiddle High German hunt\nGerman Hund\nInherited from Middle High German hunt, from Old High German hunt, from Proto-West Germanic *hund, from Proto-Germanic *hundaz, from Proto-Indo-European *ḱwṓ.\nCognates\nCognates include Dutch hond, English hound, Danish hund, Icelandic hundur, and Gothic 𐌷𐌿𐌽𐌳𐍃 (hunds)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "dog, hound"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "derogatory",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "derog"
+              }
+             ]
+            },
+            "scoundrel; dog (mean or morally reprehensible person)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "ein gemeiner ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Hund"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "a mean ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "dog"
+                   }
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "A board with casters used to transport heavy objects."
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "synonyms"
+       },
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "synonyms-label"
+         },
+         "content": "Synonyms"
+        },
+        {
+         "tag": "ul",
+         "data": {
+          "content": "synonyms-list"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "Wauwau"
+          },
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "Köter"
+          },
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "Töle"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/Hund#German",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/German/meaning/H/Hu/Hund.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "Oma",
+   "",
+   "n fem",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "Oma f (genitive Oma or (prenominal without an article) Omas, plural Omas)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Cognate to Dutch oma."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "grandma, granny, nan"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "any elderly woman"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "synonyms"
+       },
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "synonyms-label"
+         },
+         "content": "Synonyms"
+        },
+        {
+         "tag": "ul",
+         "data": {
+          "content": "synonyms-list"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "Altmutter"
+          },
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "Großmama"
+          },
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "Großmutter"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/Oma#German",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/German/meaning/O/Om/Oma.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "Kiefer",
+   "",
+   "n fem",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "Kiefer f (genitive Kiefer, plural Kiefern)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From older Kienföhre."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "pine (tree of genus Pinus)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/Kiefer#German",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/German/meaning/K/Ki/Kiefer.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "Kiefer",
+   "",
+   "n masc neut strong",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "Kiefer m or n (strong, genitive Kiefers, plural Kiefer)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Middle High German kiver m or n, from Old High German kifer, from Proto-West Germanic *kebr, from the perhaps onomatopoeic Proto-Indo-European root *ǵep- (“to chew, eat”), also the root of Käfer (“beetle”).\nCompare the Proto-Indo-European roots *ǵyewh₁- (“to chew”) and *gʰabʰ- (“to seize”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "jaw"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/Kiefer#German",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/German/meaning/K/Ki/Kiefer.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "Ferien",
+   "",
+   "n pl pl-only",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "Ferien pl (plural only)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "15th century, from Latin fēriae, with replacement of the Latin plural suffix -ae with German -en."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "holidays during which an institution (especially a school, university) or a business is closed; break (usually three days or more)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "vacation, holiday"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/Ferien#German",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/German/meaning/F/Fe/Ferien.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "E-Mail",
+   "",
+   "n 🇦🇹 🇨🇭 fem neut regio strong",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "E-Mail (predominantly) f (genitive E-Mail, plural E-Mails)\nE-Mail (alternatively in southern Germany, Austria and Switzerland) n (strong, genitive E-Mails, plural E-Mails)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Borrowed from English e-mail. The feminine gender probably after Post (“mail”), perhaps also Nachricht (“message”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "e-mail (system; letter)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/E-Mail#German",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/German/meaning/E/E-/E-Mail.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "ansehen",
+   "",
+   "v strong",
+   "v",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "ansehen (class 5 strong, third-person singular present sieht an, past tense sah an, past participle angesehen, past subjunctive sähe an, auxiliary haben)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "an- + sehen"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "reflexive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vr"
+              },
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              }
+             ]
+            },
+            "to look at, to have a look at (taking in information in doing so)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Sieh"
+                   },
+                   " dir diese riesige Tomate ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "an"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Have a look"
+                   },
+                   " at this huge tomato."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              }
+             ]
+            },
+            "to look at (especially a person; implying eye contact or direction of gaze without analyzing)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Sie ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "sah"
+                   },
+                   " ihn erstaunt ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "an"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "She ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "looked at"
+                   },
+                   " him in astonishment."
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Sarah ist wunderschön ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "anzusehen"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "Sarah is beautiful ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "to look at"
+                   },
+                   "."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              },
+              {
+               "tag": "span",
+               "title": "figurative",
+               "data": {
+                "content": "tag",
+                "category": "usage"
+               },
+               "content": "fig"
+              }
+             ]
+            },
+            "to regard, to consider, to look on (something in a certain way or having a certain quality)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Ich ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "sehe"
+                   },
+                   " ihren Schutz als unsere Ver",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "an"
+                   },
+                   "twortung ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "an"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "I ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "see"
+                   },
+                   " their protection as our responsibility."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              }
+             ]
+            },
+            "to watch (a movie, a television program, sports, etc)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Siehst"
+                   },
+                   " du gerne Fußball im Fernsehen ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "an"
+                   },
+                   "?"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "Do you like to ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "watch"
+                   },
+                   " soccer/football on television?"
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "ditransitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vdt"
+              }
+             ]
+            },
+            "to notice, to be able to tell (a quality based on the look of someone/something); to be apparent (with subject and object switched)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Man sieht dir an"
+                   },
+                   ", dass du zwei Tage lang nicht geschlafen hast."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "It's obvious just from looking at you"
+                   },
+                   " that you haven't slept in two days."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/ansehen#German",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/German/meaning/a/an/ansehen.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "Straße",
+   "",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "Strasse",
+     [
+      "Liechtenstein"
+     ]
+    ],
+    [
+     "Strasse",
+     [
+      "Switzerland"
+     ]
+    ],
+    [
+     "Strasse",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "Strasse",
+     [
+      "feminine"
+     ]
+    ],
+    [
+     "Strasse",
+     [
+      "standard"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "E-Mail",
+   "",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "Mail",
+     [
+      "Austria"
+     ]
+    ],
+    [
+     "Mail",
+     [
+      "Southern-Germany"
+     ]
+    ],
+    [
+     "Mail",
+     [
+      "Switzerland"
+     ]
+    ],
+    [
+     "Mail",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "Mail",
+     [
+      "alternative"
+     ]
+    ],
+    [
+     "Mail",
+     [
+      "feminine/neuter"
+     ]
+    ],
+    [
+     "Mail",
+     [
+      "regional"
+     ]
+    ],
+    [
+     "Mail",
+     [
+      "southern-Germany"
+     ]
+    ],
+    [
+     "Mail",
+     [
+      "strong"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "Fuchs",
+   "",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "Fux",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "Fux",
+     [
+      "alternative"
+     ]
+    ],
+    [
+     "Fux",
+     [
+      "masculine"
+     ]
+    ],
+    [
+     "Fux",
+     [
+      "strong"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "Kiefer",
+   "",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "Kienföhre",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "Kienföhre",
+     [
+      "archaic"
+     ]
+    ],
+    [
+     "Kienföhre",
+     [
+      "feminine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "E-Mail",
+   "",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "Email",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "Email",
+     [
+      "alternative"
+     ]
+    ],
+    [
+     "Email",
+     [
+      "feminine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "Hund",
+   "",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "Hunt",
+     [
+      "alternative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "Fuchs",
+   "",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "Füchsin",
+     [
+      "masculine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ]
+ ],
+ "rendered_html": {
+  "Fuchs": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-de-en\" data-dictionary-id=\"wty-de-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"proper noun\">prop-n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"name\">name</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"surname\">surn</span><span class=\"gloss-tag\" data-category=\"\" title=\"strong\">strong</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-de-en)</i><ul class=\"gloss-list\" data-count=\"5\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">Fuchs m (strong, genitive Fuchses, plural Füchse, diminutive Füchslein n or Füchschen n, feminine Füchsin)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From Middle High German vuhs, from Old High German fuhs, from Proto-West Germanic *fuhs, from Proto-Germanic *fuhsaz, from Proto-Indo-European *púḱsos (“the tailed one”), from *puḱ- (“tail”). Cognate with English fox, Sanskrit पुच्छ (púccha).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">fox (animal)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Fuchs</span>, du hast die Gans gestohlen. Gib sie wieder her!</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Fox</span>, you&#x27;ve stolen the goose. Give it back here!</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"informal\">inf</span></div>a clever or cunning person, sly fox<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Er ist ein ganz schöner <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Fuchs</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">He is quite the <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">sly fox</span>.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"informal\">inf</span></div>redhead (a red-haired person)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Unser Paul ist ja ein kleiner <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Fuchs</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Our Paul is a little <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">redhead</span>.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"sports\">sports</span></div>chestnut, sorrel horse (horse with a reddish-brown coat, mane and tail)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">pledge (prospective member of a fraternity)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"slang\">sl</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"military\">mil</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"politics\">polit</span></div>a new recruit</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">the ace of diamonds in Doppelkopf, where it earns a side of players an extra point if they win it from the other side<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Ich hatte nur vier Trümpfe und darunter beide <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Füchse</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">I had only four trumps and among them were both <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">aces of diamonds</span>.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"military\">mil</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"politics\">polit</span></div>a tank Transportpanzer Fuchs</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"archaism\" title=\"archaic\">arch</span></div>a form of sunscald on hops</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">a fox in radiosport foxhunt</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"archaism\" title=\"obsolete\">obs</span></div>any gold coin</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"biology\">biol</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"entomology\">entom</span></div>tortoiseshell</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/Fuchs#German\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/German/meaning/F/Fu/Fuchs.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">Fuchs m (strong, genitive Fuchses, plural Füchse)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Probably from an alteration of archaic Feist (“fat”). Compare the older variants Feix, Feits.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">a member of a student fraternity in his first year</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">beginner; fresher</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/Fuchs#German\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/German/meaning/F/Fu/Fuchs.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">Fuchs m or f (proper noun, surname, masculine genitive Fuchs&#x27; or (with an article) Fuchs, feminine genitive Fuchs, plural Fuchs or Fuchsens)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From Middle High German vuhs, from Old High German fuhs, from Proto-West Germanic *fuhs, from Proto-Germanic *fuhsaz, from Proto-Indo-European *púḱsos (“the tailed one”), from *puḱ- (“tail”). Cognate with English fox, Sanskrit पुच्छ (púccha).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">a common surname transferred from the nickname</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">a German Jewish surname</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/Fuchs#German\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/German/meaning/F/Fu/Fuchs.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">Fux</li><li class=\"gloss-sc-li\">Fux</li><li class=\"gloss-sc-li\">Fux</li><li class=\"gloss-sc-li\">Fux</li></ul></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">Füchsin</div></li></ul></li></ol></div>",
+  "Hund": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-de-en\" data-dictionary-id=\"wty-de-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"\" title=\"strong\">strong</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-de-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">Hund m (strong, genitive Hundes or Hunds, plural Hunde or (regionally) Hünde, diminutive Hündchen n or Hündlein n or Hundchen n or Hunderl n or Hundi n or Hundilein n, masculine (for the animal) Rüde, feminine (for the animal) Hündin or Petze or Zaupe or Zibbe)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Etymology tree<br>Proto-Indo-European *ḱwṓder.<br>Proto-Germanic *hundaz<br>Proto-West Germanic *hund<br>Old High German hunt<br>Middle High German hunt<br>German Hund<br>Inherited from Middle High German hunt, from Old High German hunt, from Proto-West Germanic *hund, from Proto-Germanic *hundaz, from Proto-Indo-European *ḱwṓ.<br>Cognates<br>Cognates include Dutch hond, English hound, Danish hund, Icelandic hundur, and Gothic 𐌷𐌿𐌽𐌳𐍃 (hunds).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">dog, hound</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"derogatory\">derog</span></div>scoundrel; dog (mean or morally reprehensible person)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">ein gemeiner <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Hund</span></div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">a mean <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span></div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">A board with casters used to transport heavy objects.</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"synonyms\"><div class=\"gloss-sc-div\" data-sc-content=\"synonyms-label\">Synonyms</div><ul class=\"gloss-sc-ul\" data-sc-content=\"synonyms-list\"><li class=\"gloss-sc-li\" data-sc-content=\"synonym-item\">Wauwau</li><li class=\"gloss-sc-li\" data-sc-content=\"synonym-item\">Köter</li><li class=\"gloss-sc-li\" data-sc-content=\"synonym-item\">Töle</li></ul></div><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/Hund#German\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/German/meaning/H/Hu/Hund.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">Hunt</div></li></ul></li></ol></div>",
+  "Kiefer": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-de-en\" data-dictionary-id=\"wty-de-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"gender-neuter\" title=\"neuter\">neut</span><span class=\"gloss-tag\" data-category=\"\" title=\"strong\">strong</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-de-en)</i><ul class=\"gloss-list\" data-count=\"3\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">Kiefer f (genitive Kiefer, plural Kiefern)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From older Kienföhre.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">pine (tree of genus Pinus)</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/Kiefer#German\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/German/meaning/K/Ki/Kiefer.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">Kiefer m or n (strong, genitive Kiefers, plural Kiefer)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From Middle High German kiver m or n, from Old High German kifer, from Proto-West Germanic *kebr, from the perhaps onomatopoeic Proto-Indo-European root *ǵep- (“to chew, eat”), also the root of Käfer (“beetle”).<br>Compare the Proto-Indo-European roots *ǵyewh₁- (“to chew”) and *gʰabʰ- (“to seize”).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">jaw</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/Kiefer#German\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/German/meaning/K/Ki/Kiefer.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">Kienföhre</li><li class=\"gloss-sc-li\">Kienföhre</li><li class=\"gloss-sc-li\">Kienföhre</li></ul></div></li></ul></li></ol></div>",
+  "E-Mail": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-de-en\" data-dictionary-id=\"wty-de-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"gender-neuter\" title=\"neuter\">neut</span><span class=\"gloss-tag\" data-category=\"usage\" title=\"regional\">regio</span><span class=\"gloss-tag\" data-category=\"\" title=\"strong\">strong</span><span class=\"gloss-tag\" data-category=\"variety\" title=\"Austria\">🇦🇹</span><span class=\"gloss-tag\" data-category=\"variety\" title=\"Switzerland\">🇨🇭</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-de-en)</i><ul class=\"gloss-list\" data-count=\"3\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">E-Mail (predominantly) f (genitive E-Mail, plural E-Mails)<br>E-Mail (alternatively in southern Germany, Austria and Switzerland) n (strong, genitive E-Mails, plural E-Mails)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Borrowed from English e-mail. The feminine gender probably after Post (“mail”), perhaps also Nachricht (“message”).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">e-mail (system; letter)</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/E-Mail#German\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/German/meaning/E/E-/E-Mail.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">Mail</li><li class=\"gloss-sc-li\">Mail</li><li class=\"gloss-sc-li\">Mail</li><li class=\"gloss-sc-li\">Mail</li><li class=\"gloss-sc-li\">Mail</li><li class=\"gloss-sc-li\">Mail</li><li class=\"gloss-sc-li\">Mail</li><li class=\"gloss-sc-li\">Mail</li><li class=\"gloss-sc-li\">Mail</li></ul></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">Email</li><li class=\"gloss-sc-li\">Email</li><li class=\"gloss-sc-li\">Email</li></ul></div></li></ul></li></ol></div>",
+  "Ferien": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-de-en\" data-dictionary-id=\"wty-de-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"number\" title=\"plural\">pl</span><span class=\"gloss-tag\" data-category=\"number\" title=\"plural only\">pl-only</span><i>(wty-de-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">Ferien pl (plural only)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">15th century, from Latin fēriae, with replacement of the Latin plural suffix -ae with German -en.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">holidays during which an institution (especially a school, university) or a business is closed; break (usually three days or more)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">vacation, holiday</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/Ferien#German\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/German/meaning/F/Fe/Ferien.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "Straße": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-de-en\" data-dictionary-id=\"wty-de-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-de-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">Straße f (genitive Straße, plural Straßen, diminutive Sträßchen n or Sträßlein n)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Etymology tree<br>Proto-Indo-European *ster-<br>Proto-Indo-European *sterh₃-<br>Proto-Indo-European *-tós<br>Proto-Indo-European *str̥h₃tós<br>Proto-Italic *strātos<br>Latin strātus<br>Latin via strātaellip.<br>Late Latin strātabor.<br>Proto-West Germanic *strātu<br>Old High German strāȥa<br>Middle High German strāȥe<br>German Straße<br>Inherited from Middle High German strāȥe, from Old High German strāȥa, from Proto-West Germanic *strātu (“street”), from Latin (via) strata.<br>Sense 6 (“strait”) is a calque of Middle Low German strâte, itself a phono-semantic matching of Middle English streit, from Old French estreit (“narrow”), from unrelated Latin strictus.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">street; road (a way wide enough to be passable for vehicles, generally paved, in or outside a settlement)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">3 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Das Kind überquerte die <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Straße</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">The child crossed the <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">street</span>.</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Diese <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Straße</span> führt nach Kirchdorf.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">This <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">road</span> goes to Kirchdorf.</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Die <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Straße</span> ist für den Verkehr gesperrt.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">The <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">street</span> is closed for traffic.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">carriageway (the part of a road or street used by vehicles, excluding the pavement, etc.)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"usage\" title=\"figurative\">fig</span></div>public, any area accessible to anyone</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"usage\" title=\"figurative\">fig</span></div>general public, using the locale to describe people not part of a specific group</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">the streets, areas or groups of people of no income or criminal affiliation, or the leading of a life associated with these</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">strait (channel of water)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"poker\">poker</span></div>straight</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/Straße#German\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/German/meaning/S/St/Straße.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">Strasse</li><li class=\"gloss-sc-li\">Strasse</li><li class=\"gloss-sc-li\">Strasse</li><li class=\"gloss-sc-li\">Strasse</li><li class=\"gloss-sc-li\">Strasse</li></ul></div></li></ul></li></ol></div>",
+  "Hardware": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-de-en\" data-dictionary-id=\"wty-de-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><i>(wty-de-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">Hardware f (genitive Hardware, plural (uncommon) Hardwares)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Borrowed from English hardware.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"computing\">comp</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"engineering\">eng</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"mathematics\">math</span></div>hardware</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/Hardware#German\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/German/meaning/H/Ha/Hardware.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "Oma": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-de-en\" data-dictionary-id=\"wty-de-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><i>(wty-de-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">Oma f (genitive Oma or (prenominal without an article) Omas, plural Omas)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Cognate to Dutch oma.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">grandma, granny, nan</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">any elderly woman</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"synonyms\"><div class=\"gloss-sc-div\" data-sc-content=\"synonyms-label\">Synonyms</div><ul class=\"gloss-sc-ul\" data-sc-content=\"synonyms-list\"><li class=\"gloss-sc-li\" data-sc-content=\"synonym-item\">Altmutter</li><li class=\"gloss-sc-li\" data-sc-content=\"synonym-item\">Großmama</li><li class=\"gloss-sc-li\" data-sc-content=\"synonym-item\">Großmutter</li></ul></div><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/Oma#German\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/German/meaning/O/Om/Oma.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "ansehen": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-de-en\" data-dictionary-id=\"wty-de-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"\" title=\"strong\">strong</span><i>(wty-de-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">ansehen (class 5 strong, third-person singular present sieht an, past tense sah an, past participle angesehen, past subjunctive sähe an, auxiliary haben)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">an- + sehen</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"reflexive verb\">vr</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"transitive verb\">vt</span></div>to look at, to have a look at (taking in information in doing so)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Sieh</span> dir diese riesige Tomate <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">an</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Have a look</span> at this huge tomato.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"transitive verb\">vt</span></div>to look at (especially a person; implying eye contact or direction of gaze without analyzing)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">2 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Sie <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">sah</span> ihn erstaunt <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">an</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">She <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">looked at</span> him in astonishment.</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Sarah ist wunderschön <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">anzusehen</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Sarah is beautiful <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">to look at</span>.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"transitive verb\">vt</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"usage\" title=\"figurative\">fig</span></div>to regard, to consider, to look on (something in a certain way or having a certain quality)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Ich <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">sehe</span> ihren Schutz als unsere Ver<span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">an</span>twortung <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">an</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">I <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">see</span> their protection as our responsibility.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"transitive verb\">vt</span></div>to watch (a movie, a television program, sports, etc)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Siehst</span> du gerne Fußball im Fernsehen <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">an</span>?</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Do you like to <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">watch</span> soccer/football on television?</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"ditransitive verb\">vdt</span></div>to notice, to be able to tell (a quality based on the look of someone/something); to be apparent (with subject and object switched)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Man sieht dir an</span>, dass du zwei Tage lang nicht geschlafen hast.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">It&#x27;s obvious just from looking at you</span> that you haven&#x27;t slept in two days.</div></div></div></details></div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/ansehen#German\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/German/meaning/a/an/ansehen.html\">Kaikki</a></div></div></li></ul></li></ol></div>"
+ }
+}
