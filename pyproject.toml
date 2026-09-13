@@ -155,9 +155,14 @@ es = [
 it = [
     "spacy>=3.8,<3.8.15",
 ]
+# Dutch mining engine (same spaCy cap as en, R3). The nl_core_news_sm model is a
+# GitHub release asset: pip users download it in Settings -> Mining Language.
+nl = [
+    "spacy>=3.8,<3.8.15",
+]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
-languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]"]
+languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]"]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
