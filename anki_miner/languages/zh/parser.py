@@ -21,4 +21,7 @@ def create_parser(config: Any, **kwargs: Any) -> Any:
     profile = get_profile(config.language)
     kwargs.setdefault("mined_form_policy", profile.mined_form)
     kwargs.setdefault("reading_support", profile.reading)
+    # No sentence annotator: the furigana/reading generators would print the
+    # sentence with its spaces deleted (spec 6.1 #2).
+    kwargs.setdefault("sentence_annotation", profile.sentence_annotator is not None)
     return SubtitleParserService(config, **kwargs)

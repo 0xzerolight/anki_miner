@@ -110,9 +110,17 @@ _STEM_DELIMITERS = re.compile(r"[-_.]+")
 _CONTENT_MEDIA_TYPES = frozenset({"application/xhtml+xml", "text/html"})
 _CONTENT_EXTS = (".xhtml", ".html", ".htm")
 
-# Pretty-printed XHTML wraps paragraph text across lines with indent; join those
-# CJK line-wraps with "" (no space) while leaving internal U+3000 untouched.
+# Pretty-printed XHTML wraps paragraph text across lines with indent. A CJK
+# line-wrap joins with "" (no space) while leaving internal U+3000 untouched; a
+# space-delimited language joins with " " (see _line_join), or the wrap fuses
+# two words into one fabricated card front.
 _INTERNAL_LINEBREAK = re.compile(r"[ \t]*\n[ \t]*")
+
+
+def _line_join(rules: SentenceRules | None) -> str:
+    """What a source line wrap becomes inside a paragraph for this language."""
+    return " " if rules is not None and rules.space_aware else ""
+
 
 # Cap on any single decompressed member read out of the EPUB. Every fully-read
 # member is text (container/OPF/encryption/spine XHTML/nav/NCX); real chapters
@@ -302,7 +310,7 @@ def load(
             body, is_cover = _parse_content(raw)
             if body is None or is_cover:
                 continue
-            paragraphs, gaiji = _walk_body(body, cancel_check=cancel_check)
+            paragraphs, gaiji = _walk_body(body, cancel_check=cancel_check, line_join=_line_join(rules))
             gaiji_total += gaiji
             label = chapter_map.get(entry, f"ch.{content_i}")
             content_i += 1
@@ -707,12 +715,15 @@ def _walk_body(
     body,
     *,
     cancel_check: _CancelCheck | None = None,
+    line_join: str = "",
 ) -> tuple[list[str], int]:
     """Depth-first text walk → (paragraphs, gaiji-image count).
 
     Ruby/script/style subtrees are skipped; ``<img>`` counts toward gaiji and
     contributes no text; a paragraph flushes on a block close or ``<br>``, then
     has its leading whitespace (incl. U+3000) stripped and empties dropped.
+    ``line_join`` replaces each source line wrap inside a paragraph
+    (:func:`_line_join`).
     """
     paragraphs: list[str] = []
     buf: list[str] = []
@@ -721,7 +732,7 @@ def _walk_body(
     def flush() -> None:
         if not buf:
             return
-        text = _INTERNAL_LINEBREAK.sub("", "".join(buf)).lstrip()
+        text = _INTERNAL_LINEBREAK.sub(line_join, "".join(buf)).lstrip()
         buf.clear()
         if text:
             paragraphs.append(text)

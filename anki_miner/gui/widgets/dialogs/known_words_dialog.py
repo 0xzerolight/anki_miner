@@ -46,6 +46,7 @@ from anki_miner.services.known_words_import import (
 )
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.subtitle_encoding import script_check_kwarg
 
 logger = logging.getLogger(__name__)
 
@@ -236,7 +237,12 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
                 try:
                     from anki_miner.languages.registry import get_profile
 
-                    return parse_known_words_file(path, encodings=get_profile(self._language).import_encodings)
+                    profile = get_profile(self._language)
+                    return parse_known_words_file(
+                        path,
+                        encodings=profile.import_encodings,
+                        **script_check_kwarg(profile.import_encodings, profile.script),
+                    )
                 except KnownWordsImportError as exc:
                     return exc
 

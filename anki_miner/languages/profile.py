@@ -143,6 +143,11 @@ class SentenceRules:
     openers: frozenset[str]
     closers: frozenset[str]
     space_aware: bool = False
+    #: Casefolded abbreviation keys WITHOUT their final dot (``dr``, ``z.b``); a
+    #: multi-token abbreviation enters by each token (``p``, ``ej``). Non-empty
+    #: also switches on the ASCII ellipsis rule (``...`` does not terminate);
+    #: empty — ja, ko, zh — keeps every split the splitter made before Stage S.
+    abbreviations: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)

@@ -36,6 +36,7 @@ from anki_miner.services.morphology import (
     ReadingLookup,
     SyntheticToken,
     TokenInclusionRule,
+    TokenPostPass,
     _edit_distance,
     apply_special_readings,
     attest_merged_readings,
@@ -65,7 +66,7 @@ from anki_miner.utils.ja_normalize import (
     standardize_kanji_variants,
 )
 from anki_miner.utils.logging_ext import capped, log_summary
-from anki_miner.utils.subtitle_encoding import _log_decode, load_with_fallback_encoding
+from anki_miner.utils.subtitle_encoding import _log_decode, load_with_fallback_encoding, script_check_kwarg
 from anki_miner.utils.text_utils import (
     _format_furigana,
     generate_furigana_from_tokens,
@@ -364,6 +365,9 @@ class SubtitleParserService:
         script_gate: Callable[[str], bool] | None = None,
         token_merger: "TokenMerger | None" = None,
         compound_matching: bool = True,
+        token_post_pass: TokenPostPass | None = None,
+        normalize: Callable[[str], str] | None = None,
+        sentence_annotation: bool = True,
     ):
         """Initialize the subtitle parser.
 
@@ -441,6 +445,24 @@ class SubtitleParserService:
                 print ``NewYork``). ``True`` — every ja path, and ko/zh today —
                 keeps the pre-seam gate exactly: built whenever a term lookup is
                 wired.
+            token_post_pass: Optional language post-pass over the RAW tagger
+                tokens (spec §4.3 item 2(b): separable-verb reattachment gated on
+                dictionary attestation). Called once per line as
+                ``token_post_pass(raw_tokens, attest, None)`` — ``attest`` is the
+                parser's memoised existence probe (None without a dictionary),
+                the third argument is reserved for R36's form lookup — before
+                every merge pass, and its result IS the line's raw token list.
+                ``None`` — every ja/ko/zh path — runs nothing.
+            normalize: The mining language's text normaliser for cue text and
+                reading units (``LanguageProfile.normalize``), replacing the
+                Japanese pair in :func:`clean_subtitle_text`. ``None`` — every
+                ja/ko/zh parser — keeps the Japanese pair.
+            sentence_annotation: Whether to generate the sentence
+                furigana/reading fields from the token stream. They assume
+                contiguous kana-bearing tokens: for a language with no
+                ``LanguageProfile.sentence_annotator`` they print the sentence
+                with its spaces deleted, so such a factory passes ``False`` and
+                the fields stay empty.
         """
         self.config = config
         # Perf-audit counters (Task 28): cumulative wall-clock spent in offline-
@@ -462,6 +484,14 @@ class SubtitleParserService:
         # 공부하다). Runs only when an offline existence probe exists (see
         # _build_line_state); None ⇒ JA/ZH behaviour verbatim.
         self._token_merger = token_merger
+        # Language post-pass over the raw tagger tokens (§4.3 item 2(b)); None ⇒
+        # the tagger output is the raw token list, verbatim.
+        self._token_post_pass = token_post_pass
+        # Cue/unit text normaliser (spec S5); None ⇒ the Japanese pair verbatim.
+        self._normalize = normalize
+        # Sentence furigana/reading generation (spec 6.1 #2); False ⇒ the three
+        # annotation fields stay "".
+        self._sentence_annotation = sentence_annotation
         self._reading_lookup = reading_lookup
         # Shared process-wide tagger (see services/tagger.py for the single-flight
         # invariant). __init__ may block ~2-3s on the lazy build if a user triggers
@@ -712,6 +742,11 @@ class SubtitleParserService:
         )
 
     @property
+    def normalize(self) -> Callable[[str], str] | None:
+        """The injected normaliser (None = the Japanese pair). Read by the reading worker."""
+        return self._normalize
+
+    @property
     def ambiguous_reading_count(self) -> int:
         """Number of distinct real-token card fronts needing reading review."""
         return len(self._ambiguous_readings)
@@ -830,7 +865,7 @@ class SubtitleParserService:
         to empty is skipped by each caller's existing ``if not text: continue``
         guard.
         """
-        cleaned = clean_subtitle_text(raw_text)
+        cleaned = clean_subtitle_text(raw_text, normalize=self._normalize)
         return self._apply_text_filter(cleaned)
 
     def _load_subs(self, subtitle_file: Path, *, encodings: tuple[str, ...] | None = None):
@@ -856,12 +891,14 @@ class SubtitleParserService:
             try:
                 subs = pysubs2.load(str(subtitle_file))
             except UnicodeDecodeError as utf8_error:
+                profile = get_profile(config_language(self.config))
                 return load_with_fallback_encoding(
                     subtitle_file,
                     utf8_error,
-                    encodings=(
-                        get_profile(config_language(self.config)).import_encodings if encodings is None else encodings
-                    ),
+                    encodings=profile.import_encodings if encodings is None else encodings,
+                    # An explicit caller ladder (a secondary track, encodings=())
+                    # is not in the mining language, so its script says nothing.
+                    **(script_check_kwarg(profile.import_encodings, profile.script) if encodings is None else {}),
                 )
             # The ladder writes its own receipt only when UTF-8 failed; the
             # common case must leave the same trail, or a mojibake report cannot
@@ -1016,6 +1053,8 @@ class SubtitleParserService:
         tokenize_start = time.perf_counter()
         raw_tokens = list(self.tagger(text))
         self._tokenize_time_s += time.perf_counter() - tokenize_start
+        if self._token_post_pass is not None:
+            raw_tokens = list(self._token_post_pass(raw_tokens, self._attest, None))
         merged_tokens = self._merge_compound_suffixes(raw_tokens)
         # Language-specific merge (ko: 공부 + 하 → 공부하다). Placed with the other
         # merge passes and gated on the same probe; no probe ⇒ no merge.
@@ -1383,7 +1422,11 @@ class SubtitleParserService:
             # Bold the full inflected form (verb/adjective + auxiliary
             # chain), not just the stem morpheme: 蒔いた, not 蒔い.
             sentence_bolded = wrap_target_plain(text, tok_start, highlight_end)
-            sentence_furigana_bolded = wrap_target_furigana_from_tokens(text, display_tokens, tok_start, highlight_end)
+            sentence_furigana_bolded = (
+                wrap_target_furigana_from_tokens(text, display_tokens, tok_start, highlight_end)
+                if self._sentence_annotation
+                else ""
+            )
         else:
             sentence_bolded = ""
             sentence_furigana_bolded = ""
@@ -1510,8 +1553,11 @@ class SubtitleParserService:
             included_spans,
             mined_forms,
         )
-        sentence_furigana = generate_furigana_from_tokens(display_tokens, text=text)
-        sentence_reading = generate_reading_from_tokens(display_tokens)
+        if self._sentence_annotation:
+            sentence_furigana = generate_furigana_from_tokens(display_tokens, text=text)
+            sentence_reading = generate_reading_from_tokens(display_tokens)
+        else:
+            sentence_furigana = sentence_reading = ""
 
         line_lemmas_entry: LineLemmas | None = None
         if collect_index:
@@ -1753,8 +1799,13 @@ class SubtitleParserService:
             # was mined (as on the subtitle path). Order mirrors clean_subtitle_text
             # (normalize_for_tokenization then standardize_kanji_variants); the
             # markup strip / regex filter it also runs are applied just below,
-            # subtitle-cue kind only (subtitle_cleanup).
-            text = standardize_kanji_variants(normalize_for_tokenization(unit.text))
+            # subtitle-cue kind only (subtitle_cleanup). An injected normaliser
+            # replaces exactly that pair, as it does in clean_subtitle_text.
+            text = (
+                standardize_kanji_variants(normalize_for_tokenization(unit.text))
+                if self._normalize is None
+                else self._normalize(unit.text)
+            )
             if subtitle_cleanup:
                 # Reading→Subtitles per-cue cleanup remains here for synthetic
                 # ReadingUnit callers and is idempotent when the loader already

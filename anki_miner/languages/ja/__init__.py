@@ -19,7 +19,7 @@ from anki_miner.languages.ja.support import (
     JaScriptSupport,
     JaSentenceAnnotator,
 )
-from anki_miner.languages.ja.text import ja_phrase_wrap
+from anki_miner.languages.ja.text import ja_normalize, ja_phrase_wrap
 from anki_miner.languages.profile import (
     AudioDefaults,
     CaptionLangs,
@@ -34,7 +34,6 @@ from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
 from anki_miner.services.sentence_tts_fetcher import PAPAGO_SPEAKER_JA
 from anki_miner.services.subtitle_parser import SubtitleParserService
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
-from anki_miner.utils.ja_normalize import normalize_for_tokenization
 
 __all__ = ["JA_AUDIO", "build_profile"]
 
@@ -89,7 +88,7 @@ def build_profile() -> LanguageProfile:
             closers=sentence_splitter._CLOSERS,
             space_aware=False,
         ),
-        normalize=normalize_for_tokenization,
+        normalize=ja_normalize,
         dict_keys=JaDictKeys(),
         audio=JA_AUDIO,
         asr_language="ja",

@@ -19,7 +19,7 @@ from anki_miner.services.reading import sentence_splitter
 from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
 from anki_miner.services.sentence_tts_fetcher import PAPAGO_SPEAKER_JA
 from anki_miner.utils.audio_track_detector import JAPANESE_LANGUAGE_CODES
-from anki_miner.utils.ja_normalize import normalize_for_tokenization
+from anki_miner.utils.ja_normalize import normalize_for_tokenization, standardize_kanji_variants
 from anki_miner.utils.text_utils import (
     generate_furigana_from_tokens,
     generate_reading_from_tokens,
@@ -84,7 +84,8 @@ def test_sentence_rules_mirror_the_splitter_constants(profile):
 
 
 def test_normalize_and_catalog_are_the_existing_objects(profile):
-    assert profile.normalize is normalize_for_tokenization
+    sample = "ﾊﾟｿｺﾝを𠮟る"
+    assert profile.normalize(sample) == standardize_kanji_variants(normalize_for_tokenization(sample))
     assert profile.catalog == RECOMMENDED_DEFAULT_SET
 
 

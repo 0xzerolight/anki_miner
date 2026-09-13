@@ -3,7 +3,7 @@
 import html
 import re
 import unicodedata
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from typing import Any
 
 from anki_miner.utils.furigana_distribute import distribute_furigana
@@ -54,7 +54,7 @@ def strip_subtitle_markup(text: str) -> str:
     return text
 
 
-def clean_subtitle_text(text: str) -> str:
+def clean_subtitle_text(text: str, *, normalize: Callable[[str], str] | None = None) -> str:
     """Remove formatting tags, then Japanese-normalize for tokenization.
 
     Markup stripping runs first, then one ``html.unescape`` pass, then
@@ -66,8 +66,15 @@ def clean_subtitle_text(text: str) -> str:
     card sentence, so token offsets, dedup keys, and script-type filters all see
     one normalized form.
 
+    ``normalize`` replaces the two Japanese steps — ``normalize_for_tokenization``
+    and ``standardize_kanji_variants`` — with the mining language's own
+    ``LanguageProfile.normalize``. Markup stripping, the entity unescape, the
+    annotation strip and whitespace flattening stay shared. ``None`` is the
+    Japanese pair, byte-identical to the pre-seam function.
+
     Args:
         text: Raw subtitle text with possible formatting tags
+        normalize: The mining language's normaliser, or None for the Japanese pair
 
     Returns:
         Cleaned, normalized text without formatting tags or annotations
@@ -77,9 +84,12 @@ def clean_subtitle_text(text: str) -> str:
     text = re.sub(r"\\[nN]|\r\n?", "\n", text)
     text = strip_subtitle_markup(text)
     text = html.unescape(text)
-    # Japanese pre-tokenization normalization (see anki_miner.utils.ja_normalize).
-    text = normalize_for_tokenization(text)
-    text = standardize_kanji_variants(text)
+    if normalize is None:
+        # Japanese pre-tokenization normalization (see anki_miner.utils.ja_normalize).
+        text = normalize_for_tokenization(text)
+        text = standardize_kanji_variants(text)
+    else:
+        text = normalize(text)
     text = strip_inline_annotations(text)
     return " ".join(text.split())
 

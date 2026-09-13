@@ -45,6 +45,11 @@ def _ja_matches(option_id: str, form: str) -> bool:
     return False if predicate is None else predicate(form)
 
 
+def _ja_expression_tracks_surface(word: TokenizedWord) -> bool:
+    """Japanese: every POS but 動詞/形容詞 mines its surface as the card front."""
+    return word.pos not in ("動詞", "形容詞")
+
+
 def enabled_script_options(script: ScriptSupport, config: AnkiMinerConfig) -> frozenset[str]:
     """Option ids this *config* turns on for *script*.
 
@@ -207,6 +212,8 @@ class WordFilterService:
         mined_form: MinedFormPolicy | None = None,
         script: ScriptSupport | None = None,
         dedup_fold: Callable[[str], str] | None = None,
+        expression_tracks_surface: Callable[[TokenizedWord], bool] | None = None,
+        sentence_annotation: bool = True,
     ):
         """Initialize the word filter service.
 
@@ -232,12 +239,26 @@ class WordFilterService:
                 (``LanguageProfile.dedup_fold``, S3), applied to every probe
                 in ``filter_unknown``; the known sets arrive already folded
                 (known-words DB, Anki boundary). ``None`` keeps raw membership.
+            expression_tracks_surface: Whether a word's card front follows its
+                surface when an i+1 swap moves it to another line. ``None``
+                runs the Japanese literal (動詞/形容詞 keep ``orth_base``). A
+                lemma-fronted language passes ``lambda w: False``: its front
+                never changes with the surface and its reading fields are
+                never regenerated from it.
+            sentence_annotation: Whether a line expansion or a sentence swap
+                regenerates ``sentence_furigana``/``sentence_reading``/
+                ``sentence_furigana_bolded`` with the tagger. ``False`` for a
+                language with no ``LanguageProfile.sentence_annotator``,
+                matching its parser: those generators assume contiguous kana
+                tokens.
         """
         self.config = config
         self.tagger = tagger
         self._mined_form = mined_form
         self._script = script
         self._dedup_fold = dedup_fold
+        self._tracks_surface = expression_tracks_surface or _ja_expression_tracks_surface
+        self._sentence_annotation = sentence_annotation
 
     def filter_unknown(
         self,
@@ -651,7 +672,7 @@ class WordFilterService:
 
     def _line_preserves_mined_form(self, word: TokenizedWord, line: LineLemmas) -> bool:
         """Whether swapping to ``line`` keeps a surface-mined card front."""
-        if word.pos in ("動詞", "形容詞"):
+        if not self._tracks_surface(word):
             return True
         surface = next(
             (surface for lemma, surface, *_ in line.lemma_spans if lemma == word.lemma),
@@ -726,7 +747,7 @@ class WordFilterService:
         # the original values are kept as a best-effort fallback.
         expr_furigana = word.expression_furigana
         expr_reading = word.expression_reading
-        surface_is_expression = word.pos not in ("動詞", "形容詞")
+        surface_is_expression = self._tracks_surface(word)
         if surface_is_expression and new_surface != word.surface and self.tagger is not None:
             expr_furigana = generate_furigana(new_surface, self.tagger)
             expr_reading = generate_reading(new_surface, self.tagger)
@@ -763,10 +784,8 @@ class WordFilterService:
         ``config.bold_target_in_sentence``, tracked spans, and a tagger.
         """
         bold_end = highlight_end if highlight_end >= 0 else end
-        return (
-            wrap_target_plain(text, start, bold_end),
-            wrap_target_furigana(text, self.tagger, start, bold_end),
-        )
+        furigana_bolded = wrap_target_furigana(text, self.tagger, start, bold_end) if self._sentence_annotation else ""
+        return (wrap_target_plain(text, start, bold_end), furigana_bolded)
 
     def expand_word_lines(
         self,
@@ -816,7 +835,7 @@ class WordFilterService:
         new_start = word.surface_start + shift if word.surface_start >= 0 else -1
         new_end = word.surface_end + shift if word.surface_end >= 0 else -1
         new_highlight = word.highlight_end + shift if word.highlight_end >= 0 else -1
-        if self.tagger is not None:
+        if self.tagger is not None and self._sentence_annotation:
             new_furigana = generate_furigana(window.text, self.tagger)
             new_reading = generate_reading(window.text, self.tagger)
         else:

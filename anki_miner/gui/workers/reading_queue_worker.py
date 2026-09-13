@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from typing import Any
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import OperationCancelled, SetupError
@@ -52,6 +53,7 @@ from anki_miner.models.reading_queue import ReadingQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.reading import detector
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
+from anki_miner.utils.subtitle_encoding import script_check_kwarg
 
 logger = logging.getLogger(__name__)
 
@@ -195,11 +197,22 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
         exception (load or mining) propagates to the error handling in
         ``_run_item``.
         """
+        ladder = reading_decode_ladder(self._config)
+        profile = get_profile(self._config.language)
+        # The loader cleans cues with the SAME normaliser the run's parser applies
+        # to every unit, so the two can never disagree (None = the Japanese pair).
+        parser = getattr(self._processor, "subtitle_parser", None)
+        normalize = getattr(parser, "normalize", None)
+        # One bundle: omitted keywords keep detector.load's pre-seam call shape.
+        loader_kwargs: dict[str, Any] = {**script_check_kwarg(ladder, profile.script)}
+        if normalize is not None:
+            loader_kwargs["normalize"] = normalize
         document = detector.load(
             item.source,
             cancel_check=self.check_cancelled,
-            encodings=reading_decode_ladder(self._config),
-            rules=get_profile(self._config.language).sentence_rules,
+            encodings=ladder,
+            rules=profile.sentence_rules,
+            **loader_kwargs,
         )
         # Published for the manga tab's curation context (page images). Set
         # before process_reading so it is always the in-flight item's document

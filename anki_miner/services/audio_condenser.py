@@ -58,7 +58,7 @@ from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.file_pairing import find_sibling_subtitle, resolve_output_path
 from anki_miner.utils.subprocess_log import log_command, log_command_result, tail_for_log
 from anki_miner.utils.subprocess_utils import no_window_kwargs
-from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding
+from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding, script_check_kwarg
 from anki_miner.utils.text_utils import strip_subtitle_markup
 
 if TYPE_CHECKING:
@@ -86,7 +86,12 @@ _BRACKET_PAIRS: tuple[tuple[str, str], ...] = (
 # ---------------------------------------------------------------------------
 
 
-def load_subtitle_events(path: str | Path, *, encodings: tuple[str, ...] | None = None) -> list[Event]:
+def load_subtitle_events(
+    path: str | Path,
+    *,
+    encodings: tuple[str, ...] | None = None,
+    script_check: Callable[[str], bool] | None = None,
+) -> list[Event]:
     """Load *path* into ``(start_ms, end_ms, text)`` tuples.
 
     Uses pysubs2 with a UTF-8 default; on a decode failure it dispatches on a
@@ -106,7 +111,12 @@ def load_subtitle_events(path: str | Path, *, encodings: tuple[str, ...] | None 
     try:
         subs = pysubs2.load(str(path))
     except UnicodeDecodeError as utf8_error:
-        subs = load_with_fallback_encoding(path, utf8_error, encodings=encodings)
+        subs = load_with_fallback_encoding(
+            path,
+            utf8_error,
+            encodings=encodings,
+            **({} if script_check is None else {"script_check": script_check}),
+        )
     except pysubs2.exceptions.FormatAutodetectionError:
         # Empty (or contentless) file — no cues to condense.
         return []
@@ -1032,7 +1042,12 @@ def condense_one(
             return failure
         assert sub_path is not None  # failure is None ⇒ a source was resolved
 
-        events = load_subtitle_events(sub_path, encodings=get_profile(config_language(config)).import_encodings)
+        profile = get_profile(config_language(config))
+        events = load_subtitle_events(
+            sub_path,
+            encodings=profile.import_encodings,
+            **script_check_kwarg(profile.import_encodings, profile.script),
+        )
         shifted = shift_events(events, offset_ms)
         filtered = filter_lines(shifted, filtered_chars)
         periods = build_periods(filtered, padding_ms)

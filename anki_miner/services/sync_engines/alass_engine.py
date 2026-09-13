@@ -46,7 +46,7 @@ from anki_miner.utils.alass_resolver import resolve_alass
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.logging_ext import capped, log_summary
 from anki_miner.utils.process_supervisor import SupervisedState, run_supervised
-from anki_miner.utils.subtitle_encoding import detect_subtitle_encoding
+from anki_miner.utils.subtitle_encoding import detect_subtitle_encoding, script_check_kwarg
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +110,12 @@ def sync_with_alass(
     # against, so this is declared on both paths. alass's own detection fails
     # outright on cp932 ("error while decoding subtitle from bytes to string"),
     # which is the routine encoding for Japanese subtitle downloads.
-    incoming = detect_subtitle_encoding(in_sub, encodings=get_profile(config_language(config)).import_encodings)
+    profile = get_profile(config_language(config))
+    incoming = detect_subtitle_encoding(
+        in_sub,
+        encodings=profile.import_encodings,
+        **script_check_kwarg(profile.import_encodings, profile.script),
+    )
     if incoming is not None:
         flags += ["--encoding-inc", incoming]
 

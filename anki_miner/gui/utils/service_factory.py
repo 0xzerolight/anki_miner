@@ -12,6 +12,7 @@ first.
 
 import contextlib
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TypedDict, cast
@@ -702,6 +703,22 @@ def _create_subtitle_parser(config: AnkiMinerConfig, **lookups: Any) -> Subtitle
     return cast(SubtitleParserService, factory(config, **lookups))
 
 
+def create_profile_parser(
+    config: AnkiMinerConfig, ja_parser_cls: Callable[..., SubtitleParserService]
+) -> SubtitleParserService:
+    """A parser for display-only parsing (``parse_raw_entries``), built like the run's.
+
+    Cue text shown in the curator and matched by a line expansion must be cleaned
+    exactly as mining cleans it, so a non-ja language gets its profile factory's
+    seams. ja keeps the caller's own class and call shape: the display sites
+    import ``SubtitleParserService`` themselves and their tests patch that name.
+    """
+    factory = get_profile(config_language(config)).create_parser
+    if factory is get_profile("ja").create_parser:
+        return ja_parser_cls(config)
+    return cast(SubtitleParserService, factory(config))
+
+
 def create_services(
     config: AnkiMinerConfig,
     subtitle_parser: SubtitleParserService | None = None,
@@ -824,12 +841,17 @@ def create_services(
     # Share the parser's tagger with the word filter so i+1 swap can
     # rebuild bolded sentence fields without spinning up a second tagger
     # (fugashi.Tagger initialization is non-trivial).
+    profile = get_profile(config_language(config))
     word_filter = WordFilterService(
         config,
         tagger=subtitle_parser.tagger,
-        mined_form=get_profile(config_language(config)).mined_form,
-        script=get_profile(config_language(config)).script,
-        dedup_fold=get_profile(config_language(config)).dedup_fold,
+        mined_form=profile.mined_form,
+        script=profile.script,
+        dedup_fold=profile.dedup_fold,
+        # D6: whether the front follows the surface is the mined-form policy's
+        # question; a policy that does not answer it keeps the ja literal.
+        expression_tracks_surface=getattr(profile.mined_form, "expression_tracks_surface", None),
+        sentence_annotation=profile.sentence_annotator is not None,
     )
     media_extractor = MediaExtractorService(config)
     if anki_service is None:

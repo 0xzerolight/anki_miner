@@ -344,12 +344,14 @@ def load(
     cancel_check: Callable[[], bool] | None = None,
     encodings: tuple[str, ...] | None = None,
     rules: SentenceRules | None = None,
+    script_check: Callable[[str], bool] | None = None,
 ) -> ReadingDocument:
     """Load an Aozora or plain-text novel into a book ``ReadingDocument``.
 
     ``encodings`` is the mining language's decode ladder; ``None`` keeps the
     built-in Japanese sniffing path (see ``_util._decode``). ``rules`` is that
     language's sentence-splitting policy; ``None`` is the built-in Japanese one.
+    ``script_check`` validates a single-byte ladder leg (``_util._decode``).
     """
     _raise_if_cancelled(cancel_check)
     # Per-kind ref contract: file-backed kinds always carry a path.
@@ -366,7 +368,7 @@ def load(
     except OSError as e:
         logger.debug("Aozora read failed: file=%s error=%s detail=%s", ref.path, type(e).__name__, e)
         raise SetupError(f"Cannot read novel file '{ref.path.name}': {e}") from e
-    text = _decode(raw, encodings=encodings)
+    text = _decode(raw, encodings=encodings, script_check=script_check)
     lines = _cut_footer(_splitlines(text))
 
     aozora = _is_aozora(text)

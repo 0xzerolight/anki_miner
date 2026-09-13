@@ -67,7 +67,7 @@ def _pua_share(text: str) -> float:
     return sum(1 for char in non_ascii if 0xE000 <= ord(char) <= 0xF8FF) / len(non_ascii)
 
 
-def prefers_big5(data: bytes) -> bool:
+def prefers_big5(data: bytes, codec: str = "big5") -> bool:
     """True when *data* is Big5 that a gb18030 leg would swallow into mojibake.
 
     Both halves must hold, so the guard cannot fire on anything but the case it
@@ -75,11 +75,14 @@ def prefers_big5(data: bytes) -> bool:
     PUA-clean. Anything else — a real GB18030 file, bytes neither codec
     accepts, a head too short to judge — comes back False and leaves the
     caller's ladder exactly as it was.
+
+    ``codec`` is the Big5-family codec the caller's ladder names: yue passes
+    ``big5hkscs``; the default is the zh ladder's plain ``big5``.
     """
     gb = _decode_tolerating_truncation(data, "gb18030")
     if gb is None or _pua_share(gb) <= _PUA_MOJIBAKE_RATIO:
         return False
-    big5 = _decode_tolerating_truncation(data, "big5")
+    big5 = _decode_tolerating_truncation(data, codec)
     if big5 is None or _pua_share(big5) > _PUA_MOJIBAKE_RATIO:
         return False
     # DEBUG, not INFO: the caller's own decode receipt reports the encoding

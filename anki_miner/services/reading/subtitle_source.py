@@ -64,12 +64,17 @@ def load(
     *,
     cancel_check: Callable[[], bool] | None = None,
     encodings: tuple[str, ...] | None = None,
+    script_check: Callable[[str], bool] | None = None,
+    normalize: Callable[[str], str] | None = None,
 ) -> ReadingDocument:
     """Load a subtitle file into a per-cue :class:`ReadingDocument`.
 
     Identity mirrors the video path: series = parent folder name,
     episode = file stem. ``encodings`` is the mining language's decode ladder;
     ``None`` keeps the built-in Japanese sniffing path (see ``_util._decode``).
+    ``script_check`` validates a single-byte ladder leg (``_util._decode``).
+    ``normalize`` is the run parser's text normaliser, so each cue is cleaned
+    exactly as the parser cleans a subtitle line (``None`` = the Japanese pair).
 
     Raises:
         SetupError: unreadable file or unparseable subtitle content.
@@ -91,7 +96,7 @@ def load(
         logger.debug("Subtitle read failed: file=%s error=%s detail=%s", path, type(e).__name__, e)
         raise SetupError(f"Cannot read subtitle file '{path.name}': {e}") from e
 
-    text = _decode(raw, encodings=encodings)
+    text = _decode(raw, encodings=encodings, script_check=script_check)
     # detect() matched the lowered suffix but the ref keeps original case;
     # pysubs2's ext→format map is lowercase-keyed (".SRT" would raise).
     try:
@@ -110,7 +115,7 @@ def load(
         # Skip ASS/SSA Comment events (same guard as parse_raw_entries).
         if getattr(event, "is_comment", None) is True:
             continue
-        cue_text = clean_subtitle_text(event.text)
+        cue_text = clean_subtitle_text(event.text, normalize=normalize)
         if not cue_text:
             continue
         units.append(

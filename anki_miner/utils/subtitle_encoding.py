@@ -23,7 +23,9 @@ from __future__ import annotations
 
 import codecs
 import logging
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pysubs2
 
@@ -66,8 +68,29 @@ _WHATWG_LABELS = {
     "gb18030": "gb18030",
     "big5": "big5",
     "cp950": "big5",
+    "cp1250": "windows-1250",
     "cp1251": "windows-1251",
     "cp1252": "windows-1252",
+    "cp1253": "windows-1253",
+    "cp1254": "windows-1254",
+    "cp1255": "windows-1255",
+    "cp1256": "windows-1256",
+    "cp1257": "windows-1257",
+    "cp1258": "windows-1258",
+    "koi8_r": "koi8-r",
+    "koi8_u": "koi8-u",
+    "iso8859_2": "iso-8859-2",
+    "iso8859_6": "iso-8859-6",
+    "iso8859_7": "iso-8859-7",
+    "iso8859_8": "iso-8859-8",
+    # WHATWG folds ISO-8859-9 into windows-1254 and TIS-620 into windows-874.
+    "iso8859_9": "windows-1254",
+    "iso8859_13": "iso-8859-13",
+    "iso8859_16": "iso-8859-16",
+    "cp874": "windows-874",
+    "tis_620": "windows-874",
+    # WHATWG's big5 decoder is HKSCS-aware.
+    "big5hkscs": "big5",
     "latin_1": "windows-1252",
     "latin-1": "windows-1252",
     "iso8859_1": "windows-1252",
@@ -92,6 +115,77 @@ _MAX_SNIFF_BYTES = 1024 * 1024
 #: that failure is what ``original_error`` holds.
 _DEFAULT_LOAD_LADDER = ("cp932", "euc_jp")
 _DEFAULT_DETECT_LADDER = ("utf-8", "cp932", "euc_jp")
+
+#: Codecs that map every byte to one character. They almost never RAISE — each
+#: leaves only a handful of bytes undefined — so a first-success ladder would let
+#: the first one listed win on nearly any input. A candidate from this set wins
+#: only when its decode holds no U+FFFD, no C1 control and some of the mining
+#: script (spec S11). Compared by ``codecs.lookup`` name so aliases match.
+_SINGLE_BYTE_CODECS = frozenset(
+    codecs.lookup(name).name
+    for name in (
+        "cp1250",
+        "cp1251",
+        "cp1252",
+        "cp1253",
+        "cp1254",
+        "cp1255",
+        "cp1256",
+        "cp1257",
+        "cp1258",
+        "cp874",
+        "tis_620",
+        "koi8_r",
+        "koi8_u",
+        "latin_1",
+        "iso8859_2",
+        "iso8859_5",
+        "iso8859_6",
+        "iso8859_7",
+        "iso8859_8",
+        "iso8859_9",
+        "iso8859_13",
+        "iso8859_15",
+        "iso8859_16",
+    )
+)
+
+
+def is_single_byte_codec(codec: str) -> bool:
+    """Whether *codec* maps every byte to one character (see ``_SINGLE_BYTE_CODECS``)."""
+    try:
+        return codecs.lookup(codec).name in _SINGLE_BYTE_CODECS
+    except LookupError:
+        return False
+
+
+def plausible_single_byte_text(text: str, script_check: Callable[[str], bool] | None) -> bool:
+    """Whether a single-byte decode reads as text in the mining script."""
+    if "\ufffd" in text or any("\x80" <= ch <= "\x9f" for ch in text):
+        return False
+    return script_check is None or script_check(text)
+
+
+def _single_byte_leg_fails(data: bytes, codec: str, script_check: Callable[[str], bool] | None) -> bool:
+    """True when *codec* is single-byte and its decode of *data* is not plausible text."""
+    if not is_single_byte_codec(codec):
+        return False
+    try:
+        return not plausible_single_byte_text(data.decode(codec), script_check)
+    except (UnicodeDecodeError, LookupError):
+        return True
+
+
+def script_check_kwarg(encodings: tuple[str, ...] | None, script: Any) -> dict[str, Callable[[str], bool]]:
+    """``{"script_check": ...}`` for a ladder holding a single-byte codec, else nothing.
+
+    ja/ko/zh ladders hold none, so their decode calls keep their exact shape —
+    the test doubles that mirror those signatures included. ``script`` is the
+    profile's ``ScriptSupport`` (duck-typed: utils never imports languages).
+    """
+    if encodings and any(is_single_byte_codec(name) for name in encodings):
+        return {"script_check": script.contains_target_script}
+    return {}
 
 
 def _read_head(path: Path) -> bytes:
@@ -152,6 +246,7 @@ def load_with_fallback_encoding(
     original_error: UnicodeDecodeError,
     *,
     encodings: tuple[str, ...] | None = None,
+    script_check: Callable[[str], bool] | None = None,
 ) -> pysubs2.SSAFile:
     """Retry loading *path* from its BOM, the *encodings* ladder, then detection (D10).
 
@@ -168,6 +263,10 @@ def load_with_fallback_encoding(
     *encodings* is the caller's ladder — ``get_profile(...).import_encodings``
     at a config-bearing site. ``None`` (never ``()``) means the built-in
     Japanese ladder: cp932, then validated EUC-JP, then the detector.
+
+    *script_check* is the mining script's ``contains_target_script``: a
+    single-byte ladder leg wins only when its decode of the head passes
+    :func:`plausible_single_byte_text` (see :func:`script_check_kwarg`).
     """
     path = Path(path)
     if original_error.object.startswith((codecs.BOM_UTF32_LE, codecs.BOM_UTF32_BE)):
@@ -212,6 +311,11 @@ def load_with_fallback_encoding(
             if prefers_big5(head):
                 continue
         tried.append(candidate)
+        if is_single_byte_codec(candidate):
+            if head is None:
+                head = _read_head(path)
+            if _single_byte_leg_fails(head, candidate, script_check):
+                continue
         try:
             subs = pysubs2.load(str(path), encoding=candidate)
         except (UnicodeDecodeError, LookupError):
@@ -244,14 +348,20 @@ def load_with_fallback_encoding(
     raise original_error
 
 
-def detect_subtitle_encoding(path: str | Path, *, encodings: tuple[str, ...] | None = None) -> str | None:
+def detect_subtitle_encoding(
+    path: str | Path,
+    *,
+    encodings: tuple[str, ...] | None = None,
+    script_check: Callable[[str], bool] | None = None,
+) -> str | None:
     """Return the WHATWG encoding label for *path*, or None when unsure.
 
     Runs the same precedence as :func:`load_with_fallback_encoding` — BOM, then
     the *encodings* ladder, then the charset-normalizer detector — but reports
     the encoding's *name* instead of a parsed file, for callers that must
     declare it to an external tool. ``None`` (never ``()``) means the built-in
-    Japanese ladder: UTF-8, cp932, validated EUC-JP.
+    Japanese ladder: UTF-8, cp932, validated EUC-JP. *script_check* validates a
+    single-byte leg exactly as :func:`load_with_fallback_encoding` does.
 
     None means "could not name it confidently"; callers must then omit the
     declaration rather than guess, because naming the wrong encoding is worse
@@ -286,6 +396,8 @@ def detect_subtitle_encoding(path: str | Path, *, encodings: tuple[str, ...] | N
         # Same guard as the load path: gb18030 names itself for Big5 bytes
         # unless its own decode is PUA mojibake and big5's is clean.
         if candidate == "gb18030" and "big5" in ladder and prefers_big5(head):
+            continue
+        if _single_byte_leg_fails(head, candidate, script_check):
             continue
         try:
             head.decode(candidate)
