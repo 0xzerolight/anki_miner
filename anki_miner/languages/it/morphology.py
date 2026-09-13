@@ -35,11 +35,18 @@ vowel — plus the silent ``h`` of loanwords (``l'hotel``).
 
 from __future__ import annotations
 
+import logging
 import unicodedata
 from types import MappingProxyType
+from typing import TYPE_CHECKING, Any
 
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 from anki_miner.languages.token import LanguageToken
+
+if TYPE_CHECKING:  # annotation-only
+    from anki_miner.services.morphology import AttestLookup, FormLookup
+
+logger = logging.getLogger(__name__)
 
 #: The model package the tokenizer loads and the availability probe looks for.
 IT_MODEL_PACKAGE = "it_core_news_sm"
@@ -115,3 +122,44 @@ def keep_lemma_head(tokens: list[LanguageToken]) -> list[LanguageToken]:
         if len(words) > 1:
             token.feature.lemma = words[0]
     return tokens
+
+
+#: Classes a card can front (the shared UPOS gate); other tokens keep the model's lemma untouched.
+_CONTENT_POS = frozenset(UPOS_ALLOWED)
+
+
+class AttestedLemmaPass:
+    """A ``token_post_pass``: an unattested lemma yields to an attested lowercased surface.
+
+    ``it_core_news_sm``'s edit-tree lemmatizer fabricates lemmas for some
+    inflected forms (``fammi`` -> ``fammare``, ``passo`` -> ``pasdere``). The
+    lookup ladder still finds the definition through the surface, but the card
+    front — and so known-word and duplicate matching — would keep the invented
+    word. One attestation call per line over the distinct candidates; a lemma
+    the dictionary knows is never touched, and with no offline dictionary wired
+    (``attest is None``) nothing changes. The third argument (R36's form lookup)
+    is unused. Accepted trade-off: a verb the dictionary lists only in its
+    ``-rsi`` form (``accorgersi``) keeps the inflected surface (``accorto``).
+    """
+
+    def __call__(self, tokens: list[Any], attest: AttestLookup | None, forms: FormLookup | None) -> list[Any]:
+        del forms
+        if attest is None:
+            return tokens
+        suspects = [
+            token
+            for token in tokens
+            if token.feature.pos1 in _CONTENT_POS
+            and token.feature.lemma
+            and token.feature.lemma != token.surface.lower()
+        ]
+        if not suspects:
+            return tokens
+        candidates = [word for token in suspects for word in (token.feature.lemma, token.surface.lower())]
+        attested = attest(list(dict.fromkeys(candidates)))
+        for token in suspects:
+            surface = token.surface.lower()
+            if token.feature.lemma not in attested and surface in attested:
+                logger.debug("Lemma %r not attested; fronting the surface %r", token.feature.lemma, surface)
+                token.feature.lemma = surface
+        return tokens
