@@ -43,3 +43,8 @@
 {"id":"nl43","sentence":"Ja, ik kom eraan.","must_mine":["komen","eraan"],"must_not_mine":["ja"],"note":"ja is INTJ; eraan is ADV and mines"}
 {"id":"nl44","sentence":"De eersten kwamen vroeg.","must_mine":["komen"],"must_not_mine":["eersten","één"],"note":"nominal ordinal TW|rang|nom|mv-n: excluded subtype. vroeg is tagged VERB with lemma vragen (real output, unasserted)"}
 {"id":"nl45","sentence":"Zij is de derde in de rij.","must_mine":["rij"],"must_not_mine":["drie","derde"],"note":"nominal ordinal TW|rang|nom|zonder-n lemmatises to the cardinal drie: excluded subtype"}
+{"id":"nl46","sentence":"Geef me je hand.","must_mine":["geven","hand"],"must_not_mine":["hand."],"note":"spaCy nl lists hand. as a tokenizer exception; the tagger drops every non-abbreviation dotted exception (NL_ABBREVIATIONS), so hand is a NOUN, not the junk front hand."}
+{"id":"nl47","sentence":"Hij deed wat hij kon.","must_mine":["doen","kunnen"],"must_not_mine":["kon.","Kon."],"note":"kon. is a spaCy nl exception (PROPN Kon.) until the dotted exceptions are trimmed; then kon is VERB kunnen"}
+{"id":"nl48","sentence":"Na het eten krijgen we een toetje.","must_mine":["eten","krijgen","toet"],"must_not_mine":["toetje"],"note":"real output pinned, not endorsed: the diminutive toetje (dessert, its own wty-nl-en headword) lemmatises to toet; no diminutive policy this stage (plan N20)"}
+{"id":"nl49","sentence":"IJs is koud.","must_mine":["ijs","koud"],"must_not_mine":["IJs"],"note":"the IJ digraph capital lowers to ij on the front; the U+0132 ligature is mapped to IJ by nl_normalize before tagging"}
+{"id":"nl50","sentence":"Ik woon in IJsland.","must_mine":["wonen"],"must_not_mine":["IJsland","ijsland"],"note":"PROPN with the IJ digraph excluded"}
