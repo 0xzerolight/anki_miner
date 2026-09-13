@@ -28,6 +28,7 @@ from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.workers.base_worker import ProcessorOwningWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.progress import ProgressCallback
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.models import MiningOutcome, classify_result
 from anki_miner.models.deck_build import DeckBuildRequest
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
@@ -182,7 +183,12 @@ class DeckBuilderWorker(ProcessorOwningWorker):
             known = self._known_lemmas(base) if self.request.collection_filter else set()
             if self.check_cancelled():
                 return
-            selected, preview = select(counts, self.request.mode, self.request.value, known)
+            # The known set arrives folded (known-words DB / Anki boundary, S3),
+            # so the preview folds each candidate with the same language's fold.
+            fold = get_profile(config_language(self.config)).dedup_fold
+            selected, preview = select(
+                counts, self.request.mode, self.request.value, known, **({} if fold is None else {"fold": fold})
+            )
             self.preview_ready.emit(preview)
 
             # Gate: block until the GUI confirms/rejects, or until cancel() fires.

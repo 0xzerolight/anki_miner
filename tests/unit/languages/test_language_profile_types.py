@@ -37,6 +37,7 @@ EXPECTED_FIELDS = (
     "extra_card_fields",
     "smoke_sentence",
     "english_name",
+    "dedup_fold",
 )
 
 

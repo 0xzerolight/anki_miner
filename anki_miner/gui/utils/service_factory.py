@@ -822,6 +822,7 @@ def create_services(
         tagger=subtitle_parser.tagger,
         mined_form=get_profile(config_language(config)).mined_form,
         script=get_profile(config_language(config)).script,
+        dedup_fold=get_profile(config_language(config)).dedup_fold,
     )
     media_extractor = MediaExtractorService(config)
     if anki_service is None:
@@ -830,7 +831,11 @@ def create_services(
         # stubbed non-ja profile is reachable from (ruling R6 keeps unregistered
         # codes out of the registry). The other fourteen AnkiService sites take
         # the constructor's own default, which resolves the same profile.
-        anki_service = AnkiService(config, script=get_profile(config_language(config)).script)
+        anki_service = AnkiService(
+            config,
+            script=get_profile(config_language(config)).script,
+            dedup_fold=get_profile(config_language(config)).dedup_fold,
+        )
     youtube_fetcher = YouTubeFetcherService(config=config)
     # Scanned once here, then handed to both consumers: the fetcher chain that
     # resolves pack entries, and Services, whose EpisodeProcessor reads it for
@@ -867,7 +872,7 @@ def create_services(
     # users who never touch the feature get no empty file.
     known_word_db: KnownWordDB | None = None
     try:
-        known_word_db = KnownWordDB(resolve_known_words_db_path(config))
+        known_word_db = KnownWordDB(resolve_known_words_db_path(config), language=config_language(config))
         if config.use_known_words_db:
             known_word_db.initialize()
     except MemoryError:
@@ -883,6 +888,7 @@ def create_services(
             word_list_service = WordListService(
                 blacklist_path=config.blacklist_path if config.use_blacklist else None,
                 whitelist_path=config.whitelist_path if config.use_whitelist else None,
+                dedup_fold=get_profile(config_language(config)).dedup_fold,
             )
             word_list_service.load()
         except MemoryError:

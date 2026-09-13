@@ -2302,6 +2302,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         mining run re-syncs from Anki with the current exclusions applied.
         """
         from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
+        from anki_miner.languages.registry import config_language
 
         confirm = QMessageBox.question(
             self,
@@ -2325,7 +2326,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             return
 
         try:
-            db = KnownWordDB(resolve_known_words_db_path(self.config))
+            db = KnownWordDB(resolve_known_words_db_path(self.config), language=config_language(self.config))
         except Exception as error:  # noqa: BLE001 - preserve the existing constructor boundary
             self._on_rebuild_known_words_error(str(error))
             return
@@ -2376,7 +2377,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         from anki_miner.languages.registry import config_language, get_profile
 
         try:
-            db = KnownWordDB(resolve_known_words_db_path(self.config))
+            db = KnownWordDB(resolve_known_words_db_path(self.config), language=config_language(self.config))
             language = config_language(self.config)
             KnownWordsManagerDialog(
                 db, self, language=language, content_style=get_profile(language).content_style

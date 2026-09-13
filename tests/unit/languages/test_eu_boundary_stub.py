@@ -123,6 +123,7 @@ FIELD_CHECKS: dict[str, Callable[[object], bool]] = {
     "extra_card_fields": _tuple_of(CardFieldSpec),
     "smoke_sentence": lambda v: isinstance(v, str) and bool(v),
     "english_name": lambda v: isinstance(v, str) and v.isascii() and bool(v),
+    "dedup_fold": _optional(callable),
 }
 
 
@@ -316,21 +317,19 @@ def test_count_lemmas_runs_the_same_gate_over_a_subtitle_file(eu_parser, tmp_pat
     assert counts == collections.Counter({"the": 3, "cat": 1, "sat": 1, "on": 1, "mat": 1, "dog": 1, "barked": 1})
 
 
-def test_extract_lemma_still_truncates_a_hyphenated_compound(eu_parser):
-    """A residual ja-ism, pinned rather than papered over.
+def test_extract_lemma_keeps_a_hyphenated_compound(eu_parser):
+    """The residual ja-ism this stub recorded is closed (S6).
 
     ``morphology.extract_lemma`` strips a hyphen tail containing an ASCII letter
-    — unidic's ``スクランブル-scramble`` disambiguator. On Latin script that also
-    truncates a genuine compound: "well-known" mines as "well". It is not one of
-    the injectable seams, so a real Latin-script language would need this gated
-    (on the token type, or on the profile) rather than assumed harmless.
+    only from UniDic tokens (``スクランブル-scramble``); a ``LanguageToken``
+    carries its final lemma, so "well-known" mines whole.
     """
     units = [ReadingUnit(text="A well-known author.", index=0, location_label="p.1")]
 
     words, _index, _counts = eu_parser.parse_text_units(units, want_line_index=False)
 
-    assert "well" in [w.mined_form for w in words]
-    assert "well-known" not in [w.mined_form for w in words]
+    assert "well-known" in [w.mined_form for w in words]
+    assert "well" not in [w.mined_form for w in words]
 
 
 # ---------------------------------------------------------------------------

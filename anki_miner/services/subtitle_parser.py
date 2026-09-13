@@ -311,6 +311,16 @@ def _is_all_katakana(surface: str) -> bool:
     return bool(non_ws) and all(_is_katakana_surface_char(c) for c in non_ws)
 
 
+def _token_morph(token: Any) -> str:
+    """A duck token's morphological features, or "" (fugashi nodes have none).
+
+    ``isinstance`` rather than truthiness: a MagicMock token in a test
+    auto-creates a truthy ``morph`` attribute.
+    """
+    morph = getattr(token, "morph", "")
+    return morph if isinstance(morph, str) else ""
+
+
 def _differs_by_okurigana_only(orth_base: str, lemma: str) -> bool:
     """Whether ``orth_base`` is ``lemma`` with only its trailing okurigana changed.
 
@@ -353,6 +363,7 @@ class SubtitleParserService:
         reading_support: "ReadingSupport | None" = None,
         script_gate: Callable[[str], bool] | None = None,
         token_merger: "TokenMerger | None" = None,
+        compound_matching: bool = True,
     ):
         """Initialize the subtitle parser.
 
@@ -423,6 +434,13 @@ class SubtitleParserService:
                 and ZH path — and any config with no offline dictionary (no
                 probe to pass) skip it entirely, so output stays byte-identical.
                 Duck-typed like ``mined_form_policy``.
+            compound_matching: Whether the dictionary-attested compound matcher
+                may run at all. The matcher joins adjacent tokens with "" and
+                reads UniDic POS names, so a space-delimited language passes
+                ``False`` through its ``create_parser`` (a spaced match would
+                print ``NewYork``). ``True`` — every ja path, and ko/zh today —
+                keeps the pre-seam gate exactly: built whenever a term lookup is
+                wired.
         """
         self.config = config
         # Perf-audit counters (Task 28): cumulative wall-clock spent in offline-
@@ -511,7 +529,7 @@ class SubtitleParserService:
         # a surface's existence is looked up once across the merge gate and the
         # matcher.
         self._compound_matcher: CompoundDictionaryMatcher | None = None
-        if self._attest is not None and COMPOUND_MATCHING:
+        if self._attest is not None and COMPOUND_MATCHING and compound_matching:
             self._compound_matcher = CompoundDictionaryMatcher(self._attest, self._inclusion_rule)
         # Masu-stem nominalization (see services/masu_stem_nominalizer.py).
         # Shares the same memoized probe; None when no dict is wired, so the
@@ -1393,6 +1411,7 @@ class SubtitleParserService:
             sentence_bolded=sentence_bolded,
             sentence_furigana_bolded=sentence_furigana_bolded,
             mined_form_override=mined,
+            morph=_token_morph(word_token),
         )
 
     def _emit_line_words_and_index(

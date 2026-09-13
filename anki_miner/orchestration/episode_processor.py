@@ -64,6 +64,7 @@ from anki_miner.services.subtitle_parser import _differs_by_okurigana_only
 from anki_miner.services.word_filter import (
     enabled_script_options,
     find_cue_index,
+    folded_pairs,
     merge_cue_window,
     script_options_kwarg,
     whitelist_hits,
@@ -1017,8 +1018,11 @@ class EpisodeProcessor:
         if coverage_wls is not None:
             entries = coverage_wls.whitelist_entries()
             if entries:
-                present = whitelist_hits(((w.mined_form, w.lemma) for w in all_words), coverage_wls)
-                candidate = whitelist_hits(((w.mined_form, w.lemma) for w in unknown_words), coverage_wls)
+                fold = self.profile.dedup_fold
+                present = whitelist_hits(folded_pairs(((w.mined_form, w.lemma) for w in all_words), fold), coverage_wls)
+                candidate = whitelist_hits(
+                    folded_pairs(((w.mined_form, w.lemma) for w in unknown_words), fold), coverage_wls
+                )
                 ctx.whitelist_coverage = WhitelistCoverage(entries, known=present - candidate)
 
         # Comprehension percentage.
@@ -2784,7 +2788,9 @@ class EpisodeProcessor:
         if not isinstance(forms, list) or not isinstance(lemmas, list) or len(forms) != len(lemmas):
             result.whitelist_coverage = coverage
             return result
-        result.whitelist_coverage = replace(coverage, mined=whitelist_hits(zip(forms, lemmas, strict=True), wls))
+        result.whitelist_coverage = replace(
+            coverage, mined=whitelist_hits(folded_pairs(zip(forms, lemmas, strict=True), self.profile.dedup_fold), wls)
+        )
         return result
 
     def _unexpected_exception_result(self, ctx: _EpisodeContext, e: Exception) -> ProcessingResult:

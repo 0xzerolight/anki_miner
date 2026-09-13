@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any, Iterator
 
+from anki_miner.languages.token import LanguageToken
 from anki_miner.utils.ja_normalize import is_cjk_ideograph
 from anki_miner.utils.text_utils import hiragana_to_katakana, katakana_to_hiragana
 
@@ -276,8 +277,10 @@ def extract_lemma(word_token) -> str:
     # Decorated lemmas miss every lemma-fallback lookup (frequency/pitch/offline
     # definition existence) AND block mining_base folds keyed on a clean headword
     # (引ける→引く). Japanese name segments (メル-ビル) end with neither an ASCII
-    # letter nor pos1 and are kept intact.
-    if "-" in lemma:
+    # letter nor pos1 and are kept intact. A duck token from a non-ja tokenizer
+    # carries its FINAL lemma: "well-known", "kupu-kupu", "e-mail" are words, not
+    # UniDic disambiguators, so the strip is UniDic-only (spec S6).
+    if "-" in lemma and not isinstance(word_token, LanguageToken):
         head, _, tail = lemma.partition("-")
         pos1 = getattr(getattr(word_token, "feature", None), "pos1", None)
         is_pos_tail = bool(pos1) and (tail == pos1 or tail.endswith(pos1))

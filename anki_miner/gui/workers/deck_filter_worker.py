@@ -37,7 +37,7 @@ def _build_filter_bundle(config: AnkiMinerConfig, frequency_service) -> SimpleNa
     """
     known_word_db = None
     try:
-        known_word_db = KnownWordDB(resolve_known_words_db_path(config))
+        known_word_db = KnownWordDB(resolve_known_words_db_path(config), language=config_language(config))
     except Exception as e:
         logger.warning("Could not open known word database: %s", e)
 
@@ -47,6 +47,7 @@ def _build_filter_bundle(config: AnkiMinerConfig, frequency_service) -> SimpleNa
             word_list_service = WordListService(
                 blacklist_path=config.blacklist_path if config.use_blacklist else None,
                 whitelist_path=config.whitelist_path if config.use_whitelist else None,
+                dedup_fold=get_profile(config_language(config)).dedup_fold,
             )
             word_list_service.load()
         except Exception as e:
@@ -80,6 +81,7 @@ def _build_filter_bundle(config: AnkiMinerConfig, frequency_service) -> SimpleNa
             config,
             mined_form=get_profile(config_language(config)).mined_form,
             script=get_profile(config_language(config)).script,
+            dedup_fold=get_profile(config_language(config)).dedup_fold,
         ),
         frequency_service=frequency_service,
         word_list_service=word_list_service,

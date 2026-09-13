@@ -269,6 +269,11 @@ class TokenizedWord:
     # pass only (EpisodeProcessor._apply_render_hooks). Always "" on every ja
     # path — ja renders no hooks, so no ja card, filename or field changes.
     definition_html: str = ""
+    # Morphological features of the mined token, verbatim from a duck token's
+    # ``morph`` (spaCy ``str(tok.morph)``: ``Gender=Masc|Number=Sing``), read by
+    # render hooks that print gender/aspect/article. "" on every ja path:
+    # fugashi nodes and SyntheticTokens carry no ``morph`` attribute.
+    morph: str = ""
 
     @property
     def bold_end(self) -> int:

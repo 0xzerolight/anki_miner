@@ -708,7 +708,9 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         from anki_miner.gui.utils.service_factory import resolve_known_words_db_path
         from anki_miner.services.known_word_db import add_user_known_words
 
-        return add_user_known_words(resolve_known_words_db_path(self.config), forms)
+        return add_user_known_words(
+            resolve_known_words_db_path(self.config), forms, language=config_language(self.config)
+        )
 
     # ------------------------------------------------------------------
     # Word curation bridge (Issue #60)
