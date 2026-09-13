@@ -5,7 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from types import MappingProxyType
 
-from anki_miner.languages.profile import CardFieldSpec
+from anki_miner.languages._spaced.script import LATIN_SUBTITLE_REGEX
+from anki_miner.languages.profile import AudioDefaults, CardFieldSpec
 
 POS_FIELD = CardFieldSpec(key="pos", capability="pos_tag", placeholder="PartOfSpeech")
 NOUN_GENDER_FIELD = CardFieldSpec(key="noun_gender", capability="noun_gender", placeholder="Gender")
@@ -28,3 +29,45 @@ def spaced_card_fields(extra: Sequence[CardFieldSpec]) -> Mapping[str, str]:
     fields["sentence_furigana"] = ""
     fields.update({spec.key: "" for spec in extra})
     return MappingProxyType(fields)
+
+
+def spaced_scoped_defaults(
+    *,
+    subtitle_langs: str,
+    audio: AudioDefaults,
+    allowed_pos: tuple[str, ...],
+    excluded_subtypes: tuple[str, ...],
+    card_fields: Mapping[str, str],
+    subtitle_regex: str = LATIN_SUBTITLE_REGEX,
+) -> dict[str, object]:
+    """First-visit values for EVERY ``LANGUAGE_SCOPED_FIELDS`` name (the ko/zh ``_scoped_defaults`` shape).
+
+    Starts from ``blank_scoped_defaults()`` so a scoped field added later
+    cannot be missed. Nothing is inherited from the ja dataclass defaults: the
+    jmdict chain, ja subtitle langs and the ja note type are ja-specific; the
+    deck name ``Anki Miner`` is the generic default. The SDH filter is ON for a
+    first visit (S10) with the Latin default unless the language passes its own
+    ``subtitle_regex`` (R11: caption conventions differ, fr ``JEAN : …``); a
+    user's own ja filter stays parked in ja's stash. The dict is fresh: a
+    caller may override any key (pt ``script_variant``).
+    """
+    from anki_miner.languages.switching import blank_scoped_defaults
+
+    defaults = blank_scoped_defaults()
+    defaults.update(
+        {
+            "downloader_subtitle_langs": subtitle_langs,
+            "expression_audio_chain": audio.default_chain,
+            "allowed_pos": allowed_pos,
+            "excluded_subtypes": excluded_subtypes,
+            "anki_fields": dict(card_fields),
+            "anki_deck_name": "Anki Miner",
+            "anki_note_type": "",
+            "script_variant": "",
+            "reading_tone_color": False,
+            "use_subtitle_regex_filter": True,
+            "subtitle_regex_filter": subtitle_regex,
+            "subtitle_regex_replacement": "",
+        }
+    )
+    return defaults
