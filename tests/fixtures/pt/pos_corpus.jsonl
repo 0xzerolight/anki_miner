@@ -30,3 +30,6 @@
 {"id":"pt30","sentence":"Obrigado pela ajuda, foi muito gentil.","must_mine":["ajuda","gentil"],"must_not_mine":["pela","por o"],"note":"pela contraction is ADP"}
 {"id":"pt31","sentence":"Me dá o guarda-chuva, por favor.","must_mine":["dar","guarda-chuva","favor"],"must_not_mine":["me","por"],"note":"Brazilian proclisis: the clitic is its own PRON token"}
 {"id":"pt32","sentence":"Ele se chama João e mora no Rio.","must_mine":["chamar","morar"],"must_not_mine":["se","João","joão","Rio","rio"],"note":"proclitic se is PRON; names are PROPN"}
+{"id":"pt33","sentence":"Ele saiu daqui e voltou dali.","must_mine":["sair","daqui","voltar","dali"],"must_not_mine":["de aqui","de ali"],"note":"fused adverb contractions keep a one-word lemma (D20; the model says de ali)"}
+{"id":"pt34","sentence":"Ela tem um dom.","must_mine":["ter","dom"],"must_not_mine":["dom."],"note":"dom. is pruned from the word exceptions, so a sentence-final dom mines (D14)"}
+{"id":"pt35","sentence":"O Sr. Silva chegou atrasado à reunião.","must_mine":["chegar","atrasado","reunião"],"must_not_mine":["sr.","Sr.","Silva","silva"],"note":"a dotted title is X (en contract item 7); the name is PROPN"}
