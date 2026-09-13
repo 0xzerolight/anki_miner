@@ -41,3 +41,5 @@
 {"id":"nl41","sentence":"Het regent al de hele dag.","must_mine":["regenen","heel","dag"],"must_not_mine":["hele"],"note":"hele fronts heel"}
 {"id":"nl42","sentence":"Wauw, wat een prachtige zonsondergang!","must_mine":["prachtig","zonsondergang"],"must_not_mine":["wat"],"note":"wauw is tagged ADJ, not TSW, and mines (real output, unasserted)"}
 {"id":"nl43","sentence":"Ja, ik kom eraan.","must_mine":["komen","eraan"],"must_not_mine":["ja"],"note":"ja is INTJ; eraan is ADV and mines"}
+{"id":"nl44","sentence":"De eersten kwamen vroeg.","must_mine":["komen"],"must_not_mine":["eersten","één"],"note":"nominal ordinal TW|rang|nom|mv-n: excluded subtype. vroeg is tagged VERB with lemma vragen (real output, unasserted)"}
+{"id":"nl45","sentence":"Zij is de derde in de rij.","must_mine":["rij"],"must_not_mine":["drie","derde"],"note":"nominal ordinal TW|rang|nom|zonder-n lemmatises to the cardinal drie: excluded subtype"}
