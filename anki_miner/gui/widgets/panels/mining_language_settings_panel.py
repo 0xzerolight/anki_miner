@@ -69,6 +69,15 @@ def pack_already_importable(pack: LanguagePack) -> bool:
                 error=f"{type(error).__name__}: {error}",
             )
             return False
+    # A pack whose engine arrives as another pack is importable only when that
+    # engine imports as well: a pip user with the model but not the engine
+    # still needs the row.
+    from anki_miner.services.language_pack_installer import load_pack
+
+    for requirement in pack.requires:
+        required = load_pack(requirement)
+        if required is None or not pack_already_importable(required):
+            return False
     return True
 
 
@@ -244,7 +253,12 @@ class MiningLanguageSettingsPanel(FormPanel):
 
     def _refresh_language_pack_row(self, code: str) -> None:
         """Show, hide and label one row from what this install actually has."""
-        from anki_miner.services.language_pack_installer import is_installed, load_pack, pack_supported
+        from anki_miner.services.language_pack_installer import (
+            combined_download_mb,
+            is_installed,
+            load_pack,
+            pack_supported,
+        )
 
         row = self.language_pack_rows[code]
         pack = load_pack(code)
@@ -270,7 +284,9 @@ class MiningLanguageSettingsPanel(FormPanel):
         row.status_label.setText(
             self.tr("Installed")
             if installed
-            else tr_format(self.tr("Not installed - about %1 MB download"), str(row.approx_download_mb))
+            # The live combined size, not the row's own manifest figure: one
+            # button also fetches every pack this one requires and still lacks.
+            else tr_format(self.tr("Not installed - about %1 MB download"), str(combined_download_mb(code)))
         )
 
     def _on_language_pack_download_clicked(self, code: str) -> None:
