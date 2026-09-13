@@ -208,6 +208,15 @@ fr_model_license_datas = []
 if os.path.isdir(fr_model_license_dir):
     fr_model_license_datas.append((fr_model_license_dir, os.path.join("licenses", "fr_core_news_sm")))
 
+# it_core_news_sm (Italian spaCy model) CC BY-NC-SA 3.0 notices: shipped whenever
+# the license dir exists. Lands at sys._MEIPASS/licenses/it_core_news_sm/ in the
+# bundle. The model is never bundled - it arrives as a language pack the app
+# downloads - but the app is what delivers it, so the notice travels with it.
+it_core_news_sm_license_dir = os.path.join(project_root, "licenses", "it_core_news_sm")
+it_core_news_sm_license_datas = []
+if os.path.isdir(it_core_news_sm_license_dir):
+    it_core_news_sm_license_datas.append((it_core_news_sm_license_dir, os.path.join("licenses", "it_core_news_sm")))
+
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
 # ML model has no positive trust signals to weigh against "packed binary that runs
@@ -364,7 +373,8 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + pt_core_news_sm_license_datas
     + fr_model_license_datas
     + en_model_license_datas
-    + es_model_license_datas,
+    + es_model_license_datas
+    + it_core_news_sm_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",
