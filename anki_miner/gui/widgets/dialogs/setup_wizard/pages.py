@@ -884,6 +884,9 @@ class ResourcesPage(_LiveCheckPage):
         # engine extra absent — is legal on disk, and raising here would make the
         # whole wizard unconstructible on first run.
         self._specs = list(get_profile(config_language(wizard.working_config())).catalog)
+        # A regional-variety resource (pt's two frequency lists) starts ticked
+        # only for the variety the config holds; the other row stays offered.
+        variant = wizard.working_config().script_variant
         self.resource_checks: dict[str, QCheckBox] = {}
         for spec in self._specs:
             noun = _RESOURCE_KIND_NOUNS.get(spec.kind)
@@ -894,7 +897,7 @@ class ResourcesPage(_LiveCheckPage):
             )
             box = QCheckBox(label)
             box.setToolTip(spec.license_note)
-            box.setChecked(True)
+            box.setChecked(not spec.variant or spec.variant == variant)
             box.toggled.connect(self._sync_download_button)
             layout.addWidget(box)
             self.resource_checks[spec.id] = box

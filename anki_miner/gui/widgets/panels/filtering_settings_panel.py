@@ -534,6 +534,23 @@ class FilteringSettingsPanel(FormPanel):
             helper=self.tr("Which spelling the card front and the dictionary lookup prefer."),
         )
 
+        # Portuguese national variety (B.3): the same language-scoped field as
+        # the zh combo above, its own ids and capability, so at most one of the
+        # two is ever visible and contribute() writes only the visible one.
+        self.add_section(self.tr("Regional Variety"))
+        self._regional_variants_section_label = self._active_section_label
+
+        self.regional_variant_combo = QComboBox()
+        self.regional_variant_combo.addItem(self.tr("Brazilian Portuguese"), "br")
+        self.regional_variant_combo.addItem(self.tr("European Portuguese"), "pt")
+        self.add_field(
+            self.tr("Variety"),
+            self.regional_variant_combo,
+            helper=self.tr(
+                "Which Google voice reads word and sentence audio, and which frequency list setup suggests."
+            ),
+        )
+
         # i+1 Sentence Filter section
         self.add_section(self.tr("i+1 Sentence Filter"))
 
@@ -690,6 +707,11 @@ class FilteringSettingsPanel(FormPanel):
         )
         if self._script_variants_section_label is not None:
             self._language_gate_pairs.append((self._script_variants_section_label, "script_variants"))
+        self._language_gate_pairs.extend(
+            (w, "regional_variants") for w in field_row_widgets(self, self.regional_variant_combo)
+        )
+        if self._regional_variants_section_label is not None:
+            self._language_gate_pairs.append((self._regional_variants_section_label, "regional_variants"))
         self._language_gate_pairs.extend(
             (w, "tone_color") for w in field_row_widgets(self, self.reading_tone_color_checkbox)
         )
@@ -1097,6 +1119,9 @@ class FilteringSettingsPanel(FormPanel):
         index = self.script_variant_combo.findData(config.script_variant)
         if index >= 0:
             self.script_variant_combo.setCurrentIndex(index)
+        index = self.regional_variant_combo.findData(config.script_variant)
+        if index >= 0:
+            self.regional_variant_combo.setCurrentIndex(index)
         self.reading_tone_color_checkbox.setChecked(config.reading_tone_color)
         apply_language_gate(self._language_gate_pairs, get_profile(config_language(config)).capabilities)
 
@@ -1154,6 +1179,8 @@ class FilteringSettingsPanel(FormPanel):
                 updated = replace(updated, **{self._script_filter_fields[option_id]: checkbox.isChecked()})
         if self.script_variant_combo.isVisibleTo(self):
             updated = replace(updated, script_variant=str(self.script_variant_combo.currentData()))
+        if self.regional_variant_combo.isVisibleTo(self):
+            updated = replace(updated, script_variant=str(self.regional_variant_combo.currentData()))
         if self.reading_tone_color_checkbox.isVisibleTo(self):
             updated = replace(updated, reading_tone_color=self.reading_tone_color_checkbox.isChecked())
         return updated

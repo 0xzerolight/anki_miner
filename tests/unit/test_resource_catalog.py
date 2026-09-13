@@ -92,7 +92,7 @@ class TestResourceSpec:
 
     def test_fields_present(self):
         field_names = {f.name for f in dataclasses.fields(ResourceSpec)}
-        assert field_names == {"id", "kind", "display_name", "url", "license_note", "lemmatise"}
+        assert field_names == {"id", "kind", "display_name", "url", "license_note", "lemmatise", "variant"}
 
 
 def _by_id(spec_id: str) -> ResourceSpec:

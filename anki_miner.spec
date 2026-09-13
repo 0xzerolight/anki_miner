@@ -169,6 +169,17 @@ ca_model_license_datas = []
 if os.path.isdir(ca_model_license_dir):
     ca_model_license_datas.append((ca_model_license_dir, os.path.join("licenses", "ca_core_news_sm")))
 
+# pt_core_news_sm (Portuguese spaCy model) CC BY-SA 4.0 attribution: shipped
+# whenever the license dir exists. Lands at sys._MEIPASS/licenses/pt_core_news_sm/.
+# The model is excluded from the graph and arrives as a language pack; the notice
+# ships anyway, because the app is what delivers the model to the user.
+pt_core_news_sm_license_dir = os.path.join(project_root, "licenses", "pt_core_news_sm")
+pt_core_news_sm_license_datas = []
+if os.path.isdir(pt_core_news_sm_license_dir):
+    pt_core_news_sm_license_datas.append(
+        (pt_core_news_sm_license_dir, os.path.join("licenses", "pt_core_news_sm"))
+    )
+
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
 # ML model has no positive trust signals to weigh against "packed binary that runs
@@ -321,7 +332,8 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + local_audio_license_datas
     + vulkan_loader_license_datas
     + kiwipiepy_license_datas
-    + ca_model_license_datas,
+    + ca_model_license_datas
+    + pt_core_news_sm_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",

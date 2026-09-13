@@ -135,9 +135,14 @@ ca = [
 de = [
     "spacy>=3.8,<3.8.15",
 ]
+# Portuguese mining engine: the same capped spaCy as en (R3). The model wheel
+# is a GitHub release asset: pip users download it in Settings -> Mining Language.
+pt = [
+    "spacy>=3.8,<3.8.15",
+]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
-languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]"]
+languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]"]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",

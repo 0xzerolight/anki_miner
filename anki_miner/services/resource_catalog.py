@@ -26,6 +26,9 @@ class ResourceSpec:
         license_note: Short human string about source/license.
         lemmatise: Import a word-count list as occurrence counts aggregated
             per lemma with the language's tagger (S17).
+        variant: The ``config.script_variant`` id this resource belongs to
+            ("" = every variety). The setup wizard starts a spec ticked only when
+            its variant is "" or the config's own (pt's two frequency lists).
     """
 
     id: str
@@ -34,6 +37,7 @@ class ResourceSpec:
     url: str
     license_note: str
     lemmatise: bool = False
+    variant: str = ""
 
 
 # For dict resources, ``id`` is the PINNED on-disk slot the importer writes to
