@@ -132,6 +132,16 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             )
             for warning in media_warnings:
                 logger.warning("Dictionary media skipped: %s", warning)
+        if meta.get("source_language_mismatch"):
+            notes.append(
+                tr_format(
+                    QCoreApplication.translate(
+                        "DictionaryImportFlow",
+                        "This dictionary says its language is %1, not the language you are mining.",
+                    ),
+                    str(meta.get("source_language", "")),
+                )
+            )
         return ("\n\n" + "\n".join(notes)) if notes else ""
 
     def _set_import_buttons_enabled(self, enabled: bool) -> None:
