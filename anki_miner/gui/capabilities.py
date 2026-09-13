@@ -437,6 +437,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "italian",
             "italiano",
             "dutch",
+            "nederlands",
             "hangul",
             "switch language",
             "ja",
