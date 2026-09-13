@@ -1,0 +1,32 @@
+{"id":"pt01","sentence":"O estudante leu um livro interessante ontem.","must_mine":["estudante","ler","livro","interessante","ontem"],"must_not_mine":["o","um","leu","."],"note":"smoke sentence; the past-tense verb fronts as its infinitive, articles are DET"}
+{"id":"pt02","sentence":"A casa do meu avô fica perto da estação.","must_mine":["casa","avô","ficar","perto","estação"],"must_not_mine":["do","da","de o","meu","a"],"note":"do/da are one ADP token each (lemma 'de o') and never mine"}
+{"id":"pt03","sentence":"Os meninos correram pelo jardim.","must_mine":["menino","correr","jardim"],"must_not_mine":["pelo","por o","os","meninos"],"note":"pelo contraction is ADP; plural noun fronts singular"}
+{"id":"pt04","sentence":"Ela foi à praia com os amigos.","must_mine":["ir","praia","amigo"],"must_not_mine":["à","a o","com","ela"],"note":"crasis à is ADP"}
+{"id":"pt05","sentence":"A professora trabalha numa escola nova.","must_mine":["professora","trabalhar","escola","novo"],"must_not_mine":["numa","em um"],"note":"numa contraction is ADP; feminine adjective fronts masculine singular"}
+{"id":"pt06","sentence":"Esqueci o guarda-chuva no carro.","must_mine":["guarda-chuva","carro"],"must_not_mine":["guarda","chuva","no"],"note":"hyphenated compound stays one token with a whole lemma (S6); sentence-initial Esqueci keeps its surface as lemma (sm model miss)"}
+{"id":"pt07","sentence":"Ela tem muitos livros antigos.","must_mine":["ter","livro","antigo"],"must_not_mine":["livros","antigos"],"note":"plural forms front their singular lemma (PROBE livros)"}
+{"id":"pt08","sentence":"Maria mora em Lisboa desde o ano passado.","must_mine":["morar","ano","passado"],"must_not_mine":["Maria","maria","Lisboa","lisboa","em","desde"],"note":"PROPN excluded"}
+{"id":"pt09","sentence":"ESTOU MUITO CANSADO HOJE.","must_mine":["cansado","hoje"],"must_not_mine":["ESTOU","CANSADO","HOJE","estar"],"note":"all-caps cue is tagged from a lowercased copy; without it every word is PROPN"}
+{"id":"pt10","sentence":"Ela disse: «Nunca mais volto aqui.»","must_mine":["dizer","nunca","voltar","aqui"],"must_not_mine":["«","»",":"],"note":"guillemets are PUNCT"}
+{"id":"pt11","sentence":"Ele respondeu: “Tudo bem, pode ir.”","must_mine":["responder","bem","poder","ir"],"must_not_mine":["“","”","tudo"],"note":"the sm model tags curly quotes PROPN/NOUN; the Latin script gate keeps them out"}
+{"id":"pt12","sentence":"Estou muito cansado depois da viagem.","must_mine":["cansado","depois","viagem"],"must_not_mine":["cansar","estou","estar"],"note":"participle tagged ADJ keeps the participle front (A.2); copular estar is AUX"}
+{"id":"pt13","sentence":"Não sei se ele vai gostar do presente.","must_mine":["não","saber","gostar","presente"],"must_not_mine":["se","ele","vai","do"],"note":"future ir + infinitive: vai is AUX"}
+{"id":"pt14","sentence":"Tá bom, a gente se vê pra semana.","must_mine":["bom","gente","ver","semana"],"must_not_mine":["tá","Tá","pra","se"],"note":"Brazilian colloquial tá (AUX) and pra (ADP) never mine"}
+{"id":"pt15","sentence":"Estamos a estudar português na universidade.","must_mine":["estudar","português","universidade"],"must_not_mine":["na","em o"],"note":"European estar a + infinitive"}
+{"id":"pt16","sentence":"Espero que você tenha um bom dia.","must_mine":["esperar","ter","bom","dia"],"must_not_mine":["você","que","tenha"],"note":"subjunctive fronts the infinitive; você is PRON"}
+{"id":"pt17","sentence":"Amanhã vou visitar os meus pais.","must_mine":["amanhã","visitar","pai"],"must_not_mine":["vou","meus","os","pais"],"note":"vou is AUX; possessive is DET"}
+{"id":"pt18","sentence":"Você já viu o filme novo daquele diretor?","must_mine":["já","ver","filme","novo","diretor"],"must_not_mine":["você","daquele","de aquele"],"note":"daquele contraction is ADP"}
+{"id":"pt19","sentence":"Estou falando com a minha mãe agora.","must_mine":["falar","mãe","agora"],"must_not_mine":["estou","minha","com","falando"],"note":"Brazilian progressive: the gerund fronts the infinitive"}
+{"id":"pt20","sentence":"O bem-te-vi cantou no jardim.","must_mine":["bem-te-vi","cantar","jardim"],"must_not_mine":["bem","te","vi"],"note":"a compound whose middle looks like a clitic stays one token"}
+{"id":"pt21","sentence":"A luta do dia-a-dia cansa qualquer pessoa.","must_mine":["luta","dia-a-dia","pessoa"],"must_not_mine":["dia","qualquer"],"note":"a compound with an article-shaped middle stays one token"}
+{"id":"pt22","sentence":"As crianças brincavam no parque.","must_mine":["criança","brincar","parque"],"must_not_mine":["as","no","crianças"],"note":"imperfect tense fronts the infinitive"}
+{"id":"pt23","sentence":"Olá! Tudo bem com você?","must_mine":["bem"],"must_not_mine":["olá","Olá","você","tudo"],"note":"greeting is not mined"}
+{"id":"pt24","sentence":"Visite www.exemplo.com.br para mais informações.","must_mine":["informação"],"must_not_mine":["www.exemplo.com.br"],"note":"URL tokens are X"}
+{"id":"pt25","sentence":"Vou te contar uma história muito engraçada.","must_mine":["contar","história","engraçado"],"must_not_mine":["vou","te","uma"],"note":"sentence-initial Vou is tagged PROPN by the sm model and lost (spec §8, accepted)"}
+{"id":"pt26","sentence":"Estudo português há três anos.","must_mine":["português","ano"],"must_not_mine":["três"],"note":"cardinal numbers are NUM"}
+{"id":"pt27","sentence":"O médico examinou a paciente com cuidado.","must_mine":["médico","examinar","paciente","cuidado"],"must_not_mine":["com","a"],"note":"ordinary transitive clause"}
+{"id":"pt28","sentence":"Eles abriram uma pequena loja de roupas.","must_mine":["abrir","pequeno","loja","roupa"],"must_not_mine":["eles","uma","de"],"note":"prenominal adjective fronts masculine singular"}
+{"id":"pt29","sentence":"A cidade é muito bonita durante o verão.","must_mine":["cidade","muito","bonito","verão"],"must_not_mine":["é","ser","durante"],"note":"copular ser is AUX"}
+{"id":"pt30","sentence":"Obrigado pela ajuda, foi muito gentil.","must_mine":["ajuda","gentil"],"must_not_mine":["pela","por o"],"note":"pela contraction is ADP"}
+{"id":"pt31","sentence":"Me dá o guarda-chuva, por favor.","must_mine":["dar","guarda-chuva","favor"],"must_not_mine":["me","por"],"note":"Brazilian proclisis: the clitic is its own PRON token"}
+{"id":"pt32","sentence":"Ele se chama João e mora no Rio.","must_mine":["chamar","morar"],"must_not_mine":["se","João","joão","Rio","rio"],"note":"proclitic se is PRON; names are PROPN"}

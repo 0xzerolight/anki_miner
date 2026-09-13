@@ -1,0 +1,1183 @@
+{
+ "_attribution": "Rows and rendered HTML from wty-pt-en revision 2026.08.29 (yomidevs/wiktionary-to-yomitan, https://huggingface.co/datasets/daxida/wty-release), rendered through anki_miner IndexedDictProvider.lookup. Content derived from Wiktionary via kaikki.org, licensed CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/); reproduced unmodified as a test fixture.",
+ "entries": {
+  "livro": {
+   "term_bank_rows": [
+    [
+     "livro",
+     "",
+     "n masc",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "livro m (plural livros, diminutive livrinho, augmentative livrão)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "From Old Galician-Portuguese livro, an early borrowing from Latin librum. Cognate with Galician, Spanish, and Italian libro, Catalan llibre, Occitan libre and French livre."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "book",
+              {
+               "tag": "details",
+               "data": {
+                "content": "details-entry-examples"
+               },
+               "content": [
+                {
+                 "tag": "summary",
+                 "data": {
+                  "content": "summary-entry"
+                 },
+                 "content": "1 example"
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "Livros"
+                     },
+                     " são janelas abertas para o mundo."
+                    ]
+                   },
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-b"
+                    },
+                    "content": [
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "Books"
+                     },
+                     " are open windows to the world."
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "biology",
+                 "data": {
+                  "content": "tag",
+                  "category": "topic"
+                 },
+                 "content": "biol"
+                },
+                {
+                 "tag": "span",
+                 "title": "zoology",
+                 "data": {
+                  "content": "tag",
+                  "category": "topic"
+                 },
+                 "content": "zoo"
+                }
+               ]
+              },
+              "omasum (third part of the stomach of ruminants, which internally has numerous folds)"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/livro#Portuguese",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Portuguese/meaning/l/li/livro.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ],
+    [
+     "livro",
+     "",
+     "non-lemma",
+     "",
+     0,
+     [
+      [
+       "livrar",
+       [
+        "first-person singular present indicative"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ]
+   ],
+   "definition_html": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-pt-en\" data-dictionary-id=\"wty-pt-en\" data-has-styles=\"\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-pt-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">livro m (plural livros, diminutive livrinho, augmentative livrão)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From Old Galician-Portuguese livro, an early borrowing from Latin librum. Cognate with Galician, Spanish, and Italian libro, Catalan llibre, Occitan libre and French livre.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">book<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Livros</span> são janelas abertas para o mundo.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Books</span> are open windows to the world.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"biology\">biol</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"zoology\">zoo</span></div>omasum (third part of the stomach of ruminants, which internally has numerous folds)</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/livro#Portuguese\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Portuguese/meaning/l/li/livro.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">livrar</div></li></ul></li></ol></div>"
+  },
+  "cidade": {
+   "term_bank_rows": [
+    [
+     "cidade",
+     "",
+     "n fem",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "cidade f (plural cidades)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Inherited from Old Galician-Portuguese cidade, from Latin cīvitātem."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "city, town",
+              {
+               "tag": "details",
+               "data": {
+                "content": "details-entry-examples"
+               },
+               "content": [
+                {
+                 "tag": "summary",
+                 "data": {
+                  "content": "summary-entry"
+                 },
+                 "content": "1 example"
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "cidade"
+                     },
+                     " natal"
+                    ]
+                   },
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-b"
+                    },
+                    "content": [
+                     "home",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "town"
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "city life, urban life"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/cidade#Portuguese",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Portuguese/meaning/c/ci/cidade.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ]
+   ],
+   "definition_html": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-pt-en\" data-dictionary-id=\"wty-pt-en\" data-has-styles=\"\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><i>(wty-pt-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">cidade f (plural cidades)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Old Galician-Portuguese cidade, from Latin cīvitātem.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">city, town<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">cidade</span> natal</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">home<span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">town</span></div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">city life, urban life</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/cidade#Portuguese\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Portuguese/meaning/c/ci/cidade.html\">Kaikki</a></div></div></li></ul></li></ol></div>"
+  },
+  "problema": {
+   "term_bank_rows": [
+    [
+     "problema",
+     "",
+     "n masc",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "problema m (plural problemas)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Borrowed from Latin problēma, from Ancient Greek πρόβλημα (próblēma, “obstacle”)."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "problem (difficulty that has to be resolved or dealt with)"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "problem (question to be answered)"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "informal",
+                 "data": {
+                  "content": "tag",
+                  "category": "register"
+                 },
+                 "content": "inf"
+                },
+                {
+                 "tag": "span",
+                 "title": "medicine",
+                 "data": {
+                  "content": "tag",
+                  "category": "topic"
+                 },
+                 "content": "med"
+                },
+                {
+                 "tag": "span",
+                 "title": "pathology",
+                 "data": {
+                  "content": "tag",
+                  "category": "topic"
+                 },
+                 "content": "path"
+                }
+               ]
+              },
+              "disorder (physical or psychical malfunction)"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/problema#Portuguese",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Portuguese/meaning/p/pr/problema.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ]
+   ],
+   "definition_html": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-pt-en\" data-dictionary-id=\"wty-pt-en\" data-has-styles=\"\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><i>(wty-pt-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">problema m (plural problemas)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Borrowed from Latin problēma, from Ancient Greek πρόβλημα (próblēma, “obstacle”).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">problem (difficulty that has to be resolved or dealt with)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">problem (question to be answered)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"informal\">inf</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"medicine\">med</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"pathology\">path</span></div>disorder (physical or psychical malfunction)</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/problema#Portuguese\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Portuguese/meaning/p/pr/problema.html\">Kaikki</a></div></div></li></ul></li></ol></div>"
+  },
+  "foto": {
+   "term_bank_rows": [
+    [
+     "foto",
+     "",
+     "n fem",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "foto f (plural fotos)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Etymology tree\nProto-Indo-European *bʰeh₂-\nProto-Indo-European *bʰéh₂os\nProto-Hellenic *pʰáwos\nAncient Greek φᾰ́ος (phắos)\nAncient Greek φῶς (phôs)\nAncient Greek φωτο- (phōto-)\nProto-Indo-European *gerbʰ-\nProto-Hellenic *grə́pʰō\nAncient Greek γρᾰ́φω (grắphō)\nFrench photographiebor.\nPortuguese fotografiaclip.\nPortuguese foto\nClipping of fotografia."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "photo; photograph"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/foto#Portuguese",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Portuguese/meaning/f/fo/foto.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ]
+   ],
+   "definition_html": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-pt-en\" data-dictionary-id=\"wty-pt-en\" data-has-styles=\"\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><i>(wty-pt-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">foto f (plural fotos)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Etymology tree<br>Proto-Indo-European *bʰeh₂-<br>Proto-Indo-European *bʰéh₂os<br>Proto-Hellenic *pʰáwos<br>Ancient Greek φᾰ́ος (phắos)<br>Ancient Greek φῶς (phôs)<br>Ancient Greek φωτο- (phōto-)<br>Proto-Indo-European *gerbʰ-<br>Proto-Hellenic *grə́pʰō<br>Ancient Greek γρᾰ́φω (grắphō)<br>French photographiebor.<br>Portuguese fotografiaclip.<br>Portuguese foto<br>Clipping of fotografia.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">photo; photograph</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/foto#Portuguese\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Portuguese/meaning/f/fo/foto.html\">Kaikki</a></div></div></li></ul></li></ol></div>"
+  },
+  "estudante": {
+   "term_bank_rows": [
+    [
+     "estudante",
+     "",
+     "n fem masc",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "estudante m or f by sense (plural estudantes)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Etymology tree\nPortuguese estudar\nProto-Indo-European *-onts\nLatin -ns\nLatin -āns\nOld Galician-Portuguese -ante\nPortuguese -ante\nPortuguese estudante\nFrom estudar + -ante."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "student (person who studies an academic subject)"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "Brazil",
+                 "data": {
+                  "content": "tag",
+                  "category": "variety"
+                 },
+                 "content": "🇧🇷"
+                },
+                {
+                 "tag": "span",
+                 "title": "rare",
+                 "data": {
+                  "content": "tag",
+                  "category": "archaism"
+                 },
+                 "content": "rare"
+                }
+               ]
+              },
+              "a student who is actively interested in learning (by comparison with the word aluno used more negatively)"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/estudante#Portuguese",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Portuguese/meaning/e/es/estudante.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ]
+   ],
+   "definition_html": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-pt-en\" data-dictionary-id=\"wty-pt-en\" data-has-styles=\"\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><i>(wty-pt-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">estudante m or f by sense (plural estudantes)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Etymology tree<br>Portuguese estudar<br>Proto-Indo-European *-onts<br>Latin -ns<br>Latin -āns<br>Old Galician-Portuguese -ante<br>Portuguese -ante<br>Portuguese estudante<br>From estudar + -ante.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">student (person who studies an academic subject)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"variety\" title=\"Brazil\">🇧🇷</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"archaism\" title=\"rare\">rare</span></div>a student who is actively interested in learning (by comparison with the word aluno used more negatively)</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/estudante#Portuguese\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Portuguese/meaning/e/es/estudante.html\">Kaikki</a></div></div></li></ul></li></ol></div>"
+  },
+  "mapa": {
+   "term_bank_rows": [
+    [
+     "mapa",
+     "",
+     "n fem masc obs",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "mapa m or (obsolete) f (plural mapas)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Etymology tree\nProto-Semitic *manpayder.\nProto-Semitic *manpiy-der.\nPhoenician 𐤌𐤀𐤐 (mʾp /⁠mappē⁠/)der.?\nLatin mappabor.\nPortuguese mapa\nBorrowed from Latin mappa (“a napkin, table-napkin, towel”), of Punic origin."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "map"
+             ]
+            },
+            {
+             "tag": "ul",
+             "content": [
+              {
+               "tag": "li",
+               "content": [
+                "visual representation of an area"
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "an environment where a game is played"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/mapa#Portuguese",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Portuguese/meaning/m/ma/mapa.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ]
+   ],
+   "definition_html": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-pt-en\" data-dictionary-id=\"wty-pt-en\" data-has-styles=\"\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"archaism\" title=\"obsolete\">obs</span><i>(wty-pt-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">mapa m or (obsolete) f (plural mapas)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Etymology tree<br>Proto-Semitic *manpayder.<br>Proto-Semitic *manpiy-der.<br>Phoenician 𐤌𐤀𐤐 (mʾp /⁠mappē⁠/)der.?<br>Latin mappabor.<br>Portuguese mapa<br>Borrowed from Latin mappa (“a napkin, table-napkin, towel”), of Punic origin.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">map</div><ul class=\"gloss-sc-ul\"><li class=\"gloss-sc-li\">visual representation of an area</li></ul></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">an environment where a game is played</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/mapa#Portuguese\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Portuguese/meaning/m/ma/mapa.html\">Kaikki</a></div></div></li></ul></li></ol></div>"
+  },
+  "guarda-chuva": {
+   "term_bank_rows": [
+    [
+     "guarda-chuva",
+     "",
+     "n masc",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "guarda-chuva m (plural guarda-chuvas)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "From guardar (“to guard”) + chuva (“rain”)."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "umbrella"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/guarda-chuva#Portuguese",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Portuguese/meaning/g/gu/guarda-chuva.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ]
+   ],
+   "definition_html": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-pt-en\" data-dictionary-id=\"wty-pt-en\" data-has-styles=\"\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><i>(wty-pt-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">guarda-chuva m (plural guarda-chuvas)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From guardar (“to guard”) + chuva (“rain”).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">umbrella</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/guarda-chuva#Portuguese\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Portuguese/meaning/g/gu/guarda-chuva.html\">Kaikki</a></div></div></li></ul></li></ol></div>"
+  },
+  "dá": {
+   "term_bank_rows": [
+    [
+     "dá",
+     "",
+     "non-lemma",
+     "",
+     0,
+     [
+      [
+       "dar",
+       [
+        "second-person singular imperative"
+       ]
+      ],
+      [
+       "dar",
+       [
+        "third-person singular present indicative"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ],
+    [
+     "dá",
+     "",
+     "non-lemma",
+     "",
+     0,
+     [
+      [
+       "dah",
+       [
+        "Brazil"
+       ]
+      ],
+      [
+       "dah",
+       [
+        "Internet"
+       ]
+      ],
+      [
+       "dah",
+       [
+        "alt-of"
+       ]
+      ],
+      [
+       "dah",
+       [
+        "alternative"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ]
+   ],
+   "definition_html": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-pt-en\" data-dictionary-id=\"wty-pt-en\" data-has-styles=\"\"><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-pt-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">dar</li><li class=\"gloss-sc-li\">dar</li></ul></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">dah</li><li class=\"gloss-sc-li\">dah</li><li class=\"gloss-sc-li\">dah</li><li class=\"gloss-sc-li\">dah</li></ul></div></li></ul></li></ol></div>"
+  }
+ }
+}
