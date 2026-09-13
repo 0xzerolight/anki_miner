@@ -851,6 +851,7 @@ def create_services(
         # D6: whether the front follows the surface is the mined-form policy's
         # question; a policy that does not answer it keeps the ja literal.
         expression_tracks_surface=getattr(profile.mined_form, "expression_tracks_surface", None),
+        sentence_annotation=profile.sentence_annotator is not None,
     )
     media_extractor = MediaExtractorService(config)
     if anki_service is None:

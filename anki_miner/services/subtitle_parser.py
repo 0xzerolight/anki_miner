@@ -367,6 +367,7 @@ class SubtitleParserService:
         compound_matching: bool = True,
         token_post_pass: TokenPostPass | None = None,
         normalize: Callable[[str], str] | None = None,
+        sentence_annotation: bool = True,
     ):
         """Initialize the subtitle parser.
 
@@ -456,6 +457,12 @@ class SubtitleParserService:
                 reading units (``LanguageProfile.normalize``), replacing the
                 Japanese pair in :func:`clean_subtitle_text`. ``None`` — every
                 ja/ko/zh parser — keeps the Japanese pair.
+            sentence_annotation: Whether to generate the sentence
+                furigana/reading fields from the token stream. They assume
+                contiguous kana-bearing tokens: for a language with no
+                ``LanguageProfile.sentence_annotator`` they print the sentence
+                with its spaces deleted, so such a factory passes ``False`` and
+                the fields stay empty.
         """
         self.config = config
         # Perf-audit counters (Task 28): cumulative wall-clock spent in offline-
@@ -482,6 +489,9 @@ class SubtitleParserService:
         self._token_post_pass = token_post_pass
         # Cue/unit text normaliser (spec S5); None ⇒ the Japanese pair verbatim.
         self._normalize = normalize
+        # Sentence furigana/reading generation (spec 6.1 #2); False ⇒ the three
+        # annotation fields stay "".
+        self._sentence_annotation = sentence_annotation
         self._reading_lookup = reading_lookup
         # Shared process-wide tagger (see services/tagger.py for the single-flight
         # invariant). __init__ may block ~2-3s on the lazy build if a user triggers
@@ -1412,7 +1422,11 @@ class SubtitleParserService:
             # Bold the full inflected form (verb/adjective + auxiliary
             # chain), not just the stem morpheme: 蒔いた, not 蒔い.
             sentence_bolded = wrap_target_plain(text, tok_start, highlight_end)
-            sentence_furigana_bolded = wrap_target_furigana_from_tokens(text, display_tokens, tok_start, highlight_end)
+            sentence_furigana_bolded = (
+                wrap_target_furigana_from_tokens(text, display_tokens, tok_start, highlight_end)
+                if self._sentence_annotation
+                else ""
+            )
         else:
             sentence_bolded = ""
             sentence_furigana_bolded = ""
@@ -1539,8 +1553,11 @@ class SubtitleParserService:
             included_spans,
             mined_forms,
         )
-        sentence_furigana = generate_furigana_from_tokens(display_tokens, text=text)
-        sentence_reading = generate_reading_from_tokens(display_tokens)
+        if self._sentence_annotation:
+            sentence_furigana = generate_furigana_from_tokens(display_tokens, text=text)
+            sentence_reading = generate_reading_from_tokens(display_tokens)
+        else:
+            sentence_furigana = sentence_reading = ""
 
         line_lemmas_entry: LineLemmas | None = None
         if collect_index:

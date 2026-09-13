@@ -87,6 +87,7 @@ def _build_filter_bundle(config: AnkiMinerConfig, frequency_service) -> SimpleNa
             # policy's question; a policy that does not answer it keeps the ja
             # literal.
             expression_tracks_surface=getattr(profile.mined_form, "expression_tracks_surface", None),
+            sentence_annotation=profile.sentence_annotator is not None,
         ),
         frequency_service=frequency_service,
         word_list_service=word_list_service,

@@ -213,6 +213,7 @@ class WordFilterService:
         script: ScriptSupport | None = None,
         dedup_fold: Callable[[str], str] | None = None,
         expression_tracks_surface: Callable[[TokenizedWord], bool] | None = None,
+        sentence_annotation: bool = True,
     ):
         """Initialize the word filter service.
 
@@ -244,6 +245,12 @@ class WordFilterService:
                 lemma-fronted language passes ``lambda w: False``: its front
                 never changes with the surface and its reading fields are
                 never regenerated from it.
+            sentence_annotation: Whether a line expansion or a sentence swap
+                regenerates ``sentence_furigana``/``sentence_reading``/
+                ``sentence_furigana_bolded`` with the tagger. ``False`` for a
+                language with no ``LanguageProfile.sentence_annotator``,
+                matching its parser: those generators assume contiguous kana
+                tokens.
         """
         self.config = config
         self.tagger = tagger
@@ -251,6 +258,7 @@ class WordFilterService:
         self._script = script
         self._dedup_fold = dedup_fold
         self._tracks_surface = expression_tracks_surface or _ja_expression_tracks_surface
+        self._sentence_annotation = sentence_annotation
 
     def filter_unknown(
         self,
@@ -776,10 +784,8 @@ class WordFilterService:
         ``config.bold_target_in_sentence``, tracked spans, and a tagger.
         """
         bold_end = highlight_end if highlight_end >= 0 else end
-        return (
-            wrap_target_plain(text, start, bold_end),
-            wrap_target_furigana(text, self.tagger, start, bold_end),
-        )
+        furigana_bolded = wrap_target_furigana(text, self.tagger, start, bold_end) if self._sentence_annotation else ""
+        return (wrap_target_plain(text, start, bold_end), furigana_bolded)
 
     def expand_word_lines(
         self,
@@ -829,7 +835,7 @@ class WordFilterService:
         new_start = word.surface_start + shift if word.surface_start >= 0 else -1
         new_end = word.surface_end + shift if word.surface_end >= 0 else -1
         new_highlight = word.highlight_end + shift if word.highlight_end >= 0 else -1
-        if self.tagger is not None:
+        if self.tagger is not None and self._sentence_annotation:
             new_furigana = generate_furigana(window.text, self.tagger)
             new_reading = generate_reading(window.text, self.tagger)
         else:

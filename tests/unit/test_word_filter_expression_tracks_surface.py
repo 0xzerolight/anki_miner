@@ -65,7 +65,7 @@ def test_deck_filter_bundle_reads_the_policy_attribute(test_config, monkeypatch)
         return False
 
     policy = SimpleNamespace(mined_form=lambda *a, **k: "", expression_tracks_surface=tracks)
-    profile = SimpleNamespace(mined_form=policy, script=SimpleNamespace(), dedup_fold=None)
+    profile = SimpleNamespace(mined_form=policy, script=SimpleNamespace(), dedup_fold=None, sentence_annotator=None)
     monkeypatch.setattr(deck_filter_worker, "get_profile", lambda code: profile)
     monkeypatch.setattr(deck_filter_worker, "KnownWordDB", lambda *a, **k: None)
     monkeypatch.setattr("anki_miner.services.tagger.get_shared_tagger", lambda: None)
