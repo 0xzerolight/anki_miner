@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.languages.registry import config_language, language_display_name
+from anki_miner.languages.registry import config_language, get_profile, language_display_name
 from anki_miner.services._sqlite_index import (
     is_generated_store_artifact,
     log_resource_inventory,
@@ -234,6 +234,7 @@ class FrequencySourceRegistry:
                     db_path=meta.db_path,
                     display_name=meta.source_name,
                     is_categorical=meta.is_categorical,
+                    keys=get_profile(language).dict_keys,
                 )
             )
         return sources

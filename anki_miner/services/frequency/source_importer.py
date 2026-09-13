@@ -31,7 +31,6 @@ import logging
 import os
 import shutil
 import tempfile
-import unicodedata
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -93,6 +92,20 @@ def _rank_preference(row: tuple[int, str | None]) -> tuple[bool, int]:
     """
     rank, display_value = row
     return (is_kana_usage_display(display_value), rank)
+
+
+def _term_fold(language: str) -> Callable[[str], str]:
+    """The stamped language's index-key fold (S4): NFC for ja/ko/zh.
+
+    Applied to terms and readings before the dedupe key, so rows the fold makes
+    equal collapse exactly as the query side will see them. Function-local
+    import: ``languages.profile`` imports ``services.resource_catalog``, whose
+    package pulls this module back in. The dictionary importer resolves its
+    keys the same way.
+    """
+    from anki_miner.languages.registry import get_profile
+
+    return get_profile(language).dict_keys.fold_term
 
 
 @dataclass(frozen=True)
@@ -256,6 +269,7 @@ def _import_zip(
         digit_free_count = 0
         total_labelled = 0
         total_considered = 0
+        fold = _term_fold(language)
 
         for bank in banks.iter_banks(progress=progress, cancel_check=cancel_check):
             # Entries are already structurally validated by iter_banks (list,
@@ -263,11 +277,11 @@ def _import_zip(
             for entry in bank:
                 if entry[1] != "freq":
                     continue
-                term = unicodedata.normalize("NFC", str(entry[0]).strip())
+                term = fold(str(entry[0]).strip())
                 data = entry[2]
                 reading = extract_envelope_reading(data)
                 if reading is not None:
-                    reading = unicodedata.normalize("NFC", reading)
+                    reading = fold(reading)
 
                 # Numeric rank via the existing gate (byte-identical to today,
                 # incl. unstripped object-form displayValue); the raw label is
@@ -341,6 +355,7 @@ def _import_zip(
             overwrite=overwrite,
             before_promote=before_promote,
             language=language,
+            fold_term=fold,
         )
 
     logger.info(
@@ -387,6 +402,7 @@ def _import_csv(
     # unusable, plus a few verbatim rows so the mistake is visible.
     skipped: dict[str, int] = {"short_row": 0, "no_word_rank": 0}
     skip_examples: list[str] = []
+    fold = _term_fold(language)
 
     def _skip(kind: str, row: list[str]) -> None:
         skipped[kind] += 1
@@ -424,9 +440,9 @@ def _import_csv(
                     continue
 
                 reading = _csv_reading(row, word)
-                word = unicodedata.normalize("NFC", word)
+                word = fold(word)
                 if reading is not None:
-                    reading = unicodedata.normalize("NFC", reading)
+                    reading = fold(reading)
                 key = (word, reading)
                 if key not in ranks:
                     ranks[key] = rank
@@ -472,6 +488,7 @@ def _import_csv(
         overwrite=overwrite,
         before_promote=before_promote,
         language=language,
+        fold_term=fold,
     )
     logger.info(
         "Imported %d frequency entries from CSV '%s' as source '%s'",
@@ -582,6 +599,7 @@ def _finalize(
     overwrite: bool,
     before_promote: Callable[[], None] | None,
     language: str,
+    fold_term: Callable[[str], str] | None = None,
 ) -> FreqSourceImportResult:
     """Build the index under a staging dir, then atomically promote it.
 
@@ -618,7 +636,7 @@ def _finalize(
             "is_categorical": "1" if is_categorical else "0",
             "language": language,
         }
-        storage.build_index(db_path, rows, meta)
+        storage.build_index(db_path, rows, meta, fold_term=fold_term)
 
         # Persist the source file so a later "reimport" can rebuild without the
         # user re-picking it (mirrors the dict importer's source.zip).
