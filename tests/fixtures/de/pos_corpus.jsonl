@@ -4,7 +4,7 @@
 {"id":"de04","sentence":"Ich rufe dich morgen früh an.","must_mine":["anrufen","morgen","früh"],"must_not_mine":["rufen","an","dich"],"note":"separable verb with an intervening object and adverbs"}
 {"id":"de05","sentence":"Sie steht jeden Tag um sechs Uhr auf.","must_mine":["aufstehen","Tag","Uhr"],"must_not_mine":["stehen","auf","sechs","jeden","um"],"note":"CARD numeral and the PIAT determiner stay out"}
 {"id":"de06","sentence":"Er kommt erst spät nach Hause zurück.","must_mine":["zurückkommen","spät","Haus"],"must_not_mine":["kommen","zurück","nach"],"note":"an ADV-tagged svp particle reattaches too; dative Hause lemmatises to Haus"}
-{"id":"de07","sentence":"Das Wetter sieht heute wirklich schön aus.","must_mine":["Wetter","aussehen","heute","wirklich","schön"],"must_not_mine":["sehen","aus"],"note":"ADJD predicative adjective is mined under UPOS ADV"}
+{"id":"de07","sentence":"Das Wetter sieht heute wirklich schön aus.","must_mine":["Wetter","aussehen","heute","wirklich","schön"],"must_not_mine":["sehen","aus"],"note":"ADJD predicative adjective: the model says UPOS ADV, the de token pass makes it ADJ (mined either way)"}
 {"id":"de08","sentence":"Wir fahren morgen früh los.","must_mine":["losfahren","morgen","früh"],"must_not_mine":["fahren","los"],"note":"ADV particle los"}
 {"id":"de09","sentence":"Der Film hat um acht Uhr angefangen.","must_mine":["Film","Uhr","anfangen"],"must_not_mine":["angefangen","acht"],"note":"participle of a separable verb"}
 {"id":"de10","sentence":"Ich muss noch meine Mutter anrufen.","must_mine":["Mutter","anrufen"],"must_not_mine":["muss","meine"],"note":"modal verb is AUX; the infinitive is one token"}
