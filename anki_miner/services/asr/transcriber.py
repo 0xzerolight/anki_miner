@@ -71,15 +71,16 @@ class Ct2ModelSession:
 # junk signal agrees — so a real line the VAD merely MISSED is never deleted on
 # the VAD verdict alone (the cardinal rule: never drop real dialogue).
 #
+# no_speech_prob is NOT a drop signal. faster-whisper scores it once per 30 s
+# window and stamps it on every segment decoded there, and on large-v3 it is
+# uncalibrated: clean audiobook narration measured 0.98 at avg_logprob -0.10, and a
+# drama episode lost 2,301 chars of real dialogue to a >=0.60 cut. Whisper itself
+# only skips a high-nsp window whose avg_logprob is also below -1.0, and
+# _is_junk_segment already drops that logprob on its own.
+#
 # SAMPLE_RATE for the mask: faster-whisper fixes audio at 16 kHz, so get_speech_
 # timestamps' sample-indexed regions convert to seconds by ÷ this.
 _ASR_SAMPLE_RATE = 16000
-# no_speech_prob at/above this = confident non-speech ANYWHERE (drops loud
-# hallucinations that sit inside a VAD false-positive region). Real dialogue
-# measured ≤0.35 across the manual JP-clip gate, so this never touches speech.
-# nsp is a per-30s-WINDOW score, NOT per-segment, so it is used ONLY as this
-# high-confidence solo cut and NEVER as the primary discriminator.
-_CONFIDENT_NONSPEECH_PROB = 0.60
 # A segment whose own time span is covered by the speech mask below this fraction
 # lies OUTSIDE detected speech. Non-speech measured at exactly 0% here; real
 # dialogue ≥10% (segments slightly overrun the tight, un-padded mask).
@@ -212,21 +213,17 @@ def _is_nonspeech_ct2_segment(seg, speech: list[tuple[float, float]] | None) -> 
     """Return True for a CT2 segment to drop as non-speech (vad_filter-OFF path).
 
     Reuses Whisper's own gates (:func:`_is_junk_segment`: compression_ratio /
-    avg_logprob) and adds two non-speech drops (see the module constants):
-      * ``no_speech_prob >= _CONFIDENT_NONSPEECH_PROB`` — confident non-speech.
-      * out-of-speech (overlap < :data:`_MIN_SPEECH_OVERLAP`) AND corroborated by
-        a repetition (compression_ratio) or a long span (:data:`_NONSPEECH_MIN_DURATION_S`).
+    avg_logprob) and adds one non-speech drop (see the module constants):
+    out-of-speech (overlap < :data:`_MIN_SPEECH_OVERLAP`) AND corroborated by a
+    repetition (compression_ratio) or a long span (:data:`_NONSPEECH_MIN_DURATION_S`).
 
-    The overlap arm never fires on ``no_speech_prob`` alone, so a real line the
-    VAD merely missed (short, out-of-speech, any nsp) survives. ``getattr``
+    ``no_speech_prob`` never drops a segment (see the module comment), so a real
+    line the VAD merely missed (short, out-of-speech, any nsp) survives. ``getattr``
     defaults keep this a no-op on field-less fakes. Applied ONLY to CT2 segments;
     the cpp path has no nsp/compression and uses :func:`_is_junk_segment` +
     :func:`_is_low_probability_cpp_segment`.
     """
     if _is_junk_segment(seg):
-        return True
-    no_speech_prob = getattr(seg, "no_speech_prob", 0.0)
-    if no_speech_prob is not None and no_speech_prob >= _CONFIDENT_NONSPEECH_PROB:
         return True
     if speech is not None:
         start = getattr(seg, "start", 0.0)

@@ -1752,9 +1752,27 @@ def test_nonspeech_real_in_mask_kept():
     assert transcriber._is_nonspeech_ct2_segment(seg, _IN) is False
 
 
-def test_nonspeech_confident_prob_dropped_any_overlap():
-    """no_speech_prob>=0.60 drops even inside the mask (VAD-false-positive hallucination)."""
-    seg = make_segment(11.0, 13.0, "ご視聴", no_speech_prob=0.9, compression_ratio=0.8)
+def test_nonspeech_high_prob_confident_speech_kept():
+    """A high no_speech_prob alone never drops a segment. The score is per 30 s window
+    and uncalibrated on large-v3: clean audiobook narration measured nsp 0.98 at
+    avg_logprob -0.10, and cutting on it deleted ~80% of the transcript."""
+    seg = make_segment(
+        11.0,
+        13.0,
+        "私の常識は、おばさんの家の非常識である。",
+        no_speech_prob=0.98,
+        avg_logprob=-0.10,
+        compression_ratio=1.47,
+    )
+    assert transcriber._is_nonspeech_ct2_segment(seg, _IN) is False
+
+
+def test_nonspeech_outro_hallucination_dropped_out_of_speech():
+    """The ご視聴 outro hallucination (measured: 5.3 s, overlap 0.00, nsp 0.64) drops on
+    the out-of-speech arm, corroborated by its duration."""
+    seg = make_segment(
+        100.0, 105.3, "ご視聴ありがとうございました", no_speech_prob=0.64, avg_logprob=-0.52, compression_ratio=0.86
+    )
     assert transcriber._is_nonspeech_ct2_segment(seg, _IN) is True
 
 
@@ -1777,8 +1795,8 @@ def test_nonspeech_short_out_of_speech_low_prob_KEPT():
 
 
 def test_nonspeech_short_out_of_speech_midband_prob_KEPT():
-    """A short out-of-speech line at nsp 0.30 (below the 0.60 confident cut) is kept:
-    the overlap arm never fires on nsp alone (Path-1 closed)."""
+    """A short out-of-speech line at nsp 0.30 is kept: the overlap arm never fires on
+    nsp alone (Path-1 closed)."""
     seg = make_segment(100.0, 102.0, "quiet real?", no_speech_prob=0.30, compression_ratio=1.2)
     assert transcriber._is_nonspeech_ct2_segment(seg, _IN) is False
 
@@ -1801,13 +1819,6 @@ def test_nonspeech_overlap_boundary():
     assert transcriber._is_nonspeech_ct2_segment(seg, mask_at) is False  # overlap == thr, not < thr
     mask_below = [(0.0, 10.0 * thr - 0.01)]
     assert transcriber._is_nonspeech_ct2_segment(seg, mask_below) is True  # overlap < thr, dur corroborates
-
-
-def test_nonspeech_prob_boundary():
-    g = transcriber._CONFIDENT_NONSPEECH_PROB
-    assert transcriber._is_nonspeech_ct2_segment(make_segment(11.0, 12.0, "x", no_speech_prob=g), _IN) is True
-    below = make_segment(11.0, 12.0, "x", no_speech_prob=g - 0.01, compression_ratio=1.0)
-    assert transcriber._is_nonspeech_ct2_segment(below, _IN) is False
 
 
 def test_nonspeech_mask_none_skips_overlap_arm():
@@ -1849,3 +1860,26 @@ def test_transcribe_drops_nonspeech_end_to_end(monkeypatch, tmp_path):
         device="cpu",
     )
     assert result == [(11.0, 13.0, "本物")]
+
+
+def test_transcribe_keeps_high_no_speech_prob_window_end_to_end(monkeypatch, tmp_path):
+    """Full CT2 path: every segment of a confidently decoded window survives a high
+    per-window no_speech_prob (the Audiobook Sync "nothing matched" report)."""
+    import numpy as np
+
+    segs = [
+        make_segment(11.0, 14.0, " 私の常識は ", no_speech_prob=0.98, avg_logprob=-0.10, compression_ratio=1.47),
+        make_segment(15.0, 21.0, " 孤立無縁の環境で ", no_speech_prob=0.98, avg_logprob=-0.10, compression_ratio=1.47),
+    ]
+    monkeypatch.setattr(_engine, "get_whisper_model_cls", lambda: fake_model_cls_factory(segs))
+    monkeypatch.setattr(transcriber, "_speech_mask", lambda audio, onnx_pack_root: [(10.0, 40.0)])
+
+    result = transcriber.transcribe(
+        np.zeros(16000, dtype=np.float32),
+        model_name="small",
+        models_root=tmp_path,
+        sample_rate=16000,
+        duration_s=30.0,
+        device="cpu",
+    )
+    assert result == [(11.0, 14.0, "私の常識は"), (15.0, 21.0, "孤立無縁の環境で")]
