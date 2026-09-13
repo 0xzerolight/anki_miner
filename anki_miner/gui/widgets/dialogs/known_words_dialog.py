@@ -62,10 +62,12 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         *,
         language: str = "ja",
         content_style: ContentTextStyle | None = None,
+        excluded_decks: tuple[str, ...] = (),
     ):
         super().__init__(parent)
         self._db = known_word_db
         self._language = language
+        self._excluded_decks = excluded_decks
         # Every listed word is mined content: the face follows the mining
         # language. None keeps today's Japanese face for the ja default.
         self._content_style = content_style or get_profile(self._language).content_style
@@ -100,6 +102,22 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         helper.setObjectName("helper-text")
         helper.setWordWrap(True)
         layout.addWidget(helper)
+        # S15: the scan's exclusions are this language's own, and they are the
+        # only thing that keeps another language's deck out of its known words.
+        if self._excluded_decks:
+            exclusions_text = tr_format(
+                self.tr("Decks this language's known-words scan skips: %1. Change them in Settings → Filtering."),
+                ", ".join(self._excluded_decks),
+            )
+        else:
+            exclusions_text = self.tr(
+                "Every deck is scanned for this language, including decks in another language written in the same "
+                "script. Exclude them in Settings → Filtering."
+            )
+        self.exclusions_label = QLabel(exclusions_text)
+        self.exclusions_label.setObjectName("helper-text")
+        self.exclusions_label.setWordWrap(True)
+        layout.addWidget(self.exclusions_label)
 
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(self.tr("Filter…"))
