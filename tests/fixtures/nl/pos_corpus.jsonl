@@ -1,0 +1,50 @@
+{"id":"nl01","sentence":"De student las gisteren een interessant boek.","must_mine":["student","gisteren","interessant","boek"],"must_not_mine":["de","een"],"note":"smoke sentence; articles are DET. las lemmatises to las (real nl_core_news_sm output, not lezen) and is left unasserted"}
+{"id":"nl02","sentence":"Ik zit in 't huis.","must_mine":["zitten","huis"],"must_not_mine":["'t","het"],"note":"'t as an article is DET with lemma het, excluded by UPOS"}
+{"id":"nl03","sentence":"Hij zei: ’t Is al laat.","must_mine":["zeggen"],"must_not_mine":["’t","'t","het"],"note":"curly apostrophe: only the tagging copy's fold makes ’t a PRON; untagged it is NOUN ’t and would mine. laat lemmatises to laten and is left unasserted"}
+{"id":"nl04","sentence":"Ik ga 's morgens altijd hardlopen.","must_mine":["gaan","morgen","altijd","hardlopen"],"must_not_mine":["'s"],"note":"'s is the genitive article (DET); morgens lemmatises to morgen"}
+{"id":"nl05","sentence":"Heb je m'n sleutels gezien?","must_mine":["sleutel","zien"],"must_not_mine":["m'n"],"note":"m'n is one PRON token; participle lemmatises to the infinitive"}
+{"id":"nl06","sentence":"Zo'n fiets wil ik ook.","must_mine":["fiets","willen"],"must_not_mine":["zo'n"],"note":"zo'n is one DET token"}
+{"id":"nl07","sentence":"Dhr. Jansen komt om drie uur.","must_mine":["komen","uur"],"must_not_mine":["dhr.","Dhr.","Jansen","drie"],"note":"S8 abbreviation dhr.; the tokenizer keeps Dhr. one PROPN token; NUM excluded"}
+{"id":"nl08","sentence":"Mevr. de Vries is ziek.","must_mine":["ziek"],"must_not_mine":["Mevr.","mevr.","Vries"],"note":"mevr. abbreviation and the name are PROPN"}
+{"id":"nl09","sentence":"We kopen fruit, bijv. appels en peren.","must_mine":["kopen","fruit","appel","peer"],"must_not_mine":["bijv."],"note":"bijv. is one X token; plural lemmas"}
+{"id":"nl10","sentence":"Er zijn veel dieren, o.a. katten en honden.","must_mine":["dier","kat","hond"],"must_not_mine":["o.a."],"note":"o.a. is one X token. Er (VNW adv-pron, UPOS ADV) mines: over-include beats silent drop"}
+{"id":"nl11","sentence":"Hij is moe, d.w.z. hij wil slapen.","must_mine":["moe","willen","slapen"],"must_not_mine":["d.w.z."],"note":"d.w.z. is one X token"}
+{"id":"nl12","sentence":"Ik heb brood, melk, kaas enz. gekocht.","must_mine":["brood","melk","kaas","kopen"],"must_not_mine":["enz."],"note":"enz. is one X token"}
+{"id":"nl13","sentence":"Ik stuur je morgen een e-mail.","must_mine":["morgen","e-mail"],"must_not_mine":["e","mail"],"note":"e-mail stays one token (nl has no letter-hyphen-letter infix). stuur lemmatises to junk and is left unasserted"}
+{"id":"nl14","sentence":"DE WINKEL IS GESLOTEN.","must_mine":["winkel","sluiten"],"must_not_mine":["de","zijn"],"note":"all-caps cue tagged from the lowercased copy, surfaces sliced from the original; tagged as-is it mines nothing"}
+{"id":"nl15","sentence":"Hij woont in Amsterdam.","must_mine":["wonen"],"must_not_mine":["Amsterdam","amsterdam"],"note":"PROPN excluded"}
+{"id":"nl16","sentence":"Ze woont in Den Haag.","must_mine":["wonen"],"must_not_mine":["Den","Haag"],"note":"multi-token PROPN excluded"}
+{"id":"nl17","sentence":"Die huizen zijn erg oud.","must_mine":["huis","erg","oud"],"must_not_mine":["huizen"],"note":"plural noun fronts its singular lemma; plural morph carries no Gender"}
+{"id":"nl18","sentence":"Het meisje heeft drie boeken gekocht.","must_mine":["meisje","boek","kopen"],"must_not_mine":["drie","boeken"],"note":"meisje is its own lemma (neuter diminutive noun); NUM excluded"}
+{"id":"nl19","sentence":"Wil je een kopje thee?","must_mine":["kop","thee"],"must_not_mine":["kopje"],"note":"the diminutive lemmatises to its base kop (a de-word) while morph says Gender=Neut: the article hook must not read het from morph here"}
+{"id":"nl20","sentence":"De tweede helft begon.","must_mine":["helft","beginnen"],"must_not_mine":["twee","tweede"],"note":"ordinal TW|rang|prenom|stan lemmatises to the cardinal twee: excluded subtype"}
+{"id":"nl21","sentence":"Het was de eerste keer dat ik vloog.","must_mine":["keer","vliegen"],"must_not_mine":["één","eerste"],"note":"ordinal eerste lemmatises to één: excluded subtype"}
+{"id":"nl22","sentence":"Hij heeft 25 euro betaald.","must_mine":["euro","betalen"],"must_not_mine":["25"],"note":"digits are NUM"}
+{"id":"nl23","sentence":"Nou, dat is raar hè.","must_mine":["raar"],"must_not_mine":["hè"],"note":"hè is INTJ"}
+{"id":"nl24","sentence":"Het café is één uur open.","must_mine":["café","uur","open"],"must_not_mine":["één"],"note":"NFC diacritics survive in the lemma"}
+{"id":"nl25","sentence":"De coördinatie was naïef.","must_mine":["coördinatie","naïef"],"must_not_mine":["de"],"note":"trema letters are Latin letters for the script gate"}
+{"id":"nl26","sentence":"Een reünie in België.","must_mine":["reünie"],"must_not_mine":["België"],"note":"PROPN with a trema excluded"}
+{"id":"nl27","sentence":"„Kom je ook?” vroeg ze.","must_mine":["komen","ook","vragen"],"must_not_mine":["„","”"],"note":"the model tags „ PROPN and ” NOUN; neither carries a Latin letter, so the script gate drops them"}
+{"id":"nl28","sentence":"De mooie bloemen staan op tafel.","must_mine":["mooi","bloem","staan","tafel"],"must_not_mine":["op","mooie"],"note":"inflected adjective fronts its base"}
+{"id":"nl29","sentence":"Dit is een grotere kamer.","must_mine":["groot","kamer"],"must_not_mine":["grotere"],"note":"comparative fronts the positive"}
+{"id":"nl30","sentence":"Zij schaamt zich voor haar broer.","must_mine":["schamen","broer"],"must_not_mine":["zich"],"note":"reflexive pronoun is PRON; the verb fronts without it"}
+{"id":"nl31","sentence":"Hij heeft zich vergist.","must_mine":["vergissen"],"must_not_mine":["zich"],"note":"reflexive participle"}
+{"id":"nl32","sentence":"Omdat zij morgen terugkomt.","must_mine":["morgen","terugkomen"],"must_not_mine":[],"note":"a joined separable verb in a subordinate clause is one token and lemmatises whole"}
+{"id":"nl33","sentence":"Ik vind het jammer dat je weggaat.","must_mine":["vinden","jammer","weggaan"],"must_not_mine":["dat"],"note":"joined separable verb"}
+{"id":"nl34","sentence":"Er zijn veel zeeën.","must_mine":["zee"],"must_not_mine":["veel","zeeën"],"note":"trema plural fronts the singular"}
+{"id":"nl35","sentence":"Mail naar info@voorbeeld.nl of kijk op www.voorbeeld.nl.","must_mine":["mail","kijken"],"must_not_mine":["info@voorbeeld.nl","www.voorbeeld.nl"],"note":"like_email / like_url tokens are X"}
+{"id":"nl36","sentence":"Ik heb geen zin om te werken.","must_mine":["zin","werken"],"must_not_mine":["te","om","geen"],"note":"te-infinitive marker is ADP"}
+{"id":"nl37","sentence":"Hij belde gisteren zijn broer op.","must_mine":["gisteren","broer"],"must_not_mine":["op"],"note":"the compound:prt particle is demoted to PART; the verb front belongs to separable_verbs.jsonl"}
+{"id":"nl38","sentence":"Neem je paraplu mee.","must_mine":["paraplu"],"must_not_mine":["mee"],"note":"imperative separable verb; particle demoted"}
+{"id":"nl39","sentence":"De kinderen spelen in de tuin.","must_mine":["kind","spelen","tuin"],"must_not_mine":["kinderen"],"note":"irregular plural kinderen fronts kind"}
+{"id":"nl40","sentence":"Ik herinner me die dag nog goed.","must_mine":["herinneren","dag","goed"],"must_not_mine":["me"],"note":"reflexive me is PRON"}
+{"id":"nl41","sentence":"Het regent al de hele dag.","must_mine":["regenen","heel","dag"],"must_not_mine":["hele"],"note":"hele fronts heel"}
+{"id":"nl42","sentence":"Wauw, wat een prachtige zonsondergang!","must_mine":["prachtig","zonsondergang"],"must_not_mine":["wat"],"note":"wauw is tagged ADJ, not TSW, and mines (real output, unasserted)"}
+{"id":"nl43","sentence":"Ja, ik kom eraan.","must_mine":["komen","eraan"],"must_not_mine":["ja"],"note":"ja is INTJ; eraan is ADV and mines"}
+{"id":"nl44","sentence":"De eersten kwamen vroeg.","must_mine":["komen"],"must_not_mine":["eersten","één"],"note":"nominal ordinal TW|rang|nom|mv-n: excluded subtype. vroeg is tagged VERB with lemma vragen (real output, unasserted)"}
+{"id":"nl45","sentence":"Zij is de derde in de rij.","must_mine":["rij"],"must_not_mine":["drie","derde"],"note":"nominal ordinal TW|rang|nom|zonder-n lemmatises to the cardinal drie: excluded subtype"}
+{"id":"nl46","sentence":"Geef me je hand.","must_mine":["geven","hand"],"must_not_mine":["hand."],"note":"spaCy nl lists hand. as a tokenizer exception; the tagger drops every non-abbreviation dotted exception (NL_ABBREVIATIONS), so hand is a NOUN, not the junk front hand."}
+{"id":"nl47","sentence":"Hij deed wat hij kon.","must_mine":["doen","kunnen"],"must_not_mine":["kon.","Kon."],"note":"kon. is a spaCy nl exception (PROPN Kon.) until the dotted exceptions are trimmed; then kon is VERB kunnen"}
+{"id":"nl48","sentence":"Na het eten krijgen we een toetje.","must_mine":["eten","krijgen","toet"],"must_not_mine":["toetje"],"note":"real output pinned, not endorsed: the diminutive toetje (dessert, its own wty-nl-en headword) lemmatises to toet; no diminutive policy this stage (plan N20)"}
+{"id":"nl49","sentence":"IJs is koud.","must_mine":["ijs","koud"],"must_not_mine":["IJs"],"note":"the IJ digraph capital lowers to ij on the front; the U+0132 ligature is mapped to IJ by nl_normalize before tagging"}
+{"id":"nl50","sentence":"Ik woon in IJsland.","must_mine":["wonen"],"must_not_mine":["IJsland","ijsland"],"note":"PROPN with the IJ digraph excluded"}
