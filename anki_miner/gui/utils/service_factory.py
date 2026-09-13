@@ -867,7 +867,7 @@ def create_services(
     # users who never touch the feature get no empty file.
     known_word_db: KnownWordDB | None = None
     try:
-        known_word_db = KnownWordDB(resolve_known_words_db_path(config))
+        known_word_db = KnownWordDB(resolve_known_words_db_path(config), language=config_language(config))
         if config.use_known_words_db:
             known_word_db.initialize()
     except MemoryError:

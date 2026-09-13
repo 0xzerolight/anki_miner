@@ -37,7 +37,7 @@ def _build_filter_bundle(config: AnkiMinerConfig, frequency_service) -> SimpleNa
     """
     known_word_db = None
     try:
-        known_word_db = KnownWordDB(resolve_known_words_db_path(config))
+        known_word_db = KnownWordDB(resolve_known_words_db_path(config), language=config_language(config))
     except Exception as e:
         logger.warning("Could not open known word database: %s", e)
 

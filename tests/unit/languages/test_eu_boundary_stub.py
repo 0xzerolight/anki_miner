@@ -123,6 +123,7 @@ FIELD_CHECKS: dict[str, Callable[[object], bool]] = {
     "extra_card_fields": _tuple_of(CardFieldSpec),
     "smoke_sentence": lambda v: isinstance(v, str) and bool(v),
     "english_name": lambda v: isinstance(v, str) and v.isascii() and bool(v),
+    "dedup_fold": _optional(callable),
 }
 
 

@@ -73,7 +73,9 @@ def test_service_factory_constructs_through_the_resolver():
     profile lands in Stage 2A, so this site is pinned at the source instead of
     by execution; the other five are driven for real below.
     """
-    assert "KnownWordDB(resolve_known_words_db_path(config))" in _source("anki_miner/gui/utils/service_factory.py")
+    assert "KnownWordDB(resolve_known_words_db_path(config), language=config_language(config))" in _source(
+        "anki_miner/gui/utils/service_factory.py"
+    )
 
 
 def test_ja_path_is_byte_identical(test_config):
@@ -120,7 +122,7 @@ def ctx(monkeypatch, qtbot, test_config, patch_heavy_init):
 def _recorder(seen: list[Path]):
     """Stand-in for ``KnownWordDB`` that records the path it was handed."""
 
-    def _build(path):
+    def _build(path, **_kwargs):
         seen.append(Path(path))
         db = MagicMock()
         db.is_available.return_value = False
@@ -178,7 +180,9 @@ def _drive_curator_commit(cfg, ctx) -> Path:
 
     seen: list[Path] = []
     # Function-local import again: patch the helper on its owning module.
-    ctx.monkeypatch.setattr(kw_module, "add_user_known_words", lambda path, forms: seen.append(Path(path)) or 0)
+    ctx.monkeypatch.setattr(
+        kw_module, "add_user_known_words", lambda path, forms, **_kwargs: seen.append(Path(path)) or 0
+    )
 
     class _KnownWordsTab(MiningTabBase):
         pass
