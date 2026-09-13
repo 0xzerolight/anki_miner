@@ -2538,6 +2538,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         if self._show_player and hasattr(self, "player_widget") and self._ensure_player_source(video_file):
             self.player_widget.seek_seconds(start_time if frame_time is None else frame_time)
             self.player_widget.pause()
+            # Parked on the card's frame, but Play hears the line from its start.
+            self.player_widget.set_play_from(start_time)
         if self._show_image:
             self._request_page_image(int(start_time))
 

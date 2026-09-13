@@ -205,6 +205,8 @@ class TestWiring:
         # The merged window is 1.0-7.0, so the card's frame is 1.0 + min(offset,
         # half the window) = 2.0: the preview parks where the card's frame comes from.
         player.seek_seconds.assert_called_with(2.0)
+        # Play still starts the merged line at its own start, not at that frame.
+        player.set_play_from.assert_called_with(1.0)
 
     def test_next_add_does_not_snap(self, qtbot, words, existing_video):
         dlg, player = _dialog(qtbot, words, existing_video)

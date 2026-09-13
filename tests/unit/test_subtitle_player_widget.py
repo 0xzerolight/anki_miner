@@ -655,6 +655,78 @@ class TestFrameStep:
         assert not widget.frame_forward_button.isVisibleTo(widget)
 
 
+class TestPlayFrom:
+    """A parked preview's Play origin — the word curator parks on the card's
+    screenshot frame but plays the line from its start."""
+
+    def _parked(self, qtbot, fake_mpv) -> SubtitlePlayerWidget:
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget._on_file_loaded()
+        widget.seek_seconds(6.0)
+        widget.pause()
+        widget.set_play_from(5.0)
+        fake_mpv["player"].command.reset_mock()
+        return widget
+
+    def test_play_seeks_to_the_origin_then_unpauses(self, qtbot, fake_mpv):
+        widget = self._parked(qtbot, fake_mpv)
+        widget.play()
+        fake_mpv["player"].command.assert_called_once_with("seek", 5.0, "absolute+exact")
+        assert fake_mpv["player"].pause is False
+
+    def test_the_origin_is_consumed_once(self, qtbot, fake_mpv):
+        widget = self._parked(qtbot, fake_mpv)
+        widget.play()
+        widget.pause()
+        fake_mpv["player"].command.reset_mock()
+        widget.play()
+        fake_mpv["player"].command.assert_not_called()
+
+    def test_the_origin_wins_over_the_eof_rewind(self, qtbot, fake_mpv):
+        widget = self._parked(qtbot, fake_mpv)
+        widget._on_eof(True)
+        widget.play()
+        fake_mpv["player"].command.assert_called_once_with("seek", 5.0, "absolute+exact")
+
+    def test_a_seek_voids_the_origin(self, qtbot, fake_mpv):
+        widget = self._parked(qtbot, fake_mpv)
+        widget.seek_seconds(30.0)
+        fake_mpv["player"].command.reset_mock()
+        widget.play()
+        fake_mpv["player"].command.assert_not_called()
+
+    def test_a_frame_step_voids_the_origin(self, qtbot, fake_mpv):
+        widget = self._parked(qtbot, fake_mpv)
+        widget.step_frame(1)
+        fake_mpv["player"].command.reset_mock()
+        widget.play()
+        fake_mpv["player"].command.assert_not_called()
+
+    def test_a_new_source_voids_the_origin(self, qtbot, fake_mpv):
+        widget = self._parked(qtbot, fake_mpv)
+        widget.set_source(Path("/tmp/other_video.mkv"), ENTRIES)
+        widget._on_file_loaded()
+        fake_mpv["player"].command.reset_mock()
+        widget.play()
+        fake_mpv["player"].command.assert_not_called()
+
+    def test_a_clip_preview_plays_its_own_start(self, qtbot, fake_mpv):
+        widget = self._parked(qtbot, fake_mpv)
+        widget.play_range(4.7, 7.3)
+        fake_mpv["player"].command.assert_called_once_with("seek", 4.7, "absolute+exact")
+        assert widget._range_end == 7.3
+
+    def test_play_before_the_file_loads_queues_the_origin(self, qtbot, fake_mpv_no_ctx):
+        widget = _widget(qtbot)
+        widget.set_source(VIDEO, ENTRIES)
+        widget.seek_seconds(6.0)
+        widget.set_play_from(5.0)
+        widget.play()
+        assert widget._pending_seek_ms == 5000
+        assert fake_mpv_no_ctx["player"].pause is False
+
+
 class TestLifecycleSignals:
     """The public seam consumers build a loading/failed state on (D35)."""
 
