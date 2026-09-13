@@ -154,3 +154,57 @@ class TestPickWhilePlaying:
 
         assert [w.screenshot_override for w in selected] == [pytest.approx(31 / FPS)]
         assert words[0].screenshot_override is None  # the source word is untouched
+
+
+class TestPlayFromParkedPreview:
+    """Play starts at the line, not at the screenshot frame the preview parks on.
+
+    The preview parks ``screenshot_offset`` into the line so the pane shows the
+    card's frame. Play used to unpause right there, so the first second of every
+    line was skipped and the curator's audio sounded late next to the card's.
+    """
+
+    def _parked(self, qtbot, fake_mpv, words, video) -> WordCurationDialog:
+        dlg = _dialog(qtbot, words, video)
+        _focus(dlg, 0)
+        fake_mpv.command.assert_called_with("seek", 6.0, "absolute+exact")  # the card's frame
+        fake_mpv.command.reset_mock()
+        return dlg
+
+    def test_space_plays_from_the_line_start(self, qtbot, fake_mpv, words, video):
+        dlg = self._parked(qtbot, fake_mpv, words, video)
+
+        dlg._toggle_play_pause()
+
+        fake_mpv.command.assert_called_once_with("seek", 5.0, "absolute+exact")
+        assert fake_mpv.pause is False
+
+    def test_the_play_button_plays_from_the_line_start(self, qtbot, fake_mpv, words, video):
+        dlg = self._parked(qtbot, fake_mpv, words, video)
+
+        dlg.player_widget.play_button.click()
+
+        fake_mpv.command.assert_called_once_with("seek", 5.0, "absolute+exact")
+        assert fake_mpv.pause is False
+
+    def test_a_frame_step_then_play_resumes_from_the_step(self, qtbot, fake_mpv, words, video):
+        dlg = self._parked(qtbot, fake_mpv, words, video)
+        dlg.player_widget.frame_forward_button.click()
+        fake_mpv.command.reset_mock()
+
+        dlg._toggle_play_pause()
+
+        fake_mpv.command.assert_not_called()
+        assert fake_mpv.pause is False
+
+    def test_pause_then_play_resumes_in_place(self, qtbot, fake_mpv, words, video):
+        dlg = self._parked(qtbot, fake_mpv, words, video)
+        dlg._toggle_play_pause()
+        dlg._toggle_play_pause()
+        assert fake_mpv.pause is True
+        fake_mpv.command.reset_mock()
+
+        dlg._toggle_play_pause()
+
+        fake_mpv.command.assert_not_called()
+        assert fake_mpv.pause is False

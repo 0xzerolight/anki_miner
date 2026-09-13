@@ -155,6 +155,9 @@ class SubtitlePlayerWidget(QWidget):
         # _on_file_loaded — WordCurationDialog's seek-then-pause preview is
         # issued immediately after set_source, before mpv finishes loading.
         self._pending_seek_ms: int | None = None
+        # Where the next play() starts instead of the parked position; see
+        # set_play_from. Voided by anything that moves the position.
+        self._play_from_ms: int | None = None
         self._duration_ms: int = 0
         # True while mpv sits at end-of-file (keep-open=yes auto-pauses there;
         # unpausing at EOF is a no-op, so play() must seek to 0 first).
@@ -371,6 +374,7 @@ class SubtitlePlayerWidget(QWidget):
         # New source: nothing loaded yet, previous pendings are void.
         self._file_loaded = False
         self._pending_seek_ms = None
+        self._play_from_ms = None
         self._at_eof = False
         self._set_cue_text("")
 
@@ -598,6 +602,7 @@ class SubtitlePlayerWidget(QWidget):
             seconds: Target position in seconds (clamped to >= 0).
         """
         self.cancel_range()
+        self._play_from_ms = None
         target_ms = max(0, int(seconds * 1000))
         if self.player is None or not self._file_loaded:
             self._pending_seek_ms = target_ms
@@ -626,9 +631,23 @@ class SubtitlePlayerWidget(QWidget):
         self.cancel_range()
         if self.player is None:
             return
-        if self._at_eof and self._file_loaded:
+        if self._play_from_ms is not None:
+            self.seek_seconds(self._play_from_ms / 1000.0)  # also consumes it
+        elif self._at_eof and self._file_loaded:
             self._seek_ms(0)
         self.player.pause = False
+
+    def set_play_from(self, seconds: float) -> None:
+        """Make the next :meth:`play` start at ``seconds`` rather than in place.
+
+        The word curator parks the preview on the frame the card's screenshot
+        is grabbed at, ``screenshot_offset`` into the line, but Play has to
+        start the line from its beginning or its first second is never heard.
+        Call it AFTER the parking seek: any seek, frame step or new source
+        voids it, because the user has moved somewhere Play should resume
+        from. Play consumes it, so a later Pause/Play resumes in place.
+        """
+        self._play_from_ms = max(0, int(seconds * 1000))
 
     def pause(self) -> None:
         """Pause playback (no-op if no source has been loaded)."""
@@ -699,6 +718,7 @@ class SubtitlePlayerWidget(QWidget):
         clip-preview stop like every other transport entry point.
         """
         self.cancel_range()
+        self._play_from_ms = None
         if self.player is None or not self._file_loaded:
             # A queued frame step is meaningless (unlike seek_seconds, which has
             # a pending-seek mechanism for a pre-load target): there is no frame
