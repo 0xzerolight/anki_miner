@@ -17,4 +17,10 @@ from __future__ import annotations
 #: ``WORDSET_IDS``); ``tests/unit/test_config_language.py`` pins them identical.
 AVAILABLE_LANGUAGES: tuple[str, ...] = ("ja", "ko", "zh")
 
-__all__ = ["AVAILABLE_LANGUAGES"]
+#: Engine packs shared by several mining languages. Not languages: never in
+#: AVAILABLE_LANGUAGES, never discovered as profiles, but every consumer that
+#: walks packs (installer boot injection, the .spec hiddenimports derivation,
+#: the manifest test, the seeder) walks these too.
+SHARED_PACK_CODES: tuple[str, ...] = ("_spacy",)
+
+__all__ = ["AVAILABLE_LANGUAGES", "SHARED_PACK_CODES"]

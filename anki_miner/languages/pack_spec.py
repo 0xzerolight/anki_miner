@@ -87,6 +87,10 @@ class LanguagePack:
     code: str
     approx_download_mb: int
     components: tuple[PackComponent, ...] = field(default=())
+    #: Pack codes (``languages.SHARED_PACK_CODES``) that must be installed
+    #: before this one: a spaCy model pack requires the ``_spacy`` engine pack.
+    #: Satisfied per component, so an importable engine counts on any Python.
+    requires: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
