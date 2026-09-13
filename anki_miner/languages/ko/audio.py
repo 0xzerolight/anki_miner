@@ -42,6 +42,15 @@ def ko_audio_candidates(word: Any) -> list[tuple[str, str]]:
     return pairs
 
 
+def ko_speakable(term: str, reading: str) -> str | None:
+    """What Google TTS speaks for a Korean ladder pair: the slot the ladder filled.
+
+    The first rung carries the orthographic form in the reading slot (Korean TTS
+    applies its own phonology to it), the second the pronunciation respelling.
+    """
+    return reading or term or None
+
+
 KO_AUDIO = AudioDefaults(
     gtts_lang="ko",
     cache_stem_prefix="googletts_ko",
@@ -50,4 +59,5 @@ KO_AUDIO = AudioDefaults(
     papago_speaker="kyuri",
     default_chain=(AudioSourceEntry(kind="googletts"),),
     candidates=ko_audio_candidates,
+    speakable=ko_speakable,
 )

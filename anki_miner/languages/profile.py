@@ -177,6 +177,12 @@ class AudioDefaults:
     papago_speaker: str | None = None
     default_chain: tuple[AudioSourceEntry, ...] = ()
     candidates: Callable[[Any], list[tuple[str, str]]] | None = None
+    #: What the synthetic and custom word-audio sources may speak for a
+    #: ``(term, reading)`` ladder pair: the text, or None to skip the pair (R5).
+    #: ``None`` is Japanese — the reading, only when it is kana (a kanji reading
+    #: is the tokenizer's OOV fallback and would let the voice guess a homograph).
+    #: JPod101 keeps its own kana gate: its endpoint only answers Japanese.
+    speakable: Callable[[str, str], str | None] | None = None
 
     def resolved_gtts_lang(self, config: AnkiMinerConfig) -> str:
         """The gTTS code for *config*; "" when the language has no Google voice."""

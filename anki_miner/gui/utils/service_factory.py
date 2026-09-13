@@ -553,6 +553,7 @@ def _build_expression_audio_fetcher(
                     delay=config.expression_audio_delay,
                     gtts_lang=gtts_lang,
                     cache_stem_prefix=audio.cache_stem_prefix,
+                    speakable=audio.speakable,
                 )
             )
         elif entry.kind in ("custom", "custom_json"):
@@ -571,6 +572,7 @@ def _build_expression_audio_fetcher(
                     file_prefix=f"custom_{slug}",
                     delay=config.expression_audio_delay,
                     language=audio.custom_fetcher_language,
+                    speakable=audio.speakable,
                 )
             )
         elif entry.kind == "pack":
