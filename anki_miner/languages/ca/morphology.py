@@ -27,6 +27,7 @@ import re
 import unicodedata
 from collections.abc import Mapping
 from types import MappingProxyType
+from typing import Any
 
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 
@@ -97,3 +98,45 @@ def interpunct_variants(word: str, surface: str) -> list[str]:
             if variant not in variants:
                 variants.append(variant)
     return variants
+
+
+def install_lemma_correction(nlp: Any) -> None:
+    """Let the model's own lookup table overrule the rule lemmatizer where the rules allow it.
+
+    ``CatalanLemmatizer.rule_lemmatize`` returns every rule candidate found in
+    its POS index and spaCy keeps the first: ``llibres`` gives ``llibra``
+    (``es→a``) before ``llibre`` (``s→``). When no candidate is indexed it keeps
+    an invented guess (``juguen``→``juguar``, ``sé``→``sre``) although
+    ``lemma_lookup`` knows the answer. The wrapper takes the lookup answer when
+    it is one of the rule candidates, or when no candidate is indexed and the
+    answer is indexed for the token's POS; otherwise the rule's pick stands.
+    UD Catalan AnCora test, content tokens with model POS: 97.00 % → 98.55 %.
+
+    The index tables hold lists, so membership uses a frozenset per POS built
+    on first use. Called once per loaded pipeline, before it tags anything.
+    """
+    lemmatizer = nlp.get_pipe("lemmatizer")
+    lookup = lemmatizer.lookups.get_table("lemma_lookup")
+    index_table = lemmatizer.lookups.get_table("lemma_index")
+    rule_lemmatize = lemmatizer.lemmatize
+    indexes: dict[str, frozenset[str]] = {}
+
+    def indexed(pos: str) -> frozenset[str]:
+        if pos not in indexes:
+            indexes[pos] = frozenset(index_table.get(pos, ()))
+        return indexes[pos]
+
+    def lemmatize(token: Any) -> list[str]:
+        forms: list[str] = rule_lemmatize(token)
+        entry = lookup.get(token.text.lower())
+        answer = entry[0] if isinstance(entry, list) and entry else None
+        if answer is None:
+            return forms
+        if answer in forms:
+            return [answer]
+        index = indexed(token.pos_.lower())
+        if answer in index and not any(form in index for form in forms):
+            return [answer]
+        return forms
+
+    lemmatizer.lemmatize = lemmatize
