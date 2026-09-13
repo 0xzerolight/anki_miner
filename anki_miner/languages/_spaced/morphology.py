@@ -165,29 +165,52 @@ class EncliticRung:
         return out
 
 
+#: A language's join candidates for a verb head carrying a stashed separable particle, best first.
+ParticleCandidates = Callable[[Any], Sequence[str]]
+
+
+def particle_plus_lemma(token: Any) -> list[str]:
+    """The default join (§4.3 item 2): the casefolded particle prefixed to the verb lemma."""
+    return [token.feature.particle + token.feature.lemma]
+
+
 class SeparableVerbPass:
-    """§4.3 item 2(b): ``lemma := particle + lemma`` when the dictionary knows the headword.
+    """§4.3 item 2(b): join a stashed particle to its verb when the dictionary knows the result.
 
     A ``token_post_pass`` (Stage S seam), injected by a language's
-    ``parser.py`` through ``create_spaced_parser``. One attestation call per
-    line, over the distinct candidates. ``attest is None`` (no offline
-    dictionary wired) reattaches unconditionally, mirroring the ungated merge
-    passes; a miss keeps the bare verb and is logged at debug. The stash is
-    cleared either way, so running the pass twice cannot prefix twice. The
-    third argument (R36's form lookup) is ignored.
+    ``parser.py`` through ``create_spaced_parser``. ``candidates`` lists a
+    head's possible joins, best first; the default is ``particle + lemma``. A
+    language whose lemmatiser already folds particles into lemmas passes its
+    own order (nl: ``dutch_particle_candidates``). One attestation call per
+    line over every head's distinct candidates; per head the first attested
+    candidate wins. ``attest is None`` (no offline dictionary wired) takes the
+    first candidate, mirroring the ungated merge passes; nothing attested keeps
+    the model's lemma and is logged at debug. The stash is cleared either way,
+    so running the pass twice cannot join twice. The third argument (R36's
+    form lookup) is ignored.
     """
+
+    def __init__(self, candidates: ParticleCandidates = particle_plus_lemma) -> None:
+        self._candidates = candidates
 
     def __call__(self, tokens: list[Any], attest: AttestLookup | None, forms: FormLookup | None) -> list[Any]:
         del forms
         heads = [token for token in tokens if getattr(token.feature, "particle", "")]
         if not heads:
             return tokens
-        candidates = [token.feature.particle + token.feature.lemma for token in heads]
-        attested = None if attest is None else attest(list(dict.fromkeys(candidates)))
-        for token, candidate in zip(heads, candidates, strict=True):
-            if attested is None or candidate in attested:
-                token.feature.lemma = candidate
+        options = [list(dict.fromkeys(self._candidates(token))) for token in heads]
+        probe = list(dict.fromkeys(text for texts in options for text in texts))
+        attested: set[str] | None = None
+        if attest is not None:
+            attested = attest(probe) if probe else set()
+        for token, texts in zip(heads, options, strict=True):
+            if attested is None:
+                chosen = texts[0] if texts else ""
             else:
-                logger.debug("Separable verb %r not attested; keeping %r", candidate, token.feature.lemma)
+                chosen = next((text for text in texts if text in attested), "")
+            if chosen:
+                token.feature.lemma = chosen
+            else:
+                logger.debug("Separable verb %r not attested; keeping %r", texts, token.feature.lemma)
             token.feature.particle = ""
         return tokens
