@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- **Language packs can require a shared engine pack.** A `LanguagePack` names the engine packs it needs (`requires`, `languages.SHARED_PACK_CODES`); the installer fetches them first (beside a seed root, or in their own `language_packs/<code>/`), Settings → Mining Language shows one download button with the combined size, frozen builds pin the shared manifests, and `scripts/pin_language_pack.py` generates model and runtime manifests from hashed GitHub release wheels and a per-platform `uv pip compile` against `requirements.lock`. Nothing uses it yet — the spaCy languages will.
 
 ### Changed
 
