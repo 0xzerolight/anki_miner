@@ -68,7 +68,7 @@ def ends_sentence(text: str, rules: SentenceRules) -> bool:
     character classes come from the splitter's ``_policy``, so the two agree on
     what a sentence end looks like by construction.
     """
-    terminators, _openers, closers, punct, _space_aware = _policy(rules)
+    terminators, _openers, closers, punct, _space_aware, _abbreviations = _policy(rules)
     stripped = text.rstrip()
     while stripped and stripped[-1] in closers:
         stripped = stripped[:-1].rstrip()

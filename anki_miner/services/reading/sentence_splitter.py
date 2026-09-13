@@ -14,11 +14,14 @@ The module constants below are the Japanese policy and stay the behaviour of a
 ``rules=None`` call, byte for byte. Another language passes its profile's
 ``SentenceRules`` instead; ``space_aware`` is what lets a terminator set that
 contains ``.`` (Korean's) leave ``3.14`` and ``Dr.`` alone, by requiring the run
-to be followed by whitespace or end-of-text.
+to be followed by whitespace or end-of-text. ``abbreviations`` adds the period
+model for a language whose ``.`` is also an abbreviation dot (``Dr.``, ``z.B.``)
+and whose ``...`` is an ellipsis; an empty set keeps that model off.
 """
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -31,6 +34,9 @@ _DOT = "．"
 # Pure ellipsis marks — never terminate on their own.
 _ELLIPSIS = frozenset("…‥")
 _SENTENCE_PUNCT = _HARD_TERMINATORS | _ELLIPSIS | {_DOT}
+# The ASCII period of a language's period model (SentenceRules.abbreviations).
+_ASCII_DOT = "."
+_WHITESPACE_RE = re.compile(r"\s")
 
 # Bracket/quote pairs; depth rises on an opener, falls on a matching closer.
 _OPENERS = frozenset("「｢『（〔［｛〈《【([{｟〝")
@@ -39,15 +45,33 @@ _CLOSERS = frozenset("」｣』）〕］｝〉》】)]}｠〟")
 
 def _policy(
     rules: SentenceRules | None,
-) -> tuple[frozenset[str], frozenset[str], frozenset[str], frozenset[str], bool]:
-    """(terminators, openers, closers, punct, space_aware) for this call.
+) -> tuple[frozenset[str], frozenset[str], frozenset[str], frozenset[str], bool, frozenset[str]]:
+    """(terminators, openers, closers, punct, space_aware, abbreviations) for this call.
 
     ``rules is None`` is the Japanese module constants, verbatim.
     """
     if rules is None:
-        return _HARD_TERMINATORS, _OPENERS, _CLOSERS, _SENTENCE_PUNCT, False
+        return _HARD_TERMINATORS, _OPENERS, _CLOSERS, _SENTENCE_PUNCT, False, frozenset()
     punct = rules.terminators | rules.ellipses | {_DOT}
-    return rules.terminators, rules.openers, rules.closers, punct, rules.space_aware
+    return rules.terminators, rules.openers, rules.closers, punct, rules.space_aware, rules.abbreviations
+
+
+def _period_continues(run: str, buf: list[str], abbreviations: frozenset[str], openers: frozenset[str]) -> bool:
+    """Whether a terminating ASCII-dot run is an abbreviation dot or an ellipsis.
+
+    Only consulted when a language declares abbreviations (the period model).
+    A run of two or more ASCII dots and nothing else is an ellipsis — the Latin
+    mirror of the full-width ``．．`` rule. A lone dot continues the sentence
+    when the text back to the previous whitespace, minus leading openers and
+    the dot itself, casefolds to a declared key.
+    """
+    if len(run) >= 2 and set(run) == {_ASCII_DOT}:
+        return True
+    if run != _ASCII_DOT:
+        return False
+    before = "".join(buf)[: -len(run)]
+    word = _WHITESPACE_RE.split(before)[-1].lstrip("".join(openers))
+    return bool(word) and word.casefold() in abbreviations
 
 
 def _run_is_terminating(run: str, terminators: frozenset[str]) -> bool:
@@ -105,7 +129,7 @@ def split_sentences(
     mining language's character policy; ``None`` is the Japanese module
     constants and the pre-multilanguage behaviour, verbatim.
     """
-    terminators, openers, closers, punct, space_aware = _policy(rules)
+    terminators, openers, closers, punct, space_aware, abbreviations = _policy(rules)
     matched_openers = _matched_openers(text, openers, closers)
     segments: list[str] = []
     buf: list[str] = []
@@ -136,7 +160,9 @@ def split_sentences(
             i = j
             # space_aware: a terminator set containing "." only splits when the
             # run is followed by whitespace or end-of-text, so "3.14" survives.
-            if _run_is_terminating(run, terminators) and (not space_aware or j >= n or text[j].isspace()):
+            # The period model (abbreviations) keeps "Dr." and "..." in the sentence.
+            terminates = _run_is_terminating(run, terminators) and (not space_aware or j >= n or text[j].isspace())
+            if terminates and not (abbreviations and _period_continues(run, buf, abbreviations, openers)):
                 segments.append("".join(buf))
                 buf = []
         else:
