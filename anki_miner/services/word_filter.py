@@ -5,7 +5,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import unicodedata
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, NamedTuple, TypedDict
 
 from anki_miner.config import AnkiMinerConfig
@@ -186,6 +186,16 @@ def whitelist_hits(pairs: Iterable[tuple[str, str]], word_list_service: WordList
     return frozenset(key for front, lemma in pairs for key in whitelisted_keys(front, lemma, word_list_service))
 
 
+def folded_pairs(pairs: Iterable[tuple[str, str]], fold: Callable[[str], str] | None) -> Iterator[tuple[str, str]]:
+    """``(front, lemma)`` pairs under the language's comparison fold (identity for None).
+
+    The run-end whitelist coverage compares folded list entries with these, so a
+    folded list and an unfolded probe can never disagree about coverage.
+    """
+    for front, lemma in pairs:
+        yield (front, lemma) if fold is None else (fold(front), fold(lemma))
+
+
 class WordFilterService:
     """Filter vocabulary words based on various criteria (stateless service)."""
 
@@ -196,6 +206,7 @@ class WordFilterService:
         *,
         mined_form: MinedFormPolicy | None = None,
         script: ScriptSupport | None = None,
+        dedup_fold: Callable[[str], str] | None = None,
     ):
         """Initialize the word filter service.
 
@@ -217,11 +228,16 @@ class WordFilterService:
                 deciding each script-filter option id in
                 ``filter_by_script_type``. ``None`` runs the JA predicates
                 verbatim. Duck-typed, same as ``mined_form``.
+            dedup_fold: The mining language's comparison fold
+                (``LanguageProfile.dedup_fold``, S3), applied to every probe
+                in ``filter_unknown``; the known sets arrive already folded
+                (known-words DB, Anki boundary). ``None`` keeps raw membership.
         """
         self.config = config
         self.tagger = tagger
         self._mined_form = mined_form
         self._script = script
+        self._dedup_fold = dedup_fold
 
     def filter_unknown(
         self,
@@ -269,14 +285,18 @@ class WordFilterService:
             List of unknown words (``mined_form`` not in existing vocabulary).
         """
         fold_kana = self.config.known_words_match_kana_variants
+        fold = self._dedup_fold
+
+        def _key(form: str) -> str:
+            return form if fold is None else fold(form)
 
         def _is_known(word: TokenizedWord) -> bool:
-            if word.mined_form in existing_vocabulary:
+            if _key(word.mined_form) in existing_vocabulary:
                 return True
             return (
                 fold_kana
                 and word.lemma != word.mined_form
-                and word.lemma in existing_vocabulary
+                and _key(word.lemma) in existing_vocabulary
                 and is_kana_only(word.mined_form)
             )
 

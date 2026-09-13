@@ -154,13 +154,23 @@ class AnkiService:
     REQUIRED_FIELD_KEYS = _REQUIRED_FIELD_KEYS
     OPTIONAL_FIELD_KEYS = _OPTIONAL_FIELD_KEYS
 
-    def __init__(self, config: AnkiMinerConfig, *, script: "ScriptSupport | None" = None):
+    def __init__(
+        self,
+        config: AnkiMinerConfig,
+        *,
+        script: "ScriptSupport | None" = None,
+        dedup_fold: Callable[[str], str] | None = None,
+    ):
         """Initialize the Anki service.
 
         Args:
             config: Configuration for Anki integration
             script: Script support for the vocabulary-scan gate. ``None``
                 resolves it from the configured mining language.
+            dedup_fold: The comparison fold for the vocabulary scan (S3).
+                ``None`` resolves it from the configured mining language,
+                the same rule as ``script``; ja/ko/zh profiles declare
+                none, so the key stays the Anki-stripped first field.
 
         Raises:
             ValueError: If required field keys are missing from config
@@ -178,6 +188,9 @@ class AnkiService:
         profile = get_profile(config_language(config))
         if script is None:
             script = profile.script
+        if dedup_fold is None:
+            dedup_fold = profile.dedup_fold
+        self._dedup_fold = dedup_fold
         # Logical card-field keys this language adds beyond anki_note_builder's
         # frozen sets, computed once and threaded into every build_note call.
         # ja/ko/zh declare only keys those sets already carry, so both come out
@@ -634,6 +647,11 @@ class AnkiService:
         """Whether *text* is written in the mining language's script."""
         return self._script.contains_target_script(text)
 
+    def _dedup_key(self, value: str) -> str:
+        """The comparison key for a first-field value: Anki's strip, then the language fold."""
+        key = _strip_for_dedup(value)
+        return self._dedup_fold(key) if key and self._dedup_fold is not None else key
+
     def _collect_first_field_forms(self, query: str) -> set[str]:
         """Run ``query`` and return the dedup-normalized in-script expressions.
 
@@ -684,7 +702,7 @@ class AnkiService:
                 # `mined_form` the filter compares against — otherwise the
                 # word slips the filter and AnkiConnect rejects it as a
                 # duplicate at addNotes time.
-                word = _strip_for_dedup(field_info.get("value", ""))
+                word = self._dedup_key(field_info.get("value", ""))
                 if word and self._is_target_script(word):
                     existing_words.add(word)
 
@@ -855,7 +873,7 @@ class AnkiService:
                 note = self._build_note(item, set()).note
                 fields = note.get("fields") or {}
                 first_value = next(iter(fields.values()), "")
-                key = _strip_for_dedup(first_value if isinstance(first_value, str) else "")
+                key = self._dedup_key(first_value if isinstance(first_value, str) else "")
                 duplicate = bool(key and (key in existing or key in seen))
                 if duplicate:
                     skipped_duplicates += 1
@@ -1056,7 +1074,7 @@ class AnkiService:
             # (not yet populated), leave it None so the next call scans normally.
             if self._existing_vocab_cache is not None:
                 for form in created_forms:
-                    key = _strip_for_dedup(form)
+                    key = self._dedup_key(form)
                     if key and self._is_target_script(key):
                         self._existing_vocab_cache.add(key)
 

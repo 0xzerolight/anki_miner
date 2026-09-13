@@ -2,6 +2,7 @@
 
 import logging
 import unicodedata
+from collections.abc import Callable
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
@@ -20,13 +21,19 @@ class WordListService:
         self,
         blacklist_path: Path | None = None,
         whitelist_path: Path | None = None,
+        *,
+        dedup_fold: Callable[[str], str] | None = None,
     ):
         """Initialize the word list service.
 
         Args:
             blacklist_path: Path to blacklist file, or None to skip.
             whitelist_path: Path to whitelist file, or None to skip.
+            dedup_fold: The mining language's comparison fold (S3), applied to
+                every entry at load and every probe; ``None`` keeps the NFC'd
+                entries and raw probes.
         """
+        self._dedup_fold = dedup_fold
         self._blacklist_path = blacklist_path
         self._whitelist_path = whitelist_path
         self._blacklist: set[str] = set()
@@ -40,14 +47,18 @@ class WordListService:
             SetupError: If a specified file cannot be read.
         """
         if self._blacklist_path is not None:
-            self._blacklist = self._read_word_file(self._blacklist_path)
+            self._blacklist = {self._key(word) for word in self._read_word_file(self._blacklist_path)}
             logger.info("Loaded %d blacklisted words", len(self._blacklist))
 
         if self._whitelist_path is not None:
-            self._whitelist = self._read_word_file(self._whitelist_path)
+            self._whitelist = {self._key(word) for word in self._read_word_file(self._whitelist_path)}
             logger.info("Loaded %d whitelisted words", len(self._whitelist))
 
         self._loaded = True
+
+    def _key(self, word: str) -> str:
+        """The comparison key for an entry or a probe (identity without a fold)."""
+        return word if self._dedup_fold is None else self._dedup_fold(word)
 
     def is_available(self) -> bool:
         """Check if the service has been loaded.
@@ -66,7 +77,7 @@ class WordListService:
         Returns:
             True if the word is blacklisted.
         """
-        return word in self._blacklist
+        return self._key(word) in self._blacklist
 
     def is_whitelisted(self, word: str) -> bool:
         """Check if a word is on the whitelist.
@@ -77,10 +88,10 @@ class WordListService:
         Returns:
             True if the word is whitelisted.
         """
-        return word in self._whitelist
+        return self._key(word) in self._whitelist
 
     def whitelist_entries(self) -> frozenset[str]:
-        """Every whitelist entry as written in the file (NFC, stripped).
+        """Every whitelist entry as written in the file (NFC, stripped, and folded when the language folds).
 
         The run-end coverage report diffs this against what got mined; it is
         the only reason the set is exposed rather than queried one word at a

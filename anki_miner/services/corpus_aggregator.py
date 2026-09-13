@@ -51,6 +51,8 @@ def select(
     mode: DeckSelectionMode,
     value: float,
     known_lemmas: set[str],
+    *,
+    fold: Callable[[str], str] | None = None,
 ) -> tuple[set[str], DeckBuildPreview]:
     """Select candidate lemmas from a corpus counter and compute a build preview.
 
@@ -65,6 +67,9 @@ def select(
             ``int()``) or target percentage 0–100 (``COVERAGE_PCT``); ignored
             for ``ALL``.  ``TOP_N`` ≤ 0 and ``COVERAGE_PCT`` ≤ 0 select nothing.
         known_lemmas: Lemmas already in the user's Anki collection.
+        fold: The mining language's comparison fold (S3). ``known_lemmas``
+            then arrive folded, so each candidate is folded before the
+            membership test; ``None`` compares raw lemmas.
 
     Returns:
         A ``(candidate_set, preview)`` tuple.  ``candidate_set`` is a plain
@@ -113,7 +118,11 @@ def select(
 
     candidate_count = len(candidate_set)
     projected_coverage_pct = (sum(counts[lemma] for lemma in candidate_set) / total_tokens) * 100.0
-    known_skipped = len(candidate_set & known_lemmas)
+    if fold is None:
+        known_skipped = len(candidate_set & known_lemmas)
+    else:
+        # known_lemmas arrive folded (known-words DB / Anki boundary, S3).
+        known_skipped = sum(1 for lemma in candidate_set if fold(lemma) in known_lemmas)
     card_count = candidate_count - known_skipped
 
     return candidate_set, DeckBuildPreview(
