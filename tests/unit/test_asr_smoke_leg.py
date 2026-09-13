@@ -31,7 +31,12 @@ def test_the_seed_writes_where_the_installer_reads() -> None:
 
 def test_the_release_workflow_seeds_the_asr_pack_and_runs_the_leg_on_every_platform() -> None:
     workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
-    assert 'scripts/fetch_language_pack_seeds.py "$RUNNER_TEMP/lang_pack_seeds" zh ko asr' in workflow
+    seed_lines = [
+        line for line in workflow.splitlines() if 'fetch_language_pack_seeds.py "$RUNNER_TEMP/lang_pack_seeds"' in line
+    ]
+    assert len(seed_lines) == 1
+    codes = seed_lines[0].split('"$RUNNER_TEMP/lang_pack_seeds"', 1)[1].split()
+    assert {"zh", "ko", "asr"} <= set(codes) and codes[-1] == "asr"
     matrix = json.loads((ROOT / ".github" / "release-matrix.json").read_text(encoding="utf-8"))
     for entry in matrix:
         assert entry["skip_asr_smoke"] == "", entry["platform"]

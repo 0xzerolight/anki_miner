@@ -145,6 +145,7 @@ def test_the_panel_anchors_the_selector_and_every_pack_row(qtbot):
         "mining_language.mining_language_combo",
         "mining_language.language_pack_ko",
         "mining_language.language_pack_zh",
+        "mining_language.language_pack_en",
     }
 
 

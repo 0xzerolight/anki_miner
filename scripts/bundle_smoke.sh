@@ -383,12 +383,20 @@ if [ -n "${BUNDLE_SMOKE_LANGS:-}" ]; then
     # under bash on every OS. Normalise the separators: a backslash path that
     # does not resolve here would SKIP the leg with a warning rather than fail
     # it, i.e. lose the Windows language smokes silently.
-    SEED="${BUNDLE_SMOKE_PACK_SEEDS:-}"
-    SEED="${SEED//\\//}/$lang"
+    SEED_ROOT="${BUNDLE_SMOKE_PACK_SEEDS:-}"
+    SEED_ROOT="${SEED_ROOT//\\//}"
+    SEED="$SEED_ROOT/$lang"
     if [ -n "${BUNDLE_SMOKE_PACK_SEEDS:-}" ] && [ -d "$SEED" ]; then
       echo "Seeding the $lang language pack from $SEED"
       mkdir -p "$ANKI_MINER_HOME/language_packs"
       cp -R "$SEED" "$ANKI_MINER_HOME/language_packs/$lang"
+      # Engine packs several languages share (languages.SHARED_PACK_CODES, "_"
+      # prefixed) are seeded BESIDE the language by the seeder; a model pack's
+      # `requires` only resolves when they are in the smoke home too.
+      for shared in "$SEED_ROOT"/_*; do
+        [ -d "$shared" ] || continue
+        [ -e "$ANKI_MINER_HOME/language_packs/${shared##*/}" ] || cp -R "$shared" "$ANKI_MINER_HOME/language_packs/${shared##*/}"
+      done
     else
       echo "::warning::no $lang seed under BUNDLE_SMOKE_PACK_SEEDS — the $lang language pack was not fetched, so the $lang leg cannot run"
       echo "SKIP language-$lang"
