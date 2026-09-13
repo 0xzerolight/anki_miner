@@ -52,6 +52,7 @@ from anki_miner.models.reading_queue import ReadingQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.reading import detector
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
+from anki_miner.utils.subtitle_encoding import script_check_kwarg
 
 logger = logging.getLogger(__name__)
 
@@ -195,11 +196,14 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
         exception (load or mining) propagates to the error handling in
         ``_run_item``.
         """
+        ladder = reading_decode_ladder(self._config)
+        profile = get_profile(self._config.language)
         document = detector.load(
             item.source,
             cancel_check=self.check_cancelled,
-            encodings=reading_decode_ladder(self._config),
-            rules=get_profile(self._config.language).sentence_rules,
+            encodings=ladder,
+            rules=profile.sentence_rules,
+            **script_check_kwarg(ladder, profile.script),
         )
         # Published for the manga tab's curation context (page images). Set
         # before process_reading so it is always the in-flight item's document

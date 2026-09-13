@@ -169,6 +169,7 @@ def load(
     cancel_check: Callable[[], bool] | None = None,
     encodings: tuple[str, ...] | None = None,
     rules: SentenceRules | None = None,
+    script_check: Callable[[str], bool] | None = None,
 ) -> ReadingDocument:
     """Dispatch a ref to its source loader and return the loaded document.
 
@@ -197,6 +198,9 @@ def load(
         raise OperationCancelled("Reading load cancelled")
     common: dict[str, Any] = {} if cancel_check is None else {"cancel_check": cancel_check}
     sniffing: dict[str, Any] = {} if encodings is None else {"encodings": encodings}
+    if script_check is not None:
+        # Validates a single-byte leg of that same ladder (spec S11).
+        sniffing["script_check"] = script_check
     splitting: dict[str, Any] = {} if rules is None else {"rules": rules}
     if ref.kind == "mokuro":
         from . import mokuro_source

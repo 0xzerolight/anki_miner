@@ -9,11 +9,14 @@ from __future__ import annotations
 
 import logging
 import re
+import unicodedata
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
 from anki_miner.utils.cjk_encoding import prefers_big5
+from anki_miner.utils.subtitle_encoding import is_single_byte_codec, plausible_single_byte_text
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +162,12 @@ def _jp_ratio(text: str) -> float:
     return score / len(text)
 
 
-def _decode(raw: bytes, *, encodings: tuple[str, ...] | None = None) -> str:
+def _decode(
+    raw: bytes,
+    *,
+    encodings: tuple[str, ...] | None = None,
+    script_check: Callable[[str], bool] | None = None,
+) -> str:
     """Decode bytes: BOM sniff → strict utf-8 → cp932/euc_jp (JP-ratio tiebreak).
 
     ``encodings`` is the mining language's ``get_profile(...).import_encodings``.
@@ -178,6 +186,11 @@ def _decode(raw: bytes, *, encodings: tuple[str, ...] | None = None) -> str:
     another language's bytes is the right one. Exhausting it raises rather than
     returning a replacement-character string, because a novel that decoded to
     U+FFFD noise would mine into cards.
+
+    A single-byte leg (cp1252, cp1258, …) must also pass
+    ``plausible_single_byte_text`` with *script_check* — such codecs almost never
+    raise — and its result is NFC-composed: cp1258 decodes Vietnamese to
+    combining sequences, and the decoded text becomes the card sentence.
     """
     if encodings is not None:
         for encoding in encodings:
@@ -190,9 +203,14 @@ def _decode(raw: bytes, *, encodings: tuple[str, ...] | None = None) -> str:
             if encoding == "gb18030" and "big5" in encodings and prefers_big5(raw):
                 continue
             try:
-                return raw.decode(encoding)
+                text = raw.decode(encoding)
             except (UnicodeDecodeError, LookupError):
                 continue
+            if is_single_byte_codec(encoding):
+                if not plausible_single_byte_text(text, script_check):
+                    continue
+                return unicodedata.normalize("NFC", text)
+            return text
         raise SetupError("Text encoding could not be detected.")
     if raw[:3] == b"\xef\xbb\xbf":
         return raw.decode("utf-8-sig")

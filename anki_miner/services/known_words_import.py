@@ -33,11 +33,14 @@ from __future__ import annotations
 import csv
 import json
 import logging
+import unicodedata
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.subtitle_encoding import is_single_byte_codec, plausible_single_byte_text
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +91,12 @@ class KnownWordsImportResult:
     skipped_malformed: int = 0
 
 
-def parse_known_words_file(path: Path, *, encodings: tuple[str, ...] | None = None) -> KnownWordsImportResult:
+def parse_known_words_file(
+    path: Path,
+    *,
+    encodings: tuple[str, ...] | None = None,
+    script_check: Callable[[str], bool] | None = None,
+) -> KnownWordsImportResult:
     """Detect the export format of ``path`` and extract its known words.
 
     Content is tried as JSON first; valid JSON that matches no known JSON
@@ -99,7 +107,8 @@ def parse_known_words_file(path: Path, *, encodings: tuple[str, ...] | None = No
     *encodings* is the caller's decode ladder — the mining language's
     ``get_profile(...).import_encodings``. ``None`` keeps the historical
     two-leg Japanese default; ``()`` would be an EMPTY ladder, so never pass
-    it as the "use the default" sentinel.
+    it as the "use the default" sentinel. *script_check* validates a
+    single-byte leg (``utils.subtitle_encoding.script_check_kwarg``).
     """
     try:
         if path.stat().st_size > _MAX_IMPORT_BYTES:
@@ -107,7 +116,7 @@ def parse_known_words_file(path: Path, *, encodings: tuple[str, ...] | None = No
         raw = path.read_bytes()
     except OSError as exc:
         raise KnownWordsImportError("unreadable") from exc
-    text, encoding = _decode(raw, encodings)
+    text, encoding = _decode(raw, encodings, script_check)
 
     try:
         data = json.loads(text)
@@ -245,7 +254,11 @@ def _parse_generic(text: str) -> KnownWordsImportResult:
     return _result("generic", words, total)
 
 
-def _decode(raw: bytes, encodings: tuple[str, ...] | None = None) -> tuple[str, str]:
+def _decode(
+    raw: bytes,
+    encodings: tuple[str, ...] | None = None,
+    script_check: Callable[[str], bool] | None = None,
+) -> tuple[str, str]:
     # utf-8-sig strips a Windows/Excel BOM that would otherwise break
     # json.loads and the exact first-cell header matches; the rest of the
     # ladder is the mining language's (cp932 for Japanese Notepad/Excel
@@ -259,11 +272,20 @@ def _decode(raw: bytes, encodings: tuple[str, ...] | None = None) -> tuple[str, 
     # Returns the winning encoding alongside the text: a list that imported as
     # nonsense words is a decode fault, and the import receipt cannot name the
     # ladder leg that produced it unless this reports which one won.
+    #
+    # A single-byte leg (cp1252, cp1258, …) almost never raises, so it wins only
+    # when its text passes the mining script's check, and it is NFC-composed
+    # (cp1258 decodes Vietnamese to combining sequences) — spec S11/S5.
     for encoding in ("utf-8-sig", "cp932") if encodings is None else encodings:
         try:
-            return raw.decode(encoding), encoding
+            text = raw.decode(encoding)
         except (UnicodeDecodeError, LookupError):
             continue
+        if is_single_byte_codec(encoding):
+            if not plausible_single_byte_text(text, script_check):
+                continue
+            text = unicodedata.normalize("NFC", text)
+        return text, encoding
     raise KnownWordsImportError("undecodable")
 
 
