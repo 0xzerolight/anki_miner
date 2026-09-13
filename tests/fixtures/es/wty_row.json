@@ -1,0 +1,1008 @@
+{
+ "source": "wty-es-en revision 2026.08.29 (huggingface.co/datasets/daxida/wty-release)",
+ "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0. Attribution: https://en.wiktionary.org/wiki/nieve#Spanish, https://en.wiktionary.org/wiki/mapa#Spanish, https://en.wiktionary.org/wiki/mano#Spanish, https://en.wiktionary.org/wiki/estudiante#Spanish",
+ "index": {
+  "title": "wty-es-en",
+  "format": 3,
+  "revision": "2026.08.29",
+  "sequenced": true,
+  "sourceLanguage": "es",
+  "targetLanguage": "en",
+  "attribution": "https://kaikki.org/"
+ },
+ "tag_bank": [
+  [
+   "adj",
+   "partOfSpeech",
+   -2,
+   "adjective",
+   2
+  ],
+  [
+   "fem",
+   "gender-feminine",
+   -1,
+   "feminine",
+   1
+  ],
+  [
+   "masc",
+   "gender-masculine",
+   -1,
+   "masculine",
+   1
+  ],
+  [
+   "n",
+   "partOfSpeech",
+   -2,
+   "noun",
+   2
+  ],
+  [
+   "non-lemma",
+   "",
+   10,
+   "non-lemma",
+   -10
+  ],
+  [
+   "sl",
+   "register",
+   0,
+   "slang",
+   0
+  ],
+  [
+   "🇨🇴",
+   "variety",
+   0,
+   "Colombia",
+   0
+  ],
+  [
+   "🇲🇽",
+   "variety",
+   0,
+   "Mexico",
+   0
+  ],
+  [
+   "🇵🇪",
+   "variety",
+   0,
+   "Peru",
+   0
+  ],
+  [
+   "🇻🇪",
+   "variety",
+   0,
+   "Venezuela",
+   0
+  ]
+ ],
+ "entries": [
+  {
+   "query": "nieve",
+   "why": "plain feminine noun: one gender chip and the head line agree",
+   "expected_gender": "fem",
+   "term_rows": [
+    [
+     "nieve",
+     "",
+     "n fem",
+     "n",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "nieve f (plural nieves)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Etymology tree\nProto-Indo-European *sneygʷʰ-\nProto-Indo-European *snígʷʰs\nProto-Italic *sniks\nLatin nix\nLatin -em\nLatin nivem\nVulgar Latin *nĕvem\nOld Spanish nieve\nSpanish nieve\nInherited from Old Spanish nieve, from Vulgar Latin *nĕvem, alteration of Latin nivem."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "snow"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "Mexico",
+                 "data": {
+                  "content": "tag",
+                  "category": "variety"
+                 },
+                 "content": "🇲🇽"
+                }
+               ]
+              },
+              "ice cream"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/nieve#Spanish",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Spanish/meaning/n/ni/nieve.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ],
+    [
+     "nieve",
+     "",
+     "non-lemma",
+     "v",
+     0,
+     [
+      [
+       "nevar",
+       [
+        "first/third-person singular present subjunctive"
+       ]
+      ],
+      [
+       "nevar",
+       [
+        "first/third-person singular present subjunctive"
+       ]
+      ],
+      [
+       "nevar",
+       [
+        "formal third-person second-person-semantically singular imperative negative"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ],
+    [
+     "nieve",
+     "",
+     "non-lemma",
+     "n",
+     0,
+     [
+      [
+       "ñeve",
+       [
+        "alt-of"
+       ]
+      ],
+      [
+       "ñeve",
+       [
+        "alternative"
+       ]
+      ],
+      [
+       "ñeve",
+       [
+        "feminine"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ]
+   ],
+   "rendered_html": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-es-en\" data-dictionary-id=\"wty-es-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-es-en)</i><ul class=\"gloss-list\" data-count=\"3\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">nieve f (plural nieves)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Etymology tree<br>Proto-Indo-European *sneygʷʰ-<br>Proto-Indo-European *snígʷʰs<br>Proto-Italic *sniks<br>Latin nix<br>Latin -em<br>Latin nivem<br>Vulgar Latin *nĕvem<br>Old Spanish nieve<br>Spanish nieve<br>Inherited from Old Spanish nieve, from Vulgar Latin *nĕvem, alteration of Latin nivem.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">snow</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"variety\" title=\"Mexico\">🇲🇽</span></div>ice cream</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/nieve#Spanish\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Spanish/meaning/n/ni/nieve.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">nevar</li><li class=\"gloss-sc-li\">nevar</li><li class=\"gloss-sc-li\">nevar</li></ul></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">ñeve</li><li class=\"gloss-sc-li\">ñeve</li><li class=\"gloss-sc-li\">ñeve</li></ul></div></li></ul></li></ol></div>"
+  },
+  {
+   "query": "mapa",
+   "why": "masculine noun in -a: the head line says m where the sm morphologizer says Gender=Fem",
+   "expected_gender": "masc",
+   "term_rows": [
+    [
+     "mapa",
+     "",
+     "n masc",
+     "n",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "mapa m (plural mapas)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Etymology tree\nProto-Semitic *manpayder.\nProto-Semitic *manpiy-der.\nPhoenician 𐤌𐤀𐤐 (mʾp /⁠mappē⁠/)der.?\nLatin mappader.\nSpanish mapa\nFrom Latin mappa (“napkin, starting signal in a race”), see map for more."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "map (sheet with geographical information on it)"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/mapa#Spanish",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Spanish/meaning/m/ma/mapa.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ]
+   ],
+   "rendered_html": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-es-en\" data-dictionary-id=\"wty-es-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><i>(wty-es-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">mapa m (plural mapas)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Etymology tree<br>Proto-Semitic *manpayder.<br>Proto-Semitic *manpiy-der.<br>Phoenician 𐤌𐤀𐤐 (mʾp /⁠mappē⁠/)der.?<br>Latin mappader.<br>Spanish mapa<br>From Latin mappa (“napkin, starting signal in a race”), see map for more.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">map (sheet with geographical information on it)</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/mapa#Spanish\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Spanish/meaning/m/ma/mapa.html\">Kaikki</a></div></div></li></ul></li></ol></div>"
+  },
+  {
+   "query": "mano",
+   "why": "feminine noun in -o whose block also holds a masculine slang row: chips fem+masc, head line f",
+   "expected_gender": "fem",
+   "term_rows": [
+    [
+     "mano",
+     "",
+     "n fem",
+     "n",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "mano f (plural manos)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Inherited from Old Spanish mano, from Latin manus, from Proto-Italic *manus, perhaps from Proto-Indo-European *méh₂-r̥ ~ *mh₂-én-, derived from Proto-Indo-European *(s)meh₂- (“to beckon”), or perhaps from Proto-Indo-European *mon-u- (see the Proto-Italic entry). Cognate with Galician man and Portuguese mão. Compare French main."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "anatomy",
+                 "data": {
+                  "content": "tag",
+                  "category": "topic"
+                 },
+                 "content": "anat"
+                },
+                {
+                 "tag": "span",
+                 "title": "medicine",
+                 "data": {
+                  "content": "tag",
+                  "category": "topic"
+                 },
+                 "content": "med"
+                }
+               ]
+              },
+              "hand"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "front foot"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "round; hand"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "coat, lick"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "skill, talent"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "mano (a stone resembling a rolling pin, used to grind maize or other grain on a metate)"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "A group of people united for a job"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/mano#Spanish",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Spanish/meaning/m/ma/mano.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ],
+    [
+     "mano",
+     "",
+     "n 🇨🇴 🇲🇽 🇵🇪 🇻🇪 masc sl",
+     "n",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "mano m (plural manos, feminine mana, feminine plural manas)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Etymology tree\nProto-Indo-European *ǵenh₁-\nProto-Indo-European *-mn̥\nProto-Indo-European *ǵénh₁mn̥\nProto-Italic *genamen\nLatin *genmen\nLatin germen\nLatin germānus\nOld Spanish ermano\nSpanish hermanoclip.\nSpanish mano\nClipping of hermano (“brother, sibling”)."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "buddy, friend, bro, homie"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/mano#Spanish",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Spanish/meaning/m/ma/mano.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ],
+    [
+     "mano",
+     "",
+     "non-lemma",
+     "v",
+     0,
+     [
+      [
+       "manar",
+       [
+        "first-person singular present indicative"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ],
+    [
+     "mano",
+     "",
+     "non-lemma",
+     "n",
+     0,
+     [
+      [
+       "hermano",
+       [
+        "alternative clipping"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ]
+   ],
+   "rendered_html": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-es-en\" data-dictionary-id=\"wty-es-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"register\" title=\"slang\">sl</span><span class=\"gloss-tag\" data-category=\"variety\" title=\"Colombia\">🇨🇴</span><span class=\"gloss-tag\" data-category=\"variety\" title=\"Mexico\">🇲🇽</span><span class=\"gloss-tag\" data-category=\"variety\" title=\"Peru\">🇵🇪</span><span class=\"gloss-tag\" data-category=\"variety\" title=\"Venezuela\">🇻🇪</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-es-en)</i><ul class=\"gloss-list\" data-count=\"4\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">mano f (plural manos)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Old Spanish mano, from Latin manus, from Proto-Italic *manus, perhaps from Proto-Indo-European *méh₂-r̥ ~ *mh₂-én-, derived from Proto-Indo-European *(s)meh₂- (“to beckon”), or perhaps from Proto-Indo-European *mon-u- (see the Proto-Italic entry). Cognate with Galician man and Portuguese mão. Compare French main.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"anatomy\">anat</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"medicine\">med</span></div>hand</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">front foot</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">round; hand</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">coat, lick</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">skill, talent</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">mano (a stone resembling a rolling pin, used to grind maize or other grain on a metate)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">A group of people united for a job</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/mano#Spanish\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Spanish/meaning/m/ma/mano.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">mano m (plural manos, feminine mana, feminine plural manas)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Etymology tree<br>Proto-Indo-European *ǵenh₁-<br>Proto-Indo-European *-mn̥<br>Proto-Indo-European *ǵénh₁mn̥<br>Proto-Italic *genamen<br>Latin *genmen<br>Latin germen<br>Latin germānus<br>Old Spanish ermano<br>Spanish hermanoclip.<br>Spanish mano<br>Clipping of hermano (“brother, sibling”).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">buddy, friend, bro, homie</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/mano#Spanish\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Spanish/meaning/m/ma/mano.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">manar</div></li><li class=\"gloss-item\"><div class=\"gloss-content\">hermano</div></li></ul></li></ol></div>"
+  },
+  {
+   "query": "estudiante",
+   "why": "common-gender noun: chips fem+masc and the head line reads 'm or f by sense'",
+   "expected_gender": null,
+   "term_rows": [
+    [
+     "estudiante",
+     "",
+     "n fem masc",
+     "n",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "estudiante m or f by sense (plural estudiantes)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Etymology tree\nProto-Indo-European *(s)tew-\nProto-Indo-European *-d-\nProto-Indo-European *(s)tewd-\nProto-Indo-European *-éh₁ti\nProto-Indo-European *studéh₁ti\nProto-Italic *studēō\nLatin studeō\nProto-Indo-European *-(i)yós\nProto-Italic *-ijos\nProto-Italic *-ios\nOld Latin -ios\nLatin -iusnom.\nLatin -ium\nLatin studiumlbor.\nOld Spanish estudio\nSpanish estudio\nProto-Indo-European *-h₂\nProto-Indo-European *-éh₂\nProto-Indo-European *-yéti\nProto-Indo-European *-eh₂yéti\nProto-Indo-European *-h₂tiinflu.\nProto-Italic *-ājō\nProto-Italic *-āō\nLatin -āre\nOld Spanish -ar\nSpanish -ar\nSpanish estudiar\nProto-Indo-European *-onts\nLatin -ns\nLatin -antem\nSpanish -ante\nSpanish estudiante\nFrom estudiar + -ante."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "student (a person who studies or learns about a particular subject)"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "student (a person who is formally enrolled at a school, university or other educational institution)"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/estudiante#Spanish",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Spanish/meaning/e/es/estudiante.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ],
+    [
+     "estudiante",
+     "",
+     "adj fem masc",
+     "adj",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "estudiante m or f (masculine and feminine plural estudiantes)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Etymology tree\nProto-Indo-European *(s)tew-\nProto-Indo-European *-d-\nProto-Indo-European *(s)tewd-\nProto-Indo-European *-éh₁ti\nProto-Indo-European *studéh₁ti\nProto-Italic *studēō\nLatin studeō\nProto-Indo-European *-(i)yós\nProto-Italic *-ijos\nProto-Italic *-ios\nOld Latin -ios\nLatin -iusnom.\nLatin -ium\nLatin studiumlbor.\nOld Spanish estudio\nSpanish estudio\nProto-Indo-European *-h₂\nProto-Indo-European *-éh₂\nProto-Indo-European *-yéti\nProto-Indo-European *-eh₂yéti\nProto-Indo-European *-h₂tiinflu.\nProto-Italic *-ājō\nProto-Italic *-āō\nLatin -āre\nOld Spanish -ar\nSpanish -ar\nSpanish estudiar\nProto-Indo-European *-onts\nLatin -ns\nLatin -antem\nSpanish -ante\nSpanish estudiante\nFrom estudiar + -ante."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "that studies, who studies"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/estudiante#Spanish",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Spanish/meaning/e/es/estudiante.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ]
+   ],
+   "rendered_html": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-es-en\" data-dictionary-id=\"wty-es-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"adjective\">adj</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><i>(wty-es-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">estudiante m or f by sense (plural estudiantes)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Etymology tree<br>Proto-Indo-European *(s)tew-<br>Proto-Indo-European *-d-<br>Proto-Indo-European *(s)tewd-<br>Proto-Indo-European *-éh₁ti<br>Proto-Indo-European *studéh₁ti<br>Proto-Italic *studēō<br>Latin studeō<br>Proto-Indo-European *-(i)yós<br>Proto-Italic *-ijos<br>Proto-Italic *-ios<br>Old Latin -ios<br>Latin -iusnom.<br>Latin -ium<br>Latin studiumlbor.<br>Old Spanish estudio<br>Spanish estudio<br>Proto-Indo-European *-h₂<br>Proto-Indo-European *-éh₂<br>Proto-Indo-European *-yéti<br>Proto-Indo-European *-eh₂yéti<br>Proto-Indo-European *-h₂tiinflu.<br>Proto-Italic *-ājō<br>Proto-Italic *-āō<br>Latin -āre<br>Old Spanish -ar<br>Spanish -ar<br>Spanish estudiar<br>Proto-Indo-European *-onts<br>Latin -ns<br>Latin -antem<br>Spanish -ante<br>Spanish estudiante<br>From estudiar + -ante.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">student (a person who studies or learns about a particular subject)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">student (a person who is formally enrolled at a school, university or other educational institution)</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/estudiante#Spanish\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Spanish/meaning/e/es/estudiante.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">estudiante m or f (masculine and feminine plural estudiantes)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Etymology tree<br>Proto-Indo-European *(s)tew-<br>Proto-Indo-European *-d-<br>Proto-Indo-European *(s)tewd-<br>Proto-Indo-European *-éh₁ti<br>Proto-Indo-European *studéh₁ti<br>Proto-Italic *studēō<br>Latin studeō<br>Proto-Indo-European *-(i)yós<br>Proto-Italic *-ijos<br>Proto-Italic *-ios<br>Old Latin -ios<br>Latin -iusnom.<br>Latin -ium<br>Latin studiumlbor.<br>Old Spanish estudio<br>Spanish estudio<br>Proto-Indo-European *-h₂<br>Proto-Indo-European *-éh₂<br>Proto-Indo-European *-yéti<br>Proto-Indo-European *-eh₂yéti<br>Proto-Indo-European *-h₂tiinflu.<br>Proto-Italic *-ājō<br>Proto-Italic *-āō<br>Latin -āre<br>Old Spanish -ar<br>Spanish -ar<br>Spanish estudiar<br>Proto-Indo-European *-onts<br>Latin -ns<br>Latin -antem<br>Spanish -ante<br>Spanish estudiante<br>From estudiar + -ante.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">that studies, who studies</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/estudiante#Spanish\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Spanish/meaning/e/es/estudiante.html\">Kaikki</a></div></div></li></ul></li></ol></div>"
+  }
+ ]
+}
