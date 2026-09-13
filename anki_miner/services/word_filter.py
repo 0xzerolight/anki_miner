@@ -45,6 +45,11 @@ def _ja_matches(option_id: str, form: str) -> bool:
     return False if predicate is None else predicate(form)
 
 
+def _ja_expression_tracks_surface(word: TokenizedWord) -> bool:
+    """Japanese: every POS but 動詞/形容詞 mines its surface as the card front."""
+    return word.pos not in ("動詞", "形容詞")
+
+
 def enabled_script_options(script: ScriptSupport, config: AnkiMinerConfig) -> frozenset[str]:
     """Option ids this *config* turns on for *script*.
 
@@ -207,6 +212,7 @@ class WordFilterService:
         mined_form: MinedFormPolicy | None = None,
         script: ScriptSupport | None = None,
         dedup_fold: Callable[[str], str] | None = None,
+        expression_tracks_surface: Callable[[TokenizedWord], bool] | None = None,
     ):
         """Initialize the word filter service.
 
@@ -232,12 +238,19 @@ class WordFilterService:
                 (``LanguageProfile.dedup_fold``, S3), applied to every probe
                 in ``filter_unknown``; the known sets arrive already folded
                 (known-words DB, Anki boundary). ``None`` keeps raw membership.
+            expression_tracks_surface: Whether a word's card front follows its
+                surface when an i+1 swap moves it to another line. ``None``
+                runs the Japanese literal (動詞/形容詞 keep ``orth_base``). A
+                lemma-fronted language passes ``lambda w: False``: its front
+                never changes with the surface and its reading fields are
+                never regenerated from it.
         """
         self.config = config
         self.tagger = tagger
         self._mined_form = mined_form
         self._script = script
         self._dedup_fold = dedup_fold
+        self._tracks_surface = expression_tracks_surface or _ja_expression_tracks_surface
 
     def filter_unknown(
         self,
@@ -651,7 +664,7 @@ class WordFilterService:
 
     def _line_preserves_mined_form(self, word: TokenizedWord, line: LineLemmas) -> bool:
         """Whether swapping to ``line`` keeps a surface-mined card front."""
-        if word.pos in ("動詞", "形容詞"):
+        if not self._tracks_surface(word):
             return True
         surface = next(
             (surface for lemma, surface, *_ in line.lemma_spans if lemma == word.lemma),
@@ -726,7 +739,7 @@ class WordFilterService:
         # the original values are kept as a best-effort fallback.
         expr_furigana = word.expression_furigana
         expr_reading = word.expression_reading
-        surface_is_expression = word.pos not in ("動詞", "形容詞")
+        surface_is_expression = self._tracks_surface(word)
         if surface_is_expression and new_surface != word.surface and self.tagger is not None:
             expr_furigana = generate_furigana(new_surface, self.tagger)
             expr_reading = generate_reading(new_surface, self.tagger)

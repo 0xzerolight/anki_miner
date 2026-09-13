@@ -824,12 +824,16 @@ def create_services(
     # Share the parser's tagger with the word filter so i+1 swap can
     # rebuild bolded sentence fields without spinning up a second tagger
     # (fugashi.Tagger initialization is non-trivial).
+    profile = get_profile(config_language(config))
     word_filter = WordFilterService(
         config,
         tagger=subtitle_parser.tagger,
-        mined_form=get_profile(config_language(config)).mined_form,
-        script=get_profile(config_language(config)).script,
-        dedup_fold=get_profile(config_language(config)).dedup_fold,
+        mined_form=profile.mined_form,
+        script=profile.script,
+        dedup_fold=profile.dedup_fold,
+        # D6: whether the front follows the surface is the mined-form policy's
+        # question; a policy that does not answer it keeps the ja literal.
+        expression_tracks_surface=getattr(profile.mined_form, "expression_tracks_surface", None),
     )
     media_extractor = MediaExtractorService(config)
     if anki_service is None:
