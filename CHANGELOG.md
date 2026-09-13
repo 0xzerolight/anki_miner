@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 - **Language packs can require a shared engine pack.** A `LanguagePack` names the engine packs it needs (`requires`, `languages.SHARED_PACK_CODES`); the installer fetches them first (beside a seed root, or in their own `language_packs/<code>/`), Settings → Mining Language shows one download button with the combined size, frozen builds pin the shared manifests, and `scripts/pin_language_pack.py` generates model and runtime manifests from hashed GitHub release wheels and a per-platform `uv pip compile` against `requirements.lock`. Nothing uses it yet — the spaCy languages will.
+- **Frequency lists in the headerless `word count` format import (Settings → Frequency → Add frequency source…).** One word, a space and its count per line, with no header, tab or comma — the shape hermitdave/FrequencyWords ships its OpenSubtitles lists in — used to fail with "no usable frequency entries", because the delimiter sniffer only knew tab and comma. A sample whose every complete line is `word count` is now read as space-delimited; everything else keeps the tab/comma choice. Whether the numbers are counts or ranks is still decided by the existing direction probe.
 
 ### Changed
 
