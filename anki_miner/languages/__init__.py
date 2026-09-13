@@ -23,4 +23,10 @@ AVAILABLE_LANGUAGES: tuple[str, ...] = ("ja", "ko", "zh")
 #: the manifest test, the seeder) walks these too.
 SHARED_PACK_CODES: tuple[str, ...] = ("_spacy",)
 
-__all__ = ["AVAILABLE_LANGUAGES", "SHARED_PACK_CODES"]
+#: Every ``config.script_variant`` value any profile may use: "" (no variants)
+#: plus zh's Han scripts and pt's two national varieties. Duplicated as
+#: ``config.config._SCRIPT_VARIANT_IDS`` (config must not import this package);
+#: ``tests/unit/languages/test_stage_s_contract.py`` pins them identical.
+SCRIPT_VARIANT_IDS: tuple[str, ...] = ("", "simplified", "traditional", "br", "pt")
+
+__all__ = ["AVAILABLE_LANGUAGES", "SHARED_PACK_CODES", "SCRIPT_VARIANT_IDS"]

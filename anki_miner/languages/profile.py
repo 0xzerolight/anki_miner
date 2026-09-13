@@ -167,13 +167,20 @@ class AudioDefaults:
     ``languages/`` (there is no ``service_factory.sentence_cache_stem_prefix``).
     """
 
-    gtts_lang: str
+    #: gTTS language code, or a callable resolving it from the running config
+    #: (pt picks ``pt``/``pt-PT`` by variety). "" means the language has no
+    #: Google voice: service_factory builds neither Google leg.
+    gtts_lang: str | Callable[[AnkiMinerConfig], str]
     cache_stem_prefix: str
     sentence_cache_stem_prefix: str
     custom_fetcher_language: str
     papago_speaker: str | None = None
     default_chain: tuple[AudioSourceEntry, ...] = ()
     candidates: Callable[[Any], list[tuple[str, str]]] | None = None
+
+    def resolved_gtts_lang(self, config: AnkiMinerConfig) -> str:
+        """The gTTS code for *config*; "" when the language has no Google voice."""
+        return self.gtts_lang(config) if callable(self.gtts_lang) else self.gtts_lang
 
 
 @dataclass(frozen=True)

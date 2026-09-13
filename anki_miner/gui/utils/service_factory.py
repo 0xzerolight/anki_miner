@@ -518,6 +518,7 @@ def _build_expression_audio_fetcher(
     # stem prefix and the custom-source {language} value all come from here, so
     # no member has to know the language code itself.
     audio = get_profile(config_language(config)).audio
+    gtts_lang = audio.resolved_gtts_lang(config)
     audio_cache_root = ANKI_MINER_HOME / "audio_cache"
     jpod_cache = audio_cache_root / "jpod101"
     googletts_cache = audio_cache_root / "googletts"
@@ -543,11 +544,14 @@ def _build_expression_audio_fetcher(
                 )
             )
         elif entry.kind == "googletts":
+            if not gtts_lang:
+                # A language with no Google voice (gtts_lang == "") has no leg.
+                continue
             fetchers.append(
                 GoogleTranslateAudioFetcher(
                     cache_dir=googletts_cache,
                     delay=config.expression_audio_delay,
-                    gtts_lang=audio.gtts_lang,
+                    gtts_lang=gtts_lang,
                     cache_stem_prefix=audio.cache_stem_prefix,
                 )
             )
@@ -625,12 +629,13 @@ def _build_sentence_audio_fetcher(config: AnkiMinerConfig) -> SentenceAudioFetch
     audio = get_profile(config_language(config)).audio
     cache_dir = ANKI_MINER_HOME / "audio_cache" / "sentence_tts"
     fetchers: list[SentenceAudioFetcher] = []
-    if config.reading_tts_google_enabled:
+    gtts_lang = audio.resolved_gtts_lang(config)
+    if config.reading_tts_google_enabled and gtts_lang:
         fetchers.append(
             GoogleSentenceTtsFetcher(
                 cache_dir=cache_dir,
                 delay=config.expression_audio_delay,
-                gtts_lang=audio.gtts_lang,
+                gtts_lang=gtts_lang,
                 cache_stem_prefix=audio.sentence_cache_stem_prefix,
             )
         )
