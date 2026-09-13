@@ -180,6 +180,15 @@ if os.path.isdir(pt_core_news_sm_license_dir):
         (pt_core_news_sm_license_dir, os.path.join("licenses", "pt_core_news_sm"))
     )
 
+# fr_core_news_sm (French spaCy model) LGPL-LR notice: shipped whenever the
+# license dir exists. Lands at sys._MEIPASS/licenses/fr_core_news_sm/. The model
+# is excluded below and arrives as a language pack the app downloads; the notice
+# ships because the app is what delivers the model (the kiwipiepy precedent).
+fr_model_license_dir = os.path.join(project_root, "licenses", "fr_core_news_sm")
+fr_model_license_datas = []
+if os.path.isdir(fr_model_license_dir):
+    fr_model_license_datas.append((fr_model_license_dir, os.path.join("licenses", "fr_core_news_sm")))
+
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
 # ML model has no positive trust signals to weigh against "packed binary that runs
@@ -333,7 +342,8 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + vulkan_loader_license_datas
     + kiwipiepy_license_datas
     + ca_model_license_datas
-    + pt_core_news_sm_license_datas,
+    + pt_core_news_sm_license_datas
+    + fr_model_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",
