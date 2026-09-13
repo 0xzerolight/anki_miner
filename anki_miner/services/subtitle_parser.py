@@ -311,6 +311,16 @@ def _is_all_katakana(surface: str) -> bool:
     return bool(non_ws) and all(_is_katakana_surface_char(c) for c in non_ws)
 
 
+def _token_morph(token: Any) -> str:
+    """A duck token's morphological features, or "" (fugashi nodes have none).
+
+    ``isinstance`` rather than truthiness: a MagicMock token in a test
+    auto-creates a truthy ``morph`` attribute.
+    """
+    morph = getattr(token, "morph", "")
+    return morph if isinstance(morph, str) else ""
+
+
 def _differs_by_okurigana_only(orth_base: str, lemma: str) -> bool:
     """Whether ``orth_base`` is ``lemma`` with only its trailing okurigana changed.
 
@@ -1393,6 +1403,7 @@ class SubtitleParserService:
             sentence_bolded=sentence_bolded,
             sentence_furigana_bolded=sentence_furigana_bolded,
             mined_form_override=mined,
+            morph=_token_morph(word_token),
         )
 
     def _emit_line_words_and_index(
