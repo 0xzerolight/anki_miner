@@ -444,6 +444,42 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "opencc",
         "kiwipiepy",
         "kiwipiepy_model",
+        # The spaCy engine (languages/_spacy/pack.py, generated) and every spaCy
+        # model package are language packs, never bundle content: a dev building
+        # from a `.[languages]` venv would otherwise ship them.
+        # tests/unit/languages/test_spacy_runtime_pack.py reads this list against
+        # the manifest. NOT typer: huggingface_hub bundles it (A.6). NOT colorama:
+        # tqdm and click import it on Windows, where the bundle already ships it.
+        "annotated_types",
+        "blis",
+        "catalogue",
+        "cloudpathlib",
+        "confection",
+        "cymem",
+        "jinja2",
+        "markupsafe",
+        "murmurhash",
+        "preshed",
+        "pydantic",
+        "pydantic_core",
+        "smart_open",
+        "spacy",
+        "spacy_legacy",
+        "spacy_loggers",
+        "srsly",
+        "thinc",
+        "typing_inspection",
+        "wasabi",
+        "weasel",
+        "wrapt",
+        "ca_core_news_sm",
+        "de_core_news_sm",
+        "en_core_web_sm",
+        "es_core_news_sm",
+        "fr_core_news_sm",
+        "it_core_news_sm",
+        "nl_core_news_sm",
+        "pt_core_news_sm",
         # yt-dlp is a SUBPROCESS, never an import: every call site spawns the
         # executable, so the Python package was collected wholesale for no runtime
         # benefit (~16 MB, 13 MB of it extractors) and is dropped here. The frozen

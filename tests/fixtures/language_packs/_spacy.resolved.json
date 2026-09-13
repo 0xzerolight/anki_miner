@@ -1,0 +1,849 @@
+{
+  "approx_download_mb": 55,
+  "code": "_spacy",
+  "components": [
+    {
+      "abi": null,
+      "import_name": "annotated_types",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "annotated_types-0.8.0-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "annotated_types/",
+        "root_members": [],
+        "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+        "size": 13427,
+        "url": "https://files.pythonhosted.org/packages/99/91/8acff4f5e50511b911bbccb72b8628a49c68ce14148cd9f6431094859a90/annotated_types-0.8.0-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": [
+        3,
+        12
+      ],
+      "import_name": "blis",
+      "per_platform": {
+        "darwin/arm64": {
+          "exclude": [],
+          "filename": "blis-1.3.3-cp312-cp312-macosx_11_0_arm64.whl",
+          "kind": "wheel",
+          "member_prefix": "blis/",
+          "root_members": [],
+          "sha256": "3f6c595185176ce021316263e1a1d636a3425b6c48366c1fd712d08d0b71849a",
+          "size": 1230939,
+          "url": "https://files.pythonhosted.org/packages/11/69/363c8df8d98b3cc97be19aad6aabb2c9c53f372490d79316bdee92d476e7/blis-1.3.3-cp312-cp312-macosx_11_0_arm64.whl"
+        },
+        "darwin/x86_64": {
+          "exclude": [],
+          "filename": "blis-1.3.3-cp312-cp312-macosx_10_13_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "blis/",
+          "root_members": [],
+          "sha256": "2a1c74e100665f8e918ebdbae2794576adf1f691680b5cdb8b29578432f623ef",
+          "size": 6929663,
+          "url": "https://files.pythonhosted.org/packages/16/d1/429cf0cf693d4c7dc2efed969bd474e315aab636e4a95f66c4ed7264912d/blis-1.3.3-cp312-cp312-macosx_10_13_x86_64.whl"
+        },
+        "linux/aarch64": {
+          "exclude": [],
+          "filename": "blis-1.3.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "kind": "wheel",
+          "member_prefix": "blis/",
+          "root_members": [],
+          "sha256": "d734b19fba0be7944f272dfa7b443b37c61f9476d9ab054a9ac53555ceadd2e0",
+          "size": 2818835,
+          "url": "https://files.pythonhosted.org/packages/96/2a/fbf65d906d823d839076c5150a6f8eb5ecbc5f9135e0b6510609bda1e6b7/blis-1.3.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl"
+        },
+        "linux/x86_64": {
+          "exclude": [],
+          "filename": "blis-1.3.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "blis/",
+          "root_members": [],
+          "sha256": "1ef6d6e2b599a3a2788eb6d9b443533961265aa4ec49d574ed4bb846e548dcdb",
+          "size": 11366550,
+          "url": "https://files.pythonhosted.org/packages/d5/ad/58deaa3ad856dd3cc96493e40ffd2ed043d18d4d304f85a65cde1ccbf644/blis-1.3.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
+        },
+        "win32/AMD64": {
+          "exclude": [],
+          "filename": "blis-1.3.3-cp312-cp312-win_amd64.whl",
+          "kind": "wheel",
+          "member_prefix": "blis/",
+          "root_members": [],
+          "sha256": "f20f7ad69aaffd1ce14fe77de557b6df9b61e0c9e582f75a843715d836b5c8af",
+          "size": 6192759,
+          "url": "https://files.pythonhosted.org/packages/20/07/fb43edc2ff0a6a367e4a94fc39eb3b85aa1e55e24cc857af2db145ce9f0d/blis-1.3.3-cp312-cp312-win_amd64.whl"
+        }
+      },
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": null
+    },
+    {
+      "abi": null,
+      "import_name": "catalogue",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "catalogue-2.0.10-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "catalogue/",
+        "root_members": [],
+        "sha256": "58c2de0020aa90f4a2da7dfad161bf7b3b054c86a5f09fcedc0b2b740c109a9f",
+        "size": 17325,
+        "url": "https://files.pythonhosted.org/packages/9e/96/d32b941a501ab566a16358d68b6eb4e4acc373fab3c3c4d7d9e649f7b4bb/catalogue-2.0.10-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "cloudpathlib",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "cloudpathlib-0.25.0-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "cloudpathlib/",
+        "root_members": [],
+        "sha256": "8faef3ed3a0dd71d134e8617b4fdc5ce56a12a6b485c080cfe80106e5f1d1f5d",
+        "size": 66109,
+        "url": "https://files.pythonhosted.org/packages/37/f9/9084c945d0b3ef8f129b4f0dd21baec759761a337902b70f17a3945015dd/cloudpathlib-0.25.0-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "colorama",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "colorama-0.4.6-py2.py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "colorama/",
+        "root_members": [],
+        "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
+        "size": 25335,
+        "url": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "confection",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "confection-1.3.3-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "confection/",
+        "root_members": [],
+        "sha256": "b9fef9ee84b237ef4611ec3eb5797b70e13063e6310ad9f15536373f5e313c82",
+        "size": 35902,
+        "url": "https://files.pythonhosted.org/packages/8d/e4/d66708bdf0d92fb4d49b22cdff4b10cec38aca5dcd7e81d909bb55c65cd7/confection-1.3.3-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": [
+        3,
+        12
+      ],
+      "import_name": "cymem",
+      "per_platform": {
+        "darwin/arm64": {
+          "exclude": [],
+          "filename": "cymem-2.0.13-cp312-cp312-macosx_11_0_arm64.whl",
+          "kind": "wheel",
+          "member_prefix": "cymem/",
+          "root_members": [],
+          "sha256": "c9251d889348fe79a75e9b3e4d1b5fa651fca8a64500820685d73a3acc21b6a8",
+          "size": 42927,
+          "url": "https://files.pythonhosted.org/packages/f9/71/f0f8adee945524774b16af326bd314a14a478ed369a728a22834e6785a18/cymem-2.0.13-cp312-cp312-macosx_11_0_arm64.whl"
+        },
+        "darwin/x86_64": {
+          "exclude": [],
+          "filename": "cymem-2.0.13-cp312-cp312-macosx_10_13_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "cymem/",
+          "root_members": [],
+          "sha256": "e8afbc5162a0fe14b6463e1c4e45248a1b2fe2cbcecc8a5b9e511117080da0eb",
+          "size": 43745,
+          "url": "https://files.pythonhosted.org/packages/c9/52/478a2911ab5028cb710b4900d64aceba6f4f882fcb13fd8d40a456a1b6dc/cymem-2.0.13-cp312-cp312-macosx_10_13_x86_64.whl"
+        },
+        "linux/aarch64": {
+          "exclude": [],
+          "filename": "cymem-2.0.13-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "kind": "wheel",
+          "member_prefix": "cymem/",
+          "root_members": [],
+          "sha256": "742fc19764467a49ed22e56a4d2134c262d73a6c635409584ae3bf9afa092c33",
+          "size": 258346,
+          "url": "https://files.pythonhosted.org/packages/62/6d/159780fe162ff715d62b809246e5fc20901cef87ca28b67d255a8d741861/cymem-2.0.13-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl"
+        },
+        "linux/x86_64": {
+          "exclude": [],
+          "filename": "cymem-2.0.13-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "cymem/",
+          "root_members": [],
+          "sha256": "f190a92fe46197ee64d32560eb121c2809bb843341733227f51538ce77b3410d",
+          "size": 260843,
+          "url": "https://files.pythonhosted.org/packages/eb/12/678d16f7aa1996f947bf17b8cfb917ea9c9674ef5e2bd3690c04123d5680/cymem-2.0.13-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
+        },
+        "win32/AMD64": {
+          "exclude": [],
+          "filename": "cymem-2.0.13-cp312-cp312-win_amd64.whl",
+          "kind": "wheel",
+          "member_prefix": "cymem/",
+          "root_members": [],
+          "sha256": "2ff1c41fd59b789579fdace78aa587c5fc091991fa59458c382b116fc36e30dc",
+          "size": 40176,
+          "url": "https://files.pythonhosted.org/packages/dd/fe/3ee37d02ca4040f2fb22d34eb415198f955862b5dd47eee01df4c8f5454c/cymem-2.0.13-cp312-cp312-win_amd64.whl"
+        }
+      },
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": null
+    },
+    {
+      "abi": null,
+      "import_name": "jinja2",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "jinja2-3.1.6-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "jinja2/",
+        "root_members": [],
+        "sha256": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67",
+        "size": 134899,
+        "url": "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": [
+        3,
+        12
+      ],
+      "import_name": "markupsafe",
+      "per_platform": {
+        "darwin/arm64": {
+          "exclude": [],
+          "filename": "markupsafe-3.0.3-cp312-cp312-macosx_11_0_arm64.whl",
+          "kind": "wheel",
+          "member_prefix": "markupsafe/",
+          "root_members": [],
+          "sha256": "1872df69a4de6aead3491198eaf13810b565bdbeec3ae2dc8780f14458ec73ce",
+          "size": 12020,
+          "url": "https://files.pythonhosted.org/packages/9a/81/7e4e08678a1f98521201c3079f77db69fb552acd56067661f8c2f534a718/markupsafe-3.0.3-cp312-cp312-macosx_11_0_arm64.whl"
+        },
+        "darwin/x86_64": {
+          "exclude": [],
+          "filename": "markupsafe-3.0.3-cp312-cp312-macosx_10_13_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "markupsafe/",
+          "root_members": [],
+          "sha256": "d53197da72cc091b024dd97249dfc7794d6a56530370992a5e1a08983ad9230e",
+          "size": 11615,
+          "url": "https://files.pythonhosted.org/packages/5a/72/147da192e38635ada20e0a2e1a51cf8823d2119ce8883f7053879c2199b5/markupsafe-3.0.3-cp312-cp312-macosx_10_13_x86_64.whl"
+        },
+        "linux/aarch64": {
+          "exclude": [],
+          "filename": "markupsafe-3.0.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "kind": "wheel",
+          "member_prefix": "markupsafe/",
+          "root_members": [],
+          "sha256": "3a7e8ae81ae39e62a41ec302f972ba6ae23a5c5396c8e60113e9066ef893da0d",
+          "size": 24332,
+          "url": "https://files.pythonhosted.org/packages/1e/2c/799f4742efc39633a1b54a92eec4082e4f815314869865d876824c257c1e/markupsafe-3.0.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl"
+        },
+        "linux/x86_64": {
+          "exclude": [],
+          "filename": "markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "markupsafe/",
+          "root_members": [],
+          "sha256": "d6dd0be5b5b189d31db7cda48b91d7e0a9795f31430b7f271219ab30f1d3ac9d",
+          "size": 22947,
+          "url": "https://files.pythonhosted.org/packages/3c/2e/8d0c2ab90a8c1d9a24f0399058ab8519a3279d1bd4289511d74e909f060e/markupsafe-3.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+        },
+        "win32/AMD64": {
+          "exclude": [],
+          "filename": "markupsafe-3.0.3-cp312-cp312-win_amd64.whl",
+          "kind": "wheel",
+          "member_prefix": "markupsafe/",
+          "root_members": [],
+          "sha256": "26a5784ded40c9e318cfc2bdb30fe164bdb8665ded9cd64d500a34fb42067b1c",
+          "size": 15105,
+          "url": "https://files.pythonhosted.org/packages/aa/5b/bec5aa9bbbb2c946ca2733ef9c4ca91c91b6a24580193e891b5f7dbe8e1e/markupsafe-3.0.3-cp312-cp312-win_amd64.whl"
+        }
+      },
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": null
+    },
+    {
+      "abi": [
+        3,
+        12
+      ],
+      "import_name": "murmurhash",
+      "per_platform": {
+        "darwin/arm64": {
+          "exclude": [],
+          "filename": "murmurhash-1.0.15-cp312-cp312-macosx_11_0_arm64.whl",
+          "kind": "wheel",
+          "member_prefix": "murmurhash/",
+          "root_members": [],
+          "sha256": "0861cb11039409eaf46878456b7d985ef17b6b484103a6fc367b2ecec846891d",
+          "size": 27855,
+          "url": "https://files.pythonhosted.org/packages/ed/cc/630449bf4f6178d7daf948ce46ad00b25d279065fc30abd8d706be3d87e0/murmurhash-1.0.15-cp312-cp312-macosx_11_0_arm64.whl"
+        },
+        "darwin/x86_64": {
+          "exclude": [],
+          "filename": "murmurhash-1.0.15-cp312-cp312-macosx_10_13_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "murmurhash/",
+          "root_members": [],
+          "sha256": "d37e3ae44746bca80b1a917c2ea625cf216913564ed43f69d2888e5df97db0cb",
+          "size": 27884,
+          "url": "https://files.pythonhosted.org/packages/b6/46/be8522d3456fdccf1b8b049c6d82e7a3c1114c4fc2cfe14b04cba4b3e701/murmurhash-1.0.15-cp312-cp312-macosx_10_13_x86_64.whl"
+        },
+        "linux/aarch64": {
+          "exclude": [],
+          "filename": "murmurhash-1.0.15-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "kind": "wheel",
+          "member_prefix": "murmurhash/",
+          "root_members": [],
+          "sha256": "32c6fde7bd7e9407003370a07b5f4addacabe1556ad3dc2cac246b7a2bba3400",
+          "size": 133978,
+          "url": "https://files.pythonhosted.org/packages/c9/de/c40ce8c0877d406691e735b8d6e9c815f36a82b499d358313db5dbe219d7/murmurhash-1.0.15-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl"
+        },
+        "linux/x86_64": {
+          "exclude": [],
+          "filename": "murmurhash-1.0.15-cp312-cp312-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "murmurhash/",
+          "root_members": [],
+          "sha256": "5a301decfaccfec70fe55cb01dde2a012c3014a874542eaa7cc73477bb749616",
+          "size": 134088,
+          "url": "https://files.pythonhosted.org/packages/ff/30/ea8f601a9bf44db99468696efd59eb9cff1157cd55cb586d67116697583f/murmurhash-1.0.15-cp312-cp312-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl"
+        },
+        "win32/AMD64": {
+          "exclude": [],
+          "filename": "murmurhash-1.0.15-cp312-cp312-win_amd64.whl",
+          "kind": "wheel",
+          "member_prefix": "murmurhash/",
+          "root_members": [],
+          "sha256": "f4ac15a2089dc42e6eb0966622d42d2521590a12c92480aafecf34c085302cca",
+          "size": 25647,
+          "url": "https://files.pythonhosted.org/packages/84/a4/b249b042f5afe34d14ada2dc4afc777e883c15863296756179652e081c44/murmurhash-1.0.15-cp312-cp312-win_amd64.whl"
+        }
+      },
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": null
+    },
+    {
+      "abi": [
+        3,
+        12
+      ],
+      "import_name": "preshed",
+      "per_platform": {
+        "darwin/arm64": {
+          "exclude": [],
+          "filename": "preshed-3.0.13-cp312-cp312-macosx_11_0_arm64.whl",
+          "kind": "wheel",
+          "member_prefix": "preshed/",
+          "root_members": [],
+          "sha256": "f05b08ce92399c0655b5e0eb5a1cc1f9e295703ed3aabdfaf6538dfa8ae23d57",
+          "size": 138010,
+          "url": "https://files.pythonhosted.org/packages/8e/ce/cad5a8145881a771e6c0d002f2e585fc19b962f120860b54d32af5baa342/preshed-3.0.13-cp312-cp312-macosx_11_0_arm64.whl"
+        },
+        "darwin/x86_64": {
+          "exclude": [],
+          "filename": "preshed-3.0.13-cp312-cp312-macosx_10_13_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "preshed/",
+          "root_members": [],
+          "sha256": "5d14eea14bd01291388928991d7df7d60b9fd19ae970e55006eb4d29b0c1e8eb",
+          "size": 138497,
+          "url": "https://files.pythonhosted.org/packages/39/fb/ccff23c44c04088c248539005fcda78b9014512a34d170c5360f02ad908b/preshed-3.0.13-cp312-cp312-macosx_10_13_x86_64.whl"
+        },
+        "linux/aarch64": {
+          "exclude": [],
+          "filename": "preshed-3.0.13-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "kind": "wheel",
+          "member_prefix": "preshed/",
+          "root_members": [],
+          "sha256": "62cf7f3113132891d6bba70ff547ad81c6fe50a31930bbbb8499f1d47cd122b7",
+          "size": 861498,
+          "url": "https://files.pythonhosted.org/packages/a7/a2/c5fed4fb3e946699259d11e4036a3cfdd8c89b3e542e3077d46781642425/preshed-3.0.13-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl"
+        },
+        "linux/x86_64": {
+          "exclude": [],
+          "filename": "preshed-3.0.13-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "preshed/",
+          "root_members": [],
+          "sha256": "8b8de3f58043070a354477995acdd98626ce43e4193c708ebd0f694e467f5155",
+          "size": 868988,
+          "url": "https://files.pythonhosted.org/packages/51/94/8c9bc48a6ea4903f53a1a0031ce8e35687526949f25821762ef21493c007/preshed-3.0.13-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
+        },
+        "win32/AMD64": {
+          "exclude": [],
+          "filename": "preshed-3.0.13-cp312-cp312-win_amd64.whl",
+          "kind": "wheel",
+          "member_prefix": "preshed/",
+          "root_members": [],
+          "sha256": "04d8f13f2986e5d11af5ac51f55ce3106c70c41b483d20ea392e6180bdd0f870",
+          "size": 122938,
+          "url": "https://files.pythonhosted.org/packages/a0/c9/c91ea56342e6c364fc69b444a1ac5432327857199c44032c9cc9dc4c3a23/preshed-3.0.13-cp312-cp312-win_amd64.whl"
+        }
+      },
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": null
+    },
+    {
+      "abi": null,
+      "import_name": "pydantic",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "pydantic-2.13.5-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "pydantic/",
+        "root_members": [],
+        "sha256": "346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73",
+        "size": 472589,
+        "url": "https://files.pythonhosted.org/packages/eb/47/c95ffc2009878c7aac0c5e08528022dcb885933252a88b5f170058014464/pydantic-2.13.5-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": [
+        3,
+        12
+      ],
+      "import_name": "pydantic_core",
+      "per_platform": {
+        "darwin/arm64": {
+          "exclude": [],
+          "filename": "pydantic_core-2.46.5-cp312-cp312-macosx_11_0_arm64.whl",
+          "kind": "wheel",
+          "member_prefix": "pydantic_core/",
+          "root_members": [],
+          "sha256": "a39ac25a9a2fa4072efdb429833c4a4c8009a51ff9eea3eeae131713cd27991e",
+          "size": 1922874,
+          "url": "https://files.pythonhosted.org/packages/db/50/26b091836076ce4cb2fac264186936acc069e0595772cfd02a563bc4761a/pydantic_core-2.46.5-cp312-cp312-macosx_11_0_arm64.whl"
+        },
+        "darwin/x86_64": {
+          "exclude": [],
+          "filename": "pydantic_core-2.46.5-cp312-cp312-macosx_10_12_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "pydantic_core/",
+          "root_members": [],
+          "sha256": "b9fe6fb92520e3fd61f2e49000b6911b188824f089b75973ea06d6267f0b476d",
+          "size": 2076516,
+          "url": "https://files.pythonhosted.org/packages/82/3f/76358795aa7a8c6d4f36e2cb828ad1c90ee118e1393a9281664f5aade9d4/pydantic_core-2.46.5-cp312-cp312-macosx_10_12_x86_64.whl"
+        },
+        "linux/aarch64": {
+          "exclude": [],
+          "filename": "pydantic_core-2.46.5-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+          "kind": "wheel",
+          "member_prefix": "pydantic_core/",
+          "root_members": [],
+          "sha256": "4fdc8b93a41521988916eeaa271173fcca7fa0803d62f87675aac8dcec1c8e29",
+          "size": 1951772,
+          "url": "https://files.pythonhosted.org/packages/09/f0/2a8ce3849e299d44e2d2c196b6082643a3235565a735cb51db7a6261f614/pydantic_core-2.46.5-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl"
+        },
+        "linux/x86_64": {
+          "exclude": [],
+          "filename": "pydantic_core-2.46.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "pydantic_core/",
+          "root_members": [],
+          "sha256": "0fc5be0abd4a407e200d844b404e33639a554e7bd0d448e7b9ae181be4789ac2",
+          "size": 2066284,
+          "url": "https://files.pythonhosted.org/packages/c0/a4/eb9409ec0736e50aa70a412f16c204ed149516846912f7e6724d4c73ee53/pydantic_core-2.46.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+        },
+        "win32/AMD64": {
+          "exclude": [],
+          "filename": "pydantic_core-2.46.5-cp312-cp312-win_amd64.whl",
+          "kind": "wheel",
+          "member_prefix": "pydantic_core/",
+          "root_members": [],
+          "sha256": "5e81740c09e310f5aa5cbd3e434a01c154d4bef93241c7877b39f211d2b78ba8",
+          "size": 2043140,
+          "url": "https://files.pythonhosted.org/packages/cf/c9/4c19f41b84cf6b622a72fbeed7665b25d47a187d68d47d0d430c07f23268/pydantic_core-2.46.5-cp312-cp312-win_amd64.whl"
+        }
+      },
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": null
+    },
+    {
+      "abi": null,
+      "import_name": "smart_open",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "smart_open-8.0.1-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "smart_open/",
+        "root_members": [],
+        "sha256": "3e97f90e92a952cb57863dfe132082c400a52eeeb27c067692fb51dbcc5b0089",
+        "size": 73504,
+        "url": "https://files.pythonhosted.org/packages/c3/96/325b8c507ccecc50421fecc0345a502ee6e4a44785af3c4e6ecbadad624a/smart_open-8.0.1-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": [
+        3,
+        12
+      ],
+      "import_name": "spacy",
+      "per_platform": {
+        "darwin/arm64": {
+          "exclude": [],
+          "filename": "spacy-3.8.14-cp312-cp312-macosx_11_0_arm64.whl",
+          "kind": "wheel",
+          "member_prefix": "spacy/",
+          "root_members": [],
+          "sha256": "e3ebe50b93f2d40e8ec3451255528bb622ccb12be39fd140bb87668ce8d1075b",
+          "size": 6033860,
+          "url": "https://files.pythonhosted.org/packages/06/df/178bbab47fa209c8baf2f1e609cbddc6b18a985200be1ceee22bd5b89beb/spacy-3.8.14-cp312-cp312-macosx_11_0_arm64.whl"
+        },
+        "darwin/x86_64": {
+          "exclude": [],
+          "filename": "spacy-3.8.14-cp312-cp312-macosx_10_13_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "spacy/",
+          "root_members": [],
+          "sha256": "726f02c60a2c6b0029167370d22d51731172a053d29c7e2ea6190db6de3ab483",
+          "size": 6218335,
+          "url": "https://files.pythonhosted.org/packages/0c/78/e4f2ae19a791cae756cd0e801204953eaec4e9ab75a60ad39f671dbb8d5a/spacy-3.8.14-cp312-cp312-macosx_10_13_x86_64.whl"
+        },
+        "linux/aarch64": {
+          "exclude": [],
+          "filename": "spacy-3.8.14-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "kind": "wheel",
+          "member_prefix": "spacy/",
+          "root_members": [],
+          "sha256": "daeb64b048f12c059997281aed53eb8776d26416dd313cf17ad6f63124b2b564",
+          "size": 32725099,
+          "url": "https://files.pythonhosted.org/packages/ff/e8/048d83b73b28686307bd9a60878a58de7b7b21b562ca4de8b5bd558031e9/spacy-3.8.14-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl"
+        },
+        "linux/x86_64": {
+          "exclude": [],
+          "filename": "spacy-3.8.14-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "spacy/",
+          "root_members": [],
+          "sha256": "6d45715a24446f23b98ec3f09409a1d4111983d1d64613250ee38c3270e21853",
+          "size": 33205838,
+          "url": "https://files.pythonhosted.org/packages/8e/3f/1799af5f4ccc8eb7500e4a20ca301488134429dba08cda5be68ce6ab2992/spacy-3.8.14-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
+        },
+        "win32/AMD64": {
+          "exclude": [],
+          "filename": "spacy-3.8.14-cp312-cp312-win_amd64.whl",
+          "kind": "wheel",
+          "member_prefix": "spacy/",
+          "root_members": [],
+          "sha256": "9def18c76a4472b326cb91a195623c9ca38a2b86999ad2df9e00b49ba8c63734",
+          "size": 14226946,
+          "url": "https://files.pythonhosted.org/packages/5f/55/4371413a6dfc1fa837282a365498165f828c2f3fe018dfb35336acc869e0/spacy-3.8.14-cp312-cp312-win_amd64.whl"
+        }
+      },
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": null
+    },
+    {
+      "abi": null,
+      "import_name": "spacy_legacy",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "spacy_legacy-3.0.12-py2.py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "spacy_legacy/",
+        "root_members": [],
+        "sha256": "476e3bd0d05f8c339ed60f40986c07387c0a71479245d6d0f4298dbd52cda55f",
+        "size": 29971,
+        "url": "https://files.pythonhosted.org/packages/c3/55/12e842c70ff8828e34e543a2c7176dac4da006ca6901c9e8b43efab8bc6b/spacy_legacy-3.0.12-py2.py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "spacy_loggers",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "spacy_loggers-1.0.5-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "spacy_loggers/",
+        "root_members": [],
+        "sha256": "196284c9c446cc0cdb944005384270d775fdeaf4f494d8e269466cfa497ef645",
+        "size": 22343,
+        "url": "https://files.pythonhosted.org/packages/33/78/d1a1a026ef3af911159398c939b1509d5c36fe524c7b644f34a5146c4e16/spacy_loggers-1.0.5-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": [
+        3,
+        12
+      ],
+      "import_name": "srsly",
+      "per_platform": {
+        "darwin/arm64": {
+          "exclude": [],
+          "filename": "srsly-2.5.3-cp312-cp312-macosx_11_0_arm64.whl",
+          "kind": "wheel",
+          "member_prefix": "srsly/",
+          "root_members": [],
+          "sha256": "2f73c0db911552e94fe2016e1759d261d2f47926f68826664cada3723c87006a",
+          "size": 658513,
+          "url": "https://files.pythonhosted.org/packages/21/e4/fea4512e9785f58509b2cf67d993323848e583161b5fcfdc7dd9d7c1f3df/srsly-2.5.3-cp312-cp312-macosx_11_0_arm64.whl"
+        },
+        "darwin/x86_64": {
+          "exclude": [],
+          "filename": "srsly-2.5.3-cp312-cp312-macosx_10_13_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "srsly/",
+          "root_members": [],
+          "sha256": "71e51c046ccbeefb86524c6b1e17574f579c6ac4dc8ea4a09437d3e8f88342d3",
+          "size": 658379,
+          "url": "https://files.pythonhosted.org/packages/02/cc/e9f7fcec4cc92ad8bad6316c4241638b8cf7380382d4489d94ec6c436452/srsly-2.5.3-cp312-cp312-macosx_10_13_x86_64.whl"
+        },
+        "linux/aarch64": {
+          "exclude": [],
+          "filename": "srsly-2.5.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "kind": "wheel",
+          "member_prefix": "srsly/",
+          "root_members": [],
+          "sha256": "5c1ac27ae5f4bb9163c7d2c45fc8ec173aac3d92e32086d9472b326c5c6e570e",
+          "size": 1172265,
+          "url": "https://files.pythonhosted.org/packages/20/b1/53591681b6ff2699a4f97b2d5552ba196eaa6a979b0873605f4c04b5f7ee/srsly-2.5.3-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl"
+        },
+        "linux/x86_64": {
+          "exclude": [],
+          "filename": "srsly-2.5.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "srsly/",
+          "root_members": [],
+          "sha256": "99026bcd9cbd3211cc36517400b04ca0fc5d3e412b14daf84ee6e65f67d9a2d8",
+          "size": 1180873,
+          "url": "https://files.pythonhosted.org/packages/4e/c9/741e29f534919a944a16da4184924b1d3404c4bf60716ab2b91be771d1e3/srsly-2.5.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
+        },
+        "win32/AMD64": {
+          "exclude": [],
+          "filename": "srsly-2.5.3-cp312-cp312-win_amd64.whl",
+          "kind": "wheel",
+          "member_prefix": "srsly/",
+          "root_members": [],
+          "sha256": "598f1e494c18cacb978299d77125415a586417081959f8ec3f068b32d97f8933",
+          "size": 652459,
+          "url": "https://files.pythonhosted.org/packages/5a/de/89ca640ca1953c4612279ce515d0af35658df3c06cdb324329bc91b4a7e1/srsly-2.5.3-cp312-cp312-win_amd64.whl"
+        }
+      },
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": null
+    },
+    {
+      "abi": [
+        3,
+        12
+      ],
+      "import_name": "thinc",
+      "per_platform": {
+        "darwin/arm64": {
+          "exclude": [],
+          "filename": "thinc-8.3.13-cp312-cp312-macosx_11_0_arm64.whl",
+          "kind": "wheel",
+          "member_prefix": "thinc/",
+          "root_members": [],
+          "sha256": "3710d318b4e5460cf366a6f7b5ddbefb5d39dbd4cfa408222750fdc6c27c4411",
+          "size": 791932,
+          "url": "https://files.pythonhosted.org/packages/45/8f/69d7338575d98df85d0b54c0f5fc277dba72587fe9ab846ecdd12a998bcb/thinc-8.3.13-cp312-cp312-macosx_11_0_arm64.whl"
+        },
+        "darwin/x86_64": {
+          "exclude": [],
+          "filename": "thinc-8.3.13-cp312-cp312-macosx_10_13_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "thinc/",
+          "root_members": [],
+          "sha256": "77a41f66285321d20aaedaea1e87d7cd48dca6d2427bed1867ec7cba7109fc8d",
+          "size": 821097,
+          "url": "https://files.pythonhosted.org/packages/3e/af/f7c1ebfe92eb5d27d7f2f3da67a11e2eb57bc30ab1553279af6dc65b65a8/thinc-8.3.13-cp312-cp312-macosx_10_13_x86_64.whl"
+        },
+        "linux/aarch64": {
+          "exclude": [],
+          "filename": "thinc-8.3.13-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+          "kind": "wheel",
+          "member_prefix": "thinc/",
+          "root_members": [],
+          "sha256": "5a08c87143a6d20177652dca1ec0dc815d88216d8fc62594a57e8bc45bf5ed49",
+          "size": 3854219,
+          "url": "https://files.pythonhosted.org/packages/4b/a5/21d010c81e81e1589e5ccb4950e521804d13726e541e87f644c51815673b/thinc-8.3.13-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl"
+        },
+        "linux/x86_64": {
+          "exclude": [],
+          "filename": "thinc-8.3.13-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "thinc/",
+          "root_members": [],
+          "sha256": "4b5ec9ff313819e7d8667794a3559463fa89ff45aaa73e3fd8d6273b1e0d7a7f",
+          "size": 3903307,
+          "url": "https://files.pythonhosted.org/packages/f9/ff/6914bf370bd1d604d89e6dfb46b97d10cd9b00d42ff8c036283e92314a8c/thinc-8.3.13-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
+        },
+        "win32/AMD64": {
+          "exclude": [],
+          "filename": "thinc-8.3.13-cp312-cp312-win_amd64.whl",
+          "kind": "wheel",
+          "member_prefix": "thinc/",
+          "root_members": [],
+          "sha256": "ed1dc709ac4f2f03b710457889e4e02f05de51bc8456980c241d0b28798bc7cb",
+          "size": 1721248,
+          "url": "https://files.pythonhosted.org/packages/21/82/5651bb1f904d04220fc7670035ada921bf0638e2cff6444d67c12887a968/thinc-8.3.13-cp312-cp312-win_amd64.whl"
+        }
+      },
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": null
+    },
+    {
+      "abi": null,
+      "import_name": "typing_inspection",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "typing_inspection-0.4.4-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "typing_inspection/",
+        "root_members": [],
+        "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+        "size": 14750,
+        "url": "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "wasabi",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "wasabi-1.1.3-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "wasabi/",
+        "root_members": [],
+        "sha256": "f76e16e8f7e79f8c4c8be49b4024ac725713ab10cd7f19350ad18a8e3f71728c",
+        "size": 27880,
+        "url": "https://files.pythonhosted.org/packages/06/7c/34330a89da55610daa5f245ddce5aab81244321101614751e7537f125133/wasabi-1.1.3-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "weasel",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "weasel-1.0.0-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "weasel/",
+        "root_members": [],
+        "sha256": "89518acee027f49d743126c3502d35e6dd14f5768be5c37c9af47c171b6005cc",
+        "size": 50713,
+        "url": "https://files.pythonhosted.org/packages/0a/07/57ebf7a6798b016c064bd0ca81b4c6a99daa4dc377b898bc7b41eb6b5af0/weasel-1.0.0-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "wrapt",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "wrapt-2.4.1-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "wrapt/",
+        "root_members": [],
+        "sha256": "1e84ec5d89a0a07a0ef6bcd343f5c8ecdc95601d71de3058cdc63274e86c193c",
+        "size": 75317,
+        "url": "https://files.pythonhosted.org/packages/4f/a2/edcfc8d9a30375791b775715f8501364588f65b494ec4f6930568a19e765/wrapt-2.4.1-py3-none-any.whl"
+      }
+    }
+  ],
+  "requires": []
+}
