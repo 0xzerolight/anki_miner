@@ -124,9 +124,15 @@ ko = [
 en = [
     "spacy>=3.8,<3.8.15",
 ]
+# Catalan mining engine: the same spaCy cap as en (R3). The model wheel
+# (ca_core_news_sm, GPL-3.0) is a GitHub release asset, downloaded in
+# Settings -> Mining Language.
+ca = [
+    "spacy>=3.8,<3.8.15",
+]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
-languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]"]
+languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]"]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",

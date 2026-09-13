@@ -27,6 +27,8 @@ HOOK_ROWS = [
     ("zh", "expression_pinyin", "expression_pinyin_field_input", "pinyin"),
     ("zh", "expression_traditional", "expression_traditional_field_input", "script_variants"),
     ("en", "pos", "pos_field_input", "pos_tag"),
+    ("ca", "pos", "pos_field_input", "pos_tag"),
+    ("ca", "noun_gender", "noun_gender_field_input", "noun_gender"),
 ]
 
 

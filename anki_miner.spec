@@ -159,6 +159,16 @@ kiwipiepy_license_datas = []
 if os.path.isdir(kiwipiepy_license_dir):
     kiwipiepy_license_datas.append((kiwipiepy_license_dir, os.path.join("licenses", "kiwipiepy")))
 
+# ca_core_news_sm (Catalan spaCy model) GPL-3.0 notice: shipped whenever the
+# license dir exists. Lands at sys._MEIPASS/licenses/ca_core_news_sm/. The model
+# itself is excluded below and arrives as a language pack the app downloads;
+# the notice ships because the app is what delivers the model (the kiwipiepy
+# precedent).
+ca_model_license_dir = os.path.join(project_root, "licenses", "ca_core_news_sm")
+ca_model_license_datas = []
+if os.path.isdir(ca_model_license_dir):
+    ca_model_license_datas.append((ca_model_license_dir, os.path.join("licenses", "ca_core_news_sm")))
+
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
 # ML model has no positive trust signals to weigh against "packed binary that runs
@@ -310,7 +320,8 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + libmpv_license_datas
     + local_audio_license_datas
     + vulkan_loader_license_datas
-    + kiwipiepy_license_datas,
+    + kiwipiepy_license_datas
+    + ca_model_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",

@@ -1,0 +1,22 @@
+{
+  "_comment": "Raw ca_core_news_sm 3.8.0 output, recorded 2026-09-13 through importlib.import_module('ca_core_news_sm').load(exclude=['ner', 'senter', 'parser']). The model has no trained tagger, so tag_ is a copy of pos_ on every token (0 of 59,483 UD Catalan AnCora test tokens differ): pos2 is dead and excluded_subtypes is dead config for ca, as for ko. morph comes from the trained morphologizer. 'llibres' -> 'llibra' is the raw rule lemmatizer's first candidate (rules es->a and s-> both land in its noun index); the ca lemma correction picks the lemma_lookup answer 'llibre' instead. The model is GPL-3.0 (UD Catalan AnCora v2.8).",
+  "package": "ca_core_news_sm",
+  "version": "3.8.0",
+  "license": "GNU GPL 3.0",
+  "pipeline": ["tok2vec", "morphologizer", "attribute_ruler", "lemmatizer"],
+  "lemmatizer_mode": "rule",
+  "sentence": "L'home va comprar dos llibres per al col·legi.",
+  "tokens": [
+    {"text": "L'", "pos": "DET", "tag": "DET", "lemma": "el", "morph": "Definite=Def|Number=Sing|PronType=Art"},
+    {"text": "home", "pos": "NOUN", "tag": "NOUN", "lemma": "home", "morph": "Gender=Masc|Number=Sing"},
+    {"text": "va", "pos": "AUX", "tag": "AUX", "lemma": "anar", "morph": "Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin"},
+    {"text": "comprar", "pos": "VERB", "tag": "VERB", "lemma": "comprar", "morph": "VerbForm=Inf"},
+    {"text": "dos", "pos": "NUM", "tag": "NUM", "lemma": "dos", "morph": "Gender=Masc|NumType=Card|Number=Plur"},
+    {"text": "llibres", "pos": "NOUN", "tag": "NOUN", "lemma": "llibra", "morph": "Gender=Masc|Number=Plur"},
+    {"text": "per", "pos": "ADP", "tag": "ADP", "lemma": "per", "morph": ""},
+    {"text": "a", "pos": "ADP", "tag": "ADP", "lemma": "a", "morph": ""},
+    {"text": "l", "pos": "DET", "tag": "DET", "lemma": "el", "morph": "Definite=Def|Gender=Masc|Number=Sing|PronType=Art"},
+    {"text": "col·legi", "pos": "NOUN", "tag": "NOUN", "lemma": "col·legi", "morph": "Gender=Masc|Number=Sing"},
+    {"text": ".", "pos": "PUNCT", "tag": "PUNCT", "lemma": ".", "morph": "PunctType=Peri"}
+  ]
+}
