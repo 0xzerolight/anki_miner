@@ -39,6 +39,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils import queue_state_store
 from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
 from anki_miner.gui.widgets.base.ytdlp_availability import YTDLP_DOWNLOAD_ACTION
+from anki_miner.gui.widgets.youtube_playlist_flow import split_url_lines
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.models.youtube import PlaylistEntry, PlaylistInfo, VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus
@@ -98,6 +99,7 @@ def _make_playlist_info(
 
 PLAYLIST_URL = "https://www.youtube.com/playlist?list=PLabcdefghijkl"
 MIXED_URL = "https://www.youtube.com/watch?v=abcdefghijk&list=PLabcdefghijkl"
+PLAYLIST_URL_2 = "https://www.youtube.com/playlist?list=PLzyxwvutsrqpo"
 
 
 @pytest.fixture
@@ -1416,22 +1418,6 @@ class TestPlaylistAdd:
         assert tab._probe_worker_cls.call_count == 1
         assert len(tab._queue.all_items()) == 1
 
-    def test_second_playlist_add_while_probe_active_warns(self, tab):
-        # First playlist resolves and expands; resolve worker then finishes,
-        # leaving the playlist probe worker as the active guard.
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
-        _resolve_playlist(tab, PLAYLIST_URL, _make_playlist_info(n=2))
-        tab._add_flow._on_playlist_resolve_finished()
-        assert tab._add_flow._playlist_probe_worker is not None
-        assert tab.add_button.isEnabled()
-
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
-
-        assert tab._playlist_resolve_worker_cls.call_count == 1  # no second resolve
-        assert "already being added" in tab.log_widget.text_edit.toPlainText()
-
     def test_resolve_error_logged_and_recovers(self, tab):
         tab.url_edit.setText(PLAYLIST_URL)
         tab._on_add_clicked()
@@ -2133,3 +2119,96 @@ class TestYtdlpPreflight:
         tab._on_mine_clicked()
 
         assert tab._queue_worker_cls.call_count == 1
+
+
+# ---------------------------------------------------------------------------
+# Batch add: a pasted list of links
+# ---------------------------------------------------------------------------
+
+
+class TestSplitUrlLines:
+    def test_blank_lines_skipped_and_order_kept(self):
+        text = "  https://youtu.be/aaaaaaaaaaa \n\n dQw4w9WgXcQ\n--update-to=evil/fork@tag\nhttps://[\n"
+
+        accepted, rejected = split_url_lines(text)
+
+        assert accepted == ["https://youtu.be/aaaaaaaaaaa", "dQw4w9WgXcQ"]
+        assert rejected == ["--update-to=evil/fork@tag", "https://["]
+
+
+class TestAddUrls:
+    def test_duplicates_in_batch_and_queue_are_skipped(self, tab):
+        tab._add_flow.add_urls(["https://youtu.be/aaaaaaaaaaa"])
+        tab._add_flow.add_urls(
+            [
+                "https://www.youtube.com/watch?v=aaaaaaaaaaa",  # same id as the queued row
+                "https://youtu.be/bbbbbbbbbbb",
+                "bbbbbbbbbbb",  # same id again, bare
+            ]
+        )
+
+        assert [i.url for i in tab._queue.all_items()] == [
+            "https://youtu.be/aaaaaaaaaaa",
+            "https://youtu.be/bbbbbbbbbbb",
+        ]
+        assert "Skipped 2 already in the queue." in tab.log_widget.text_edit.toPlainText()
+
+    def test_probe_count_is_capped(self, tab):
+        tab._add_flow.add_urls([f"https://youtu.be/v{i:010d}" for i in range(6)])
+
+        assert tab._probe_worker_cls.call_count == 4
+        assert len(tab._add_flow._probe_backlog) == 2
+        assert all(i.status is YouTubeItemStatus.PROBING for i in tab._queue.all_items())
+        assert tab._add_flow.is_busy
+
+        tab._add_flow._on_probe_finished(tab._add_flow._probe_workers[0])
+
+        assert tab._probe_worker_cls.call_count == 5
+
+    def test_backlogged_row_removed_from_queue_is_not_probed(self, tab):
+        tab._add_flow.add_urls([f"https://youtu.be/v{i:010d}" for i in range(5)])
+        tab._drop_item(tab._queue.all_items()[-1])
+
+        tab._add_flow._on_probe_finished(tab._add_flow._probe_workers[0])
+
+        assert tab._probe_worker_cls.call_count == 4
+        assert not tab._add_flow._probe_backlog
+
+    def test_playlists_resolve_one_after_another(self, tab):
+        tab._add_flow.add_urls([PLAYLIST_URL, PLAYLIST_URL_2])
+        assert tab._playlist_resolve_worker_cls.call_count == 1
+        assert tab._add_flow.is_busy
+
+        _resolve_playlist(tab, PLAYLIST_URL, _make_playlist_info(n=2))
+        tab._add_flow._on_playlist_resolve_finished()
+        assert tab._playlist_resolve_worker_cls.call_count == 1  # entries still probing
+
+        tab._add_flow._on_playlist_probe_finished()
+
+        assert tab._playlist_resolve_worker_cls.call_count == 2
+        assert tab._playlist_resolve_worker_cls.call_args.args[1] == PLAYLIST_URL_2
+
+    def test_busy_while_the_choice_dialog_is_open(self, tab):
+        """The dialog's nested event loop can deliver the resolve worker's finished."""
+        tab._add_flow.add_urls([MIXED_URL])
+        seen: list[bool] = []
+
+        def choose(*_args):
+            tab._add_flow._on_playlist_resolve_finished()
+            seen.append(tab._add_flow.is_busy)
+            return "cancel"
+
+        with patch.object(tab._add_flow, "_ask_playlist_choice", side_effect=choose):
+            _resolve_playlist(tab, MIXED_URL, _make_playlist_info(n=2))
+
+        assert seen == [True]
+        assert not tab._add_flow.is_busy
+
+    def test_clear_drops_both_backlogs(self, tab):
+        videos = [f"https://youtu.be/v{i:010d}" for i in range(5)]
+        tab._add_flow.add_urls([*videos, PLAYLIST_URL, PLAYLIST_URL_2])
+
+        tab._on_clear_clicked()
+
+        assert not tab._add_flow._probe_backlog
+        assert not tab._add_flow._playlist_backlog
