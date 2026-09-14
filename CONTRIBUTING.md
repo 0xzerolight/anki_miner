@@ -1,6 +1,6 @@
 # Contributing to Anki Miner
 
-Thanks for helping out. Anki Miner is a solo-maintained mining tool for Japanese, Chinese and Korean, and contributions of any size are welcome — bug reports, fixes, dictionary integrations, GUI polish, doc improvements.
+Thanks for helping out. Anki Miner is a solo-maintained mining tool for Japanese, Chinese, Korean and eight European languages, and contributions of any size are welcome — bug reports, fixes, dictionary integrations, GUI polish, doc improvements.
 
 ## Before you start
 

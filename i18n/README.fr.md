@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:3bdd638d22b50e04 -->
+<!-- i18n-source: README.md sha256:10e84410ad08f17c -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Transformez du contenu japonais, chinois et coréen authentique en cartes de vocabulaire Anki.
+Transformez du contenu authentique en japonais, chinois, coréen et huit langues européennes en cartes de vocabulaire Anki.
 </p>
 
 <p align="center">
@@ -89,10 +89,10 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
-Le japonais ne demande rien de plus. Pour extraire du chinois ou du coréen, ajoutez le moteur :
+Le japonais ne demande rien de plus. Pour toute autre langue d'extraction, ajoutez son moteur :
 
 ```bash
-pipx install "anki-miner[languages]"   # both; or [zh] / [ko] for one
+pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [de], [fr], [es], [it], [pt], [nl], [ca] for one
 ```
 
 Les téléchargements ci-dessus les récupèrent directement dans l'application, via Paramètres -> Langue d'extraction.
@@ -125,7 +125,7 @@ Pour une configuration de développement complète, consultez [CONTRIBUTING.md](
 
 ## Autres fonctionnalités
 
-- Langues d'extraction - japonais, chinois et coréen, changées dans les Paramètres. Le coréen télécharge son modèle de langue dans l'application.
+- Langues d'extraction - japonais, chinois, coréen, anglais, allemand, français, espagnol, italien, portugais, néerlandais et catalan, changées dans les Paramètres. Toutes les langues sauf le japonais téléchargent leur moteur dans l'application.
 - Curateur de mots - passez en revue chaque mot candidat avant la création des cartes, avec sa scène, sa page de manga et son entrée de dictionnaire côte à côte.
 - Annuler une exécution - supprimez les notes qu'une exécution vient de créer, directement depuis sa boîte de dialogue de résultats.
 - Filtrage étendu : i+1, plage de rang de fréquence, liste noire, regex, ensembles de mots, et plus encore.
@@ -228,7 +228,7 @@ Liste d'idées pour les futures versions d'Anki Miner. Sans ordre de priorité. 
 
 - **Long terme** :
   - [x] Portage Android -- https://github.com/0xzerolight/anki_miner_android
-  - [x] Au-delà du japonais : extraction du chinois et du coréen.
+  - [x] Au-delà du japonais : extraction du chinois, du coréen et de huit langues européennes.
   - [ ] Extension de navigateur Anki Miner.
 
 

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:3bdd638d22b50e04 -->
+<!-- i18n-source: README.md sha256:10e84410ad08f17c -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Ubah konten asli berbahasa Jepang, Mandarin, dan Korea menjadi kartu kosakata Anki.
+Ubah konten asli berbahasa Jepang, Mandarin, Korea, dan delapan bahasa Eropa menjadi kartu kosakata Anki.
 </p>
 
 <p align="center">
@@ -89,10 +89,10 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
-Bahasa Jepang tidak perlu tambahan apa pun. Untuk mining bahasa Mandarin atau Korea, tambahkan mesinnya:
+Bahasa Jepang tidak perlu tambahan apa pun. Untuk bahasa mining lainnya, tambahkan mesinnya:
 
 ```bash
-pipx install "anki-miner[languages]"   # both; or [zh] / [ko] for one
+pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [de], [fr], [es], [it], [pt], [nl], [ca] for one
 ```
 
 Unduhan di atas mengambilnya langsung di dalam aplikasi, lewat Pengaturan -> Bahasa Mining.
@@ -125,7 +125,7 @@ Untuk pengaturan pengembangan lengkap, lihat [CONTRIBUTING.md](../CONTRIBUTING.m
 
 ## Fitur Lainnya
 
-- Bahasa mining - Jepang, Mandarin, dan Korea, diganti di Pengaturan. Bahasa Korea mengunduh model bahasanya di dalam aplikasi.
+- Bahasa mining - Jepang, Mandarin, Korea, Inggris, Jerman, Prancis, Spanyol, Italia, Portugis, Belanda, dan Katalan, diganti di Pengaturan. Semua bahasa selain Jepang mengunduh mesinnya di dalam aplikasi.
 - Word Curator - tinjau setiap kata kandidat sebelum kartu dibuat, lengkap dengan adegan, halaman manga, dan entri kamus berdampingan.
 - Batalkan sebuah proses - hapus catatan yang baru saja dibuat oleh sebuah proses, langsung dari dialog hasilnya.
 - Filter yang luas: i+1, rentang peringkat frekuensi, daftar hitam, regex, kumpulan kata, dan lainnya.
@@ -228,7 +228,7 @@ Daftar ide untuk versi mendatang Anki Miner. Bukan dalam urutan prioritas. Permi
 
 - **Jangka panjang**:
   - [x] Port Android -- https://github.com/0xzerolight/anki_miner_android
-  - [x] Di luar bahasa Jepang: mining bahasa Mandarin dan Korea.
+  - [x] Di luar bahasa Jepang: mining bahasa Mandarin, Korea, dan delapan bahasa Eropa.
   - [ ] Ekstensi peramban Anki Miner.
 
 

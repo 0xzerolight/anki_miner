@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:3bdd638d22b50e04 -->
+<!-- i18n-source: README.md sha256:10e84410ad08f17c -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Trasforma contenuti giapponesi, cinesi e coreani nativi in carte di vocabolario Anki.
+Trasforma contenuti nativi in giapponese, cinese, coreano e otto lingue europee in carte di vocabolario Anki.
 </p>
 
 <p align="center">
@@ -89,10 +89,10 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
-Il giapponese non richiede nulla in più. Per il mining di cinese o coreano, aggiungi il motore:
+Il giapponese non richiede nulla in più. Per il mining di qualsiasi altra lingua, aggiungi il suo motore:
 
 ```bash
-pipx install "anki-miner[languages]"   # both; or [zh] / [ko] for one
+pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [de], [fr], [es], [it], [pt], [nl], [ca] for one
 ```
 
 I download qui sopra li recuperano direttamente nell'app, da Impostazioni -> Lingua di mining.
@@ -125,7 +125,7 @@ Per la configurazione completa dell'ambiente di sviluppo, consulta [CONTRIBUTING
 
 ## Altre funzionalità
 
-- Lingue di mining - giapponese, cinese e coreano, si cambiano nelle Impostazioni. Il coreano scarica il suo modello linguistico dall'app.
+- Lingue di mining - giapponese, cinese, coreano, inglese, tedesco, francese, spagnolo, italiano, portoghese, olandese e catalano, si cambiano nelle Impostazioni. Tutte le lingue tranne il giapponese scaricano il proprio motore dall'app.
 - Curatore di parole - rivedi ogni parola candidata prima che vengano create le carte, con la sua scena, pagina del manga e voce del dizionario affiancate.
 - Annulla un'esecuzione - elimina le note appena create da un'esecuzione, direttamente dalla sua finestra dei risultati.
 - Filtri avanzati: i+1, intervallo di rango di frequenza, blacklist, regex, insiemi di parole e altro ancora.
@@ -228,7 +228,7 @@ Elenco di idee per le versioni future di Anki Miner. Non in ordine di priorità.
 
 - **Lungo termine**:
   - [x] Port per Android -- https://github.com/0xzerolight/anki_miner_android
-  - [x] Oltre il giapponese: mining di cinese e coreano.
+  - [x] Oltre il giapponese: mining di cinese, coreano e otto lingue europee.
   - [ ] Estensione per browser di Anki Miner.
 
 

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:3bdd638d22b50e04 -->
+<!-- i18n-source: README.md sha256:10e84410ad08f17c -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-把日文、中文與韓文的原生內容變成 Anki 單字卡片。
+把日文、中文、韓文與八種歐洲語言的原生內容變成 Anki 單字卡片。
 </p>
 
 <p align="center">
@@ -89,10 +89,10 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
-日語不需額外安裝。要採集中文或韓文，請加裝引擎:
+日語不需額外安裝。要採集其他語言，請加裝對應的引擎:
 
 ```bash
-pipx install "anki-miner[languages]"   # both; or [zh] / [ko] for one
+pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [de], [fr], [es], [it], [pt], [nl], [ca] for one
 ```
 
 上面的下載版改為在應用程式內取得，位於設定 -> 採集語言。
@@ -125,7 +125,7 @@ anki_miner_gui
 
 ## 其他功能
 
-- 採集語言 - 日文、中文與韓文，可在設定中切換。韓文的語言模型會在程式內下載。
+- 採集語言 - 日文、中文、韓文、英文、德文、法文、西班牙文、義大利文、葡萄牙文、荷蘭文與加泰隆尼亞文，可在設定中切換。除日文外，各語言的引擎都會在程式內下載。
 - 單字整理工具 - 在製作卡片前逐一檢視每個候選單字，並排顯示它的場景、漫畫頁面與字典條目。
 - 復原一次執行 - 直接在結果對話框中刪除該次執行剛建立的筆記。
 - 完整的篩選機制：i+1、頻率排名區間、黑名單、正規表示式、單字集等等。
@@ -228,7 +228,7 @@ Anki Miner 未來版本的構想清單。順序不代表優先度。功能請求
 
 - **長期目標**：
   - [x] Android 移植 -- https://github.com/0xzerolight/anki_miner_android
-  - [x] 超越日文：採集中文與韓文。
+  - [x] 超越日文：採集中文、韓文與八種歐洲語言。
   - [ ] Anki Miner 瀏覽器擴充功能。
 
 

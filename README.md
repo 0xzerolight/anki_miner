@@ -29,7 +29,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Turn native Japanese, Chinese, and Korean content into Anki vocabulary cards.
+Turn native content in Japanese, Chinese, Korean, and eight European languages into Anki vocabulary cards.
 </p>
 
 <p align="center">
@@ -87,10 +87,10 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
-Japanese needs nothing extra. For Chinese or Korean mining, add the engine:
+Japanese needs nothing extra. For any other mining language, add its engine:
 
 ```bash
-pipx install "anki-miner[languages]"   # both; or [zh] / [ko] for one
+pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [de], [fr], [es], [it], [pt], [nl], [ca] for one
 ```
 
 The downloads above fetch these in-app instead, from Settings -> Mining Language.
@@ -123,7 +123,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Other Features
 
-- Mining languages - Japanese, Chinese, and Korean, switched in Settings. Korean downloads its language model in-app.
+- Mining languages - Japanese, Chinese, Korean, English, German, French, Spanish, Italian, Portuguese, Dutch, and Catalan, switched in Settings. Languages other than Japanese download their engine in-app.
 - Word Curator - review every candidate word before cards are made, with its scene, manga page, and dictionary entry side by side.
 - Undo a run - delete the notes a run just created, straight from its results dialog.
 - Extensive filtering: i+1, frequency rank range, blacklist, regex, wordsets, and more.
@@ -226,7 +226,7 @@ List of ideas for future versions of Anki Miner. Not in priority order. Feature 
 
 - **Long-term**:
   - [x] Android port -- https://github.com/0xzerolight/anki_miner_android
-  - [x] Beyond Japanese: Chinese and Korean mining.
+  - [x] Beyond Japanese: Chinese, Korean, and eight European languages.
   - [ ] Anki Miner browser extension.
 
 
