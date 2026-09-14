@@ -684,7 +684,8 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     list_widget: QListWidget
     empty_label: QLabel
     page_filler: QWidget
-    add_button: Any
+    #: AudiobookTab's Add button. YouTube has none: its Mine reads the link box.
+    add_button: Any = None
     mine_button: Any
     clear_button: Any
     stop_button: Any
@@ -1331,16 +1332,17 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
 
         Run active → the whole queue is frozen (D29-A): Add, Mine, Clear and
         every selection verb grey out, reorder is refused, the lock badge and
-        the two boundary controls appear, and Stop is shown. Otherwise Add is
-        enabled (unless a subclass :meth:`_add_locked`); Mine iff a READY item
-        exists; Clear iff the queue is non-empty; Stop hidden.
+        the two boundary controls appear, and Stop is shown. Otherwise Add (when
+        the tab has one) is enabled; Mine iff a READY item exists; Clear iff the
+        queue is non-empty; Stop hidden.
         """
         items = self._queue.all_items()
         has_items = bool(items)
         has_ready = any(i.status == self._status_ready for i in items)
         run_active = self._queue_locked()
 
-        self.add_button.setEnabled(not run_active and not self._add_locked())
+        if self.add_button is not None:
+            self.add_button.setEnabled(not run_active)
         self.mine_button.setEnabled(has_ready and not run_active)
         self.clear_button.setEnabled(has_items and not run_active)
         self.queue_controls.set_running(run_active)
@@ -1435,10 +1437,6 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
     # ------------------------------------------------------------------
     # Subclass hooks
     # ------------------------------------------------------------------
-
-    def _add_locked(self) -> bool:
-        """Return ``True`` to keep the Add button disabled while idle. Default off."""
-        return False
 
     def _filter_bucket(self, item: Any) -> str:
         """Map *item* to a filter chip. Subclass MUST override.

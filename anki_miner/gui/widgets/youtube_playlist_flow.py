@@ -201,9 +201,6 @@ class PlaylistAddCallbacks:
     recompute_buttons: Callable[[], None]
     """Re-derive button enabled/visible state from queue + workers."""
 
-    clear_url_input: Callable[[], None]
-    """Clear the URL line edit after an accepted Add."""
-
     run_active: Callable[[], bool]
     """Whether a mining run owns the queue right now — freezes the sweep."""
 
@@ -225,9 +222,10 @@ class PlaylistAddController:
     * a frozen :class:`AnkiMinerConfig` snapshot (refreshed via
       :meth:`update_config` alongside the fetcher).
 
-    The tab drives it through four entry points: :meth:`begin` on Add,
-    :attr:`is_active` from its button recomputation, :meth:`invalidate_pending`
-    on Clear, and :meth:`shutdown` from ``YouTubeTab.shutdown()``.
+    The tab drives it through four entry points: :meth:`add_urls` on Mine,
+    :attr:`is_busy` while a Mine waits for its links to be checked,
+    :meth:`invalidate_pending` on Clear, and :meth:`shutdown` from
+    ``YouTubeTab.shutdown()``.
     """
 
     def __init__(
@@ -284,18 +282,6 @@ class PlaylistAddController:
     # ------------------------------------------------------------------
 
     @property
-    def is_active(self) -> bool:
-        """True while a playlist resolve is pending.
-
-        This is the phase during which the tab must lock its Add button — a
-        second Add mid-resolve would race the confirmation dialog. Entry
-        probing does *not* count: single videos may still be added while a
-        playlist's entries are being probed (a second *playlist* waits in the
-        backlog instead).
-        """
-        return self._playlist_resolve_worker is not None
-
-    @property
     def is_busy(self) -> bool:
         """True while pasted links are still becoming checked queue rows.
 
@@ -304,23 +290,6 @@ class PlaylistAddController:
         videos waiting for a probe slot.
         """
         return bool(self._playlist_backlog) or bool(self._probe_backlog) or self._playlist_busy()
-
-    def begin(self, url: str) -> None:
-        """Add one typed URL (the Add button)."""
-        if self._shutdown_started:
-            return
-        # Reject option-leading / non-URL inputs before they reach yt-dlp as
-        # an argument. Leave the field populated so the user can fix it. T-34.
-        if not _is_acceptable_add_input(url):
-            self._callbacks.log_error(
-                QCoreApplication.translate(
-                    "PlaylistAddController",
-                    "Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.",
-                )
-            )
-            return
-        self._callbacks.clear_url_input()
-        self.add_urls([url])
 
     def add_urls(self, urls: Sequence[str]) -> None:
         """Queue *urls*: videos are probed now, playlists resolve one at a time.
