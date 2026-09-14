@@ -1,0 +1,16 @@
+de_core_news_sm - spaCy German pipeline (MIT)
+Release: https://github.com/explosion/spacy-models/releases/tag/de_core_news_sm-3.8.0
+Model source and training configuration: https://github.com/explosion/spacy-models
+
+Training data, as listed in the model's own meta.json:
+  TIGER Corpus (commercial, licensed by Explosion) - https://www.ims.uni-stuttgart.de/forschung/ressourcen/korpora/tiger.html
+  Tiger2Dep (citation only, no code packaged) - https://www.ims.uni-stuttgart.de/forschung/ressourcen/werkzeuge/tiger2dep/
+  WikiNER (CC BY 4.0) - https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500
+The full texts of those terms are the wheel's own LICENSES_SOURCES file, which
+stays beside the model data after the language pack is extracted
+(~/.anki_miner/language_packs/de/de_core_news_sm/de_core_news_sm-3.8.0/LICENSES_SOURCES).
+
+The binary this application downloads is the unmodified wheel
+de_core_news_sm-3.8.0-py3-none-any.whl. Its URL and SHA-256 digest are pinned in
+anki_miner/languages/de/pack.py; corresponding source for that exact version is
+available from the release and repository URLs above.

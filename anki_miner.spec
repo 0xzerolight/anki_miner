@@ -178,6 +178,15 @@ en_model_license_datas = []
 if os.path.isdir(en_model_license_dir):
     en_model_license_datas.append((en_model_license_dir, os.path.join("licenses", "en_core_web_sm")))
 
+# de_core_news_sm (German spaCy model) MIT notice: shipped whenever the license
+# dir exists. Lands at sys._MEIPASS/licenses/de_core_news_sm/. The model itself is
+# excluded below and arrives as a language pack the app downloads; the MIT notice
+# travels with the app that delivers it.
+de_model_license_dir = os.path.join(project_root, "licenses", "de_core_news_sm")
+de_model_license_datas = []
+if os.path.isdir(de_model_license_dir):
+    de_model_license_datas.append((de_model_license_dir, os.path.join("licenses", "de_core_news_sm")))
+
 # es_core_news_sm (Spanish spaCy model) GPL-3.0 notice: shipped whenever the
 # license dir exists. Lands at sys._MEIPASS/licenses/es_core_news_sm/. The model
 # itself is excluded below and arrives as a language pack the app downloads;
@@ -381,6 +390,7 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + pt_core_news_sm_license_datas
     + fr_model_license_datas
     + en_model_license_datas
+    + de_model_license_datas
     + es_model_license_datas
     + it_core_news_sm_license_datas
     + nl_core_news_sm_license_datas,
