@@ -334,6 +334,38 @@
         <translation>Menyimpan karakter hanja yang terkandung dalam kata. Kosong = lewati.</translation>
     </message>
     <message>
+        <source>Part of Speech Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the word's part of speech (noun, verb, adjective, adverb). Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Gender Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores a noun's grammatical gender. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Article Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the article that goes with a noun. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Plural Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores a noun's plural form from the dictionary entry. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Tidak ada di Anki — mining akan gagal sampai Anda memilih yang benar atau membuatnya di Anki.</translation>
     </message>
@@ -2046,8 +2078,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Jaga pengunduh yt-dlp tetap terkini, perbarui sesuai kebutuhan, atau arahkan ke eksekutabel Anda sendiri.</translation>
     </message>
     <message>
-        <source>Mine Japanese, Korean or Chinese</source>
-        <translation>Mining bahasa Jepang, Korea, atau Mandarin</translation>
+        <source>Mine another language</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
@@ -3732,6 +3764,10 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>%1 berkas media tidak dapat diimpor.</translation>
     </message>
     <message>
+        <source>This dictionary says its language is %1, not the language you are mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose Yomitan dictionary zips</source>
         <translation>Pilih zip kamus Yomitan</translation>
     </message>
@@ -5140,6 +5176,10 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Awalan Pembicara:</translation>
     </message>
     <message>
+        <source>Dialogue dash</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Presets</source>
         <translation>Prasetel</translation>
     </message>
@@ -5218,6 +5258,26 @@ Tidak ada berkas di disk yang dihapus.</translation>
     <message>
         <source>Which spelling the card front and the dictionary lookup prefer.</source>
         <translation>Ejaan mana yang didahulukan oleh bagian depan kartu dan pencarian kamus.</translation>
+    </message>
+    <message>
+        <source>Regional Variety</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Brazilian Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>European Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Variety</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -5570,6 +5630,14 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Kata yang Anda tambahkan dari Word Curator. Diabaikan pada setiap proses mining dan tetap ada saat cache dibangun ulang.</translation>
     </message>
     <message>
+        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Filter…</source>
         <translation>Filter…</translation>
     </message>
@@ -5764,26 +5832,6 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
         <translation>
             <numerusform>Beralih ke %1 akan membuang %n item dalam antrean, di layar maupun pada salinan yang disimpan untuk peluncuran berikutnya. Lanjutkan?</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>First time mining this language</source>
-        <translation>Pertama kali mining bahasa ini</translation>
-    </message>
-    <message>
-        <source>You have not mined %1 before.</source>
-        <translation>Anda belum pernah mining %1.</translation>
-    </message>
-    <message>
-        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
-        <translation>Pemindaian kata yang dikenal membaca setiap dek yang tidak dikecualikan, sehingga kata dalam %1 akan dihitung sebagai sudah dikenal. Kecualikan dek tersebut untuk bahasa ini?</translation>
-    </message>
-    <message>
-        <source>Exclude these decks</source>
-        <translation>Kecualikan dek ini</translation>
-    </message>
-    <message>
-        <source>Set up resources…</source>
-        <translation>Siapkan sumber daya…</translation>
     </message>
     <message>
         <source>That mining language is not available in this build.</source>
@@ -6956,12 +7004,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
 </context><context>
     <name>PlaylistAddController</name>
     <message>
-        <source>Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.</source>
-        <translation>Bukan URL YouTube atau id video yang valid. Tempel tautan youtube.com / youtu.be.</translation>
-    </message>
-    <message>
-        <source>A playlist is already being added — wait for it to finish.</source>
-        <translation>Sebuah playlist sedang ditambahkan — tunggu hingga selesai.</translation>
+        <source>Skipped %1 already in the queue.</source>
+        <translation>Melewati %1 yang sudah ada dalam antrean.</translation>
     </message>
     <message>
         <source>Resolving playlist…</source>
@@ -7006,10 +7050,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Add first %1</source>
         <translation>Tambah %1 pertama</translation>
-    </message>
-    <message>
-        <source>Skipped %1 already in the queue.</source>
-        <translation>Melewati %1 yang sudah ada dalam antrean.</translation>
     </message>
     <message>
         <source>No new videos to add from playlist '%1'.</source>
@@ -10836,16 +10876,12 @@ Urutkan menaik untuk menempatkan baris i+1 di awal — yaitu baris yang satu-sat
         <translation>Mengunduh yt-dlp…</translation>
     </message>
     <message>
-        <source>Add</source>
-        <translation>Tambah</translation>
+        <source>One YouTube link or playlist per line</source>
+        <translation>Satu tautan atau playlist YouTube per baris</translation>
     </message>
     <message>
-        <source>Add the URL to the queue and check the video.</source>
-        <translation>Tambahkan URL ke antrean dan periksa video.</translation>
-    </message>
-    <message>
-        <source>Paste a YouTube URL above and click Add.</source>
-        <translation>Tempelkan URL YouTube di atas lalu klik Tambah.</translation>
+        <source>Paste YouTube links above, one per line, then click Mine.</source>
+        <translation>Tempelkan tautan YouTube di atas, satu per baris, lalu klik Mining.</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -10884,8 +10920,8 @@ Urutkan menaik untuk menempatkan baris i+1 di awal — yaitu baris yang satu-sat
         <translation>Atur ulang waktu teks YouTube berdasarkan audio video sebelum mining. Diabaikan jika subtitel ditranskripsi secara lokal.</translation>
     </message>
     <message>
-        <source>Mine every Ready item in the queue.</source>
-        <translation>Mining setiap item Siap dalam antrean.</translation>
+        <source>Check every link in the box, then mine every Ready video.</source>
+        <translation>Periksa setiap tautan di kotak, lalu mining setiap video Siap.</translation>
     </message>
     <message>
         <source>Clear</source>
@@ -10906,6 +10942,18 @@ Urutkan menaik untuk menempatkan baris i+1 di awal — yaitu baris yang satu-sat
     <message>
         <source>videos</source>
         <translation>video</translation>
+    </message>
+    <message>
+        <source>Some lines are not valid URLs.</source>
+        <translation>Beberapa baris bukan URL yang valid.</translation>
+    </message>
+    <message>
+        <source>Checking videos…</source>
+        <translation>Memeriksa video…</translation>
+    </message>
+    <message>
+        <source>None of the videos can be mined. Each row says why.</source>
+        <translation>Tidak ada video yang dapat di-mining. Setiap item menjelaskan alasannya.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>
