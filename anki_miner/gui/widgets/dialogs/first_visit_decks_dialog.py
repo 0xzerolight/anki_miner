@@ -32,10 +32,6 @@ CHOICE_SETUP = "setup"
 CHOICE_NONE = "none"
 
 
-def _t(text: str) -> str:
-    return QCoreApplication.translate("LanguageSwitch", text)
-
-
 class FirstVisitDecksDialog(QDialog):
     """Checklist of decks; Exclude ticked decks / Set up resources… / Close."""
 
@@ -50,16 +46,21 @@ class FirstVisitDecksDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.choice = CHOICE_NONE
-        self.setWindowTitle(_t("First time mining this language"))
+        self.setWindowTitle(QCoreApplication.translate("LanguageSwitch", "First time mining this language"))
         layout = QVBoxLayout(self)
         layout.setSpacing(SPACING.sm)
-        layout.addWidget(QLabel(tr_format(_t("You have not mined %1 before."), display_name)))
+        layout.addWidget(
+            QLabel(
+                tr_format(QCoreApplication.translate("LanguageSwitch", "You have not mined %1 before."), display_name)
+            )
+        )
         explanation = QLabel(
             tr_format(
-                _t(
+                QCoreApplication.translate(
+                    "LanguageSwitch",
                     "The known-words scan reads every deck that is not excluded, and it cannot tell apart "
                     "languages that share a script: words in a ticked deck would not count as known in %1. "
-                    "Untick the decks that hold %1 cards."
+                    "Untick the decks that hold %1 cards.",
                 ),
                 display_name,
             )
@@ -77,17 +78,17 @@ class FirstVisitDecksDialog(QDialog):
         layout.addWidget(self.deck_list)
 
         buttons = QHBoxLayout()
-        self.exclude_button = QPushButton(_t("Exclude ticked decks"))
+        self.exclude_button = QPushButton(QCoreApplication.translate("LanguageSwitch", "Exclude ticked decks"))
         self.exclude_button.setDefault(True)
         self.exclude_button.clicked.connect(lambda: self._finish(CHOICE_EXCLUDE))
         buttons.addWidget(self.exclude_button)
         self.setup_button: QPushButton | None = None
         if offer_setup:
-            self.setup_button = QPushButton(_t("Set up resources…"))
+            self.setup_button = QPushButton(QCoreApplication.translate("LanguageSwitch", "Set up resources…"))
             self.setup_button.clicked.connect(lambda: self._finish(CHOICE_SETUP))
             buttons.addWidget(self.setup_button)
         buttons.addStretch()
-        close = QPushButton(_t("Close"))
+        close = QPushButton(QCoreApplication.translate("LanguageSwitch", "Close"))
         close.clicked.connect(self.reject)
         buttons.addWidget(close)
         layout.addLayout(buttons)

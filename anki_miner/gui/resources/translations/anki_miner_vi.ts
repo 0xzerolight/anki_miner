@@ -5849,6 +5849,30 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
         <source>Could not switch to %1. Nothing was switched.</source>
         <translation>Không thể chuyển sang %1. Không có gì được chuyển đổi.</translation>
     </message>
+    <message>
+        <source>First time mining this language</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>You have not mined %1 before.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The known-words scan reads every deck that is not excluded, and it cannot tell apart languages that share a script: words in a ticked deck would not count as known in %1. Untick the decks that hold %1 cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Exclude ticked decks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Set up resources…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Close</source>
+        <translation type="unfinished">Đóng</translation>
+    </message>
 </context><context>
     <name>LogWidget</name>
     <message>
