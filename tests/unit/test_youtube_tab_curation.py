@@ -61,8 +61,7 @@ def tab(test_config: AnkiMinerConfig, qtbot):
 
 
 def _add_ready_item(tab, url: str = "https://www.youtube.com/watch?v=abc"):
-    tab.url_edit.setText(url)
-    tab._on_add_clicked()
+    tab._add_flow.add_urls([url])
     item = tab._queue.all_items()[-1]
     tab._add_flow._on_probe_done(item, _make_video_info())
     return item

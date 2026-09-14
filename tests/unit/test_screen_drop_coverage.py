@@ -74,7 +74,7 @@ def _drop(widget, data: QMimeData) -> QDropEvent:
 
 
 # ---------------------------------------------------------------------------
-# YouTube: one link, added the ordinary way
+# YouTube: dropped links go into the link box
 # ---------------------------------------------------------------------------
 
 
@@ -102,20 +102,31 @@ class TestYouTubeTakesALink:
 
         assert youtube_tab.url_edit.property("dropState") == "valid"
 
-    def test_a_dropped_link_goes_into_the_add_flow(self, youtube_tab):
+    def test_a_dropped_link_lands_in_the_box(self, youtube_tab):
         youtube_tab._add_flow = MagicMock()
 
         event = _drop(youtube_tab, _mime(urls=(_YT_URL,)))
 
-        youtube_tab._add_flow.begin.assert_called_once_with(_YT_URL)
+        assert youtube_tab.url_edit.toPlainText() == _YT_URL
+        youtube_tab._add_flow.add_urls.assert_not_called()
         assert event.isAccepted()
 
     def test_a_link_dragged_as_plain_text_counts(self, youtube_tab):
-        youtube_tab._add_flow = MagicMock()
-
         _drop(youtube_tab, _mime(text=_YT_URL))
 
-        youtube_tab._add_flow.begin.assert_called_once_with(_YT_URL)
+        assert youtube_tab.url_edit.toPlainText() == _YT_URL
+
+    def test_several_links_in_one_drag_become_lines(self, youtube_tab):
+        second = "https://youtu.be/aaaaaaaaaaa"
+        youtube_tab.url_edit.setPlainText("https://youtu.be/bbbbbbbbbbb")
+
+        _drop(youtube_tab, _mime(urls=(_YT_URL,), text=f"{_YT_URL}\n{second}"))
+
+        assert youtube_tab.url_edit.toPlainText().splitlines() == [
+            "https://youtu.be/bbbbbbbbbbb",
+            _YT_URL,
+            second,
+        ]
 
     def test_a_non_youtube_url_is_marked_invalid_and_refused(self, youtube_tab):
         youtube_tab._add_flow = MagicMock()
@@ -124,7 +135,7 @@ class TestYouTubeTakesALink:
         event = _drop(youtube_tab, _mime(urls=("https://example.com/video",)))
 
         assert youtube_tab.url_edit.property("dropState") == ""  # cleared on drop
-        youtube_tab._add_flow.begin.assert_not_called()
+        assert youtube_tab.url_edit.toPlainText() == ""
         assert event.isAccepted() is False
 
     def test_a_dropped_file_says_where_files_are_mined(self, youtube_tab, tmp_path):
@@ -136,7 +147,7 @@ class TestYouTubeTakesALink:
 
         logged = youtube_tab.log_widget.text_edit.toPlainText()
         assert "Mine local files from the Video or Audiobooks tab." in logged
-        youtube_tab._add_flow.begin.assert_not_called()
+        assert youtube_tab.url_edit.toPlainText() == ""
 
     def test_a_queue_reorder_drag_is_left_to_the_list(self, youtube_tab):
         """An internal move carries neither URL nor text and is not this screen's."""

@@ -1422,12 +1422,14 @@ QLineEdit[warning="true"] {
    pointed HERE", which is what the focus border already means, and D41-B keeps
    the accent itself scarce — one primary action, navigation, focus, checked
    controls, progress. A drop target is none of those. */
-QLineEdit[dropState="valid"] {
+QLineEdit[dropState="valid"],
+QPlainTextEdit[dropState="valid"] {
     border-color: ${color-border-focus};
     border-width: 2px;
 }
 
-QLineEdit[dropState="invalid"] {
+QLineEdit[dropState="invalid"],
+QPlainTextEdit[dropState="invalid"] {
     border-color: ${color-error};
     border-width: 2px;
 }

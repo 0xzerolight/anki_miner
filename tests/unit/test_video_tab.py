@@ -314,7 +314,6 @@ class TestShutdown:
             render_new_item=MagicMock(),
             refresh_row=MagicMock(),
             recompute_buttons=MagicMock(),
-            clear_url_input=MagicMock(),
             run_active=lambda: False,
             log_info=MagicMock(),
             log_warning=MagicMock(),
@@ -323,7 +322,7 @@ class TestShutdown:
         controller = PlaylistAddController(_ResolveFetcher(), test_config, callbacks)
 
         with patch("anki_miner.gui.widgets.youtube_playlist_flow.YouTubePlaylistProbeWorker") as probe_cls:
-            controller.begin(playlist_url)
+            controller.add_urls([playlist_url])
             resolve_worker = controller._playlist_resolve_worker
             assert resolve_worker is not None
             assert resolve_entered.wait(1)

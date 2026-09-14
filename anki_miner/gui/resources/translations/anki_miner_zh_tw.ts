@@ -334,6 +334,38 @@
         <translation>儲存單字中包含的韓文漢字。留空＝略過。</translation>
     </message>
     <message>
+        <source>Part of Speech Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the word's part of speech (noun, verb, adjective, adverb). Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Gender Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores a noun's grammatical gender. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Article Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the article that goes with a noun. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Plural Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores a noun's plural form from the dictionary entry. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>不在 Anki 中 — 在選取有效項目或於 Anki 建立前，採集會失敗。</translation>
     </message>
@@ -2046,8 +2078,8 @@ No index files are deleted.</source>
         <translation>讓 yt-dlp 下載器保持最新、依需求更新，或指向你自己的可執行檔。</translation>
     </message>
     <message>
-        <source>Mine Japanese, Korean or Chinese</source>
-        <translation>採集日文、韓文或中文</translation>
+        <source>Mine another language</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
@@ -3732,6 +3764,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>有 %1 個媒體檔案無法匯入。</translation>
     </message>
     <message>
+        <source>This dictionary says its language is %1, not the language you are mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose Yomitan dictionary zips</source>
         <translation>選擇 Yomitan 字典 zip</translation>
     </message>
@@ -5140,6 +5176,10 @@ No files on disk are deleted.</source>
         <translation>講者：前綴</translation>
     </message>
     <message>
+        <source>Dialogue dash</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Presets</source>
         <translation>預設集</translation>
     </message>
@@ -5218,6 +5258,26 @@ No files on disk are deleted.</source>
     <message>
         <source>Which spelling the card front and the dictionary lookup prefer.</source>
         <translation>卡片正面與字典查詢優先使用哪一種寫法。</translation>
+    </message>
+    <message>
+        <source>Regional Variety</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Brazilian Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>European Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Variety</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -5570,6 +5630,14 @@ No index files are deleted.</source>
         <translation>您從單字整理工具加入的單字。每次執行時皆會忽略，且在快取重建後仍會保留。</translation>
     </message>
     <message>
+        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Filter…</source>
         <translation>篩選…</translation>
     </message>
@@ -5764,26 +5832,6 @@ Words to add: %3. Continue?</source>
         <translation>
             <numerusform>切換到 %1 將捨棄佇列中的 %n 個項目，畫面上的與為下次啟動儲存的副本都會捨棄。要繼續嗎？</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>First time mining this language</source>
-        <translation>首次採集此語言</translation>
-    </message>
-    <message>
-        <source>You have not mined %1 before.</source>
-        <translation>您尚未採集過 %1。</translation>
-    </message>
-    <message>
-        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
-        <translation>已知單字掃描會讀取所有未排除的牌組，因此 %1 中的單字會被視為已知。要在此語言中排除它們嗎？</translation>
-    </message>
-    <message>
-        <source>Exclude these decks</source>
-        <translation>排除這些牌組</translation>
-    </message>
-    <message>
-        <source>Set up resources…</source>
-        <translation>設定資源…</translation>
     </message>
     <message>
         <source>That mining language is not available in this build.</source>
@@ -6956,12 +7004,8 @@ No index files are deleted.</source>
 </context><context>
     <name>PlaylistAddController</name>
     <message>
-        <source>Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.</source>
-        <translation>不是有效的 YouTube 網址或影片 id。請貼上 youtube.com／youtu.be 連結。</translation>
-    </message>
-    <message>
-        <source>A playlist is already being added — wait for it to finish.</source>
-        <translation>已有一個播放清單正在加入中 — 請等待其完成。</translation>
+        <source>Skipped %1 already in the queue.</source>
+        <translation>已略過 %1 個已在佇列中的項目。</translation>
     </message>
     <message>
         <source>Resolving playlist…</source>
@@ -7006,10 +7050,6 @@ No index files are deleted.</source>
     <message>
         <source>Add first %1</source>
         <translation>加入前 %1 部</translation>
-    </message>
-    <message>
-        <source>Skipped %1 already in the queue.</source>
-        <translation>已略過 %1 個已在佇列中的項目。</translation>
     </message>
     <message>
         <source>No new videos to add from playlist '%1'.</source>
@@ -10836,16 +10876,12 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation>正在下載 yt-dlp…</translation>
     </message>
     <message>
-        <source>Add</source>
-        <translation>加入</translation>
+        <source>One YouTube link or playlist per line</source>
+        <translation>每行一個 YouTube 連結或播放清單</translation>
     </message>
     <message>
-        <source>Add the URL to the queue and check the video.</source>
-        <translation>將網址加入佇列並檢查影片。</translation>
-    </message>
-    <message>
-        <source>Paste a YouTube URL above and click Add.</source>
-        <translation>在上方貼上 YouTube 網址並點擊「加入」。</translation>
+        <source>Paste YouTube links above, one per line, then click Mine.</source>
+        <translation>在上方貼上 YouTube 連結，每行一個，然後點擊「採集」。</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -10884,8 +10920,8 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation>採集前依照影片音訊重新校準 YouTube 字幕時間軸。若字幕為本機轉錄，則此設定會被忽略。</translation>
     </message>
     <message>
-        <source>Mine every Ready item in the queue.</source>
-        <translation>採集佇列中每個「就緒」項目。</translation>
+        <source>Check every link in the box, then mine every Ready video.</source>
+        <translation>檢查方塊中的每個連結，然後採集每個「就緒」影片。</translation>
     </message>
     <message>
         <source>Clear</source>
@@ -10906,6 +10942,18 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     <message>
         <source>videos</source>
         <translation>影片</translation>
+    </message>
+    <message>
+        <source>Some lines are not valid URLs.</source>
+        <translation>有些行不是有效的網址。</translation>
+    </message>
+    <message>
+        <source>Checking videos…</source>
+        <translation>正在檢查影片…</translation>
+    </message>
+    <message>
+        <source>None of the videos can be mined. Each row says why.</source>
+        <translation>沒有可採集的影片。每個項目都註明了原因。</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

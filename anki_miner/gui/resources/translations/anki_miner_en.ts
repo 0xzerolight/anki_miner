@@ -334,6 +334,38 @@
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Part of Speech Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the word's part of speech (noun, verb, adjective, adverb). Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Gender Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores a noun's grammatical gender. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Article Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the article that goes with a noun. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Plural Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores a noun's plural form from the dictionary entry. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation type="unfinished" />
     </message>
@@ -2037,7 +2069,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mine Japanese, Korean or Chinese</source>
+        <source>Mine another language</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3721,6 +3753,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
+        <source>This dictionary says its language is %1, not the language you are mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose Yomitan dictionary zips</source>
         <translation type="unfinished" />
     </message>
@@ -5121,6 +5157,10 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Dialogue dash</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Presets</source>
         <translation type="unfinished" />
     </message>
@@ -5198,6 +5238,26 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Which spelling the card front and the dictionary lookup prefer.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Regional Variety</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Brazilian Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>European Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Variety</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5547,6 +5607,14 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Filter…</source>
         <translation type="unfinished" />
     </message>
@@ -5736,26 +5804,6 @@ Words to add: %3. Continue?</source>
         <translation type="unfinished">
             <numerusform />
         </translation>
-    </message>
-    <message>
-        <source>First time mining this language</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>You have not mined %1 before.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Exclude these decks</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Set up resources…</source>
-        <translation type="unfinished" />
     </message>
     <message>
         <source>That mining language is not available in this build.</source>
@@ -6920,11 +6968,7 @@ No index files are deleted.</source>
 </context><context>
     <name>PlaylistAddController</name>
     <message>
-        <source>Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>A playlist is already being added — wait for it to finish.</source>
+        <source>Skipped %1 already in the queue.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6969,10 +7013,6 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Add first %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Skipped %1 already in the queue.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10781,15 +10821,11 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Add</source>
+        <source>One YouTube link or playlist per line</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Add the URL to the queue and check the video.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Paste a YouTube URL above and click Add.</source>
+        <source>Paste YouTube links above, one per line, then click Mine.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10829,7 +10865,7 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mine every Ready item in the queue.</source>
+        <source>Check every link in the box, then mine every Ready video.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10850,6 +10886,18 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>videos</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Some lines are not valid URLs.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Checking videos…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>None of the videos can be mined. Each row says why.</source>
         <translation type="unfinished" />
     </message>
     <message>

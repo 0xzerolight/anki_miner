@@ -6,15 +6,19 @@ of the YouTube queue:
 
 * Input gating (T-34): :func:`_is_acceptable_add_input` rejects option-leading
   tokens before classification, on both the single-video and playlist paths.
-* Single videos: one :class:`YouTubeProbeWorker` per Add, run in parallel;
-  results are classified by :func:`_classify_probe_result` into READY or
-  PROBE_ERROR.
+* Pasted lists: :func:`split_url_lines` validates a block of lines and
+  :meth:`PlaylistAddController.add_urls` queues them, skipping any video already
+  queued or repeated in the paste.
+* Single videos: one :class:`YouTubeProbeWorker` per video, at most
+  ``_MAX_PARALLEL_PROBES`` at once (the rest wait their turn); results are
+  classified by :func:`_classify_probe_result` into READY or PROBE_ERROR.
 * Playlists (Issue #70): playlist-shaped URLs spawn a
   :class:`YouTubePlaylistResolveWorker` (flat-playlist probe), the user
   confirms via :meth:`PlaylistAddController._ask_playlist_choice`, and the
   chosen entries are expanded into ordinary queue rows whose metadata is
   filled in sequentially by a single :class:`YouTubePlaylistProbeWorker`.
-  At most one playlist may be resolving/probing at a time.
+  At most one playlist may be resolving/probing at a time; further pasted
+  playlists wait in a backlog and start in paste order.
 
 The controller is a plain (non-QObject) collaborator constructed and driven on
 the GUI thread; every signal connection below is made on the GUI thread, so
@@ -30,6 +34,7 @@ from __future__ import annotations
 import contextlib
 import logging
 import re
+from collections import deque
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Literal
@@ -71,6 +76,10 @@ _BARE_VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
 # only delays the close — it never changes the outcome.
 _PROBE_JOIN_TIMEOUT_MS = 2000
 
+# Parallel single-video probes. Each is a yt-dlp process; a pasted list of fifty
+# links must not start fifty of them at once (memory, and YouTube's bot checks).
+_MAX_PARALLEL_PROBES = 4
+
 
 def _is_acceptable_add_input(url: str) -> bool:
     """Reject inputs that would reach yt-dlp as an *option*, not a URL (T-34).
@@ -96,6 +105,21 @@ def _is_acceptable_add_input(url: str) -> bool:
     if _BARE_VIDEO_ID_RE.match(candidate):
         return True
     return classify_youtube_url(candidate).kind != "unknown"
+
+
+def split_url_lines(text: str) -> tuple[list[str], list[str]]:
+    """Split a pasted block into (accepted, rejected) lines, blank lines dropped.
+
+    Acceptance is :func:`_is_acceptable_add_input` (T-34), so a line that passes
+    here is one the add flow will queue.
+    """
+    accepted: list[str] = []
+    rejected: list[str] = []
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if line:
+            (accepted if _is_acceptable_add_input(line) else rejected).append(line)
+    return accepted, rejected
 
 
 def _classify_probe_result(
@@ -177,9 +201,6 @@ class PlaylistAddCallbacks:
     recompute_buttons: Callable[[], None]
     """Re-derive button enabled/visible state from queue + workers."""
 
-    clear_url_input: Callable[[], None]
-    """Clear the URL line edit after an accepted Add."""
-
     run_active: Callable[[], bool]
     """Whether a mining run owns the queue right now — freezes the sweep."""
 
@@ -201,9 +222,10 @@ class PlaylistAddController:
     * a frozen :class:`AnkiMinerConfig` snapshot (refreshed via
       :meth:`update_config` alongside the fetcher).
 
-    The tab drives it through four entry points: :meth:`begin` on Add,
-    :attr:`is_active` from its button recomputation, :meth:`invalidate_pending`
-    on Clear, and :meth:`shutdown` from ``YouTubeTab.shutdown()``.
+    The tab drives it through four entry points: :meth:`add_urls` on Mine,
+    :attr:`is_busy` while a Mine waits for its links to be checked,
+    :meth:`invalidate_pending` on Clear, and :meth:`shutdown` from
+    ``YouTubeTab.shutdown()``.
     """
 
     def __init__(
@@ -230,9 +252,11 @@ class PlaylistAddController:
 
         # In-flight probe workers — kept alive until they finish.
         self._probe_workers: list[YouTubeProbeWorker] = []
+        # Videos waiting for a free probe slot (_MAX_PARALLEL_PROBES).
+        self._probe_backlog: deque[YouTubeQueueItem] = deque()
 
         # Playlist expansion state (Issue #70). At most one playlist may be
-        # resolving or probing at a time; begin() warns and refuses a second.
+        # resolving or probing at a time; later ones wait in _playlist_backlog.
         self._playlist_resolve_worker: YouTubePlaylistResolveWorker | None = None
         self._playlist_probe_worker: YouTubePlaylistProbeWorker | None = None
         # Frozen snapshot of the items handed to the playlist probe worker,
@@ -242,6 +266,12 @@ class PlaylistAddController:
         # Bumped on Clear so a late playlist_resolved from a pre-Clear Add is
         # ignored instead of popping a dialog over an emptied queue.
         self._playlist_generation = 0
+        # Pasted playlists not yet resolved, in paste order.
+        self._playlist_backlog: deque[tuple[str, YouTubeUrlInfo]] = deque()
+        # True while the playlist choice dialog is open. Its nested event loop can
+        # deliver the resolve worker's finished signal, so the worker handle alone
+        # cannot say the playlist is still being added.
+        self._awaiting_choice = False
         self._shutdown_started = False
         # The run's requested subtitle source. Session-only, like the tab's
         # review-words checkbox: it is a per-run choice, not a setting.
@@ -252,52 +282,40 @@ class PlaylistAddController:
     # ------------------------------------------------------------------
 
     @property
-    def is_active(self) -> bool:
-        """True while a playlist resolve is pending.
+    def is_busy(self) -> bool:
+        """True while pasted links are still becoming checked queue rows.
 
-        This is the phase during which the tab must lock its Add button — a
-        second Add mid-resolve would race the confirmation dialog. Entry
-        probing does *not* count: single videos may still be added while a
-        playlist's entries are being probed (a second *playlist* is refused
-        inside :meth:`begin` instead).
+        Covers the work with no PROBING row to show for it: playlists waiting,
+        resolving, awaiting the user's choice or probing their entries, and
+        videos waiting for a probe slot.
         """
-        return self._playlist_resolve_worker is not None
+        return bool(self._playlist_backlog) or bool(self._probe_backlog) or self._playlist_busy()
 
-    def begin(self, url: str) -> None:
-        """Add *url* — single videos probe directly, playlists resolve first."""
+    def add_urls(self, urls: Sequence[str]) -> None:
+        """Queue *urls*: videos are probed now, playlists resolve one at a time.
+
+        Callers validate with :func:`split_url_lines` first. A video already in
+        the queue, or repeated in *urls*, is skipped: mining it twice would only
+        download it twice.
+        """
         if self._shutdown_started:
             return
-        # Reject option-leading / non-URL inputs before they reach yt-dlp as
-        # an argument. Leave the field populated so the user can fix it. T-34.
-        if not _is_acceptable_add_input(url):
-            self._callbacks.log_error(
-                QCoreApplication.translate(
-                    "PlaylistAddController",
-                    "Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.",
-                )
-            )
-            return
-
-        url_info = classify_youtube_url(url)
-        if url_info.kind in ("playlist", "video_in_playlist"):
-            if self._playlist_resolve_worker is not None or self._playlist_probe_worker is not None:
-                self._callbacks.log_warning(
-                    QCoreApplication.translate(
-                        "PlaylistAddController",
-                        "A playlist is already being added — wait for it to finish.",
-                    )
-                )
-                return
-            self._begin_playlist_resolve(url, url_info)
-            return
-
-        # "video" and "unknown" both fall through to the single-video probe
-        # path — yt-dlp remains the final validator for unrecognised URLs.
-        # Normalise a bare 11-char video id to a canonical watch URL so that
-        # item.url always classifies correctly in playlist dedup (OVH-036).
-        if _BARE_VIDEO_ID_RE.match(url.strip()):
-            url = f"https://www.youtube.com/watch?v={url.strip()}"
-        self._add_single_url(url)
+        videos: list[str] = []
+        for raw_url in urls:
+            url = raw_url.strip()
+            # Normalise a bare 11-char video id to a canonical watch URL so that
+            # item.url always classifies correctly in dedup (OVH-036).
+            if _BARE_VIDEO_ID_RE.match(url):
+                url = f"https://www.youtube.com/watch?v={url}"
+            url_info = classify_youtube_url(url)
+            if url_info.kind in ("playlist", "video_in_playlist"):
+                self._playlist_backlog.append((url, url_info))
+            else:
+                # "video" and "unknown" both take the single-video probe path —
+                # yt-dlp remains the final validator for unrecognised URLs.
+                videos.append(url)
+        self._add_videos(videos)
+        self._start_next_playlist()
 
     def invalidate_pending(self) -> None:
         """Invalidate pending playlist work on Clear.
@@ -309,6 +327,8 @@ class PlaylistAddController:
         handle + snapshot.
         """
         self._playlist_generation += 1
+        self._probe_backlog.clear()
+        self._playlist_backlog.clear()
         if self._playlist_probe_worker is not None:
             self._playlist_probe_worker.cancel()
 
@@ -334,6 +354,8 @@ class PlaylistAddController:
         """
         self._shutdown_started = True
         self._playlist_generation += 1
+        self._probe_backlog.clear()
+        self._playlist_backlog.clear()
 
         lagging_probes: list[YouTubeProbeWorker] = []
         for probe in list(self._probe_workers):
@@ -382,11 +404,42 @@ class PlaylistAddController:
     # Single-video probe lifecycle
     # ------------------------------------------------------------------
 
+    def _queued_keys(self) -> set[str]:
+        """Video ids (or URLs, for non-YouTube links) already in the queue.
+
+        A single-added row keeps ``video_id=None`` until its probe completes, so
+        the id falls back to the one in its URL; otherwise a video added while
+        its probe is in flight slips the dedup and gets fetched twice for the
+        same ``YT:<video_id>``.
+        """
+        return {
+            item.video_id or classify_youtube_url(item.url).video_id or item.url
+            for item in self._callbacks.queued_items()
+        }
+
+    def _add_videos(self, urls: Sequence[str]) -> None:
+        """Queue each video in *urls* that is not already queued or repeated."""
+        queued = self._queued_keys()
+        skipped = 0
+        for url in urls:
+            key = classify_youtube_url(url).video_id or url
+            if key in queued:
+                skipped += 1
+                continue
+            queued.add(key)
+            self._add_single_url(url)
+        if skipped:
+            self._callbacks.log_warning(
+                tr_format(
+                    QCoreApplication.translate("PlaylistAddController", "Skipped %1 already in the queue."),
+                    skipped,
+                )
+            )
+
     def _add_single_url(self, url: str) -> None:
-        """Queue *url* as a single video and spawn a metadata probe worker."""
+        """Queue *url* as a single video and probe it."""
         item = self._callbacks.enqueue(url)
         self._callbacks.render_new_item(item)
-        self._callbacks.clear_url_input()
         self._start_probe(item)
 
     def retry_probe(self, item: YouTubeQueueItem) -> None:
@@ -404,15 +457,22 @@ class PlaylistAddController:
         self._start_probe(item)
 
     def _start_probe(self, item: YouTubeQueueItem) -> None:
-        """Put *item* into PROBING and spawn a metadata probe worker for it."""
+        """Put *item* into PROBING and probe it, or queue it for a free slot."""
         if self._shutdown_started:
             return
         # The queue model defaults to PENDING; flip to PROBING up-front so the
-        # row widget renders the checking state immediately.
+        # row widget renders the checking state immediately, waiting or not.
         item.status = YouTubeItemStatus.PROBING
         item.error_message = None
         self._callbacks.refresh_row(item)
+        if len(self._probe_workers) >= _MAX_PARALLEL_PROBES:
+            self._probe_backlog.append(item)
+            self._callbacks.recompute_buttons()
+            return
+        self._spawn_probe(item)
 
+    def _spawn_probe(self, item: YouTubeQueueItem) -> None:
+        """Spawn a metadata probe worker for *item*."""
         probe = YouTubeProbeWorker(self._fetcher, item.url, parent=self._parent)
         probe.probe_done.connect(lambda info, it=item: self._on_probe_done(it, info))
         probe.probe_error.connect(lambda msg, it=item: self._on_probe_error(it, msg))
@@ -491,17 +551,39 @@ class PlaylistAddController:
         with contextlib.suppress(ValueError):
             self._probe_workers.remove(probe)
         probe.deleteLater()
+        if self._shutdown_started:
+            return
+        queued = self._callbacks.queued_items()
+        while self._probe_backlog and len(self._probe_workers) < _MAX_PARALLEL_PROBES:
+            waiting = self._probe_backlog.popleft()
+            # A row removed or cleared while it waited is not probed.
+            if waiting in queued and waiting.status is YouTubeItemStatus.PROBING:
+                self._spawn_probe(waiting)
 
     # ------------------------------------------------------------------
     # Playlist resolve + expansion (Issue #70)
     # ------------------------------------------------------------------
+
+    def _playlist_busy(self) -> bool:
+        """Whether a playlist is resolving, awaiting its choice, or probing entries."""
+        return (
+            self._playlist_resolve_worker is not None
+            or self._playlist_probe_worker is not None
+            or self._awaiting_choice
+        )
+
+    def _start_next_playlist(self) -> None:
+        """Resolve the next pasted playlist once the previous one is fully added."""
+        if self._shutdown_started or self._playlist_busy() or not self._playlist_backlog:
+            return
+        url, url_info = self._playlist_backlog.popleft()
+        self._begin_playlist_resolve(url, url_info)
 
     def _begin_playlist_resolve(self, url: str, url_info: YouTubeUrlInfo) -> None:
         """Spawn a flat-playlist resolve worker for *url*."""
         if self._shutdown_started:
             return
         self._callbacks.log_info(QCoreApplication.translate("PlaylistAddController", "Resolving playlist…"))
-        self._callbacks.clear_url_input()
 
         cap = self._config.youtube_playlist_max
         worker = YouTubePlaylistResolveWorker(
@@ -541,6 +623,7 @@ class PlaylistAddController:
         self._playlist_resolve_worker = None
         if worker is not None:
             worker.deleteLater()
+        self._start_next_playlist()
         self._callbacks.recompute_buttons()
 
     def _on_playlist_resolved(
@@ -563,13 +646,19 @@ class PlaylistAddController:
         over_cap = len(pl.entries) > cap or (pl.total_count is not None and pl.total_count > cap)
         entries = pl.entries[:cap]
 
-        choice = self._ask_playlist_choice(url_info, pl, cap, over_cap)
-        if choice == "single":
-            self._add_single_url(original_url)
-        elif choice == "playlist":
-            self._expand_playlist(entries, pl.title)
-        else:
-            self._callbacks.log_info(QCoreApplication.translate("PlaylistAddController", "Playlist add cancelled."))
+        self._awaiting_choice = True
+        try:
+            choice = self._ask_playlist_choice(url_info, pl, cap, over_cap)
+            if choice == "single":
+                self._add_videos([original_url])
+            elif choice == "playlist":
+                self._expand_playlist(entries, pl.title)
+            else:
+                self._callbacks.log_info(QCoreApplication.translate("PlaylistAddController", "Playlist add cancelled."))
+        finally:
+            self._awaiting_choice = False
+        self._start_next_playlist()
+        self._callbacks.recompute_buttons()
 
     def _ask_playlist_choice(
         self,
@@ -649,12 +738,7 @@ class PlaylistAddController:
         """Add *entries* as PROBING queue rows and start the sequential probe."""
         if self._shutdown_started:
             return
-        # A single-added item keeps video_id=None until its probe completes, so
-        # fall back to the URL-derived id; otherwise a video added standalone
-        # (probe in flight) then again via a playlist slips the dedup and gets
-        # fetched twice for the same YT:<video_id>.
-        existing_ids = {i.video_id or classify_youtube_url(i.url).video_id for i in self._callbacks.queued_items()}
-        existing_ids.discard(None)
+        existing_ids = self._queued_keys()
         seen: set[str] = set()
         kept_entries: list[PlaylistEntry] = []
         skipped = 0
@@ -753,4 +837,5 @@ class PlaylistAddController:
         self._playlist_probe_items = []
         if worker is not None:
             worker.deleteLater()
+        self._start_next_playlist()
         self._callbacks.recompute_buttons()

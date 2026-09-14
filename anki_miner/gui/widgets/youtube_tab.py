@@ -1,13 +1,13 @@
 """YouTube mining tab for the GUI.
 
-Drives a multi-URL queue: the user pastes URLs, each one is probed
-asynchronously, and once at least one item is READY the user can run
-*Mine* across the whole queue. The tab itself is a thin shell
-around three collaborators:
+Drives a multi-URL queue: the user pastes links into a box, one per line, and
+presses *Mine*. Mine queues every line, waits until every video has been probed,
+then runs across every READY row. The tab itself is a thin shell around three
+collaborators:
 
 * :class:`~anki_miner.gui.widgets.youtube_playlist_flow.PlaylistAddController`
-  — owns the Add flow: input gating (T-34), the parallel single-video probe
-  workers, and the playlist resolve/confirm/expand detour (Issue #70).
+  — owns the add flow: input gating (T-34), dedup, the capped single-video
+  probe workers, and the playlist resolve/confirm/expand detour (Issue #70).
 * :class:`~anki_miner.gui.workers.youtube_queue_worker.YouTubeQueueWorker` —
   single long-running worker that sweeps the queue sequentially.
 * :class:`~anki_miner.gui.widgets.youtube_queue_item_widget.YouTubeQueueItemWidget` —
@@ -18,15 +18,14 @@ terminal-bar summary, worker/processor management, curation, and the D28
 selection/filter/search/reorder surface — is shared with
 :class:`~anki_miner.gui.widgets.audiobook_tab.AudiobookTab` on
 :class:`~anki_miner.gui.widgets._queue_mining_tab_base._ListQueueMiningTabBase`
-(ARC-008). This tab adds only the URL/probe/playlist Add flow, the fetcher
-rebuild, and the per-tab adapters (worker class, row widget, item labels, status
-enum, filter bucket, search text, probe retry, the Add lock while a playlist
-resolves).
+(ARC-008). This tab adds only the link box and its two-phase Mine (queue and
+check, then run), the fetcher rebuild, and the per-tab adapters (worker class,
+row widget, item labels, status enum, filter bucket, search text, probe retry).
 
 Button enable/disable is recomputed on every queue/worker signal by
 :meth:`_recompute_buttons` (base). There is no explicit state enum — the queue
-contents plus the worker handle (and the add-flow controller's ``is_active``)
-fully determine the UI.
+contents, the worker handle, the box text and ``_mine_pending`` fully determine
+the UI.
 """
 
 from __future__ import annotations
@@ -44,10 +43,11 @@ from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QPlainTextEdit,
     QScrollArea,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -77,7 +77,11 @@ from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
 from anki_miner.gui.widgets.queue_controls_bar import QueueControlsBar
-from anki_miner.gui.widgets.youtube_playlist_flow import PlaylistAddCallbacks, PlaylistAddController
+from anki_miner.gui.widgets.youtube_playlist_flow import (
+    PlaylistAddCallbacks,
+    PlaylistAddController,
+    split_url_lines,
+)
 from anki_miner.gui.widgets.youtube_queue_item_widget import YouTubeQueueItemWidget, queue_bucket
 from anki_miner.gui.workers.youtube_queue_worker import YouTubeQueueWorker
 from anki_miner.interfaces.presenter import PresenterProtocol
@@ -112,6 +116,10 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
     _status_processing = YouTubeItemStatus.PROCESSING
     _status_completed = YouTubeItemStatus.COMPLETED
     _status_error = YouTubeItemStatus.ERROR
+
+    #: Mine was pressed and is waiting for its links to be checked (see
+    #: _start_pending_run_when_checked). Holds the queue the way a run does.
+    _mine_pending: bool = False
 
     TASK_ID = "queue.youtube"
     TASK_OWNER = CapabilityTarget("video", "youtube")
@@ -195,8 +203,8 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
 
         # Add-flow controller: probe workers, playlist resolve/expand, choice
         # dialog (Issue #70). Constructed after _setup_ui so the widget-bound
-        # callbacks (url_edit, log_widget) exist; the tab stays the Qt parent of
-        # every spawned worker thread.
+        # callbacks (log_widget) exist; the tab stays the Qt parent of every
+        # spawned worker thread.
         self._add_flow = PlaylistAddController(
             fetcher=fetcher,
             config=config,
@@ -205,8 +213,7 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
                 queued_items=self._queue.all_items,
                 render_new_item=self._render_new_item,
                 refresh_row=self._refresh_row,
-                recompute_buttons=self._recompute_buttons,
-                clear_url_input=self.url_edit.clear,
+                recompute_buttons=self._on_add_flow_changed,
                 run_active=self._queue_locked,
                 log_info=self.log_widget.append_info,
                 log_warning=self.log_widget.append_warning,
@@ -232,7 +239,7 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
     def _setup_ui(self) -> None:
         """Build the tab layout.
 
-        A QScrollArea wraps a Queue card (URL input + list + action buttons),
+        A QScrollArea wraps a Queue card (link box + list + action buttons),
         a Progress card, and a LogWidget.
         """
         scroll_area = QScrollArea()
@@ -250,24 +257,22 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
 
         queue_layout.addWidget(SectionHeader(self.tr("YouTube queue")))
 
-        # URL row
-        url_row = QHBoxLayout()
-        url_row.setSpacing(SPACING.xs)
-        self.url_edit = QLineEdit()
-        self.url_edit.setPlaceholderText("https://www.youtube.com/watch?v=…")
-        self.url_edit.returnPressed.connect(self._on_add_clicked)
+        # One link per line, like Utilities -> Download. Mine reads it; there is
+        # no Add step. Fixed vertically, policy included: the queue list below is
+        # this page's one vertical absorber, and a text edit's default Expanding
+        # policy keeps the card expansive even at a fixed height.
+        self.url_edit = QPlainTextEdit()
+        self.url_edit.setPlaceholderText(self.tr("One YouTube link or playlist per line"))
+        # Tab must move focus, not insert a literal tab (keyboard-only flow).
+        self.url_edit.setTabChangesFocus(True)
+        self.url_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.url_edit.setFixedHeight(self.url_edit.fontMetrics().lineSpacing() * 6 + 16)
         # The tab handles every drop on this screen (D50), including the ones
-        # that land on the box itself: a QLineEdit would silently absorb the
-        # text and leave the user to press Add, and a link dropped on a screen
-        # whose whole purpose is queueing links should just queue.
+        # that land on the box itself, so a dropped link always arrives as a
+        # whole line rather than wherever the text cursor happened to be.
         self.url_edit.setAcceptDrops(False)
-        url_row.addWidget(self.url_edit, 1)
-
-        self.add_button = ModernButton(self.tr("Add"), variant="secondary")
-        self.add_button.setToolTip(self.tr("Add the URL to the queue and check the video."))
-        self.add_button.clicked.connect(self._on_add_clicked)
-        url_row.addWidget(self.add_button)
-        queue_layout.addLayout(url_row)
+        self.url_edit.textChanged.connect(self._refresh_mine_button)
+        queue_layout.addWidget(self.url_edit)
 
         # Filters, search, counter and the selection actions (D28).
         self.queue_controls = QueueControlsBar()
@@ -291,7 +296,7 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         self._wire_queue_interaction()
 
         # Empty-state hint (shown when the list is empty).
-        self.empty_label = QLabel(self.tr("Paste a YouTube URL above and click Add."))
+        self.empty_label = QLabel(self.tr("Paste YouTube links above, one per line, then click Mine."))
         self.empty_label.setObjectName("helper-text")
         self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         queue_layout.addWidget(self.empty_label)
@@ -344,7 +349,7 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         button_row.setSpacing(SPACING.xs)
 
         self.mine_button = ModernButton(self.tr("Mine"), variant="primary")
-        self.mine_button.setToolTip(self.tr("Mine every Ready item in the queue."))
+        self.mine_button.setToolTip(self.tr("Check every link in the box, then mine every Ready video."))
         self.mine_button.clicked.connect(self._on_mine_clicked)
 
         self.clear_button = ModernButton(self.tr("Clear"), variant="ghost")
@@ -405,17 +410,85 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         self.install_issue_banner(main_layout)
 
     # ------------------------------------------------------------------
-    # Add flow (delegated to PlaylistAddController)
+    # Mine: queue the pasted links, check them, then run
     # ------------------------------------------------------------------
 
-    def _on_add_clicked(self) -> None:
-        """Hand the current URL to the add-flow controller."""
-        if not self.add_button.isEnabled():
-            return  # Defensive: returnPressed fires even when the button is disabled.
-        url = self.url_edit.text().strip()
-        if not url:
+    def _on_mine_clicked(self) -> None:
+        """Queue every line in the box, then mine once every video is checked."""
+        if self._queue_locked():
             return
-        self._add_flow.begin(url)
+        self.clear_screen_issue()
+        if self._ytdlp_known_missing():
+            # Every probe would fail the same way; refuse before queueing any.
+            self._render_ytdlp_issue()
+            return
+        urls, rejected = split_url_lines(self.url_edit.toPlainText())
+        if rejected:
+            # All or nothing, like Download: half a list queued is harder to fix.
+            self.show_screen_issue(
+                ScreenIssue(summary=self.tr("Some lines are not valid URLs."), details="\n".join(rejected))
+            )
+            return
+        if urls:
+            self.url_edit.clear()
+            self._add_flow.add_urls(urls)
+        if not self._add_flow.is_busy and not self._has_rows_to_mine():
+            # Everything pasted was already queued and finished: nothing to wait for.
+            return
+        self._mine_pending = True
+        self.progress_widget.reset()
+        self.progress_widget.set_status(self.tr("Checking videos…"))
+        self._recompute_buttons()
+        self._start_pending_run_when_checked()
+
+    def _has_rows_to_mine(self) -> bool:
+        """Whether a row is READY, or still being checked and may become so."""
+        return any(i.status in (YouTubeItemStatus.READY, YouTubeItemStatus.PROBING) for i in self._queue.all_items())
+
+    def _on_add_flow_changed(self) -> None:
+        """Add-flow callback: re-derive the buttons, then start a waiting Mine if it can."""
+        self._recompute_buttons()
+        self._start_pending_run_when_checked()
+
+    def _start_pending_run_when_checked(self) -> None:
+        """Start the run a Mine is waiting on, once no link is still being checked.
+
+        The worker mines a snapshot frozen at launch, so starting while a row is
+        still PROBING would leave that row out of the run it was pasted for.
+        """
+        if not self._mine_pending or self.worker_thread is not None:
+            return
+        if self._add_flow.is_busy or any(i.status is YouTubeItemStatus.PROBING for i in self._queue.all_items()):
+            return
+        self._mine_pending = False
+        self.progress_widget.reset()
+        self._recompute_buttons()
+        if not any(i.status is YouTubeItemStatus.READY for i in self._queue.all_items()):
+            self.show_screen_issue(ScreenIssue(summary=self.tr("None of the videos can be mined. Each row says why.")))
+            return
+        self._start_run()
+
+    def _on_stop_all_clicked(self) -> None:
+        """Cancel a Mine still checking its links, or the run itself.
+
+        Rows already queued stay; their probes finish on their own.
+        """
+        if self._mine_pending and self.worker_thread is None:
+            self._log_run_control("stop")
+            self._mine_pending = False
+            self.progress_widget.set_status(self._queue_list_strings.cancelled)
+            self._recompute_buttons()
+            return
+        super()._on_stop_all_clicked()
+
+    def _queue_locked(self) -> bool:
+        """A Mine waiting on its links holds the queue as a run does (D29-A)."""
+        return super()._queue_locked() or self._mine_pending
+
+    def _refresh_mine_button(self) -> None:
+        """Offer Mine when there are links to check or rows to mine."""
+        has_links = bool(self.url_edit.toPlainText().strip())
+        self.mine_button.setEnabled(not self._queue_locked() and (has_links or self._has_rows_to_mine()))
 
     # ------------------------------------------------------------------
     # Durable queue contents (D16-C)
@@ -490,28 +563,29 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         return restored
 
     # ------------------------------------------------------------------
-    # Drag and drop (D50): one YouTube URL, added the ordinary way
+    # Drag and drop (D50): dropped links go into the box
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _dropped_youtube_url(event: QDragEnterEvent | QDropEvent) -> str | None:
-        """Return the one YouTube URL a drag carries, or ``None``.
+    def _dropped_youtube_urls(event: QDragEnterEvent | QDropEvent) -> list[str]:
+        """Every YouTube link a drag carries, once each, in drag order.
 
         A dragged link arrives as a URL and often as text as well; both are
-        read, and both are classified by the same parser the Add button uses,
-        so a link that drops is exactly a link that can be added.
+        read, text line by line, and classified by the YouTube URL parser, so
+        a link that drops is a link Mine can queue.
         """
         mime = event.mimeData()
         if mime is None:
-            return None
+            return []
         candidates = [url.toString() for url in urls_from_event(event)]
         if mime.hasText():
-            candidates.append(mime.text())
+            candidates.extend(mime.text().splitlines())
+        found: list[str] = []
         for candidate in candidates:
             text = candidate.strip()
-            if text and classify_youtube_url(text).kind != "unknown":
-                return text
-        return None
+            if text and text not in found and classify_youtube_url(text).kind != "unknown":
+                found.append(text)
+        return found
 
     @staticmethod
     def _carries_a_payload(event: QDragEnterEvent | QDropEvent) -> bool:
@@ -535,7 +609,7 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         """Light the URL box for a YouTube link; take anything else to refuse it."""
         if event is None or not self._carries_a_payload(event):
             return
-        self._light_url_field("valid" if self._dropped_youtube_url(event) is not None else "invalid")
+        self._light_url_field("valid" if self._dropped_youtube_urls(event) else "invalid")
         event.acceptProposedAction()
 
     def dragLeaveEvent(self, event: QDragLeaveEvent | None) -> None:  # noqa: N802 - Qt override
@@ -549,8 +623,8 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         if event is None:
             return
         self._light_url_field("")
-        url = self._dropped_youtube_url(event)
-        if url is None:
+        urls = self._dropped_youtube_urls(event)
+        if not urls:
             # A file is the common wrong payload here, and it has a right home.
             log_summary(
                 logger,
@@ -563,8 +637,8 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
             )
             event.ignore()
             return
-        self.url_edit.setText(url)
-        self._add_flow.begin(url)
+        # Into the box, not the queue: Mine is the one step that queues links.
+        self.url_edit.appendPlainText("\n".join(urls))
         event.acceptProposedAction()
 
     # ------------------------------------------------------------------
@@ -695,13 +769,20 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         """Freeze the per-run subtitle controls while a run owns the queue.
 
         The worker reads ``resolved_sub_mode`` off unclaimed READY rows, and the
-        sweep behind the picker rewrites exactly that field.
+        sweep behind the picker rewrites exactly that field. A Mine still
+        checking its links counts as owning the queue.
         """
         super()._recompute_buttons()
         idle = not self._queue_locked()
         self.subtitle_source_combo.setEnabled(idle)
         self.subtitle_source_label.setEnabled(idle)
         self.align_captions_checkbox.setEnabled(idle)
+        # Mine also answers to the box text and to rows still being checked.
+        self._refresh_mine_button()
+        if self._mine_pending and self.worker_thread is None:
+            # Checking links is not a run yet: there is no item boundary to stop at.
+            self.queue_controls.pause_button.hide()
+            self.queue_controls.finish_button.hide()
 
     def _create_processor(self, presenter: PresenterProtocol) -> EpisodeProcessor:
         """Build a fresh processor (``create_episode_processor`` resolves here for tests)."""
@@ -745,11 +826,6 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
             self._add_flow.retry_probe(item)
             return False
         return super()._retry_item(item)
-
-    def _add_locked(self) -> bool:
-        """Also lock Add while a playlist resolve is pending (a second Add
-        mid-resolve would race the confirmation dialog)."""
-        return self._add_flow.is_active
 
     def _on_clear_extra(self) -> None:
         """Invalidate pending playlist work (late-resolve generation bump +

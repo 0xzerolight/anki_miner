@@ -335,6 +335,38 @@
         <translation>Memorizza i caratteri hanja contenuti nella parola. Vuoto = salta.</translation>
     </message>
     <message>
+        <source>Part of Speech Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the word's part of speech (noun, verb, adjective, adverb). Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Gender Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores a noun's grammatical gender. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Article Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the article that goes with a noun. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Plural Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores a noun's plural form from the dictionary entry. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Non è in Anki — il mining non riuscirà finché non se ne seleziona uno reale o lo si crea in Anki.</translation>
     </message>
@@ -2048,8 +2080,8 @@ Nessun file indice viene eliminato.</translation>
         <translation>Mantieni aggiornato il downloader yt-dlp, aggiornalo su richiesta oppure indica un tuo eseguibile.</translation>
     </message>
     <message>
-        <source>Mine Japanese, Korean or Chinese</source>
-        <translation>Estrai da giapponese, coreano o cinese</translation>
+        <source>Mine another language</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
@@ -3734,6 +3766,10 @@ Numero di note da modificare: {notes}; numero di campi da modificare: {fields}; 
         <translation>Impossibile importare %1 file multimediali.</translation>
     </message>
     <message>
+        <source>This dictionary says its language is %1, not the language you are mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose Yomitan dictionary zips</source>
         <translation>Scegliere gli zip dei dizionari Yomitan</translation>
     </message>
@@ -5153,6 +5189,10 @@ Nessun file sul disco viene eliminato.</translation>
         <translation>Prefisso Parlante:</translation>
     </message>
     <message>
+        <source>Dialogue dash</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Presets</source>
         <translation>Preimpostazioni</translation>
     </message>
@@ -5231,6 +5271,26 @@ Nessun file sul disco viene eliminato.</translation>
     <message>
         <source>Which spelling the card front and the dictionary lookup prefer.</source>
         <translation>Quale grafia preferiscono il fronte della carta e la ricerca nel dizionario.</translation>
+    </message>
+    <message>
+        <source>Regional Variety</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Brazilian Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>European Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Variety</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -5583,6 +5643,14 @@ Nessun file indice viene eliminato.</translation>
         <translation>Parole aggiunte dal Curatore di parole. Ignorate in ogni esecuzione e mantenute tra le ricostruzioni della cache.</translation>
     </message>
     <message>
+        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Filter…</source>
         <translation>Filtra…</translation>
     </message>
@@ -5778,26 +5846,6 @@ Parole da aggiungere: %3. Continuare?</translation>
             <numerusform>Il passaggio a %1 elimina %n elemento in coda, a schermo e nella copia salvata per il prossimo avvio. Continuare?</numerusform>
             <numerusform>Il passaggio a %1 elimina %n elementi in coda, a schermo e nella copia salvata per il prossimo avvio. Continuare?</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>First time mining this language</source>
-        <translation>Primo mining in questa lingua</translation>
-    </message>
-    <message>
-        <source>You have not mined %1 before.</source>
-        <translation>Non è mai stato fatto mining di %1.</translation>
-    </message>
-    <message>
-        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
-        <translation>La scansione delle parole conosciute legge ogni mazzo non escluso, quindi le parole in %1 risulterebbero già conosciute. Escluderli da questa lingua?</translation>
-    </message>
-    <message>
-        <source>Exclude these decks</source>
-        <translation>Escludi questi mazzi</translation>
-    </message>
-    <message>
-        <source>Set up resources…</source>
-        <translation>Configura risorse…</translation>
     </message>
     <message>
         <source>That mining language is not available in this build.</source>
@@ -6970,12 +7018,8 @@ Nessun file indice viene eliminato.</translation>
 </context><context>
     <name>PlaylistAddController</name>
     <message>
-        <source>Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.</source>
-        <translation>URL o ID video di YouTube non valido. Incollare un link youtube.com / youtu.be.</translation>
-    </message>
-    <message>
-        <source>A playlist is already being added — wait for it to finish.</source>
-        <translation>È già in corso l'aggiunta di una playlist — attendere che finisca.</translation>
+        <source>Skipped %1 already in the queue.</source>
+        <translation>Saltati %1 già in coda.</translation>
     </message>
     <message>
         <source>Resolving playlist…</source>
@@ -7020,10 +7064,6 @@ Nessun file indice viene eliminato.</translation>
     <message>
         <source>Add first %1</source>
         <translation>Aggiungi i primi %1</translation>
-    </message>
-    <message>
-        <source>Skipped %1 already in the queue.</source>
-        <translation>Saltati %1 già in coda.</translation>
     </message>
     <message>
         <source>No new videos to add from playlist '%1'.</source>
@@ -10853,16 +10893,12 @@ Ordina in modo crescente per mettere prima le righe i+1 — quelle il cui unico 
         <translation>Download di yt-dlp in corso…</translation>
     </message>
     <message>
-        <source>Add</source>
-        <translation>Aggiungi</translation>
+        <source>One YouTube link or playlist per line</source>
+        <translation>Un link o una playlist di YouTube per riga</translation>
     </message>
     <message>
-        <source>Add the URL to the queue and check the video.</source>
-        <translation>Aggiungi l'URL alla coda e controlla il video.</translation>
-    </message>
-    <message>
-        <source>Paste a YouTube URL above and click Add.</source>
-        <translation>Incollare un URL di YouTube sopra e fare clic su Aggiungi.</translation>
+        <source>Paste YouTube links above, one per line, then click Mine.</source>
+        <translation>Incollare sopra i link di YouTube, uno per riga, quindi fare clic su Estrai.</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -10901,8 +10937,8 @@ Ordina in modo crescente per mettere prima le righe i+1 — quelle il cui unico 
         <translation>Risincronizza le didascalie di YouTube con l'audio del video prima del mining. Ignorato se il sottotitolo è stato trascritto localmente.</translation>
     </message>
     <message>
-        <source>Mine every Ready item in the queue.</source>
-        <translation>Estrai ogni elemento Pronto nella coda.</translation>
+        <source>Check every link in the box, then mine every Ready video.</source>
+        <translation>Controlla ogni link nella casella, poi estrai ogni video Pronto.</translation>
     </message>
     <message>
         <source>Clear</source>
@@ -10923,6 +10959,18 @@ Ordina in modo crescente per mettere prima le righe i+1 — quelle il cui unico 
     <message>
         <source>videos</source>
         <translation>video</translation>
+    </message>
+    <message>
+        <source>Some lines are not valid URLs.</source>
+        <translation>Alcune righe non sono URL validi.</translation>
+    </message>
+    <message>
+        <source>Checking videos…</source>
+        <translation>Controllo dei video…</translation>
+    </message>
+    <message>
+        <source>None of the videos can be mined. Each row says why.</source>
+        <translation>Nessuno dei video può essere estratto. Ogni elemento indica il motivo.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

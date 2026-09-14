@@ -334,6 +334,38 @@
         <translation>Lưu các ký tự hanja có trong từ. Để trống = bỏ qua.</translation>
     </message>
     <message>
+        <source>Part of Speech Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the word's part of speech (noun, verb, adjective, adverb). Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Gender Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores a noun's grammatical gender. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Article Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the article that goes with a noun. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Plural Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores a noun's plural form from the dictionary entry. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Không có trong Anki — việc khai thác sẽ thất bại cho đến khi chọn một mục thực hoặc tạo nó trong Anki.</translation>
     </message>
@@ -2046,8 +2078,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Giữ trình tải xuống yt-dlp luôn cập nhật, cập nhật khi cần, hoặc trỏ đến tệp thực thi riêng của bạn.</translation>
     </message>
     <message>
-        <source>Mine Japanese, Korean or Chinese</source>
-        <translation>Khai thác tiếng Nhật, Hàn hoặc Trung</translation>
+        <source>Mine another language</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
@@ -3732,6 +3764,10 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Không thể nhập %1 tệp phương tiện.</translation>
     </message>
     <message>
+        <source>This dictionary says its language is %1, not the language you are mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose Yomitan dictionary zips</source>
         <translation>Chọn các tệp zip từ điển Yomitan</translation>
     </message>
@@ -5140,6 +5176,10 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation>Tiền tố Người nói:</translation>
     </message>
     <message>
+        <source>Dialogue dash</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Presets</source>
         <translation>Mẫu có sẵn</translation>
     </message>
@@ -5218,6 +5258,26 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     <message>
         <source>Which spelling the card front and the dictionary lookup prefer.</source>
         <translation>Cách viết mà mặt trước của thẻ và tra cứu từ điển ưu tiên.</translation>
+    </message>
+    <message>
+        <source>Regional Variety</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Brazilian Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>European Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Variety</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -5570,6 +5630,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Các từ bạn đã thêm từ Word Curator. Bị bỏ qua ở mỗi lần chạy và được giữ lại qua các lần xây dựng lại bộ nhớ đệm.</translation>
     </message>
     <message>
+        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Filter…</source>
         <translation>Lọc…</translation>
     </message>
@@ -5764,26 +5832,6 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
         <translation>
             <numerusform>Chuyển sang %1 sẽ loại bỏ %n mục trong hàng đợi, cả trên màn hình lẫn trong bản lưu cho lần khởi động sau. Tiếp tục?</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>First time mining this language</source>
-        <translation>Lần đầu khai thác ngôn ngữ này</translation>
-    </message>
-    <message>
-        <source>You have not mined %1 before.</source>
-        <translation>Chưa từng khai thác %1 trước đây.</translation>
-    </message>
-    <message>
-        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
-        <translation>Quá trình quét từ đã biết đọc mọi bộ thẻ không bị loại trừ, nên các từ trong %1 sẽ bị tính là đã biết. Loại trừ chúng khỏi ngôn ngữ này?</translation>
-    </message>
-    <message>
-        <source>Exclude these decks</source>
-        <translation>Loại trừ các bộ thẻ này</translation>
-    </message>
-    <message>
-        <source>Set up resources…</source>
-        <translation>Thiết lập tài nguyên…</translation>
     </message>
     <message>
         <source>That mining language is not available in this build.</source>
@@ -6956,12 +7004,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
 </context><context>
     <name>PlaylistAddController</name>
     <message>
-        <source>Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.</source>
-        <translation>Không phải URL YouTube hoặc id video hợp lệ. Dán một liên kết youtube.com / youtu.be.</translation>
-    </message>
-    <message>
-        <source>A playlist is already being added — wait for it to finish.</source>
-        <translation>Một danh sách phát đang được thêm — chờ nó hoàn tất.</translation>
+        <source>Skipped %1 already in the queue.</source>
+        <translation>Đã bỏ qua %1 vì đã có trong hàng đợi.</translation>
     </message>
     <message>
         <source>Resolving playlist…</source>
@@ -7006,10 +7050,6 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Add first %1</source>
         <translation>Thêm %1 video đầu</translation>
-    </message>
-    <message>
-        <source>Skipped %1 already in the queue.</source>
-        <translation>Đã bỏ qua %1 vì đã có trong hàng đợi.</translation>
     </message>
     <message>
         <source>No new videos to add from playlist '%1'.</source>
@@ -10836,16 +10876,12 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên đầu — những dòng
         <translation>Đang tải yt-dlp…</translation>
     </message>
     <message>
-        <source>Add</source>
-        <translation>Thêm</translation>
+        <source>One YouTube link or playlist per line</source>
+        <translation>Mỗi dòng một liên kết hoặc danh sách phát YouTube</translation>
     </message>
     <message>
-        <source>Add the URL to the queue and check the video.</source>
-        <translation>Thêm URL vào hàng đợi và kiểm tra video.</translation>
-    </message>
-    <message>
-        <source>Paste a YouTube URL above and click Add.</source>
-        <translation>Dán URL YouTube phía trên và nhấn Thêm.</translation>
+        <source>Paste YouTube links above, one per line, then click Mine.</source>
+        <translation>Dán các liên kết YouTube phía trên, mỗi dòng một liên kết, rồi nhấn Khai thác.</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -10884,8 +10920,8 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên đầu — những dòng
         <translation>Chỉnh lại thời gian phụ đề của YouTube theo âm thanh video trước khi khai thác. Bỏ qua khi phụ đề đã được phiên âm cục bộ.</translation>
     </message>
     <message>
-        <source>Mine every Ready item in the queue.</source>
-        <translation>Khai thác mọi mục Sẵn sàng trong hàng đợi.</translation>
+        <source>Check every link in the box, then mine every Ready video.</source>
+        <translation>Kiểm tra mọi liên kết trong ô, rồi khai thác mọi video Sẵn sàng.</translation>
     </message>
     <message>
         <source>Clear</source>
@@ -10906,6 +10942,18 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên đầu — những dòng
     <message>
         <source>videos</source>
         <translation>video</translation>
+    </message>
+    <message>
+        <source>Some lines are not valid URLs.</source>
+        <translation>Một số dòng không phải URL hợp lệ.</translation>
+    </message>
+    <message>
+        <source>Checking videos…</source>
+        <translation>Đang kiểm tra video…</translation>
+    </message>
+    <message>
+        <source>None of the videos can be mined. Each row says why.</source>
+        <translation>Không video nào có thể khai thác. Mỗi mục đều ghi lý do.</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

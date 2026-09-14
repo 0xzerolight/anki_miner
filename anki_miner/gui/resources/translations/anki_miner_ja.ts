@@ -334,6 +334,38 @@
         <translation>単語に含まれる韓国漢字を格納します。空欄 = スキップ。</translation>
     </message>
     <message>
+        <source>Part of Speech Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the word's part of speech (noun, verb, adjective, adverb). Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Gender Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores a noun's grammatical gender. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Article Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the article that goes with a noun. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Plural Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores a noun's plural form from the dictionary entry. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Anki にありません — 実在するものを選択するか Anki で作成するまで、マイニングは失敗します。</translation>
     </message>
@@ -2046,8 +2078,8 @@ No index files are deleted.</source>
         <translation>ダウンローダー yt-dlp を最新に保ち、必要に応じて更新したり、独自の実行ファイルを指定したりできます。</translation>
     </message>
     <message>
-        <source>Mine Japanese, Korean or Chinese</source>
-        <translation>日本語・韓国語・中国語のマイニング</translation>
+        <source>Mine another language</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
@@ -3732,6 +3764,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>メディアファイルを %1 件インポートできませんでした。</translation>
     </message>
     <message>
+        <source>This dictionary says its language is %1, not the language you are mining.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Choose Yomitan dictionary zips</source>
         <translation>Yomitan辞書のzipを選択</translation>
     </message>
@@ -5140,6 +5176,10 @@ No files on disk are deleted.</source>
         <translation>話者名のプレフィックス</translation>
     </message>
     <message>
+        <source>Dialogue dash</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Presets</source>
         <translation>プリセット</translation>
     </message>
@@ -5218,6 +5258,26 @@ No files on disk are deleted.</source>
     <message>
         <source>Which spelling the card front and the dictionary lookup prefer.</source>
         <translation>カードの表面と辞書検索でどちらの表記を優先するかを指定します。</translation>
+    </message>
+    <message>
+        <source>Regional Variety</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Brazilian Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>European Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Variety</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -5570,6 +5630,14 @@ No index files are deleted.</source>
         <translation>単語キュレーターから追加した単語です。毎回の実行で無視され、キャッシュの再構築後も保持されます。</translation>
     </message>
     <message>
+        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Filter…</source>
         <translation>絞り込み…</translation>
     </message>
@@ -5764,26 +5832,6 @@ Words to add: %3. Continue?</source>
         <translation>
             <numerusform>%1 に切り替えると、キュー内の %n 件の項目が画面上からも次回起動用の保存分からも破棄されます。続行しますか？</numerusform>
         </translation>
-    </message>
-    <message>
-        <source>First time mining this language</source>
-        <translation>この言語のマイニングは初めてです</translation>
-    </message>
-    <message>
-        <source>You have not mined %1 before.</source>
-        <translation>%1 はこれまでマイニングしていません。</translation>
-    </message>
-    <message>
-        <source>The known-words scan reads every deck that is not excluded, so words in %1 would count as already known. Exclude them from this language?</source>
-        <translation>既知単語のスキャンは除外されていないすべてのデッキを読み取るため、%1 の単語も既知として扱われます。この言語では除外しますか？</translation>
-    </message>
-    <message>
-        <source>Exclude these decks</source>
-        <translation>これらのデッキを除外</translation>
-    </message>
-    <message>
-        <source>Set up resources…</source>
-        <translation>リソースを設定…</translation>
     </message>
     <message>
         <source>That mining language is not available in this build.</source>
@@ -6956,12 +7004,8 @@ No index files are deleted.</source>
 </context><context>
     <name>PlaylistAddController</name>
     <message>
-        <source>Not a valid YouTube URL or video id. Paste a youtube.com / youtu.be link.</source>
-        <translation>有効な YouTube の URL または動画 ID ではありません。youtube.com / youtu.be のリンクを貼り付けてください。</translation>
-    </message>
-    <message>
-        <source>A playlist is already being added — wait for it to finish.</source>
-        <translation>すでにプレイリストを追加中です。完了するまでお待ちください。</translation>
+        <source>Skipped %1 already in the queue.</source>
+        <translation>すでにキューにある %1 件をスキップしました。</translation>
     </message>
     <message>
         <source>Resolving playlist…</source>
@@ -7006,10 +7050,6 @@ No index files are deleted.</source>
     <message>
         <source>Add first %1</source>
         <translation>最初の %1 本を追加</translation>
-    </message>
-    <message>
-        <source>Skipped %1 already in the queue.</source>
-        <translation>すでにキューにある %1 件をスキップしました。</translation>
     </message>
     <message>
         <source>No new videos to add from playlist '%1'.</source>
@@ -10836,16 +10876,12 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation>yt-dlp をダウンロード中…</translation>
     </message>
     <message>
-        <source>Add</source>
-        <translation>追加</translation>
+        <source>One YouTube link or playlist per line</source>
+        <translation>1 行に 1 つの YouTube リンクまたはプレイリスト</translation>
     </message>
     <message>
-        <source>Add the URL to the queue and check the video.</source>
-        <translation>URL をキューに追加して動画を確認します。</translation>
-    </message>
-    <message>
-        <source>Paste a YouTube URL above and click Add.</source>
-        <translation>上に YouTube の URL を貼り付けて「追加」をクリックしてください。</translation>
+        <source>Paste YouTube links above, one per line, then click Mine.</source>
+        <translation>上に YouTube のリンクを 1 行に 1 つずつ貼り付けて「マイニング」をクリックしてください。</translation>
     </message>
     <message>
         <source>Review words before mining</source>
@@ -10884,8 +10920,8 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation>マイニング前にYouTubeの字幕を動画の音声に合わせて再調整します。字幕がローカルで文字起こしされた場合は無視されます。</translation>
     </message>
     <message>
-        <source>Mine every Ready item in the queue.</source>
-        <translation>キュー内のすべての準備完了項目をマイニングします。</translation>
+        <source>Check every link in the box, then mine every Ready video.</source>
+        <translation>ボックス内のすべてのリンクを確認し、準備完了の動画をすべてマイニングします。</translation>
     </message>
     <message>
         <source>Clear</source>
@@ -10906,6 +10942,18 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     <message>
         <source>videos</source>
         <translation>動画</translation>
+    </message>
+    <message>
+        <source>Some lines are not valid URLs.</source>
+        <translation>有効な URL でない行があります。</translation>
+    </message>
+    <message>
+        <source>Checking videos…</source>
+        <translation>動画を確認中…</translation>
+    </message>
+    <message>
+        <source>None of the videos can be mined. Each row says why.</source>
+        <translation>マイニングできる動画がありません。理由は各項目に表示されています。</translation>
     </message>
     <message>
         <source>Interrupted when Anki Miner closed</source>

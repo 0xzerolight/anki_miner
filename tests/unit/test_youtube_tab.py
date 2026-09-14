@@ -34,11 +34,13 @@ from dataclasses import replace
 from unittest.mock import MagicMock, patch
 
 import pytest
+from PyQt6.QtCore import Qt
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils import queue_state_store
 from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
 from anki_miner.gui.widgets.base.ytdlp_availability import YTDLP_DOWNLOAD_ACTION
+from anki_miner.gui.widgets.youtube_playlist_flow import split_url_lines
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 from anki_miner.models.youtube import PlaylistEntry, PlaylistInfo, VideoInfo
 from anki_miner.models.youtube_queue import YouTubeItemStatus
@@ -98,6 +100,7 @@ def _make_playlist_info(
 
 PLAYLIST_URL = "https://www.youtube.com/playlist?list=PLabcdefghijkl"
 MIXED_URL = "https://www.youtube.com/watch?v=abcdefghijk&list=PLabcdefghijkl"
+PLAYLIST_URL_2 = "https://www.youtube.com/playlist?list=PLzyxwvutsrqpo"
 
 
 @pytest.fixture
@@ -150,8 +153,7 @@ def tab(qtbot, test_config: AnkiMinerConfig):
 
 def _add_ready_item(tab, url: str = "https://www.youtube.com/watch?v=abc", **probe_kwargs):
     """Helper: add URL, simulate successful probe, return the item."""
-    tab.url_edit.setText(url)
-    tab._on_add_clicked()
+    tab._add_flow.add_urls([url])
     item = tab._queue.all_items()[-1]
     info = _make_video_info(**probe_kwargs)
     tab._add_flow._on_probe_done(item, info)
@@ -163,7 +165,6 @@ class TestInitialState:
 
     def test_empty_queue_buttons(self, tab):
         assert tab._queue.all_items() == []
-        assert tab.add_button.isEnabled()
         assert not tab.mine_button.isEnabled()
         assert not tab.clear_button.isEnabled()
         assert tab.stop_button.isHidden()
@@ -204,38 +205,25 @@ class TestQueueRecovery:
 
 
 class TestAddUrl:
-    """Add button spawns probe + creates row in PROBING state."""
+    """Adding a URL spawns a probe and creates a row in PROBING state."""
 
     def test_add_creates_probing_item(self, tab):
-        tab.url_edit.setText("https://youtu.be/abc123")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/abc123"])
 
         items = tab._queue.all_items()
         assert len(items) == 1
         assert items[0].url == "https://youtu.be/abc123"
         assert items[0].status == YouTubeItemStatus.PROBING
 
-    def test_add_clears_url_field(self, tab):
-        tab.url_edit.setText("https://youtu.be/abc123")
-        tab._on_add_clicked()
-        assert tab.url_edit.text() == ""
-
-    def test_add_empty_url_noop(self, tab):
-        tab.url_edit.setText("   ")
-        tab._on_add_clicked()
-        assert tab._queue.all_items() == []
-
     def test_add_spawns_probe_worker(self, tab):
         probe_cls = tab._probe_worker_cls  # patched
-        tab.url_edit.setText("https://youtu.be/abc123")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/abc123"])
         assert probe_cls.call_count == 1
         # Probe instance kept alive in tab's list.
         assert len(tab._add_flow._probe_workers) == 1
 
     def test_add_renders_row_widget(self, tab):
-        tab.url_edit.setText("https://youtu.be/abc123")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/abc123"])
         assert tab.list_widget.count() == 1
         item = tab._queue.all_items()[0]
         assert item in tab._row_widgets
@@ -243,72 +231,54 @@ class TestAddUrl:
     def test_multiple_adds_parallel_probes(self, tab):
         probe_cls = tab._probe_worker_cls
         for i in range(3):
-            tab.url_edit.setText(f"https://youtu.be/v{i}")
-            tab._on_add_clicked()
+            tab._add_flow.add_urls([f"https://youtu.be/v{i}"])
         assert probe_cls.call_count == 3
         assert len(tab._add_flow._probe_workers) == 3
 
 
 class TestAddUrlRejection:
-    """Add rejects inputs that aren't http(s) / a YouTube URL / a video id (T-34).
+    """Mine refuses lines that aren't http(s) / a YouTube URL / a video id (T-34).
 
     Guards against an option-leading "URL" reaching yt-dlp as an argument
     (e.g. ``--update-to=...`` -> attacker-repo self-replacement on the probe).
-    A rejected input must queue nothing, spawn no probe, and surface a
-    user-visible error.
+    A rejected line must queue nothing, spawn no probe, leave the box as it was
+    and name the line in a screen issue.
     """
 
-    def test_option_leading_url_rejected(self, tab):
-        probe_cls = tab._probe_worker_cls
-        tab.url_edit.setText("--update-to=evil/fork@tag")
-        tab._on_add_clicked()
+    @pytest.mark.parametrize(
+        "bad",
+        ["--update-to=evil/fork@tag", "--config-location=/tmp/evil.conf", "https://["],
+    )
+    def test_rejected_line_queues_nothing(self, tab, bad):
+        tab.url_edit.setPlainText(bad)
 
-        assert tab._queue.all_items() == []
-        assert probe_cls.call_count == 0
-        assert len(tab._add_flow._probe_workers) == 0
-        # User-visible feedback and the URL field is NOT cleared (so the user
-        # can see/fix what they pasted).
-        assert "valid" in tab.log_widget.text_edit.toPlainText().lower()
-        assert tab.url_edit.text() == "--update-to=evil/fork@tag"
-
-    def test_dash_config_location_rejected(self, tab):
-        probe_cls = tab._probe_worker_cls
-        tab.url_edit.setText("--config-location=/tmp/evil.conf")
-        tab._on_add_clicked()
-        assert tab._queue.all_items() == []
-        assert probe_cls.call_count == 0
-
-    def test_malformed_bracketed_url_rejected(self, tab):
-        tab.url_edit.setText("https://[")
-
-        tab._on_add_clicked()
+        tab._on_mine_clicked()
 
         assert tab._queue.all_items() == []
         assert tab._probe_worker_cls.call_count == 0
-        assert "valid" in tab.log_widget.text_edit.toPlainText().lower()
-        assert tab.url_edit.text() == "https://["
+        assert len(tab._add_flow._probe_workers) == 0
+        assert tab.url_edit.toPlainText() == bad
+        issue = tab.issue_banner().current_issue()
+        assert issue is not None
+        assert bad in issue.details
 
     def test_plain_https_url_still_accepted(self, tab):
         # http(s) inputs remain accepted — yt-dlp stays the final validator
         # for non-YouTube-shaped URLs (no behaviour change for that path).
-        probe_cls = tab._probe_worker_cls
-        tab.url_edit.setText("https://example.com/whatever")
-        tab._on_add_clicked()
+        tab.url_edit.setPlainText("https://example.com/whatever")
+        tab._on_mine_clicked()
         assert len(tab._queue.all_items()) == 1
-        assert probe_cls.call_count == 1
+        assert tab._probe_worker_cls.call_count == 1
 
     def test_bare_video_id_accepted(self, tab):
-        probe_cls = tab._probe_worker_cls
-        tab.url_edit.setText("dQw4w9WgXcQ")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["dQw4w9WgXcQ"])
         assert len(tab._queue.all_items()) == 1
-        assert probe_cls.call_count == 1
+        assert tab._probe_worker_cls.call_count == 1
 
     def test_bare_video_id_normalised_to_watch_url(self, tab):
         """OVH-036: bare id must be normalised to a canonical watch URL so that
         the item classifies correctly in playlist dedup (classify_youtube_url)."""
-        tab.url_edit.setText("dQw4w9WgXcQ")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["dQw4w9WgXcQ"])
         item = tab._queue.all_items()[-1]
         assert item.url == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
@@ -317,8 +287,7 @@ class TestProbeOutcomes:
     """Probe done/error flip the item's status and refresh buttons."""
 
     def test_probe_done_flips_to_ready_enables_buttons(self, tab):
-        tab.url_edit.setText("https://youtu.be/abc")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/abc"])
         item = tab._queue.all_items()[-1]
 
         tab._add_flow._on_probe_done(item, _make_video_info())
@@ -331,8 +300,7 @@ class TestProbeOutcomes:
         assert tab.clear_button.isEnabled()
 
     def test_probe_done_auto_only(self, tab):
-        tab.url_edit.setText("https://youtu.be/abc")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/abc"])
         item = tab._queue.all_items()[-1]
 
         tab._add_flow._on_probe_done(item, _make_video_info(has_manual_ja_subs=False, has_auto_ja_subs=True))
@@ -341,8 +309,7 @@ class TestProbeOutcomes:
         assert item.resolved_sub_mode == "auto_only"
 
     def test_probe_done_auto_dub(self, tab):
-        tab.url_edit.setText("https://youtu.be/abc")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/abc"])
         item = tab._queue.all_items()[-1]
 
         tab._add_flow._on_probe_done(
@@ -355,8 +322,7 @@ class TestProbeOutcomes:
 
     def test_probe_done_manual_beats_dub(self, tab):
         """Priority: a manual track wins even when the dub flag is also set."""
-        tab.url_edit.setText("https://youtu.be/abc")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/abc"])
         item = tab._queue.all_items()[-1]
 
         tab._add_flow._on_probe_done(
@@ -369,8 +335,7 @@ class TestProbeOutcomes:
     def test_probe_done_no_subs_still_rejected(self, tab):
         """All three flags False keeps the original rejection message."""
         tab._add_flow.set_subtitle_source("captions")
-        tab.url_edit.setText("https://youtu.be/abc")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/abc"])
         item = tab._queue.all_items()[-1]
 
         tab._add_flow._on_probe_done(
@@ -382,8 +347,7 @@ class TestProbeOutcomes:
         assert "No Japanese subtitles" in (item.error_message or "")
 
     def test_probe_done_live_marks_probe_error(self, tab):
-        tab.url_edit.setText("https://youtu.be/abc")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/abc"])
         item = tab._queue.all_items()[-1]
 
         tab._add_flow._on_probe_done(item, _make_video_info(is_live=True))
@@ -393,8 +357,7 @@ class TestProbeOutcomes:
         assert not tab.mine_button.isEnabled()
 
     def test_probe_done_too_long_marks_probe_error(self, tab):
-        tab.url_edit.setText("https://youtu.be/abc")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/abc"])
         item = tab._queue.all_items()[-1]
 
         tab._add_flow._on_probe_done(
@@ -405,8 +368,7 @@ class TestProbeOutcomes:
         assert item.status == YouTubeItemStatus.PROBE_ERROR
 
     def test_probe_done_age_locked_without_cookies(self, tab):
-        tab.url_edit.setText("https://youtu.be/abc")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/abc"])
         item = tab._queue.all_items()[-1]
 
         tab._add_flow._on_probe_done(item, _make_video_info(is_age_restricted=True))
@@ -416,8 +378,7 @@ class TestProbeOutcomes:
 
     def test_probe_done_no_subs_transcribes_under_the_default_source(self, tab):
         """Auto is the default: a caption-less video is mined by transcribing it."""
-        tab.url_edit.setText("https://youtu.be/abc")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/abc"])
         item = tab._queue.all_items()[-1]
 
         tab._add_flow._on_probe_done(item, _make_video_info(has_manual_ja_subs=False, has_auto_ja_subs=False))
@@ -427,8 +388,7 @@ class TestProbeOutcomes:
 
     def test_probe_done_no_subs_marks_probe_error_under_captions_only(self, tab):
         tab._add_flow.set_subtitle_source("captions")
-        tab.url_edit.setText("https://youtu.be/abc")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/abc"])
         item = tab._queue.all_items()[-1]
 
         tab._add_flow._on_probe_done(item, _make_video_info(has_manual_ja_subs=False, has_auto_ja_subs=False))
@@ -436,8 +396,7 @@ class TestProbeOutcomes:
         assert item.status == YouTubeItemStatus.PROBE_ERROR
 
     def test_probe_error_flips_to_probe_error(self, tab):
-        tab.url_edit.setText("https://youtu.be/abc")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/abc"])
         item = tab._queue.all_items()[-1]
 
         tab._add_flow._on_probe_error(item, "yt-dlp exploded")
@@ -451,8 +410,7 @@ class TestProbeOutcomes:
         _add_ready_item(tab, "https://youtu.be/ok")
 
         # Second item errors
-        tab.url_edit.setText("https://youtu.be/bad")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/bad"])
         bad = tab._queue.all_items()[-1]
         tab._add_flow._on_probe_error(bad, "nope")
 
@@ -462,8 +420,7 @@ class TestProbeOutcomes:
         """_on_probe_finished removes the handle from _probe_workers and calls
         deleteLater() so the finished QThread's C++ object is reclaimed promptly
         instead of lingering until the tab is destroyed (OVH-058)."""
-        tab.url_edit.setText("https://youtu.be/abc123")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/abc123"])
 
         assert len(tab._add_flow._probe_workers) == 1
         probe = tab._add_flow._probe_workers[0]
@@ -535,8 +492,7 @@ class TestDeferredProcessor:
                 # Drive _start_run via the public Mine path: add a ready item,
                 # click Mine, and assert the build is deferred to the worker via a
                 # factory rather than run on the GUI thread.
-                widget.url_edit.setText("https://youtu.be/abc")
-                widget._on_add_clicked()
+                widget._add_flow.add_urls(["https://youtu.be/abc"])
                 item = widget._queue.all_items()[-1]
                 widget._add_flow._on_probe_done(item, _make_video_info())
                 widget._on_mine_clicked()
@@ -591,8 +547,7 @@ class TestDeferredProcessor:
 
                 # The next _start_run defers the build to the worker via a
                 # factory that still threads stats_service through.
-                widget.url_edit.setText("https://youtu.be/abc")
-                widget._on_add_clicked()
+                widget._add_flow.add_urls(["https://youtu.be/abc"])
                 item = widget._queue.all_items()[-1]
                 widget._add_flow._on_probe_done(item, _make_video_info())
                 widget._on_mine_clicked()
@@ -624,19 +579,22 @@ class TestRunStartup:
         # Worker handle set.
         assert tab.worker_thread is not None
 
-    def test_mine_passes_ready_items_only(self, tab):
-        _add_ready_item(tab, "https://youtu.be/v1")
-        # An item still PROBING should NOT reach the worker.
-        tab.url_edit.setText("https://youtu.be/v2")
-        tab._on_add_clicked()  # PROBING
+    def test_mine_waits_for_a_probing_item(self, tab):
+        first = _add_ready_item(tab, "https://youtu.be/v1")
+        tab._add_flow.add_urls(["https://youtu.be/v2"])  # PROBING
+        second = tab._queue.all_items()[-1]
 
         queue_cls = tab._queue_worker_cls
         tab._on_mine_clicked()
 
-        kwargs = queue_cls.call_args.kwargs
-        items = kwargs["items"]
-        assert len(items) == 1
-        assert items[0].url == "https://youtu.be/v1"
+        # A PROBING item is still being checked: the run waits for it.
+        assert queue_cls.call_count == 0
+        assert tab._mine_pending
+
+        tab._add_flow._on_probe_done(second, _make_video_info(video_id="v2"))
+
+        assert queue_cls.call_count == 1
+        assert queue_cls.call_args.kwargs["items"] == [first, second]
 
     def test_mine_with_no_ready_items_noop(self, tab):
         queue_cls = tab._queue_worker_cls
@@ -648,7 +606,6 @@ class TestRunStartup:
         _add_ready_item(tab)
         tab._on_mine_clicked()
 
-        assert not tab.add_button.isEnabled()
         assert not tab.mine_button.isEnabled()
         assert not tab.stop_button.isHidden()
 
@@ -974,8 +931,7 @@ class TestWorkerFinished:
         tab._on_queue_finished()
         tab._on_worker_finished()
 
-        # No more READY items; Mine disabled, Add re-enabled, Stop hidden.
-        assert tab.add_button.isEnabled()
+        # No more READY items; Mine disabled, Stop hidden.
         assert not tab.mine_button.isEnabled()
         assert tab.stop_button.isHidden()
         # Item record preserved.
@@ -1188,10 +1144,8 @@ class TestShutdown:
         assert tab.worker_thread is None
 
     def test_shutdown_cleans_probe_workers(self, tab):
-        tab.url_edit.setText("https://youtu.be/v1")
-        tab._on_add_clicked()
-        tab.url_edit.setText("https://youtu.be/v2")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://youtu.be/v1"])
+        tab._add_flow.add_urls(["https://youtu.be/v2"])
 
         probes = list(tab._add_flow._probe_workers)
         assert len(probes) == 2
@@ -1378,76 +1332,44 @@ class TestPlaylistAdd:
     """Playlist-shaped URLs spawn a resolve worker instead of a single probe."""
 
     def test_playlist_url_spawns_resolve_worker_not_single_probe(self, tab):
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
 
         assert tab._playlist_resolve_worker_cls.call_count == 1
         assert tab._probe_worker_cls.call_count == 0
         # No row appears until the user confirms the expansion.
         assert tab._queue.all_items() == []
-        assert tab.url_edit.text() == ""
         # Resolve worker constructed with the configured cap and started.
         kwargs = tab._playlist_resolve_worker_cls.call_args.kwargs
         assert kwargs["limit"] == tab.config.youtube_playlist_max
         tab._add_flow._playlist_resolve_worker.start.assert_called_once()
 
     def test_mixed_url_spawns_resolve_worker(self, tab):
-        tab.url_edit.setText(MIXED_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([MIXED_URL])
 
         assert tab._playlist_resolve_worker_cls.call_count == 1
         assert tab._probe_worker_cls.call_count == 0
 
-    def test_add_disabled_while_resolve_active(self, tab):
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
-        assert not tab.add_button.isEnabled()
-
-        # finished → handle cleared → Add re-enabled.
-        tab._add_flow._on_playlist_resolve_finished()
-        assert tab.add_button.isEnabled()
-
     def test_plain_video_url_unaffected(self, tab):
         """Plain video URLs keep the existing single-probe path."""
-        tab.url_edit.setText("https://www.youtube.com/watch?v=abcdefghijk")
-        tab._on_add_clicked()
+        tab._add_flow.add_urls(["https://www.youtube.com/watch?v=abcdefghijk"])
 
         assert tab._playlist_resolve_worker_cls.call_count == 0
         assert tab._probe_worker_cls.call_count == 1
         assert len(tab._queue.all_items()) == 1
 
-    def test_second_playlist_add_while_probe_active_warns(self, tab):
-        # First playlist resolves and expands; resolve worker then finishes,
-        # leaving the playlist probe worker as the active guard.
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
-        _resolve_playlist(tab, PLAYLIST_URL, _make_playlist_info(n=2))
-        tab._add_flow._on_playlist_resolve_finished()
-        assert tab._add_flow._playlist_probe_worker is not None
-        assert tab.add_button.isEnabled()
-
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
-
-        assert tab._playlist_resolve_worker_cls.call_count == 1  # no second resolve
-        assert "already being added" in tab.log_widget.text_edit.toPlainText()
-
     def test_resolve_error_logged_and_recovers(self, tab):
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
 
         tab._add_flow._on_playlist_resolve_error("yt-dlp exploded")
         tab._add_flow._on_playlist_resolve_finished()
 
         assert "yt-dlp exploded" in tab.log_widget.text_edit.toPlainText()
         assert tab._add_flow._playlist_resolve_worker is None
-        assert tab.add_button.isEnabled()
 
     def test_resolve_finished_calls_delete_later(self, tab):
         """Y7: the finished resolve QThread is released via deleteLater() (as
         the single-video path does), so handles don't accumulate per playlist."""
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
         worker = tab._add_flow._playlist_resolve_worker
         assert worker is not None
 
@@ -1461,8 +1383,7 @@ class TestPlaylistResolved:
     """Resolved playlists expand (optionally via the choice dialog)."""
 
     def test_under_cap_pure_playlist_expands_without_dialog(self, tab):
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
         pl = _make_playlist_info(n=3)
 
         with patch("anki_miner.gui.widgets.youtube_playlist_flow.QMessageBox") as mock_box:
@@ -1486,8 +1407,7 @@ class TestPlaylistResolved:
     def test_over_cap_truncates_and_passes_over_cap_flag(self, tab):
         # The add flow reads its own frozen snapshot — override it there.
         tab._add_flow._config = replace(tab._add_flow._config, youtube_playlist_max=3)
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
         pl = _make_playlist_info(n=4)  # fetcher returns cap+1 untruncated
 
         with patch.object(tab._add_flow, "_ask_playlist_choice", return_value="playlist") as ask:
@@ -1504,8 +1424,7 @@ class TestPlaylistResolved:
     def test_resolve_uses_cap_captured_when_request_started(self, tab):
         resolve_config = replace(tab._add_flow._config, youtube_playlist_max=3)
         tab._add_flow.update_config(resolve_config, MagicMock(name="ResolveFetcher"))
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
         resolved_callback = tab._add_flow._playlist_resolve_worker.playlist_resolved.connect.call_args.args[0]
 
         live_config = replace(resolve_config, youtube_playlist_max=100)
@@ -1522,8 +1441,7 @@ class TestPlaylistResolved:
         """total_count > cap flags over-cap even when fewer entries survived parsing."""
         # The add flow reads its own frozen snapshot — override it there.
         tab._add_flow._config = replace(tab._add_flow._config, youtube_playlist_max=3)
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
         pl = _make_playlist_info(n=2, total_count=50)
 
         with patch.object(tab._add_flow, "_ask_playlist_choice", return_value="cancel") as ask:
@@ -1534,8 +1452,7 @@ class TestPlaylistResolved:
     def test_over_cap_cancel_creates_zero_rows(self, tab):
         # The add flow reads its own frozen snapshot — override it there.
         tab._add_flow._config = replace(tab._add_flow._config, youtube_playlist_max=3)
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
 
         with patch.object(tab._add_flow, "_ask_playlist_choice", return_value="cancel"):
             _resolve_playlist(tab, PLAYLIST_URL, _make_playlist_info(n=4))
@@ -1544,8 +1461,7 @@ class TestPlaylistResolved:
         assert tab._playlist_probe_worker_cls.call_count == 0
 
     def test_mixed_url_single_choice_uses_single_path(self, tab):
-        tab.url_edit.setText(MIXED_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([MIXED_URL])
 
         with patch.object(tab._add_flow, "_ask_playlist_choice", return_value="single"):
             _resolve_playlist(tab, MIXED_URL, _make_playlist_info(n=3))
@@ -1557,8 +1473,7 @@ class TestPlaylistResolved:
         assert tab._playlist_probe_worker_cls.call_count == 0
 
     def test_mixed_url_playlist_choice_expands(self, tab):
-        tab.url_edit.setText(MIXED_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([MIXED_URL])
 
         with patch.object(tab._add_flow, "_ask_playlist_choice", return_value="playlist"):
             _resolve_playlist(tab, MIXED_URL, _make_playlist_info(n=3))
@@ -1567,8 +1482,7 @@ class TestPlaylistResolved:
         assert tab._playlist_probe_worker_cls.call_count == 1
 
     def test_mixed_url_cancel_choice_does_nothing(self, tab):
-        tab.url_edit.setText(MIXED_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([MIXED_URL])
 
         with patch.object(tab._add_flow, "_ask_playlist_choice", return_value="cancel"):
             _resolve_playlist(tab, MIXED_URL, _make_playlist_info(n=3))
@@ -1578,8 +1492,7 @@ class TestPlaylistResolved:
         assert tab._playlist_probe_worker_cls.call_count == 0
 
     def test_late_resolve_after_clear_ignored(self, tab):
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
         stale_generation = tab._add_flow._playlist_generation
 
         tab._on_clear_clicked()  # bumps the generation
@@ -1605,8 +1518,7 @@ class TestPlaylistDedupe:
         # Existing READY item shares a video_id with the first playlist entry.
         _add_ready_item(tab, "https://youtu.be/preexisting", video_id=pl.entries[0].video_id)
 
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
         _resolve_playlist(tab, PLAYLIST_URL, pl)
 
         new_items = tab._queue.all_items()[1:]
@@ -1618,8 +1530,7 @@ class TestPlaylistDedupe:
         other = _make_playlist_entry(video_id="vid00000001", title="Other")
         pl = PlaylistInfo(playlist_id="PLabcdefghijkl", title="P", entries=(entry, entry, other), total_count=None)
 
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
         _resolve_playlist(tab, PLAYLIST_URL, pl)
 
         assert [i.video_id for i in tab._queue.all_items()] == ["vid00000000", "vid00000001"]
@@ -1638,8 +1549,7 @@ class TestPlaylistDedupe:
         # Add as a bare id — it must land in PROBING state (no probe done yet)
         # so video_id is None on the item (normal probe-not-complete state).
         bare_id = "dQw4w9WgXcQ"
-        tab.url_edit.setText(bare_id)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([bare_id])
         bare_item = tab._queue.all_items()[-1]
         # Still probing: video_id not yet populated by a probe result.
         assert bare_item.video_id is None
@@ -1652,8 +1562,7 @@ class TestPlaylistDedupe:
             entries=(_make_playlist_entry(video_id=bare_id),),
             total_count=None,
         )
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
         _resolve_playlist(tab, PLAYLIST_URL, pl)
 
         # The bare-id item should survive; the playlist duplicate must be skipped.
@@ -1666,8 +1575,7 @@ class TestPlaylistDedupe:
         for entry in pl.entries:
             _add_ready_item(tab, f"https://youtu.be/{entry.video_id}", video_id=entry.video_id)
 
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
         _resolve_playlist(tab, PLAYLIST_URL, pl)
 
         assert len(tab._queue.all_items()) == 2  # only the pre-existing items
@@ -1679,8 +1587,7 @@ class TestPlaylistEntryProbes:
     """Per-entry probe signals reuse the single-video classification path."""
 
     def _expand(self, tab, n: int = 3):
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
         pl = _make_playlist_info(n=n)
         _resolve_playlist(tab, PLAYLIST_URL, pl)
         tab._add_flow._on_playlist_resolve_finished()
@@ -1766,8 +1673,7 @@ class TestPlaylistClearAndShutdown:
     """Clear cancels the playlist probe; shutdown waits on both workers."""
 
     def test_clear_cancels_playlist_probe_worker(self, tab):
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
         _resolve_playlist(tab, PLAYLIST_URL, _make_playlist_info(n=2))
         worker = tab._add_flow._playlist_probe_worker
         assert worker is not None
@@ -1779,8 +1685,7 @@ class TestPlaylistClearAndShutdown:
         assert tab._queue.all_items() == []
 
     def test_shutdown_cancels_and_waits_playlist_workers(self, tab):
-        tab.url_edit.setText(PLAYLIST_URL)
-        tab._on_add_clicked()
+        tab._add_flow.add_urls([PLAYLIST_URL])
         resolve_worker = tab._add_flow._playlist_resolve_worker
         # Start the probe worker directly so both are simultaneously active.
         tab._add_flow._expand_playlist(list(_make_playlist_info(n=2).entries), "P")
@@ -2133,3 +2038,239 @@ class TestYtdlpPreflight:
         tab._on_mine_clicked()
 
         assert tab._queue_worker_cls.call_count == 1
+
+
+# ---------------------------------------------------------------------------
+# Batch add: a pasted list of links
+# ---------------------------------------------------------------------------
+
+
+class TestSplitUrlLines:
+    def test_blank_lines_skipped_and_order_kept(self):
+        text = "  https://youtu.be/aaaaaaaaaaa \n\n dQw4w9WgXcQ\n--update-to=evil/fork@tag\nhttps://[\n"
+
+        accepted, rejected = split_url_lines(text)
+
+        assert accepted == ["https://youtu.be/aaaaaaaaaaa", "dQw4w9WgXcQ"]
+        assert rejected == ["--update-to=evil/fork@tag", "https://["]
+
+
+class TestAddUrls:
+    def test_duplicates_in_batch_and_queue_are_skipped(self, tab):
+        tab._add_flow.add_urls(["https://youtu.be/aaaaaaaaaaa"])
+        tab._add_flow.add_urls(
+            [
+                "https://www.youtube.com/watch?v=aaaaaaaaaaa",  # same id as the queued row
+                "https://youtu.be/bbbbbbbbbbb",
+                "bbbbbbbbbbb",  # same id again, bare
+            ]
+        )
+
+        assert [i.url for i in tab._queue.all_items()] == [
+            "https://youtu.be/aaaaaaaaaaa",
+            "https://youtu.be/bbbbbbbbbbb",
+        ]
+        assert "Skipped 2 already in the queue." in tab.log_widget.text_edit.toPlainText()
+
+    def test_probe_count_is_capped(self, tab):
+        tab._add_flow.add_urls([f"https://youtu.be/v{i:010d}" for i in range(6)])
+
+        assert tab._probe_worker_cls.call_count == 4
+        assert len(tab._add_flow._probe_backlog) == 2
+        assert all(i.status is YouTubeItemStatus.PROBING for i in tab._queue.all_items())
+        assert tab._add_flow.is_busy
+
+        tab._add_flow._on_probe_finished(tab._add_flow._probe_workers[0])
+
+        assert tab._probe_worker_cls.call_count == 5
+
+    def test_backlogged_row_removed_from_queue_is_not_probed(self, tab):
+        tab._add_flow.add_urls([f"https://youtu.be/v{i:010d}" for i in range(5)])
+        tab._drop_item(tab._queue.all_items()[-1])
+
+        tab._add_flow._on_probe_finished(tab._add_flow._probe_workers[0])
+
+        assert tab._probe_worker_cls.call_count == 4
+        assert not tab._add_flow._probe_backlog
+
+    def test_playlists_resolve_one_after_another(self, tab):
+        tab._add_flow.add_urls([PLAYLIST_URL, PLAYLIST_URL_2])
+        assert tab._playlist_resolve_worker_cls.call_count == 1
+        assert tab._add_flow.is_busy
+
+        _resolve_playlist(tab, PLAYLIST_URL, _make_playlist_info(n=2))
+        tab._add_flow._on_playlist_resolve_finished()
+        assert tab._playlist_resolve_worker_cls.call_count == 1  # entries still probing
+
+        tab._add_flow._on_playlist_probe_finished()
+
+        assert tab._playlist_resolve_worker_cls.call_count == 2
+        assert tab._playlist_resolve_worker_cls.call_args.args[1] == PLAYLIST_URL_2
+
+    def test_busy_while_the_choice_dialog_is_open(self, tab):
+        """The dialog's nested event loop can deliver the resolve worker's finished."""
+        tab._add_flow.add_urls([MIXED_URL])
+        seen: list[bool] = []
+
+        def choose(*_args):
+            tab._add_flow._on_playlist_resolve_finished()
+            seen.append(tab._add_flow.is_busy)
+            return "cancel"
+
+        with patch.object(tab._add_flow, "_ask_playlist_choice", side_effect=choose):
+            _resolve_playlist(tab, MIXED_URL, _make_playlist_info(n=2))
+
+        assert seen == [True]
+        assert not tab._add_flow.is_busy
+
+    def test_clear_drops_both_backlogs(self, tab):
+        videos = [f"https://youtu.be/v{i:010d}" for i in range(5)]
+        tab._add_flow.add_urls([*videos, PLAYLIST_URL, PLAYLIST_URL_2])
+
+        tab._on_clear_clicked()
+
+        assert not tab._add_flow._probe_backlog
+        assert not tab._add_flow._playlist_backlog
+
+
+# ---------------------------------------------------------------------------
+# Mine reads the link box
+# ---------------------------------------------------------------------------
+
+
+class TestLinkBoxMine:
+    """Mine queues the box, waits for every probe, then runs over READY rows."""
+
+    def test_mine_queues_every_line_and_waits(self, tab):
+        tab.url_edit.setPlainText("https://youtu.be/aaaaaaaaaaa\n\n  https://youtu.be/bbbbbbbbbbb \n")
+        assert tab.mine_button.isEnabled()
+
+        tab._on_mine_clicked()
+
+        assert [i.status for i in tab._queue.all_items()] == [YouTubeItemStatus.PROBING] * 2
+        assert tab.url_edit.toPlainText() == ""
+        assert tab._queue_worker_cls.call_count == 0
+        assert tab._mine_pending
+        assert not tab.mine_button.isEnabled()
+        assert not tab.stop_button.isHidden()
+        assert tab.queue_controls.pause_button.isHidden()
+        assert tab.queue_controls.finish_button.isHidden()
+
+    def test_run_starts_when_the_last_probe_lands(self, tab):
+        tab.url_edit.setPlainText("https://youtu.be/aaaaaaaaaaa\nhttps://youtu.be/bbbbbbbbbbb")
+        tab._on_mine_clicked()
+        first, second = tab._queue.all_items()
+
+        tab._add_flow._on_probe_done(first, _make_video_info(video_id="aaaaaaaaaaa"))
+        assert tab._queue_worker_cls.call_count == 0
+        tab._add_flow._on_probe_error(second, "gone")
+
+        assert tab._queue_worker_cls.call_count == 1
+        assert tab._queue_worker_cls.call_args.kwargs["items"] == [first]
+        assert not tab._mine_pending
+
+    def test_nothing_mineable_raises_an_issue_and_unlocks(self, tab):
+        tab.url_edit.setPlainText("https://youtu.be/aaaaaaaaaaa")
+        tab._on_mine_clicked()
+
+        tab._add_flow._on_probe_error(tab._queue.all_items()[0], "gone")
+
+        assert tab._queue_worker_cls.call_count == 0
+        assert not tab._mine_pending
+        issue = tab.issue_banner().current_issue()
+        assert issue is not None
+        assert "None of the videos can be mined" in issue.summary
+        assert tab.clear_button.isEnabled()
+        assert tab.stop_button.isHidden()
+
+    def test_one_invalid_line_refuses_the_whole_mine(self, tab):
+        text = "https://youtu.be/aaaaaaaaaaa\n--config-location=/tmp/evil.conf"
+        tab.url_edit.setPlainText(text)
+
+        tab._on_mine_clicked()
+
+        assert tab._queue.all_items() == []
+        assert tab.url_edit.toPlainText() == text
+        issue = tab.issue_banner().current_issue()
+        assert issue is not None
+        assert issue.details == "--config-location=/tmp/evil.conf"
+        assert not tab._mine_pending
+
+    def test_cancel_while_checking_keeps_rows_and_never_runs(self, tab):
+        tab.url_edit.setPlainText("https://youtu.be/aaaaaaaaaaa")
+        tab._on_mine_clicked()
+
+        tab._on_stop_all_clicked()
+        tab._add_flow._on_probe_done(tab._queue.all_items()[0], _make_video_info(video_id="aaaaaaaaaaa"))
+
+        assert tab._queue_worker_cls.call_count == 0
+        assert len(tab._queue.all_items()) == 1
+        assert tab.stop_button.isHidden()
+        assert tab.mine_button.isEnabled()
+
+    def test_empty_box_with_ready_rows_runs_at_once(self, tab):
+        _add_ready_item(tab)
+
+        tab._on_mine_clicked()
+
+        assert tab._queue_worker_cls.call_count == 1
+
+    def test_a_pasted_duplicate_of_a_finished_row_starts_nothing(self, tab):
+        item = _add_ready_item(tab, "https://youtu.be/aaaaaaaaaaa", video_id="aaaaaaaaaaa")
+        item.status = YouTubeItemStatus.COMPLETED
+        tab.url_edit.setPlainText("https://youtu.be/aaaaaaaaaaa")
+
+        tab._on_mine_clicked()
+
+        assert tab._queue_worker_cls.call_count == 0
+        assert not tab._mine_pending
+        assert "Skipped 1 already in the queue." in tab.log_widget.text_edit.toPlainText()
+
+    def test_mine_waits_for_a_playlist_to_be_checked(self, tab):
+        tab.url_edit.setPlainText(PLAYLIST_URL)
+        tab._on_mine_clicked()
+        _resolve_playlist(tab, PLAYLIST_URL, _make_playlist_info(n=2))
+        tab._add_flow._on_playlist_resolve_finished()
+        tab._add_flow._on_playlist_entry_probed(0, _make_video_info(video_id="vid00000000"))
+        tab._add_flow._on_playlist_entry_probed(1, _make_video_info(video_id="vid00000001"))
+        assert tab._queue_worker_cls.call_count == 0  # the entry worker has not finished
+
+        tab._add_flow._on_playlist_probe_finished()
+
+        assert tab._queue_worker_cls.call_count == 1
+        assert len(tab._queue_worker_cls.call_args.kwargs["items"]) == 2
+
+    def test_no_run_while_the_playlist_choice_is_open(self, tab):
+        ready = _add_ready_item(tab, "https://youtu.be/ok")
+        tab.url_edit.setPlainText(MIXED_URL)
+        tab._on_mine_clicked()
+        runs_during_dialog: list[int] = []
+
+        def choose(*_args):
+            tab._add_flow._on_playlist_resolve_finished()
+            runs_during_dialog.append(tab._queue_worker_cls.call_count)
+            return "cancel"
+
+        with patch.object(tab._add_flow, "_ask_playlist_choice", side_effect=choose):
+            _resolve_playlist(tab, MIXED_URL, _make_playlist_info(n=2))
+
+        assert runs_during_dialog == [0]
+        assert tab._queue_worker_cls.call_args.kwargs["items"] == [ready]
+
+    def test_mine_button_follows_the_box(self, tab):
+        assert not tab.mine_button.isEnabled()
+        tab.url_edit.setPlainText("https://youtu.be/aaaaaaaaaaa")
+        assert tab.mine_button.isEnabled()
+        tab.url_edit.clear()
+        assert not tab.mine_button.isEnabled()
+
+    def test_ctrl_enter_in_the_box_mines(self, qtbot, tab):
+        tab.show()
+        qtbot.waitExposed(tab)
+        tab.url_edit.setFocus()
+        qtbot.waitUntil(tab.url_edit.hasFocus, timeout=1000)
+        tab.url_edit.setPlainText("https://youtu.be/aaaaaaaaaaa")
+
+        qtbot.keyClick(tab.url_edit, Qt.Key.Key_Return, Qt.KeyboardModifier.ControlModifier)
+
+        assert len(tab._queue.all_items()) == 1

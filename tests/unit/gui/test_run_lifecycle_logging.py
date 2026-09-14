@@ -104,8 +104,7 @@ def youtube_tab(qtbot, test_config: AnkiMinerConfig):
 def _ready_youtube_item(tab, video_id: str):
     from anki_miner.models.youtube import VideoInfo
 
-    tab.url_edit.setText(f"https://www.youtube.com/watch?v={video_id}")
-    tab._on_add_clicked()
+    tab._add_flow.add_urls([f"https://www.youtube.com/watch?v={video_id}"])
     item = tab._queue.all_items()[-1]
     tab._add_flow._on_probe_done(
         item,
