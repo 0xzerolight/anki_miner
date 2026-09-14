@@ -337,35 +337,35 @@
     </message>
     <message>
         <source>Part of Speech Field</source>
-        <translation type="unfinished" />
+        <translation>Поле части речи</translation>
     </message>
     <message>
         <source>Stores the word's part of speech (noun, verb, adjective, adverb). Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Хранит часть речи слова (существительное, глагол, прилагательное, наречие). Пусто = пропустить.</translation>
     </message>
     <message>
         <source>Gender Field</source>
-        <translation type="unfinished" />
+        <translation>Поле рода</translation>
     </message>
     <message>
         <source>Stores a noun's grammatical gender. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Хранит грамматический род существительного. Пусто = пропустить.</translation>
     </message>
     <message>
         <source>Article Field</source>
-        <translation type="unfinished" />
+        <translation>Поле артикля</translation>
     </message>
     <message>
         <source>Stores the article that goes with a noun. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Хранит артикль, относящийся к существительному. Пусто = пропустить.</translation>
     </message>
     <message>
         <source>Plural Field</source>
-        <translation type="unfinished" />
+        <translation>Поле множественного числа</translation>
     </message>
     <message>
         <source>Stores a noun's plural form from the dictionary entry. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Хранит форму множественного числа существительного из словарной статьи. Пусто = пропустить.</translation>
     </message>
     <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
@@ -775,15 +775,15 @@ Continue anyway?</source>
     <name>AsrPackDownloadWorker</name>
     <message>
         <source>Transcription engine</source>
-        <translation type="unfinished" />
+        <translation>Движок транскрипции</translation>
     </message>
     <message>
         <source>Downloading the transcription engine…</source>
-        <translation type="unfinished" />
+        <translation>Загрузка движка транскрипции…</translation>
     </message>
     <message>
         <source>Transcription engine installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>Движок транскрипции успешно установлен.</translation>
     </message>
 </context><context>
     <name>AudioClipEditor</name>
@@ -1603,249 +1603,249 @@ No index files are deleted.</source>
     <name>BookSyncTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Прогресс</translation>
+        <translation>Прогресс</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Готово</translation>
+        <translation>Готово</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Готово: </translation>
+        <translation>Готово: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Пропущено</translation>
+        <translation>Пропущено</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Пропущено: </translation>
+        <translation>Пропущено: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Отмена</translation>
+        <translation>Отмена</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Отмена…</translation>
+        <translation>Отмена…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Отменено</translation>
+        <translation>Отменено</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Ошибка — см. журнал</translation>
+        <translation>Ошибка — см. журнал</translation>
     </message>
     <message>
         <source>Finished with errors — see log</source>
-        <translation type="unfinished">Завершено с ошибками — см. журнал</translation>
+        <translation>Завершено с ошибками — см. журнал</translation>
     </message>
     <message>
         <source>Some audio files could not be synced.</source>
-        <translation type="unfinished" />
+        <translation>Некоторые аудиофайлы не удалось синхронизировать.</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) synced</source>
-        <translation type="unfinished" />
+        <translation>Завершено — синхронизировано файлов: %1</translation>
     </message>
     <message>
         <source>Complete — %1 synced, %2 skipped</source>
-        <translation type="unfinished" />
+        <translation>Завершено — синхронизировано: %1, пропущено: %2</translation>
     </message>
     <message>
         <source>No subtitles written — all %1 skipped; see log.</source>
-        <translation type="unfinished" />
+        <translation>Субтитры не записаны — все %1 пропущены; см. журнал.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
-        <translation type="unfinished">Выбрать папку для вывода</translation>
+        <translation>Выбрать папку для вывода</translation>
     </message>
     <message>
         <source>Next to the audio</source>
-        <translation type="unfinished" />
+        <translation>Рядом с аудио</translation>
     </message>
     <message>
         <source>Audiobook sync</source>
-        <translation type="unfinished" />
+        <translation>Синхронизация аудиокниги</translation>
     </message>
     <message>
         <source>Audiobook</source>
-        <translation type="unfinished" />
+        <translation>Аудиокнига</translation>
     </message>
     <message>
         <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>
-        <translation type="unfinished">Транскрипция не готова. Откройте Настройки → Транскрипция и выравнивание, чтобы завершить настройку.</translation>
+        <translation>Транскрипция не готова. Откройте Настройки → Транскрипция и выравнивание, чтобы завершить настройку.</translation>
     </message>
     <message>
         <source>Transcribes the audiobook and times the book's own sentences to it, writing an .srt beside each audio file. A folder is read as one book in file-name order.</source>
-        <translation type="unfinished" />
+        <translation>Транскрибирует аудиокнигу и синхронизирует с ней предложения самой книги, записывая файл .srt рядом с каждым аудиофайлом. Папка читается как одна книга в порядке имён файлов.</translation>
     </message>
     <message>
         <source>Mode:</source>
-        <translation type="unfinished">Режим:</translation>
+        <translation>Режим:</translation>
     </message>
     <message>
         <source>Single File</source>
-        <translation type="unfinished">Один файл</translation>
+        <translation>Один файл</translation>
     </message>
     <message>
         <source>Sync one audio file to the book.</source>
-        <translation type="unfinished" />
+        <translation>Синхронизирует один аудиофайл с книгой.</translation>
     </message>
     <message>
         <source>Folder</source>
-        <translation type="unfinished">Папка</translation>
+        <translation>Папка</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each.</source>
-        <translation type="unfinished" />
+        <translation>Все аудиофайлы в папке, в порядке имён файлов, по одному .srt на каждый.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
-        <translation type="unfinished" />
+        <translation>EPUB-файл или текстовый файл:</translation>
     </message>
     <message>
         <source>Audio File:</source>
-        <translation type="unfinished">Аудиофайл:</translation>
+        <translation>Аудиофайл:</translation>
     </message>
     <message>
         <source>This field takes an audio file.</source>
-        <translation type="unfinished">Это поле принимает аудиофайл.</translation>
+        <translation>Это поле принимает аудиофайл.</translation>
     </message>
     <message>
         <source>Audio Folder:</source>
-        <translation type="unfinished" />
+        <translation>Папка с аудио:</translation>
     </message>
     <message>
         <source>Book</source>
-        <translation type="unfinished" />
+        <translation>Книга</translation>
     </message>
     <message>
         <source>This field takes an .epub or .txt file.</source>
-        <translation type="unfinished" />
+        <translation>Это поле принимает файл .epub или .txt.</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">Вывод</translation>
+        <translation>Вывод</translation>
     </message>
     <message>
         <source>Each .srt is saved next to its audio file unless you choose a folder.</source>
-        <translation type="unfinished" />
+        <translation>Каждый файл .srt сохраняется рядом со своим аудиофайлом, если вы не выберете папку.</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">Вывод:</translation>
+        <translation>Вывод:</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">Выбрать папку…</translation>
+        <translation>Выбрать папку…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">Сбросить</translation>
+        <translation>Сбросить</translation>
     </message>
     <message>
         <source>Overwrite existing SRT files</source>
-        <translation type="unfinished">Перезаписывать существующие файлы SRT</translation>
+        <translation>Перезаписывать существующие файлы SRT</translation>
     </message>
     <message>
         <source>When unchecked, audio files that already have an .srt file are skipped, not overwritten.</source>
-        <translation type="unfinished" />
+        <translation>Если флажок снят, аудиофайлы, у которых уже есть файл .srt, пропускаются, а не перезаписываются.</translation>
     </message>
     <message>
         <source>Sync Audiobook</source>
-        <translation type="unfinished" />
+        <translation>Синхронизировать аудиокнигу</translation>
     </message>
     <message>
         <source>Choose the book (.epub or .txt) before syncing.</source>
-        <translation type="unfinished" />
+        <translation>Выберите книгу (.epub или .txt) перед синхронизацией.</translation>
     </message>
     <message>
         <source>Pick an .epub or .txt file for the book.</source>
-        <translation type="unfinished" />
+        <translation>Выберите файл .epub или .txt для книги.</translation>
     </message>
     <message>
         <source>That book file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Этот файл книги больше не существует.</translation>
     </message>
     <message>
         <source>Choose an audio file before syncing.</source>
-        <translation type="unfinished" />
+        <translation>Выберите аудиофайл перед синхронизацией.</translation>
     </message>
     <message>
         <source>That audio file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Этот аудиофайл больше не существует.</translation>
     </message>
     <message>
         <source>Choose a folder before syncing.</source>
-        <translation type="unfinished" />
+        <translation>Выберите папку перед синхронизацией.</translation>
     </message>
     <message>
         <source>That folder no longer exists.</source>
-        <translation type="unfinished">Эта папка больше не существует.</translation>
+        <translation>Эта папка больше не существует.</translation>
     </message>
     <message>
         <source>No audio files were found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>В этой папке не найдено аудиофайлов.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
-        <translation type="unfinished">Не удалось просканировать эту папку.</translation>
+        <translation>Не удалось просканировать эту папку.</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
-        <translation type="unfinished">В папку вывода нельзя записывать.</translation>
+        <translation>В папку вывода нельзя записывать.</translation>
     </message>
     <message>
         <source>The transcription model %1 is not ready.</source>
-        <translation type="unfinished">Модель транскрипции %1 не готова.</translation>
+        <translation>Модель транскрипции %1 не готова.</translation>
     </message>
     <message>
         <source>Open Transcription Settings</source>
-        <translation type="unfinished">Открыть настройки транскрипции</translation>
+        <translation>Открыть настройки транскрипции</translation>
     </message>
     <message>
         <source>Book: %1</source>
-        <translation type="unfinished" />
+        <translation>Книга: %1</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Синхронизация файла %1 из %2</translation>
     </message>
 </context><context>
     <name>BookSyncWorker</name>
     <message>
         <source>Skipped, exists</source>
-        <translation type="unfinished">Пропущено, уже существует</translation>
+        <translation>Пропущено, уже существует</translation>
     </message>
     <message>
         <source>Extracting audio: %1</source>
-        <translation type="unfinished">Извлечение звука: %1</translation>
+        <translation>Извлечение звука: %1</translation>
     </message>
     <message>
         <source>Transcribing: %1%</source>
-        <translation type="unfinished">Транскрибирование: %1%</translation>
+        <translation>Транскрибирование: %1%</translation>
     </message>
     <message>
         <source>Aligning to the book…</source>
-        <translation type="unfinished" />
+        <translation>Выравнивание по книге…</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
-        <translation type="unfinished" />
+        <translation>Синхронизировано предложений: %1, без звука между ними: %2</translation>
     </message>
     <message>
         <source>No speech detected</source>
-        <translation type="unfinished">Речь не обнаружена</translation>
+        <translation>Речь не обнаружена</translation>
     </message>
     <message>
         <source>Nothing in %1 matched the book</source>
-        <translation type="unfinished" />
+        <translation>Ничего в %1 не совпало с книгой</translation>
     </message>
     <message>
         <source>Audio extraction failed for %1</source>
-        <translation type="unfinished">Не удалось извлечь звук для %1</translation>
+        <translation>Не удалось извлечь звук для %1</translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -2083,7 +2083,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine another language</source>
-        <translation type="unfinished" />
+        <translation>Майнинг другого языка</translation>
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
@@ -2491,11 +2491,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
-        <translation type="unfinished" />
+        <translation>Синхронизация аудиокниги с её EPUB</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitles or a reader can use.</source>
-        <translation type="unfinished" />
+        <translation>Транскрибировать аудиокнигу и синхронизировать с ней предложения самой книги, записывая файл .srt, который можно использовать на вкладке «Аудиокниги», в разделе Чтение -&gt; Субтитры или в приложении для чтения.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -3769,7 +3769,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>This dictionary says its language is %1, not the language you are mining.</source>
-        <translation type="unfinished" />
+        <translation>В этом словаре указан язык %1, а не язык майнинга.</translation>
     </message>
     <message>
         <source>Choose Yomitan dictionary zips</source>
@@ -5203,7 +5203,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Dialogue dash</source>
-        <translation type="unfinished" />
+        <translation>Диалоговое тире</translation>
     </message>
     <message>
         <source>Presets</source>
@@ -5287,23 +5287,23 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Regional Variety</source>
-        <translation type="unfinished" />
+        <translation>Региональный вариант языка</translation>
     </message>
     <message>
         <source>Brazilian Portuguese</source>
-        <translation type="unfinished" />
+        <translation>Бразильский португальский</translation>
     </message>
     <message>
         <source>European Portuguese</source>
-        <translation type="unfinished" />
+        <translation>Европейский португальский</translation>
     </message>
     <message>
         <source>Variety</source>
-        <translation type="unfinished" />
+        <translation>Вариант языка</translation>
     </message>
     <message>
         <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
-        <translation type="unfinished" />
+        <translation>Определяет, каким голосом Google озвучиваются слова и предложения и какой список частотности предлагается при настройке.</translation>
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -5657,11 +5657,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
-        <translation type="unfinished" />
+        <translation>Колоды, которые сканирование известных слов для этого языка пропускает: %1. Измените их в разделе Настройки → Фильтрация.</translation>
     </message>
     <message>
         <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
-        <translation type="unfinished" />
+        <translation>Для этого языка сканируются все колоды, включая колоды на другом языке с тем же типом письменности. Исключите их в разделе Настройки → Фильтрация.</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -5879,27 +5879,27 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>First time mining this language</source>
-        <translation type="unfinished" />
+        <translation>Майнинг этого языка выполняется впервые</translation>
     </message>
     <message>
         <source>You have not mined %1 before.</source>
-        <translation type="unfinished" />
+        <translation>Вы ещё не майнили %1.</translation>
     </message>
     <message>
         <source>The known-words scan reads every deck that is not excluded, and it cannot tell apart languages that share a script: words in a ticked deck would not count as known in %1. Untick the decks that hold %1 cards.</source>
-        <translation type="unfinished" />
+        <translation>Сканирование известных слов читает все колоды, которые не исключены, и не может отличить языки, использующие одну и ту же письменность: слова в отмеченной колоде не будут считаться известными на языке %1. Снимите отметку с колод, содержащих карточки на языке %1.</translation>
     </message>
     <message>
         <source>Exclude ticked decks</source>
-        <translation type="unfinished" />
+        <translation>Исключить отмеченные колоды</translation>
     </message>
     <message>
         <source>Set up resources…</source>
-        <translation type="unfinished" />
+        <translation>Настроить ресурсы…</translation>
     </message>
     <message>
         <source>Close</source>
-        <translation type="unfinished">Закрыть</translation>
+        <translation>Закрыть</translation>
     </message>
 </context><context>
     <name>LogWidget</name>
@@ -6379,7 +6379,7 @@ Continue?</source>
     </message>
     <message>
         <source>Audiobook Sync</source>
-        <translation type="unfinished" />
+        <translation>Синхронизация аудиокниги</translation>
     </message>
     <message>
         <source>Single</source>
@@ -9471,11 +9471,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished" />
+        <translation>Шаг на один кадр назад</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished" />
+        <translation>Шаг на один кадр вперёд</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
@@ -9919,19 +9919,19 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Download transcription engine</source>
-        <translation type="unfinished" />
+        <translation>Скачать движок транскрипции</translation>
     </message>
     <message>
         <source>Download the faster-whisper speech-to-text engine into Anki Miner's folder. Required before subtitle generation can run on a packaged install.</source>
-        <translation type="unfinished" />
+        <translation>Загрузить движок распознавания речи faster-whisper в папку Anki Miner. Требуется перед запуском генерации субтитров в сборочной установке.</translation>
     </message>
     <message>
         <source>Transcription engine</source>
-        <translation type="unfinished" />
+        <translation>Движок транскрипции</translation>
     </message>
     <message>
         <source>Speech-to-text engine (faster-whisper), about %1 MB, downloaded once.</source>
-        <translation type="unfinished" />
+        <translation>Движок распознавания речи (faster-whisper), около %1 МБ, загружается один раз.</translation>
     </message>
     <message>
         <source>ASR model</source>
@@ -10103,7 +10103,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Local transcription is not available for this build.</source>
-        <translation type="unfinished" />
+        <translation>Локальная транскрипция недоступна для этой сборки.</translation>
     </message>
     <message>
         <source>Silence removal is available.</source>

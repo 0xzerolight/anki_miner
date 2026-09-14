@@ -336,35 +336,35 @@
     </message>
     <message>
         <source>Part of Speech Field</source>
-        <translation type="unfinished" />
+        <translation>Champ Nature grammaticale</translation>
     </message>
     <message>
         <source>Stores the word's part of speech (noun, verb, adjective, adverb). Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Stocke la nature grammaticale du mot (nom, verbe, adjectif, adverbe). Vide = ignorer.</translation>
     </message>
     <message>
         <source>Gender Field</source>
-        <translation type="unfinished" />
+        <translation>Champ Genre</translation>
     </message>
     <message>
         <source>Stores a noun's grammatical gender. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Stocke le genre grammatical d'un nom. Vide = ignorer.</translation>
     </message>
     <message>
         <source>Article Field</source>
-        <translation type="unfinished" />
+        <translation>Champ Article</translation>
     </message>
     <message>
         <source>Stores the article that goes with a noun. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Stocke l'article qui accompagne un nom. Vide = ignorer.</translation>
     </message>
     <message>
         <source>Plural Field</source>
-        <translation type="unfinished" />
+        <translation>Champ Pluriel</translation>
     </message>
     <message>
         <source>Stores a noun's plural form from the dictionary entry. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Stocke la forme plurielle d'un nom depuis l'entrée du dictionnaire. Vide = ignorer.</translation>
     </message>
     <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
@@ -774,15 +774,15 @@ Continuer quand même ?</translation>
     <name>AsrPackDownloadWorker</name>
     <message>
         <source>Transcription engine</source>
-        <translation type="unfinished" />
+        <translation>Moteur de transcription</translation>
     </message>
     <message>
         <source>Downloading the transcription engine…</source>
-        <translation type="unfinished" />
+        <translation>Téléchargement du moteur de transcription…</translation>
     </message>
     <message>
         <source>Transcription engine installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>Moteur de transcription installé avec succès.</translation>
     </message>
 </context><context>
     <name>AudioClipEditor</name>
@@ -1601,249 +1601,249 @@ Aucun fichier d'index n'est supprimé.</translation>
     <name>BookSyncTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Progression</translation>
+        <translation>Progression</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Terminé</translation>
+        <translation>Terminé</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Terminé : </translation>
+        <translation>Terminé : </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Ignoré</translation>
+        <translation>Ignoré</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Ignoré : </translation>
+        <translation>Ignoré : </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Annuler</translation>
+        <translation>Annuler</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Annulation…</translation>
+        <translation>Annulation…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Annulé</translation>
+        <translation>Annulé</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Échec — voir le journal</translation>
+        <translation>Échec — voir le journal</translation>
     </message>
     <message>
         <source>Finished with errors — see log</source>
-        <translation type="unfinished">Terminé avec des erreurs — voir le journal</translation>
+        <translation>Terminé avec des erreurs — voir le journal</translation>
     </message>
     <message>
         <source>Some audio files could not be synced.</source>
-        <translation type="unfinished" />
+        <translation>Certains fichiers audio n'ont pas pu être synchronisés.</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) synced</source>
-        <translation type="unfinished" />
+        <translation>Terminé — %1 fichier(s) synchronisé(s)</translation>
     </message>
     <message>
         <source>Complete — %1 synced, %2 skipped</source>
-        <translation type="unfinished" />
+        <translation>Terminé — %1 synchronisé(s), %2 ignoré(s)</translation>
     </message>
     <message>
         <source>No subtitles written — all %1 skipped; see log.</source>
-        <translation type="unfinished" />
+        <translation>Aucun sous-titre écrit — tous les %1 ignorés ; voir le journal.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
-        <translation type="unfinished">Sélectionner le dossier de sortie</translation>
+        <translation>Sélectionner le dossier de sortie</translation>
     </message>
     <message>
         <source>Next to the audio</source>
-        <translation type="unfinished" />
+        <translation>À côté de l'audio</translation>
     </message>
     <message>
         <source>Audiobook sync</source>
-        <translation type="unfinished" />
+        <translation>Synchronisation de livre audio</translation>
     </message>
     <message>
         <source>Audiobook</source>
-        <translation type="unfinished" />
+        <translation>Livre audio</translation>
     </message>
     <message>
         <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>
-        <translation type="unfinished">La transcription n'est pas prête. Ouvrez Paramètres → Transcription et alignement pour terminer la configuration.</translation>
+        <translation>La transcription n'est pas prête. Ouvrez Paramètres → Transcription et alignement pour terminer la configuration.</translation>
     </message>
     <message>
         <source>Transcribes the audiobook and times the book's own sentences to it, writing an .srt beside each audio file. A folder is read as one book in file-name order.</source>
-        <translation type="unfinished" />
+        <translation>Transcrit le livre audio et synchronise les phrases du livre avec lui, en écrivant un fichier .srt à côté de chaque fichier audio. Un dossier est lu comme un seul livre, dans l'ordre des noms de fichiers.</translation>
     </message>
     <message>
         <source>Mode:</source>
-        <translation type="unfinished">Mode :</translation>
+        <translation>Mode :</translation>
     </message>
     <message>
         <source>Single File</source>
-        <translation type="unfinished">Fichier unique</translation>
+        <translation>Fichier unique</translation>
     </message>
     <message>
         <source>Sync one audio file to the book.</source>
-        <translation type="unfinished" />
+        <translation>Synchroniser un fichier audio avec le livre.</translation>
     </message>
     <message>
         <source>Folder</source>
-        <translation type="unfinished">Dossier</translation>
+        <translation>Dossier</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each.</source>
-        <translation type="unfinished" />
+        <translation>Chaque fichier audio du dossier, dans l'ordre des noms de fichiers, avec un .srt chacun.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
-        <translation type="unfinished" />
+        <translation>Fichier EPUB ou texte :</translation>
     </message>
     <message>
         <source>Audio File:</source>
-        <translation type="unfinished">Fichier audio :</translation>
+        <translation>Fichier audio :</translation>
     </message>
     <message>
         <source>This field takes an audio file.</source>
-        <translation type="unfinished">Ce champ accepte un fichier audio.</translation>
+        <translation>Ce champ accepte un fichier audio.</translation>
     </message>
     <message>
         <source>Audio Folder:</source>
-        <translation type="unfinished" />
+        <translation>Dossier audio :</translation>
     </message>
     <message>
         <source>Book</source>
-        <translation type="unfinished" />
+        <translation>Livre</translation>
     </message>
     <message>
         <source>This field takes an .epub or .txt file.</source>
-        <translation type="unfinished" />
+        <translation>Ce champ accepte un fichier .epub ou .txt.</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">Sortie</translation>
+        <translation>Sortie</translation>
     </message>
     <message>
         <source>Each .srt is saved next to its audio file unless you choose a folder.</source>
-        <translation type="unfinished" />
+        <translation>Chaque fichier .srt est enregistré à côté de son fichier audio, sauf si vous choisissez un dossier.</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">Sortie :</translation>
+        <translation>Sortie :</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">Choisir un dossier…</translation>
+        <translation>Choisir un dossier…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">Réinitialiser</translation>
+        <translation>Réinitialiser</translation>
     </message>
     <message>
         <source>Overwrite existing SRT files</source>
-        <translation type="unfinished">Écraser les fichiers SRT existants</translation>
+        <translation>Écraser les fichiers SRT existants</translation>
     </message>
     <message>
         <source>When unchecked, audio files that already have an .srt file are skipped, not overwritten.</source>
-        <translation type="unfinished" />
+        <translation>Lorsque cette case est décochée, les fichiers audio qui ont déjà un fichier .srt sont ignorés, non écrasés.</translation>
     </message>
     <message>
         <source>Sync Audiobook</source>
-        <translation type="unfinished" />
+        <translation>Synchroniser le livre audio</translation>
     </message>
     <message>
         <source>Choose the book (.epub or .txt) before syncing.</source>
-        <translation type="unfinished" />
+        <translation>Choisissez le livre (.epub ou .txt) avant de synchroniser.</translation>
     </message>
     <message>
         <source>Pick an .epub or .txt file for the book.</source>
-        <translation type="unfinished" />
+        <translation>Choisissez un fichier .epub ou .txt pour le livre.</translation>
     </message>
     <message>
         <source>That book file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Ce fichier de livre n'existe plus.</translation>
     </message>
     <message>
         <source>Choose an audio file before syncing.</source>
-        <translation type="unfinished" />
+        <translation>Choisissez un fichier audio avant de synchroniser.</translation>
     </message>
     <message>
         <source>That audio file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Ce fichier audio n'existe plus.</translation>
     </message>
     <message>
         <source>Choose a folder before syncing.</source>
-        <translation type="unfinished" />
+        <translation>Choisissez un dossier avant de synchroniser.</translation>
     </message>
     <message>
         <source>That folder no longer exists.</source>
-        <translation type="unfinished">Ce dossier n'existe plus.</translation>
+        <translation>Ce dossier n'existe plus.</translation>
     </message>
     <message>
         <source>No audio files were found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>Aucun fichier audio n'a été trouvé dans ce dossier.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
-        <translation type="unfinished">Impossible d’analyser ce dossier.</translation>
+        <translation>Impossible d'analyser ce dossier.</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
-        <translation type="unfinished">Le dossier de sortie n'est pas accessible en écriture.</translation>
+        <translation>Le dossier de sortie n'est pas accessible en écriture.</translation>
     </message>
     <message>
         <source>The transcription model %1 is not ready.</source>
-        <translation type="unfinished">Le modèle de transcription %1 n'est pas prêt.</translation>
+        <translation>Le modèle de transcription %1 n'est pas prêt.</translation>
     </message>
     <message>
         <source>Open Transcription Settings</source>
-        <translation type="unfinished">Ouvrir les paramètres de transcription</translation>
+        <translation>Ouvrir les paramètres de transcription</translation>
     </message>
     <message>
         <source>Book: %1</source>
-        <translation type="unfinished" />
+        <translation>Livre : %1</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Synchronisation du fichier %1 sur %2</translation>
     </message>
 </context><context>
     <name>BookSyncWorker</name>
     <message>
         <source>Skipped, exists</source>
-        <translation type="unfinished">Ignoré, existe déjà</translation>
+        <translation>Ignoré, existe déjà</translation>
     </message>
     <message>
         <source>Extracting audio: %1</source>
-        <translation type="unfinished">Extraction de l'audio : %1</translation>
+        <translation>Extraction de l'audio : %1</translation>
     </message>
     <message>
         <source>Transcribing: %1%</source>
-        <translation type="unfinished">Transcription : %1 %</translation>
+        <translation>Transcription : %1 %</translation>
     </message>
     <message>
         <source>Aligning to the book…</source>
-        <translation type="unfinished" />
+        <translation>Alignement sur le livre…</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
-        <translation type="unfinished" />
+        <translation>%1 phrases synchronisées, %2 entre elles sans audio</translation>
     </message>
     <message>
         <source>No speech detected</source>
-        <translation type="unfinished">Aucune parole détectée</translation>
+        <translation>Aucune parole détectée</translation>
     </message>
     <message>
         <source>Nothing in %1 matched the book</source>
-        <translation type="unfinished" />
+        <translation>Rien dans %1 ne correspond au livre</translation>
     </message>
     <message>
         <source>Audio extraction failed for %1</source>
-        <translation type="unfinished">Échec de l'extraction audio pour %1</translation>
+        <translation>Échec de l'extraction audio pour %1</translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -2081,7 +2081,7 @@ Aucun fichier d'index n'est supprimé.</translation>
     </message>
     <message>
         <source>Mine another language</source>
-        <translation type="unfinished" />
+        <translation>Extraire dans une autre langue</translation>
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
@@ -2489,11 +2489,11 @@ Aucun fichier d'index n'est supprimé.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
-        <translation type="unfinished" />
+        <translation>Synchroniser un livre audio avec son EPUB</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitles or a reader can use.</source>
-        <translation type="unfinished" />
+        <translation>Transcrivez un livre audio et synchronisez les phrases du livre avec lui, en écrivant un fichier .srt que l'onglet Livres audio, Lecture -&gt; Sous-titres ou une application de lecture peuvent utiliser.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -3767,7 +3767,7 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
     </message>
     <message>
         <source>This dictionary says its language is %1, not the language you are mining.</source>
-        <translation type="unfinished" />
+        <translation>Ce dictionnaire indique que sa langue est %1, et non votre langue d'extraction.</translation>
     </message>
     <message>
         <source>Choose Yomitan dictionary zips</source>
@@ -5190,7 +5190,7 @@ Aucun fichier sur le disque n'est supprimé.</translation>
     </message>
     <message>
         <source>Dialogue dash</source>
-        <translation type="unfinished" />
+        <translation>Tiret de dialogue</translation>
     </message>
     <message>
         <source>Presets</source>
@@ -5274,23 +5274,23 @@ Aucun fichier sur le disque n'est supprimé.</translation>
     </message>
     <message>
         <source>Regional Variety</source>
-        <translation type="unfinished" />
+        <translation>Variété régionale</translation>
     </message>
     <message>
         <source>Brazilian Portuguese</source>
-        <translation type="unfinished" />
+        <translation>Portugais brésilien</translation>
     </message>
     <message>
         <source>European Portuguese</source>
-        <translation type="unfinished" />
+        <translation>Portugais européen</translation>
     </message>
     <message>
         <source>Variety</source>
-        <translation type="unfinished" />
+        <translation>Variété linguistique</translation>
     </message>
     <message>
         <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
-        <translation type="unfinished" />
+        <translation>Quelle voix Google lit l'audio des mots et des phrases, et quelle liste de fréquence la configuration suggère.</translation>
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -5644,11 +5644,11 @@ Aucun fichier d'index n'est supprimé.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
-        <translation type="unfinished" />
+        <translation>Paquets ignorés par l'analyse des mots connus pour cette langue : %1. Modifiez-les dans Paramètres → Filtrage.</translation>
     </message>
     <message>
         <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
-        <translation type="unfinished" />
+        <translation>Tous les paquets sont analysés pour cette langue, y compris les paquets d'une autre langue écrite avec le même système d'écriture. Excluez-les dans Paramètres → Filtrage.</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -5865,27 +5865,27 @@ Mots à ajouter : %3. Continuer ?</translation>
     </message>
     <message>
         <source>First time mining this language</source>
-        <translation type="unfinished" />
+        <translation>Première extraction dans cette langue</translation>
     </message>
     <message>
         <source>You have not mined %1 before.</source>
-        <translation type="unfinished" />
+        <translation>Vous n'avez encore rien extrait en %1.</translation>
     </message>
     <message>
         <source>The known-words scan reads every deck that is not excluded, and it cannot tell apart languages that share a script: words in a ticked deck would not count as known in %1. Untick the decks that hold %1 cards.</source>
-        <translation type="unfinished" />
+        <translation>L'analyse des mots connus lit tous les paquets qui ne sont pas exclus, et elle ne fait pas la différence entre des langues qui partagent le même système d'écriture : les mots d'un paquet coché ne compteraient pas comme connus en %1. Décochez les paquets qui contiennent des cartes en %1.</translation>
     </message>
     <message>
         <source>Exclude ticked decks</source>
-        <translation type="unfinished" />
+        <translation>Exclure les paquets cochés</translation>
     </message>
     <message>
         <source>Set up resources…</source>
-        <translation type="unfinished" />
+        <translation>Configurer les ressources…</translation>
     </message>
     <message>
         <source>Close</source>
-        <translation type="unfinished">Fermer</translation>
+        <translation>Fermer</translation>
     </message>
 </context><context>
     <name>LogWidget</name>
@@ -6365,7 +6365,7 @@ Continuer ?</translation>
     </message>
     <message>
         <source>Audiobook Sync</source>
-        <translation type="unfinished" />
+        <translation>Synchronisation de livre audio</translation>
     </message>
     <message>
         <source>Single</source>
@@ -9454,11 +9454,11 @@ Vos ressources installées et votre thème sont conservés.</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished" />
+        <translation>Reculer d'une image</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished" />
+        <translation>Avancer d'une image</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
@@ -9902,19 +9902,19 @@ Vos ressources installées et votre thème sont conservés.</translation>
     </message>
     <message>
         <source>Download transcription engine</source>
-        <translation type="unfinished" />
+        <translation>Télécharger le moteur de transcription</translation>
     </message>
     <message>
         <source>Download the faster-whisper speech-to-text engine into Anki Miner's folder. Required before subtitle generation can run on a packaged install.</source>
-        <translation type="unfinished" />
+        <translation>Téléchargez le moteur de reconnaissance vocale faster-whisper dans le dossier d'Anki Miner. Nécessaire pour que la génération de sous-titres fonctionne sur une installation groupée.</translation>
     </message>
     <message>
         <source>Transcription engine</source>
-        <translation type="unfinished" />
+        <translation>Moteur de transcription</translation>
     </message>
     <message>
         <source>Speech-to-text engine (faster-whisper), about %1 MB, downloaded once.</source>
-        <translation type="unfinished" />
+        <translation>Moteur de reconnaissance vocale (faster-whisper), environ %1 Mo, téléchargé une seule fois.</translation>
     </message>
     <message>
         <source>ASR model</source>
@@ -10086,7 +10086,7 @@ Vos ressources installées et votre thème sont conservés.</translation>
     </message>
     <message>
         <source>Local transcription is not available for this build.</source>
-        <translation type="unfinished" />
+        <translation>La transcription locale n'est pas disponible pour cette version.</translation>
     </message>
     <message>
         <source>Silence removal is available.</source>

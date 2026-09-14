@@ -335,35 +335,35 @@
     </message>
     <message>
         <source>Part of Speech Field</source>
-        <translation type="unfinished" />
+        <translation>Bidang Kelas Kata</translation>
     </message>
     <message>
         <source>Stores the word's part of speech (noun, verb, adjective, adverb). Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Menyimpan kelas kata (nomina, verba, adjektiva, adverbia). Kosong = lewati.</translation>
     </message>
     <message>
         <source>Gender Field</source>
-        <translation type="unfinished" />
+        <translation>Bidang Gender</translation>
     </message>
     <message>
         <source>Stores a noun's grammatical gender. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Menyimpan gender gramatikal sebuah nomina. Kosong = lewati.</translation>
     </message>
     <message>
         <source>Article Field</source>
-        <translation type="unfinished" />
+        <translation>Bidang Kata Sandang</translation>
     </message>
     <message>
         <source>Stores the article that goes with a noun. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Menyimpan kata sandang yang menyertai nomina. Kosong = lewati.</translation>
     </message>
     <message>
         <source>Plural Field</source>
-        <translation type="unfinished" />
+        <translation>Bidang Bentuk Jamak</translation>
     </message>
     <message>
         <source>Stores a noun's plural form from the dictionary entry. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Menyimpan bentuk jamak nomina dari entri kamus. Kosong = lewati.</translation>
     </message>
     <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
@@ -773,15 +773,15 @@ Tetap lanjutkan?</translation>
     <name>AsrPackDownloadWorker</name>
     <message>
         <source>Transcription engine</source>
-        <translation type="unfinished" />
+        <translation>Mesin transkripsi</translation>
     </message>
     <message>
         <source>Downloading the transcription engine…</source>
-        <translation type="unfinished" />
+        <translation>Mengunduh mesin transkripsi…</translation>
     </message>
     <message>
         <source>Transcription engine installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>Mesin transkripsi berhasil dipasang.</translation>
     </message>
 </context><context>
     <name>AudioClipEditor</name>
@@ -1599,249 +1599,249 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <name>BookSyncTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Progres</translation>
+        <translation>Progres</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Selesai</translation>
+        <translation>Selesai</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Selesai: </translation>
+        <translation>Selesai: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Dilewati</translation>
+        <translation>Dilewati</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Dilewati: </translation>
+        <translation>Dilewati: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Batal</translation>
+        <translation>Batal</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Membatalkan…</translation>
+        <translation>Membatalkan…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Dibatalkan</translation>
+        <translation>Dibatalkan</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Gagal — lihat log</translation>
+        <translation>Gagal — lihat log</translation>
     </message>
     <message>
         <source>Finished with errors — see log</source>
-        <translation type="unfinished">Selesai dengan kesalahan — lihat log</translation>
+        <translation>Selesai dengan kesalahan — lihat log</translation>
     </message>
     <message>
         <source>Some audio files could not be synced.</source>
-        <translation type="unfinished" />
+        <translation>Beberapa berkas audio tidak dapat disinkronkan.</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) synced</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 berkas disinkronkan</translation>
     </message>
     <message>
         <source>Complete — %1 synced, %2 skipped</source>
-        <translation type="unfinished" />
+        <translation>Selesai — %1 disinkronkan, %2 dilewati</translation>
     </message>
     <message>
         <source>No subtitles written — all %1 skipped; see log.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada subtitel yang ditulis — semua %1 dilewati; lihat log.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
-        <translation type="unfinished">Pilih Folder Keluaran</translation>
+        <translation>Pilih Folder Keluaran</translation>
     </message>
     <message>
         <source>Next to the audio</source>
-        <translation type="unfinished" />
+        <translation>Di sebelah audio</translation>
     </message>
     <message>
         <source>Audiobook sync</source>
-        <translation type="unfinished" />
+        <translation>Sinkronisasi buku audio</translation>
     </message>
     <message>
         <source>Audiobook</source>
-        <translation type="unfinished" />
+        <translation>Buku Audio</translation>
     </message>
     <message>
         <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>
-        <translation type="unfinished">Transkripsi belum siap. Buka Pengaturan → Transkripsi &amp; Penyelarasan untuk menyelesaikan penyiapan.</translation>
+        <translation>Transkripsi belum siap. Buka Pengaturan → Transkripsi &amp; Penyelarasan untuk menyelesaikan penyiapan.</translation>
     </message>
     <message>
         <source>Transcribes the audiobook and times the book's own sentences to it, writing an .srt beside each audio file. A folder is read as one book in file-name order.</source>
-        <translation type="unfinished" />
+        <translation>Mentranskripsikan buku audio dan mengatur waktu kalimat-kalimat buku itu sendiri terhadapnya, menulis .srt di sebelah setiap berkas audio. Folder dibaca sebagai satu buku menurut urutan nama berkas.</translation>
     </message>
     <message>
         <source>Mode:</source>
-        <translation type="unfinished">Mode:</translation>
+        <translation>Mode:</translation>
     </message>
     <message>
         <source>Single File</source>
-        <translation type="unfinished">Berkas Tunggal</translation>
+        <translation>Berkas Tunggal</translation>
     </message>
     <message>
         <source>Sync one audio file to the book.</source>
-        <translation type="unfinished" />
+        <translation>Sinkronkan satu berkas audio dengan buku.</translation>
     </message>
     <message>
         <source>Folder</source>
-        <translation type="unfinished">Folder</translation>
+        <translation>Folder</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each.</source>
-        <translation type="unfinished" />
+        <translation>Setiap berkas audio dalam folder, menurut urutan nama berkas, masing-masing satu .srt.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
-        <translation type="unfinished" />
+        <translation>Berkas EPUB atau Teks:</translation>
     </message>
     <message>
         <source>Audio File:</source>
-        <translation type="unfinished">Berkas Audio:</translation>
+        <translation>Berkas Audio:</translation>
     </message>
     <message>
         <source>This field takes an audio file.</source>
-        <translation type="unfinished">Bidang ini menerima berkas audio.</translation>
+        <translation>Bidang ini menerima berkas audio.</translation>
     </message>
     <message>
         <source>Audio Folder:</source>
-        <translation type="unfinished" />
+        <translation>Folder Audio:</translation>
     </message>
     <message>
         <source>Book</source>
-        <translation type="unfinished" />
+        <translation>Buku</translation>
     </message>
     <message>
         <source>This field takes an .epub or .txt file.</source>
-        <translation type="unfinished" />
+        <translation>Bidang ini menerima berkas .epub atau .txt.</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">Keluaran</translation>
+        <translation>Keluaran</translation>
     </message>
     <message>
         <source>Each .srt is saved next to its audio file unless you choose a folder.</source>
-        <translation type="unfinished" />
+        <translation>Setiap .srt disimpan di sebelah berkas audionya kecuali Anda memilih folder.</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">Keluaran:</translation>
+        <translation>Keluaran:</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">Pilih Folder…</translation>
+        <translation>Pilih Folder…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">Setel Ulang</translation>
+        <translation>Setel Ulang</translation>
     </message>
     <message>
         <source>Overwrite existing SRT files</source>
-        <translation type="unfinished">Timpa berkas SRT yang ada</translation>
+        <translation>Timpa berkas SRT yang ada</translation>
     </message>
     <message>
         <source>When unchecked, audio files that already have an .srt file are skipped, not overwritten.</source>
-        <translation type="unfinished" />
+        <translation>Jika tidak dicentang, berkas audio yang sudah memiliki berkas .srt akan dilewati, bukan ditimpa.</translation>
     </message>
     <message>
         <source>Sync Audiobook</source>
-        <translation type="unfinished" />
+        <translation>Sinkronkan Buku Audio</translation>
     </message>
     <message>
         <source>Choose the book (.epub or .txt) before syncing.</source>
-        <translation type="unfinished" />
+        <translation>Pilih buku (.epub atau .txt) sebelum menyinkronkan.</translation>
     </message>
     <message>
         <source>Pick an .epub or .txt file for the book.</source>
-        <translation type="unfinished" />
+        <translation>Pilih berkas .epub atau .txt untuk buku.</translation>
     </message>
     <message>
         <source>That book file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Berkas buku tersebut sudah tidak ada.</translation>
     </message>
     <message>
         <source>Choose an audio file before syncing.</source>
-        <translation type="unfinished" />
+        <translation>Pilih berkas audio sebelum menyinkronkan.</translation>
     </message>
     <message>
         <source>That audio file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Berkas audio tersebut sudah tidak ada.</translation>
     </message>
     <message>
         <source>Choose a folder before syncing.</source>
-        <translation type="unfinished" />
+        <translation>Pilih folder sebelum menyinkronkan.</translation>
     </message>
     <message>
         <source>That folder no longer exists.</source>
-        <translation type="unfinished">Folder tersebut sudah tidak ada.</translation>
+        <translation>Folder tersebut sudah tidak ada.</translation>
     </message>
     <message>
         <source>No audio files were found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada berkas audio yang ditemukan di folder tersebut.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
-        <translation type="unfinished">Folder itu tidak dapat dipindai.</translation>
+        <translation>Folder itu tidak dapat dipindai.</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
-        <translation type="unfinished">Folder keluaran tidak dapat ditulisi.</translation>
+        <translation>Folder keluaran tidak dapat ditulisi.</translation>
     </message>
     <message>
         <source>The transcription model %1 is not ready.</source>
-        <translation type="unfinished">Model transkripsi %1 belum siap.</translation>
+        <translation>Model transkripsi %1 belum siap.</translation>
     </message>
     <message>
         <source>Open Transcription Settings</source>
-        <translation type="unfinished">Buka Pengaturan Transkripsi</translation>
+        <translation>Buka Pengaturan Transkripsi</translation>
     </message>
     <message>
         <source>Book: %1</source>
-        <translation type="unfinished" />
+        <translation>Buku: %1</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Menyinkronkan berkas %1 dari %2</translation>
     </message>
 </context><context>
     <name>BookSyncWorker</name>
     <message>
         <source>Skipped, exists</source>
-        <translation type="unfinished">Dilewati, sudah ada</translation>
+        <translation>Dilewati, sudah ada</translation>
     </message>
     <message>
         <source>Extracting audio: %1</source>
-        <translation type="unfinished">Mengekstrak audio: %1</translation>
+        <translation>Mengekstrak audio: %1</translation>
     </message>
     <message>
         <source>Transcribing: %1%</source>
-        <translation type="unfinished">Mentranskripsikan: %1%</translation>
+        <translation>Mentranskripsikan: %1%</translation>
     </message>
     <message>
         <source>Aligning to the book…</source>
-        <translation type="unfinished" />
+        <translation>Menyelaraskan dengan buku…</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
-        <translation type="unfinished" />
+        <translation>%1 kalimat diberi waktu, %2 kalimat di sela-selanya tidak memiliki audio</translation>
     </message>
     <message>
         <source>No speech detected</source>
-        <translation type="unfinished">Tidak ada ucapan yang terdeteksi</translation>
+        <translation>Tidak ada ucapan yang terdeteksi</translation>
     </message>
     <message>
         <source>Nothing in %1 matched the book</source>
-        <translation type="unfinished" />
+        <translation>Tidak ada apa pun dalam %1 yang cocok dengan buku</translation>
     </message>
     <message>
         <source>Audio extraction failed for %1</source>
-        <translation type="unfinished">Ekstraksi audio gagal untuk %1</translation>
+        <translation>Ekstraksi audio gagal untuk %1</translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -2079,7 +2079,7 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Mine another language</source>
-        <translation type="unfinished" />
+        <translation>Mining bahasa lain</translation>
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
@@ -2487,11 +2487,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
-        <translation type="unfinished" />
+        <translation>Sinkronkan buku audio dengan EPUB-nya</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitles or a reader can use.</source>
-        <translation type="unfinished" />
+        <translation>Transkripsikan buku audio dan atur waktu kalimat buku itu sendiri terhadapnya, lalu tulis .srt yang dapat digunakan tab Buku Audio, Bacaan -&gt; Subtitel, atau pembaca lain.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -3765,7 +3765,7 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
     </message>
     <message>
         <source>This dictionary says its language is %1, not the language you are mining.</source>
-        <translation type="unfinished" />
+        <translation>Kamus ini menyatakan bahasanya adalah %1, bukan bahasa yang sedang Anda mining.</translation>
     </message>
     <message>
         <source>Choose Yomitan dictionary zips</source>
@@ -5177,7 +5177,7 @@ Tidak ada berkas di disk yang dihapus.</translation>
     </message>
     <message>
         <source>Dialogue dash</source>
-        <translation type="unfinished" />
+        <translation>Tanda pisah dialog</translation>
     </message>
     <message>
         <source>Presets</source>
@@ -5261,23 +5261,23 @@ Tidak ada berkas di disk yang dihapus.</translation>
     </message>
     <message>
         <source>Regional Variety</source>
-        <translation type="unfinished" />
+        <translation>Ragam Regional</translation>
     </message>
     <message>
         <source>Brazilian Portuguese</source>
-        <translation type="unfinished" />
+        <translation>Portugis Brasil</translation>
     </message>
     <message>
         <source>European Portuguese</source>
-        <translation type="unfinished" />
+        <translation>Portugis Eropa</translation>
     </message>
     <message>
         <source>Variety</source>
-        <translation type="unfinished" />
+        <translation>Ragam</translation>
     </message>
     <message>
         <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
-        <translation type="unfinished" />
+        <translation>Menentukan suara Google mana yang membacakan audio kata dan kalimat, serta daftar frekuensi mana yang disarankan oleh penyiapan.</translation>
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -5631,11 +5631,11 @@ Tidak ada berkas indeks yang dihapus.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
-        <translation type="unfinished" />
+        <translation>Dek yang dilewati pemindaian kata yang dikenal untuk bahasa ini: %1. Ubah di Pengaturan → Penyaringan.</translation>
     </message>
     <message>
         <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
-        <translation type="unfinished" />
+        <translation>Setiap dek dipindai untuk bahasa ini, termasuk dek dalam bahasa lain yang ditulis dengan aksara yang sama. Kecualikan dek tersebut di Pengaturan → Penyaringan.</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -5851,27 +5851,27 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
     </message>
     <message>
         <source>First time mining this language</source>
-        <translation type="unfinished" />
+        <translation>Pertama kali mining bahasa ini</translation>
     </message>
     <message>
         <source>You have not mined %1 before.</source>
-        <translation type="unfinished" />
+        <translation>Anda belum pernah mining %1.</translation>
     </message>
     <message>
         <source>The known-words scan reads every deck that is not excluded, and it cannot tell apart languages that share a script: words in a ticked deck would not count as known in %1. Untick the decks that hold %1 cards.</source>
-        <translation type="unfinished" />
+        <translation>Pemindaian kata yang dikenal membaca setiap dek yang tidak dikecualikan, dan tidak dapat membedakan bahasa yang berbagi aksara yang sama: kata dalam dek yang dicentang tidak akan dihitung sebagai dikenal dalam %1. Hapus centang pada dek yang berisi kartu %1.</translation>
     </message>
     <message>
         <source>Exclude ticked decks</source>
-        <translation type="unfinished" />
+        <translation>Kecualikan dek yang dicentang</translation>
     </message>
     <message>
         <source>Set up resources…</source>
-        <translation type="unfinished" />
+        <translation>Siapkan sumber daya…</translation>
     </message>
     <message>
         <source>Close</source>
-        <translation type="unfinished">Tutup</translation>
+        <translation>Tutup</translation>
     </message>
 </context><context>
     <name>LogWidget</name>
@@ -6351,7 +6351,7 @@ Lanjutkan?</translation>
     </message>
     <message>
         <source>Audiobook Sync</source>
-        <translation type="unfinished" />
+        <translation>Sinkronisasi Buku Audio</translation>
     </message>
     <message>
         <source>Single</source>
@@ -9437,11 +9437,11 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished" />
+        <translation>Mundur satu bingkai</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished" />
+        <translation>Maju satu bingkai</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
@@ -9885,19 +9885,19 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     </message>
     <message>
         <source>Download transcription engine</source>
-        <translation type="unfinished" />
+        <translation>Unduh mesin transkripsi</translation>
     </message>
     <message>
         <source>Download the faster-whisper speech-to-text engine into Anki Miner's folder. Required before subtitle generation can run on a packaged install.</source>
-        <translation type="unfinished" />
+        <translation>Unduh mesin ucapan ke teks faster-whisper ke folder Anki Miner. Diperlukan sebelum pembuatan subtitel dapat berjalan pada instalasi bundel.</translation>
     </message>
     <message>
         <source>Transcription engine</source>
-        <translation type="unfinished" />
+        <translation>Mesin transkripsi</translation>
     </message>
     <message>
         <source>Speech-to-text engine (faster-whisper), about %1 MB, downloaded once.</source>
-        <translation type="unfinished" />
+        <translation>Mesin ucapan ke teks (faster-whisper), sekitar %1 MB, diunduh sekali.</translation>
     </message>
     <message>
         <source>ASR model</source>
@@ -10069,7 +10069,7 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     </message>
     <message>
         <source>Local transcription is not available for this build.</source>
-        <translation type="unfinished" />
+        <translation>Transkripsi lokal tidak tersedia di build ini.</translation>
     </message>
     <message>
         <source>Silence removal is available.</source>

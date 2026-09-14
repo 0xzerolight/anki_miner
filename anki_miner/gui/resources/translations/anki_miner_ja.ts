@@ -335,35 +335,35 @@
     </message>
     <message>
         <source>Part of Speech Field</source>
-        <translation type="unfinished" />
+        <translation>品詞フィールド</translation>
     </message>
     <message>
         <source>Stores the word's part of speech (noun, verb, adjective, adverb). Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>単語の品詞（名詞、動詞、形容詞、副詞）を格納します。空欄 = スキップ。</translation>
     </message>
     <message>
         <source>Gender Field</source>
-        <translation type="unfinished" />
+        <translation>性フィールド</translation>
     </message>
     <message>
         <source>Stores a noun's grammatical gender. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>名詞の文法上の性を格納します。空欄 = スキップ。</translation>
     </message>
     <message>
         <source>Article Field</source>
-        <translation type="unfinished" />
+        <translation>冠詞フィールド</translation>
     </message>
     <message>
         <source>Stores the article that goes with a noun. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>名詞に伴う冠詞を格納します。空欄 = スキップ。</translation>
     </message>
     <message>
         <source>Plural Field</source>
-        <translation type="unfinished" />
+        <translation>複数形フィールド</translation>
     </message>
     <message>
         <source>Stores a noun's plural form from the dictionary entry. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>辞書項目から得られる名詞の複数形を格納します。空欄 = スキップ。</translation>
     </message>
     <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
@@ -773,15 +773,15 @@ Continue anyway?</source>
     <name>AsrPackDownloadWorker</name>
     <message>
         <source>Transcription engine</source>
-        <translation type="unfinished" />
+        <translation>文字起こしエンジン</translation>
     </message>
     <message>
         <source>Downloading the transcription engine…</source>
-        <translation type="unfinished" />
+        <translation>文字起こしエンジンをダウンロード中…</translation>
     </message>
     <message>
         <source>Transcription engine installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>文字起こしエンジンのインストールが完了しました。</translation>
     </message>
 </context><context>
     <name>AudioClipEditor</name>
@@ -1599,249 +1599,249 @@ No index files are deleted.</source>
     <name>BookSyncTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">進捗</translation>
+        <translation>進捗</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">完了</translation>
+        <translation>完了</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">完了: </translation>
+        <translation>完了: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">スキップ</translation>
+        <translation>スキップ</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">スキップ: </translation>
+        <translation>スキップ: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">キャンセル</translation>
+        <translation>キャンセル</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">キャンセル中…</translation>
+        <translation>キャンセル中…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">キャンセルされました</translation>
+        <translation>キャンセルされました</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">失敗しました — ログを確認してください</translation>
+        <translation>失敗しました — ログを確認してください</translation>
     </message>
     <message>
         <source>Finished with errors — see log</source>
-        <translation type="unfinished">エラーが発生して完了しました — ログを確認してください</translation>
+        <translation>エラーが発生して完了しました — ログを確認してください</translation>
     </message>
     <message>
         <source>Some audio files could not be synced.</source>
-        <translation type="unfinished" />
+        <translation>一部の音声ファイルを同期できませんでした。</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) synced</source>
-        <translation type="unfinished" />
+        <translation>完了 — %1 個のファイルを同期しました</translation>
     </message>
     <message>
         <source>Complete — %1 synced, %2 skipped</source>
-        <translation type="unfinished" />
+        <translation>完了 — %1 個を同期、%2 個をスキップしました</translation>
     </message>
     <message>
         <source>No subtitles written — all %1 skipped; see log.</source>
-        <translation type="unfinished" />
+        <translation>字幕は書き出されませんでした — %1 件すべてスキップされました。ログを確認してください。</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
-        <translation type="unfinished">出力フォルダを選択</translation>
+        <translation>出力フォルダを選択</translation>
     </message>
     <message>
         <source>Next to the audio</source>
-        <translation type="unfinished" />
+        <translation>音声ファイルの隣</translation>
     </message>
     <message>
         <source>Audiobook sync</source>
-        <translation type="unfinished" />
+        <translation>オーディオブック同期</translation>
     </message>
     <message>
         <source>Audiobook</source>
-        <translation type="unfinished" />
+        <translation>オーディオブック</translation>
     </message>
     <message>
         <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>
-        <translation type="unfinished">文字起こしの準備ができていません。設定 → 文字起こしとアラインメントを開き、セットアップを完了してください。</translation>
+        <translation>文字起こしの準備ができていません。設定 → 文字起こしとアラインメントを開き、セットアップを完了してください。</translation>
     </message>
     <message>
         <source>Transcribes the audiobook and times the book's own sentences to it, writing an .srt beside each audio file. A folder is read as one book in file-name order.</source>
-        <translation type="unfinished" />
+        <translation>オーディオブックを文字起こしし、書籍自体の文をそれに合わせてタイミング調整して、各音声ファイルの隣に .srt を書き出します。フォルダを指定した場合は、ファイル名順に1つの書籍として読み込まれます。</translation>
     </message>
     <message>
         <source>Mode:</source>
-        <translation type="unfinished">モード:</translation>
+        <translation>モード:</translation>
     </message>
     <message>
         <source>Single File</source>
-        <translation type="unfinished">単一ファイル</translation>
+        <translation>単一ファイル</translation>
     </message>
     <message>
         <source>Sync one audio file to the book.</source>
-        <translation type="unfinished" />
+        <translation>音声ファイル1つを書籍に同期します。</translation>
     </message>
     <message>
         <source>Folder</source>
-        <translation type="unfinished">フォルダ</translation>
+        <translation>フォルダ</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each.</source>
-        <translation type="unfinished" />
+        <translation>フォルダ内のすべての音声ファイルをファイル名順に処理し、それぞれに .srt を1つずつ書き出します。</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
-        <translation type="unfinished" />
+        <translation>EPUB またはテキストファイル:</translation>
     </message>
     <message>
         <source>Audio File:</source>
-        <translation type="unfinished">音声ファイル:</translation>
+        <translation>音声ファイル:</translation>
     </message>
     <message>
         <source>This field takes an audio file.</source>
-        <translation type="unfinished">このフィールドには音声ファイルを指定します。</translation>
+        <translation>このフィールドには音声ファイルを指定します。</translation>
     </message>
     <message>
         <source>Audio Folder:</source>
-        <translation type="unfinished" />
+        <translation>音声フォルダ:</translation>
     </message>
     <message>
         <source>Book</source>
-        <translation type="unfinished" />
+        <translation>書籍</translation>
     </message>
     <message>
         <source>This field takes an .epub or .txt file.</source>
-        <translation type="unfinished" />
+        <translation>このフィールドには .epub または .txt ファイルを指定します。</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">出力</translation>
+        <translation>出力</translation>
     </message>
     <message>
         <source>Each .srt is saved next to its audio file unless you choose a folder.</source>
-        <translation type="unfinished" />
+        <translation>フォルダを選択しない限り、各 .srt は音声ファイルの隣に保存されます。</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">出力:</translation>
+        <translation>出力:</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">フォルダを選択…</translation>
+        <translation>フォルダを選択…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">リセット</translation>
+        <translation>リセット</translation>
     </message>
     <message>
         <source>Overwrite existing SRT files</source>
-        <translation type="unfinished">既存の SRT ファイルを上書きする</translation>
+        <translation>既存の SRT ファイルを上書きする</translation>
     </message>
     <message>
         <source>When unchecked, audio files that already have an .srt file are skipped, not overwritten.</source>
-        <translation type="unfinished" />
+        <translation>チェックを外すと、既に .srt ファイルが存在する音声ファイルは上書きされずにスキップされます。</translation>
     </message>
     <message>
         <source>Sync Audiobook</source>
-        <translation type="unfinished" />
+        <translation>オーディオブックを同期</translation>
     </message>
     <message>
         <source>Choose the book (.epub or .txt) before syncing.</source>
-        <translation type="unfinished" />
+        <translation>同期する前に書籍（.epub または .txt）を選択してください。</translation>
     </message>
     <message>
         <source>Pick an .epub or .txt file for the book.</source>
-        <translation type="unfinished" />
+        <translation>書籍として .epub または .txt ファイルを選択してください。</translation>
     </message>
     <message>
         <source>That book file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>その書籍ファイルは存在しなくなっています。</translation>
     </message>
     <message>
         <source>Choose an audio file before syncing.</source>
-        <translation type="unfinished" />
+        <translation>同期する前に音声ファイルを選択してください。</translation>
     </message>
     <message>
         <source>That audio file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>その音声ファイルは存在しなくなっています。</translation>
     </message>
     <message>
         <source>Choose a folder before syncing.</source>
-        <translation type="unfinished" />
+        <translation>同期する前にフォルダを選択してください。</translation>
     </message>
     <message>
         <source>That folder no longer exists.</source>
-        <translation type="unfinished">そのフォルダは存在しなくなっています。</translation>
+        <translation>そのフォルダは存在しなくなっています。</translation>
     </message>
     <message>
         <source>No audio files were found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>そのフォルダに音声ファイルが見つかりませんでした。</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
-        <translation type="unfinished">そのフォルダをスキャンできませんでした。</translation>
+        <translation>そのフォルダをスキャンできませんでした。</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
-        <translation type="unfinished">出力フォルダに書き込めません。</translation>
+        <translation>出力フォルダに書き込めません。</translation>
     </message>
     <message>
         <source>The transcription model %1 is not ready.</source>
-        <translation type="unfinished">文字起こしモデル %1 の準備ができていません。</translation>
+        <translation>文字起こしモデル %1 の準備ができていません。</translation>
     </message>
     <message>
         <source>Open Transcription Settings</source>
-        <translation type="unfinished">文字起こし設定を開く</translation>
+        <translation>文字起こし設定を開く</translation>
     </message>
     <message>
         <source>Book: %1</source>
-        <translation type="unfinished" />
+        <translation>書籍: %1</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>%2 件中 %1 件目のファイルを同期中</translation>
     </message>
 </context><context>
     <name>BookSyncWorker</name>
     <message>
         <source>Skipped, exists</source>
-        <translation type="unfinished">スキップしました（既に存在）</translation>
+        <translation>スキップしました（既に存在）</translation>
     </message>
     <message>
         <source>Extracting audio: %1</source>
-        <translation type="unfinished">音声を抽出中: %1</translation>
+        <translation>音声を抽出中: %1</translation>
     </message>
     <message>
         <source>Transcribing: %1%</source>
-        <translation type="unfinished">文字起こし中: %1%</translation>
+        <translation>文字起こし中: %1%</translation>
     </message>
     <message>
         <source>Aligning to the book…</source>
-        <translation type="unfinished" />
+        <translation>書籍とのアラインメント中…</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
-        <translation type="unfinished" />
+        <translation>%1 文にタイミングを設定し、間の %2 文には音声がありませんでした</translation>
     </message>
     <message>
         <source>No speech detected</source>
-        <translation type="unfinished">音声が検出されませんでした</translation>
+        <translation>音声が検出されませんでした</translation>
     </message>
     <message>
         <source>Nothing in %1 matched the book</source>
-        <translation type="unfinished" />
+        <translation>%1 に書籍と一致する部分が見つかりませんでした</translation>
     </message>
     <message>
         <source>Audio extraction failed for %1</source>
-        <translation type="unfinished">%1 の音声抽出に失敗しました</translation>
+        <translation>%1 の音声抽出に失敗しました</translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -2079,7 +2079,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine another language</source>
-        <translation type="unfinished" />
+        <translation>別の言語をマイニング</translation>
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
@@ -2487,11 +2487,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
-        <translation type="unfinished" />
+        <translation>オーディオブックを EPUB に同期</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitles or a reader can use.</source>
-        <translation type="unfinished" />
+        <translation>オーディオブックを文字起こしし、書籍自体の文をそれに合わせてタイミング調整して、「オーディオブック」タブ、読み -&gt; 字幕、またはリーダーアプリで使える .srt を書き出します。</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -3765,7 +3765,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>This dictionary says its language is %1, not the language you are mining.</source>
-        <translation type="unfinished" />
+        <translation>この辞書の言語は %1 と記載されており、マイニング中の言語ではありません。</translation>
     </message>
     <message>
         <source>Choose Yomitan dictionary zips</source>
@@ -5177,7 +5177,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Dialogue dash</source>
-        <translation type="unfinished" />
+        <translation>セリフのダッシュ</translation>
     </message>
     <message>
         <source>Presets</source>
@@ -5261,23 +5261,23 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Regional Variety</source>
-        <translation type="unfinished" />
+        <translation>地域変種</translation>
     </message>
     <message>
         <source>Brazilian Portuguese</source>
-        <translation type="unfinished" />
+        <translation>ブラジルポルトガル語</translation>
     </message>
     <message>
         <source>European Portuguese</source>
-        <translation type="unfinished" />
+        <translation>ヨーロッパポルトガル語</translation>
     </message>
     <message>
         <source>Variety</source>
-        <translation type="unfinished" />
+        <translation>変種</translation>
     </message>
     <message>
         <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
-        <translation type="unfinished" />
+        <translation>選んだ変種によって、単語・文の音声を読み上げる Google の声と、セットアップが提案する頻度リストが決まります。</translation>
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -5631,11 +5631,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
-        <translation type="unfinished" />
+        <translation>この言語の既知単語スキャンが除外するデッキ: %1。設定 → フィルタリングで変更できます。</translation>
     </message>
     <message>
         <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
-        <translation type="unfinished" />
+        <translation>この言語では、同じ文字体系で書かれた別言語のデッキも含め、すべてのデッキがスキャンされます。設定 → フィルタリングで除外してください。</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -5851,27 +5851,27 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>First time mining this language</source>
-        <translation type="unfinished" />
+        <translation>この言語のマイニングは初めてです</translation>
     </message>
     <message>
         <source>You have not mined %1 before.</source>
-        <translation type="unfinished" />
+        <translation>%1 はこれまでマイニングしていません。</translation>
     </message>
     <message>
         <source>The known-words scan reads every deck that is not excluded, and it cannot tell apart languages that share a script: words in a ticked deck would not count as known in %1. Untick the decks that hold %1 cards.</source>
-        <translation type="unfinished" />
+        <translation>既知単語のスキャンは除外されていないすべてのデッキを読み取りますが、同じ文字体系を使う言語同士は区別できません。チェックしたデッキの単語は %1 の既知単語として数えられません。%1 のカードが入っているデッキはチェックを外してください。</translation>
     </message>
     <message>
         <source>Exclude ticked decks</source>
-        <translation type="unfinished" />
+        <translation>チェックしたデッキを除外</translation>
     </message>
     <message>
         <source>Set up resources…</source>
-        <translation type="unfinished" />
+        <translation>リソースを設定…</translation>
     </message>
     <message>
         <source>Close</source>
-        <translation type="unfinished">閉じる</translation>
+        <translation>閉じる</translation>
     </message>
 </context><context>
     <name>LogWidget</name>
@@ -6351,7 +6351,7 @@ Continue?</source>
     </message>
     <message>
         <source>Audiobook Sync</source>
-        <translation type="unfinished" />
+        <translation>オーディオブック同期</translation>
     </message>
     <message>
         <source>Single</source>
@@ -9437,11 +9437,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished" />
+        <translation>1フレーム戻る</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished" />
+        <translation>1フレーム進む</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
@@ -9885,19 +9885,19 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Download transcription engine</source>
-        <translation type="unfinished" />
+        <translation>文字起こしエンジンをダウンロード</translation>
     </message>
     <message>
         <source>Download the faster-whisper speech-to-text engine into Anki Miner's folder. Required before subtitle generation can run on a packaged install.</source>
-        <translation type="unfinished" />
+        <translation>faster-whisper 音声認識エンジンを Anki Miner のフォルダにダウンロードします。バンドル版インストールで字幕生成を実行するには、事前にこれが必要です。</translation>
     </message>
     <message>
         <source>Transcription engine</source>
-        <translation type="unfinished" />
+        <translation>文字起こしエンジン</translation>
     </message>
     <message>
         <source>Speech-to-text engine (faster-whisper), about %1 MB, downloaded once.</source>
-        <translation type="unfinished" />
+        <translation>音声認識エンジン（faster-whisper）、約 %1 MB、1回だけダウンロードされます。</translation>
     </message>
     <message>
         <source>ASR model</source>
@@ -10069,7 +10069,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Local transcription is not available for this build.</source>
-        <translation type="unfinished" />
+        <translation>このビルドではローカルでの文字起こしは利用できません。</translation>
     </message>
     <message>
         <source>Silence removal is available.</source>

@@ -335,35 +335,35 @@
     </message>
     <message>
         <source>Part of Speech Field</source>
-        <translation type="unfinished" />
+        <translation>詞性欄位</translation>
     </message>
     <message>
         <source>Stores the word's part of speech (noun, verb, adjective, adverb). Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>儲存單字的詞性（名詞、動詞、形容詞、副詞）。留空＝略過。</translation>
     </message>
     <message>
         <source>Gender Field</source>
-        <translation type="unfinished" />
+        <translation>性別欄位</translation>
     </message>
     <message>
         <source>Stores a noun's grammatical gender. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>儲存名詞的語法性別。留空＝略過。</translation>
     </message>
     <message>
         <source>Article Field</source>
-        <translation type="unfinished" />
+        <translation>冠詞欄位</translation>
     </message>
     <message>
         <source>Stores the article that goes with a noun. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>儲存與名詞搭配的冠詞。留空＝略過。</translation>
     </message>
     <message>
         <source>Plural Field</source>
-        <translation type="unfinished" />
+        <translation>複數欄位</translation>
     </message>
     <message>
         <source>Stores a noun's plural form from the dictionary entry. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>儲存字典詞條中名詞的複數形。留空＝略過。</translation>
     </message>
     <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
@@ -773,15 +773,15 @@ Continue anyway?</source>
     <name>AsrPackDownloadWorker</name>
     <message>
         <source>Transcription engine</source>
-        <translation type="unfinished" />
+        <translation>轉錄引擎</translation>
     </message>
     <message>
         <source>Downloading the transcription engine…</source>
-        <translation type="unfinished" />
+        <translation>正在下載轉錄引擎…</translation>
     </message>
     <message>
         <source>Transcription engine installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>轉錄引擎已成功安裝。</translation>
     </message>
 </context><context>
     <name>AudioClipEditor</name>
@@ -1599,249 +1599,249 @@ No index files are deleted.</source>
     <name>BookSyncTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">進度</translation>
+        <translation>進度</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">完成</translation>
+        <translation>完成</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">完成：</translation>
+        <translation>完成：</translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">已略過</translation>
+        <translation>已略過</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">已略過：</translation>
+        <translation>已略過：</translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">取消</translation>
+        <translation>取消</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">取消中……</translation>
+        <translation>取消中……</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">已取消</translation>
+        <translation>已取消</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">失敗 — 請查看日誌</translation>
+        <translation>失敗 — 請查看日誌</translation>
     </message>
     <message>
         <source>Finished with errors — see log</source>
-        <translation type="unfinished">完成時發生錯誤 — 請查看日誌</translation>
+        <translation>完成時發生錯誤 — 請查看日誌</translation>
     </message>
     <message>
         <source>Some audio files could not be synced.</source>
-        <translation type="unfinished" />
+        <translation>部分音訊檔案無法同步。</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) synced</source>
-        <translation type="unfinished" />
+        <translation>完成 — 已同步 %1 個檔案</translation>
     </message>
     <message>
         <source>Complete — %1 synced, %2 skipped</source>
-        <translation type="unfinished" />
+        <translation>完成 — 已同步 %1 個，已略過 %2 個</translation>
     </message>
     <message>
         <source>No subtitles written — all %1 skipped; see log.</source>
-        <translation type="unfinished" />
+        <translation>未寫入任何字幕 — 全部 %1 個已略過；請查看日誌。</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
-        <translation type="unfinished">選擇輸出資料夾</translation>
+        <translation>選擇輸出資料夾</translation>
     </message>
     <message>
         <source>Next to the audio</source>
-        <translation type="unfinished" />
+        <translation>與音訊檔案同一位置</translation>
     </message>
     <message>
         <source>Audiobook sync</source>
-        <translation type="unfinished" />
+        <translation>有聲書同步</translation>
     </message>
     <message>
         <source>Audiobook</source>
-        <translation type="unfinished" />
+        <translation>有聲書</translation>
     </message>
     <message>
         <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>
-        <translation type="unfinished">轉錄尚未就緒。請開啟「設定」→「轉錄與對齊」以完成設定。</translation>
+        <translation>轉錄尚未就緒。請開啟「設定」→「轉錄與對齊」以完成設定。</translation>
     </message>
     <message>
         <source>Transcribes the audiobook and times the book's own sentences to it, writing an .srt beside each audio file. A folder is read as one book in file-name order.</source>
-        <translation type="unfinished" />
+        <translation>轉錄有聲書並將書籍本身的句子計時對應到其中，在每個音訊檔案旁寫入 .srt。資料夾會依檔名順序視為一本書。</translation>
     </message>
     <message>
         <source>Mode:</source>
-        <translation type="unfinished">模式：</translation>
+        <translation>模式：</translation>
     </message>
     <message>
         <source>Single File</source>
-        <translation type="unfinished">單一檔案</translation>
+        <translation>單一檔案</translation>
     </message>
     <message>
         <source>Sync one audio file to the book.</source>
-        <translation type="unfinished" />
+        <translation>將一個音訊檔案與書籍同步。</translation>
     </message>
     <message>
         <source>Folder</source>
-        <translation type="unfinished">資料夾</translation>
+        <translation>資料夾</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each.</source>
-        <translation type="unfinished" />
+        <translation>資料夾中的每個音訊檔案依檔名順序處理，各產生一個 .srt。</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
-        <translation type="unfinished" />
+        <translation>EPUB 或文字檔：</translation>
     </message>
     <message>
         <source>Audio File:</source>
-        <translation type="unfinished">音訊檔案：</translation>
+        <translation>音訊檔案：</translation>
     </message>
     <message>
         <source>This field takes an audio file.</source>
-        <translation type="unfinished">此欄位接受音訊檔案。</translation>
+        <translation>此欄位接受音訊檔案。</translation>
     </message>
     <message>
         <source>Audio Folder:</source>
-        <translation type="unfinished" />
+        <translation>音訊資料夾：</translation>
     </message>
     <message>
         <source>Book</source>
-        <translation type="unfinished" />
+        <translation>書籍</translation>
     </message>
     <message>
         <source>This field takes an .epub or .txt file.</source>
-        <translation type="unfinished" />
+        <translation>此欄位接受 .epub 或 .txt 檔案。</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">輸出</translation>
+        <translation>輸出</translation>
     </message>
     <message>
         <source>Each .srt is saved next to its audio file unless you choose a folder.</source>
-        <translation type="unfinished" />
+        <translation>除非您選擇資料夾，否則每個 .srt 都會儲存在其音訊檔案旁。</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">輸出：</translation>
+        <translation>輸出：</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">選擇資料夾…</translation>
+        <translation>選擇資料夾…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">重設</translation>
+        <translation>重設</translation>
     </message>
     <message>
         <source>Overwrite existing SRT files</source>
-        <translation type="unfinished">覆寫現有的 SRT 檔案</translation>
+        <translation>覆寫現有的 SRT 檔案</translation>
     </message>
     <message>
         <source>When unchecked, audio files that already have an .srt file are skipped, not overwritten.</source>
-        <translation type="unfinished" />
+        <translation>取消勾選時，已有 .srt 檔案的音訊檔案會被略過，不會被覆寫。</translation>
     </message>
     <message>
         <source>Sync Audiobook</source>
-        <translation type="unfinished" />
+        <translation>同步有聲書</translation>
     </message>
     <message>
         <source>Choose the book (.epub or .txt) before syncing.</source>
-        <translation type="unfinished" />
+        <translation>請在同步前選擇書籍（.epub 或 .txt）。</translation>
     </message>
     <message>
         <source>Pick an .epub or .txt file for the book.</source>
-        <translation type="unfinished" />
+        <translation>為書籍選擇 .epub 或 .txt 檔案。</translation>
     </message>
     <message>
         <source>That book file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>該書籍檔案已不存在。</translation>
     </message>
     <message>
         <source>Choose an audio file before syncing.</source>
-        <translation type="unfinished" />
+        <translation>請在同步前選擇音訊檔案。</translation>
     </message>
     <message>
         <source>That audio file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>該音訊檔案已不存在。</translation>
     </message>
     <message>
         <source>Choose a folder before syncing.</source>
-        <translation type="unfinished" />
+        <translation>請在同步前選擇資料夾。</translation>
     </message>
     <message>
         <source>That folder no longer exists.</source>
-        <translation type="unfinished">該資料夾已不存在。</translation>
+        <translation>該資料夾已不存在。</translation>
     </message>
     <message>
         <source>No audio files were found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>該資料夾中找不到音訊檔案。</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
-        <translation type="unfinished">無法掃描該資料夾。</translation>
+        <translation>無法掃描該資料夾。</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
-        <translation type="unfinished">輸出資料夾無法寫入。</translation>
+        <translation>輸出資料夾無法寫入。</translation>
     </message>
     <message>
         <source>The transcription model %1 is not ready.</source>
-        <translation type="unfinished">轉錄模型 %1 尚未就緒。</translation>
+        <translation>轉錄模型 %1 尚未就緒。</translation>
     </message>
     <message>
         <source>Open Transcription Settings</source>
-        <translation type="unfinished">開啟轉錄設定</translation>
+        <translation>開啟轉錄設定</translation>
     </message>
     <message>
         <source>Book: %1</source>
-        <translation type="unfinished" />
+        <translation>書籍：%1</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>正在同步第 %1 個檔案，共 %2 個</translation>
     </message>
 </context><context>
     <name>BookSyncWorker</name>
     <message>
         <source>Skipped, exists</source>
-        <translation type="unfinished">已略過，已存在</translation>
+        <translation>已略過，已存在</translation>
     </message>
     <message>
         <source>Extracting audio: %1</source>
-        <translation type="unfinished">正在擷取音訊：%1</translation>
+        <translation>正在擷取音訊：%1</translation>
     </message>
     <message>
         <source>Transcribing: %1%</source>
-        <translation type="unfinished">正在轉錄：%1%</translation>
+        <translation>正在轉錄：%1%</translation>
     </message>
     <message>
         <source>Aligning to the book…</source>
-        <translation type="unfinished" />
+        <translation>正在與書籍對齊…</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
-        <translation type="unfinished" />
+        <translation>已為 %1 句計時，其間 %2 句沒有音訊</translation>
     </message>
     <message>
         <source>No speech detected</source>
-        <translation type="unfinished">未偵測到語音</translation>
+        <translation>未偵測到語音</translation>
     </message>
     <message>
         <source>Nothing in %1 matched the book</source>
-        <translation type="unfinished" />
+        <translation>%1 中沒有任何內容與書籍相符</translation>
     </message>
     <message>
         <source>Audio extraction failed for %1</source>
-        <translation type="unfinished">%1 的音訊擷取失敗</translation>
+        <translation>%1 的音訊擷取失敗</translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -2079,7 +2079,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Mine another language</source>
-        <translation type="unfinished" />
+        <translation>採集另一種語言</translation>
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
@@ -2487,11 +2487,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
-        <translation type="unfinished" />
+        <translation>將有聲書與其 EPUB 同步</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitles or a reader can use.</source>
-        <translation type="unfinished" />
+        <translation>轉錄有聲書，並將書籍本身的句子計時對應到其中，寫出「有聲書」分頁、閱讀 -&gt; 字幕或其他閱讀器可使用的 .srt 檔案。</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -3765,7 +3765,7 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>This dictionary says its language is %1, not the language you are mining.</source>
-        <translation type="unfinished" />
+        <translation>此字典標示的語言為 %1，並非您正在採集的語言。</translation>
     </message>
     <message>
         <source>Choose Yomitan dictionary zips</source>
@@ -5177,7 +5177,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Dialogue dash</source>
-        <translation type="unfinished" />
+        <translation>對白破折號</translation>
     </message>
     <message>
         <source>Presets</source>
@@ -5261,23 +5261,23 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Regional Variety</source>
-        <translation type="unfinished" />
+        <translation>地區變體</translation>
     </message>
     <message>
         <source>Brazilian Portuguese</source>
-        <translation type="unfinished" />
+        <translation>巴西葡萄牙文</translation>
     </message>
     <message>
         <source>European Portuguese</source>
-        <translation type="unfinished" />
+        <translation>歐洲葡萄牙文</translation>
     </message>
     <message>
         <source>Variety</source>
-        <translation type="unfinished" />
+        <translation>變體</translation>
     </message>
     <message>
         <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
-        <translation type="unfinished" />
+        <translation>決定由哪個 Google 語音朗讀單字與例句音訊，以及設定精靈建議使用哪個頻率清單。</translation>
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -5631,11 +5631,11 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
-        <translation type="unfinished" />
+        <translation>此語言的已知單字掃描會略過的牌組：%1。請在「設定」→「篩選」中變更。</translation>
     </message>
     <message>
         <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
-        <translation type="unfinished" />
+        <translation>此語言會掃描所有牌組，包括以相同文字書寫的其他語言的牌組。請在「設定」→「篩選」中排除它們。</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -5851,27 +5851,27 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>First time mining this language</source>
-        <translation type="unfinished" />
+        <translation>首次採集此語言</translation>
     </message>
     <message>
         <source>You have not mined %1 before.</source>
-        <translation type="unfinished" />
+        <translation>您尚未採集過 %1。</translation>
     </message>
     <message>
         <source>The known-words scan reads every deck that is not excluded, and it cannot tell apart languages that share a script: words in a ticked deck would not count as known in %1. Untick the decks that hold %1 cards.</source>
-        <translation type="unfinished" />
+        <translation>已知單字掃描會讀取所有未排除的牌組，且無法分辨共用同一種文字的不同語言：已勾選牌組中的單字，將不會被視為 %1 的已知單字。請取消勾選含有 %1 卡片的牌組。</translation>
     </message>
     <message>
         <source>Exclude ticked decks</source>
-        <translation type="unfinished" />
+        <translation>排除已勾選的牌組</translation>
     </message>
     <message>
         <source>Set up resources…</source>
-        <translation type="unfinished" />
+        <translation>設定資源…</translation>
     </message>
     <message>
         <source>Close</source>
-        <translation type="unfinished">關閉</translation>
+        <translation>關閉</translation>
     </message>
 </context><context>
     <name>LogWidget</name>
@@ -6351,7 +6351,7 @@ Continue?</source>
     </message>
     <message>
         <source>Audiobook Sync</source>
-        <translation type="unfinished" />
+        <translation>有聲書同步</translation>
     </message>
     <message>
         <source>Single</source>
@@ -9437,11 +9437,11 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished" />
+        <translation>後退一影格</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished" />
+        <translation>前進一影格</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
@@ -9885,19 +9885,19 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Download transcription engine</source>
-        <translation type="unfinished" />
+        <translation>下載轉錄引擎</translation>
     </message>
     <message>
         <source>Download the faster-whisper speech-to-text engine into Anki Miner's folder. Required before subtitle generation can run on a packaged install.</source>
-        <translation type="unfinished" />
+        <translation>將 faster-whisper 語音轉文字引擎下載至 Anki Miner 的資料夾。套裝安裝必須先完成此步驟，才能執行字幕生成。</translation>
     </message>
     <message>
         <source>Transcription engine</source>
-        <translation type="unfinished" />
+        <translation>轉錄引擎</translation>
     </message>
     <message>
         <source>Speech-to-text engine (faster-whisper), about %1 MB, downloaded once.</source>
-        <translation type="unfinished" />
+        <translation>語音轉文字引擎（faster-whisper），約 %1 MB，僅需下載一次。</translation>
     </message>
     <message>
         <source>ASR model</source>
@@ -10069,7 +10069,7 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Local transcription is not available for this build.</source>
-        <translation type="unfinished" />
+        <translation>此版本不支援本機轉錄。</translation>
     </message>
     <message>
         <source>Silence removal is available.</source>

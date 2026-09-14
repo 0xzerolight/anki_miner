@@ -335,35 +335,35 @@
     </message>
     <message>
         <source>Part of Speech Field</source>
-        <translation type="unfinished" />
+        <translation>Trường Từ loại</translation>
     </message>
     <message>
         <source>Stores the word's part of speech (noun, verb, adjective, adverb). Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Lưu từ loại của từ (danh từ, động từ, tính từ, trạng từ). Để trống = bỏ qua.</translation>
     </message>
     <message>
         <source>Gender Field</source>
-        <translation type="unfinished" />
+        <translation>Trường Giống</translation>
     </message>
     <message>
         <source>Stores a noun's grammatical gender. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Lưu giống ngữ pháp của danh từ. Để trống = bỏ qua.</translation>
     </message>
     <message>
         <source>Article Field</source>
-        <translation type="unfinished" />
+        <translation>Trường Mạo từ</translation>
     </message>
     <message>
         <source>Stores the article that goes with a noun. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Lưu mạo từ đi kèm với danh từ. Để trống = bỏ qua.</translation>
     </message>
     <message>
         <source>Plural Field</source>
-        <translation type="unfinished" />
+        <translation>Trường Số nhiều</translation>
     </message>
     <message>
         <source>Stores a noun's plural form from the dictionary entry. Blank = skip.</source>
-        <translation type="unfinished" />
+        <translation>Lưu dạng số nhiều của danh từ từ mục từ điển. Để trống = bỏ qua.</translation>
     </message>
     <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
@@ -773,15 +773,15 @@ Vẫn tiếp tục?</translation>
     <name>AsrPackDownloadWorker</name>
     <message>
         <source>Transcription engine</source>
-        <translation type="unfinished" />
+        <translation>Công cụ phiên âm</translation>
     </message>
     <message>
         <source>Downloading the transcription engine…</source>
-        <translation type="unfinished" />
+        <translation>Đang tải công cụ phiên âm…</translation>
     </message>
     <message>
         <source>Transcription engine installed successfully.</source>
-        <translation type="unfinished" />
+        <translation>Đã cài đặt công cụ phiên âm thành công.</translation>
     </message>
 </context><context>
     <name>AudioClipEditor</name>
@@ -1599,249 +1599,249 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <name>BookSyncTab</name>
     <message>
         <source>Progress</source>
-        <translation type="unfinished">Tiến độ</translation>
+        <translation>Tiến độ</translation>
     </message>
     <message>
         <source>Done</source>
-        <translation type="unfinished">Xong</translation>
+        <translation>Xong</translation>
     </message>
     <message>
         <source>Done: </source>
-        <translation type="unfinished">Xong: </translation>
+        <translation>Xong: </translation>
     </message>
     <message>
         <source>Skipped</source>
-        <translation type="unfinished">Đã bỏ qua</translation>
+        <translation>Đã bỏ qua</translation>
     </message>
     <message>
         <source>Skipped: </source>
-        <translation type="unfinished">Đã bỏ qua: </translation>
+        <translation>Đã bỏ qua: </translation>
     </message>
     <message>
         <source>Cancel</source>
-        <translation type="unfinished">Hủy</translation>
+        <translation>Hủy</translation>
     </message>
     <message>
         <source>Cancelling…</source>
-        <translation type="unfinished">Đang hủy…</translation>
+        <translation>Đang hủy…</translation>
     </message>
     <message>
         <source>Cancelled</source>
-        <translation type="unfinished">Đã hủy</translation>
+        <translation>Đã hủy</translation>
     </message>
     <message>
         <source>Failed — see log</source>
-        <translation type="unfinished">Thất bại — xem nhật ký</translation>
+        <translation>Thất bại — xem nhật ký</translation>
     </message>
     <message>
         <source>Finished with errors — see log</source>
-        <translation type="unfinished">Hoàn tất với lỗi — xem nhật ký</translation>
+        <translation>Hoàn tất với lỗi — xem nhật ký</translation>
     </message>
     <message>
         <source>Some audio files could not be synced.</source>
-        <translation type="unfinished" />
+        <translation>Một số tệp âm thanh không thể đồng bộ.</translation>
     </message>
     <message>
         <source>Complete — %1 file(s) synced</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — đã đồng bộ %1 tệp</translation>
     </message>
     <message>
         <source>Complete — %1 synced, %2 skipped</source>
-        <translation type="unfinished" />
+        <translation>Hoàn tất — đã đồng bộ %1, đã bỏ qua %2</translation>
     </message>
     <message>
         <source>No subtitles written — all %1 skipped; see log.</source>
-        <translation type="unfinished" />
+        <translation>Không có phụ đề nào được ghi — tất cả %1 đã bị bỏ qua; xem nhật ký.</translation>
     </message>
     <message>
         <source>Select Output Folder</source>
-        <translation type="unfinished">Chọn thư mục đầu ra</translation>
+        <translation>Chọn thư mục đầu ra</translation>
     </message>
     <message>
         <source>Next to the audio</source>
-        <translation type="unfinished" />
+        <translation>Cạnh tệp âm thanh</translation>
     </message>
     <message>
         <source>Audiobook sync</source>
-        <translation type="unfinished" />
+        <translation>Đồng bộ sách nói</translation>
     </message>
     <message>
         <source>Audiobook</source>
-        <translation type="unfinished" />
+        <translation>Sách nói</translation>
     </message>
     <message>
         <source>Transcription is not ready. Open Settings → Transcription &amp; Alignment to finish setup.</source>
-        <translation type="unfinished">Phiên âm chưa sẵn sàng. Mở Cài đặt → Phiên âm &amp; Căn chỉnh để hoàn tất thiết lập.</translation>
+        <translation>Phiên âm chưa sẵn sàng. Mở Cài đặt → Phiên âm &amp; Căn chỉnh để hoàn tất thiết lập.</translation>
     </message>
     <message>
         <source>Transcribes the audiobook and times the book's own sentences to it, writing an .srt beside each audio file. A folder is read as one book in file-name order.</source>
-        <translation type="unfinished" />
+        <translation>Phiên âm sách nói rồi khớp thời gian các câu của sách với bản ghi, ghi tệp .srt bên cạnh mỗi tệp âm thanh. Một thư mục được coi là một cuốn sách, theo thứ tự tên tệp.</translation>
     </message>
     <message>
         <source>Mode:</source>
-        <translation type="unfinished">Chế độ:</translation>
+        <translation>Chế độ:</translation>
     </message>
     <message>
         <source>Single File</source>
-        <translation type="unfinished">Một tệp</translation>
+        <translation>Một tệp</translation>
     </message>
     <message>
         <source>Sync one audio file to the book.</source>
-        <translation type="unfinished" />
+        <translation>Đồng bộ một tệp âm thanh với sách.</translation>
     </message>
     <message>
         <source>Folder</source>
-        <translation type="unfinished">Thư mục</translation>
+        <translation>Thư mục</translation>
     </message>
     <message>
         <source>Every audio file in the folder, in file-name order, one .srt each.</source>
-        <translation type="unfinished" />
+        <translation>Mọi tệp âm thanh trong thư mục, theo thứ tự tên tệp, mỗi tệp cho ra một .srt.</translation>
     </message>
     <message>
         <source>EPUB or Text File:</source>
-        <translation type="unfinished" />
+        <translation>Tệp EPUB hoặc văn bản:</translation>
     </message>
     <message>
         <source>Audio File:</source>
-        <translation type="unfinished">Tệp âm thanh:</translation>
+        <translation>Tệp âm thanh:</translation>
     </message>
     <message>
         <source>This field takes an audio file.</source>
-        <translation type="unfinished">Trường này nhận tệp âm thanh.</translation>
+        <translation>Trường này nhận tệp âm thanh.</translation>
     </message>
     <message>
         <source>Audio Folder:</source>
-        <translation type="unfinished" />
+        <translation>Thư mục âm thanh:</translation>
     </message>
     <message>
         <source>Book</source>
-        <translation type="unfinished" />
+        <translation>Sách</translation>
     </message>
     <message>
         <source>This field takes an .epub or .txt file.</source>
-        <translation type="unfinished" />
+        <translation>Trường này nhận tệp .epub hoặc .txt.</translation>
     </message>
     <message>
         <source>Output</source>
-        <translation type="unfinished">Đầu ra</translation>
+        <translation>Đầu ra</translation>
     </message>
     <message>
         <source>Each .srt is saved next to its audio file unless you choose a folder.</source>
-        <translation type="unfinished" />
+        <translation>Mỗi tệp .srt được lưu cạnh tệp âm thanh của nó trừ khi bạn chọn một thư mục.</translation>
     </message>
     <message>
         <source>Output:</source>
-        <translation type="unfinished">Đầu ra:</translation>
+        <translation>Đầu ra:</translation>
     </message>
     <message>
         <source>Choose Folder…</source>
-        <translation type="unfinished">Chọn thư mục…</translation>
+        <translation>Chọn thư mục…</translation>
     </message>
     <message>
         <source>Reset</source>
-        <translation type="unfinished">Đặt lại</translation>
+        <translation>Đặt lại</translation>
     </message>
     <message>
         <source>Overwrite existing SRT files</source>
-        <translation type="unfinished">Ghi đè các tệp SRT hiện có</translation>
+        <translation>Ghi đè các tệp SRT hiện có</translation>
     </message>
     <message>
         <source>When unchecked, audio files that already have an .srt file are skipped, not overwritten.</source>
-        <translation type="unfinished" />
+        <translation>Khi bỏ chọn, các tệp âm thanh đã có tệp .srt sẽ bị bỏ qua, không bị ghi đè.</translation>
     </message>
     <message>
         <source>Sync Audiobook</source>
-        <translation type="unfinished" />
+        <translation>Đồng bộ sách nói</translation>
     </message>
     <message>
         <source>Choose the book (.epub or .txt) before syncing.</source>
-        <translation type="unfinished" />
+        <translation>Hãy chọn sách (.epub hoặc .txt) trước khi đồng bộ.</translation>
     </message>
     <message>
         <source>Pick an .epub or .txt file for the book.</source>
-        <translation type="unfinished" />
+        <translation>Chọn tệp .epub hoặc .txt cho sách.</translation>
     </message>
     <message>
         <source>That book file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Tệp sách đó không còn tồn tại.</translation>
     </message>
     <message>
         <source>Choose an audio file before syncing.</source>
-        <translation type="unfinished" />
+        <translation>Hãy chọn tệp âm thanh trước khi đồng bộ.</translation>
     </message>
     <message>
         <source>That audio file no longer exists.</source>
-        <translation type="unfinished" />
+        <translation>Tệp âm thanh đó không còn tồn tại.</translation>
     </message>
     <message>
         <source>Choose a folder before syncing.</source>
-        <translation type="unfinished" />
+        <translation>Hãy chọn thư mục trước khi đồng bộ.</translation>
     </message>
     <message>
         <source>That folder no longer exists.</source>
-        <translation type="unfinished">Thư mục đó không còn tồn tại.</translation>
+        <translation>Thư mục đó không còn tồn tại.</translation>
     </message>
     <message>
         <source>No audio files were found in that folder.</source>
-        <translation type="unfinished" />
+        <translation>Không tìm thấy tệp âm thanh nào trong thư mục đó.</translation>
     </message>
     <message>
         <source>That folder could not be scanned.</source>
-        <translation type="unfinished">Không thể quét thư mục đó.</translation>
+        <translation>Không thể quét thư mục đó.</translation>
     </message>
     <message>
         <source>Output folder is not writable.</source>
-        <translation type="unfinished">Không ghi được vào thư mục đầu ra.</translation>
+        <translation>Không ghi được vào thư mục đầu ra.</translation>
     </message>
     <message>
         <source>The transcription model %1 is not ready.</source>
-        <translation type="unfinished">Mô hình phiên âm %1 chưa sẵn sàng.</translation>
+        <translation>Mô hình phiên âm %1 chưa sẵn sàng.</translation>
     </message>
     <message>
         <source>Open Transcription Settings</source>
-        <translation type="unfinished">Mở Cài đặt Phiên âm</translation>
+        <translation>Mở Cài đặt Phiên âm</translation>
     </message>
     <message>
         <source>Book: %1</source>
-        <translation type="unfinished" />
+        <translation>Sách: %1</translation>
     </message>
     <message>
         <source>Syncing file %1 of %2</source>
-        <translation type="unfinished" />
+        <translation>Đang đồng bộ tệp %1 trên %2</translation>
     </message>
 </context><context>
     <name>BookSyncWorker</name>
     <message>
         <source>Skipped, exists</source>
-        <translation type="unfinished">Đã bỏ qua, đã tồn tại</translation>
+        <translation>Đã bỏ qua, đã tồn tại</translation>
     </message>
     <message>
         <source>Extracting audio: %1</source>
-        <translation type="unfinished">Đang trích xuất âm thanh: %1</translation>
+        <translation>Đang trích xuất âm thanh: %1</translation>
     </message>
     <message>
         <source>Transcribing: %1%</source>
-        <translation type="unfinished">Đang chép lời: %1%</translation>
+        <translation>Đang chép lời: %1%</translation>
     </message>
     <message>
         <source>Aligning to the book…</source>
-        <translation type="unfinished" />
+        <translation>Đang khớp thời gian với sách…</translation>
     </message>
     <message>
         <source>%1 sentences timed, %2 in between had no audio</source>
-        <translation type="unfinished" />
+        <translation>%1 câu đã được khớp thời gian, %2 câu ở giữa không có âm thanh</translation>
     </message>
     <message>
         <source>No speech detected</source>
-        <translation type="unfinished">Không phát hiện giọng nói nào</translation>
+        <translation>Không phát hiện giọng nói nào</translation>
     </message>
     <message>
         <source>Nothing in %1 matched the book</source>
-        <translation type="unfinished" />
+        <translation>Không có gì trong %1 khớp với sách</translation>
     </message>
     <message>
         <source>Audio extraction failed for %1</source>
-        <translation type="unfinished">Trích xuất âm thanh thất bại cho %1</translation>
+        <translation>Trích xuất âm thanh thất bại cho %1</translation>
     </message>
 </context><context>
     <name>Capabilities</name>
@@ -2079,7 +2079,7 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Mine another language</source>
-        <translation type="unfinished" />
+        <translation>Khai thác một ngôn ngữ khác</translation>
     </message>
     <message>
         <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
@@ -2487,11 +2487,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
-        <translation type="unfinished" />
+        <translation>Đồng bộ sách nói với EPUB của nó</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitles or a reader can use.</source>
-        <translation type="unfinished" />
+        <translation>Phiên âm sách nói rồi khớp thời gian các câu của sách với bản ghi, tạo tệp .srt mà tab Sách nói, Đọc -&gt; Phụ đề, hoặc một trình đọc khác có thể dùng.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -3765,7 +3765,7 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     </message>
     <message>
         <source>This dictionary says its language is %1, not the language you are mining.</source>
-        <translation type="unfinished" />
+        <translation>Từ điển này cho biết ngôn ngữ của nó là %1, không phải ngôn ngữ bạn đang khai thác.</translation>
     </message>
     <message>
         <source>Choose Yomitan dictionary zips</source>
@@ -5177,7 +5177,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Dialogue dash</source>
-        <translation type="unfinished" />
+        <translation>Gạch ngang lời thoại</translation>
     </message>
     <message>
         <source>Presets</source>
@@ -5261,23 +5261,23 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Regional Variety</source>
-        <translation type="unfinished" />
+        <translation>Biến thể khu vực</translation>
     </message>
     <message>
         <source>Brazilian Portuguese</source>
-        <translation type="unfinished" />
+        <translation>Tiếng Bồ Đào Nha Brazil</translation>
     </message>
     <message>
         <source>European Portuguese</source>
-        <translation type="unfinished" />
+        <translation>Tiếng Bồ Đào Nha châu Âu</translation>
     </message>
     <message>
         <source>Variety</source>
-        <translation type="unfinished" />
+        <translation>Biến thể</translation>
     </message>
     <message>
         <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
-        <translation type="unfinished" />
+        <translation>Xác định giọng Google nào đọc âm thanh từ và câu, và gợi ý danh sách tần suất nào khi thiết lập.</translation>
     </message>
     <message>
         <source>i+1 Sentence Filter</source>
@@ -5631,11 +5631,11 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     </message>
     <message>
         <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
-        <translation type="unfinished" />
+        <translation>Các bộ thẻ mà quá trình quét từ đã biết của ngôn ngữ này bỏ qua: %1. Thay đổi trong Cài đặt → Lọc.</translation>
     </message>
     <message>
         <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
-        <translation type="unfinished" />
+        <translation>Mọi bộ thẻ đều được quét cho ngôn ngữ này, bao gồm cả bộ thẻ thuộc ngôn ngữ khác dùng cùng loại chữ viết. Loại trừ chúng trong Cài đặt → Lọc.</translation>
     </message>
     <message>
         <source>Filter…</source>
@@ -5851,27 +5851,27 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     </message>
     <message>
         <source>First time mining this language</source>
-        <translation type="unfinished" />
+        <translation>Lần đầu khai thác ngôn ngữ này</translation>
     </message>
     <message>
         <source>You have not mined %1 before.</source>
-        <translation type="unfinished" />
+        <translation>Chưa từng khai thác %1 trước đây.</translation>
     </message>
     <message>
         <source>The known-words scan reads every deck that is not excluded, and it cannot tell apart languages that share a script: words in a ticked deck would not count as known in %1. Untick the decks that hold %1 cards.</source>
-        <translation type="unfinished" />
+        <translation>Quá trình quét từ đã biết đọc mọi bộ thẻ không bị loại trừ, và không thể phân biệt các ngôn ngữ dùng chung loại chữ viết: từ trong một bộ thẻ đã đánh dấu sẽ không được tính là đã biết trong %1. Hãy bỏ đánh dấu các bộ thẻ chứa thẻ %1.</translation>
     </message>
     <message>
         <source>Exclude ticked decks</source>
-        <translation type="unfinished" />
+        <translation>Loại trừ các bộ thẻ đã đánh dấu</translation>
     </message>
     <message>
         <source>Set up resources…</source>
-        <translation type="unfinished" />
+        <translation>Thiết lập tài nguyên…</translation>
     </message>
     <message>
         <source>Close</source>
-        <translation type="unfinished">Đóng</translation>
+        <translation>Đóng</translation>
     </message>
 </context><context>
     <name>LogWidget</name>
@@ -6351,7 +6351,7 @@ Tiếp tục?</translation>
     </message>
     <message>
         <source>Audiobook Sync</source>
-        <translation type="unfinished" />
+        <translation>Đồng bộ sách nói</translation>
     </message>
     <message>
         <source>Single</source>
@@ -9437,11 +9437,11 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Step one frame back</source>
-        <translation type="unfinished" />
+        <translation>Lùi một khung hình</translation>
     </message>
     <message>
         <source>Step one frame forward</source>
-        <translation type="unfinished" />
+        <translation>Tiến một khung hình</translation>
     </message>
     <message>
         <source>Video preview is unavailable: the bundled video component (libmpv) could not be loaded on this PC. Try reinstalling Anki Miner; if the problem persists, report it and attach your log from %USERPROFILE%\.anki_miner\anki_miner.log.</source>
@@ -9885,19 +9885,19 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Download transcription engine</source>
-        <translation type="unfinished" />
+        <translation>Tải công cụ phiên âm</translation>
     </message>
     <message>
         <source>Download the faster-whisper speech-to-text engine into Anki Miner's folder. Required before subtitle generation can run on a packaged install.</source>
-        <translation type="unfinished" />
+        <translation>Tải công cụ chuyển giọng nói thành văn bản faster-whisper vào thư mục của Anki Miner. Bắt buộc trước khi có thể tạo phụ đề trên bản cài đóng gói.</translation>
     </message>
     <message>
         <source>Transcription engine</source>
-        <translation type="unfinished" />
+        <translation>Công cụ phiên âm</translation>
     </message>
     <message>
         <source>Speech-to-text engine (faster-whisper), about %1 MB, downloaded once.</source>
-        <translation type="unfinished" />
+        <translation>Công cụ chuyển giọng nói thành văn bản (faster-whisper), khoảng %1 MB, chỉ tải một lần.</translation>
     </message>
     <message>
         <source>ASR model</source>
@@ -10069,7 +10069,7 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
     </message>
     <message>
         <source>Local transcription is not available for this build.</source>
-        <translation type="unfinished" />
+        <translation>Phiên âm cục bộ không khả dụng cho bản dựng này.</translation>
     </message>
     <message>
         <source>Silence removal is available.</source>
