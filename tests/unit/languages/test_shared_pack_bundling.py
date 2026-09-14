@@ -45,3 +45,19 @@ def test_the_real_codes_evaluate_without_raising():
     for code in SHARED_PACK_CODES:
         package = f"anki_miner.languages.{code}"
         assert (package in pins) is (importlib.util.find_spec(package) is not None)
+
+
+#: Stdlib modules the _spacy engine pack imports at package load that nothing in
+#: the base graph reaches once spaCy and its dependencies are excluded. Each one
+#: missing was a ModuleNotFoundError for every spaCy language in the frozen app:
+#: timeit (spacy/language.py), cProfile + pstats (spacy/cli/profile.py, which
+#: spacy/__init__ reaches through spacy.cli), zoneinfo (pydantic/_internal).
+SPACY_PACK_STDLIB = ("timeit", "cProfile", "pstats", "zoneinfo")
+
+
+def test_the_stdlib_modules_the_spacy_pack_needs_from_the_base_stay_pinned():
+    from tests.unit.languages.test_zh_bundling import _list_body
+
+    hiddenimports = _list_body("hiddenimports")
+    for name in SPACY_PACK_STDLIB:
+        assert f'"{name}",' in hiddenimports, f"anki_miner.spec no longer pins {name} for the spaCy engine pack"

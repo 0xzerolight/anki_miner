@@ -4,6 +4,25 @@
   "components": [
     {
       "abi": null,
+      "import_name": "annotated_doc",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "annotated_doc-0.0.4-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "annotated_doc/",
+        "root_members": [],
+        "sha256": "571ac1dc6991c450b25a9c2d84a3705e2ae7a53467b5d111c24fa8baabbed320",
+        "size": 5303,
+        "url": "https://files.pythonhosted.org/packages/1e/d3/26bf1008eb3d2daa8ef4cacc7f3bfdc11818d111f7e2d0201bc6e3b49d45/annotated_doc-0.0.4-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
       "import_name": "annotated_types",
       "per_platform": null,
       "required": true,
@@ -19,6 +38,25 @@
         "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
         "size": 13427,
         "url": "https://files.pythonhosted.org/packages/99/91/8acff4f5e50511b911bbccb72b8628a49c68ce14148cd9f6431094859a90/annotated_types-0.8.0-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "anyio",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "anyio-4.14.0-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "anyio/",
+        "root_members": [],
+        "sha256": "dd9b7a2a9799ed6552fde617b2c5df02b7fdd7d88392fc48101e51bae46164d9",
+        "size": 123506,
+        "url": "https://files.pythonhosted.org/packages/ba/16/9826f089383c593cdfc4a6e5aca94d9e91ae1692c57af82c3b2aa5e810f7/anyio-4.14.0-py3-none-any.whl"
       }
     },
     {
@@ -224,6 +262,63 @@
         "__init__.py"
       ],
       "universal": null
+    },
+    {
+      "abi": null,
+      "import_name": "h11",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "h11-0.16.0-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "h11/",
+        "root_members": [],
+        "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+        "size": 37515,
+        "url": "https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "httpcore",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "httpcore-1.0.9-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "httpcore/",
+        "root_members": [],
+        "sha256": "2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+        "size": 78784,
+        "url": "https://files.pythonhosted.org/packages/7e/f5/f66802a942d491edb555dd61e3a9961140fd64c90bce1eafd741609d334d/httpcore-1.0.9-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "httpx",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "httpx-0.28.1-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "httpx/",
+        "root_members": [],
+        "sha256": "d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+        "size": 73517,
+        "url": "https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl"
+      }
     },
     {
       "abi": null,
@@ -521,6 +616,25 @@
     },
     {
       "abi": null,
+      "import_name": "shellingham",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "shellingham-1.5.4-py2.py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "shellingham/",
+        "root_members": [],
+        "sha256": "7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686",
+        "size": 9755,
+        "url": "https://files.pythonhosted.org/packages/e0/f9/0595336914c5619e5f28a1fb793285925a8cd4b432c9da0a987836c7f822/shellingham-1.5.4-py2.py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
       "import_name": "smart_open",
       "per_platform": null,
       "required": true,
@@ -767,6 +881,25 @@
         "__init__.py"
       ],
       "universal": null
+    },
+    {
+      "abi": null,
+      "import_name": "typer",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "typer-0.26.7-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "typer/",
+        "root_members": [],
+        "sha256": "5c87cfbc5d34491c5346ebf49c23e18d56ccb863268d3a8d592b26087c2f5e58",
+        "size": 122456,
+        "url": "https://files.pythonhosted.org/packages/24/25/2201973529af2c954de0bb725323c3aaed6d7f0ceee8f550dec9185df013/typer-0.26.7-py3-none-any.whl"
+      }
     },
     {
       "abi": null,

@@ -10,7 +10,9 @@ hand. Two modes:
 * ``runtime`` -- a requirement set resolved PER PLATFORM by ``uv pip compile``
   under ``--constraint requirements.lock`` (a bundle-resident package the
   resolver would have to move makes the compile fail, never silently omits it),
-  minus every distribution the lock pins; sha256 and URL from the PyPI JSON
+  minus every lock-pinned distribution the BASE install resolves to (the lock
+  also pins the optional extras' closures, which a frozen bundle excludes or
+  never imports); sha256 and URL from the PyPI JSON
   index; import names from each wheel's ``RECORD`` (``build/pin-cache`` holds
   the one wheel per distribution this reads).
 
@@ -49,6 +51,10 @@ UV = os.environ.get("UV") or shutil.which("uv") or "uv"
 MODEL_RELEASE = "https://api.github.com/repos/explosion/spacy-models/releases/tags/{package}-{version}"
 PYPI_JSON = "https://pypi.org/pypi/{name}/{version}/json"
 PIN_CACHE = REPO_ROOT / "build" / "pin-cache"
+#: Named by a requirement in the closure but imported by no pack code at runtime:
+#: spaCy's metadata still requires setuptools, whose only mention is a setup.py
+#: template string in spacy/cli/package.py.
+NOT_IMPORTED_AT_RUNTIME = frozenset({"setuptools"})
 
 #: (sys.platform, platform.machine()) -> uv --python-platform, in manifest order.
 PLATFORMS: dict[tuple[str, str], str] = {
@@ -180,6 +186,34 @@ def _lock_names(lock_path: Path) -> set[str]:
     return names
 
 
+def _base_names(lock_path: Path, python: str, run_compile: RunCompile, pyproject: Path) -> set[str]:
+    """Distributions the base install (``[project].dependencies``, no extras) resolves to.
+
+    That closure is what a frozen bundle can carry. The lock pins more: the
+    ``[asr]`` extra brings httpx, anyio, typer and shellingham, which the bundle
+    excludes (the ASR pack owns them) or never imports. Subtracting the whole
+    lock dropped those from the spaCy runtime pack while weasel imports typer and
+    httpx at ``import spacy``, so no spaCy language could load in the frozen app.
+    """
+    with pyproject.open("rb") as handle:
+        dependencies = tomllib.load(handle)["project"]["dependencies"]
+    args = [
+        UV,
+        "pip",
+        "compile",
+        "-",
+        "--universal",
+        "--python-version",
+        python,
+        "--constraint",
+        str(lock_path),
+        "--no-header",
+        "--no-annotate",
+        "--quiet",
+    ]
+    return set(_pins(run_compile(args, "\n".join(dependencies))))
+
+
 def _pins(output: str) -> dict[str, str]:
     pins: dict[str, str] = {}
     for line in output.splitlines():
@@ -229,9 +263,10 @@ def resolve_runtime(
     run_compile: RunCompile,
     fetch_json: FetchJson,
     read_top_level: ReadTopLevel,
+    pyproject: Path = REPO_ROOT / "pyproject.toml",
 ) -> dict[str, Any]:
-    """Resolve a runtime closure per platform, minus what the bundle already pins."""
-    bundled = _lock_names(lock_path)
+    """Resolve a runtime closure per platform, minus what the bundle already carries."""
+    bundled = _lock_names(lock_path) & _base_names(lock_path, python, run_compile, pyproject)
     abi_tag = "cp" + python.replace(".", "")
     per_key: dict[tuple[str, str], dict[str, str]] = {}
     for key, uv_platform in PLATFORMS.items():
@@ -251,7 +286,11 @@ def resolve_runtime(
             "--quiet",
         ]
         pins = _pins(run_compile(args, "\n".join(requirements)))
-        per_key[key] = {name: version for name, version in pins.items() if name not in bundled}
+        per_key[key] = {
+            name: version
+            for name, version in pins.items()
+            if name not in bundled and name not in NOT_IMPORTED_AT_RUNTIME
+        }
 
     components: list[dict[str, Any]] = []
     sizes: dict[tuple[str, str], int] = dict.fromkeys(PLATFORMS, 0)

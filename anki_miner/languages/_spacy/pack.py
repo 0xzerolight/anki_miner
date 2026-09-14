@@ -9,6 +9,18 @@ from anki_miner.languages.pack_spec import ArtifactSpec, LanguagePack, PackCompo
 
 COMPONENTS = (
     PackComponent(
+        import_name="annotated_doc",
+        required=True,
+        sentinels=("__init__.py",),
+        universal=ArtifactSpec(
+            # annotated_doc-0.0.4-py3-none-any.whl
+            url="https://files.pythonhosted.org/packages/1e/d3/26bf1008eb3d2daa8ef4cacc7f3bfdc11818d111f7e2d0201bc6e3b49d45/annotated_doc-0.0.4-py3-none-any.whl",
+            sha256="571ac1dc6991c450b25a9c2d84a3705e2ae7a53467b5d111c24fa8baabbed320",
+            kind="wheel",
+            member_prefix="annotated_doc/",
+        ),
+    ),
+    PackComponent(
         import_name="annotated_types",
         required=True,
         sentinels=("__init__.py",),
@@ -18,6 +30,18 @@ COMPONENTS = (
             sha256="f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
             kind="wheel",
             member_prefix="annotated_types/",
+        ),
+    ),
+    PackComponent(
+        import_name="anyio",
+        required=True,
+        sentinels=("__init__.py",),
+        universal=ArtifactSpec(
+            # anyio-4.14.0-py3-none-any.whl
+            url="https://files.pythonhosted.org/packages/ba/16/9826f089383c593cdfc4a6e5aca94d9e91ae1692c57af82c3b2aa5e810f7/anyio-4.14.0-py3-none-any.whl",
+            sha256="dd9b7a2a9799ed6552fde617b2c5df02b7fdd7d88392fc48101e51bae46164d9",
+            kind="wheel",
+            member_prefix="anyio/",
         ),
     ),
     PackComponent(
@@ -153,6 +177,42 @@ COMPONENTS = (
                 member_prefix="cymem/",
             ),
         },
+    ),
+    PackComponent(
+        import_name="h11",
+        required=True,
+        sentinels=("__init__.py",),
+        universal=ArtifactSpec(
+            # h11-0.16.0-py3-none-any.whl
+            url="https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl",
+            sha256="63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86",
+            kind="wheel",
+            member_prefix="h11/",
+        ),
+    ),
+    PackComponent(
+        import_name="httpcore",
+        required=True,
+        sentinels=("__init__.py",),
+        universal=ArtifactSpec(
+            # httpcore-1.0.9-py3-none-any.whl
+            url="https://files.pythonhosted.org/packages/7e/f5/f66802a942d491edb555dd61e3a9961140fd64c90bce1eafd741609d334d/httpcore-1.0.9-py3-none-any.whl",
+            sha256="2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55",
+            kind="wheel",
+            member_prefix="httpcore/",
+        ),
+    ),
+    PackComponent(
+        import_name="httpx",
+        required=True,
+        sentinels=("__init__.py",),
+        universal=ArtifactSpec(
+            # httpx-0.28.1-py3-none-any.whl
+            url="https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl",
+            sha256="d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad",
+            kind="wheel",
+            member_prefix="httpx/",
+        ),
     ),
     PackComponent(
         import_name="jinja2",
@@ -351,6 +411,18 @@ COMPONENTS = (
         },
     ),
     PackComponent(
+        import_name="shellingham",
+        required=True,
+        sentinels=("__init__.py",),
+        universal=ArtifactSpec(
+            # shellingham-1.5.4-py2.py3-none-any.whl
+            url="https://files.pythonhosted.org/packages/e0/f9/0595336914c5619e5f28a1fb793285925a8cd4b432c9da0a987836c7f822/shellingham-1.5.4-py2.py3-none-any.whl",
+            sha256="7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686",
+            kind="wheel",
+            member_prefix="shellingham/",
+        ),
+    ),
+    PackComponent(
         import_name="smart_open",
         required=True,
         sentinels=("__init__.py",),
@@ -514,6 +586,18 @@ COMPONENTS = (
                 member_prefix="thinc/",
             ),
         },
+    ),
+    PackComponent(
+        import_name="typer",
+        required=True,
+        sentinels=("__init__.py",),
+        universal=ArtifactSpec(
+            # typer-0.26.7-py3-none-any.whl
+            url="https://files.pythonhosted.org/packages/24/25/2201973529af2c954de0bb725323c3aaed6d7f0ceee8f550dec9185df013/typer-0.26.7-py3-none-any.whl",
+            sha256="5c87cfbc5d34491c5346ebf49c23e18d56ccb863268d3a8d592b26087c2f5e58",
+            kind="wheel",
+            member_prefix="typer/",
+        ),
     ),
     PackComponent(
         import_name="typing_inspection",

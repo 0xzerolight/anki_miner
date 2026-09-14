@@ -37,6 +37,15 @@ def test_the_runtime_pack_is_shared_and_carries_spacy():
     assert {"spacy", "thinc", "blis", "srsly", "preshed", "cymem", "murmurhash", "pydantic"} <= names
 
 
+#: Lock pins only the [asr] extra's closure brings. The frozen bundle carries none of them (the ASR pack owns
+#: httpx/httpcore/h11/anyio; typer, shellingham and annotated_doc arrived with huggingface_hub), yet weasel
+#: imports typer and httpx at `import spacy`, so the runtime pack must carry them. Any OTHER lock pin is bundle
+#: content the pack must not shadow.
+_LOCK_PINS_THE_BUNDLE_DOES_NOT_CARRY = frozenset(
+    {"annotated-doc", "anyio", "h11", "httpcore", "httpx", "shellingham", "typer"}
+)
+
+
 def test_no_component_shadows_a_bundle_pin():
     lock = {
         _canonical(line.split("==", 1)[0])
@@ -45,7 +54,7 @@ def test_no_component_shadows_a_bundle_pin():
     }
     pack = load_pack("_spacy")
     assert pack is not None
-    assert {_canonical(comp.import_name) for comp in pack.components} & lock == set()
+    assert {_canonical(comp.import_name) for comp in pack.components} & lock == _LOCK_PINS_THE_BUNDLE_DOES_NOT_CARRY
 
 
 #: Win32-only closure members the Windows bundle already ships, so the spec must not exclude them: tqdm and
@@ -63,7 +72,7 @@ def test_every_pack_package_and_every_model_is_excluded_from_the_bundle():
     assert set(names) >= _BUNDLED_THROUGH_A_PLATFORM_MARKER  # an exception the manifest no longer needs goes
     for name in [name for name in names if name not in _BUNDLED_THROUGH_A_PLATFORM_MARKER] + list(SPACY_MODEL_PACKAGES):
         assert f'"{name}",' in excludes, f"anki_miner.spec does not exclude {name}"
-    for name in [*_BUNDLED_THROUGH_A_PLATFORM_MARKER, "typer"]:  # typer: huggingface_hub bundles it (A.6)
+    for name in _BUNDLED_THROUGH_A_PLATFORM_MARKER:
         assert f'"{name}",' not in excludes, f"anki_miner.spec must not exclude {name}"
 
 

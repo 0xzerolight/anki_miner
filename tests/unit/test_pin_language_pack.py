@@ -139,7 +139,8 @@ def test_a_runtime_pack_resolves_per_platform_and_subtracts_the_lock(tmp_path):
     )
     pack = _exec_manifest(pin.render_manifest(resolved))
 
-    assert len(compiled) == len(pin.PLATFORMS) and "--constraint" in compiled[0]
+    per_platform = [args for args in compiled if "--python-platform" in args]
+    assert len(per_platform) == len(pin.PLATFORMS) and all("--constraint" in args for args in compiled)
     assert [comp.import_name for comp in pack.components] == ["blis", "wasabi"]
     blis, wasabi = pack.components
     assert blis.abi == (3, 12) and set(blis.per_platform) == set(pin.PLATFORMS)
@@ -148,6 +149,40 @@ def test_a_runtime_pack_resolves_per_platform_and_subtracts_the_lock(tmp_path):
     # The committed fixture is written with sorted keys; re-rendering it must not
     # reorder the per-platform table, or the regeneration test below would fail.
     assert pin.render_manifest(json.loads(json.dumps(resolved, sort_keys=True))) == pin.render_manifest(resolved)
+
+
+def test_a_lock_pin_only_an_extra_brings_stays_in_the_runtime_pack(tmp_path):
+    """typer is in the lock through [asr] only; the frozen bundle never carries it, so the pack must."""
+    lock = tmp_path / "requirements.lock"
+    lock.write_text("numpy==2.5.0\ntyper==0.26.7\n", encoding="utf-8")
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text('[project]\ndependencies = ["numpy"]\n', encoding="utf-8")
+
+    def run_compile(args, stdin):
+        if "--universal" in args:
+            assert stdin == "numpy"
+            return "numpy==2.5.0\n"
+        return "numpy==2.5.0\ntyper==0.26.7\n"
+
+    typer_wheel = {
+        "filename": "typer-0.26.7-py3-none-any.whl",
+        "url": "https://files.pythonhosted.org/packages/xx/typer-0.26.7-py3-none-any.whl",
+        "digests": {"sha256": "7" * 64},
+        "size": 4096,
+        "packagetype": "bdist_wheel",
+    }
+    resolved = pin.resolve_runtime(
+        "_spacy",
+        ["spacy>=3.8,<3.8.15"],
+        "3.12",
+        lock,
+        run_compile=run_compile,
+        fetch_json=lambda url: {"urls": [typer_wheel]},
+        read_top_level=lambda artifact: ["typer"],
+        pyproject=pyproject,
+    )
+
+    assert [comp["import_name"] for comp in resolved["components"]] == ["typer"]
 
 
 def test_a_reported_digest_must_agree_with_the_download():

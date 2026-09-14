@@ -448,6 +448,20 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "tqdm.autonotebook",
         "tqdm.asyncio",
         "tqdm.contrib.concurrent",
+        # Stdlib modules the spaCy engine pack (languages/_spacy, behind every
+        # spaCy mining language) imports at package load that nothing in the
+        # BASE graph reaches once spaCy and its dependencies are excluded below.
+        # Each is named by its pack importer:
+        #   timeit              spacy/language.py
+        #   cProfile, pstats    spacy/cli/profile.py (spacy/__init__ imports spacy.cli)
+        #   zoneinfo            pydantic/_internal/_generate_schema.py, _validators.py
+        # A missing one is a ModuleNotFoundError for all eight languages in the
+        # frozen app; the seeded language smokes (scripts/bundle_smoke.sh) are the
+        # gate, tests/unit/languages/test_shared_pack_bundling.py pins the list.
+        "timeit",
+        "cProfile",
+        "pstats",
+        "zoneinfo",
         # Per-language tokenizer + pack manifest modules; see the generator
         # above for why bytecode analysis cannot find them.
         *language_hiddenimports,
@@ -531,8 +545,12 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         # model package are language packs, never bundle content: a dev building
         # from a `.[languages]` venv would otherwise ship them.
         # tests/unit/languages/test_spacy_runtime_pack.py reads this list against
-        # the manifest. NOT typer: huggingface_hub bundles it (A.6). NOT colorama:
-        # tqdm and click import it on Windows, where the bundle already ships it.
+        # the manifest. typer, shellingham and annotated_doc are pack content too
+        # (weasel imports typer at `import spacy`): huggingface_hub used to bundle
+        # them, and stopped when it moved to the ASR pack. httpx/httpcore/h11/anyio
+        # are excluded with the ASR block above. NOT colorama: tqdm and click
+        # import it on Windows, where the bundle already ships it.
+        "annotated_doc",
         "annotated_types",
         "blis",
         "catalogue",
@@ -545,12 +563,14 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "preshed",
         "pydantic",
         "pydantic_core",
+        "shellingham",
         "smart_open",
         "spacy",
         "spacy_legacy",
         "spacy_loggers",
         "srsly",
         "thinc",
+        "typer",
         "typing_inspection",
         "wasabi",
         "weasel",
