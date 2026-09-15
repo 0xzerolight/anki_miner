@@ -20,7 +20,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from anki_miner.services.reading._util import is_junk_path, natural_sort_key
+from anki_miner.services.reading._util import natural_sort_key
+from anki_miner.utils.file_utils import is_junk_path
 
 #: mokuro's ``Volume.get_img_paths`` set (one wider than the Reading loader's).
 MOKURO_IMAGE_EXTENSIONS: frozenset[str] = frozenset({".jpg", ".jpeg", ".png", ".webp", ".avif"})

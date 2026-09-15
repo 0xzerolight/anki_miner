@@ -6,12 +6,11 @@ import pytest
 
 from anki_miner.exceptions import SetupError
 from anki_miner.services.reading._util import (
-    JUNK_NAMES,
     _decode,
-    is_junk_path,
     natural_sort_key,
     read_zip_member_text_capped,
 )
+from anki_miner.utils.file_utils import JUNK_NAMES, is_junk_path
 
 
 def test_natural_sort_orders_numerically():

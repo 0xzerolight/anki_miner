@@ -25,11 +25,11 @@ from typing import TYPE_CHECKING, Any, Literal
 
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.models.reading import ReadingDocument, ReadingSourceRef
+from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.logging_ext import log_summary
 
 from ._util import (
     MAX_MOKURO_JSON_BYTES,
-    is_junk_path,
     natural_sort_key,
     read_text_capped,
     read_zip_member_text_capped,

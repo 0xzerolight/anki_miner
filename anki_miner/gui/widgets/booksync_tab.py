@@ -40,7 +40,8 @@ from anki_miner.gui.widgets.subtitle_creation_tab import _AUDIO_EXTENSIONS
 from anki_miner.gui.workers.booksync_worker import BookSyncWorker
 from anki_miner.services.asr import _engine
 from anki_miner.services.asr.model_availability import usable_model_installed
-from anki_miner.services.reading._util import is_junk_path, natural_sort_key
+from anki_miner.services.reading._util import natural_sort_key
+from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)

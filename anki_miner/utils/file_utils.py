@@ -10,6 +10,23 @@ _DEFAULT_COMPONENT_BYTES = 255
 #: Digest characters kept when a truncated stem needs a collision marker.
 _TRUNCATED_HASH_CHARS = 12
 
+# Listings junk dropped from both directory walks and archive namelists so the
+# two paths filter identically (see is_junk_path). __MACOSX and $RECYCLE.BIN are
+# directory components; .DS_Store and Thumbs.db are files.
+JUNK_NAMES: frozenset[str] = frozenset({"__MACOSX", ".DS_Store", "Thumbs.db", "$RECYCLE.BIN"})
+
+
+def is_junk_path(name: str) -> bool:
+    """True when any path component is OS/archive listing junk.
+
+    Accepts a bare name or a ``/``- (or ``\\``-) separated path; matches junk
+    in nested components too, e.g. ``foo/__MACOSX/bar.jpg``. Also drops macOS
+    AppleDouble sidecars (``._Book.epub``, ``._EP01.srt``), which mirror every
+    file on a non-HFS volume and keep its extension, so an extension filter
+    alone takes them for the real file.
+    """
+    return any(part in JUNK_NAMES or part.startswith("._") for part in name.replace("\\", "/").split("/") if part)
+
 
 def _truncate_utf8(value: str, byte_budget: int) -> str:
     """Return the longest codepoint prefix fitting ``byte_budget`` UTF-8 bytes."""
