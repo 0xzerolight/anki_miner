@@ -17,6 +17,7 @@ from anki_miner.gui.widgets.youtube_playlist_flow import _classify_probe_result
 from anki_miner.languages import registry
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
+from anki_miner.models import TokenizedWord
 from anki_miner.models.card_payload import CardPayload
 from anki_miner.models.media import MediaData
 from anki_miner.models.youtube import VideoInfo
@@ -32,6 +33,7 @@ from anki_miner.services.dictionary.storage import (
     write_meta,
 )
 from anki_miner.services.known_word_db import KnownWordDB
+from anki_miner.services.word_filter import WordFilterService
 from anki_miner.utils.subtitle_encoding import load_with_fallback_encoding
 from tests.conftest import build_processor
 
@@ -108,7 +110,7 @@ def test_an_excluded_ja_deck_never_reaches_the_zh_known_words_db(test_config, tm
     _fake_ankiconnect(monkeypatch)
     config = _zh_config(test_config, tmp_path, excluded_decks=("JA Mining",))
     vocabulary = AnkiService(config).get_existing_vocabulary()
-    db = KnownWordDB(resolve_known_words_db_path(config))
+    db = KnownWordDB(resolve_known_words_db_path(config), language="zh")
     db.initialize()
     db.sync_with_anki(vocabulary)
     known = db.get_known_words()
@@ -121,10 +123,30 @@ def test_without_the_exclusion_the_same_notes_do_reach_it(test_config, tmp_path,
     _fake_ankiconnect(monkeypatch)
     config = _zh_config(test_config, tmp_path, excluded_decks=())
     vocabulary = AnkiService(config).get_existing_vocabulary()
-    db = KnownWordDB(resolve_known_words_db_path(config))
+    db = KnownWordDB(resolve_known_words_db_path(config), language="zh")
     db.initialize()
     db.sync_with_anki(vocabulary)
     assert {"学生", "世界"} <= db.get_known_words()
+
+
+def _zh_word(form):
+    return TokenizedWord(surface=form, lemma=form, reading="", sentence=form, start_time=0, end_time=1, duration=1)
+
+
+def test_a_traditional_anki_card_marks_its_simplified_twin_known(test_config, tmp_path, monkeypatch):
+    """A 頭髮 card makes 头发 known; a 麵 (noodles) card never makes 面 (face) known."""
+    pytest.importorskip("opencc")
+    _fake_ankiconnect(monkeypatch)
+    monkeypatch.setitem(_COLLECTION, 5, ("ZH Mining", "頭髮"))
+    monkeypatch.setitem(_COLLECTION, 6, ("ZH Mining", "麵"))
+    config = _zh_config(test_config, tmp_path, excluded_decks=("JA Mining",))
+    db = KnownWordDB(resolve_known_words_db_path(config), language="zh")
+    db.initialize()
+    db.sync_with_anki(AnkiService(config).get_existing_vocabulary())
+
+    word_filter = WordFilterService(config, dedup_fold=get_profile("zh").dedup_fold)
+    unknown = word_filter.filter_unknown([_zh_word("头发"), _zh_word("面"), _zh_word("麵")], db.get_known_words())
+    assert [w.surface for w in unknown] == ["面"]
 
 
 def _seed_zh_dict(dicts_root, dict_id="cedict-zh"):

@@ -32,7 +32,7 @@ from anki_miner.languages.zh.support import (
     ZhMinedFormPolicy,
     ZhScriptSupport,
 )
-from anki_miner.languages.zh.variants import normalize_zh
+from anki_miner.languages.zh.variants import normalize_zh, script_key
 
 __all__ = ["build_profile"]
 
@@ -138,4 +138,8 @@ def build_profile() -> LanguageProfile:
         extra_card_fields=ZH_EXTRA_CARD_FIELDS,
         smoke_sentence=ZH_SMOKE_SENTENCE,
         english_name="Chinese",
+        # A known word counts in either script (頭髮 meets 头发). Known-words
+        # rows, the Manage Known Words list and the whitelist report therefore
+        # show the simplified key for words that fold.
+        dedup_fold=script_key,
     )

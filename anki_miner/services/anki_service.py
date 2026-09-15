@@ -169,7 +169,7 @@ class AnkiService:
                 resolves it from the configured mining language.
             dedup_fold: The comparison fold for the vocabulary scan (S3).
                 ``None`` resolves it from the configured mining language,
-                the same rule as ``script``; ja/ko/zh profiles declare
+                the same rule as ``script``; ja/ko profiles declare
                 none, so the key stays the Anki-stripped first field.
 
         Raises:

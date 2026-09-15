@@ -8,7 +8,7 @@ import threading
 
 import pytest
 
-from anki_miner.services.known_word_db import KnownWordDB
+from anki_miner.services.known_word_db import _SCHEMA_VERSION, KnownWordDB
 
 
 class TestInitialize:
@@ -694,7 +694,7 @@ class TestNfcMigration:
         db = KnownWordDB(db_path)
         db.initialize()
         with sqlite3.connect(db_path) as conn:
-            assert int(conn.execute("PRAGMA user_version").fetchone()[0]) == 1
+            assert int(conn.execute("PRAGMA user_version").fetchone()[0]) == _SCHEMA_VERSION
         db.initialize()
         assert db.get_known_words() == {self.NFC}
 

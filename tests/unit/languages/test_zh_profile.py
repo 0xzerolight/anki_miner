@@ -4,11 +4,21 @@ from __future__ import annotations
 
 import dataclasses
 
+import pytest
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages.profile import AudioDefaults, ContentTextStyle, LanguageProfile
 from anki_miner.languages.registry import available_languages, get_profile
 from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS, switch_language
 from anki_miner.languages.zh.style import ZH_CONTENT_STYLE, zh_cjk_wrap
+
+
+def test_a_known_word_meets_its_other_script_spelling():
+    pytest.importorskip("opencc")
+    fold = get_profile("zh").dedup_fold
+    assert fold is not None
+    assert fold("頭髮") == fold("头发") == "头发"
+    assert fold("麵") != fold("面")
 
 
 def test_zh_is_registered():

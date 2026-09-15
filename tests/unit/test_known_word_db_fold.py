@@ -5,6 +5,8 @@ from __future__ import annotations
 import sqlite3
 import unicodedata
 
+import pytest
+
 from anki_miner.services.known_word_db import KnownWordDB, add_user_known_words
 from tests.unit.languages.stub_registry import register_stub_profile
 
@@ -25,13 +27,47 @@ def test_japanese_keys_are_normalize_lemma_verbatim(tmp_path):
 
 
 def test_a_non_folding_language_keeps_case(tmp_path):
-    """``dedup_fold=None`` is NFC only: ja/ko/zh rows never change spelling."""
+    """``dedup_fold=None`` is NFC only: ja/ko rows never change spelling."""
     db = KnownWordDB(tmp_path / "known_words.ko.db", language="ko")
     db.initialize()
     db.add_words({"Hund"}, source="anki")
 
     assert db.normalize_key("Hund") == "Hund"
     assert db.get_known_words() == {"Hund"}
+
+
+def test_chinese_keys_fold_both_scripts_onto_one_row(tmp_path):
+    pytest.importorskip("opencc")
+    db = KnownWordDB(tmp_path / "known_words.zh.db", language="zh")
+    db.initialize()
+    db.add_words({"頭髮", "麵"}, source="anki")
+
+    assert db.get_known_words() == {"头发", "麵"}
+    assert db.add_words_with_receipt({"头发"}, source="mined") == set()
+    assert db.remove_words({"頭髮"}) == 1
+
+
+def test_an_existing_chinese_database_rekeys_once(tmp_path):
+    """A file already stamped by the NFC-only migration still adopts the script key."""
+    pytest.importorskip("opencc")
+    path = tmp_path / "known_words.zh.db"
+    with sqlite3.connect(path) as conn:
+        conn.execute(
+            "CREATE TABLE known_words (lemma TEXT PRIMARY KEY, source TEXT DEFAULT 'anki', "
+            "added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
+        )
+        conn.executemany(
+            "INSERT INTO known_words (lemma, source, added_at) VALUES (?, ?, ?)",
+            [("頭髮", "anki", "2026-01-02"), ("头发", "user", "2026-01-05")],
+        )
+        conn.execute("PRAGMA user_version = 1")
+
+    KnownWordDB(path, language="zh").initialize()
+
+    with sqlite3.connect(path) as conn:
+        assert conn.execute("SELECT lemma, source, added_at FROM known_words").fetchall() == [
+            ("头发", "user", "2026-01-02")
+        ]
 
 
 def test_a_folding_language_stores_and_matches_folded_keys(tmp_path, monkeypatch):

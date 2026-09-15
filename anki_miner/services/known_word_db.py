@@ -14,7 +14,10 @@ logger = logging.getLogger(__name__)
 
 #: Schema revision stored in ``PRAGMA user_version``. Bumped when a migration
 #: must run once per database rather than on every ``initialize()``.
-_SCHEMA_VERSION = 1
+#: 2: zh gained a script fold, so existing ``known_words.zh.db`` rows re-key
+#: (traditional rows onto their simplified key); a no-op for other languages.
+#: A zh database migrated while OpenCC is missing keeps its NFC keys.
+_SCHEMA_VERSION = 2
 
 #: Sentinel for a comparison fold not looked up yet (``None`` is a real answer).
 _UNRESOLVED = object()
@@ -100,7 +103,7 @@ class KnownWordDB:
     def _normalize_words(self, words: set[str]) -> set[str]:
         """Normalize a lemma set, collapsing keys that fold together.
 
-        ``None`` fold (ja/ko/zh) calls the module-level :func:`_normalize_all`
+        ``None`` fold (ja/ko) calls the module-level :func:`_normalize_all`
         exactly as before — ``test_known_word_db.py`` spies on that function
         for the Anki-vocabulary memo — and a folding language maps its fold.
         """
@@ -139,7 +142,7 @@ class KnownWordDB:
     def _migrate_to_nfc(self, conn: sqlite3.Connection) -> None:
         """Rewrite pre-normalization rows to their key, once per database.
 
-        The key is :meth:`normalize_key` — NFC for ja/ko/zh, the language's
+        The key is :meth:`normalize_key` — NFC for ja/ko, the language's
         fold otherwise. Rows written before ``normalize_lemma`` existed can hold
         NFD spellings that no lookup will ever match. Two rows can also normalize onto the
         same lemma; those merge, keeping ``source='user'`` if any side had it so
@@ -489,8 +492,9 @@ def add_user_known_words(db_path: Path, forms: set[str], *, language: str = "ja"
 
     Encapsulates the user "mark known" rule shared by every mining tab's
     curation callback: build the DB ad hoc from the config path, write with
-    ``source='user'``, and store the ``mined_form`` spelling as passed — never
-    the lemma. Same pattern the settings tab uses for the rebuild action.
+    ``source='user'``, and store the ``mined_form`` spelling — never the lemma —
+    under the language's comparison key (zh stores 頭髮 as 头发). Same pattern
+    the settings tab uses for the rebuild action.
 
     The curator stages its marks and calls this only from a successful Confirm
     (D34-B), so cancelling a review writes nothing. Callers must not treat this

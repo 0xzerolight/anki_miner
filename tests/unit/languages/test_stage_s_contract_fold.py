@@ -8,7 +8,7 @@ from anki_miner.languages.registry import available_languages, get_profile
 
 CODES = sorted(available_languages())
 
-_FOLD_SAMPLES = ("食べた", "Hund", "The Cat", "Straße", "Café", "  spaced  ")
+_FOLD_SAMPLES = ("食べた", "Hund", "The Cat", "Straße", "Café", "  spaced  ", "頭髮", "乾", "裏面", "記著", "麼")
 
 
 @pytest.mark.parametrize("code", CODES)
