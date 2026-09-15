@@ -100,6 +100,10 @@ class IndexedFreqProvider:
         # The index's own key fold (S4), applied to every query term and reading
         # exactly as the importer applied it to the stored rows. None = NFC.
         self._fold_term = keys.fold_term if keys is not None else _nfc
+        # Optional spelling variants for a term this source does not carry (zh:
+        # the other script, so a simplified list ranks 銀行). Asked only on a
+        # miss, per source: a variant is the same word, not another homograph.
+        self._term_variants = getattr(keys, "term_variants", None)
         self._conn: sqlite3.Connection | None = None
         # Set at load() from PRAGMA table_info so a physical schema mismatch
         # cannot mis-shape detail queries.
@@ -187,19 +191,14 @@ class IndexedFreqProvider:
             return None
         term = self._fold_term(term)
         reading = self._fold_term(reading) if reading is not None else None
-        display_col = "display_value" if self._has_display_value else "NULL"
-        try:
-            rows = self._conn.execute(
-                f"SELECT reading, rank, {display_col} FROM entries WHERE term = ?",
-                (term,),
-            ).fetchall()
-        except sqlite3.DatabaseError as e:
-            logger.warning(
-                "Frequency source '%s' (%s) raised DatabaseError during lookup; treating as miss: %s",
-                self.source_id,
-                self._db_path,
-                e,
-            )
+        rows = self._term_rows(term)
+        if rows == []:
+            # Miss-only variant walk, mirrored by lookup_detail_many's second pass.
+            for variant in self._variants_of(term):
+                rows = self._term_rows(variant)
+                if rows != []:
+                    break
+        if rows is None:
             return None
         row = _select_scoped_row(rows, reading)
         if row is None:
@@ -230,14 +229,62 @@ class IndexedFreqProvider:
             )
             for term, reading in pairs
         ]
+        by_term = self._rows_by_term(list(dict.fromkeys(term for term, _reading in pairs)))
+        if self._term_variants is not None:
+            # Second pass, mirroring lookup_detail's miss-only variant walk: the
+            # first variant with rows stands in for the missed term.
+            variants = {term: self._variants_of(term) for term, _reading in pairs if term not in by_term}
+            wanted = [v for v in dict.fromkeys(v for vs in variants.values() for v in vs) if v not in by_term]
+            by_term.update(self._rows_by_term(wanted))
+            for term, candidates in variants.items():
+                hit = next((by_term[v] for v in candidates if v in by_term), None)
+                if hit is not None:
+                    by_term[term] = hit
+        results: list[tuple[int, str | None] | None] = []
+        for term, reading in pairs:
+            row = _select_scoped_row(by_term.get(term, []), reading)
+            results.append(None if row is None else (int(row[1]), row[2]))
+        return results
+
+    def _term_rows(self, term: str) -> list[tuple] | None:
+        """``[(reading, rank, display_value)]`` for one folded term; None on a DatabaseError."""
+        if self._conn is None:
+            return None
         display_col = "display_value" if self._has_display_value else "NULL"
-        unique = list(dict.fromkeys(term for term, _reading in pairs))
+        try:
+            rows: list[tuple] = self._conn.execute(
+                f"SELECT reading, rank, {display_col} FROM entries WHERE term = ?",
+                (term,),
+            ).fetchall()
+        except sqlite3.DatabaseError as e:
+            logger.warning(
+                "Frequency source '%s' (%s) raised DatabaseError during lookup; treating as miss: %s",
+                self.source_id,
+                self._db_path,
+                e,
+            )
+            return None
+        return rows
+
+    def _variants_of(self, folded_term: str) -> list[str]:
+        """Folded spelling variants of ``folded_term`` (never itself), in keys order."""
+        if self._term_variants is None:
+            return []
+        variants = (self._fold_term(v) for v in self._term_variants(folded_term))
+        return [v for v in dict.fromkeys(variants) if v and v != folded_term]
+
+    def _rows_by_term(self, unique: list[str]) -> dict[str, list[tuple]]:
+        """``term -> [(reading, rank, display_value)]`` for the terms that have rows."""
         by_term: dict[str, list[tuple]] = {}
+        conn = self._conn
+        if conn is None:
+            return by_term
+        display_col = "display_value" if self._has_display_value else "NULL"
         for start in range(0, len(unique), _BIND_CHUNK):
             chunk = unique[start : start + _BIND_CHUNK]
             placeholders = ",".join("?" * len(chunk))
             try:
-                rows = self._conn.execute(
+                rows = conn.execute(
                     f"SELECT term, reading, rank, {display_col} FROM entries WHERE term IN ({placeholders})",
                     chunk,
                 ).fetchall()
@@ -255,11 +302,7 @@ class IndexedFreqProvider:
                 # Same row shape _select_scoped_row sees from lookup_detail:
                 # (stored_reading, rank, display_value).
                 by_term.setdefault(term, []).append((reading, rank, display))
-        results: list[tuple[int, str | None] | None] = []
-        for term, reading in pairs:
-            row = _select_scoped_row(by_term.get(term, []), reading)
-            results.append(None if row is None else (int(row[1]), row[2]))
-        return results
+        return by_term
 
     def close(self) -> None:
         if self._conn is not None:

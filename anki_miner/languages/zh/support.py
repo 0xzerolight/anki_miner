@@ -8,7 +8,7 @@ with NFC only, and the settings script-filter section has no options at all.
 from __future__ import annotations
 
 from anki_miner.languages.profile import ScriptFilterOption
-from anki_miner.languages.zh.variants import normalize_zh, variant_candidates
+from anki_miner.languages.zh.variants import normalize_zh, to_simplified, variant_candidates
 from anki_miner.utils.ja_normalize import is_cjk_ideograph
 
 
@@ -61,6 +61,17 @@ class ZhDictKeyFolding:
             return [True] * len(rows)
         exact_contents = {content for (_, content), keep in zip(rows, term_exact, strict=True) if keep}
         return [keep or content in exact_contents for (_, content), keep in zip(rows, term_exact, strict=True)]
+
+    def term_variants(self, term: str) -> list[str]:
+        """Other-script spellings a frequency source may rank ``term`` under.
+
+        Read by ``IndexedFreqProvider`` only when a source has no row for the
+        term. The Taiwan-aware simplified spelling leads (看著 -> 看着), then
+        the lookup ladder's s2t/t2s variants. An ambiguous word takes the shared
+        spelling's rank (麵 -> 面), which is closer than no rank at all.
+        """
+        candidates = [to_simplified(term), *variant_candidates(term)[1:]]
+        return [c for c in dict.fromkeys(candidates) if c and c != term]
 
 
 class ZhMinedFormPolicy:

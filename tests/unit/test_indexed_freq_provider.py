@@ -352,3 +352,67 @@ def test_lookup_detail_many_database_error_per_chunk(
     warnings = [r for r in caplog.records if "lookup_detail_many" in r.getMessage()]
     assert len(warnings) == 1
     assert "jpdb" in warnings[0].getMessage()
+
+
+class _VariantKeys:
+    """NFC keys that name each term's spelling variants and record every ask."""
+
+    def __init__(self, variants: dict[str, list[str]]) -> None:
+        self._variants = variants
+        self.asked: list[str] = []
+
+    def fold_term(self, s: str) -> str:
+        return unicodedata.normalize("NFC", s)
+
+    def fold_reading(self, s: str | None) -> str | None:
+        return None if s is None else unicodedata.normalize("NFC", s)
+
+    def homograph_keep_mask(self, word, rows, lemma=None):
+        return [True] * len(rows)
+
+    def term_variants(self, term: str) -> list[str]:
+        self.asked.append(term)
+        return self._variants.get(term, [])
+
+
+def test_a_missed_term_is_ranked_by_its_spelling_variant(tmp_path: Path):
+    db = _build_source(tmp_path, "subtlex", [("银行", "yín háng", 300), ("电影", None, 90)])
+    provider = IndexedFreqProvider("subtlex", db, "SUBTLEX", keys=_VariantKeys({"銀行": ["银行"], "電影": ["电影"]}))
+    assert provider.load() is True
+    assert provider.lookup_detail("銀行", "yín háng") == (300, None)
+    pairs = [("銀行", "yín háng"), ("電影", None), ("电影", None), ("不存在", None)]
+    assert provider.lookup_detail_many(pairs) == [provider.lookup_detail(t, r) for t, r in pairs]
+    assert provider.lookup_detail_many(pairs) == [(300, None), (90, None), (90, None), None]
+
+
+def test_an_exact_hit_never_consults_a_variant(tmp_path: Path):
+    db = _build_source(tmp_path, "subtlex", [("銀行", None, 100), ("银行", None, 300)])
+    keys = _VariantKeys({"銀行": ["银行"]})
+    provider = IndexedFreqProvider("subtlex", db, "SUBTLEX", keys=keys)
+    assert provider.load() is True
+    assert provider.lookup_detail("銀行") == (100, None)
+    assert provider.lookup_detail_many([("銀行", None)]) == [(100, None)]
+    assert keys.asked == []
+
+
+def test_keys_without_variants_keep_the_miss(tmp_path: Path):
+    db = _build_source(tmp_path, "subtlex", [("银行", None, 300)])
+
+    class _PlainKeys:
+        def fold_term(self, s: str) -> str:
+            return s
+
+    provider = IndexedFreqProvider("subtlex", db, "SUBTLEX", keys=_PlainKeys())  # type: ignore[arg-type]
+    assert provider.load() is True
+    assert provider.lookup_detail("銀行") is None
+    assert provider.lookup_detail_many([("銀行", None)]) == [None]
+
+
+def test_the_chinese_keys_rank_a_traditional_word_from_a_simplified_list(tmp_path: Path):
+    pytest.importorskip("opencc")
+    from anki_miner.languages.registry import get_profile
+
+    db = _build_source(tmp_path, "subtlex", [("银行", "yín háng", 300), ("看着", None, 40)])
+    provider = IndexedFreqProvider("subtlex", db, "SUBTLEX", keys=get_profile("zh").dict_keys)
+    assert provider.load() is True
+    assert provider.lookup_detail_many([("銀行", "yín háng"), ("看著", None)]) == [(300, None), (40, None)]
