@@ -122,43 +122,43 @@ ko = [
 # GitHub release asset, not a PyPI package, so no extra can name it: pip users
 # download it in Settings -> Mining Language (or pip install the wheel URL).
 en = [
-    "spacy>=3.8,<3.8.15",
+    "spacy>=3.8,<3.8.17",
 ]
 # Catalan mining engine: the same spaCy cap as en (R3). The model wheel
 # (ca_core_news_sm, GPL-3.0) is a GitHub release asset, downloaded in
 # Settings -> Mining Language.
 ca = [
-    "spacy>=3.8,<3.8.15",
+    "spacy>=3.8,<3.8.17",
 ]
 # German mining engine: the same spaCy cap as en (R3). The de_core_news_sm model
 # wheel is a GitHub release asset, downloaded in Settings -> Mining Language.
 de = [
-    "spacy>=3.8,<3.8.15",
+    "spacy>=3.8,<3.8.17",
 ]
 # Portuguese mining engine: the same capped spaCy as en (R3). The model wheel
 # is a GitHub release asset: pip users download it in Settings -> Mining Language.
 pt = [
-    "spacy>=3.8,<3.8.15",
+    "spacy>=3.8,<3.8.17",
 ]
 # French mining engine: same spaCy pin as en (R3); the fr_core_news_sm wheel is a
 # GitHub release asset, downloaded in Settings -> Mining Language.
 fr = [
-    "spacy>=3.8,<3.8.15",
+    "spacy>=3.8,<3.8.17",
 ]
 # Spanish mining engine: the same spaCy pin as en (R3). The es_core_news_sm model
 # wheel is a GitHub release asset, downloaded in Settings -> Mining Language.
 es = [
-    "spacy>=3.8,<3.8.15",
+    "spacy>=3.8,<3.8.17",
 ]
 # Italian mining engine: the same spaCy pin as English (R3). The it_core_news_sm
 # model wheel is a GitHub release asset, downloaded in Settings -> Mining Language.
 it = [
-    "spacy>=3.8,<3.8.15",
+    "spacy>=3.8,<3.8.17",
 ]
 # Dutch mining engine (same spaCy cap as en, R3). The nl_core_news_sm model is a
 # GitHub release asset: pip users download it in Settings -> Mining Language.
 nl = [
-    "spacy>=3.8,<3.8.15",
+    "spacy>=3.8,<3.8.17",
 ]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
