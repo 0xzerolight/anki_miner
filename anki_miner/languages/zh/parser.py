@@ -15,11 +15,11 @@ from typing import Any
 
 def create_parser(config: Any, **kwargs: Any) -> Any:
     """Build the Chinese SubtitleParser for ``config``."""
-    from anki_miner.languages.registry import get_profile
+    from anki_miner.languages.registry import bound_mined_form, get_profile
     from anki_miner.services.subtitle_parser import SubtitleParserService
 
     profile = get_profile(config.language)
-    kwargs.setdefault("mined_form_policy", profile.mined_form)
+    kwargs.setdefault("mined_form_policy", bound_mined_form(profile, config))
     kwargs.setdefault("reading_support", profile.reading)
     # No sentence annotator: the furigana/reading generators would print the
     # sentence with its spaces deleted (spec 6.1 #2).

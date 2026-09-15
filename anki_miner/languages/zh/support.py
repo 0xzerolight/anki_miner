@@ -1,14 +1,16 @@
 """zh script gate, dictionary-key folding, mined-form policy, lookup ladder.
 
-Chinese has no inflection and no kana, so three of the four policies collapse
-to the trivial case: the mined form is the segmented surface, term keys fold
+Chinese has no inflection and no kana, so the policies stay small: the mined
+form is the segmented surface in the configured Character Set, term keys fold
 with NFC only, and the settings script-filter section has no options at all.
 """
 
 from __future__ import annotations
 
+from typing import Any
+
 from anki_miner.languages.profile import ScriptFilterOption
-from anki_miner.languages.zh.variants import normalize_zh, to_simplified, variant_candidates
+from anki_miner.languages.zh.variants import normalize_zh, to_script, to_simplified, variant_candidates
 from anki_miner.utils.ja_normalize import is_cjk_ideograph
 
 
@@ -75,7 +77,19 @@ class ZhDictKeyFolding:
 
 
 class ZhMinedFormPolicy:
-    """Identity: jieba emits no inflection, so surface == card front."""
+    """The segmented surface in the configured Character Set.
+
+    jieba emits no inflection, so the front is the surface, projected onto
+    ``config.script_variant`` (Settings -> Filtering -> Character Set). The
+    profile holds the unbound instance, which keeps the surface as written;
+    runs bind one through ``registry.bound_mined_form``.
+    """
+
+    def __init__(self, script_variant: str = "") -> None:
+        self._script_variant = script_variant
+
+    def for_config(self, config: Any) -> ZhMinedFormPolicy:
+        return ZhMinedFormPolicy(getattr(config, "script_variant", ""))
 
     def mined_form(
         self,
@@ -85,7 +99,7 @@ class ZhMinedFormPolicy:
         surface: str,
         pronunciation: str | None = None,
     ) -> str:
-        return surface or lemma or orth_base
+        return to_script(surface or lemma or orth_base, self._script_variant)
 
 
 class ZhLookupStrategy:

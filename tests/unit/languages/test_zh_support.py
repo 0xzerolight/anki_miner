@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 import pytest
 
+from anki_miner.config import AnkiMinerConfig
+from anki_miner.languages.registry import bound_mined_form, get_profile
+from anki_miner.languages.switching import switch_language
 from anki_miner.languages.zh import support
 from anki_miner.languages.zh.support import (
     ZhDictKeyFolding,
@@ -82,6 +87,30 @@ def test_mined_form_is_identity_on_the_surface():
     policy = ZhMinedFormPolicy()
     assert policy.mined_form("n", "", "", "银行") == "银行"
     assert policy.mined_form("v", "吃", "吃", "吃", None) == "吃"
+
+
+class TestCharacterSetFront:
+    @pytest.fixture(autouse=True)
+    def _opencc(self) -> None:
+        pytest.importorskip("opencc")
+
+    def test_simplified_converts_a_traditional_front(self):
+        assert ZhMinedFormPolicy("simplified").mined_form("n", "", "頭髮", "頭髮") == "头发"
+
+    def test_simplified_keeps_an_ambiguous_front(self):
+        assert ZhMinedFormPolicy("simplified").mined_form("n", "", "麵", "麵") == "麵"
+
+    def test_traditional_converts_a_simplified_front(self):
+        assert ZhMinedFormPolicy("traditional").mined_form("n", "", "这里", "这里") == "這裡"
+
+    def test_for_config_binds_the_configured_character_set(self):
+        config = switch_language(AnkiMinerConfig(), "zh")
+        bound = bound_mined_form(get_profile("zh"), dataclasses.replace(config, script_variant="traditional"))
+        assert bound.mined_form("n", "", "头发", "头发") == "頭髮"
+
+    def test_an_unbindable_policy_is_returned_as_is(self):
+        profile = get_profile("ja")
+        assert bound_mined_form(profile, AnkiMinerConfig()) is profile.mined_form
 
 
 def test_candidates_are_variants_with_a_zero_condition_mask(fake_variants):

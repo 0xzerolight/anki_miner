@@ -16,7 +16,7 @@ from collections.abc import Callable
 from typing import Any
 
 from anki_miner.languages import AVAILABLE_LANGUAGES
-from anki_miner.languages.profile import LanguageProfile
+from anki_miner.languages.profile import LanguageProfile, MinedFormPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +123,19 @@ def get_profile(code: str) -> LanguageProfile:
         profile = builder()
         _CACHE[code] = profile
         return profile
+
+
+def bound_mined_form(profile: LanguageProfile, config: Any) -> MinedFormPolicy:
+    """*profile*'s card-front policy for *config*.
+
+    A policy whose front depends on settings (zh ``script_variant``) offers
+    ``for_config(config)``; every other policy is returned as-is. The parser
+    that produces a run's fronts and the word filter that recomputes them for an
+    i+1 swap must both take the policy from here, or a converted front never
+    matches its recomputation and every candidate line is rejected.
+    """
+    bind = getattr(profile.mined_form, "for_config", None)
+    return profile.mined_form if bind is None else bind(config)
 
 
 def language_display_name(code: str) -> str:

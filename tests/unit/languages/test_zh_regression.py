@@ -12,7 +12,7 @@ import pytest
 
 from anki_miner.config import ChainEntry
 from anki_miner.exceptions import SetupError
-from anki_miner.gui.utils.service_factory import _create_subtitle_parser, resolve_known_words_db_path
+from anki_miner.gui.utils.service_factory import _create_subtitle_parser, create_services, resolve_known_words_db_path
 from anki_miner.gui.widgets.youtube_playlist_flow import _classify_probe_result
 from anki_miner.languages import registry
 from anki_miner.languages.registry import get_profile
@@ -271,6 +271,40 @@ def test_a_traditional_srt_splits_and_reads_like_its_simplified_twin(test_config
     assert {"銀行", "電影"} <= set(words)
     assert "後" not in words
     assert words["銀行"].expression_reading == "yín háng"
+
+
+def test_character_set_simplified_converts_traditional_fronts_only(test_config, tmp_path):
+    """The front follows Character Set; the sentence keeps the subtitle's own characters."""
+    pytest.importorskip("opencc")
+    config = dataclasses.replace(switch_language(test_config, "zh"), script_variant="simplified")
+    path = _srt_file(tmp_path, "zh-hant.srt", "我今天去銀行領錢", "我喜歡吃麵")
+    words = {w.surface: w for w in _create_subtitle_parser(config).parse_subtitle_file(path)}
+    assert words["銀行"].mined_form == "银行"
+    assert "銀行" in words["銀行"].sentence
+    assert words["麵"].mined_form == "麵"
+
+
+def test_character_set_traditional_converts_simplified_fronts(test_config, tmp_path):
+    pytest.importorskip("opencc")
+    config = dataclasses.replace(switch_language(test_config, "zh"), script_variant="traditional")
+    path = _srt_file(tmp_path, "zh-hans.srt", "我今天去银行取钱")
+    words = {w.surface: w for w in _create_subtitle_parser(config).parse_subtitle_file(path)}
+    assert words["银行"].mined_form == "銀行"
+    assert "银行" in words["银行"].sentence
+
+
+def test_the_word_filter_recomputes_fronts_with_the_run_policy(test_config, tmp_path):
+    """A mismatched policy would reject every i+1 candidate line for a converted front."""
+    pytest.importorskip("opencc")
+    config = dataclasses.replace(
+        switch_language(test_config, "zh"),
+        script_variant="simplified",
+        known_words_db_path=tmp_path / "known_words.db",
+        stats_db_path=tmp_path / "stats.db",
+    )
+    word_filter = create_services(config).word_filter
+    assert word_filter._mined_form is not None
+    assert word_filter._mined_form.mined_form("n", "", "銀行", "銀行") == "银行"
 
 
 def test_non_han_cue_text_mines_nothing_and_the_log_names_why(test_config, tmp_path, caplog):

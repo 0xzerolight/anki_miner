@@ -25,7 +25,7 @@ from anki_miner.interfaces.expression_audio import ExpressionAudioFetcher
 from anki_miner.interfaces.presenter import PresenterProtocol
 from anki_miner.interfaces.sentence_audio import SentenceAudioFetcher
 from anki_miner.languages.profile import LookupStrategy
-from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.languages.registry import bound_mined_form, config_language, get_profile
 from anki_miner.orchestration.episode_processor import EpisodeProcessor
 from anki_miner.services.anki_service import AnkiService
 from anki_miner.services.audio_packs.fetcher import LocalAudioPackFetcher
@@ -845,7 +845,7 @@ def create_services(
     word_filter = WordFilterService(
         config,
         tagger=subtitle_parser.tagger,
-        mined_form=profile.mined_form,
+        mined_form=bound_mined_form(profile, config),
         script=profile.script,
         dedup_fold=profile.dedup_fold,
         # D6: whether the front follows the surface is the mined-form policy's

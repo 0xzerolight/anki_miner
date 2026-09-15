@@ -95,6 +95,8 @@ PARSE_RELEVANT_CONFIG_FIELDS = (
     "use_subtitle_regex_filter",
     "subtitle_regex_filter",
     "subtitle_regex_replacement",
+    # zh card fronts follow Character Set (the injected mined-form policy).
+    "script_variant",
 )
 
 # Dictionary-attested compound matching (Yomitan longest-match principle):
