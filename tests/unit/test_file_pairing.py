@@ -617,3 +617,54 @@ class TestSecondaryFolderPairing:
             tmp_path / "v", tmp_path / "s", secondary_folder=tmp_path / "t"
         )
         assert pairs[0].secondary.name == "EP01_retimed.srt"
+
+
+#: Start of a real AppleDouble header (magic, version, "Mac OS X" filler, two
+#: entries, the first 0xEB0 bytes long). Decoding it as UTF-8 fails on the 0xB0
+#: at offset 37 — the exact error a paired sidecar raised in the parser.
+_APPLEDOUBLE_HEADER = (
+    b"\x00\x05\x16\x07\x00\x02\x00\x00Mac OS X        \x00\x02\x00\x00\x00\x09\x00\x00\x00\x32\x00\x00\x0e\xb0"
+)
+
+
+class TestAppleDoubleSidecars:
+    """macOS writes a ``._<name>`` sidecar beside every file on a non-HFS volume.
+
+    The sidecar keeps the real file's extension, and ``.`` sorts before any
+    letter, so it used to win the episode number and the real subtitle was
+    skipped as a collision.
+    """
+
+    @staticmethod
+    def _make(folder: Path, *names: str) -> None:
+        folder.mkdir(parents=True, exist_ok=True)
+        for name in names:
+            (folder / f"._{name}").write_bytes(_APPLEDOUBLE_HEADER)
+            (folder / name).touch()
+
+    def test_a_subtitle_sidecar_does_not_take_the_episode(self, tmp_path):
+        (tmp_path / "v").mkdir()
+        (tmp_path / "v" / "Show.S02E08.mkv").touch()
+        self._make(tmp_path / "s", "Show.S02E08.ko.srt")
+        pairs = FilePairMatcher.find_pairs_by_episode_number(tmp_path / "v", tmp_path / "s")
+        assert [(p.video.name, p.subtitle.name) for p in pairs] == [("Show.S02E08.mkv", "Show.S02E08.ko.srt")]
+
+    def test_sidecars_on_both_sides_pair_nothing_extra(self, tmp_path):
+        self._make(tmp_path / "v", "Show.S02E07.mkv", "Show.S02E08.mkv")
+        self._make(tmp_path / "s", "Show.S02E07.ko.srt", "Show.S02E08.ko.srt")
+        pairs = FilePairMatcher.find_pairs_by_episode_number(tmp_path / "v", tmp_path / "s")
+        assert [(p.video.name, p.subtitle.name) for p in pairs] == [
+            ("Show.S02E07.mkv", "Show.S02E07.ko.srt"),
+            ("Show.S02E08.mkv", "Show.S02E08.ko.srt"),
+        ]
+
+    def test_a_translation_sidecar_does_not_take_the_episode(self, tmp_path):
+        (tmp_path / "v").mkdir()
+        (tmp_path / "v" / "EP01.mkv").touch()
+        (tmp_path / "s").mkdir()
+        (tmp_path / "s" / "EP01.ass").touch()
+        self._make(tmp_path / "t", "EP01.en.srt")
+        pairs = FilePairMatcher.find_pairs_by_episode_number(
+            tmp_path / "v", tmp_path / "s", secondary_folder=tmp_path / "t"
+        )
+        assert [p.secondary.name for p in pairs] == ["EP01.en.srt"]

@@ -323,6 +323,35 @@ def test_folder_mode_collects_pairs_and_logs_matched(qtbot, tmp_path):
     assert "Matched 2 of 2" in log_text
 
 
+def test_folder_mode_sidecars_are_not_counted_as_videos(qtbot, tmp_path):
+    """macOS ``._`` sidecars in both folders neither pair nor count as unmatched."""
+    config = _make_config(tmp_path)
+    video_folder = tmp_path / "videos"
+    sub_folder = tmp_path / "subs"
+    video_folder.mkdir()
+    sub_folder.mkdir()
+    v1 = video_folder / "ep01.mp4"
+    v1.write_bytes(b"fake")
+    s1 = sub_folder / "ep01.srt"
+    s1.write_text("1\n")
+    (video_folder / "._ep01.mp4").write_bytes(b"\x00\x05\x16\x07")
+    (sub_folder / "._ep01.srt").write_bytes(b"\x00\x05\x16\x07")
+
+    tab = _make_tab(config, qtbot)
+    tab.folder_mode_button.click()
+    tab.video_folder_selector.set_path(str(video_folder))
+    tab.subtitle_folder_selector.set_path(str(sub_folder))
+
+    result: list[list[tuple[Path, Path]]] = []
+    tab._collect_folder_pairs_async(result.append)
+    qtbot.waitUntil(lambda: bool(result), timeout=3000)
+
+    assert result[0] == [(v1, s1)]
+    log_text = tab.log_widget.text_edit.toPlainText()
+    assert "Matched 1 of 1" in log_text
+    assert "Unmatched" not in log_text
+
+
 def test_pairing_summary_survives_log_clear_on_start(qtbot, tmp_path):
     """The 'Matched N of M' line logged during collection survives the pre-run
     log clear (clear happens before _collect_pairs, not after)."""
@@ -567,6 +596,24 @@ def test_pair_preview_lists_matches_and_unmatched(qtbot, tmp_path):
     assert any("Show - 02.mkv" in t and "jp 02.srt" in t for t in items)
     assert any("Show - 03.mkv" in t and "no matching subtitle" in t for t in items)
     assert "2" in tab.pair_preview_label.text()
+
+
+def test_pair_preview_omits_appledouble_sidecars(qtbot, tmp_path):
+    """macOS ``._`` sidecars keep the video extension; they are not listed as
+    unmatched videos (and do not pair)."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    video_dir, sub_dir = _folder_fixture(tmp_path)
+    for folder, name in ((video_dir, "Show - 01.mkv"), (sub_dir, "jp 01.srt")):
+        (folder / f"._{name}").write_bytes(b"\x00\x05\x16\x07")
+
+    tab._on_folder_mode()
+    tab.video_folder_selector.set_path(str(video_dir))
+    tab.subtitle_folder_selector.set_path(str(sub_dir))
+    qtbot.waitUntil(lambda: not tab.pair_preview.isHidden(), timeout=3000)
+
+    items = [tab.pair_preview.item(i).text() for i in range(tab.pair_preview.count())]
+    assert len(items) == 3
+    assert not any("._" in t for t in items)
 
 
 def test_pair_preview_clears_on_scan_error(qtbot, tmp_path):

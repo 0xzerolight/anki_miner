@@ -60,6 +60,7 @@ from anki_miner.utils import list_audio_streams
 from anki_miner.utils.alass_resolver import resolve_alass
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.file_pairing import FilePairMatcher
+from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -346,7 +347,7 @@ class SubtitleRetimeTab(_ToolTabBase):
                 unmatched = sorted(
                     f.name
                     for f in video_folder.iterdir()
-                    if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
+                    if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS and not is_junk_path(f.name)
                 )
             except OSError:
                 unmatched = []
@@ -822,7 +823,7 @@ class SubtitleRetimeTab(_ToolTabBase):
             all_videos = sorted(
                 f
                 for f in video_folder.iterdir()
-                if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS
+                if f.is_file() and f.suffix.lower() in FilePairMatcher.VIDEO_EXTENSIONS and not is_junk_path(f.name)
             )
             # Same pairing as the preview above, including prefer_retimed=False.
             file_pairs = FilePairMatcher.find_pairs_by_episode_number(video_folder, sub_folder, prefer_retimed=False)

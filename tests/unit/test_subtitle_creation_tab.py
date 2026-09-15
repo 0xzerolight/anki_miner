@@ -238,6 +238,21 @@ def test_audio_files_are_collected_from_folder(qtbot, tmp_path):
     assert result[0] == [mp3, wav]
 
 
+def test_folder_collection_skips_appledouble_sidecars(qtbot, tmp_path):
+    """A macOS ``._`` sidecar keeps the media extension; it is not queued."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    mp3 = tmp_path / "episode01.mp3"
+    mp3.write_bytes(b"fake")
+    (tmp_path / "._episode01.mp3").write_bytes(b"\x00\x05\x16\x07")
+    tab.folder_mode_button.click()
+    tab.folder_selector.set_path(str(tmp_path))
+
+    result: list[list[Path]] = []
+    tab._collect_folder_video_files_async(result.append)
+    qtbot.waitUntil(lambda: bool(result), timeout=3000)
+    assert result[0] == [mp3]
+
+
 def test_folder_mode_failed_collection_leaves_button_enabled(qtbot, tmp_path):
     """A synchronous bail (no folder picked) must not leave Generate dead:
     _on_generate disables it before dispatch, so the collector must always

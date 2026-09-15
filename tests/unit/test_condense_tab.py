@@ -383,6 +383,25 @@ def test_folder_mode_auto_scans_media(qtbot, tmp_path):
     assert result[0] == [CondenseItem(m1, None), CondenseItem(m2, None)]
 
 
+def test_folder_mode_auto_scan_skips_appledouble_sidecars(qtbot, tmp_path):
+    """A macOS ``._`` sidecar keeps the media extension; it is not its own job."""
+    config = _make_config(tmp_path)
+    media_folder = tmp_path / "media"
+    media_folder.mkdir()
+    m1 = media_folder / "ep01.mkv"
+    m1.write_bytes(b"fake")
+    (media_folder / "._ep01.mkv").write_bytes(b"\x00\x05\x16\x07")
+
+    tab = _make_tab(config, qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(media_folder))
+
+    result: list[list[CondenseItem]] = []
+    tab._collect_folder_items_async(result.append)
+    qtbot.waitUntil(lambda: bool(result), timeout=3000)
+    assert result[0] == [CondenseItem(m1, None)]
+
+
 def test_folder_mode_empty_folder_warns(qtbot, tmp_path):
     """Folder mode with no media files → warning, returns []."""
     config = _make_config(tmp_path)
@@ -491,6 +510,35 @@ def test_folder_mode_subfolder_unmatched_logs_warning(qtbot, tmp_path):
     assert "Matched 1 of 2" in log_text
     assert "Unmatched media files: 1." in log_text
     assert tab.issue_banner().current_issue() is None
+
+
+def test_folder_mode_subfolder_sidecars_are_not_counted_as_media(qtbot, tmp_path):
+    """macOS ``._`` sidecars in both folders neither pair nor count as unmatched."""
+    config = _make_config(tmp_path)
+    media_folder = tmp_path / "media"
+    sub_folder = tmp_path / "subs"
+    media_folder.mkdir()
+    sub_folder.mkdir()
+    m1 = media_folder / "ep01.mkv"
+    m1.write_bytes(b"fake")
+    s1 = sub_folder / "ep01.srt"
+    s1.write_text("1\n")
+    (media_folder / "._ep01.mkv").write_bytes(b"\x00\x05\x16\x07")
+    (sub_folder / "._ep01.srt").write_bytes(b"\x00\x05\x16\x07")
+
+    tab = _make_tab(config, qtbot)
+    tab.folder_mode_button.click()
+    tab.media_folder_selector.set_path(str(media_folder))
+    tab.subtitle_folder_selector.set_path(str(sub_folder))
+
+    result: list[list[CondenseItem]] = []
+    tab._collect_folder_items_async(result.append)
+    qtbot.waitUntil(lambda: bool(result), timeout=3000)
+
+    assert result[0] == [CondenseItem(m1, s1)]
+    log_text = tab.log_widget.text_edit.toPlainText()
+    assert "Matched 1 of 1" in log_text
+    assert "Unmatched" not in log_text
 
 
 def test_folder_mode_subfolder_no_pairs_warns(qtbot, tmp_path):

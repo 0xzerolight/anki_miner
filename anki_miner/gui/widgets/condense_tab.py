@@ -69,7 +69,7 @@ from anki_miner.utils import list_audio_streams
 from anki_miner.utils.audio_track_detector import list_subtitle_streams, matches_language_tag
 from anki_miner.utils.ffmpeg_resolver import resolve_ffmpeg, resolve_ffprobe
 from anki_miner.utils.file_pairing import FilePairMatcher, resolve_output_path
-from anki_miner.utils.file_utils import bounded_output_name, safe_filename
+from anki_miner.utils.file_utils import bounded_output_name, is_junk_path, safe_filename
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
@@ -1076,7 +1076,9 @@ class CondenseTab(_ToolTabBase):
         # No subtitle folder → per-file auto-detection over the media folder.
         def _scan() -> object:
             return sorted(
-                f for f in media_folder.iterdir() if f.is_file() and f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS
+                f
+                for f in media_folder.iterdir()
+                if f.is_file() and f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS and not is_junk_path(f.name)
             )
 
         def _apply(result: object) -> None:
@@ -1100,7 +1102,9 @@ class CondenseTab(_ToolTabBase):
     ) -> None:
         def _scan() -> object:
             all_media = sorted(
-                f for f in media_folder.iterdir() if f.is_file() and f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS
+                f
+                for f in media_folder.iterdir()
+                if f.is_file() and f.suffix.lower() in CONDENSE_MEDIA_EXTENSIONS and not is_junk_path(f.name)
             )
             file_pairs = FilePairMatcher.find_pairs_by_episode_number(
                 media_folder,

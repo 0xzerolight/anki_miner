@@ -48,6 +48,7 @@ from anki_miner.languages.registry import get_profile
 from anki_miner.services.asr import _engine
 from anki_miner.services.asr.model_availability import usable_model_installed
 from anki_miner.utils.file_pairing import FilePairMatcher
+from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
@@ -533,7 +534,11 @@ class SubtitleCreationTab(_ToolTabBase):
             return
 
         def _scan() -> object:
-            return sorted(f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in _MEDIA_EXTENSIONS)
+            return sorted(
+                f
+                for f in folder.iterdir()
+                if f.is_file() and f.suffix.lower() in _MEDIA_EXTENSIONS and not is_junk_path(f.name)
+            )
 
         def _apply(result: object) -> None:
             files = cast("list[Path]", result)

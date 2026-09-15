@@ -7,6 +7,7 @@ from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from anki_miner.utils.file_utils import is_junk_path
 from anki_miner.utils.logging_ext import suppressed
 
 logger = logging.getLogger(__name__)
@@ -239,7 +240,11 @@ def _attach_secondary(
     secondary_subs: list[Path] = []
     scanned = False
     with suppressed(logger, f"scanning {secondary_folder} for translation subtitles", level=logging.WARNING):
-        secondary_subs = [f for f in secondary_folder.iterdir() if f.is_file() and f.suffix.lower() in subtitle_exts]
+        secondary_subs = [
+            f
+            for f in secondary_folder.iterdir()
+            if f.is_file() and f.suffix.lower() in subtitle_exts and not is_junk_path(f.name)
+        ]
         scanned = True
     _sort_subtitles(secondary_subs, prefer_retimed)
     if not secondary_subs:
@@ -339,11 +344,22 @@ class FilePairMatcher:
         # WARNING, not silent: zero pairs is what the user sees, and "the
         # folder is empty" and "the folder could not be read" look identical
         # from the batch screen.
+        # is_junk_path: a macOS AppleDouble sidecar (``._EP01.srt``) keeps the
+        # real file's extension and sorts ahead of it, so it would take the
+        # episode number and the real subtitle would be skipped as a collision.
         videos: list[Path] = []
         subtitles: list[Path] = []
         with suppressed(logger, f"scanning {video_folder} and {subtitle_folder} for pairs", level=logging.WARNING):
-            videos = [f for f in video_folder.iterdir() if f.is_file() and f.suffix.lower() in video_exts]
-            subtitles = [f for f in subtitle_folder.iterdir() if f.is_file() and f.suffix.lower() in subtitle_exts]
+            videos = [
+                f
+                for f in video_folder.iterdir()
+                if f.is_file() and f.suffix.lower() in video_exts and not is_junk_path(f.name)
+            ]
+            subtitles = [
+                f
+                for f in subtitle_folder.iterdir()
+                if f.is_file() and f.suffix.lower() in subtitle_exts and not is_junk_path(f.name)
+            ]
         if not videos or not subtitles:
             return []
 
