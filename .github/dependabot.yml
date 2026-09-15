@@ -7,6 +7,11 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - dependencies
+    ignore:
+      # R3 (pyproject.toml en extra): gTTS caps click<8.2, spaCy >=3.8.15 needs
+      # click>=8.2.1. Remove once a gTTS release lifts its click cap.
+      - dependency-name: "spacy"
+        versions: [">=3.8.15"]
 
   - package-ecosystem: github-actions
     directory: "/"
