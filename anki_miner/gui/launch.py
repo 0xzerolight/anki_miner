@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import multiprocessing
 import os
 import sys
 import tempfile
@@ -258,7 +259,15 @@ def _inject_windows_truststore() -> None:
 
 def main() -> int:
     """Install early recovery, then hand control to the full GUI application."""
-    # First, before the crash sink, the Windows app mutex and the instance
+    # A frozen bundle has no interpreter, so multiprocessing's helper processes
+    # re-run this executable: macOS defaults to ``spawn``, and the first tqdm
+    # lock (a Whisper download) starts the resource tracker that way.
+    # PyInstaller's freeze_support() runs the helper and exits; without it the
+    # helper boots a second GUI. A no-op outside a frozen bundle. Called through
+    # the module because PyInstaller's runtime hook replaces the attribute.
+    multiprocessing.freeze_support()
+
+    # Next, before the crash sink, the Windows app mutex and the instance
     # lock: the child is a headless one-shot worker for the application that
     # spawned it and must neither boot a second GUI nor contend for the
     # parent's single-instance guards.

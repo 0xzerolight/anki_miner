@@ -326,6 +326,45 @@ def test_ffsubsync_child_flag_dispatches_before_any_bootstrap(
     assert calls == ["child sink", ("child", ["ref.srt", "-i", "in.srt", "-o", "out.srt"])]
 
 
+def test_multiprocessing_helper_argv_diverts_before_any_bootstrap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A frozen bundle re-runs itself as multiprocessing's resource tracker.
+
+    macOS defaults to ``spawn``, so the first tqdm lock (a Whisper download)
+    starts the tracker as ``<app> -B -s -c "from multiprocessing..."``. Only
+    ``freeze_support()`` — which PyInstaller replaces with a version that runs
+    the helper and exits — keeps that process from booting a second GUI.
+    """
+    import multiprocessing
+
+    from anki_miner.gui import launch
+
+    calls = []
+    monkeypatch.setattr(launch, "_install_early_crash_sink", lambda: calls.append("sink"))
+    monkeypatch.setattr(launch, "_create_windows_app_mutex", lambda: calls.append("mutex"))
+    monkeypatch.setattr(launch, "_inject_windows_truststore", lambda: calls.append("truststore"))
+    monkeypatch.setattr(launch, "_install_child_log_sink", lambda: calls.append("child sink"))
+    fake_app = ModuleType("anki_miner.gui.app")
+    fake_app.main = lambda: calls.append("app") or 0  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "anki_miner.gui.app", fake_app)
+
+    def pyinstaller_freeze_support() -> None:
+        calls.append("freeze_support")
+        raise SystemExit(0)
+
+    monkeypatch.setattr(multiprocessing, "freeze_support", pyinstaller_freeze_support)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["Anki Miner", "-B", "-s", "-c", "from multiprocessing.resource_tracker import main;main(5)"],
+    )
+
+    with pytest.raises(SystemExit):
+        launch.main()
+    assert calls == ["freeze_support"]
+
+
 def test_installer_app_mutex_matches_launch_constant() -> None:
     from anki_miner.gui import launch
 
@@ -540,6 +579,7 @@ def test_script_entry_shares_public_truststore_flag(tmp_path: Path) -> None:
     (fake_modules / "sitecustomize.py").write_text(
         "import builtins\n"
         "import logging\n"
+        "import multiprocessing\n"
         "import os\n"
         "import pathlib\n"
         "import sys\n"
@@ -548,6 +588,9 @@ def test_script_entry_shares_public_truststore_flag(tmp_path: Path) -> None:
         "import typing\n"
         "sys.frozen = True\n"
         "sys.platform = 'win32'\n"
+        # A real bundle's PyInstaller runtime hook replaces freeze_support; the
+        # stdlib one would import _winapi under this faked platform.
+        "multiprocessing.freeze_support = lambda: None\n"
         "real_import = builtins.__import__\n"
         "def inspect_app_import(name, globals=None, locals=None, fromlist=(), level=0):\n"
         "    if name == 'anki_miner.gui.app':\n"
