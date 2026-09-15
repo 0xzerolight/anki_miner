@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import pytest
+
 from anki_miner.languages.tagger_provider import get_tagger
 from anki_miner.languages.token import LanguageToken
+from anki_miner.languages.zh import tokenizer
 from anki_miner.languages.zh.tokenizer import JiebaTagger, build_tagger
 from anki_miner.services.morphology import SyntheticToken, iter_token_spans
 from anki_miner.services.tagger import LockedTagger
@@ -54,6 +57,63 @@ class TestJiebaTagger:
             ("北京", "n", "ns"),
             ("书", "n", ""),
         ]
+
+
+class _Pair:
+    def __init__(self, word: str, flag: str) -> None:
+        self.word, self.flag = word, flag
+
+
+class _RecordingCutter:
+    """Cuts one character per token, recording every text it was handed."""
+
+    def __init__(self, drop_last: bool = False) -> None:
+        self.seen: list[str] = []
+        self._drop_last = drop_last
+
+    def cut(self, text: str):
+        self.seen.append(text)
+        chars = list(text)
+        if self._drop_last and len(self.seen) == 1:
+            chars = chars[:-1]
+        return [_Pair(char, "n") for char in chars]
+
+
+class TestSimplifiedCopy:
+    """jieba's dictionary is simplified-only, so traditional text is cut on a simplified copy."""
+
+    TRADITIONAL = "我今天去銀行領錢，然後回家看電影。"
+
+    def test_a_traditional_line_splits_like_its_simplified_twin(self) -> None:
+        pytest.importorskip("opencc")
+        tokens = build_tagger()(self.TRADITIONAL)
+        twin = build_tagger()("我今天去银行领钱，然后回家看电影。")
+        assert [len(t.surface) for t in tokens] == [len(t.surface) for t in twin]
+        assert [t.feature.pos2 or t.feature.pos1 for t in tokens] == [t.feature.pos2 or t.feature.pos1 for t in twin]
+        assert "然後" in [t.surface for t in tokens]
+
+    def test_surfaces_are_sliced_from_the_original_text(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(tokenizer, "to_simplified", lambda text: text.replace("後", "后"))
+        cutter = _RecordingCutter()
+        tokens = JiebaTagger(cutter)("然後")
+        assert cutter.seen == ["然后"]
+        assert [t.surface for t in tokens] == ["然", "後"]
+        assert [t.feature.lemma for t in tokens] == ["然", "後"]
+
+    def test_a_length_changing_conversion_cuts_the_original(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(tokenizer, "to_simplified", lambda text: text + "x")
+        cutter = _RecordingCutter()
+        JiebaTagger(cutter)("然後")
+        assert cutter.seen == ["然後"]
+
+    def test_a_cut_that_does_not_cover_the_text_is_redone_on_the_original(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(tokenizer, "to_simplified", lambda text: text.replace("後", "后"))
+        cutter = _RecordingCutter(drop_last=True)
+        tokens = JiebaTagger(cutter)("然後")
+        assert cutter.seen == ["然后", "然後"]
+        assert [t.surface for t in tokens] == ["然", "後"]
 
 
 class TestTaggerProvider:

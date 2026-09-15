@@ -22,6 +22,15 @@ class TestWordPinyin:
     def test_non_hanzi_yields_an_empty_reading(self) -> None:
         assert word_pinyin("ok!") == ""
 
+    @pytest.mark.parametrize(
+        ("word", "expected"), [("銀行", "yín háng"), ("重複", "chóng fù"), ("音樂", "yīn yuè"), ("會計", "kuài jì")]
+    )
+    def test_traditional_polyphones_read_like_their_simplified_twin(self, word: str, expected: str) -> None:
+        # pypinyin's phrase dictionary is simplified-only; a traditional word
+        # would otherwise be read one character at a time (銀行 yín xíng).
+        pytest.importorskip("opencc")
+        assert word_pinyin(word) == expected
+
 
 class TestSyllableTone:
     @pytest.mark.parametrize(
@@ -34,6 +43,10 @@ class TestSyllableTone:
 class TestPinyinSyllables:
     def test_pairs_each_syllable_with_its_tone(self) -> None:
         assert pinyin_syllables("中国") == [("zhōng", 1), ("guó", 2)]
+
+    def test_a_traditional_word_gets_its_simplified_twin_tones(self) -> None:
+        pytest.importorskip("opencc")
+        assert pinyin_syllables("銀行") == [("yín", 2), ("háng", 2)]
 
 
 class TestZhReadingSupport:

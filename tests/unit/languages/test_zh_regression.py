@@ -239,6 +239,18 @@ def test_a_switched_zh_config_mines_words_from_a_simplified_srt(test_config, tmp
     assert not [r for r in caplog.records if "mined no words" in r.getMessage()]
 
 
+def test_a_traditional_srt_splits_and_reads_like_its_simplified_twin(test_config, tmp_path):
+    """jieba and pypinyin only know simplified words; a traditional line is cut and
+    read through a simplified copy while the words keep their traditional spelling."""
+    pytest.importorskip("opencc")
+    parser = _create_subtitle_parser(switch_language(test_config, "zh"))
+    path = _srt_file(tmp_path, "zh-hant.srt", "我今天去銀行領錢", "然後回家看電影")
+    words = {w.surface: w for w in parser.parse_subtitle_file(path)}
+    assert {"銀行", "電影"} <= set(words)
+    assert "後" not in words
+    assert words["銀行"].expression_reading == "yín háng"
+
+
 def test_non_han_cue_text_mines_nothing_and_the_log_names_why(test_config, tmp_path, caplog):
     """English cues under a Chinese caption code mine nothing - the shape of the
     first zh YouTube report - and the GUI's "No words found in subtitles" carries

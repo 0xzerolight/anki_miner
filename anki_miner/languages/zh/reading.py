@@ -11,6 +11,8 @@ from __future__ import annotations
 import unicodedata
 from typing import Any
 
+from anki_miner.languages.zh.variants import to_simplified
+
 # Combining diacritics a TONE-styled syllable carries, in NFD form. Neutral
 # (5th) tone carries none, which is why the default is 5 rather than 0.
 _TONE_BY_MARK = {"\u0304": 1, "\u0301": 2, "\u030c": 3, "\u0300": 4}
@@ -30,11 +32,13 @@ def _syllables(word: str) -> list[str]:
 
     The whole word is handed to pypinyin in one call so its phrase dictionary
     can disambiguate polyphones; feeding characters one at a time would silently
-    return the most common reading for every one of them.
+    return the most common reading for every one of them. That dictionary is
+    simplified-only, so the word goes in as its simplified spelling (銀行 would
+    otherwise read yín xíng); both scripts share one pronunciation.
     """
     from pypinyin import Style, pinyin
 
-    rows = pinyin(word, style=Style.TONE, heteronym=False, errors="ignore")
+    rows = pinyin(to_simplified(word), style=Style.TONE, heteronym=False, errors="ignore")
     return [row[0] for row in rows if row and row[0]]
 
 

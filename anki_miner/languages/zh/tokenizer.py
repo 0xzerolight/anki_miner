@@ -4,10 +4,16 @@ Emits ``LanguageToken`` (NOT ``morphology.SyntheticToken``): that class's
 isinstance gates drive ja-only attested-reading and span-replacement merge
 passes, and a zh token caught by them would be swept into Japanese morphology.
 
-Surfaces are the raw jieba segments, never re-spelled or normalised.
+Surfaces are slices of the text as given, never re-spelled or normalised.
 ``morphology.iter_token_spans`` (:380) locates each token by ``str.find`` from a
 running cursor and silently drops what it cannot find, so a normalised surface
 would delete the word from the mined set with no error anywhere.
+
+jieba's dictionary is simplified-only: on traditional text it splits 然後 into 然
+and 後 (tagged as a name). The cut therefore runs on a simplified copy, and each
+segment's length is sliced back out of the original text. OpenCC's simplified
+conversion keeps the character count; a copy whose length differs, or a cut that
+does not cover the text, falls back to cutting the original.
 """
 
 from __future__ import annotations
@@ -15,6 +21,7 @@ from __future__ import annotations
 from typing import Any
 
 from anki_miner.languages.token import LanguageToken
+from anki_miner.languages.zh.variants import to_simplified
 from anki_miner.services.tagger import LockedTagger
 
 
@@ -24,13 +31,26 @@ class JiebaTagger:
     def __init__(self, cutter: Any) -> None:
         self._cutter = cutter
 
+    def _segments(self, text: str) -> list[tuple[str, str]]:
+        """``(original-text slice, flag)`` per jieba segment of ``text``."""
+        simplified = to_simplified(text)
+        if len(simplified) == len(text):
+            segments: list[tuple[str, str]] = []
+            pos = 0
+            for pair in self._cutter.cut(simplified):
+                end = pos + len(pair.word)
+                segments.append((text[pos:end], pair.flag))
+                pos = end
+            if pos == len(text):
+                return segments
+        return [(pair.word, pair.flag) for pair in self._cutter.cut(text)]
+
     def __call__(self, text: str) -> list[LanguageToken]:
         tokens: list[LanguageToken] = []
-        for pair in self._cutter.cut(text):
-            surface = pair.word
+        for surface, flag in self._segments(text):
             if not surface:
                 continue
-            flag = pair.flag or "x"
+            flag = flag or "x"
             tokens.append(
                 LanguageToken(
                     surface=surface,
