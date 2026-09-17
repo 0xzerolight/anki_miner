@@ -1,0 +1,30 @@
+{
+  "approx_download_mb": 13,
+  "code": "ro",
+  "components": [
+    {
+      "abi": null,
+      "import_name": "ro_core_news_sm",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py",
+        "ro_core_news_sm-3.8.0/config.cfg",
+        "ro_core_news_sm-3.8.0/meta.json"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "ro_core_news_sm-3.8.0-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "ro_core_news_sm/",
+        "root_members": [],
+        "sha256": "3cebfba2437131efe95345adcc7ea2131e4463915652df9099c577e618460cd9",
+        "size": 12910222,
+        "url": "https://github.com/explosion/spacy-models/releases/download/ro_core_news_sm-3.8.0/ro_core_news_sm-3.8.0-py3-none-any.whl"
+      }
+    }
+  ],
+  "requires": [
+    "_spacy"
+  ]
+}
