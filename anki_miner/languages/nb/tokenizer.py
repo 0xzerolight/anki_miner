@@ -5,6 +5,11 @@ The parser supplies the ``compound:prt`` arc the particle stash reads; the parse
 splitter uses trims spaCy's dotted exceptions, so a sentence-final ``ti.``, ``min.`` or ``jul.`` is two tokens. No
 apostrophe fold: tagged as written, ``Lars’ bil`` is PROPN + X; folded to ``Lars'`` it would be one ADJ token. nb's
 infixes keep hyphen compounds (``e-posten``) whole already.
+
+``relemmatise_capitalised`` opts into RULING S2 FINAL's variant R: a sentence-initial capitalised content word
+whose lemma is its own surface is re-lemmatised lowercased, POS kept (``Studenten`` → ``student``). Measured
+on UD Norwegian Bokmaal dev+test: all-content lemma accuracy 94.11 % → 94.42 %, and PROPN-anywhere predicted
+content stays at 155/3,944 — the ruling's opt-in bar.
 """
 
 from __future__ import annotations
@@ -22,4 +27,5 @@ def build_tagger() -> LockedTagger:
         keep_parser=True,
         particle_deps=NB_SEPARABLE_VERB_DEPS,
         abbreviations=NB_ABBREVIATIONS,
+        relemmatise_capitalised=True,
     )

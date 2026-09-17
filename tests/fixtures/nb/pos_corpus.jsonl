@@ -1,9 +1,9 @@
-{"id":"nb01","sentence":"Studenten leste en interessant bok i går.","must_mine":["lese","interessant","bok","går"],"must_not_mine":["en","i"],"note":"smoke sentence; en is DET. Studenten keeps its surface as the lemma (sentence-initial capital) and fronts studenten: a pinned miss. går is NOUN, a real wty-nb-en headword (only in i går)"}
+{"id":"nb01","sentence":"Studenten leste en interessant bok i går.","must_mine":["lese","interessant","bok","går","student"],"must_not_mine":["en","i","studenten"],"note":"smoke sentence; en is DET. Studenten fronts student: the capital-lemma seam (variant R, B24) re-lemmatises it, so the old pinned miss studenten is now excluded. går is NOUN, a real wty-nb-en headword (only in i går)"}
 {"id":"nb02","sentence":"Hun gikk hjem.","must_mine":["gå hjem"],"must_not_mine":["gå","hjem","hun"],"note":"gikk → gå (PROBE). hjem is labelled compound:prt: without a dictionary the join is taken (see particle_verbs.jsonl for the attested path)"}
 {"id":"nb03","sentence":"Boka ligger på bordet.","must_mine":["bok","ligge","bord"],"must_not_mine":["boka","på"],"note":"feminine definite boka → bok (morph Gender=Fem)"}
 {"id":"nb04","sentence":"Boken ligger på bordet.","must_mine":["bok","ligge","bord"],"must_not_mine":["boken"],"note":"masculine definite boken → bok (morph Gender=Masc)"}
 {"id":"nb05","sentence":"Huset var stort.","must_mine":["hus","stor"],"must_not_mine":["var","være","huset"],"note":"var is AUX (være), excluded"}
-{"id":"nb06","sentence":"Jenta leste boka.","must_mine":["lese","bok"],"must_not_mine":["boka"],"note":"Jenta lemmatises to jenta (sentence-initial capital, lemma miss) and fronts jenta; pinned, not asserted as must_mine"}
+{"id":"nb06","sentence":"Jenta leste boka.","must_mine":["lese","bok"],"must_not_mine":["boka","jente"],"note":"Jenta fronts jenta here and the capital-lemma seam (variant R, B24) cannot reach it: the model's raw lemma is already the lowercase jenta, and variant R only fires when the raw lemma equals the surface. Pinned as a residual miss; the same word in 'Jenta er her.' lemmatises to jente without the seam"}
 {"id":"nb07","sentence":"Han har kjøpt en ny bil.","must_mine":["kjøpe","ny","bil"],"must_not_mine":["ha","han"],"note":"participle → infinitive; har AUX"}
 {"id":"nb08","sentence":"Jeg vet ikke hva jeg skal gjøre.","must_mine":["vite","gjøre"],"must_not_mine":["ikke","skulle","hva"],"note":"ikke is PART, skal AUX"}
 {"id":"nb09","sentence":"Vi så barna leke i hagen.","must_mine":["se","barn","leke","hage"],"must_not_mine":["barna","vi"],"note":"så → se; barna → barn"}
@@ -19,7 +19,7 @@
 {"id":"nb19","sentence":"Vi kjøpte epler, pærer osv.","must_mine":["kjøpe","eple","pære"],"must_not_mine":["osv.","osv"],"note":"osv. is one X token"}
 {"id":"nb20","sentence":"Sykkelen min er ødelagt.","must_mine":["sykkel","ødelegge"],"must_not_mine":["min"],"note":"ødelagt is ADJ with lemma ødelegge"}
 {"id":"nb21","sentence":"Jeg glemte å ringe til mora mi.","must_mine":["glemme","ringe","mor"],"must_not_mine":["å","mi","min"],"note":"å is PART; mora → mor"}
-{"id":"nb22","sentence":"Øynene hennes er blå.","must_mine":["blå"],"must_not_mine":["hennes"],"note":"Øynene lemmatises to øynene (sentence-initial capital, lemma miss); pinned, not asserted"}
+{"id":"nb22","sentence":"Øynene hennes er blå.","must_mine":["blå","øye"],"must_not_mine":["hennes","øynene"],"note":"Øynene fronts øye: repaired by the capital-lemma seam (variant R, B24), which was a pinned miss"}
 {"id":"nb23","sentence":"Vi drar på ferie til Spania neste uke.","must_mine":["dra","ferie","uke"],"must_not_mine":["Spania","neste"],"note":"neste is DET, excluded"}
 {"id":"nb24","sentence":"HUN ER IKKE HJEMME.","must_mine":[],"must_not_mine":["hun","være","ikke","HUN"],"note":"all-caps cue tagged from the lowercased copy: HUN PRON, ER AUX, IKKE PART; HJEMME is tagged ADP and mines nothing"}
 {"id":"nb25","sentence":"Jeg må handle mat før butikken stenger.","must_mine":["handle","mat","butikk","stenge"],"must_not_mine":["måtte","før"],"note":""}
