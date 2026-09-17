@@ -101,3 +101,14 @@ def test_an_all_caps_cue_is_a_settled_miss(tagger, parser, record):
     keys = get_profile("el").dict_keys
     for front, key in zip(record["must_mine"], record["dictionary_keys"], strict=True):
         assert keys.fold_term(front) != keys.fold_term(key)
+
+
+def test_a_capitalised_inflected_content_word_is_relemmatised(tagger):
+    tokens = {token.surface: token for token in tagger("Εκφράζουμε τη λύπη μας.")}
+    assert (tokens["Εκφράζουμε"].feature.pos1, tokens["Εκφράζουμε"].feature.lemma) == ("VERB", "εκφράζω")
+
+
+def test_a_function_word_tagged_capital_verb_is_not_touched(tagger):
+    """R keeps POS: Κλείσε tagged PROPN stays out of mining (el16's class of miss)."""
+    tokens = {token.surface: token for token in tagger("Κλείσε την πόρτα.")}
+    assert tokens["Κλείσε"].feature.pos1 == "PROPN"

@@ -5,6 +5,9 @@ join (``ελληνο-τουρκική`` is already one token; glued dashes still
 infix). Curly and modifier apostrophes are folded in the tagging copy: the model's elision exceptions
 know ``'`` and ``’`` but not U+02BC, so ``Θ\u02bc`` would tag ADJ and mine as a word. The abbreviation set
 is the sentence splitter's, so ``κ.``/``χλμ.`` stay tokenizer exceptions and ``Νικ.``/``αν.`` do not.
+
+A capitalised content word whose lemma is its surface is re-lemmatised lowercase (Ruling S2 R; UD GDT
+dev+test lemma exact 80.99 % -> 81.92 %, POS untouched).
 """
 
 from __future__ import annotations
@@ -17,4 +20,9 @@ from anki_miner.services.tagger import LockedTagger
 
 def build_tagger() -> LockedTagger:
     """``tagger_provider``'s entry point."""
-    return build_spacy_tagger(EL_MODEL_PACKAGE, tag_char_map=APOSTROPHE_FOLD, abbreviations=EL_ABBREVIATIONS)
+    return build_spacy_tagger(
+        EL_MODEL_PACKAGE,
+        tag_char_map=APOSTROPHE_FOLD,
+        abbreviations=EL_ABBREVIATIONS,
+        relemmatise_capitalised=True,
+    )
