@@ -1,0 +1,100 @@
+{
+  "_comment": "Raw ro_core_news_sm 3.8.0 output, recorded 2026-09-17 through importlib.import_module('ro_core_news_sm').load(exclude=['ner', 'senter', 'parser']). No morphologizer: the attribute_ruler maps each trained RRT MSD tag to UPOS and morph, so morph is non-empty without one (E.2.5). The ruler maps several main-verb tags (Vmip1s, Vmip3s, ...) to AUX: 'știu' is AUX here, and ro's main_verb_pos pass lifts it to VERB. The sentence-initial 'Cărțile' keeps its surface as the lemma; lowercased it lemmatises to 'carte' (ro's capitalised-lemma retry). The model is CC BY-SA 4.0 (UD Romanian RRT v2.8).",
+  "package": "ro_core_news_sm",
+  "version": "3.8.0",
+  "license": "CC BY-SA 4.0",
+  "pipeline": [
+    "tok2vec",
+    "tagger",
+    "lemmatizer",
+    "attribute_ruler"
+  ],
+  "lemmatizer": "EditTreeLemmatizer",
+  "sentence": "Cărțile sunt pe masă, dar nu știu unde e cheia.",
+  "tokens": [
+    {
+      "text": "Cărțile",
+      "pos": "NOUN",
+      "tag": "Ncfpry",
+      "lemma": "Cărțile",
+      "morph": "Case=Acc,Nom|Definite=Def|Gender=Fem|Number=Plur"
+    },
+    {
+      "text": "sunt",
+      "pos": "AUX",
+      "tag": "Vaip3p",
+      "lemma": "fi",
+      "morph": "Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin"
+    },
+    {
+      "text": "pe",
+      "pos": "ADP",
+      "tag": "Spsa",
+      "lemma": "pe",
+      "morph": "AdpType=Prep|Case=Acc"
+    },
+    {
+      "text": "masă",
+      "pos": "NOUN",
+      "tag": "Ncfsrn",
+      "lemma": "masă",
+      "morph": "Case=Acc,Nom|Definite=Ind|Gender=Fem|Number=Sing"
+    },
+    {
+      "text": ",",
+      "pos": "PUNCT",
+      "tag": "COMMA",
+      "lemma": ",",
+      "morph": ""
+    },
+    {
+      "text": "dar",
+      "pos": "CCONJ",
+      "tag": "Ccssp",
+      "lemma": "dar",
+      "morph": "Polarity=Pos"
+    },
+    {
+      "text": "nu",
+      "pos": "PART",
+      "tag": "Qz",
+      "lemma": "nu",
+      "morph": "Polarity=Neg"
+    },
+    {
+      "text": "știu",
+      "pos": "AUX",
+      "tag": "Vmip1s",
+      "lemma": "ști",
+      "morph": "Mood=Ind|Number=Sing|Person=1|Tense=Pres|VerbForm=Fin"
+    },
+    {
+      "text": "unde",
+      "pos": "ADV",
+      "tag": "Rw",
+      "lemma": "unde",
+      "morph": "PronType=Int,Rel"
+    },
+    {
+      "text": "e",
+      "pos": "AUX",
+      "tag": "Vaip3s",
+      "lemma": "fi",
+      "morph": "Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin"
+    },
+    {
+      "text": "cheia",
+      "pos": "NOUN",
+      "tag": "Ncfsry",
+      "lemma": "cheie",
+      "morph": "Case=Acc,Nom|Definite=Def|Gender=Fem|Number=Sing"
+    },
+    {
+      "text": ".",
+      "pos": "PUNCT",
+      "tag": "PERIOD",
+      "lemma": ".",
+      "morph": ""
+    }
+  ]
+}
