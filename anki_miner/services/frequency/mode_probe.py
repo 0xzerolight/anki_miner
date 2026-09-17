@@ -67,6 +67,8 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     # ro: the list spells most s/t words with the legacy cedilla and the probe matches raw terms,
     # so the common terms are the top of ro_50k.txt without an s/t letter.
     "ro": ["de", "nu", "să", "o", "în", "ce", "e", "că", "la", "a"],
+    # el: the top ten of hermitdave's OpenSubtitles 2018 el_50k.txt, lowercase surface forms.
+    "el": ["να", "το", "δεν", "είναι", "θα", "και", "μου", "με", "για", "την"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -159,6 +161,18 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
         "strykejern",
     ],
     "ro": ["arici", "felinar", "bursuc", "nicovală", "morsă", "roabă", "stup", "telescop", "canoe", "degetar"],
+    "el": [
+        "φανάρι",
+        "πυξίδα",
+        "μέλισσα",
+        "λαγουδάκι",
+        "τηλεσκόπιο",
+        "κυψέλη",
+        "κανό",
+        "καλούπι",
+        "καζάνι",
+        "δρεπάνι",
+    ],
 }
 
 
