@@ -1,0 +1,30 @@
+{
+  "streams": [
+    {
+      "index": 1,
+      "codec_type": "audio",
+      "codec_name": "aac",
+      "channels": 2,
+      "disposition": {
+        "default": 1
+      },
+      "tags": {
+        "language": "jpn",
+        "title": "Japanese"
+      }
+    },
+    {
+      "index": 2,
+      "codec_type": "audio",
+      "codec_name": "aac",
+      "channels": 2,
+      "disposition": {
+        "default": 0
+      },
+      "tags": {
+        "language": "gre",
+        "title": "Ελληνικά"
+      }
+    }
+  ]
+}
