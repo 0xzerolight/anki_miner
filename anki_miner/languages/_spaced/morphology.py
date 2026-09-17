@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
+from anki_miner.languages._spaced.pos import UPOS_ALLOWED
+
 if TYPE_CHECKING:  # annotation-only: services must not load at profile build
     from anki_miner.services.morphology import AttestLookup, FormLookup
 
@@ -65,6 +67,47 @@ def tagging_copy(text: str, char_map: Mapping[str, str] = EMPTY_MAP) -> str:
         if len(lowered) == len(copy):
             return lowered
     return copy
+
+
+#: The classes a capitalised-lemma repair may touch: the card-front classes (a name is never re-lemmatised).
+CAPITALISED_LEMMA_POS: frozenset[str] = frozenset(UPOS_ALLOWED)
+
+#: Lowercased words -> the lemma the model gives each one parsed alone, ``""`` when it has none.
+Lemmatise = Callable[[list[str]], list[str]]
+
+
+def relemmatise_capitalised(
+    doc_tokens: Iterable[Any], lemmatise: Lemmatise, *, pos: frozenset[str] = CAPITALISED_LEMMA_POS
+) -> None:
+    """§4.3 item 1 for a lemmatiser that learned from lowercase words (Ruling S2, variant R); opt-in per language.
+
+    ``sv_core_news_sm`` lemmatises ``huset`` → ``hus`` but leaves a cue-initial ``Huset`` as ``Huset``, and
+    the casing rule only lowers that to ``huset``. A spaCy token whose ``pos_`` is in *pos*, whose first
+    character is uppercase, which is not all caps and whose RAW ``lemma_`` equals its text is lemmatised again
+    from its lowercased text alone; ``lemma_`` is rewritten in place, POS, tag and morph stay the in-context
+    ones, and ``""`` keeps the lemma. The raw lemma is the signal: after ``case_lemma`` a word the model
+    lemmatised by lowercasing it (``Var`` "where" → ``var``) looks the same as a miss. One ``lemmatise`` call
+    per line over the distinct words. UD Swedish Talbanken dev+test: content lemma exact 91.52 → 92.14 %,
+    sentence-initial 73.3 → 86.9 %, PROPN predicted as content unchanged (59 of 278).
+
+    *pos* is the language's set: ro passes ``CAPITALISED_LEMMA_POS | {"AUX"}`` because its tagger maps
+    main-verb ``Vm`` tags to AUX. A language that capitalises its nouns (de ``title_case_pos={"NOUN"}``) must
+    not opt in: ``lemma_ == text`` is then true of every uninflected noun, which is harmless but re-parses one
+    word per noun.
+    """
+    suspects = [
+        tok
+        for tok in doc_tokens
+        if tok.pos_ in pos and tok.text[:1].isupper() and tok.text != tok.text.upper() and tok.lemma_ == tok.text
+    ]
+    if not suspects:
+        return
+    words = list(dict.fromkeys(tok.text.lower() for tok in suspects))
+    lemmas = dict(zip(words, lemmatise(words), strict=True))
+    for tok in suspects:
+        lemma = lemmas[tok.text.lower()]
+        if lemma:
+            tok.lemma_ = lemma
 
 
 class SpacedMinedForm:
