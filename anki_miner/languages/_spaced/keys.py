@@ -70,7 +70,8 @@ def spaced_dedup_fold(keys: CasefoldDictKeys, leading_words: frozenset[str] = fr
     point is what makes the fold idempotent — ``LanguageProfile.dedup_fold``
     must be, because folded keys are stored and folded again.
     """
-    whole_words = frozenset(_apostrophes(word) for word in leading_words)
+    # Folded like the text they are compared with: casefold maps el's final sigma (ένας → ένασ).
+    whole_words = frozenset(_apostrophes(keys.fold_term(word)) for word in leading_words)
     elided = tuple(sorted((w for w in whole_words if w.endswith("'")), key=lambda w: (-len(w), w)))
 
     def fold(text: str) -> str:
