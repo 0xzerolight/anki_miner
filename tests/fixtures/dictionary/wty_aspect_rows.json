@@ -1,0 +1,1721 @@
+{
+ "_comment": "Real rows from wiktionary-to-yomitan revision 2026.08.29 (huggingface.co/datasets/daxida/wty-release): wty-sh-en.zip 8,555,841 B and wty-pl-en.zip 16,078,249 B. Every row of each listed term, the tag-bank entries those rows use, and the HTML the app renders for each term. Pins GrammarTagHook's aspect_pair.",
+ "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). Attribution: https://en.wiktionary.org/ entries for the listed Serbo-Croatian and Polish terms.",
+ "dictionaries": {
+  "wty-sh-en": {
+   "index": {
+    "title": "wty-sh-en",
+    "format": 3,
+    "revision": "2026.08.29",
+    "sequenced": true,
+    "sourceLanguage": "sh",
+    "targetLanguage": "en",
+    "attribution": "https://kaikki.org/"
+   },
+   "tag_bank": [
+    [
+     "impf",
+     "aspect",
+     0,
+     "imperfective",
+     0
+    ],
+    [
+     "pf",
+     "aspect",
+     0,
+     "perfective",
+     0
+    ],
+    [
+     "v",
+     "partOfSpeech",
+     -2,
+     "verb",
+     2
+    ],
+    [
+     "vr",
+     "partOfSpeech",
+     -2,
+     "reflexive verb",
+     2
+    ],
+    [
+     "vt",
+     "partOfSpeech",
+     -2,
+     "transitive verb",
+     2
+    ],
+    [
+     "non-lemma",
+     "",
+     10,
+     "non-lemma",
+     -10
+    ]
+   ],
+   "term_rows": [
+    [
+     "imenovati",
+     "",
+     "v vt impf pf",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "ȉmenovati impf or pf (Cyrillic spelling и̏меновати)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Inherited from Proto-Slavic *jьmenovati."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to name"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to mention"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to appoint"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/imenovati#Serbo-Croatian",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/i/im/imenovati.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ],
+    [
+     "čitati",
+     "",
+     "v impf",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "čìtati impf (Cyrillic spelling чѝтати, perfective pročìtati)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Inherited from Proto-Slavic *čitati, from Proto-Indo-European *kʷeyt-. Common Balto-Slavic, compare Lithuanian skaitýti."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to read"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/čitati#Serbo-Croatian",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/č/či/čitati.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ],
+    [
+     "kupiti",
+     "",
+     "v vt pf",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "kúpiti pf (Cyrillic spelling ку́пити)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Inherited from Proto-Slavic *kupiti, from Proto-Germanic *kaupōną, from Latin caupō."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to buy, purchase"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/kupiti#Serbo-Croatian",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/k/ku/kupiti.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ],
+    [
+     "kupiti",
+     "",
+     "v vr impf",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "kȕpiti impf (Cyrillic spelling ку̏пити)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Inherited from Proto-Slavic *kupiti. See kȕp."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "transitive verb",
+                 "data": {
+                  "content": "tag",
+                  "category": "partOfSpeech"
+                 },
+                 "content": "vt"
+                }
+               ]
+              },
+              "to collect, gather, to pick up"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to leave, go away"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/kupiti#Serbo-Croatian",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/k/ku/kupiti.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ],
+    [
+     "pročitati",
+     "",
+     "v vt pf",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "pročìtati pf (Cyrillic spelling прочѝтати, imperfective čìtati)"
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to read to get acquainted with the content"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/pročitati#Serbo-Croatian",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/p/pr/pročitati.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ],
+    [
+     "pročitati",
+     "pročìtati",
+     "non-lemma",
+     "",
+     0,
+     [
+      [
+       "čitati",
+       [
+        "perfective"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ],
+    [
+     "čitati",
+     "čìtati",
+     "non-lemma",
+     "",
+     0,
+     [
+      [
+       "pročitati",
+       [
+        "imperfective"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ],
+    [
+     "čitati",
+     "",
+     "non-lemma",
+     "",
+     0,
+     [
+      [
+       "štiti",
+       [
+        "alt-of"
+       ]
+      ],
+      [
+       "štiti",
+       [
+        "alternative"
+       ]
+      ],
+      [
+       "štiti",
+       [
+        "dated"
+       ]
+      ],
+      [
+       "štiti",
+       [
+        "imperfective"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ]
+   ],
+   "rendered_html": {
+    "čitati": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"imperfective\">impf</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"3\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">čìtati impf (Cyrillic spelling чѝтати, perfective pročìtati)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *čitati, from Proto-Indo-European *kʷeyt-. Common Balto-Slavic, compare Lithuanian skaitýti.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to read</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/čitati#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/č/či/čitati.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">pročitati</div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">štiti</li><li class=\"gloss-sc-li\">štiti</li><li class=\"gloss-sc-li\">štiti</li><li class=\"gloss-sc-li\">štiti</li></ul></div></li></ul></li></ol></div>",
+    "pročitati": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"transitive verb\">vt</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"perfective\">pf</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">pročìtati pf (Cyrillic spelling прочѝтати, imperfective čìtati)</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to read to get acquainted with the content</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/pročitati#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/p/pr/pročitati.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">čitati</div></li></ul></li></ol></div>",
+    "kupiti": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"reflexive verb\">vr</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"transitive verb\">vt</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"imperfective\">impf</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"perfective\">pf</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">kúpiti pf (Cyrillic spelling ку́пити)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *kupiti, from Proto-Germanic *kaupōną, from Latin caupō.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to buy, purchase</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/kupiti#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/k/ku/kupiti.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">kȕpiti impf (Cyrillic spelling ку̏пити)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *kupiti. See kȕp.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"transitive verb\">vt</span></div>to collect, gather, to pick up</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to leave, go away</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/kupiti#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/k/ku/kupiti.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+    "imenovati": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"transitive verb\">vt</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"imperfective\">impf</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"perfective\">pf</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">ȉmenovati impf or pf (Cyrillic spelling и̏меновати)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *jьmenovati.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to name</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to mention</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to appoint</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/imenovati#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/i/im/imenovati.html\">Kaikki</a></div></div></li></ul></li></ol></div>"
+   }
+  },
+  "wty-pl-en": {
+   "index": {
+    "title": "wty-pl-en",
+    "format": 3,
+    "revision": "2026.08.29",
+    "sequenced": true,
+    "sourceLanguage": "pl",
+    "targetLanguage": "en",
+    "attribution": "https://kaikki.org/"
+   },
+   "tag_bank": [
+    [
+     "impf",
+     "aspect",
+     0,
+     "imperfective",
+     0
+    ],
+    [
+     "pf",
+     "aspect",
+     0,
+     "perfective",
+     0
+    ],
+    [
+     "v",
+     "partOfSpeech",
+     -2,
+     "verb",
+     2
+    ],
+    [
+     "vi",
+     "partOfSpeech",
+     -2,
+     "intransitive verb",
+     2
+    ],
+    [
+     "vt",
+     "partOfSpeech",
+     -2,
+     "transitive verb",
+     2
+    ],
+    [
+     "non-lemma",
+     "",
+     10,
+     "non-lemma",
+     -10
+    ]
+   ],
+   "term_rows": [
+    [
+     "mieszkać",
+     "",
+     "v impf vi",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Etymology tree\nProto-Indo-European *mey-?\nProto-Indo-European *meyḱ-der.\nProto-Balto-Slavic *maiśī́ˀtei\nProto-Slavic *měsiti\nProto-Indo-European *-h₂\nProto-Indo-European *-éh₂\nProto-Indo-European *-yéti\nProto-Indo-European *-eh₂yéti\nProto-Balto-Slavic *-ā́ˀtei\nProto-Slavic *-ati\nProto-Slavic *měšati\nProto-Slavic *-kati\nProto-Slavic *mešьkati\nOld Polish mieszkać\nPolish mieszkać\nInherited from Old Polish mieszkać."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to live, to reside (to have permanent or long-term residence; to treat a place as one's long-term place of residence)",
+              {
+               "tag": "details",
+               "data": {
+                "content": "details-entry-examples"
+               },
+               "content": [
+                {
+                 "tag": "summary",
+                 "data": {
+                  "content": "summary-entry"
+                 },
+                 "content": "1 example"
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "Mieszkam"
+                     },
+                     " w Warszawie."
+                    ]
+                   },
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-b"
+                    },
+                    "content": [
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "I live"
+                     },
+                     " in Warsaw."
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to dwell, to live (to have one's habitat somewhere)",
+              {
+               "tag": "details",
+               "data": {
+                "content": "details-entry-examples"
+               },
+               "content": [
+                {
+                 "tag": "summary",
+                 "data": {
+                  "content": "summary-entry"
+                 },
+                 "content": "1 example"
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     "Pandy wielkie ",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "mieszkają"
+                     },
+                     " w Chinach."
+                    ]
+                   },
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-b"
+                    },
+                    "content": [
+                     "Pandas ",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "live"
+                     },
+                     " in China."
+                    ]
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to dwell, to reside (to be felt by most people; to be in the air)"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "obsolete",
+                 "data": {
+                  "content": "tag",
+                  "category": "archaism"
+                 },
+                 "content": "obs"
+                }
+               ]
+              },
+              "to pay attention to; to spend time with"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "participle",
+                 "data": {
+                  "content": "tag",
+                  "category": "partOfSpeech"
+                 },
+                 "content": "ptcpl"
+                }
+               ]
+              },
+              "to linger"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to rely, to depend"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to live (to be alive)"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to remain (to not disappear)"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to remain (to not leave)"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to live under certain conditions"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to associate with (to be in someone's company)"
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to act according to some regulations, rules, etc."
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "dialectal",
+                 "data": {
+                  "content": "tag",
+                  "category": "usage"
+                 },
+                 "content": "dialect"
+                }
+               ]
+              },
+              "to be late"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/mieszkać#Polish",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Polish/meaning/m/mi/mieszkać.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ],
+    [
+     "mieszkać",
+     "",
+     "v vi pf",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Etymology tree\nProto-Indo-European *mey-?\nProto-Indo-European *meyḱ-der.\nProto-Balto-Slavic *maiśī́ˀtei\nProto-Slavic *měsiti\nProto-Indo-European *-h₂\nProto-Indo-European *-éh₂\nProto-Indo-European *-yéti\nProto-Indo-European *-eh₂yéti\nProto-Balto-Slavic *-ā́ˀtei\nProto-Slavic *-ati\nProto-Slavic *měšati\nProto-Slavic *-kati\nProto-Slavic *mešьkati\nOld Polish mieszkać\nPolish mieszkać\nInherited from Old Polish mieszkać."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to leave, to neglect"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/mieszkać#Polish",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Polish/meaning/m/mi/mieszkać.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ],
+    [
+     "kupić",
+     "",
+     "v pf vt",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "kupić pf (imperfective kupować or (dialectal) kupać)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "Etymology tree\nLatin caupōbor.\nProto-Germanic *kaupô\nProto-Indo-European *-yéti\nProto-Germanic *-janą\nProto-Germanic *kaupijanąder.\nProto-Slavic *kupiti\nOld Polish kupić\nPolish kupić\nInherited from Old Polish kupić."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to buy"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/kupić#Polish",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Polish/meaning/k/ku/kupić.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ],
+    [
+     "przeczytać",
+     "",
+     "v pf vt",
+     "",
+     0,
+     [
+      {
+       "type": "structured-content",
+       "content": [
+        {
+         "tag": "div",
+         "content": [
+          {
+           "tag": "div",
+           "data": {
+            "content": "preamble"
+           },
+           "content": [
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Grammar"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Grammar"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Grammar-content"
+               },
+               "content": "przeczytać pf (imperfective determinate czytać, frequentative czytywać)"
+              }
+             ]
+            },
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-Etymology"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "Etymology"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "Etymology-content"
+               },
+               "content": "From prze- + czytać."
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "ol",
+         "data": {
+          "content": "glosses"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "content": [
+            {
+             "tag": "div",
+             "content": [
+              "to read; to read up"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "div",
+         "data": {
+          "content": "backlink"
+         },
+         "content": [
+          {
+           "tag": "a",
+           "href": "https://en.wiktionary.org/wiki/przeczytać#Polish",
+           "content": "Wiktionary"
+          },
+          " | ",
+          {
+           "tag": "a",
+           "href": "https://kaikki.org/dictionary/Polish/meaning/p/pr/przeczytać.html",
+           "content": "Kaikki"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     0,
+     ""
+    ],
+    [
+     "kupić",
+     "",
+     "non-lemma",
+     "",
+     0,
+     [
+      [
+       "kupować",
+       [
+        "perfective"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ],
+    [
+     "przeczytać",
+     "",
+     "non-lemma",
+     "",
+     0,
+     [
+      [
+       "czytywać",
+       [
+        "perfective"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ],
+    [
+     "kupić",
+     "",
+     "non-lemma",
+     "",
+     0,
+     [
+      [
+       "kupywać",
+       [
+        "perfective"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ],
+    [
+     "mieszkać",
+     "",
+     "non-lemma",
+     "",
+     0,
+     [
+      [
+       "mięszkać",
+       [
+        "Poznań"
+       ]
+      ],
+      [
+       "mięszkać",
+       [
+        "alt-of"
+       ]
+      ],
+      [
+       "mięszkać",
+       [
+        "alternative"
+       ]
+      ],
+      [
+       "mięszkać",
+       [
+        "imperfective"
+       ]
+      ],
+      [
+       "mięszkać",
+       [
+        "intransitive"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ],
+    [
+     "mieszkać",
+     "",
+     "non-lemma",
+     "",
+     0,
+     [
+      [
+       "pomieszkiwać",
+       [
+        "imperfective determinate"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ],
+    [
+     "kupić",
+     "",
+     "non-lemma",
+     "",
+     0,
+     [
+      [
+       "kupać",
+       [
+        "perfective"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ],
+    [
+     "mieszkać",
+     "",
+     "non-lemma",
+     "",
+     0,
+     [
+      [
+       "miąskać",
+       [
+        "alt-of"
+       ]
+      ],
+      [
+       "miąskać",
+       [
+        "alternative"
+       ]
+      ],
+      [
+       "miąskać",
+       [
+        "imperfective"
+       ]
+      ],
+      [
+       "miąskać",
+       [
+        "intransitive"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ],
+    [
+     "mieszkać",
+     "",
+     "non-lemma",
+     "",
+     0,
+     [
+      [
+       "miauskać",
+       [
+        "alt-of"
+       ]
+      ],
+      [
+       "miauskać",
+       [
+        "alternative"
+       ]
+      ],
+      [
+       "miauskać",
+       [
+        "imperfective"
+       ]
+      ],
+      [
+       "miauskać",
+       [
+        "intransitive"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ],
+    [
+     "mieszkać",
+     "",
+     "non-lemma",
+     "",
+     0,
+     [
+      [
+       "mnięskać",
+       [
+        "alt-of"
+       ]
+      ],
+      [
+       "mnięskać",
+       [
+        "alternative"
+       ]
+      ],
+      [
+       "mnięskać",
+       [
+        "imperfective"
+       ]
+      ],
+      [
+       "mnięskać",
+       [
+        "intransitive"
+       ]
+      ]
+     ],
+     0,
+     ""
+    ]
+   ],
+   "rendered_html": {
+    "przeczytać": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-pl-en\" data-dictionary-id=\"wty-pl-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"transitive verb\">vt</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"perfective\">pf</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-pl-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">przeczytać pf (imperfective determinate czytać, frequentative czytywać)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From prze- + czytać.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to read; to read up</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/przeczytać#Polish\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Polish/meaning/p/pr/przeczytać.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">czytywać</div></li></ul></li></ol></div>",
+    "kupić": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-pl-en\" data-dictionary-id=\"wty-pl-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"transitive verb\">vt</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"perfective\">pf</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-pl-en)</i><ul class=\"gloss-list\" data-count=\"4\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">kupić pf (imperfective kupować or (dialectal) kupać)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Etymology tree<br>Latin caupōbor.<br>Proto-Germanic *kaupô<br>Proto-Indo-European *-yéti<br>Proto-Germanic *-janą<br>Proto-Germanic *kaupijanąder.<br>Proto-Slavic *kupiti<br>Old Polish kupić<br>Polish kupić<br>Inherited from Old Polish kupić.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to buy</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/kupić#Polish\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Polish/meaning/k/ku/kupić.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">kupować</div></li><li class=\"gloss-item\"><div class=\"gloss-content\">kupywać</div></li><li class=\"gloss-item\"><div class=\"gloss-content\">kupać</div></li></ul></li></ol></div>",
+    "mieszkać": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-pl-en\" data-dictionary-id=\"wty-pl-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"intransitive verb\">vi</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"imperfective\">impf</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"perfective\">pf</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-pl-en)</i><ul class=\"gloss-list\" data-count=\"5\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Etymology tree<br>Proto-Indo-European *mey-?<br>Proto-Indo-European *meyḱ-der.<br>Proto-Balto-Slavic *maiśī́ˀtei<br>Proto-Slavic *měsiti<br>Proto-Indo-European *-h₂<br>Proto-Indo-European *-éh₂<br>Proto-Indo-European *-yéti<br>Proto-Indo-European *-eh₂yéti<br>Proto-Balto-Slavic *-ā́ˀtei<br>Proto-Slavic *-ati<br>Proto-Slavic *měšati<br>Proto-Slavic *-kati<br>Proto-Slavic *mešьkati<br>Old Polish mieszkać<br>Polish mieszkać<br>Inherited from Old Polish mieszkać.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to live, to reside (to have permanent or long-term residence; to treat a place as one&#x27;s long-term place of residence)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Mieszkam</span> w Warszawie.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">I live</span> in Warsaw.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to dwell, to live (to have one&#x27;s habitat somewhere)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Pandy wielkie <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">mieszkają</span> w Chinach.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Pandas <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">live</span> in China.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to dwell, to reside (to be felt by most people; to be in the air)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"archaism\" title=\"obsolete\">obs</span></div>to pay attention to; to spend time with</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"participle\">ptcpl</span></div>to linger</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to rely, to depend</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to live (to be alive)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to remain (to not disappear)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to remain (to not leave)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to live under certain conditions</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to associate with (to be in someone&#x27;s company)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to act according to some regulations, rules, etc.</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"usage\" title=\"dialectal\">dialect</span></div>to be late</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/mieszkać#Polish\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Polish/meaning/m/mi/mieszkać.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Etymology tree<br>Proto-Indo-European *mey-?<br>Proto-Indo-European *meyḱ-der.<br>Proto-Balto-Slavic *maiśī́ˀtei<br>Proto-Slavic *měsiti<br>Proto-Indo-European *-h₂<br>Proto-Indo-European *-éh₂<br>Proto-Indo-European *-yéti<br>Proto-Indo-European *-eh₂yéti<br>Proto-Balto-Slavic *-ā́ˀtei<br>Proto-Slavic *-ati<br>Proto-Slavic *měšati<br>Proto-Slavic *-kati<br>Proto-Slavic *mešьkati<br>Old Polish mieszkać<br>Polish mieszkać<br>Inherited from Old Polish mieszkać.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to leave, to neglect</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/mieszkać#Polish\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Polish/meaning/m/mi/mieszkać.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">mięszkać</li><li class=\"gloss-sc-li\">mięszkać</li><li class=\"gloss-sc-li\">mięszkać</li><li class=\"gloss-sc-li\">mięszkać</li><li class=\"gloss-sc-li\">mięszkać</li></ul></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">pomieszkiwać</div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">miąskać</li><li class=\"gloss-sc-li\">miąskać</li><li class=\"gloss-sc-li\">miąskać</li><li class=\"gloss-sc-li\">miąskać</li></ul></div></li></ul></li></ol></div>"
+   }
+  }
+ }
+}
