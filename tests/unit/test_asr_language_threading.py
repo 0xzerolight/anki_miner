@@ -82,3 +82,10 @@ def test_generate_subtitle_one_forwards_language(tmp_path, monkeypatch):
     video.write_bytes(b"")
     subtitle_generation.generate_subtitle_one(config, _Extractor(), video, tmp_path / "ep.srt", language="ko")
     assert seen["language"] == "ko"
+
+
+def test_whisper_knows_no_and_not_nb():
+    """R27: nb's decoder id is `no` because faster-whisper has no `nb` (nb's asr_language is `no`)."""
+    from faster_whisper.tokenizer import _LANGUAGE_CODES
+
+    assert "no" in _LANGUAGE_CODES and "nb" not in _LANGUAGE_CODES
