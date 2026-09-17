@@ -15,7 +15,7 @@ from __future__ import annotations
 #: this tuple as ``anki_miner.config.config._LANGUAGE_CODES`` because config
 #: must not import this package (same rule as ``excluded_wordsets`` vs
 #: ``WORDSET_IDS``); ``tests/unit/test_config_language.py`` pins them identical.
-AVAILABLE_LANGUAGES: tuple[str, ...] = ("ja", "ko", "zh", "en", "ca", "de", "pt", "fr", "es", "it", "nl")
+AVAILABLE_LANGUAGES: tuple[str, ...] = ("ja", "ko", "zh", "en", "ca", "de", "pt", "fr", "es", "it", "nl", "nb")
 
 #: Engine packs shared by several mining languages. Not languages: never in
 #: AVAILABLE_LANGUAGES, never discovered as profiles, but every consumer that

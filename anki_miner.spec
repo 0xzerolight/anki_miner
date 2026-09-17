@@ -234,6 +234,15 @@ nl_core_news_sm_license_datas = []
 if os.path.isdir(nl_core_news_sm_license_dir):
     nl_core_news_sm_license_datas.append((nl_core_news_sm_license_dir, os.path.join("licenses", "nl_core_news_sm")))
 
+# nb_core_news_sm (Norwegian Bokmål spaCy model) MIT notice: shipped whenever the license
+# dir exists. Lands at sys._MEIPASS/licenses/nb_core_news_sm/. The model itself is
+# excluded below and arrives as a language pack the app downloads; the MIT notice
+# travels with the app that delivers it.
+nb_model_license_dir = os.path.join(project_root, "licenses", "nb_core_news_sm")
+nb_model_license_datas = []
+if os.path.isdir(nb_model_license_dir):
+    nb_model_license_datas.append((nb_model_license_dir, os.path.join("licenses", "nb_core_news_sm")))
+
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
 # ML model has no positive trust signals to weigh against "packed binary that runs
@@ -393,7 +402,8 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + de_model_license_datas
     + es_model_license_datas
     + it_core_news_sm_license_datas
-    + nl_core_news_sm_license_datas,
+    + nl_core_news_sm_license_datas
+    + nb_model_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",
@@ -581,6 +591,7 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "es_core_news_sm",
         "fr_core_news_sm",
         "it_core_news_sm",
+        "nb_core_news_sm",
         "nl_core_news_sm",
         "pt_core_news_sm",
         # yt-dlp is a SUBPROCESS, never an import: every call site spawns the

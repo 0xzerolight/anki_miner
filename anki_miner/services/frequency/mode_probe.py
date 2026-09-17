@@ -62,6 +62,8 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     "pt": ["que", "o", "não", "de", "a", "é", "e", "um", "para", "eu"],
     "nl": ["ik", "je", "het", "de", "dat", "is", "een", "niet", "en", "van"],
     "ca": ["que", "no", "de", "la", "el", "a", "i", "és", "un", "per"],
+    # nb: hermitdave's list lives in content/2018/no/ (R27) but the probe keys on the profile code.
+    "nb": ["jeg", "det", "er", "du", "ikke", "en", "og", "i", "har", "vi"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -141,6 +143,18 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
         "telescoop",
     ],
     "ca": ["didal", "enclusa", "llanterna", "teixó", "telescopi", "rusc", "sella", "canoa", "carretó", "esquirol"],
+    "nb": [
+        "pinnsvin",
+        "fyrtårn",
+        "hvalross",
+        "lanterne",
+        "meisel",
+        "grevling",
+        "kikkert",
+        "bikube",
+        "sparegris",
+        "strykejern",
+    ],
 }
 
 
