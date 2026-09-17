@@ -51,6 +51,10 @@ _MORPH_GENDER = {"Masc": "masc", "Fem": "fem", "Neut": "neut", "Com": "common"}
 _CHIP_GENDER = {"masculine": "masc", "feminine": "fem", "neuter": "neut", "common": "common"}
 _HEAD_GENDER = {"m": "masc", "f": "fem", "n": "neut", "c": "common"}
 
+#: A masculine animacy qualifier a wty head line puts after the gender letter (pl ``stół m inan``, ``pies m animal``).
+_HEAD_ANIMACY = {"pers": "pers", "anim": "anim", "animal": "anim", "inan": "inan"}
+_MORPH_ANIMACY = {"Hum": "pers", "Nhum": "anim", "Inan": "inan"}
+
 #: Aspect ids: imperfective, perfective, and a verb that is both.
 ASPECTS: tuple[str, ...] = ("impf", "pf", "biaspectual")
 DEFAULT_ASPECT_LABELS: Mapping[str, str] = MappingProxyType(
@@ -105,8 +109,29 @@ def _gender_from_morph(morph: str) -> str | None:
     return None
 
 
-def _gender_from_head(head: str) -> str | None:
+def _headword_tokens(head: str) -> list[str]:
+    """The head line's headword part, marks stripped, with ONE trailing animacy qualifier dropped (Addendum A)."""
     tokens = _without_combining_marks(head).split("(", 1)[0].split()
+    if len(tokens) >= 3 and tokens[-1] in _HEAD_ANIMACY:
+        return tokens[:-1]
+    return tokens
+
+
+def _head_animacy(head: str) -> str | None:
+    tokens = _without_combining_marks(head).split("(", 1)[0].split()
+    return _HEAD_ANIMACY.get(tokens[-1]) if len(tokens) >= 3 else None
+
+
+def _morph_animacy(morph: str) -> str | None:
+    for feature in morph.split("|"):
+        name, _, value = feature.partition("=")
+        if name == "Animacy":
+            return _MORPH_ANIMACY.get(value)
+    return None
+
+
+def _gender_from_head(head: str) -> str | None:
+    tokens = _headword_tokens(head)
     if len(tokens) < 2 or (len(tokens) >= 3 and tokens[-2] == "or"):
         return None
     return _HEAD_GENDER.get(tokens[-1])
@@ -136,7 +161,7 @@ def _head_values(head: str, *, table: Mapping[str, str] = _HEAD_GENDER) -> froze
     ``specìfikovati or spècifikovati impf or pf`` → both). Empty when there is no headword before the tokens
     or any token is outside ``table``.
     """
-    tokens = _without_combining_marks(head).split("(", 1)[0].split()
+    tokens = _headword_tokens(head)
     if len(tokens) < 2:
         return frozenset()
     letters = [tokens[-1]]
@@ -215,6 +240,8 @@ class GrammarTagHook:
     ``verb_pos`` renders only ``aspect_pair``, a word in ``noun_pos`` only the
     noun fields. ``partner_fold`` folds the partner a language prints on the
     card (hr strips tone marks); by default it is kept verbatim.
+    ``animacy_labels`` (keyed ``pers anim inan``) names a masculine noun's
+    sub-gender; empty keeps the plain gender label.
     """
 
     def __init__(
@@ -229,6 +256,7 @@ class GrammarTagHook:
         aspect_labels: Mapping[str, str] = DEFAULT_ASPECT_LABELS,
         verb_pos: frozenset[str] = frozenset({"VERB"}),
         partner_fold: Callable[[str], str] | None = None,
+        animacy_labels: Mapping[str, str] = _EMPTY,
     ) -> None:
         unknown = [name for name in fields if name not in GRAMMAR_FIELDS]
         if unknown:
@@ -248,6 +276,7 @@ class GrammarTagHook:
         self._aspect_labels = aspect_labels
         self._verb_pos = verb_pos
         self._partner_fold = partner_fold
+        self._animacy_labels = animacy_labels
 
     def field_names(self) -> tuple[str, ...]:
         return self._fields
@@ -290,6 +319,14 @@ class GrammarTagHook:
             articles = {self._article_map.get(gender, "") for gender in genders}
             return articles.pop() if len(articles) == 1 else ""
         return ""
+
+    def _gender_label(self, word: Any, gender: str, head: str) -> str:
+        """The gender label; a masculine noun takes its animacy label when the language supplies them (Addendum A)."""
+        if self._animacy_labels and gender == "masc":
+            animacy = _head_animacy(head) or _morph_animacy(str(getattr(word, "morph", "") or ""))
+            if animacy is not None and animacy in self._animacy_labels:
+                return self._animacy_labels[animacy]
+        return self._gender_labels[gender]
 
     def _aspect(self, word: Any, block: str, head: str) -> str | None:
         """The verb's aspect from the first source that answers, mirroring ``_gender``."""
@@ -334,7 +371,7 @@ class GrammarTagHook:
             gender = self._gender(word, block, head)
             if gender is not None:
                 if "noun_gender" in self._fields and gender in self._gender_labels:
-                    out["noun_gender"] = self._gender_labels[gender]
+                    out["noun_gender"] = self._gender_label(word, gender, head)
                 if "noun_article" in self._fields:
                     if self._article_rule is not None:
                         article = self._article_rule(gender, str(getattr(word, "mined_form", "") or ""))
