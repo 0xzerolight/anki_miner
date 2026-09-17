@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 from anki_miner.gui.widgets.panels.anki_settings_panel import _HOOK_FIELD_ROW_TEXTS
-from anki_miner.languages._spaced.fields import NOUN_ARTICLE_FIELD, NOUN_GENDER_FIELD, NOUN_PLURAL_FIELD, POS_FIELD
+from anki_miner.languages._spaced.fields import (
+    ASPECT_PAIR_FIELD,
+    NOUN_ARTICLE_FIELD,
+    NOUN_GENDER_FIELD,
+    NOUN_PLURAL_FIELD,
+    POS_FIELD,
+)
 from anki_miner.languages._spaced.grammar_hook import GRAMMAR_FIELDS
 from tests.unit.languages.test_language_contract import CAPABILITY_VOCABULARY, EXTRA_HOOK_FIELDS
 
-SPECS = (POS_FIELD, NOUN_GENDER_FIELD, NOUN_ARTICLE_FIELD, NOUN_PLURAL_FIELD)
+SPECS = (POS_FIELD, NOUN_GENDER_FIELD, NOUN_ARTICLE_FIELD, NOUN_PLURAL_FIELD, ASPECT_PAIR_FIELD)
 
 
 def test_every_shared_spec_key_and_capability_is_admitted():

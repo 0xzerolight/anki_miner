@@ -94,6 +94,13 @@ _HOOK_FIELD_ROW_TEXTS: dict[str, tuple[str, str]] = {
         QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Plural Field"),
         QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Stores a noun's plural form from the dictionary entry. Blank = skip."),
     ),
+    "aspect_pair": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Aspect Pair Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.",
+        ),
+    ),
 }
 
 # Keywords used by populate_from_field_list to auto-map Anki field names.
