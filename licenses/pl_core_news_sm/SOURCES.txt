@@ -1,0 +1,15 @@
+pl_core_news_sm - spaCy Polish pipeline (GPL-3.0)
+Release: https://github.com/explosion/spacy-models/releases/tag/pl_core_news_sm-3.8.0
+Model source and training configuration: https://github.com/explosion/spacy-models
+
+Training data, as listed in the model's own meta.json:
+  UD Polish PDB v2.8 (GPL-3.0) - https://github.com/UniversalDependencies/UD_Polish-PDB
+  National Corpus of Polish (GPL-3.0) - http://nkjp.pl/
+The full texts of those licences are the wheel's own LICENSES_SOURCES file, which
+stays beside the model data after the language pack is extracted
+(~/.anki_miner/language_packs/pl/pl_core_news_sm/pl_core_news_sm-3.8.0/LICENSES_SOURCES).
+
+The binary this application downloads is the unmodified wheel
+pl_core_news_sm-3.8.0-py3-none-any.whl. Its URL and SHA-256 digest are pinned in
+anki_miner/languages/pl/pack.py; corresponding source for that exact version is
+available from the release and repository URLs above.
