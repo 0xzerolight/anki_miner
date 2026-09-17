@@ -66,6 +66,8 @@ CAPABILITY_VOCABULARY = frozenset(
         "lemmatised_frequency",
         # Portuguese variety switch (S27, §4.7).
         "regional_variants",
+        # Verb aspect (Ruling S1, spaCy 10): hr, el, pl.
+        "aspect_pairs",
     }
 )
 
@@ -82,6 +84,7 @@ EXTRA_HOOK_FIELDS = {
     "noun_gender",
     "noun_article",
     "noun_plural",
+    "aspect_pair",
 }
 
 

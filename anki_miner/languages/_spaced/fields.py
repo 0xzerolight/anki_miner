@@ -12,6 +12,7 @@ POS_FIELD = CardFieldSpec(key="pos", capability="pos_tag", placeholder="PartOfSp
 NOUN_GENDER_FIELD = CardFieldSpec(key="noun_gender", capability="noun_gender", placeholder="Gender")
 NOUN_ARTICLE_FIELD = CardFieldSpec(key="noun_article", capability="noun_article", placeholder="Article")
 NOUN_PLURAL_FIELD = CardFieldSpec(key="noun_plural", capability="noun_plural", placeholder="Plural")
+ASPECT_PAIR_FIELD = CardFieldSpec(key="aspect_pair", capability="aspect_pairs", placeholder="AspectPair")
 
 
 def spaced_card_fields(extra: Sequence[CardFieldSpec]) -> Mapping[str, str]:

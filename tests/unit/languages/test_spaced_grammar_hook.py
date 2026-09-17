@@ -50,7 +50,7 @@ def render(fields, w, **kwargs):
 
 
 def test_the_field_vocabulary_and_labels():
-    assert GRAMMAR_FIELDS == ("noun_gender", "noun_article", "noun_plural")
+    assert GRAMMAR_FIELDS == ("noun_gender", "noun_article", "noun_plural", "aspect_pair")
     assert set(DEFAULT_GENDER_LABELS) == {"masc", "fem", "neut", "common"}
     hook = GrammarTagHook(("noun_gender", "noun_plural"))
     assert hook.field_names() == ("noun_gender", "noun_plural")
