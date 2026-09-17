@@ -46,6 +46,8 @@ HOOK_ROWS = [
     ("nb", "pos", "pos_field_input", "pos_tag"),
     ("nb", "noun_gender", "noun_gender_field_input", "noun_gender"),
     ("nb", "noun_article", "noun_article_field_input", "noun_article"),
+    ("ro", "pos", "pos_field_input", "pos_tag"),
+    ("ro", "noun_gender", "noun_gender_field_input", "noun_gender"),
 ]
 
 

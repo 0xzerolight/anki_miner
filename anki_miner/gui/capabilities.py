@@ -441,6 +441,8 @@ CAPABILITIES: tuple[Capability, ...] = (
             "norwegian",
             "norsk bokmål",
             "bokmål",
+            "romanian",
+            "română",
             "hangul",
             "switch language",
             "ja",
@@ -455,6 +457,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "it",
             "nl",
             "nb",
+            "ro",
         ),
     ),
     # --- Filtering ---------------------------------------------------------
