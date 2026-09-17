@@ -1,0 +1,1197 @@
+{
+ "source": "wty-nb-en revision 2026.08.29 (huggingface.co/datasets/daxida/wty-release, dict/nb/en/wty-nb-en.zip, 3,255,676 bytes)",
+ "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). Attribution: https://en.wiktionary.org/wiki/<term>#Norwegian_Bokmål for bok jente hus gutt eple pære. Rows copied unmodified; rendered_html produced by Anki Miner's importer and renderer.",
+ "index": {
+  "title": "wty-nb-en",
+  "format": 3,
+  "revision": "2026.08.29",
+  "sequenced": true,
+  "sourceLanguage": "nb",
+  "targetLanguage": "en",
+  "attribution": "https://kaikki.org/"
+ },
+ "tag_bank": [
+  [
+   "fem",
+   "gender-feminine",
+   -1,
+   "feminine",
+   1
+  ],
+  [
+   "masc",
+   "gender-masculine",
+   -1,
+   "masculine",
+   1
+  ],
+  [
+   "neut",
+   "gender-neuter",
+   -1,
+   "neuter",
+   1
+  ],
+  [
+   "indecl",
+   "morphology",
+   0,
+   "indeclinable",
+   0
+  ],
+  [
+   "adj",
+   "partOfSpeech",
+   -2,
+   "adjective",
+   2
+  ],
+  [
+   "adv",
+   "partOfSpeech",
+   -2,
+   "adverb",
+   2
+  ],
+  [
+   "n",
+   "partOfSpeech",
+   -2,
+   "noun",
+   2
+  ]
+ ],
+ "term_rows": [
+  [
+   "bok",
+   "",
+   "n fem masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "bok f or m (definite singular boka or boken, indefinite plural bøker, definite plural bøkene)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Danish bog with native Norwegian -k, from Old Norse bók (“book”), from Proto-Germanic *bōks (“letter”), which see. Often thought to be related with etymology 2 below."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "book"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/bok#Norwegian Bokmål",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/b/bo/bok.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "hus",
+   "",
+   "n neut",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "hus n (definite singular huset, indefinite plural hus, definite plural husa or husene)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Old Norse hús (“house”), from Proto-Germanic *hūsą (“house”), possibly from Proto-Indo-European *(s)kewHs-, from *(s)kewH- (“cover, hide”). Doublet of house."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "a house"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/hus#Norwegian Bokmål",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/h/hu/hus.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "jente",
+   "",
+   "n fem masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "jente f or m (definite singular jenta or jenten, indefinite plural jenter, definite plural jentene)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Derived from Old Norse genta, from gant (“joke, foolery”), cognate with Swedish jänta."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "girl; young woman"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "hired girl, housemaid"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "girlfriend, sweetheart",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Hvem er ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "jenta"
+                   },
+                   " der borte?"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "Who's that ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "girl"
+                   },
+                   " over there?"
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Der kommer ei lita ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "jente"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "A little ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "girl"
+                   },
+                   " is coming."
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "jenta"
+                   },
+                   " mi"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "my darling; sweetie; dear (literally: ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "my girl"
+                   },
+                   "; more literally: ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "the girl my"
+                   },
+                   "))"
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "synonyms"
+       },
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "synonyms-label"
+         },
+         "content": "Synonyms"
+        },
+        {
+         "tag": "ul",
+         "data": {
+          "content": "synonyms-list"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "pike"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/jente#Norwegian Bokmål",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/j/je/jente.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "gutt",
+   "",
+   "n masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "gutt m (definite singular gutten, indefinite plural gutter, definite plural guttene)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Possibly from Dutch guit (“troublemaker”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "a boy"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/gutt#Norwegian Bokmål",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/g/gu/gutt.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "pære",
+   "",
+   "n fem masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "pære f or m (definite singular pæra or pæren, indefinite plural pærer, definite plural pærene)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Old Norse pera (“pear tree”), from Latin pirum."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "a pear"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "any pear-shaped object, such as a bulb (light bulb)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "colloquial",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "col"
+              }
+             ]
+            },
+            "(human) head"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/pære#Norwegian Bokmål",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/p/pæ/pære.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "pære",
+   "",
+   "adj indecl",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "pære (indeclinable)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Possibly humorous remolding of pur (“pure”)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "utter, complete"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/pære#Norwegian Bokmål",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/p/pæ/pære.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "pære",
+   "",
+   "adv",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Possibly humorous remolding of pur (“pure”)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "utterly, completely"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/pære#Norwegian Bokmål",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/p/pæ/pære.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "eple",
+   "",
+   "n neut",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "eple n (definite singular eplet, indefinite plural epler, definite plural epla or eplene)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Danish æble, from Old Norse epli."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "an apple (fruit)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/eple#Norwegian Bokmål",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/e/ep/eple.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ]
+ ],
+ "rendered_html": {
+  "bok": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-nb-en\" data-dictionary-id=\"wty-nb-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><i>(wty-nb-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">bok f or m (definite singular boka or boken, indefinite plural bøker, definite plural bøkene)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Danish bog with native Norwegian -k, from Old Norse bók (“book”), from Proto-Germanic *bōks (“letter”), which see. Often thought to be related with etymology 2 below.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">book</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/bok#Norwegian Bokmål\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/b/bo/bok.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "jente": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-nb-en\" data-dictionary-id=\"wty-nb-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><i>(wty-nb-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">jente f or m (definite singular jenta or jenten, indefinite plural jenter, definite plural jentene)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Derived from Old Norse genta, from gant (“joke, foolery”), cognate with Swedish jänta.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">girl; young woman</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">hired girl, housemaid</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">girlfriend, sweetheart<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">3 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Hvem er <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">jenta</span> der borte?</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Who&#x27;s that <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">girl</span> over there?</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Der kommer ei lita <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">jente</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">A little <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">girl</span> is coming.</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">jenta</span> mi</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">my darling; sweetie; dear (literally: <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">my girl</span>; more literally: <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">the girl my</span>))</div></div></div></details></div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"synonyms\"><div class=\"gloss-sc-div\" data-sc-content=\"synonyms-label\">Synonyms</div><ul class=\"gloss-sc-ul\" data-sc-content=\"synonyms-list\"><li class=\"gloss-sc-li\" data-sc-content=\"synonym-item\">pike</li></ul></div><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/jente#Norwegian Bokmål\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/j/je/jente.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "hus": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-nb-en\" data-dictionary-id=\"wty-nb-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-neuter\" title=\"neuter\">neut</span><i>(wty-nb-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">hus n (definite singular huset, indefinite plural hus, definite plural husa or husene)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From Old Norse hús (“house”), from Proto-Germanic *hūsą (“house”), possibly from Proto-Indo-European *(s)kewHs-, from *(s)kewH- (“cover, hide”). Doublet of house.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">a house</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/hus#Norwegian Bokmål\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/h/hu/hus.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "gutt": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-nb-en\" data-dictionary-id=\"wty-nb-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><i>(wty-nb-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">gutt m (definite singular gutten, indefinite plural gutter, definite plural guttene)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Possibly from Dutch guit (“troublemaker”).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">a boy</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/gutt#Norwegian Bokmål\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/g/gu/gutt.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "eple": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-nb-en\" data-dictionary-id=\"wty-nb-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-neuter\" title=\"neuter\">neut</span><i>(wty-nb-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">eple n (definite singular eplet, indefinite plural epler, definite plural epla or eplene)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Danish æble, from Old Norse epli.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">an apple (fruit)</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/eple#Norwegian Bokmål\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/e/ep/eple.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "pære": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-nb-en\" data-dictionary-id=\"wty-nb-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"adjective\">adj</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"adverb\">adv</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"morphology\" title=\"indeclinable\">indecl</span><i>(wty-nb-en)</i><ul class=\"gloss-list\" data-count=\"3\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">pære f or m (definite singular pæra or pæren, indefinite plural pærer, definite plural pærene)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From Old Norse pera (“pear tree”), from Latin pirum.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">a pear</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">any pear-shaped object, such as a bulb (light bulb)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"colloquial\">col</span></div>(human) head</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/pære#Norwegian Bokmål\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/p/pæ/pære.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">pære (indeclinable)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Possibly humorous remolding of pur (“pure”)</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">utter, complete</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/pære#Norwegian Bokmål\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/p/pæ/pære.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Possibly humorous remolding of pur (“pure”)</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">utterly, completely</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/pære#Norwegian Bokmål\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Norwegian%20Bokmål/meaning/p/pæ/pære.html\">Kaikki</a></div></div></li></ul></li></ol></div>"
+ }
+}

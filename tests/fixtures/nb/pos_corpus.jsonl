@@ -1,0 +1,34 @@
+{"id":"nb01","sentence":"Studenten leste en interessant bok i går.","must_mine":["lese","interessant","bok","går"],"must_not_mine":["en","i"],"note":"smoke sentence; en is DET. Studenten keeps its surface as the lemma (sentence-initial capital) and fronts studenten: a pinned miss. går is NOUN, a real wty-nb-en headword (only in i går)"}
+{"id":"nb02","sentence":"Hun gikk hjem.","must_mine":["gå hjem"],"must_not_mine":["gå","hjem","hun"],"note":"gikk → gå (PROBE). hjem is labelled compound:prt: without a dictionary the join is taken (see particle_verbs.jsonl for the attested path)"}
+{"id":"nb03","sentence":"Boka ligger på bordet.","must_mine":["bok","ligge","bord"],"must_not_mine":["boka","på"],"note":"feminine definite boka → bok (morph Gender=Fem)"}
+{"id":"nb04","sentence":"Boken ligger på bordet.","must_mine":["bok","ligge","bord"],"must_not_mine":["boken"],"note":"masculine definite boken → bok (morph Gender=Masc)"}
+{"id":"nb05","sentence":"Huset var stort.","must_mine":["hus","stor"],"must_not_mine":["var","være","huset"],"note":"var is AUX (være), excluded"}
+{"id":"nb06","sentence":"Jenta leste boka.","must_mine":["lese","bok"],"must_not_mine":["boka"],"note":"Jenta lemmatises to jenta (sentence-initial capital, lemma miss) and fronts jenta; pinned, not asserted as must_mine"}
+{"id":"nb07","sentence":"Han har kjøpt en ny bil.","must_mine":["kjøpe","ny","bil"],"must_not_mine":["ha","han"],"note":"participle → infinitive; har AUX"}
+{"id":"nb08","sentence":"Jeg vet ikke hva jeg skal gjøre.","must_mine":["vite","gjøre"],"must_not_mine":["ikke","skulle","hva"],"note":"ikke is PART, skal AUX"}
+{"id":"nb09","sentence":"Vi så barna leke i hagen.","must_mine":["se","barn","leke","hage"],"must_not_mine":["barna","vi"],"note":"så → se; barna → barn"}
+{"id":"nb10","sentence":"Hvor er nøklene mine?","must_mine":["nøkkel","hvor"],"must_not_mine":["min","være"],"note":"nøklene → nøkkel; possessive mine is PRON"}
+{"id":"nb11","sentence":"Maten var veldig god.","must_mine":["mat","veldig","god"],"must_not_mine":["være"],"note":"veldig is tagged ADJ"}
+{"id":"nb12","sentence":"De bor i en liten leilighet i Oslo.","must_mine":["bo","liten","leilighet"],"must_not_mine":["Oslo","oslo","de"],"note":"Oslo is PROPN, excluded"}
+{"id":"nb13","sentence":"Hunden bjeffet hele natten.","must_mine":["hund","bjeffe","hel","natt"],"must_not_mine":["hunden","natten"],"note":""}
+{"id":"nb14","sentence":"Klokka er ti.","must_mine":["klokke"],"must_not_mine":["ti.","ti"],"note":"ti. is a spaCy nb exception; ti (ten) is an ordinary word, so the pruned tokenizer splits the dot and ti is NUM"}
+{"id":"nb15","sentence":"Det er min.","must_mine":[],"must_not_mine":["min.","min"],"note":"min. (minutt) exception pruned: min is a PRON"}
+{"id":"nb16","sentence":"God jul.","must_mine":["god","jul"],"must_not_mine":["jul."],"note":"jul. (juli) exception pruned: jul (Christmas) is a NOUN"}
+{"id":"nb17","sentence":"Møtet begynner kl. 9.","must_mine":["møte","begynne"],"must_not_mine":["kl.","begynne kl.","kl"],"note":"kl. stays one abbreviation token (X) and carries a compound:prt arc to begynner; a non-alphabetic particle offers no join"}
+{"id":"nb18","sentence":"Han snakker f.eks. tysk.","must_mine":["snakke","tysk"],"must_not_mine":["f.eks.","f.eks"],"note":"f.eks. is one X token"}
+{"id":"nb19","sentence":"Vi kjøpte epler, pærer osv.","must_mine":["kjøpe","eple","pære"],"must_not_mine":["osv.","osv"],"note":"osv. is one X token"}
+{"id":"nb20","sentence":"Sykkelen min er ødelagt.","must_mine":["sykkel","ødelegge"],"must_not_mine":["min"],"note":"ødelagt is ADJ with lemma ødelegge"}
+{"id":"nb21","sentence":"Jeg glemte å ringe til mora mi.","must_mine":["glemme","ringe","mor"],"must_not_mine":["å","mi","min"],"note":"å is PART; mora → mor"}
+{"id":"nb22","sentence":"Øynene hennes er blå.","must_mine":["blå"],"must_not_mine":["hennes"],"note":"Øynene lemmatises to øynene (sentence-initial capital, lemma miss); pinned, not asserted"}
+{"id":"nb23","sentence":"Vi drar på ferie til Spania neste uke.","must_mine":["dra","ferie","uke"],"must_not_mine":["Spania","neste"],"note":"neste is DET, excluded"}
+{"id":"nb24","sentence":"HUN ER IKKE HJEMME.","must_mine":[],"must_not_mine":["hun","være","ikke","HUN"],"note":"all-caps cue tagged from the lowercased copy: HUN PRON, ER AUX, IKKE PART; HJEMME is tagged ADP and mines nothing"}
+{"id":"nb25","sentence":"Jeg må handle mat før butikken stenger.","must_mine":["handle","mat","butikk","stenge"],"must_not_mine":["måtte","før"],"note":""}
+{"id":"nb26","sentence":"Læreren forklarte oppgaven.","must_mine":["lærer","forklare","oppgave"],"must_not_mine":[],"note":""}
+{"id":"nb27","sentence":"Vi møttes på kafeen.","must_mine":["møtes","kafé"],"must_not_mine":["møte","kafeen"],"note":"deponent møttes → møtes; kafeen → kafé"}
+{"id":"nb28","sentence":"Har du lest e-posten min?","must_mine":["lese","e-post"],"must_not_mine":["e-posten","epost"],"note":"hyphen compound stays whole"}
+{"id":"nb29","sentence":"Han er 25 år gammel.","must_mine":["år","gammel"],"must_not_mine":["25"],"note":"25 is NUM"}
+{"id":"nb30","sentence":"Gutten spiste opp maten.","must_mine":["gutt","spise opp","mat"],"must_not_mine":["opp","spise"],"note":"opp is compound:prt: joined without a dictionary"}
+{"id":"nb31","sentence":"Det er Lars’ bil.","must_mine":["bil"],"must_not_mine":["lars'","lars’","Lars"],"note":"curly genitive apostrophe tagged as written: Lars PROPN + ’ X. A folded tagging copy would make Lars' one ADJ token fronting lars'"}
+{"id":"nb32","sentence":"Send meg en sms.","must_mine":["sende","sms"],"must_not_mine":["sms."],"note":"sms. exception pruned: sms is a NOUN"}
+{"id":"nb33","sentence":"Det er for sent.","must_mine":["sen","for"],"must_not_mine":["sen."],"note":"sent → sen; sen. exception pruned; for (too) is ADV and mines"}
+{"id":"nb34","sentence":"Vinduene må vaskes.","must_mine":["vaske"],"must_not_mine":["måtte"],"note":"Vinduene lemmatises to vindue (wrong; vindu): pinned, not asserted"}
