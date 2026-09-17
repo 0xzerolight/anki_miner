@@ -1,0 +1,2921 @@
+{
+ "source": "wty-sh-en revision 2026.08.29 (huggingface.co/datasets/daxida/wty-release, wty-sh-en.zip 8,555,841 B); every row of: knjiga, knjige, kuća, stol, pas, dijete, more, građanin, đak, čitati, pročitati, knjigu, књига",
+ "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). Attribution: https://en.wiktionary.org/ Serbo-Croatian entries for the listed terms.",
+ "index": {
+  "title": "wty-sh-en",
+  "format": 3,
+  "revision": "2026.08.29",
+  "sequenced": true,
+  "sourceLanguage": "sh",
+  "targetLanguage": "en",
+  "attribution": "https://kaikki.org/"
+ },
+ "tag_bank": [
+  [
+   "animate",
+   "animacy",
+   0,
+   "animate",
+   0
+  ],
+  [
+   "inanim",
+   "animacy",
+   0,
+   "inanimate",
+   0
+  ],
+  [
+   "impf",
+   "aspect",
+   0,
+   "imperfective",
+   0
+  ],
+  [
+   "pf",
+   "aspect",
+   0,
+   "perfective",
+   0
+  ],
+  [
+   "fem",
+   "gender-feminine",
+   -1,
+   "feminine",
+   1
+  ],
+  [
+   "masc",
+   "gender-masculine",
+   -1,
+   "masculine",
+   1
+  ],
+  [
+   "neut",
+   "gender-neuter",
+   -1,
+   "neuter",
+   1
+  ],
+  [
+   "intj",
+   "partOfSpeech",
+   -2,
+   "interjection",
+   2
+  ],
+  [
+   "n",
+   "partOfSpeech",
+   -2,
+   "noun",
+   2
+  ],
+  [
+   "v",
+   "partOfSpeech",
+   -2,
+   "verb",
+   2
+  ],
+  [
+   "vt",
+   "partOfSpeech",
+   -2,
+   "transitive verb",
+   2
+  ],
+  [
+   "regio",
+   "usage",
+   0,
+   "regional",
+   0
+  ],
+  [
+   "ije",
+   "variety",
+   0,
+   "Ijekavian",
+   0
+  ],
+  [
+   "🇭🇷",
+   "variety",
+   0,
+   "Croatia",
+   0
+  ],
+  [
+   "🇷🇸",
+   "variety",
+   0,
+   "Serbia",
+   0
+  ],
+  [
+   "non-lemma",
+   "",
+   10,
+   "non-lemma",
+   -10
+  ]
+ ],
+ "term_rows": [
+  [
+   "more",
+   "",
+   "n neut",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "mȏre n (Cyrillic spelling мо̑ре, relational adjective mòrskī)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *moře, from Proto-Balto-Slavic *mári, from Proto-Indo-European *móri."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "sea",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "od ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "mora"
+                   },
+                   " do Zlatibora"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "from the ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "sea"
+                   },
+                   " to Zlatibor"
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "od Timoka do ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "mora"
+                   },
+                   " Crnoga"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "from Timok to the Black ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Sea"
+                   }
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "seaside or shore (any area or place near the sea where the sea is seen as the defining feature)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Čim dođe ljeto, idemo ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "na more"
+                   },
+                   "!"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "Once the summer is here, we're gonna go ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "to the seaside"
+                   },
+                   "!"
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Cijelo ljeto ću provesti ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "na moru"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "I will spend the entire summer ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "at the shore"
+                   },
+                   "."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "figurative",
+               "data": {
+                "content": "tag",
+                "category": "usage"
+               },
+               "content": "fig"
+              }
+             ]
+            },
+            "a vast expanse or quantity of something, usually detrimental or unwelcome",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Ako se ne pozabavimo time sada, biti ćemo u ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "moru"
+                   },
+                   " nevolja!"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "If we do not deal with that now, we will be in a ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "sea"
+                   },
+                   " of troubles!"
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "synonyms"
+       },
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "synonyms-label"
+         },
+         "content": "Synonyms"
+        },
+        {
+         "tag": "ul",
+         "data": {
+          "content": "synonyms-list"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "morje"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/more#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/m/mo/more.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "more",
+   "",
+   "intj 🇷🇸",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Greek μωρέ (moré). Possible doublet of bre."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "when spoken sharply, asserts that the speaker is stronger or older or more powerful than the addressee, sometimes expressing contempt or superiority"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "when not spoken sharply, functions as a term of endearment or generic intensifier, cf. bre"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/more#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/m/mo/more.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "stol",
+   "",
+   "n 🇭🇷 inanim masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "stȏl m inan (Cyrillic spelling сто̑л)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *stolъ. Doublet of àstāl, from the same ultimate source only borrowed through Hungarian."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "table"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/stol#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/s/st/stol.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "pas",
+   "",
+   "n animate masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "pȁs m anim (Cyrillic spelling па̏с, relational adjective pȁsjī or psȅćī, diminutive psȉć)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *pьsъ."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "dog",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Volim svog ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "psa"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "I love my ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "dog"
+                   },
+                   "."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/pas#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/p/pa/pas.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "pas",
+   "",
+   "n regio inanim masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "pȃs m inan (Cyrillic spelling па̑с)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Syncopic form of pȍjās. Compare Czech pás, Polish pas."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "belt, girdle"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "waist, waistline"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/pas#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/p/pa/pas.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "pas",
+   "",
+   "n inanim masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "pȃs m inan (Cyrillic spelling па̑с)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Borrowed from English pass or French passe."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "sports",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "sports"
+              }
+             ]
+            },
+            "pass"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/pas#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/p/pa/pas.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "књига",
+   "",
+   "n fem",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "књи̏га f (Latin spelling knjȉga, relational adjective књи̏жнӣ, diminutive књи̏жица, augmentative књижу̀рина)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *kъňiga."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "book",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Затварам ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "књигу"
+                   },
+                   " и гледам кроз прозор."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "I close the ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "book"
+                   },
+                   " and look out the window"
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Зелена ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "књига"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "Green ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Book"
+                   }
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "poetic",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "poet"
+              },
+              {
+               "tag": "span",
+               "title": "archaic",
+               "data": {
+                "content": "tag",
+                "category": "archaism"
+               },
+               "content": "arch"
+              }
+             ]
+            },
+            "scroll, letter, missive"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/књига#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/к/књ/књига.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "knjiga",
+   "",
+   "n fem",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "knjȉga f (Cyrillic spelling књи̏га, relational adjective knjȉžnī, diminutive knjȉžica, augmentative knjižùrina)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *kъňiga."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "book",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Zatvaram ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "knjigu"
+                   },
+                   " i gledam kroz prozor."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "I close the ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "book"
+                   },
+                   " and look out the window"
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Zelena ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "knjiga"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "Green ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Book"
+                   }
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "poetic",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "poet"
+              },
+              {
+               "tag": "span",
+               "title": "archaic",
+               "data": {
+                "content": "tag",
+                "category": "archaism"
+               },
+               "content": "arch"
+              }
+             ]
+            },
+            "scroll, letter, missive",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": "1891, recorded by Vuk Stefanović Karadžić, Srpske narodne pjesme"
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "He bears not a swallow-bird, / But a letter from the Theotokos, / Carries it off to the Tsar on Kosovo, / Lowers the letter upon the Tsar’s knee..."
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/knjiga#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/k/kn/knjiga.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "građanin",
+   "",
+   "n animate masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "grȁđanin m anim (Cyrillic spelling гра̏ђанин)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *gorďaninъ. Related to град (“town”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "citizen"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "townsman"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "plural",
+               "data": {
+                "content": "tag",
+                "category": "number"
+               },
+               "content": "pl"
+              },
+              {
+               "tag": "span",
+               "title": "soccer",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "⚽"
+              },
+              {
+               "tag": "span",
+               "title": "sports",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "sports"
+              }
+             ]
+            },
+            "Manchester City player"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/građanin#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/g/gr/građanin.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "dijete",
+   "",
+   "n ije neut",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "dijéte n (Cyrillic spelling дије́те, diminutive djeténce)\n(Ijekavian)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *dětę, from Proto-Indo-European *dʰeh₁(y)- (“to suckle, suck”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "child, kid"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/dijete#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/d/di/dijete.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "čitati",
+   "",
+   "v impf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "čìtati impf (Cyrillic spelling чѝтати, perfective pročìtati)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *čitati, from Proto-Indo-European *kʷeyt-. Common Balto-Slavic, compare Lithuanian skaitýti."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to read"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/čitati#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/č/či/čitati.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "kuća",
+   "",
+   "n fem",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "kȕća f (Cyrillic spelling ку̏ћа, relational adjective kȕćnī, diminutive kȕćica, augmentative kućèrina or kućètina)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *kǫťa; cognate with Macedonian куќа (kuḱa), Bulgarian къща (kăšta), Slovene kóča (“a mountain hut”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "house",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Da li je to tvoja ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "kuća"
+                   },
+                   "?"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "Is that your house?"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/kuća#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/k/ku/kuća.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "đak",
+   "",
+   "n animate masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "đȃk m anim (Cyrillic spelling ђа̑к)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "By second iotation from earlier dijak, from Greek διάκος (diákos). Compare đakon."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "pupil (student)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "synonyms"
+       },
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "synonyms-label"
+         },
+         "content": "Synonyms"
+        },
+        {
+         "tag": "ul",
+         "data": {
+          "content": "synonyms-list"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "dijak"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/đak#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/đ/đa/đak.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "pročitati",
+   "",
+   "v vt pf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "pročìtati pf (Cyrillic spelling прочѝтати, imperfective čìtati)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to read to get acquainted with the content"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/pročitati#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/p/pr/pročitati.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "more",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "mora",
+     [
+      "genitive singular"
+     ]
+    ],
+    [
+     "mora",
+     [
+      "nominative/accusative/vocative plural"
+     ]
+    ],
+    [
+     "mora",
+     [
+      "nominative/accusative/vocative plural"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "more",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "moriti",
+     [
+      "third-person plural present"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "stol",
+   "stȏl",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "stol",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "pas",
+   "pȃs",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "pas",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "stol",
+   "stȏl",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "sto",
+     [
+      "alternative Croatia"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "dijete",
+   "dijéte",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "dete",
+     [
+      "alternative Ijekavian"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "knjige",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "knjiga",
+     [
+      "genitive singular"
+     ]
+    ],
+    [
+     "knjiga",
+     [
+      "nominative/accusative/vocative plural"
+     ]
+    ],
+    [
+     "knjiga",
+     [
+      "nominative/accusative/vocative plural"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "knjiga",
+   "knjȋgā",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "knjiga",
+     [
+      "genitive plural"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "knjigu",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "knjiga",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "dijete",
+   "dijéte",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "dijete",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "dijete",
+   "dijȇte",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "dijete",
+     [
+      "vocative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "pročitati",
+   "pročìtati",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "čitati",
+     [
+      "perfective"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "kuća",
+   "kȗćā",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "kuća",
+     [
+      "genitive plural"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "čitati",
+   "čìtati",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "pročitati",
+     [
+      "imperfective"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "pas",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "pojas",
+     [
+      "regional alternative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "dijete",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "dijeta",
+     [
+      "genitive singular"
+     ]
+    ],
+    [
+     "dijeta",
+     [
+      "nominative/accusative/vocative plural"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "čitati",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "štiti",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "štiti",
+     [
+      "alternative"
+     ]
+    ],
+    [
+     "štiti",
+     [
+      "dated"
+     ]
+    ],
+    [
+     "štiti",
+     [
+      "imperfective"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ]
+ ],
+ "rendered_html": {
+  "knjiga": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">knjȉga f (Cyrillic spelling књи̏га, relational adjective knjȉžnī, diminutive knjȉžica, augmentative knjižùrina)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *kъňiga.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">book<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">2 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Zatvaram <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">knjigu</span> i gledam kroz prozor.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">I close the <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">book</span> and look out the window</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Zelena <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">knjiga</span></div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Green <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Book</span></div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"poetic\">poet</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"archaism\" title=\"archaic\">arch</span></div>scroll, letter, missive<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">1891, recorded by Vuk Stefanović Karadžić, Srpske narodne pjesme</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">He bears not a swallow-bird, / But a letter from the Theotokos, / Carries it off to the Tsar on Kosovo, / Lowers the letter upon the Tsar’s knee...</div></div></div></details></div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/knjiga#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/k/kn/knjiga.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">knjiga</div></li></ul></li></ol></div>",
+  "knjige": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">knjiga</li><li class=\"gloss-sc-li\">knjiga</li><li class=\"gloss-sc-li\">knjiga</li></ul></div></li></ul></li></ol></div>",
+  "kuća": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">kȕća f (Cyrillic spelling ку̏ћа, relational adjective kȕćnī, diminutive kȕćica, augmentative kućèrina or kućètina)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *kǫťa; cognate with Macedonian куќа (kuḱa), Bulgarian къща (kăšta), Slovene kóča (“a mountain hut”).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">house<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Da li je to tvoja <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">kuća</span>?</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Is that your house?</div></div></div></details></div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/kuća#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/k/ku/kuća.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">kuća</div></li></ul></li></ol></div>",
+  "stol": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"animacy\" title=\"inanimate\">inanim</span><span class=\"gloss-tag\" data-category=\"variety\" title=\"Croatia\">🇭🇷</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"3\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">stȏl m inan (Cyrillic spelling сто̑л)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *stolъ. Doublet of àstāl, from the same ultimate source only borrowed through Hungarian.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">table</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/stol#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/s/st/stol.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">stol</div></li><li class=\"gloss-item\"><div class=\"gloss-content\">sto</div></li></ul></li></ol></div>",
+  "pas": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"animacy\" title=\"animate\">animate</span><span class=\"gloss-tag\" data-category=\"animacy\" title=\"inanimate\">inanim</span><span class=\"gloss-tag\" data-category=\"usage\" title=\"regional\">regio</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"5\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">pȁs m anim (Cyrillic spelling па̏с, relational adjective pȁsjī or psȅćī, diminutive psȉć)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *pьsъ.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">dog<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Volim svog <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">psa</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">I love my <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">dog</span>.</div></div></div></details></div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/pas#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/p/pa/pas.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">pȃs m inan (Cyrillic spelling па̑с)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Syncopic form of pȍjās. Compare Czech pás, Polish pas.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">belt, girdle</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">waist, waistline</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/pas#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/p/pa/pas.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">pȃs m inan (Cyrillic spelling па̑с)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Borrowed from English pass or French passe.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"sports\">sports</span></div>pass</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/pas#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/p/pa/pas.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">pas</div></li><li class=\"gloss-item\"><div class=\"gloss-content\">pojas</div></li></ul></li></ol></div>",
+  "dijete": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-neuter\" title=\"neuter\">neut</span><span class=\"gloss-tag\" data-category=\"variety\" title=\"Ijekavian\">ije</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"4\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">dijéte n (Cyrillic spelling дије́те, diminutive djeténce)<br>(Ijekavian)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *dětę, from Proto-Indo-European *dʰeh₁(y)- (“to suckle, suck”).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">child, kid</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/dijete#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/d/di/dijete.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">dete</div></li><li class=\"gloss-item\"><div class=\"gloss-content\">dijete</div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">dijeta</li><li class=\"gloss-sc-li\">dijeta</li></ul></div></li></ul></li></ol></div>",
+  "more": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"interjection\">intj</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-neuter\" title=\"neuter\">neut</span><span class=\"gloss-tag\" data-category=\"variety\" title=\"Serbia\">🇷🇸</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"4\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">mȏre n (Cyrillic spelling мо̑ре, relational adjective mòrskī)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *moře, from Proto-Balto-Slavic *mári, from Proto-Indo-European *móri.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">sea<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">2 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">od <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">mora</span> do Zlatibora</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">from the <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">sea</span> to Zlatibor</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">od Timoka do <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">mora</span> Crnoga</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">from Timok to the Black <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Sea</span></div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">seaside or shore (any area or place near the sea where the sea is seen as the defining feature)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">2 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Čim dođe ljeto, idemo <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">na more</span>!</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Once the summer is here, we&#x27;re gonna go <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">to the seaside</span>!</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Cijelo ljeto ću provesti <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">na moru</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">I will spend the entire summer <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">at the shore</span>.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"usage\" title=\"figurative\">fig</span></div>a vast expanse or quantity of something, usually detrimental or unwelcome<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Ako se ne pozabavimo time sada, biti ćemo u <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">moru</span> nevolja!</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">If we do not deal with that now, we will be in a <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">sea</span> of troubles!</div></div></div></details></div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"synonyms\"><div class=\"gloss-sc-div\" data-sc-content=\"synonyms-label\">Synonyms</div><ul class=\"gloss-sc-ul\" data-sc-content=\"synonyms-list\"><li class=\"gloss-sc-li\" data-sc-content=\"synonym-item\">morje</li></ul></div><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/more#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/m/mo/more.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From Greek μωρέ (moré). Possible doublet of bre.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">when spoken sharply, asserts that the speaker is stronger or older or more powerful than the addressee, sometimes expressing contempt or superiority</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">when not spoken sharply, functions as a term of endearment or generic intensifier, cf. bre</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/more#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/m/mo/more.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">mora</li><li class=\"gloss-sc-li\">mora</li><li class=\"gloss-sc-li\">mora</li></ul></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">moriti</div></li></ul></li></ol></div>",
+  "građanin": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"animacy\" title=\"animate\">animate</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">grȁđanin m anim (Cyrillic spelling гра̏ђанин)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *gorďaninъ. Related to град (“town”).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">citizen</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">townsman</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"number\" title=\"plural\">pl</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"soccer\">⚽</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"sports\">sports</span></div>Manchester City player</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/građanin#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/g/gr/građanin.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "đak": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><span class=\"gloss-tag\" data-category=\"animacy\" title=\"animate\">animate</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">đȃk m anim (Cyrillic spelling ђа̑к)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">By second iotation from earlier dijak, from Greek διάκος (diákos). Compare đakon.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">pupil (student)</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"synonyms\"><div class=\"gloss-sc-div\" data-sc-content=\"synonyms-label\">Synonyms</div><ul class=\"gloss-sc-ul\" data-sc-content=\"synonyms-list\"><li class=\"gloss-sc-li\" data-sc-content=\"synonym-item\">dijak</li></ul></div><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/đak#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/đ/đa/đak.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "čitati": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"imperfective\">impf</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"3\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">čìtati impf (Cyrillic spelling чѝтати, perfective pročìtati)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *čitati, from Proto-Indo-European *kʷeyt-. Common Balto-Slavic, compare Lithuanian skaitýti.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to read</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/čitati#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/č/či/čitati.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">pročitati</div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">štiti</li><li class=\"gloss-sc-li\">štiti</li><li class=\"gloss-sc-li\">štiti</li><li class=\"gloss-sc-li\">štiti</li></ul></div></li></ul></li></ol></div>",
+  "pročitati": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"transitive verb\">vt</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"perfective\">pf</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">pročìtati pf (Cyrillic spelling прочѝтати, imperfective čìtati)</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to read to get acquainted with the content</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/pročitati#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/p/pr/pročitati.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">čitati</div></li></ul></li></ol></div>",
+  "knjigu": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\">knjiga</div></li></ul></li></ol></div>",
+  "књига": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">књи̏га f (Latin spelling knjȉga, relational adjective књи̏жнӣ, diminutive књи̏жица, augmentative књижу̀рина)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *kъňiga.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">book<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">2 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Затварам <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">књигу</span> и гледам кроз прозор.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">I close the <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">book</span> and look out the window</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Зелена <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">књига</span></div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Green <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Book</span></div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"poetic\">poet</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"archaism\" title=\"archaic\">arch</span></div>scroll, letter, missive</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/књига#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/к/књ/књига.html\">Kaikki</a></div></div></li></ul></li></ol></div>"
+ }
+}
