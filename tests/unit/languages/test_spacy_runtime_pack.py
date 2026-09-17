@@ -17,6 +17,7 @@ RESOLVED = ROOT / "tests" / "fixtures" / "language_packs" / "_spacy.resolved.jso
 SPACY_MODEL_PACKAGES = (
     "ca_core_news_sm",
     "de_core_news_sm",
+    "el_core_news_sm",
     "en_core_web_sm",
     "es_core_news_sm",
     "fr_core_news_sm",

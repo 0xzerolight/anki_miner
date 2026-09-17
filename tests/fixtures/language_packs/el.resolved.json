@@ -1,0 +1,30 @@
+{
+  "approx_download_mb": 13,
+  "code": "el",
+  "components": [
+    {
+      "abi": null,
+      "import_name": "el_core_news_sm",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py",
+        "el_core_news_sm-3.8.0/config.cfg",
+        "el_core_news_sm-3.8.0/meta.json"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "el_core_news_sm-3.8.0-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "el_core_news_sm/",
+        "root_members": [],
+        "sha256": "18df59b7f099a20d6f7cc1f964a57408a4c1663b73b5110932c1ea24f66e3027",
+        "size": 12607208,
+        "url": "https://github.com/explosion/spacy-models/releases/download/el_core_news_sm-3.8.0/el_core_news_sm-3.8.0-py3-none-any.whl"
+      }
+    }
+  ],
+  "requires": [
+    "_spacy"
+  ]
+}
