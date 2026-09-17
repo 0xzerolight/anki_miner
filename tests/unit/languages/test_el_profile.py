@@ -8,7 +8,7 @@ from pathlib import Path
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.languages import AVAILABLE_LANGUAGES
-from anki_miner.languages._spaced.fields import NOUN_GENDER_FIELD, POS_FIELD
+from anki_miner.languages._spaced.fields import ASPECT_PAIR_FIELD, NOUN_GENDER_FIELD, POS_FIELD
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import APOSTROPHE_FOLD, LatinLookupStrategy, SpacedMinedForm
@@ -47,11 +47,11 @@ def test_the_profile_is_built_from_the_shared_substrate():
         ("el-orig",),
     )
     assert profile.captions.audio_pattern == "^el(-|$)" and profile.captions.bare_fallback is True
-    assert profile.capabilities == frozenset({"pos_tag", "noun_gender", "lemmatised_frequency"})
+    assert profile.capabilities == frozenset({"pos_tag", "noun_gender", "aspect_pairs", "lemmatised_frequency"})
     assert "wiktionary_audio" not in profile.capabilities  # Stage W is not built (DECIDED 6)
-    assert profile.extra_card_fields == (POS_FIELD, NOUN_GENDER_FIELD)
+    assert profile.extra_card_fields == (POS_FIELD, NOUN_GENDER_FIELD, ASPECT_PAIR_FIELD)
     assert [type(hook) for hook in profile.render_hooks] == [PosHook, GrammarTagHook]
-    assert profile.render_hooks[1].field_names() == ("noun_gender",)
+    assert profile.render_hooks[1].field_names() == ("noun_gender", "aspect_pair")
     assert profile.unavailable_reason is not None and profile.unavailable_reason() is None
     assert profile.pos_defaults.excluded_subtypes == ()
     assert profile.smoke_sentence == "Το βιβλίο είναι στο σπίτι."
@@ -88,7 +88,11 @@ def test_scoped_defaults_turn_on_the_greek_sdh_filter():
     assert config.language == "el" and config.allowed_pos == ("ADJ", "ADV", "NOUN", "VERB")
     assert config.excluded_subtypes == ()
     assert config.use_subtitle_regex_filter is True and config.subtitle_regex_filter == EL_SUBTITLE_REGEX
-    assert {key: config.anki_fields[key] for key in ("pos", "noun_gender")} == {"pos": "", "noun_gender": ""}
+    assert {key: config.anki_fields[key] for key in ("pos", "noun_gender", "aspect_pair")} == {
+        "pos": "",
+        "noun_gender": "",
+        "aspect_pair": "",
+    }
     assert config.downloader_subtitle_langs == "el"
     assert [entry.kind for entry in config.expression_audio_chain] == ["googletts"]
 

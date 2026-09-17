@@ -5,7 +5,13 @@ from __future__ import annotations
 from anki_miner.config.config import AudioSourceEntry
 from anki_miner.languages._spaced.audio import spaced_audio_candidates, spaced_speakable
 from anki_miner.languages._spaced.availability import spaced_missing_reason
-from anki_miner.languages._spaced.fields import NOUN_GENDER_FIELD, POS_FIELD, spaced_card_fields, spaced_scoped_defaults
+from anki_miner.languages._spaced.fields import (
+    ASPECT_PAIR_FIELD,
+    NOUN_GENDER_FIELD,
+    POS_FIELD,
+    spaced_card_fields,
+    spaced_scoped_defaults,
+)
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys, spaced_dedup_fold
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
@@ -29,7 +35,7 @@ from anki_miner.languages.profile import AudioDefaults, CaptionLangs, LanguagePr
 __all__ = ["build_profile"]
 
 EL_SMOKE_SENTENCE = "Το βιβλίο είναι στο σπίτι."
-EL_EXTRA_CARD_FIELDS = (POS_FIELD, NOUN_GENDER_FIELD)
+EL_EXTRA_CARD_FIELDS = (POS_FIELD, NOUN_GENDER_FIELD, ASPECT_PAIR_FIELD)
 EL_CARD_FIELDS = spaced_card_fields(EL_EXTRA_CARD_FIELDS)
 EL_KEYS = CasefoldDictKeys()
 
@@ -89,9 +95,9 @@ def build_profile() -> LanguageProfile:
             allowed_pos=EL_ALLOWED_POS, excluded_subtypes=EL_EXCLUDED_SUBTYPES, labels=UPOS_LABELS
         ),
         catalog=EL_CATALOG,
-        capabilities=frozenset({"pos_tag", "noun_gender", "lemmatised_frequency"}),
+        capabilities=frozenset({"pos_tag", "noun_gender", "aspect_pairs", "lemmatised_frequency"}),
         card_field_defaults=EL_CARD_FIELDS,
-        render_hooks=(PosHook(), GrammarTagHook(("noun_gender",), gender_labels=EL_GENDER_LABELS)),
+        render_hooks=(PosHook(), GrammarTagHook(("noun_gender", "aspect_pair"), gender_labels=EL_GENDER_LABELS)),
         content_style=SPACED_CONTENT_STYLE,
         unavailable_reason=spaced_missing_reason("el", "Greek", EL_MODEL_PACKAGE),
         extra_card_fields=EL_EXTRA_CARD_FIELDS,
