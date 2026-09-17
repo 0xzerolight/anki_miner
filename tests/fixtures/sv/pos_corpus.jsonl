@@ -1,0 +1,36 @@
+{"id": "sv01", "sentence": "Studenten läste en intressant bok.", "must_mine": ["student", "läsa", "intressant", "bok"], "must_not_mine": ["studenten", "en"], "note": "smoke sentence; the article en is DET"}
+{"id": "sv02", "sentence": "Huset var stort och han gick hem.", "must_mine": ["hus", "stor", "gå", "hem"], "must_not_mine": ["huset", "Huset", "vara", "han", "och"], "note": "cue-initial Huset: the model lemma is Huset, re-lemmatised alone to hus; var is AUX"}
+{"id": "sv03", "sentence": "Barnen leker i parken.", "must_mine": ["barn", "leka", "park"], "must_not_mine": ["barnen", "parken", "i"], "note": "suffixed definite articles are inflection"}
+{"id": "sv04", "sentence": "Vattnet är kallt i dag.", "must_mine": ["vatten", "kall", "dag"], "must_not_mine": ["vattnet", "Vattnet"], "note": "cue-initial Vattnet re-lemmatised to vatten"}
+{"id": "sv05", "sentence": "Datorn är ny men den är långsam.", "must_mine": ["dator", "ny", "långsam"], "must_not_mine": ["datorn", "den"], "note": "cue-initial Datorn re-lemmatised to dator"}
+{"id": "sv06", "sentence": "Hör du mig?", "must_mine": ["höra"], "must_not_mine": ["hör", "du", "jag"], "note": "cue-initial imperative Hör re-lemmatised to höra"}
+{"id": "sv07", "sentence": "Kyrkan ligger mitt i byn.", "must_mine": ["kyrka", "ligga"], "must_not_mine": ["kyrkan"], "note": "byn lemmatises to byn (model miss, not by) and is left unasserted"}
+{"id": "sv08", "sentence": "Resan tog tre timmar.", "must_mine": ["resa", "ta", "timme"], "must_not_mine": ["resan", "tre"], "note": "tre is NUM"}
+{"id": "sv09", "sentence": "Mannens hund skäller hela natten.", "must_mine": ["man", "hund", "skälla", "natt"], "must_not_mine": ["mannens"], "note": "s-genitive of a common noun lemmatises to the noun"}
+{"id": "sv10", "sentence": "Det är husets tak.", "must_mine": ["hus", "tak"], "must_not_mine": ["husets"], "note": "s-genitive of a common noun lemmatises to the noun"}
+{"id": "sv11", "sentence": "Stadens gator var tomma.", "must_mine": ["stad", "gata", "tom"], "must_not_mine": ["stadens"], "note": "s-genitive; capitalised genitive already lemmatised by the model"}
+{"id": "sv12", "sentence": "Det är Eriks bil.", "must_mine": ["bil"], "must_not_mine": ["erik", "Erik", "eriks"], "note": "a name genitive is PROPN (PM|GEN)"}
+{"id": "sv13", "sentence": "Sveriges huvudstad är Stockholm.", "must_mine": ["huvudstad"], "must_not_mine": ["sverige", "Sverige", "stockholm", "Stockholm"], "note": "place names are PROPN"}
+{"id": "sv14", "sentence": "Annas bok ligger på bordet.", "must_mine": ["bok", "ligga", "bord"], "must_not_mine": ["annas"], "note": "RECORDED MISS: Annas is tagged VERB (NN|UTR|PLU|DEF|GEN) and re-lemmatised to anna, which mines; pinned in test_sv_pos_corpus.py"}
+{"id": "sv15", "sentence": "DET ÄR SLUTET.", "must_mine": ["slut"], "must_not_mine": ["slutet", "det", "vara"], "note": "all-caps cue tagged from the lowercased copy"}
+{"id": "sv16", "sentence": "Det är SLUTET nu.", "must_mine": ["nu"], "must_not_mine": ["slut"], "note": "RECORDED MISS: an all-caps word inside a mixed-case line keeps the model lemma SLUTET, lowered to slutet (the capitalised-lemma repair skips all caps; only a whole all-caps cue is tagged lowercased); pinned in test_sv_pos_corpus.py"}
+{"id": "sv18", "sentence": "Vi köpte frukt, t.ex. äpplen och päron.", "must_mine": ["köpa", "frukt"], "must_not_mine": ["t.ex.", "t.ex", "ex"], "note": "t.ex. is one X token; äpplen and päron lemmatise to äppl and päro (recorded model misses) and are left unasserted"}
+{"id": "sv19", "sentence": "Hon är ung.", "must_mine": ["ung"], "must_not_mine": ["ung.", "hon"], "note": "ung. is a spaCy sv exception and the 747th subtitle word: pruned, so the adjective survives"}
+{"id": "sv20", "sentence": "Han är lat men snäll.", "must_mine": ["lat", "snäll"], "must_not_mine": ["men"], "note": "lat. is a pruned exception; snäll is tagged NOUN but fronts correctly"}
+{"id": "sv21", "sentence": "Han gick ut ur rummet.", "must_mine": ["gå ut"], "must_not_mine": ["gå", "ut", "ur"], "note": "compound:prt joined without a dictionary; rummet lemmatises to rumm (model miss) and is left unasserted"}
+{"id": "sv22", "sentence": "Ge inte upp nu.", "must_mine": ["ge upp", "nu"], "must_not_mine": ["ge", "upp", "inte"], "note": "compound:prt on an imperative"}
+{"id": "sv23", "sentence": "Kom ihåg att ringa mig.", "must_mine": ["komma ihåg", "ringa"], "must_not_mine": ["kom ihåg", "komma", "ihåg", "att"], "note": "cue-initial Kom is re-lemmatised to komma before the particle joins"}
+{"id": "sv24", "sentence": "Jag känner igen dig.", "must_mine": ["känna igen"], "must_not_mine": ["känna", "igen"], "note": "compound:prt"}
+{"id": "sv25", "sentence": "De flyttade in i huset.", "must_mine": ["flytta in", "hus"], "must_not_mine": ["flytta", "in"], "note": "compound:prt"}
+{"id": "sv26", "sentence": "Jag tycker om dig.", "must_mine": ["tycka"], "must_not_mine": ["om", "tycka om"], "note": "KNOWN MISS: the small model parses om as ADP case in every tycka om probe, so the bare verb mines"}
+{"id": "sv27", "sentence": "Det är första gången jag är här.", "must_mine": ["gång", "här"], "must_not_mine": ["en", "första"], "note": "ordinal första (RO|NOM) lemmatises to the cardinal en: excluded subtype"}
+{"id": "sv28", "sentence": "Kl. 8 börjar skolan.", "must_mine": ["börja", "skola"], "must_not_mine": ["kl", "kl."], "note": "Kl. is a kept abbreviation, one X token"}
+{"id": "sv29", "sentence": "Det kostar 20 kr.", "must_mine": ["kosta"], "must_not_mine": ["kr", "kr."], "note": "kr. is a kept abbreviation"}
+{"id": "sv30", "sentence": "Ja, jag kommer.", "must_mine": ["komma"], "must_not_mine": ["ja"], "note": "Ja is INTJ"}
+{"id": "sv31", "sentence": "Han sprang upp för trappan.", "must_mine": ["trappa"], "must_not_mine": ["upp"], "note": "upp is PL with no compound:prt arc: excluded subtype; sprang is tagged NOUN with lemma sprang (model miss) and is left unasserted"}
+{"id": "sv32", "sentence": "Hon skickade ett e-postmeddelande till chefen.", "must_mine": ["skicka", "e-postmeddelande", "chef"], "must_not_mine": ["ett", "en"], "note": "the sv tokenizer keeps a hyphen compound whole"}
+{"id": "sv33", "sentence": "Katten sover på soffan.", "must_mine": ["katt", "sova"], "must_not_mine": ["katten"], "note": "soffan is tagged ADJ with lemma soffan (model miss) and is left unasserted"}
+{"id": "sv34", "sentence": "Flickan har en röd cykel.", "must_mine": ["flicka", "ha", "röd", "cykel"], "must_not_mine": ["flickan", "en"], "note": "cue-initial definite noun"}
+{"id": "sv35", "sentence": "Hon åkte till Sverige i fjol.", "must_mine": ["åka"], "must_not_mine": ["sverige", "Sverige"], "note": "fjol (i fjol) mines as a noun and is left unasserted"}
+{"id": "sv36", "sentence": "Jag har inte sett honom på länge.", "must_mine": ["se", "länge"], "must_not_mine": ["inte", "han", "ha"], "note": "har is AUX; supine sett lemmatises to se"}
+{"id": "sv37", "sentence": "Jag såg honom igår.", "must_mine": ["se"], "must_not_mine": ["igår"], "note": "RECORDED MISS: igår is tagged VERB with lemma igå, so the front is igå; pinned in test_sv_pos_corpus.py"}
