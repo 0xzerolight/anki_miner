@@ -44,6 +44,7 @@ PROBE = {
     "nb": "gikk",
     "ro": "cărți",
     "el": "έγραψα",
+    "fi": "kirjassa",
 }
 
 #: Every capability name any profile is allowed to declare. A typo'd flag is a
