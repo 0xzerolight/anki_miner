@@ -17,7 +17,8 @@ import re
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
-from anki_miner.languages._spaced.morphology import EMPTY_MAP, tagging_copy
+from anki_miner.languages._spaced.morphology import CAPITALISED_LEMMA_POS, EMPTY_MAP, tagging_copy
+from anki_miner.languages._spaced.morphology import relemmatise_capitalised as _relemmatise_capitalised
 from anki_miner.languages._spaced.tokens import to_duck_tokens
 from anki_miner.languages.token import LanguageToken
 from anki_miner.services.tagger import LockedTagger
@@ -53,6 +54,8 @@ class SpacyTagger:
         particle_deps: frozenset[str] = frozenset(),
         tag_char_map: Mapping[str, str] = EMPTY_MAP,
         post_passes: Sequence[TokenPass] = (),
+        relemmatise_capitalised: bool = False,
+        relemmatise_pos: frozenset[str] = CAPITALISED_LEMMA_POS,
     ) -> None:
         if any(len(key) != 1 or len(value) != 1 for key, value in tag_char_map.items()):
             raise ValueError("tag_char_map must map one character to one character")
@@ -61,6 +64,8 @@ class SpacyTagger:
         self._particle_deps = particle_deps
         self._tag_char_map = tag_char_map
         self._post_passes = tuple(post_passes)
+        self._relemmatise_capitalised = relemmatise_capitalised
+        self._relemmatise_pos = relemmatise_pos
 
     def __call__(self, text: str, **_: Any) -> list[LanguageToken]:
         """Tag the copy, build duck tokens over the original, then run the language's post-passes in order.
@@ -68,12 +73,20 @@ class SpacyTagger:
         Post-passes live here (spec §4.1/§4.2 ``post_passes``), not in the
         parser, because Card Backfill and the word filter call the tagger
         directly; a dictionary-gated repair stays the parser's ``token_post_pass``.
+        ``relemmatise_capitalised`` repairs the doc's raw lemmas before the duck
+        tokens (and so the casing rule) see them.
         """
         doc = self.nlp(tagging_copy(text, self._tag_char_map))
+        if self._relemmatise_capitalised:
+            _relemmatise_capitalised(doc, self._lemmatise_alone, pos=self._relemmatise_pos)
         tokens = to_duck_tokens(doc, text, title_case_pos=self._title_case_pos, particle_deps=self._particle_deps)
         for post_pass in self._post_passes:
             tokens = post_pass(tokens)
         return tokens
+
+    def _lemmatise_alone(self, words: list[str]) -> list[str]:
+        """Each word parsed on its own in one batch; ``""`` when the tokenizer splits a word."""
+        return [doc[0].lemma_ if len(doc) == 1 else "" for doc in self.nlp.pipe(words)]
 
     def parse(self, text: str) -> list[LanguageToken]:
         """fugashi-compatible alias so ``LockedTagger.parse`` delegates cleanly."""
@@ -141,6 +154,8 @@ def build_spacy_tagger(
     tag_char_map: Mapping[str, str] = EMPTY_MAP,
     post_passes: Sequence[TokenPass] = (),
     abbreviations: frozenset[str] | None = None,
+    relemmatise_capitalised: bool = False,
+    relemmatise_pos: frozenset[str] = CAPITALISED_LEMMA_POS,
 ) -> LockedTagger:
     """Build the lock-guarded tagger for one spaCy model package.
 
@@ -150,7 +165,10 @@ def build_spacy_tagger(
     language (``_configure_infixes``). ``abbreviations`` is the language's S8
     set (the one it feeds ``sentence_rules``): one source of truth for "this
     dotted word is an abbreviation" — every other single-dot word exception is
-    pruned (``_prune_dotted_rules``).
+    pruned (``_prune_dotted_rules``). ``relemmatise_capitalised`` opts into
+    ``morphology.relemmatise_capitalised`` (sv: ``Huset`` → ``hus``) over
+    ``relemmatise_pos`` (ro adds ``AUX``); a language that builds its own tagger
+    over the returned ``.nlp`` (pt) must call that function itself.
     """
     if particle_deps and not keep_parser:
         raise ValueError("particle_deps need the dependency parser: pass keep_parser=True")
@@ -165,5 +183,7 @@ def build_spacy_tagger(
             particle_deps=particle_deps,
             tag_char_map=tag_char_map,
             post_passes=post_passes,
+            relemmatise_capitalised=relemmatise_capitalised,
+            relemmatise_pos=relemmatise_pos,
         )
     )
