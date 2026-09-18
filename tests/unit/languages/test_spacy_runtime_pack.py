@@ -13,13 +13,14 @@ from tests.unit.languages.test_zh_bundling import _list_body
 ROOT = Path(__file__).resolve().parents[3]
 RESOLVED = ROOT / "tests" / "fixtures" / "language_packs" / "_spacy.resolved.json"
 
-#: The eight Western spaCy model packages (Stage SP pre-lands their excludes and CI wheels).
+#: Every spaCy model package the repo pins (Stage SP pre-lands their excludes and CI wheels).
 SPACY_MODEL_PACKAGES = (
     "ca_core_news_sm",
     "de_core_news_sm",
     "el_core_news_sm",
     "en_core_web_sm",
     "es_core_news_sm",
+    "fi_core_news_sm",
     "fr_core_news_sm",
     "it_core_news_sm",
     "nb_core_news_sm",

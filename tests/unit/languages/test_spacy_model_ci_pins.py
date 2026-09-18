@@ -1,4 +1,4 @@
-"""CI's real-model tests get the same model bytes the packs pin (and the CI step pre-lands all eight)."""
+"""CI's real-model tests get the same model bytes the packs pin (and the CI step pre-lands every one)."""
 
 from __future__ import annotations
 

@@ -69,6 +69,8 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     "ro": ["de", "nu", "să", "o", "în", "ce", "e", "că", "la", "a"],
     # el: the top ten of hermitdave's OpenSubtitles 2018 el_50k.txt, lowercase surface forms.
     "el": ["να", "το", "δεν", "είναι", "θα", "και", "μου", "με", "για", "την"],
+    # fi: fi_50k.txt ranks 1-10 (lowercase surfaces, before lemmatisation).
+    "fi": ["on", "ei", "ja", "se", "hän", "en", "mitä", "että", "ole", "olen"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -173,6 +175,8 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
         "καζάνι",
         "δρεπάνι",
     ],
+    # fi: rare-but-real nouns at fi_50k ranks 20,133-41,138.
+    "fi": ["majakka", "lyhty", "kompassi", "ankkuri", "lapio", "pöllö", "harppu", "kattila", "muurahainen", "kehto"],
 }
 
 
