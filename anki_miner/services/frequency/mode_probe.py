@@ -64,6 +64,9 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     "ca": ["que", "no", "de", "la", "el", "a", "i", "és", "un", "per"],
     # nb: hermitdave's list lives in content/2018/no/ (R27) but the probe keys on the profile code.
     "nb": ["jeg", "det", "er", "du", "ikke", "en", "og", "i", "har", "vi"],
+    # ro: the list spells most s/t words with the legacy cedilla and the probe matches raw terms,
+    # so the common terms are the top of ro_50k.txt without an s/t letter.
+    "ro": ["de", "nu", "să", "o", "în", "ce", "e", "că", "la", "a"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -155,6 +158,7 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
         "sparegris",
         "strykejern",
     ],
+    "ro": ["arici", "felinar", "bursuc", "nicovală", "morsă", "roabă", "stup", "telescop", "canoe", "degetar"],
 }
 
 

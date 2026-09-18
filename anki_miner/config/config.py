@@ -10,7 +10,7 @@ from .paths import ANKI_MINER_HOME
 
 # Deliberate duplicate of anki_miner.languages.AVAILABLE_LANGUAGES: config must
 # not import that package. A sync-assertion test pins the two identical.
-_LANGUAGE_CODES: tuple[str, ...] = ("ja", "ko", "zh", "en", "ca", "de", "pt", "fr", "es", "it", "nl", "nb")
+_LANGUAGE_CODES: tuple[str, ...] = ("ja", "ko", "zh", "en", "ca", "de", "pt", "fr", "es", "it", "nl", "nb", "ro")
 
 # Deliberate duplicate of anki_miner.languages.SCRIPT_VARIANT_IDS, for the same
 # reason as _LANGUAGE_CODES; test_stage_s_contract.py pins the two identical.

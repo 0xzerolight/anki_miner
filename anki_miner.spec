@@ -243,6 +243,16 @@ nb_model_license_datas = []
 if os.path.isdir(nb_model_license_dir):
     nb_model_license_datas.append((nb_model_license_dir, os.path.join("licenses", "nb_core_news_sm")))
 
+# ro_core_news_sm (Romanian spaCy model) CC BY-SA 4.0 attribution: shipped whenever the
+# license dir exists. Lands at sys._MEIPASS/licenses/ro_core_news_sm/. The model is a
+# language pack, never bundled; the notice travels because the app delivers it.
+ro_core_news_sm_license_dir = os.path.join(project_root, "licenses", "ro_core_news_sm")
+ro_core_news_sm_license_datas = []
+if os.path.isdir(ro_core_news_sm_license_dir):
+    ro_core_news_sm_license_datas.append(
+        (ro_core_news_sm_license_dir, os.path.join("licenses", "ro_core_news_sm"))
+    )
+
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
 # ML model has no positive trust signals to weigh against "packed binary that runs
@@ -403,7 +413,8 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + es_model_license_datas
     + it_core_news_sm_license_datas
     + nl_core_news_sm_license_datas
-    + nb_model_license_datas,
+    + nb_model_license_datas
+    + ro_core_news_sm_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",
@@ -594,6 +605,7 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "nb_core_news_sm",
         "nl_core_news_sm",
         "pt_core_news_sm",
+        "ro_core_news_sm",
         # yt-dlp is a SUBPROCESS, never an import: every call site spawns the
         # executable, so the Python package was collected wholesale for no runtime
         # benefit (~16 MB, 13 MB of it extractors) and is dropped here. The frozen

@@ -79,6 +79,7 @@ jobs:
           "nb_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/nb_core_news_sm-3.8.0/nb_core_news_sm-3.8.0-py3-none-any.whl#sha256=086f2cfcc1568b2ee49a2ab297f7910f2645ae6892f2d5d15d8b077f5d0bd773"
           "nl_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/nl_core_news_sm-3.8.0/nl_core_news_sm-3.8.0-py3-none-any.whl#sha256=a76978477821f213ca76a46c686df1b1d41462905d4868bc53eac086adca8b7e"
           "pt_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/pt_core_news_sm-3.8.0/pt_core_news_sm-3.8.0-py3-none-any.whl#sha256=c304fa04db3af73cd08a250feacf560506e15a2ec2469bd1b09f06847f6b455c"
+          "ro_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/ro_core_news_sm-3.8.0/ro_core_news_sm-3.8.0-py3-none-any.whl#sha256=3cebfba2437131efe95345adcc7ea2131e4463915652df9099c577e618460cd9"
       # `golden` = the Android-port engine parity contract; it's a separate
       # project's concern, and every case clones the pinned revision and runs a
       # real export. It has no hosted derivation workflow at all — the anki-miner
