@@ -56,6 +56,9 @@ HOOK_ROWS = [
     ("hr", "pos", "pos_field_input", "pos_tag"),
     ("hr", "noun_gender", "noun_gender_field_input", "noun_gender"),
     ("hr", "aspect_pair", "aspect_pair_field_input", "aspect_pairs"),
+    ("sv", "pos", "pos_field_input", "pos_tag"),
+    ("sv", "noun_article", "noun_article_field_input", "noun_article"),
+    ("sv", "noun_plural", "noun_plural_field_input", "noun_plural"),
 ]
 
 

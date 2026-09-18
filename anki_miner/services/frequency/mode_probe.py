@@ -77,6 +77,8 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     # hr: the top ten of hermitdave's OpenSubtitles 2018 hr_50k.txt. The probe votes on raw surface forms,
     # before the catalogue row's lemmatise=True aggregates them.
     "hr": ["je", "da", "ne", "se", "i", "u", "to", "sam", "što", "na"],
+    # sv: the top ten of hermitdave's OpenSubtitles 2018 sv_50k.txt, lowercase surface forms.
+    "sv": ["jag", "det", "är", "du", "att", "inte", "en", "och", "har", "vi"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -210,6 +212,20 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
         "jazavac",
         "dvogled",
         "morž",
+    ],
+    # sv: rare-but-real nouns at ranks 14,000-45,500 in that same list. "städ" (anvil) is not
+    # among them: it is also the imperative of "städa", so it would vote as a common word.
+    "sv": [
+        "kikare",
+        "kastrull",
+        "grävling",
+        "lykta",
+        "valross",
+        "bikupa",
+        "igelkott",
+        "skottkärra",
+        "strykjärn",
+        "spargris",
     ],
 }
 

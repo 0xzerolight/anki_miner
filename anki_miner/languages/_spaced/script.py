@@ -90,6 +90,10 @@ LATIN_SPEAKER_PATTERN = r"^[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ0-9 .'-]*[A-ZÀ-ÖØ-Þ]
 #: terminator and a space — followed by whitespace. A mid-sentence spaced dash (``sagte sie – wirklich``,
 #: ``I was — well — tired``) is punctuation the card sentence keeps (NOTE 013).
 DIALOGUE_DASH_PATTERN = r"(?:^|(?<=[.!?…]\s))[-–—]\s+"
+#: The Nordic variant: Swedish, Norwegian and Danish subtitles write the second speaker's dash unspaced
+#: (``-Kom hit.``), where the rule above needs a space and spaCy glues ``-Kom`` into one PUNCT token, losing the
+#: word. Requiring a letter after an unspaced dash keeps a negative number intact (``-5 grader ute.``).
+NORDIC_DIALOGUE_DASH_PATTERN = r"(?:^|(?<=[.!?…]\s))[-–—](?:\s+|(?=[^\W\d_]))"
 LATIN_SUBTITLE_REGEX = "|".join(
     (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, LATIN_SPEAKER_PATTERN, DIALOGUE_DASH_PATTERN)
 )

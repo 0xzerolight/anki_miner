@@ -159,6 +159,7 @@ def test_the_panel_anchors_the_selector_and_every_pack_row(qtbot):
         "mining_language.language_pack_fi",
         "mining_language.language_pack_hu",
         "mining_language.language_pack_hr",
+        "mining_language.language_pack_sv",
     }
 
 

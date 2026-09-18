@@ -451,6 +451,8 @@ CAPABILITIES: tuple[Capability, ...] = (
             "magyar",
             "croatian",
             "hrvatski",
+            "swedish",
+            "svenska",
             "hangul",
             "switch language",
             "ja",
@@ -470,6 +472,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "fi",
             "hu",
             "hr",
+            "sv",
         ),
     ),
     # --- Filtering ---------------------------------------------------------
