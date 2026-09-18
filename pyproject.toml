@@ -205,9 +205,14 @@ pl = [
 lt = [
     "spacy>=3.8,<3.8.15",
 ]
+# Danish mining engine (same spaCy cap as en, R3). The da_core_news_sm model is a
+# GitHub release asset: pip users download it in Settings -> Mining Language.
+da = [
+    "spacy>=3.8,<3.8.15",
+]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
-languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]", "anki-miner[nb]", "anki-miner[ro]", "anki-miner[el]", "anki-miner[fi]", "anki-miner[hu]", "anki-miner[hr]", "anki-miner[sv]", "anki-miner[pl]", "anki-miner[lt]"]
+languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]", "anki-miner[nb]", "anki-miner[ro]", "anki-miner[el]", "anki-miner[fi]", "anki-miner[hu]", "anki-miner[hr]", "anki-miner[sv]", "anki-miner[pl]", "anki-miner[lt]", "anki-miner[da]"]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
