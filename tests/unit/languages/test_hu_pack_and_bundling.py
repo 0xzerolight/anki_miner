@@ -162,13 +162,16 @@ def test_the_package_import_registers_the_factories_a_path_load_never_sees(tmp_p
 _LEGACY_PROBE = """
 import importlib.metadata, json
 
-_entry_points = importlib.metadata.entry_points
-
 
 def _without_spacy_legacy(**params):
-    return importlib.metadata.EntryPoints(
-        ep for ep in _entry_points(**params) if not ep.value.startswith("spacy_legacy.")
+    # Built from distributions(): a bare entry_points() is the dict-like SelectableGroups on 3.11.
+    kept = importlib.metadata.EntryPoints(
+        ep
+        for dist in importlib.metadata.distributions()
+        for ep in dist.entry_points
+        if not ep.value.startswith("spacy_legacy.")
     )
+    return kept.select(**params) if params else kept
 
 
 # Before spaCy imports: catalogue snapshots the entry points once, at its own import.
