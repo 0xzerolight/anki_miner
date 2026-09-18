@@ -269,6 +269,15 @@ fi_core_news_sm_license_datas = []
 if os.path.isdir(fi_core_news_sm_license_dir):
     fi_core_news_sm_license_datas.append((fi_core_news_sm_license_dir, os.path.join("licenses", "fi_core_news_sm")))
 
+# hu_core_news_md (Hungarian HuSpaCy model) CC BY-SA 4.0 notice, plus the CC BY-NC-SA 3.0 text two
+# of its training corpora carry: shipped whenever the license dir exists. Lands at
+# sys._MEIPASS/licenses/hu_core_news_md/. The model is a language pack (a HuggingFace wheel), never
+# bundled; the notice travels because the app delivers it.
+hu_core_news_md_license_dir = os.path.join(project_root, "licenses", "hu_core_news_md")
+hu_core_news_md_license_datas = []
+if os.path.isdir(hu_core_news_md_license_dir):
+    hu_core_news_md_license_datas.append((hu_core_news_md_license_dir, os.path.join("licenses", "hu_core_news_md")))
+
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
 # ML model has no positive trust signals to weigh against "packed binary that runs
@@ -432,7 +441,8 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + nb_model_license_datas
     + ro_core_news_sm_license_datas
     + el_core_news_sm_license_datas
-    + fi_core_news_sm_license_datas,
+    + fi_core_news_sm_license_datas
+    + hu_core_news_md_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",
@@ -621,6 +631,7 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "es_core_news_sm",
         "fi_core_news_sm",
         "fr_core_news_sm",
+        "hu_core_news_md",
         "it_core_news_sm",
         "nb_core_news_sm",
         "nl_core_news_sm",
