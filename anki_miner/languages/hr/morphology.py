@@ -50,7 +50,13 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
-from anki_miner.languages._spaced.script import nfc_normalize
+from anki_miner.languages._spaced.script import (
+    BRACKETS_PATTERN,
+    DIALOGUE_DASH_PATTERN,
+    MUSIC_PATTERN,
+    PARENS_PATTERN,
+    nfc_normalize,
+)
 
 if TYPE_CHECKING:  # annotation-only: no services import at profile build
     from anki_miner.services.morphology import AttestLookup, FormLookup
@@ -125,6 +131,14 @@ HR_DIGRAPH_LIGATURES: Mapping[int, str] = MappingProxyType(
 _TONE_MARKS = frozenset({"\u0300", "\u0301", "\u0304", "\u030f", "\u0311"})
 #: Schwa never carries a mark in wty-sh-en, so it is not a base.
 _TONE_BASES = frozenset("aeiourAEIOUR")
+
+#: Croatian speaker cues (``ŽELJKO:``, ``ĐURO:``): the Latin rule with the five letters Latin-1 lacks.
+#: The filter runs after ``hr_normalize``, so a digraph ligature has already become two ordinary letters.
+HR_SPEAKER_PATTERN = r"^[A-ZÀ-ÖØ-ÞĆČĐŠŽ]" r"[A-ZÀ-ÖØ-ÞĆČĐŠŽ0-9 .'-]*" r"[A-ZÀ-ÖØ-ÞĆČĐŠŽ]:\s*"
+#: The S10 default for Croatian: the shared Latin parts with the Croatian speaker rule.
+HR_SUBTITLE_REGEX = "|".join(
+    (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, HR_SPEAKER_PATTERN, DIALOGUE_DASH_PATTERN)
+)
 
 #: A short infinitive is at least three characters long; the candidate is the surface plus the dropped ``i``.
 _MIN_SHORT_INFINITIVE = 3

@@ -18,9 +18,15 @@ from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
 from anki_miner.languages._spaced.render import PosHook
-from anki_miner.languages._spaced.script import LATIN_SUBTITLE_REGEX, LatinScript
+from anki_miner.languages._spaced.script import LatinScript
 from anki_miner.languages.hr.catalog import HR_CATALOG
-from anki_miner.languages.hr.morphology import HR_ABBREVIATIONS, HR_EXCLUDED_SUBTYPES, hr_normalize, hr_tone_fold
+from anki_miner.languages.hr.morphology import (
+    HR_ABBREVIATIONS,
+    HR_EXCLUDED_SUBTYPES,
+    HR_SUBTITLE_REGEX,
+    hr_normalize,
+    hr_tone_fold,
+)
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.services.language_pack_installer import load_pack
@@ -92,7 +98,7 @@ def test_scoped_defaults_turn_on_the_croatian_filters():
     config = switch_language(AnkiMinerConfig(), "hr")
     assert config.language == "hr"
     assert config.allowed_pos == ("ADJ", "ADV", "NOUN", "VERB") and config.excluded_subtypes == HR_EXCLUDED_SUBTYPES
-    assert config.use_subtitle_regex_filter is True and config.subtitle_regex_filter == LATIN_SUBTITLE_REGEX
+    assert config.use_subtitle_regex_filter is True and config.subtitle_regex_filter == HR_SUBTITLE_REGEX
     assert config.anki_fields["pos"] == "" and config.anki_fields["aspect_pair"] == ""
     assert config.downloader_subtitle_langs == "hr"
 

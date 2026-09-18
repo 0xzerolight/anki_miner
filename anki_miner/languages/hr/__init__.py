@@ -17,7 +17,7 @@ from anki_miner.languages._spaced.keys import CasefoldDictKeys, spaced_dedup_fol
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
 from anki_miner.languages._spaced.pos import UPOS_LABELS
 from anki_miner.languages._spaced.render import PosHook
-from anki_miner.languages._spaced.script import LATIN_SUBTITLE_REGEX, LatinScript
+from anki_miner.languages._spaced.script import LatinScript
 from anki_miner.languages._spaced.sentence import sentence_rules
 from anki_miner.languages._spaced.style import SPACED_CONTENT_STYLE
 from anki_miner.languages.hr.catalog import HR_CATALOG
@@ -26,6 +26,7 @@ from anki_miner.languages.hr.morphology import (
     HR_ALLOWED_POS,
     HR_EXCLUDED_SUBTYPES,
     HR_MODEL_PACKAGE,
+    HR_SUBTITLE_REGEX,
     hr_normalize,
     hr_tone_fold,
 )
@@ -75,7 +76,7 @@ def build_profile() -> LanguageProfile:
             allowed_pos=HR_ALLOWED_POS,
             excluded_subtypes=HR_EXCLUDED_SUBTYPES,
             card_fields=HR_CARD_FIELDS,
-            subtitle_regex=LATIN_SUBTITLE_REGEX,
+            subtitle_regex=HR_SUBTITLE_REGEX,
         ),
         sentence_rules=sentence_rules(HR_ABBREVIATIONS),
         normalize=hr_normalize,
