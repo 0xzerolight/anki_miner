@@ -1,0 +1,30 @@
+{
+  "approx_download_mb": 128,
+  "code": "hu",
+  "components": [
+    {
+      "abi": null,
+      "import_name": "hu_core_news_md",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py",
+        "hu_core_news_md-3.8.0/config.cfg",
+        "hu_core_news_md-3.8.0/meta.json"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "hu_core_news_md-any-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "hu_core_news_md/",
+        "root_members": [],
+        "sha256": "0fd89c6ccf0efe1d7591910065c3bec4eadb1e25313d6ceea551150832b0f861",
+        "size": 127018056,
+        "url": "https://huggingface.co/huspacy/hu_core_news_md/resolve/v3.8.0/hu_core_news_md-any-py3-none-any.whl"
+      }
+    }
+  ],
+  "requires": [
+    "_spacy"
+  ]
+}

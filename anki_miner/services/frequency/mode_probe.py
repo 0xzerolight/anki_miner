@@ -71,6 +71,9 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     "el": ["να", "το", "δεν", "είναι", "θα", "και", "μου", "με", "για", "την"],
     # fi: fi_50k.txt ranks 1-10 (lowercase surfaces, before lemmatisation).
     "fi": ["on", "ei", "ja", "se", "hän", "en", "mitä", "että", "ole", "olen"],
+    # hu: the top 10 of hermitdave/FrequencyWords OpenSubtitles 2018 hu_50k.txt,
+    # the default catalogue source, which is imported before lemmatisation.
+    "hu": ["a", "nem", "az", "hogy", "és", "egy", "van", "ez", "is", "de"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -177,6 +180,21 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
     ],
     # fi: rare-but-real nouns at fi_50k ranks 20,133-41,138.
     "fi": ["majakka", "lyhty", "kompassi", "ankkuri", "lapio", "pöllö", "harppu", "kattila", "muurahainen", "kehto"],
+    # hu: rare-but-real nouns present in that same list at ranks 12,858-48,944
+    # (agglutination spreads a lemma over dozens of rows, so a rare noun still
+    # has a row of its own).
+    "hu": [
+        "mókus",
+        "bagoly",
+        "pillangó",
+        "denevér",
+        "vödör",
+        "kandalló",
+        "sündisznó",
+        "iránytű",
+        "világítótorony",
+        "seprű",
+    ],
 }
 
 

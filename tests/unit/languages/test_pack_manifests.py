@@ -9,8 +9,13 @@ from anki_miner.languages import AVAILABLE_LANGUAGES, SHARED_PACK_CODES
 from anki_miner.languages.pack_spec import ArtifactSpec, LanguagePack
 
 _RELEASE_PLATFORMS = (("linux", "x86_64"), ("win32", "AMD64"), ("darwin", "arm64"), ("darwin", "x86_64"))
-#: Every host a pinned artifact may come from: PyPI, and the spaCy model releases.
-_URL_PREFIXES = ("https://files.pythonhosted.org/", "https://github.com/explosion/spacy-models/releases/download/")
+#: Every host a pinned artifact may come from: PyPI, the spaCy model releases,
+#: and HuSpaCy's tag-pinned HuggingFace model (R31).
+_URL_PREFIXES = (
+    "https://files.pythonhosted.org/",
+    "https://github.com/explosion/spacy-models/releases/download/",
+    "https://huggingface.co/huspacy/hu_core_news_md/resolve/v3.8.0/",
+)
 
 
 def _packs():
