@@ -31,7 +31,7 @@ def _pins() -> dict[str, tuple[str, str]]:
     return pins
 
 
-def test_the_test_job_installs_every_western_model():
+def test_the_test_job_installs_every_spacy_model():
     assert set(_pins()) == set(SPACY_MODEL_PACKAGES)
     test_job = CI.split("\n  test:", 1)[1].split("\n  wheel-assets:", 1)[0]
     assert all(f'"{pkg} @ ' in test_job or f"$RUNNER_TEMP/{pkg}-" in test_job for pkg in SPACY_MODEL_PACKAGES)
