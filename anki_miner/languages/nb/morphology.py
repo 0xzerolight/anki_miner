@@ -17,7 +17,8 @@ feminine noun takes ``ei`` or ``en`` in Bokmål (``bok f or m``), so the token's
 
 ``NB_SUBTITLE_REGEX``: Norwegian subtitles mark a second speaker with a hyphen and no space (``-Kom hit. -Nei.``,
 spec E.4). spaCy glues that hyphen to the word (``-Kom`` is one token, so the verb never mines), and the Latin
-dialogue-dash rule needs a space; the nb rule also takes a dash followed directly by a letter. A dash that follows
+dialogue-dash rule needs a space; the Nordic rule (``NORDIC_DIALOGUE_DASH_PATTERN``, shared with sv and da since
+this shape shipped here first) also takes a dash followed directly by a letter. A dash that follows
 a speaker label (``OLA: -Hvor er du?``) stays out of reach: the shared speaker pattern consumes ``OLA: `` first, so
 the sentence-start anchor no longer matches (known limit, not fixed here — the repair is in the shared pattern).
 """
@@ -33,6 +34,7 @@ from anki_miner.languages._spaced.script import (
     BRACKETS_PATTERN,
     LATIN_SPEAKER_PATTERN,
     MUSIC_PATTERN,
+    NORDIC_DIALOGUE_DASH_PATTERN,
     PARENS_PATTERN,
     nfc_normalize,
 )
@@ -60,8 +62,9 @@ NB_LEADING_WORDS: frozenset[str] = frozenset({"en", "ei", "et", "å"})
 
 NB_ARTICLE_MAP: Mapping[str, str] = MappingProxyType({"masc": "en", "fem": "ei", "neut": "et"})
 
-#: A speaker dash at the cue start or after a sentence end, followed by spaces or directly by a letter.
-NB_DIALOGUE_DASH_PATTERN = r"(?:^|(?<=[.!?…]\s))[-–—](?:\s+|(?=[^\W\d_]))"
+#: A speaker dash at the cue start or after a sentence end, followed by spaces or directly by a letter. Shared
+#: with the other Nordic languages since sv promoted it (same bytes; the shape shipped here first).
+NB_DIALOGUE_DASH_PATTERN = NORDIC_DIALOGUE_DASH_PATTERN
 #: The S10 default for Norwegian: the Latin parts with the unspaced dash rule. No inline flags.
 NB_SUBTITLE_REGEX = "|".join(
     (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, LATIN_SPEAKER_PATTERN, NB_DIALOGUE_DASH_PATTERN)

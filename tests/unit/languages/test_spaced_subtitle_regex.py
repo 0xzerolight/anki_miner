@@ -62,3 +62,27 @@ def test_the_default_strips_sdh_and_keeps_dialogue(cue, expected):
 
 def test_the_dialogue_dash_preset_is_offered_to_every_language():
     assert SUBTITLE_REGEX_PRESETS[-1] == ("Dialogue dash", script.DIALOGUE_DASH_PATTERN)
+
+
+NORDIC_LINES = [
+    ("-Kom hit.", "Kom hit."),
+    ("- Kom hit.", "Kom hit."),
+    ("Hej. -Kom hit.", "Hej. Kom hit."),
+    ("-5 grader ute.", "-5 grader ute."),
+    ("Det var -10 igår. -20 i natt.", "Det var -10 igår. -20 i natt."),
+    ("Ett e-postmeddelande.", "Ett e-postmeddelande."),
+]
+
+
+@pytest.mark.parametrize(("cue", "expected"), NORDIC_LINES)
+def test_the_nordic_dash_takes_an_unspaced_letter_and_leaves_a_negative_number(cue, expected):
+    assert compile_subtitle_regex_filter(script.NORDIC_DIALOGUE_DASH_PATTERN, "").sub("", cue) == expected
+
+
+def test_the_nordic_dash_is_the_shipped_norwegian_pattern():
+    """nb shipped it first; sv and da consume the same constant, so it lives in the shared module."""
+    from anki_miner.languages.nb.morphology import NB_DIALOGUE_DASH_PATTERN, NB_SUBTITLE_REGEX
+
+    assert NB_DIALOGUE_DASH_PATTERN is script.NORDIC_DIALOGUE_DASH_PATTERN
+    assert NB_SUBTITLE_REGEX.endswith(script.NORDIC_DIALOGUE_DASH_PATTERN)
+    compile_subtitle_regex_filter(script.NORDIC_DIALOGUE_DASH_PATTERN, "")  # ReDoS screen
