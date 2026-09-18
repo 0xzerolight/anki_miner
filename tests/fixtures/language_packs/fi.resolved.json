@@ -1,0 +1,30 @@
+{
+  "approx_download_mb": 15,
+  "code": "fi",
+  "components": [
+    {
+      "abi": null,
+      "import_name": "fi_core_news_sm",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py",
+        "fi_core_news_sm-3.8.0/config.cfg",
+        "fi_core_news_sm-3.8.0/meta.json"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "fi_core_news_sm-3.8.0-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "fi_core_news_sm/",
+        "root_members": [],
+        "sha256": "5b9bd1496f500c1fac98f5e6a5d3913aa502f188c094ecea191dc6b8a81f418d",
+        "size": 14346621,
+        "url": "https://github.com/explosion/spacy-models/releases/download/fi_core_news_sm-3.8.0/fi_core_news_sm-3.8.0-py3-none-any.whl"
+      }
+    }
+  ],
+  "requires": [
+    "_spacy"
+  ]
+}
