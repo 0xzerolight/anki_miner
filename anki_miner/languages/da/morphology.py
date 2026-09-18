@@ -31,6 +31,7 @@ from anki_miner.languages._spaced.script import (
     BRACKETS_PATTERN,
     LATIN_SPEAKER_PATTERN,
     MUSIC_PATTERN,
+    NORDIC_DIALOGUE_DASH_PATTERN,
     PARENS_PATTERN,
     nfc_normalize,
 )
@@ -60,12 +61,12 @@ DA_GRAMMAR_SOURCES: tuple[str, ...] = ("head", "chips", "morph")
 DA_OPENERS: frozenset[str] = frozenset("([{„»")
 DA_CLOSERS: frozenset[str] = frozenset(")]}“«")
 
-#: A speaker dash at the cue start or after a sentence end, followed by spaces OR directly by a letter.
-#: Danish subtitles write it unspaced (``-Kom her.``), which the shared rule leaves glued to the word.
-DA_DIALOGUE_DASH_PATTERN = r"(?:^|(?<=[.!?…]\s))[-–—](?:\s+|(?=[^\W\d_]))"
-#: The S10 default for Danish: the Latin parts with the unspaced dash rule. No inline flags.
+#: The S10 default for Danish: the shared Latin parts with the shared Nordic dash rule. No inline flags.
+#: Danish subtitles write the speaker dash unspaced (``-Bogen ligger her.``), which the shipped Latin rule
+#: leaves glued to the word; ``NORDIC_DIALOGUE_DASH_PATTERN`` (nb shipped it first, sv consumes it too) also
+#: accepts a letter directly after the dash, so ``-5 grader ude.`` keeps its minus sign.
 DA_SUBTITLE_REGEX = "|".join(
-    (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, LATIN_SPEAKER_PATTERN, DA_DIALOGUE_DASH_PATTERN)
+    (BRACKETS_PATTERN, PARENS_PATTERN, MUSIC_PATTERN, LATIN_SPEAKER_PATTERN, NORDIC_DIALOGUE_DASH_PATTERN)
 )
 
 _NORMALIZE_MAP = str.maketrans({"\u00a0": " ", "\u00ad": None})

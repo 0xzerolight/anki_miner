@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import unicodedata
 
-from anki_miner.languages._spaced.script import LATIN_SUBTITLE_REGEX
+from anki_miner.languages._spaced.script import LATIN_SUBTITLE_REGEX, NORDIC_DIALOGUE_DASH_PATTERN
 from anki_miner.languages.da.abbreviations import DA_ABBREVIATION_ADDITIONS, DA_ABBREVIATION_DROPS, DA_ABBREVIATIONS
 from anki_miner.languages.da.morphology import (
     DA_ALLOWED_POS,
@@ -49,6 +49,8 @@ def test_articles_sources_and_leading_words():
 def test_the_subtitle_regex_keeps_the_latin_parts_and_takes_an_unspaced_speaker_dash():
     for part in LATIN_SUBTITLE_REGEX.split("|")[:-1]:
         assert part in DA_SUBTITLE_REGEX
+    # The shared Nordic rule itself, never a third copy of nb's literal (DA21).
+    assert DA_SUBTITLE_REGEX.endswith(NORDIC_DIALOGUE_DASH_PATTERN)
     pattern = re.compile(DA_SUBTITLE_REGEX)
     assert pattern.sub("", "-Kom her.") == "Kom her."
     assert pattern.sub("", "- Kom her.") == "Kom her."
