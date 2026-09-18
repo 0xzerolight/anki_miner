@@ -157,3 +157,41 @@ def test_the_package_import_registers_the_factories_a_path_load_never_sees(tmp_p
     assert out["after"] == ["hu.lookup_lemmatizer", "trainable_lemmatizer_v2"]
     assert out["pipeline"] == PIPELINE
     assert out["lemmas"][1:3] == ["ház", "olvas"]
+
+
+_LEGACY_PROBE = """
+import importlib.metadata, json
+
+_entry_points = importlib.metadata.entry_points
+
+
+def _without_spacy_legacy(**params):
+    return importlib.metadata.EntryPoints(
+        ep for ep in _entry_points(**params) if not ep.value.startswith("spacy_legacy.")
+    )
+
+
+# Before spaCy imports: catalogue snapshots the entry points once, at its own import.
+importlib.metadata.entry_points = _without_spacy_legacy
+from spacy import registry
+
+out = {"bare": registry.has("architectures", "spacy.Tagger.v1")}
+from anki_miner.languages._spaced.tokenizer import load_spacy_model
+nlp = load_spacy_model("hu_core_news_md", keep_parser=True)
+out["pipeline"] = nlp.pipe_names
+out["lemmas"] = [token.lemma_ for token in nlp("A házakban olvastam.")]
+print(json.dumps(out))
+"""
+
+
+def test_the_legacy_tagger_loads_without_spacy_legacys_entry_points():
+    """A pack extracts ``spacy_legacy`` without its dist-info, so catalogue sees none of its entry points.
+
+    hu's tagger is ``spacy.Tagger.v1``, which spaCy only finds through spacy-legacy's
+    ``spacy_architectures`` entry points; every frozen build died on it (E893).
+    """
+    result = subprocess.run([sys.executable, "-c", _LEGACY_PROBE], capture_output=True, text=True, check=True, cwd=ROOT)
+    out = json.loads(result.stdout.strip().splitlines()[-1])
+    assert out["bare"] is False
+    assert out["pipeline"] == PIPELINE
+    assert out["lemmas"][1:3] == ["ház", "olvas"]

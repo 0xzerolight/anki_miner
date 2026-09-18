@@ -27,6 +27,37 @@ from anki_miner.services.tagger import LockedTagger
 #: segmenter. The parser is excluded too unless a language needs the arc.
 _ALWAYS_EXCLUDED: tuple[str, ...] = ("ner", "senter")
 
+#: spacy-legacy's ``spacy_architectures`` entry points, as its ``entry_points.txt``
+#: names them: ``spacy-legacy.<name>.v1 = spacy_legacy.architectures.<module>:<name>_v1``.
+#: A pack root carries no ``*.dist-info``, so catalogue never sees them and spaCy's
+#: ``spacy.<name>.v1`` → ``spacy-legacy.<name>.v1`` fallback finds nothing (E893):
+#: hu_core_news_md's tagger is ``spacy.Tagger.v1``.
+_LEGACY_ARCHITECTURES: tuple[tuple[str, str], ...] = (
+    ("tok2vec", "CharacterEmbed"),
+    ("entity_linker", "EntityLinker"),
+    ("tok2vec", "HashEmbedCNN"),
+    ("tok2vec", "MaxoutWindowEncoder"),
+    ("tok2vec", "MishWindowEncoder"),
+    ("tok2vec", "MultiHashEmbed"),
+    ("tagger", "Tagger"),
+    ("textcat", "TextCatBOW"),
+    ("textcat", "TextCatCNN"),
+    ("textcat", "TextCatEnsemble"),
+    ("tok2vec", "Tok2Vec"),
+    ("parser", "TransitionBasedParser"),
+)
+
+
+def _register_legacy_architectures() -> None:
+    """Register what spacy-legacy's entry points would have; a no-op where they are visible (pip)."""
+    from spacy import registry
+
+    for module, name in _LEGACY_ARCHITECTURES:
+        key = f"spacy-legacy.{name}.v1"
+        if not registry.has("architectures", key):
+            func = getattr(importlib.import_module(f"spacy_legacy.architectures.{module}"), f"{name}_v1")
+            registry.architectures.register(key, func=func)
+
 
 def load_spacy_model(package: str, *, keep_parser: bool) -> Any:
     """Load ``package``'s pipeline minus ``ner``/``senter`` (and ``parser`` unless kept).
@@ -35,6 +66,7 @@ def load_spacy_model(package: str, *, keep_parser: bool) -> Any:
     D10: ro has no morphologizer, ca no tagger); spaCy ignores an excluded name
     a model does not have.
     """
+    _register_legacy_architectures()
     exclude = list(_ALWAYS_EXCLUDED) if keep_parser else [*_ALWAYS_EXCLUDED, "parser"]
     return importlib.import_module(package).load(exclude=exclude)
 
