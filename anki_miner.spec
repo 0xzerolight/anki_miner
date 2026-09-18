@@ -234,6 +234,14 @@ nl_core_news_sm_license_datas = []
 if os.path.isdir(nl_core_news_sm_license_dir):
     nl_core_news_sm_license_datas.append((nl_core_news_sm_license_dir, os.path.join("licenses", "nl_core_news_sm")))
 
+# pl_core_news_sm (Polish spaCy model) GPL-3.0 notice: shipped whenever the license
+# dir exists. Lands at sys._MEIPASS/licenses/pl_core_news_sm/. The model is a
+# language pack, never bundled; the notice travels because the app delivers it.
+pl_core_news_sm_license_dir = os.path.join(project_root, "licenses", "pl_core_news_sm")
+pl_core_news_sm_license_datas = []
+if os.path.isdir(pl_core_news_sm_license_dir):
+    pl_core_news_sm_license_datas.append((pl_core_news_sm_license_dir, os.path.join("licenses", "pl_core_news_sm")))
+
 # nb_core_news_sm (Norwegian Bokmål spaCy model) MIT notice: shipped whenever the license
 # dir exists. Lands at sys._MEIPASS/licenses/nb_core_news_sm/. The model itself is
 # excluded below and arrives as a language pack the app downloads; the MIT notice
@@ -455,6 +463,7 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + es_model_license_datas
     + it_core_news_sm_license_datas
     + nl_core_news_sm_license_datas
+    + pl_core_news_sm_license_datas
     + nb_model_license_datas
     + ro_core_news_sm_license_datas
     + el_core_news_sm_license_datas
@@ -655,6 +664,7 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "it_core_news_sm",
         "nb_core_news_sm",
         "nl_core_news_sm",
+        "pl_core_news_sm",
         "pt_core_news_sm",
         "ro_core_news_sm",
         "sv_core_news_sm",
