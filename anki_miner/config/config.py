@@ -30,6 +30,7 @@ _LANGUAGE_CODES: tuple[str, ...] = (
     "hr",
     "sv",
 )
+_LANGUAGE_CODES: tuple[str, ...] = ("ja", "ko", "zh", "en", "ca", "de", "pt", "fr", "es", "it", "nl", "nb", "ro", "pl")
 
 # Deliberate duplicate of anki_miner.languages.SCRIPT_VARIANT_IDS, for the same
 # reason as _LANGUAGE_CODES; test_stage_s_contract.py pins the two identical.
