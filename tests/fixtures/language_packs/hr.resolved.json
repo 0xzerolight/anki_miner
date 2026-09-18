@@ -1,0 +1,30 @@
+{
+  "approx_download_mb": 14,
+  "code": "hr",
+  "components": [
+    {
+      "abi": null,
+      "import_name": "hr_core_news_sm",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py",
+        "hr_core_news_sm-3.8.0/config.cfg",
+        "hr_core_news_sm-3.8.0/meta.json"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "hr_core_news_sm-3.8.0-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "hr_core_news_sm/",
+        "root_members": [],
+        "sha256": "393ad455bba13536e6fb257bce2b5ef0253f41c1fb5249d8c16dde6cf116d196",
+        "size": 13187227,
+        "url": "https://github.com/explosion/spacy-models/releases/download/hr_core_news_sm-3.8.0/hr_core_news_sm-3.8.0-py3-none-any.whl"
+      }
+    }
+  ],
+  "requires": [
+    "_spacy"
+  ]
+}

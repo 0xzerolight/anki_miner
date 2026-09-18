@@ -74,6 +74,9 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     # hu: the top 10 of hermitdave/FrequencyWords OpenSubtitles 2018 hu_50k.txt,
     # the default catalogue source, which is imported before lemmatisation.
     "hu": ["a", "nem", "az", "hogy", "és", "egy", "van", "ez", "is", "de"],
+    # hr: the top ten of hermitdave's OpenSubtitles 2018 hr_50k.txt. The probe votes on raw surface forms,
+    # before the catalogue row's lemmatise=True aggregates them.
+    "hr": ["je", "da", "ne", "se", "i", "u", "to", "sam", "što", "na"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -194,6 +197,19 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
         "iránytű",
         "világítótorony",
         "seprű",
+    ],
+    # hr: concrete nouns that are in hr_50k.txt (ranks 15,130-47,081), so each one really votes.
+    "hr": [
+        "teleskop",
+        "sidro",
+        "svjetionik",
+        "kanu",
+        "košnica",
+        "češalj",
+        "lopata",
+        "jazavac",
+        "dvogled",
+        "morž",
     ],
 }
 

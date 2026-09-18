@@ -77,6 +77,7 @@ jobs:
           "es_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.8.0/es_core_news_sm-3.8.0-py3-none-any.whl#sha256=e451a83d6df79b87e9eed0cb553f03e99e36a3bab18a7b79f0dcfd1fdf875e12"
           "fi_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/fi_core_news_sm-3.8.0/fi_core_news_sm-3.8.0-py3-none-any.whl#sha256=5b9bd1496f500c1fac98f5e6a5d3913aa502f188c094ecea191dc6b8a81f418d"
           "fr_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/fr_core_news_sm-3.8.0/fr_core_news_sm-3.8.0-py3-none-any.whl#sha256=7d6ad14cd5078e53147bfbf70fb9d433c6a3865b695fda2657140bbc59a27e29"
+          "hr_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/hr_core_news_sm-3.8.0/hr_core_news_sm-3.8.0-py3-none-any.whl#sha256=393ad455bba13536e6fb257bce2b5ef0253f41c1fb5249d8c16dde6cf116d196"
           "it_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/it_core_news_sm-3.8.0/it_core_news_sm-3.8.0-py3-none-any.whl#sha256=3f617bf9a8ae0418953cf1fbf014e10272684c4229e882a7fd748b637d0100bf"
           "nb_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/nb_core_news_sm-3.8.0/nb_core_news_sm-3.8.0-py3-none-any.whl#sha256=086f2cfcc1568b2ee49a2ab297f7910f2645ae6892f2d5d15d8b077f5d0bd773"
           "nl_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/nl_core_news_sm-3.8.0/nl_core_news_sm-3.8.0-py3-none-any.whl#sha256=a76978477821f213ca76a46c686df1b1d41462905d4868bc53eac086adca8b7e"

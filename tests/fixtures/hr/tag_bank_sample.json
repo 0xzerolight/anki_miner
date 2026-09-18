@@ -1,0 +1,2787 @@
+{
+ "source": "wty-sh-en revision 2026.08.29 (huggingface.co/datasets/daxida/wty-release, wty-sh-en.zip 8,555,841 B); the aspect-chip rows of: biti, imenovati, kupiti, vidjeti, vidjet, morati, morat, ići",
+ "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). Attribution: https://en.wiktionary.org/ Serbo-Croatian entries for the listed terms.",
+ "index": {
+  "title": "wty-sh-en",
+  "format": 3,
+  "revision": "2026.08.29",
+  "sequenced": true,
+  "sourceLanguage": "sh",
+  "targetLanguage": "en",
+  "attribution": "https://kaikki.org/"
+ },
+ "tag_bank": [
+  [
+   "impf",
+   "aspect",
+   0,
+   "imperfective",
+   0
+  ],
+  [
+   "pf",
+   "aspect",
+   0,
+   "perfective",
+   0
+  ],
+  [
+   "v",
+   "partOfSpeech",
+   -2,
+   "verb",
+   2
+  ],
+  [
+   "vr",
+   "partOfSpeech",
+   -2,
+   "reflexive verb",
+   2
+  ],
+  [
+   "vt",
+   "partOfSpeech",
+   -2,
+   "transitive verb",
+   2
+  ],
+  [
+   "non-lemma",
+   "",
+   10,
+   "non-lemma",
+   -10
+  ]
+ ],
+ "term_rows": [
+  [
+   "biti",
+   "",
+   "v impf pf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "bȉti impf or pf (Cyrillic spelling би̏ти)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *byti, from Proto-Balto-Slavic *bū́ˀtei, from Proto-Indo-European *bʰuH-."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "intransitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vi"
+              }
+             ]
+            },
+            "to be, to exist",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Biti"
+                   },
+                   " ili ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "ne biti"
+                   },
+                   "?"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "To be or not to be?"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              },
+              {
+               "tag": "span",
+               "title": "copulative",
+               "data": {
+                "content": "tag",
+                "category": "transitivity"
+               },
+               "content": "cop"
+              }
+             ]
+            },
+            "Used to connect a noun to an adjective or passive past participle that describes it (equivalent to all English senses and functions as a copula; subject having the state, quality, identity, nature, role, etc., specified.)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Vri",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "je"
+                   },
+                   "me ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "je"
+                   },
+                   " li",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "je"
+                   },
+                   "po, a ja ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "sam"
+                   },
+                   " sretan!"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "The weather is nice and I am happy!"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Rekoh joj \"Beži, mani se,\ni traži bol",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "je"
+                   },
+                   " parti",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "je"
+                   },
+                   "!\nPremala ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "je"
+                   },
+                   " moja tambura\nda te od kiše sakri",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "je"
+                   },
+                   "\"."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "I told her “Move on, let go of me,\nand look for a better catch\nMy guitar ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "is"
+                   },
+                   " too small\nTo hide you from the rain”."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              },
+              {
+               "tag": "span",
+               "title": "auxiliary",
+               "data": {
+                "content": "tag",
+                "category": "transitivity"
+               },
+               "content": "aux"
+              },
+              {
+               "tag": "span",
+               "title": "regional",
+               "data": {
+                "content": "tag",
+                "category": "usage"
+               },
+               "content": "regio"
+              }
+             ]
+            },
+            "Used as an auxiliary verb in the present to form near future tense; similar to English going to.",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Nisam siguran, ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "budemo"
+                   },
+                   " vid(j)eli."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "I'm not sure, we'll see."
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              },
+              {
+               "tag": "span",
+               "title": "auxiliary",
+               "data": {
+                "content": "tag",
+                "category": "transitivity"
+               },
+               "content": "aux"
+              }
+             ]
+            },
+            "Used as an auxiliary verb to form compound verb tenses (perfect, pluperfect, future perfect, conditional) together with the active past participle.",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Kad ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "si"
+                   },
+                   " zadnji put ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "bio"
+                   },
+                   " tamo?"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "When were you there the last time?"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Trčao sam"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "I ran. / I have run."
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Trčao bih"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "I would run."
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              },
+              {
+               "tag": "span",
+               "title": "auxiliary",
+               "data": {
+                "content": "tag",
+                "category": "transitivity"
+               },
+               "content": "aux"
+              }
+             ]
+            },
+            "Used to form the passive voice together with the passive past participle of the main verb.",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Ulovio sam loptu. Lopta ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "je"
+                   },
+                   " ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "bila"
+                   },
+                   " ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "ulovljena"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "I caught the ball. The ball was caught. / The ball has been caught."
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "intransitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vi"
+              }
+             ]
+            },
+            "Used to form a question, usually a polar one.",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Jesi"
+                   },
+                   " li tu?"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "Are you there?"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "intransitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vi"
+              },
+              {
+               "tag": "span",
+               "title": "copulative",
+               "data": {
+                "content": "tag",
+                "category": "transitivity"
+               },
+               "content": "cop"
+              },
+              {
+               "tag": "span",
+               "title": "impersonal",
+               "data": {
+                "content": "tag",
+                "category": "transitivity"
+               },
+               "content": "impers"
+              }
+             ]
+            },
+            "Used to indicate a general condition, such as weather, worth or value.",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Pet jabuka ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "jest"
+                   },
+                   " dva eura."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "Five apples are two euro."
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Rekli su da će danas ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "biti"
+                   },
+                   " sunčano."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "They said that it's going to be sunny today."
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              },
+              {
+               "tag": "span",
+               "title": "copulative",
+               "data": {
+                "content": "tag",
+                "category": "transitivity"
+               },
+               "content": "cop"
+              },
+              {
+               "tag": "span",
+               "title": "mathematics",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "math"
+              }
+             ]
+            },
+            "to equal, to total, to add up to (indicates the equivalence of values)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Pet plus pet ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "je"
+                   },
+                   " deset."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "Five plus five is ten."
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "intransitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vi"
+              },
+              {
+               "tag": "span",
+               "title": "impersonal",
+               "data": {
+                "content": "tag",
+                "category": "transitivity"
+               },
+               "content": "impers"
+              }
+             ]
+            },
+            "Used to express a premonition; there will be, there is going to be, to be coming",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Bit"
+                   },
+                   " će / ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Biće"
+                   },
+                   " rata."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "A war is coming."
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/biti#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/b/bi/biti.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "biti",
+   "",
+   "v vt impf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "bȉti impf (Cyrillic spelling би̏ти)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *biti, from Proto-Balto-Slavic *bī́ˀtei, from Proto-Indo-European *bʰeyh₂-."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to beat, hit, strike"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/biti#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/b/bi/biti.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "imenovati",
+   "",
+   "v vt impf pf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "ȉmenovati impf or pf (Cyrillic spelling и̏меновати)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *jьmenovati."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to name"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to mention"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to appoint"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/imenovati#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/i/im/imenovati.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "vidjeti",
+   "",
+   "v impf pf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "vȉdjeti impf or pf (Cyrillic spelling ви̏дјети)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *viděti. See vid."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "reflexive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vr"
+              }
+             ]
+            },
+            "to see"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to look, behold"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "reflexive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vr"
+              }
+             ]
+            },
+            "to meet"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "intransitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vi"
+              }
+             ]
+            },
+            "to understand"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              }
+             ]
+            },
+            "to become sensible of"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              }
+             ]
+            },
+            "to catch glimpse of"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              }
+             ]
+            },
+            "to foresee"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              }
+             ]
+            },
+            "to witness"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/vidjeti#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/v/vi/vidjeti.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "ići",
+   "",
+   "v impf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "ìći impf (Cyrillic spelling ѝћи)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *jьti, from Proto-Balto-Slavic *eitei, from Proto-Indo-European *h₁éyti."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "intransitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vi"
+              }
+             ]
+            },
+            "to go, walk"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "intransitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vi"
+              }
+             ]
+            },
+            "to flow, run, leak (of liquid)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "intransitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vi"
+              }
+             ]
+            },
+            "to function, work (of a machine)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "intransitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vi"
+              }
+             ]
+            },
+            "to do well, go well, succeed",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "\"Sumnjam da će to ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "ići"
+                   },
+                   ". No, probajmo!\" pomisli mladi postolar."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "\"I doubt that will go well.\" thought the young shoemaker."
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "\"Sumnjam da će to ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "ići"
+                   },
+                   ". No, probajmo!\" pomisli mladi postolar. […]"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-c"
+                  },
+                  "content": "1969, Ivana Brlić-Mažuranić, The Brave Adventures of Lapitch"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "intransitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vi"
+              }
+             ]
+            },
+            "to elapse, pass (of time or period)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "intransitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vi"
+              }
+             ]
+            },
+            "to belong to, classify as"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "intransitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vi"
+              }
+             ]
+            },
+            "to suit, fit"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "auxiliary",
+               "data": {
+                "content": "tag",
+                "category": "transitivity"
+               },
+               "content": "aux"
+              },
+              {
+               "tag": "span",
+               "title": "informal",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "inf"
+              }
+             ]
+            },
+            "Forms a near future tense, akin to English going to future tense construction.",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Gladan sam. ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Idem"
+                   },
+                   " jesti!"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "I am hungry. I'm gonna go eat!"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Umorio sam se! ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Idem"
+                   },
+                   " odmoriti."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "I am exhausted. I'm gonna go rest!"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Ideš li na koncert sutra? Svi ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "idu"
+                   },
+                   "!"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "Are you going to the concert tomorrow? Everyone is gonna go!"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "auxiliary",
+               "data": {
+                "content": "tag",
+                "category": "transitivity"
+               },
+               "content": "aux"
+              },
+              {
+               "tag": "span",
+               "title": "informal",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "inf"
+              }
+             ]
+            },
+            "Forms a past progressive tense that entails an inchoate future aspect."
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/ići#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/i/ić/ići.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "kupiti",
+   "",
+   "v vt pf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "kúpiti pf (Cyrillic spelling ку́пити)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *kupiti, from Proto-Germanic *kaupōną, from Latin caupō."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to buy, purchase"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/kupiti#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/k/ku/kupiti.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "kupiti",
+   "",
+   "v vr impf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "kȕpiti impf (Cyrillic spelling ку̏пити)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *kupiti. See kȕp."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              }
+             ]
+            },
+            "to collect, gather, to pick up"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to leave, go away"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/kupiti#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/k/ku/kupiti.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "morati",
+   "",
+   "v impf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "mórati impf (Cyrillic spelling мо́рати)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to have to; must"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/morati#Serbo-Croatian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Serbo-Croatian/meaning/m/mo/morati.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "biti",
+   "bȋti",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "bit",
+     [
+      "genitive/dative/vocative singular"
+     ]
+    ],
+    [
+     "bit",
+     [
+      "nominative/accusative/vocative plural"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "biti",
+   "bítī",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "bit",
+     [
+      "genitive plural"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "biti",
+   "bíti",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "bit",
+     [
+      "locative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "vidjeti",
+   "vȉdjeti",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "videti",
+     [
+      "alternative Ijekavian"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ]
+ ],
+ "rendered_html": {
+  "biti": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"transitive verb\">vt</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"imperfective\">impf</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"perfective\">pf</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"4\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">bȉti impf or pf (Cyrillic spelling би̏ти)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *byti, from Proto-Balto-Slavic *bū́ˀtei, from Proto-Indo-European *bʰuH-.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"intransitive verb\">vi</span></div>to be, to exist<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Biti</span> ili <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">ne biti</span>?</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">To be or not to be?</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"transitive verb\">vt</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"transitivity\" title=\"copulative\">cop</span></div>Used to connect a noun to an adjective or passive past participle that describes it (equivalent to all English senses and functions as a copula; subject having the state, quality, identity, nature, role, etc., specified.)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">2 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Vri<span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">je</span>me <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">je</span> li<span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">je</span>po, a ja <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">sam</span> sretan!</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">The weather is nice and I am happy!</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Rekoh joj &quot;Beži, mani se,<br>i traži bol<span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">je</span> parti<span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">je</span>!<br>Premala <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">je</span> moja tambura<br>da te od kiše sakri<span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">je</span>&quot;.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">I told her “Move on, let go of me,<br>and look for a better catch<br>My guitar <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">is</span> too small<br>To hide you from the rain”.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"transitive verb\">vt</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"transitivity\" title=\"auxiliary\">aux</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"usage\" title=\"regional\">regio</span></div>Used as an auxiliary verb in the present to form near future tense; similar to English going to.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Nisam siguran, <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">budemo</span> vid(j)eli.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">I&#x27;m not sure, we&#x27;ll see.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"transitive verb\">vt</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"transitivity\" title=\"auxiliary\">aux</span></div>Used as an auxiliary verb to form compound verb tenses (perfect, pluperfect, future perfect, conditional) together with the active past participle.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">3 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Kad <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">si</span> zadnji put <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">bio</span> tamo?</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">When were you there the last time?</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Trčao sam</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">I ran. / I have run.</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Trčao bih</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">I would run.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"transitive verb\">vt</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"transitivity\" title=\"auxiliary\">aux</span></div>Used to form the passive voice together with the passive past participle of the main verb.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Ulovio sam loptu. Lopta <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">je</span> <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">bila</span> <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">ulovljena</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">I caught the ball. The ball was caught. / The ball has been caught.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"intransitive verb\">vi</span></div>Used to form a question, usually a polar one.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Jesi</span> li tu?</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Are you there?</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"intransitive verb\">vi</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"transitivity\" title=\"copulative\">cop</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"transitivity\" title=\"impersonal\">impers</span></div>Used to indicate a general condition, such as weather, worth or value.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">2 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Pet jabuka <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">jest</span> dva eura.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Five apples are two euro.</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Rekli su da će danas <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">biti</span> sunčano.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">They said that it&#x27;s going to be sunny today.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"transitive verb\">vt</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"transitivity\" title=\"copulative\">cop</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"topic\" title=\"mathematics\">math</span></div>to equal, to total, to add up to (indicates the equivalence of values)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Pet plus pet <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">je</span> deset.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Five plus five is ten.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"intransitive verb\">vi</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"transitivity\" title=\"impersonal\">impers</span></div>Used to express a premonition; there will be, there is going to be, to be coming<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Bit</span> će / <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Biće</span> rata.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">A war is coming.</div></div></div></details></div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/biti#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/b/bi/biti.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">bȉti impf (Cyrillic spelling би̏ти)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *biti, from Proto-Balto-Slavic *bī́ˀtei, from Proto-Indo-European *bʰeyh₂-.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to beat, hit, strike</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/biti#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/b/bi/biti.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">bit</li><li class=\"gloss-sc-li\">bit</li></ul></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">bit</div></li></ul></li></ol></div>",
+  "imenovati": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"transitive verb\">vt</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"imperfective\">impf</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"perfective\">pf</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">ȉmenovati impf or pf (Cyrillic spelling и̏меновати)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *jьmenovati.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to name</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to mention</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to appoint</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/imenovati#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/i/im/imenovati.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "kupiti": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"reflexive verb\">vr</span><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"transitive verb\">vt</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"imperfective\">impf</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"perfective\">pf</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">kúpiti pf (Cyrillic spelling ку́пити)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *kupiti, from Proto-Germanic *kaupōną, from Latin caupō.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to buy, purchase</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/kupiti#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/k/ku/kupiti.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">kȕpiti impf (Cyrillic spelling ку̏пити)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *kupiti. See kȕp.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"transitive verb\">vt</span></div>to collect, gather, to pick up</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to leave, go away</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/kupiti#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/k/ku/kupiti.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "vidjeti": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"imperfective\">impf</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"perfective\">pf</span><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"2\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">vȉdjeti impf or pf (Cyrillic spelling ви̏дјети)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *viděti. See vid.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"reflexive verb\">vr</span></div>to see</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to look, behold</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"reflexive verb\">vr</span></div>to meet</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"intransitive verb\">vi</span></div>to understand</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"transitive verb\">vt</span></div>to become sensible of</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"transitive verb\">vt</span></div>to catch glimpse of</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"transitive verb\">vt</span></div>to foresee</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"transitive verb\">vt</span></div>to witness</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/vidjeti#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/v/vi/vidjeti.html\">Kaikki</a></div></div></li><li class=\"gloss-item\"><div class=\"gloss-content\">videti</div></li></ul></li></ol></div>",
+  "vidjet": null,
+  "morati": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"imperfective\">impf</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">mórati impf (Cyrillic spelling мо́рати)</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to have to; must</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/morati#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/m/mo/morati.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "morat": null,
+  "ići": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-sh-en\" data-dictionary-id=\"wty-sh-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><span class=\"gloss-tag\" data-category=\"aspect\" title=\"imperfective\">impf</span><i>(wty-sh-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">ìći impf (Cyrillic spelling ѝћи)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Proto-Slavic *jьti, from Proto-Balto-Slavic *eitei, from Proto-Indo-European *h₁éyti.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"intransitive verb\">vi</span></div>to go, walk</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"intransitive verb\">vi</span></div>to flow, run, leak (of liquid)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"intransitive verb\">vi</span></div>to function, work (of a machine)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"intransitive verb\">vi</span></div>to do well, go well, succeed<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">2 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">&quot;Sumnjam da će to <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">ići</span>. No, probajmo!&quot; pomisli mladi postolar.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">&quot;I doubt that will go well.&quot; thought the young shoemaker.</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">&quot;Sumnjam da će to <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">ići</span>. No, probajmo!&quot; pomisli mladi postolar. […]</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-c\">1969, Ivana Brlić-Mažuranić, The Brave Adventures of Lapitch</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"intransitive verb\">vi</span></div>to elapse, pass (of time or period)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"intransitive verb\">vi</span></div>to belong to, classify as</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"partOfSpeech\" title=\"intransitive verb\">vi</span></div>to suit, fit</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"transitivity\" title=\"auxiliary\">aux</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"informal\">inf</span></div>Forms a near future tense, akin to English going to future tense construction.<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">3 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Gladan sam. <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Idem</span> jesti!</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">I am hungry. I&#x27;m gonna go eat!</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Umorio sam se! <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Idem</span> odmoriti.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">I am exhausted. I&#x27;m gonna go rest!</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Ideš li na koncert sutra? Svi <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">idu</span>!</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Are you going to the concert tomorrow? Everyone is gonna go!</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"transitivity\" title=\"auxiliary\">aux</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"register\" title=\"informal\">inf</span></div>Forms a past progressive tense that entails an inchoate future aspect.</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/ići#Serbo-Croatian\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Serbo-Croatian/meaning/i/ić/ići.html\">Kaikki</a></div></div></li></ul></li></ol></div>"
+ }
+}

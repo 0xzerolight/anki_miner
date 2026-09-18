@@ -277,6 +277,15 @@ hu_core_news_md_license_dir = os.path.join(project_root, "licenses", "hu_core_ne
 hu_core_news_md_license_datas = []
 if os.path.isdir(hu_core_news_md_license_dir):
     hu_core_news_md_license_datas.append((hu_core_news_md_license_dir, os.path.join("licenses", "hu_core_news_md")))
+# hr_core_news_sm (Croatian spaCy model) CC BY-SA 4.0 notices: shipped whenever the
+# license dir exists. Lands at sys._MEIPASS/licenses/hr_core_news_sm/. The model is a
+# language pack, never bundled; the notice travels because the app delivers it.
+hr_core_news_sm_license_dir = os.path.join(project_root, "licenses", "hr_core_news_sm")
+hr_core_news_sm_license_datas = []
+if os.path.isdir(hr_core_news_sm_license_dir):
+    hr_core_news_sm_license_datas.append(
+        (hr_core_news_sm_license_dir, os.path.join("licenses", "hr_core_news_sm"))
+    )
 
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
@@ -442,7 +451,8 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + ro_core_news_sm_license_datas
     + el_core_news_sm_license_datas
     + fi_core_news_sm_license_datas
-    + hu_core_news_md_license_datas,
+    + hu_core_news_md_license_datas
+    + hr_core_news_sm_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",
@@ -631,6 +641,7 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "es_core_news_sm",
         "fi_core_news_sm",
         "fr_core_news_sm",
+        "hr_core_news_sm",
         "hu_core_news_md",
         "it_core_news_sm",
         "nb_core_news_sm",
