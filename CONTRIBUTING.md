@@ -1,6 +1,6 @@
 # Contributing to Anki Miner
 
-Thanks for helping out. Anki Miner is a solo-maintained mining tool for Japanese, Chinese, Korean and eight European languages, and contributions of any size are welcome — bug reports, fixes, dictionary integrations, GUI polish, doc improvements.
+Thanks for helping out. Anki Miner is a solo-maintained mining tool for Japanese, Chinese, Korean and eighteen European languages, and contributions of any size are welcome — bug reports, fixes, dictionary integrations, GUI polish, doc improvements.
 
 ## Before you start
 
@@ -26,7 +26,7 @@ pre-commit install
 
 Anki Miner requires Python 3.11 or newer; CI runs the suite on 3.11, 3.12 and 3.13, with lint and type checks on 3.12.
 
-The `languages` extra adds the Chinese and Korean engines. Plain `.[dev]` still runs green, because the zh/ko suites skip themselves through `pytest.importorskip` rather than failing - so a contributor without it gets a passing run that never exercised those languages.
+The `languages` extra adds the Chinese and Korean engines and every spaCy language's engine and model. The zh/ko suites skip themselves through `pytest.importorskip` rather than failing - so a contributor without the extra gets a passing run that never exercised those languages - but each spaCy language's own suite hard-requires its model and errors without it, so install the extra before running the suite.
 
 External runtime dependencies:
 
