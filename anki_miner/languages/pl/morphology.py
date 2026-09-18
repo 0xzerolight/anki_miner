@@ -104,6 +104,10 @@ PL_GENDER_LABELS: Mapping[str, str] = MappingProxyType({"masc": "m", "fem": "f",
 #: prints them as the head-line qualifier the seam parses: ``stół m inan``, ``student m pers``, ``pies m animal``.
 PL_ANIMACY_LABELS: Mapping[str, str] = MappingProxyType({"pers": "m pers", "anim": "m anim", "inan": "m inan"})
 
+#: The grammar hook's verb gate: Polish AUX is być/by and the agglutinate clitics, never an
+#: aspect-bearing headword, so the seam default is what pl wants (plan P7).
+PL_VERB_POS: frozenset[str] = frozenset({"VERB"})
+
 #: Words a Polish deck front carries AFTER the verb that the mined front never has (S3).
 PL_TRAILING_WORDS: frozenset[str] = frozenset({"się"})
 

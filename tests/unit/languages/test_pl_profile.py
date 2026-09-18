@@ -10,7 +10,7 @@ from anki_miner.config.config import _LANGUAGE_CODES
 from anki_miner.gui import app as app_module
 from anki_miner.gui.capabilities import CAPABILITIES, search
 from anki_miner.languages import AVAILABLE_LANGUAGES
-from anki_miner.languages._spaced.fields import NOUN_GENDER_FIELD, POS_FIELD
+from anki_miner.languages._spaced.fields import ASPECT_PAIR_FIELD, NOUN_GENDER_FIELD, POS_FIELD
 from anki_miner.languages._spaced.grammar_hook import GrammarTagHook
 from anki_miner.languages._spaced.keys import CasefoldDictKeys
 from anki_miner.languages._spaced.morphology import LatinLookupStrategy, SpacedMinedForm
@@ -53,11 +53,11 @@ def test_the_profile_is_built_from_the_shared_substrate():
         ("pl-orig",),
     )
     assert profile.captions.audio_pattern == "^pl(-|$)" and profile.captions.bare_fallback is True
-    assert profile.capabilities == frozenset({"pos_tag", "noun_gender", "lemmatised_frequency"})
+    assert profile.capabilities == frozenset({"pos_tag", "noun_gender", "aspect_pairs", "lemmatised_frequency"})
     assert "wiktionary_audio" not in profile.capabilities  # Stage W is not built (DECIDED 6)
-    assert profile.extra_card_fields == (POS_FIELD, NOUN_GENDER_FIELD)
+    assert profile.extra_card_fields == (POS_FIELD, NOUN_GENDER_FIELD, ASPECT_PAIR_FIELD)
     assert [type(hook) for hook in profile.render_hooks] == [PosHook, GrammarTagHook]
-    assert profile.render_hooks[1].field_names() == ("noun_gender",)
+    assert profile.render_hooks[1].field_names() == ("noun_gender", "aspect_pair")
     assert profile.unavailable_reason is not None and profile.unavailable_reason() is None
     assert profile.pos_defaults.excluded_subtypes == PL_EXCLUDED_SUBTYPES
     assert profile.sentence_rules == PL_SENTENCE_RULES
@@ -86,6 +86,7 @@ def test_scoped_defaults_carry_the_nkjp_table_and_the_polish_sdh_filter():
     assert config.use_subtitle_regex_filter is True and config.subtitle_regex_filter == PL_SUBTITLE_REGEX
     assert config.subtitle_regex_filter != LATIN_SUBTITLE_REGEX
     assert config.anki_fields["pos"] == "" and config.anki_fields["noun_gender"] == ""
+    assert config.anki_fields["aspect_pair"] == ""  # the mapped name is the on/off switch
     assert config.anki_fields["expression_furigana"] == ""
 
 

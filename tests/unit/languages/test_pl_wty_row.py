@@ -19,6 +19,14 @@ FIXTURE = json.loads((Path(__file__).parents[2] / "fixtures" / "pl" / "wty_row.j
 _CHIP = re.compile(r'<span class="gloss-tag"[^>]*>[^<]*</span>')
 #: The head line gives these; the chips agree (plan P8, Addendum A).
 GENDERS = {"książka": "f", "stół": "m inan", "student": "m pers", "pies": "m anim"}
+#: Real wty-pl-en head lines: robić impf (perfective zrobić), zrobić pf (imperfective robić),
+#: kraść impf or pf (perfective ukraść), bać impf with no partner named.
+ASPECTS = {
+    "robić": "imperfective (perfective: zrobić)",
+    "zrobić": "perfective (imperfective: robić)",
+    "kraść": "imperfective or perfective (perfective: ukraść)",
+    "bać": "imperfective",
+}
 
 
 def _provider(tmp_path: Path, dict_id: str, term_rows: list) -> IndexedDictProvider:
@@ -45,6 +53,12 @@ def provider(tmp_path):
 def _gender(definition_html: str, morph: str = "") -> dict[str, str]:
     hook = get_profile("pl").render_hooks[1]
     word = SimpleNamespace(pos="NOUN", morph=morph, definition_html=definition_html, mined_form="")
+    return hook.render(word, config=AnkiMinerConfig())
+
+
+def _aspect(definition_html: str, morph: str = "") -> dict[str, str]:
+    hook = get_profile("pl").render_hooks[1]
+    word = SimpleNamespace(pos="VERB", morph=morph, definition_html=definition_html, mined_form="")
     return hook.render(word, config=AnkiMinerConfig())
 
 
@@ -91,3 +105,29 @@ def test_a_pluralia_tantum_row_prints_no_gender():
     assert _gender(html) == {}
     assert _gender(html, morph="Case=Nom|Number=Ptan") == {}
     assert _gender(html, morph="Case=Nom|Gender=Neut|Number=Ptan") == {"noun_gender": "n"}  # the repair's job
+
+
+@pytest.mark.parametrize("verb", sorted(ASPECTS))
+def test_a_verb_row_renders_its_aspect_and_partner(verb):
+    assert _aspect(FIXTURE["rendered_html"][verb]) == {"aspect_pair": ASPECTS[verb]}
+
+
+def test_the_partner_keeps_its_polish_letters():
+    """P7: pl passes NO partner_fold. The landed D2 helper strips combining marks, which would print
+    zrobic/ukrasc - a misspelling, because ć and ś are Polish letters, not marked variants."""
+    robic = _aspect(FIXTURE["rendered_html"]["robić"])["aspect_pair"]
+    krasc = _aspect(FIXTURE["rendered_html"]["kraść"])["aspect_pair"]
+    assert "zrobić" in robic and "zrobic" not in robic
+    assert "ukraść" in krasc and "ukrasc" not in krasc
+
+
+def test_the_chips_exclude_a_disagreeing_model_aspect():
+    """P7: the model tags 442 of 4,670 verb tokens against the dictionary (zbuduję Imp vs zbudować pf),
+    so a morph value the chips exclude loses to the chip."""
+    html = FIXTURE["rendered_html"]["zrobić"]
+    assert _aspect(html, morph="Aspect=Imp|Mood=Ind|Number=Sing") == {"aspect_pair": ASPECTS["zrobić"]}
+
+
+def test_a_noun_row_renders_no_aspect_and_a_verb_no_gender():
+    assert _aspect(FIXTURE["rendered_html"]["książka"]) == {}
+    assert _gender(FIXTURE["rendered_html"]["robić"]) == {}

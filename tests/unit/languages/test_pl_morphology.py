@@ -20,6 +20,7 @@ from anki_miner.languages.pl.morphology import (
     PL_SENTENCE_RULES,
     PL_SPEAKER_PATTERN,
     PL_SUBTITLE_REGEX,
+    PL_VERB_POS,
     abbreviation_cases,
     drop_agglutinate_tail,
     drop_plurale_tantum_gender,
@@ -44,6 +45,8 @@ def test_the_tables():
     )
     assert dict(PL_GENDER_LABELS) == {"masc": "m", "fem": "f", "neut": "n"}
     assert dict(PL_ANIMACY_LABELS) == {"pers": "m pers", "anim": "m anim", "inan": "m inan"}
+    # pl's AUX is być/by and the agglutinate clitics - never an aspect-bearing headword (P7).
+    assert frozenset({"VERB"}) == PL_VERB_POS
     assert list(PL_POST_PASSES) == [drop_agglutinate_tail, drop_plurale_tantum_gender]
 
 
