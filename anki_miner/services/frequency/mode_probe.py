@@ -81,6 +81,8 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     "sv": ["jag", "det", "är", "du", "att", "inte", "en", "och", "har", "vi"],
     # pl: hermitdave pl_50k.txt ranks 1-10.
     "pl": ["nie", "to", "się", "w", "na", "i", "że", "z", "co", "jest"],
+    # lt: the top ten of hermitdave's OpenSubtitles 2018 lt_50k.txt, lowercase surface forms.
+    "lt": ["ir", "aš", "tai", "kad", "tu", "ne", "taip", "jis", "ką", "čia"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -231,6 +233,19 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
     ],
     # pl: rare-but-real nouns at pl_50k ranks 13,588-47,397 (wiadro ... ul).
     "pl": ["wiadro", "młotek", "kompas", "wagon", "teleskop", "latarnia", "wiewiórka", "latarka", "kufel", "ul"],
+    # lt: concrete nouns at lt_50k.txt ranks 16,797-41,353 (the rank is the second field's line number).
+    "lt": [
+        "žibintas",
+        "barsukas",
+        "teleskopas",
+        "avilys",
+        "kibiras",
+        "šluota",
+        "malūnas",
+        "inkaras",
+        "plaktukas",
+        "sraigė",
+    ],
 }
 
 
