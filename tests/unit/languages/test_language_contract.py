@@ -49,6 +49,7 @@ PROBE = {
     "hr": "knjige",
     "sv": "gick",
     "pl": "książki",
+    "lt": "knygos",
 }
 
 #: Every capability name any profile is allowed to declare. A typo'd flag is a
