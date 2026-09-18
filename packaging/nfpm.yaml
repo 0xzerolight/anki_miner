@@ -46,6 +46,15 @@ contents:
     dst: /usr/bin/anki-miner
     type: symlink
 
+  # Copyright file. Debian Policy 12.5 requires every package to ship the
+  # verbatim licence at /usr/share/doc/<package>/copyright; the `license:` field
+  # above is only metadata. The app's GPL-3.0 text is the whole file — the
+  # third-party notices ride along in /opt/anki-miner/_internal/licenses/.
+  - src: LICENSE
+    dst: /usr/share/doc/anki-miner/copyright
+    file_info:
+      mode: 0644
+
   # Desktop entry
   - src: packaging/deb/anki-miner.desktop
     dst: /usr/share/applications/anki-miner.desktop

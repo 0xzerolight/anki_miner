@@ -106,6 +106,19 @@ if os.path.isdir(vendor_libmpv):
         if os.path.isfile(_full):
             libmpv_binaries.append((_full, "."))
 
+# Bundle Anki Miner's OWN license. The app is GPL-3.0-or-later and every frozen
+# artifact (tar.gz, AppImage, deb, Inno tree, .app) is a binary distribution of
+# it, so the license text has to travel with the copy — the licenses/ tree below
+# only covers third-party code. Lands at the sys._MEIPASS root: PyInstaller
+# rejects a DEST_DIR pointing outside the contents directory and COLLECT prefixes
+# it onto every non-EXECUTABLE entry, so "." is the closest datas can get to the
+# executable, and it sits one level above licenses/ where a user looking for the
+# notices will already be.
+app_license_file = os.path.join(project_root, "LICENSE")
+app_license_datas = []
+if os.path.isfile(app_license_file):
+    app_license_datas.append((app_license_file, "."))
+
 # Bundle the ffmpeg GPL license text if present (populated by a sibling CI task).
 # Conditional so local builds don't hard-fail before the license dir exists. Lands at
 # sys._MEIPASS/licenses/ffmpeg/ in the bundle.
@@ -139,6 +152,15 @@ if os.path.isdir(local_audio_license_dir):
     local_audio_license_datas.append(
         (local_audio_license_dir, os.path.join("licenses", "local-audio-yomichan"))
     )
+
+# Bundle the GPL-3.0 notice and upstream provenance for the Japanese code ported
+# from Yomitan (services/deinflection.py, services/japanese_transforms.py,
+# utils/furigana_distribute.py, utils/ja_normalize.py). Lands at
+# sys._MEIPASS/licenses/yomitan/ in the bundle.
+yomitan_license_dir = os.path.join(project_root, "licenses", "yomitan")
+yomitan_license_datas = []
+if os.path.isdir(yomitan_license_dir):
+    yomitan_license_datas.append((yomitan_license_dir, os.path.join("licenses", "yomitan")))
 
 # Windows release builds add the Apache-licensed Vulkan loader next to libmpv.
 # Keep its committed, version-matched notice in the frozen bundle.
@@ -463,10 +485,12 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         (budoux_models, os.path.join("budoux", "models")),
         (budoux_skip_nodes, "budoux"),
     ]
+    + app_license_datas
     + ffmpeg_license_datas
     + alass_license_datas
     + libmpv_license_datas
     + local_audio_license_datas
+    + yomitan_license_datas
     + vulkan_loader_license_datas
     + kiwipiepy_license_datas
     + ca_model_license_datas
