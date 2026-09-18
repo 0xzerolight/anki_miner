@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:10e84410ad08f17c -->
+<!-- i18n-source: README.md sha256:bcf6a2c4beaa6567 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Biến nội dung bản ngữ tiếng Nhật, tiếng Trung, tiếng Hàn và tám ngôn ngữ châu Âu thành thẻ từ vựng Anki.
+Biến nội dung bản ngữ tiếng Nhật, tiếng Trung, tiếng Hàn và mười tám ngôn ngữ châu Âu thành thẻ từ vựng Anki.
 </p>
 
 <p align="center">
@@ -92,7 +92,7 @@ anki_miner_gui
 Tiếng Nhật không cần gì thêm. Để khai thác bất kỳ ngôn ngữ nào khác, hãy thêm engine của ngôn ngữ đó:
 
 ```bash
-pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [de], [fr], [es], [it], [pt], [nl], [ca] for one
+pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da] for one
 ```
 
 Các bản tải ở trên lấy chúng ngay trong ứng dụng, tại Cài đặt -> Ngôn ngữ khai thác.
@@ -125,7 +125,7 @@ anki_miner_gui
 
 ## Tính năng khác
 
-- Ngôn ngữ khai thác - tiếng Nhật, tiếng Trung, tiếng Hàn, tiếng Anh, tiếng Đức, tiếng Pháp, tiếng Tây Ban Nha, tiếng Ý, tiếng Bồ Đào Nha, tiếng Hà Lan và tiếng Catalan, chuyển đổi trong Cài đặt. Mọi ngôn ngữ trừ tiếng Nhật đều tải engine ngay trong ứng dụng.
+- Ngôn ngữ khai thác - tiếng Nhật, tiếng Trung, tiếng Hàn, tiếng Anh, tiếng Catalan, tiếng Đức, tiếng Bồ Đào Nha, tiếng Pháp, tiếng Tây Ban Nha, tiếng Ý, tiếng Hà Lan, tiếng Na Uy (Bokmål), tiếng Rumani, tiếng Hy Lạp, tiếng Phần Lan, tiếng Hungary, tiếng Croatia, tiếng Thụy Điển, tiếng Ba Lan, tiếng Litva và tiếng Đan Mạch, chuyển đổi trong Cài đặt. Mọi ngôn ngữ trừ tiếng Nhật đều tải engine ngay trong ứng dụng.
 - Word Curator - xem lại từng từ ứng viên trước khi thẻ được tạo, cùng với cảnh phim, trang manga và mục từ điển của nó đặt cạnh nhau.
 - Hoàn tác một lần chạy - xóa các ghi chú mà một lần chạy vừa tạo, ngay trong hộp thoại kết quả.
 - Bộ lọc phong phú: i+1, khoảng hạng tần suất, danh sách đen, regex, tập từ, và hơn thế nữa.
@@ -228,7 +228,7 @@ Danh sách ý tưởng cho các phiên bản Anki Miner trong tương lai. Khôn
 
 - **Dài hạn**:
   - [x] Bản chuyển sang Android -- https://github.com/0xzerolight/anki_miner_android
-  - [x] Vượt ra ngoài tiếng Nhật: khai thác tiếng Trung, tiếng Hàn và tám ngôn ngữ châu Âu.
+  - [x] Vượt ra ngoài tiếng Nhật: khai thác tiếng Trung, tiếng Hàn và mười tám ngôn ngữ châu Âu.
   - [ ] Tiện ích mở rộng trình duyệt cho Anki Miner.
 
 

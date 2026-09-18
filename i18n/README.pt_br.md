@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:10e84410ad08f17c -->
+<!-- i18n-source: README.md sha256:bcf6a2c4beaa6567 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Transforme conteúdo nativo em Japonês, Chinês, Coreano e oito idiomas europeus em cartões de vocabulário do Anki.
+Transforme conteúdo nativo em Japonês, Chinês, Coreano e dezoito idiomas europeus em cartões de vocabulário do Anki.
 </p>
 
 <p align="center">
@@ -92,7 +92,7 @@ anki_miner_gui
 Japonês não precisa de nada extra. Para minerar qualquer outro idioma, adicione o engine (motor) dele:
 
 ```bash
-pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [de], [fr], [es], [it], [pt], [nl], [ca] for one
+pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da] for one
 ```
 
 Os downloads acima os obtêm dentro do próprio app, em Configurações -> Idioma de Mineração.
@@ -125,7 +125,7 @@ Para a configuração completa de desenvolvimento, veja [CONTRIBUTING.md](../CON
 
 ## Outros Recursos
 
-- Idiomas de mineração - Japonês, Chinês, Coreano, Inglês, Alemão, Francês, Espanhol, Italiano, Português, Holandês e Catalão, podem ser alternados em Configurações. Todos os idiomas, exceto o Japonês, baixam o engine dentro do próprio aplicativo.
+- Idiomas de mineração - Japonês, Chinês, Coreano, Inglês, Catalão, Alemão, Português, Francês, Espanhol, Italiano, Holandês, Norueguês (Bokmål), Romeno, Grego, Finlandês, Húngaro, Croata, Sueco, Polonês, Lituano e Dinamarquês, podem ser alternados em Configurações. Todos os idiomas, exceto o Japonês, baixam o engine dentro do próprio aplicativo.
 - Seletor de Palavras - revise cada palavra antes de os cartões serem criados, com a cena, a página do mangá e a entrada do dicionário lado a lado.
 - Desfazer uma execução - exclua as notas que uma execução acabou de criar, direto da caixa de diálogo de resultados.
 - Filtragem extensa: i+1, palavras com ranking de frequência, blacklist, regex, lista de palavras predefinidas e muito mais.
@@ -228,7 +228,7 @@ Lista de ideias para futuras versões do Anki Miner. Não estão em ordem de pri
 
 - **Longo prazo**:
   - [x] Porte para Android -- https://github.com/0xzerolight/anki_miner_android
-  - [x] Além do Japonês: mineração de Chinês, Coreano e oito idiomas europeus.
+  - [x] Além do Japonês: mineração de Chinês, Coreano e dezoito idiomas europeus.
   - [ ] Extensão de navegador Anki Miner.
 
 

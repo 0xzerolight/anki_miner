@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:10e84410ad08f17c -->
+<!-- i18n-source: README.md sha256:bcf6a2c4beaa6567 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-日本語・中国語・韓国語と欧州の8言語のネイティブコンテンツを Anki の語彙カードに変換します。
+日本語・中国語・韓国語と欧州の18言語のネイティブコンテンツを Anki の語彙カードに変換します。
 </p>
 
 <p align="center">
@@ -92,7 +92,7 @@ anki_miner_gui
 日本語は追加不要です。ほかの言語をマイニングする場合は、その言語のエンジンを追加してください:
 
 ```bash
-pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [de], [fr], [es], [it], [pt], [nl], [ca] for one
+pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da] for one
 ```
 
 上記のダウンロード版では、設定 -> マイニング言語からアプリ内で取得します。
@@ -125,7 +125,7 @@ anki_miner_gui
 
 ## その他の機能
 
-- マイニング言語 - 日本語・中国語・韓国語・英語・ドイツ語・フランス語・スペイン語・イタリア語・ポルトガル語・オランダ語・カタルーニャ語。設定で切り替えます。日本語以外の言語はエンジンをアプリ内でダウンロードします。
+- マイニング言語 - 日本語・中国語・韓国語・英語・カタルーニャ語・ドイツ語・ポルトガル語・フランス語・スペイン語・イタリア語・オランダ語・ノルウェー語（ブークモール）・ルーマニア語・ギリシャ語・フィンランド語・ハンガリー語・クロアチア語・スウェーデン語・ポーランド語・リトアニア語・デンマーク語。設定で切り替えます。日本語以外の言語はエンジンをアプリ内でダウンロードします。
 - 単語キュレーター - カードが作られる前に候補の単語をすべて確認できます。シーン、漫画のページ、辞書項目を並べて表示します。
 - 実行の取り消し - 実行が作成したばかりのノートを、結果ダイアログからそのまま削除できます。
 - 豊富なフィルタリング: i+1、頻度ランクの範囲、ブラックリスト、正規表現、単語セットなど。
@@ -228,7 +228,7 @@ Anki Miner の今後のバージョンに向けたアイデアの一覧です。
 
 - **長期**:
   - [x] Android への移植 -- https://github.com/0xzerolight/anki_miner_android
-  - [x] 日本語の先へ: 中国語・韓国語と欧州の8言語のマイニング。
+  - [x] 日本語の先へ: 中国語・韓国語と欧州の18言語のマイニング。
   - [ ] Anki Miner のブラウザ拡張機能。
 
 
