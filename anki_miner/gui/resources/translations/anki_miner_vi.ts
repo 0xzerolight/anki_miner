@@ -366,6 +366,14 @@
         <translation>Lưu dạng số nhiều của danh từ từ mục từ điển. Để trống = bỏ qua.</translation>
     </message>
     <message>
+        <source>Aspect Pair Field</source>
+        <translation>Trường Cặp thể động từ</translation>
+    </message>
+    <message>
+        <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
+        <translation>Lưu thể của động từ, cùng với động từ tương ứng ở thể còn lại khi từ điển có nêu. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Không có trong Anki — việc khai thác sẽ thất bại cho đến khi chọn một mục thực hoặc tạo nó trong Anki.</translation>
     </message>

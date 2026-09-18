@@ -366,6 +366,14 @@
         <translation>存储词典条目中名词的复数形式。留空 = 跳过。</translation>
     </message>
     <message>
+        <source>Aspect Pair Field</source>
+        <translation>动词体配对字段</translation>
+    </message>
+    <message>
+        <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
+        <translation>存储动词的体；若词典列出了另一体的对应动词，也一并存储。留空 = 跳过。</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>不在 Anki 中——请在 Anki 中选择或创建有效项，否则挖词会失败。</translation>
     </message>

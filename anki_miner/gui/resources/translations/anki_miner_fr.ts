@@ -367,6 +367,14 @@
         <translation>Stocke la forme plurielle d'un nom depuis l'entrée du dictionnaire. Vide = ignorer.</translation>
     </message>
     <message>
+        <source>Aspect Pair Field</source>
+        <translation>Champ Paire aspectuelle</translation>
+    </message>
+    <message>
+        <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
+        <translation>Stocke l'aspect d'un verbe, ainsi que son partenaire aspectuel lorsque le dictionnaire en indique un. Vide = ignorer.</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Absent d’Anki — l’extraction échouera jusqu’à ce que vous en choisissiez un véritable ou le créiez dans Anki.</translation>
     </message>

@@ -366,6 +366,14 @@
         <translation>Menyimpan bentuk jamak nomina dari entri kamus. Kosong = lewati.</translation>
     </message>
     <message>
+        <source>Aspect Pair Field</source>
+        <translation>Bidang Pasangan Aspek</translation>
+    </message>
+    <message>
+        <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
+        <translation>Menyimpan aspek sebuah verba, beserta verba pasangan aspeknya bila kamus menyebutkannya. Kosong = lewati.</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Tidak ada di Anki — mining akan gagal sampai Anda memilih yang benar atau membuatnya di Anki.</translation>
     </message>
