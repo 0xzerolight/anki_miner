@@ -185,9 +185,14 @@ fi = [
 hu = [
     "spacy>=3.8,<3.8.15",
 ]
+# Croatian mining engine (same spaCy cap as en). The hr_core_news_sm model is a
+# sha256-pinned pack, not a dependency (frozen bundles ship no spaCy model).
+hr = [
+    "spacy>=3.8,<3.8.15",
+]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
-languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]", "anki-miner[nb]", "anki-miner[ro]", "anki-miner[el]", "anki-miner[fi]", "anki-miner[hu]"]
+languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]", "anki-miner[nb]", "anki-miner[ro]", "anki-miner[el]", "anki-miner[fi]", "anki-miner[hu]", "anki-miner[hr]"]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
