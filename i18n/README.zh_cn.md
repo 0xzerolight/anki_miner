@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:10e84410ad08f17c -->
+<!-- i18n-source: README.md sha256:bcf6a2c4beaa6567 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-把原汁原味的日语、中文、韩语和八种欧洲语言内容变成 Anki 词汇卡片。
+把原汁原味的日语、中文、韩语和十八种欧洲语言内容变成 Anki 词汇卡片。
 </p>
 
 <p align="center">
@@ -92,7 +92,7 @@ anki_miner_gui
 日语无需额外安装。要挖取其他语言，请加装对应的引擎:
 
 ```bash
-pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [de], [fr], [es], [it], [pt], [nl], [ca] for one
+pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da] for one
 ```
 
 上面的下载版会改为在应用内获取，位于设置 -> 挖词语言。
@@ -125,7 +125,7 @@ anki_miner_gui
 
 ## 其他功能
 
-- 挖词语言 - 日语、中文、韩语、英语、德语、法语、西班牙语、意大利语、葡萄牙语、荷兰语和加泰罗尼亚语，在设置中切换。除日语外，各语言的引擎都在应用内下载。
+- 挖词语言 - 日语、中文、韩语、英语、加泰罗尼亚语、德语、葡萄牙语、法语、西班牙语、意大利语、荷兰语、挪威语（书面挪威语）、罗马尼亚语、希腊语、芬兰语、匈牙利语、克罗地亚语、瑞典语、波兰语、立陶宛语和丹麦语，在设置中切换。除日语外，各语言的引擎都在应用内下载。
 - 单词整理器 - 在生成卡片之前逐一审阅每个候选单词，画面、漫画页面和词典条目并排显示。
 - 撤销一次运行 - 直接在结果对话框中删除该次运行刚创建的笔记。
 - 丰富的过滤器：i+1、词频排名区间、黑名单、正则表达式、词汇集等。
@@ -228,7 +228,7 @@ Anki Miner 未来版本的想法清单。排列顺序不代表优先级。功能
 
 - **长期**：
   - [x] Android 移植 -- https://github.com/0xzerolight/anki_miner_android
-  - [x] 超越日语：挖词中文、韩语和八种欧洲语言。
+  - [x] 超越日语：挖词中文、韩语和十八种欧洲语言。
   - [ ] Anki Miner 浏览器扩展。
 
 

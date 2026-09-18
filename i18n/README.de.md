@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:10e84410ad08f17c -->
+<!-- i18n-source: README.md sha256:bcf6a2c4beaa6567 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Wandelt originalsprachige Inhalte auf Japanisch, Chinesisch, Koreanisch und in acht europäischen Sprachen in Anki-Vokabelkarten um.
+Wandelt originalsprachige Inhalte auf Japanisch, Chinesisch, Koreanisch und in achtzehn europäischen Sprachen in Anki-Vokabelkarten um.
 </p>
 
 <p align="center">
@@ -92,7 +92,7 @@ anki_miner_gui
 Japanisch braucht nichts Zusätzliches. Für jede andere Mining-Sprache die Engine ergänzen:
 
 ```bash
-pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [de], [fr], [es], [it], [pt], [nl], [ca] for one
+pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da] for one
 ```
 
 Die Downloads oben holen diese stattdessen in der App, unter Einstellungen -> Mining-Sprache.
@@ -125,7 +125,7 @@ Die vollständige Entwicklungseinrichtung findest du in [CONTRIBUTING.md](../CON
 
 ## Weitere Funktionen
 
-- Mining-Sprachen - Japanisch, Chinesisch, Koreanisch, Englisch, Deutsch, Französisch, Spanisch, Italienisch, Portugiesisch, Niederländisch und Katalanisch, umschaltbar in den Einstellungen. Alle Sprachen außer Japanisch laden ihre Engine in der App herunter.
+- Mining-Sprachen - Japanisch, Chinesisch, Koreanisch, Englisch, Katalanisch, Deutsch, Portugiesisch, Französisch, Spanisch, Italienisch, Niederländisch, Norwegisch (Bokmål), Rumänisch, Griechisch, Finnisch, Ungarisch, Kroatisch, Schwedisch, Polnisch, Litauisch und Dänisch, umschaltbar in den Einstellungen. Alle Sprachen außer Japanisch laden ihre Engine in der App herunter.
 - Word Curator - jedes Kandidatenwort vor der Kartenerstellung prüfen, mit Szene, Manga-Seite und Wörterbucheintrag nebeneinander.
 - Lauf rückgängig machen - die Notizen, die ein Lauf gerade erstellt hat, direkt aus seinem Ergebnisdialog löschen.
 - Umfangreiche Filterung: i+1, Häufigkeitsrang-Bereich, Sperrliste, Regex, Wortgruppen und mehr.
@@ -228,7 +228,7 @@ Liste von Ideen für künftige Versionen von Anki Miner. Nicht nach Priorität g
 
 - **Langfristig**:
   - [x] Android-Portierung -- https://github.com/0xzerolight/anki_miner_android
-  - [x] Über Japanisch hinaus: Mining von Chinesisch, Koreanisch und acht europäischen Sprachen.
+  - [x] Über Japanisch hinaus: Mining von Chinesisch, Koreanisch und achtzehn europäischen Sprachen.
   - [ ] Anki-Miner-Browsererweiterung.
 
 
