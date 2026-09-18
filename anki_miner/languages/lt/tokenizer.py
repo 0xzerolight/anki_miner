@@ -10,6 +10,12 @@ tags the ``m`` a NOUN with lemma ``m.``, a card front. Each ``LT_ABBREVIATIONS``
 case in its lower, capitalised and upper spelling (the all-caps copy is lowercase): ``m.``, ``Pvz.``, ``A.``,
 ``t.t.`` stay one token, which the shared adapter tags ``X``. The same set is ``build_spacy_tagger``'s
 ``abbreviations`` (contract item 17).
+
+A capitalised content word whose lemma is its own surface is re-lemmatised from the lowercased word
+(Ruling S2 variant R, the shared seam): on UD ALKSNIS r2.8 dev+test that moves sentence-initial content-word
+lemma accuracy from 50.4 % to 69.4 % and all-content lemma accuracy from 72.5 % to 74.0 %, while the number of
+gold proper nouns predicted as a content class is unchanged at 150 of 610. Every subtitle cue starts
+capitalised, so this is roughly one word per cue.
 """
 
 from __future__ import annotations
@@ -35,6 +41,6 @@ def _add_abbreviation_cases(nlp: Any, spellings: list[str]) -> None:
 
 def build_tagger() -> LockedTagger:
     """``tagger_provider``'s entry point."""
-    tagger = build_spacy_tagger(LT_MODEL_PACKAGE, abbreviations=LT_ABBREVIATIONS)
+    tagger = build_spacy_tagger(LT_MODEL_PACKAGE, abbreviations=LT_ABBREVIATIONS, relemmatise_capitalised=True)
     _add_abbreviation_cases(tagger.nlp, abbreviation_spellings(LT_ABBREVIATIONS))  # before any call
     return tagger

@@ -76,3 +76,19 @@ def test_dual_lives_on_pronouns_and_habitual_is_a_verb_feature(lithuanian):
     assert abi.feature.pos1 == "PRON" and "Number=Dual" in abi.morph
     verb = _by_surface(lithuanian, "Vaikystėje dažnai skaitydavau knygas.")["skaitydavau"]
     assert verb.feature.lemma == "skaityti" and "Aspect=Hab" in verb.morph
+
+
+def test_a_capitalised_inflected_content_word_is_relemmatised(lithuanian):
+    """Ruling S2 variant R: every subtitle cue starts capitalised, so this is roughly one word per cue."""
+    tokens = _by_surface(lithuanian, "Vaikystėje dažnai skaitydavau knygas.")
+    assert (tokens["Vaikystėje"].feature.pos1, tokens["Vaikystėje"].feature.lemma) == ("NOUN", "vaikystė")
+
+
+def test_a_capitalised_name_is_left_alone(lithuanian):
+    """R keeps POS and touches only a token whose raw lemma is its own surface: names stay out of mining.
+
+    ``Kaunas`` is NOT the example: the model files it NOUN/``kaunas`` on its own, before any re-lemmatisation
+    (16 of 45 gold sentence-initial names are already mistagged, unchanged by R - status 003-MEASURED).
+    """
+    tokens = _by_surface(lithuanian, "Vilnius yra Lietuvos sostinė.")
+    assert tokens["Vilnius"].feature.pos1 == "PROPN"
