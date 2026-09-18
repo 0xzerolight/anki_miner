@@ -64,3 +64,15 @@ def test_an_all_caps_cue_is_tagged_from_the_lowercased_copy(finnish):
 def test_a_clitic_the_model_drops_is_still_named_in_morph(finnish):
     kirjakin = _by_surface(finnish, "Hänellä oli kirjakin mukana.")["kirjakin"]
     assert kirjakin.feature.lemma == "kirja" and "Clitic=Kin" in kirjakin.morph
+
+
+def test_a_capitalised_word_the_model_leaves_unlemmatised_is_relemmatised_in_lowercase(finnish):
+    """RULING S2 variant R (F5): UD Finnish TDT dev+test content lemma exact 75.86 % -> 76.65 %, PROPN unchanged.
+
+    ``Kirjakin`` is out of reach: the model already returns the lowercase lemma ``kirjakin``, so the repair's raw
+    ``lemma_ == text`` gate never sees it (probed 2026-09-18; the plan's Task 10 contingency).
+    """
+    unohdin = _by_surface(finnish, "Unohdin kirjani kotiin.")["Unohdin"]
+    assert (unohdin.feature.pos1, unohdin.feature.lemma) == ("VERB", "unohtaa")
+    matti = _by_surface(finnish, "Matti, tule tänne!")["Matti"]
+    assert (matti.feature.pos1, matti.feature.lemma) == ("PROPN", "Matti")  # POS is never changed
