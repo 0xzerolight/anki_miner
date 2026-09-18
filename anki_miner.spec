@@ -309,6 +309,13 @@ sv_core_news_sm_license_dir = os.path.join(project_root, "licenses", "sv_core_ne
 sv_core_news_sm_license_datas = []
 if os.path.isdir(sv_core_news_sm_license_dir):
     sv_core_news_sm_license_datas.append((sv_core_news_sm_license_dir, os.path.join("licenses", "sv_core_news_sm")))
+# da_core_news_sm (Danish spaCy model) CC BY-SA 4.0 attribution: shipped whenever the
+# license dir exists. Lands at sys._MEIPASS/licenses/da_core_news_sm/. The model is a
+# language pack, never bundled; the notice travels because the app delivers it.
+da_core_news_sm_license_dir = os.path.join(project_root, "licenses", "da_core_news_sm")
+da_core_news_sm_license_datas = []
+if os.path.isdir(da_core_news_sm_license_dir):
+    da_core_news_sm_license_datas.append((da_core_news_sm_license_dir, os.path.join("licenses", "da_core_news_sm")))
 
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
@@ -478,7 +485,8 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + hu_core_news_md_license_datas
     + hr_core_news_sm_license_datas
     + sv_core_news_sm_license_datas
-    + lt_core_news_sm_license_datas,
+    + lt_core_news_sm_license_datas
+    + da_core_news_sm_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",
@@ -661,6 +669,7 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "weasel",
         "wrapt",
         "ca_core_news_sm",
+        "da_core_news_sm",
         "de_core_news_sm",
         "el_core_news_sm",
         "en_core_web_sm",

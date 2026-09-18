@@ -21,6 +21,7 @@ SPACY_MODEL_PACKAGES = (
     "en_core_web_sm",
     "es_core_news_sm",
     "fi_core_news_sm",
+    "da_core_news_sm",
     "fr_core_news_sm",
     "hr_core_news_sm",
     "hu_core_news_md",
