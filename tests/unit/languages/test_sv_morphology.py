@@ -6,7 +6,6 @@ import re
 from types import SimpleNamespace
 
 import pytest
-from spacy.lang.sv.tokenizer_exceptions import TOKENIZER_EXCEPTIONS
 
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 from anki_miner.languages._spaced.script import (
@@ -33,6 +32,8 @@ from anki_miner.languages.sv.morphology import (
 
 
 def test_the_abbreviation_set_is_spacys_dotted_exceptions_minus_the_drops():
+    from spacy.lang.sv.tokenizer_exceptions import TOKENIZER_EXCEPTIONS
+
     seeded = {
         key[:-1].casefold() for key in TOKENIZER_EXCEPTIONS if key.endswith(".") and any(c.isalpha() for c in key)
     }
