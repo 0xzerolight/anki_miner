@@ -1,0 +1,21 @@
+{"id": "el01", "sentence": "Το βιβλίο είναι στο σπίτι.", "must_mine": ["βιβλίο", "σπίτι"], "must_not_mine": ["ο", "το", "στο", "σε ο", "είμαι", "είναι"], "note": "smoke sentence; στο is ADP with the two-word lemma 'σε ο' and never mines"}
+{"id": "el02", "sentence": "έγραψα", "must_mine": ["έγραψα"], "must_not_mine": ["γράφω"], "note": "documented miss: the trainable lemmatiser keeps the surface; PROBE reaches γράφω through the wty form row"}
+{"id": "el03", "sentence": "βιβλία", "must_mine": ["βιβλία"], "must_not_mine": ["βιβλίο"], "note": "documented miss: standalone plural tagged ADJ, lemma unchanged"}
+{"id": "el04", "sentence": "Απ\u02bc το σπίτι στο σχολείο.", "must_mine": ["σπίτι", "σχολείο"], "must_not_mine": ["απ'", "απ\u02bc", "Απ\u02bc", "ο", "σε ο"], "note": "U+02BC elision folds to ' in the tagging copy (unfolded, the elided preposition tags X)"}
+{"id": "el05", "sentence": "Πήρα ψωμί, γάλα κ.λπ. από το μαγαζί.", "must_mine": ["μαγαζί"], "must_not_mine": ["κ.λπ.", "κ.λπ", "από", "ο"], "note": "abbreviation stays one X token; documented misses: πήρα NOUN, ψωμί ADV, γάλα lemmatised γάλος"}
+{"id": "el06", "sentence": "Ο κ. Παπαδόπουλος ήρθε το 300 π.Χ. στην πόλη.", "must_mine": ["πόλη"], "must_not_mine": ["κ.", "κ", "παπαδόπουλος", "Παπαδόπουλος", "π.χ.", "π.Χ.", "300", "σε ο"], "note": "κ. and π.Χ. are abbreviations (X), the surname is PROPN"}
+{"id": "el07", "sentence": "Πού πήγες χθες;", "must_mine": ["χθες"], "must_not_mine": ["πού", "Πού", ";"], "note": "ASCII ; is the Greek question mark"}
+{"id": "el08", "sentence": "Τι κάνεις\u037e Καλά.", "must_mine": ["καλά"], "must_not_mine": ["κάνεις;", "κάνεις\u037e"], "note": "U+037E NFC-folds to ; in normalize, so the question mark splits from the word"}
+{"id": "el09", "sentence": "Η ελληνο-τουρκική συμφωνία υπογράφηκε.", "must_mine": ["ελληνο-τουρκικός", "συμφωνία"], "must_not_mine": ["ελληνο", "τουρκικός"], "note": "a hyphenated compound stays one token"}
+{"id": "el10", "sentence": "Ήρθα νωρίς—αλλά εσύ είχες φύγει.", "must_mine": ["νωρίς"], "must_not_mine": ["νωρίς—αλλά", "αλλά"], "note": "a glued em dash splits"}
+{"id": "el11", "sentence": "Τα παιδιά παίζουν στον κήπο.", "must_mine": ["παιδί", "παίζω", "κήπος"], "must_not_mine": ["ο", "σε ο", "στον"], "note": "plural noun and verb lemmas"}
+{"id": "el12", "sentence": "Οι φίλοι μου έρχονται απόψε.", "must_mine": ["φίλος", "έρχομαι", "απόψε"], "must_not_mine": ["ο", "μου"], "note": "deponent verb lemma"}
+{"id": "el13", "sentence": "Θα γράψω ένα γράμμα αύριο.", "must_mine": ["γράψω", "γράμμα", "αύριο"], "must_not_mine": ["θα", "ένας", "γράφω"], "note": "documented miss: the perfective subjunctive γράψω keeps its surface"}
+{"id": "el14", "sentence": "Η γάτα κοιμάται στην καρέκλα.", "must_mine": ["γάτα", "καρέκλα"], "must_not_mine": ["ο", "σε ο", "στην"], "note": "feminine nouns"}
+{"id": "el15", "sentence": "Ο καιρός είναι ωραίος σήμερα.", "must_mine": ["καιρός", "ωραίος", "σήμερα"], "must_not_mine": ["ο", "είμαι"], "note": "masculine noun, adjective, adverb"}
+{"id": "el16", "sentence": "Μιλάς ελληνικά;", "must_mine": ["ελληνικός"], "must_not_mine": ["μιλάω", "μιλάς"], "note": "documented miss: the sentence-initial capitalised verb is tagged X (no capitalisation heuristic, spec §2)"}
+{"id": "el17", "sentence": "Ευχαριστώ πολύ, Νικ.", "must_mine": ["ευχαριστώ", "πολύ"], "must_not_mine": ["νικ", "νικ.", "Νικ."], "note": "νικ is left out of the abbreviation set: a name ends the sentence"}
+{"id": "el18", "sentence": "Δεν ξέρω ούτε καν.", "must_mine": ["ξέρω", "καν"], "must_not_mine": ["καν.", "δεν", "ούτε"], "note": "καν is left out of the abbreviation set: Ούτε καν. ends sentences"}
+{"id": "el19", "sentence": "Το αυτοκίνητο είναι καινούργιο.", "must_mine": ["αυτοκίνητο", "καινούργιος"], "must_not_mine": ["ο", "είμαι"], "note": "neuter noun, adjective lemma"}
+{"id": "el20", "sentence": "Η Μαρία αγαπάει τη μουσική.", "must_mine": ["μαρία"], "must_not_mine": ["Μαρία"], "note": "documented miss: the name is tagged NOUN and fronts lowercase; μουσική is tagged ADJ μουσικός"}
+{"id": "el21", "sentence": "Νίκησαν οι παίκτες χθες.", "must_mine": ["νικώ", "παίκτης", "χθες"], "must_not_mine": ["νίκησαν"], "note": "capitalised re-lemmatisation (Ruling S2 R): the sentence-initial verb keeps its surface as lemma until re-lemmatised lowercase"}

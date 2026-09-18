@@ -1,0 +1,1263 @@
+{
+ "source": "wty-el-en revision 2026.08.29 (huggingface.co/datasets/daxida/wty-release), rows copied unmodified",
+ "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). Attribution: each row's backlink, e.g. https://en.wiktionary.org/wiki/βιβλίο#Greek",
+ "index": {
+  "title": "wty-el-en",
+  "format": 3,
+  "revision": "2026.08.29",
+  "sequenced": true,
+  "attribution": "https://kaikki.org/",
+  "sourceLanguage": "el",
+  "targetLanguage": "en"
+ },
+ "tag_bank": [
+  [
+   "fem",
+   "gender-feminine",
+   -1,
+   "feminine",
+   1
+  ],
+  [
+   "masc",
+   "gender-masculine",
+   -1,
+   "masculine",
+   1
+  ],
+  [
+   "neut",
+   "gender-neuter",
+   -1,
+   "neuter",
+   1
+  ],
+  [
+   "n",
+   "partOfSpeech",
+   -2,
+   "noun",
+   2
+  ],
+  [
+   "v",
+   "partOfSpeech",
+   -2,
+   "verb",
+   2
+  ],
+  [
+   "non-lemma",
+   "",
+   10,
+   "non-lemma",
+   -10
+  ]
+ ],
+ "term_rows": [
+  [
+   "βιβλίο",
+   "",
+   "n neut",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "βιβλίο • (vivlío) n (plural βιβλία)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Ancient Greek βιβλίον (biblíon), from βυβλίον (bublíon), from βύβλος (búblos, “papyrus”), from the city of Βύβλος (Búblos, “Byblos”), from Phoenician.\nCompare Mariupol Greek вивли́о (vivlío)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "book"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/βιβλίο#Greek",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Greek/meaning/β/βι/βιβλίο.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "σπίτι",
+   "",
+   "n neut",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "σπίτι • (spíti) n (plural σπίτια)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Byzantine Greek σπίτιν (spítin), from earlier or Koine Greek ὁσπίτιον (hospítion), from Latin hospitium (“lodgings”). Compare Albanian shtëpi and Sicilian spizziu. Displaced earlier Ancient Greek οἶκος (oîkos)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "house, home (structure built or serving as an abode of human beings)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Θα πάμε στο ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "σπίτι"
+                   },
+                   " του φίλου μου."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "We will go to my friend's ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "house"
+                   },
+                   "."
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Πήγαινε ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "σπίτι"
+                   },
+                   " σου!"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "Go ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "home"
+                   },
+                   "!"
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "household, house (all the persons who live in a given house)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Όλο το ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "σπίτι"
+                   },
+                   " μετακόμισε τον χειμώνα σε πιο ζεστά μέρη."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "The entire ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "household"
+                   },
+                   " moved in winter to warmer climes."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "euphemistic",
+               "data": {
+                "content": "tag",
+                "category": "usage"
+               },
+               "content": "euph"
+              },
+              {
+               "tag": "span",
+               "title": "figurative",
+               "data": {
+                "content": "tag",
+                "category": "usage"
+               },
+               "content": "fig"
+              }
+             ]
+            },
+            "brothel (house used by prostitutes)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/σπίτι#Greek",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Greek/meaning/σ/σπ/σπίτι.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "δρόμος",
+   "",
+   "n masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "δρόμος • (drómos) m (plural δρόμοι)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Etymology tree\nProto-Indo-European *drem-\nProto-Indo-European *-os\nProto-Hellenic *-os\nAncient Greek -ος (-os)\nAncient Greek δρόμος (drómos)\nGreek δρόμος\nInherited from Ancient Greek δρόμος (drómos), from Proto-Indo-European *drem- + Ancient Greek -ος (-os).."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "roadway, road, street, way"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "journey"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/δρόμος#Greek",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Greek/meaning/δ/δρ/δρόμος.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "οδός",
+   "",
+   "n fem",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "οδός • (odós) f (plural οδοί)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Ancient Greek ὁδός (hodós)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "street, road, way",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Έχει αξιοποιηθεί η περιοχή απ’ όπου περνούσε η παλαιά ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "οδός"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "The area which the old ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "road"
+                   },
+                   " passed through is being developed."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "route",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Ασφαλώς, κανείς δεν ισχυρίζεται ότι η νομοθετική ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "οδός"
+                   },
+                   " είναι πάντα η καλύτερη."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "Of course, no one would argue that the legislative ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "route"
+                   },
+                   " is always the best."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/οδός#Greek",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Greek/meaning/ο/οδ/οδός.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "γάτα",
+   "",
+   "n fem",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "γάτα • (gáta) f (plural γάτες)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Byzantine Greek γάτα (gáta), an 11th-century parallel form of κάττα (kátta), from Medieval Latin gatta, from Late Latin catta.\nOr, from Hellenistic κάττα (kátta) with sound change from liaison with the accusative of the feminine article τήν (tḗn) /tin ˈkata > tiŋˈɡata > ti ˈɣata/.\nThe mediaeval or Hellenistic form κάττα (kátta) and the simplified spelling κάτα (káta) survives in modern form κάτα (káta), diminutives (as κατσούλα (katsoúla)), dialectal and regional. From Late Latin catta. Also see the masculine γάτος (gátos), from Late Latin cattus."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "cat (domestic species)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "figurative",
+               "data": {
+                "content": "tag",
+                "category": "usage"
+               },
+               "content": "fig"
+              }
+             ]
+            },
+            "crafty person"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/γάτα#Greek",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Greek/meaning/γ/γά/γάτα.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "γράφω",
+   "",
+   "v",
+   "v",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "γράφω • (gráfo)\nγράφω • (gráfo) (past έγραψα, passive γράφομαι)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Ancient Greek γράφω (gráphō), from Proto-Hellenic *grəpʰō, from Proto-Indo-European *gerbʰ-. For the stems, see Related terms."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to write, pen",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Γράφετε"
+                   },
+                   " βιβλίο;"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "Are you ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "writing"
+                   },
+                   " a book?"
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to record"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to issue a ticket (for traffic violation, etc)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/γράφω#Greek",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Greek/meaning/γ/γρ/γράφω.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "έγραψα",
+   "",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "γράφω",
+     [
+      "first-person singular past perfective active indicative"
+     ]
+    ],
+    [
+     "γράφω",
+     [
+      "first-person singular past simple"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "βιβλία",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "βιβλίο",
+     [
+      "nominative/accusative/vocative plural"
+     ]
+    ],
+    [
+     "βιβλίο",
+     [
+      "nominative/accusative/vocative plural"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ]
+ ],
+ "rendered_html": {
+  "βιβλίο": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-el-en\" data-dictionary-id=\"wty-el-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-neuter\" title=\"neuter\">neut</span><i>(wty-el-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">βιβλίο • (vivlío) n (plural βιβλία)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From Ancient Greek βιβλίον (biblíon), from βυβλίον (bublíon), from βύβλος (búblos, “papyrus”), from the city of Βύβλος (Búblos, “Byblos”), from Phoenician.<br>Compare Mariupol Greek вивли́о (vivlío).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">book</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/βιβλίο#Greek\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Greek/meaning/β/βι/βιβλίο.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "σπίτι": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-el-en\" data-dictionary-id=\"wty-el-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-neuter\" title=\"neuter\">neut</span><i>(wty-el-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">σπίτι • (spíti) n (plural σπίτια)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From Byzantine Greek σπίτιν (spítin), from earlier or Koine Greek ὁσπίτιον (hospítion), from Latin hospitium (“lodgings”). Compare Albanian shtëpi and Sicilian spizziu. Displaced earlier Ancient Greek οἶκος (oîkos).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">house, home (structure built or serving as an abode of human beings)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">2 examples</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Θα πάμε στο <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">σπίτι</span> του φίλου μου.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">We will go to my friend&#x27;s <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">house</span>.</div></div></div><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Πήγαινε <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">σπίτι</span> σου!</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Go <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">home</span>!</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">household, house (all the persons who live in a given house)<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Όλο το <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">σπίτι</span> μετακόμισε τον χειμώνα σε πιο ζεστά μέρη.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">The entire <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">household</span> moved in winter to warmer climes.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"usage\" title=\"euphemistic\">euph</span><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"usage\" title=\"figurative\">fig</span></div>brothel (house used by prostitutes)</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/σπίτι#Greek\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Greek/meaning/σ/σπ/σπίτι.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "δρόμος": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-el-en\" data-dictionary-id=\"wty-el-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-masculine\" title=\"masculine\">masc</span><i>(wty-el-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">δρόμος • (drómos) m (plural δρόμοι)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Etymology tree<br>Proto-Indo-European *drem-<br>Proto-Indo-European *-os<br>Proto-Hellenic *-os<br>Ancient Greek -ος (-os)<br>Ancient Greek δρόμος (drómos)<br>Greek δρόμος<br>Inherited from Ancient Greek δρόμος (drómos), from Proto-Indo-European *drem- + Ancient Greek -ος (-os)..</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">roadway, road, street, way</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">journey</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/δρόμος#Greek\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Greek/meaning/δ/δρ/δρόμος.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "οδός": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-el-en\" data-dictionary-id=\"wty-el-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><i>(wty-el-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">οδός • (odós) f (plural οδοί)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From Ancient Greek ὁδός (hodós).</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">street, road, way<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Έχει αξιοποιηθεί η περιοχή απ’ όπου περνούσε η παλαιά <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">οδός</span>.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">The area which the old <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">road</span> passed through is being developed.</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">route<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\">Ασφαλώς, κανείς δεν ισχυρίζεται ότι η νομοθετική <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">οδός</span> είναι πάντα η καλύτερη.</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Of course, no one would argue that the legislative <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">route</span> is always the best.</div></div></div></details></div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/οδός#Greek\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Greek/meaning/ο/οδ/οδός.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "γάτα": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-el-en\" data-dictionary-id=\"wty-el-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"noun\">n</span><span class=\"gloss-tag\" data-category=\"gender-feminine\" title=\"feminine\">fem</span><i>(wty-el-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">γάτα • (gáta) f (plural γάτες)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">Inherited from Byzantine Greek γάτα (gáta), an 11th-century parallel form of κάττα (kátta), from Medieval Latin gatta, from Late Latin catta.<br>Or, from Hellenistic κάττα (kátta) with sound change from liaison with the accusative of the feminine article τήν (tḗn) /tin ˈkata &gt; tiŋˈɡata &gt; ti ˈɣata/.<br>The mediaeval or Hellenistic form κάττα (kátta) and the simplified spelling κάτα (káta) survives in modern form κάτα (káta), diminutives (as κατσούλα (katsoúla)), dialectal and regional. From Late Latin catta. Also see the masculine γάτος (gátos), from Late Latin cattus.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">cat (domestic species)</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"tags\"><span class=\"gloss-sc-span\" data-sc-content=\"tag\" data-sc-category=\"usage\" title=\"figurative\">fig</span></div>crafty person</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/γάτα#Greek\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Greek/meaning/γ/γά/γάτα.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "γράφω": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-el-en\" data-dictionary-id=\"wty-el-en\"><span class=\"gloss-tag\" data-category=\"partOfSpeech\" title=\"verb\">v</span><i>(wty-el-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><div class=\"gloss-sc-div\"><div class=\"gloss-sc-div\" data-sc-content=\"preamble\"><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Grammar\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Grammar</summary><div class=\"gloss-sc-div\" data-sc-content=\"Grammar-content\">γράφω • (gráfo)<br>γράφω • (gráfo) (past έγραψα, passive γράφομαι)</div></details><details class=\"gloss-sc-details\" data-sc-content=\"details-entry-Etymology\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">Etymology</summary><div class=\"gloss-sc-div\" data-sc-content=\"Etymology-content\">From Ancient Greek γράφω (gráphō), from Proto-Hellenic *grəpʰō, from Proto-Indo-European *gerbʰ-. For the stems, see Related terms.</div></details></div></div><ol class=\"gloss-sc-ol\" data-sc-content=\"glosses\"><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to write, pen<details class=\"gloss-sc-details\" data-sc-content=\"details-entry-examples\"><summary class=\"gloss-sc-summary\" data-sc-content=\"summary-entry\">1 example</summary><div class=\"gloss-sc-div\" data-sc-content=\"extra-info\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence\"><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-a\"><span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">Γράφετε</span> βιβλίο;</div><div class=\"gloss-sc-div\" data-sc-content=\"example-sentence-b\">Are you <span class=\"gloss-sc-span\" data-sc-content=\"bold-text\">writing</span> a book?</div></div></div></details></div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to record</div></li><li class=\"gloss-sc-li\"><div class=\"gloss-sc-div\">to issue a ticket (for traffic violation, etc)</div></li></ol><div class=\"gloss-sc-div\" data-sc-content=\"backlink\"><a class=\"gloss-sc-a\" href=\"https://en.wiktionary.org/wiki/γράφω#Greek\">Wiktionary</a> | <a class=\"gloss-sc-a\" href=\"https://kaikki.org/dictionary/Greek/meaning/γ/γρ/γράφω.html\">Kaikki</a></div></div></li></ul></li></ol></div>",
+  "έγραψα": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-el-en\" data-dictionary-id=\"wty-el-en\"><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-el-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">γράφω</li><li class=\"gloss-sc-li\">γράφω</li></ul></div></li></ul></li></ol></div>",
+  "βιβλία": "<div class=\"yomitan-glossary\"><ol data-count=\"1\"><li data-dictionary=\"wty-el-en\" data-dictionary-id=\"wty-el-en\"><span class=\"gloss-tag\" data-category=\"\" title=\"non-lemma\">non-lemma</span><i>(wty-el-en)</i><ul class=\"gloss-list\" data-count=\"1\"><li class=\"gloss-item\"><div class=\"gloss-content\"><ul class=\"gloss-sc-ul\" style=\"list-style-type: circle\"><li class=\"gloss-sc-li\">βιβλίο</li><li class=\"gloss-sc-li\">βιβλίο</li></ul></div></li></ul></li></ol></div>"
+ }
+}

@@ -1,4 +1,4 @@
-"""Latin script gate for spaCy languages (and, from Task 4, the Latin subtitle regex defaults)."""
+"""Latin and Greek script gates for spaCy languages (and the Latin subtitle regex defaults)."""
 
 from __future__ import annotations
 
@@ -43,6 +43,36 @@ class LatinScript:
 
     def contains_target_script(self, text: str) -> bool:
         return any(is_latin_letter(char) for char in text)
+
+
+#: Greek and Coptic, Greek Extended (polytonic). Letters only: U+037E (question mark), U+0387 (ano
+#: teleia) and the numeral signs are not alphabetic, so they never make a line "Greek".
+_GREEK_BLOCKS: tuple[tuple[int, int], ...] = ((0x0370, 0x03FF), (0x1F00, 0x1FFF))
+
+
+def is_greek_letter(char: str) -> bool:
+    """True when *char* is an alphabetic character from a Greek block."""
+    if not char.isalpha():
+        return False
+    code = ord(char)
+    return any(low <= code <= high for low, high in _GREEK_BLOCKS)
+
+
+class GreekScript:
+    """ScriptSupport for Greek (E.10 D3): no script toggles; the gate is "has a Greek letter".
+
+    Unlike :class:`LatinScript` it tells its language apart from every other
+    mining language: a Latin- or Cyrillic-script deck never passes a Greek scan.
+    """
+
+    def filter_options(self) -> tuple[ScriptFilterOption, ...]:
+        return ()
+
+    def matches(self, option_id: str, form: str) -> bool:
+        return False
+
+    def contains_target_script(self, text: str) -> bool:
+        return any(is_greek_letter(char) for char in text)
 
 
 # --- S10: the Latin subtitle-cleanup default ---------------------------------
