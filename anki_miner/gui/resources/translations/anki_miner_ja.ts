@@ -366,6 +366,14 @@
         <translation>辞書項目から得られる名詞の複数形を格納します。空欄 = スキップ。</translation>
     </message>
     <message>
+        <source>Aspect Pair Field</source>
+        <translation>アスペクトペアフィールド</translation>
+    </message>
+    <message>
+        <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
+        <translation>動詞のアスペクトを格納します。辞書に対になる動詞が示されている場合は、それも併記します。空欄 = スキップ。</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Anki にありません — 実在するものを選択するか Anki で作成するまで、マイニングは失敗します。</translation>
     </message>

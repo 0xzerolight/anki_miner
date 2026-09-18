@@ -366,6 +366,14 @@
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Aspect Pair Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation type="unfinished" />
     </message>

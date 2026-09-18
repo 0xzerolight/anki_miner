@@ -367,6 +367,14 @@
         <translation>Almacena la forma plural de un sustantivo según la entrada del diccionario. En blanco = omitir.</translation>
     </message>
     <message>
+        <source>Aspect Pair Field</source>
+        <translation>Campo de par aspectual</translation>
+    </message>
+    <message>
+        <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
+        <translation>Almacena el aspecto de un verbo, junto con el verbo del aspecto contrario cuando el diccionario lo indica. En blanco = omitir.</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>No está en Anki; la minería fallará hasta que elija uno real o lo cree en Anki.</translation>
     </message>

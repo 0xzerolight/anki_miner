@@ -368,6 +368,14 @@
         <translation>Хранит форму множественного числа существительного из словарной статьи. Пусто = пропустить.</translation>
     </message>
     <message>
+        <source>Aspect Pair Field</source>
+        <translation>Поле видовой пары</translation>
+    </message>
+    <message>
+        <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
+        <translation>Хранит вид глагола, а также парный глагол другого вида, если словарь его указывает. Пусто = пропустить.</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Нет в Anki — майнинг не будет работать, пока вы не выберете существующий тип или не создадите его в Anki.</translation>
     </message>

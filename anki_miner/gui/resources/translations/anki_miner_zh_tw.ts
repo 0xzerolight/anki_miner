@@ -366,6 +366,14 @@
         <translation>儲存字典詞條中名詞的複數形。留空＝略過。</translation>
     </message>
     <message>
+        <source>Aspect Pair Field</source>
+        <translation>動詞體配對欄位</translation>
+    </message>
+    <message>
+        <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
+        <translation>儲存動詞的體；若字典有列出另一體的對應動詞，也一併儲存。留空＝略過。</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>不在 Anki 中 — 在選取有效項目或於 Anki 建立前，採集會失敗。</translation>
     </message>

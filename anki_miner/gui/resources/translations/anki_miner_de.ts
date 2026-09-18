@@ -367,6 +367,14 @@
         <translation>Speichert die Pluralform eines Nomens aus dem Wörterbucheintrag. Leer = überspringen.</translation>
     </message>
     <message>
+        <source>Aspect Pair Field</source>
+        <translation>Aspektpaar-Feld</translation>
+    </message>
+    <message>
+        <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
+        <translation>Speichert den Aspekt eines Verbs sowie seinen Aspektpartner, sofern das Wörterbuch einen nennt. Leer = überspringen.</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Nicht in Anki — das Sammeln schlägt fehl, bis Sie einen vorhandenen auswählen oder ihn in Anki erstellen.</translation>
     </message>

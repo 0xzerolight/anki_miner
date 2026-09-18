@@ -367,6 +367,14 @@
         <translation>Armazena a forma plural do substantivo, extraída do verbete do dicionário. Em branco = ignorar.</translation>
     </message>
     <message>
+        <source>Aspect Pair Field</source>
+        <translation>Campo de Par Aspectual</translation>
+    </message>
+    <message>
+        <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
+        <translation>Armazena o aspecto do verbo, além do verbo de aspecto oposto quando o dicionário o indica. Em branco = ignorar.</translation>
+    </message>
+    <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
         <translation>Não está no Anki — a mineração falhará até você escolher um existente ou criá-lo no Anki.</translation>
     </message>
