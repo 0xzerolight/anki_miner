@@ -83,6 +83,8 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     "pl": ["nie", "to", "się", "w", "na", "i", "że", "z", "co", "jest"],
     # lt: the top ten of hermitdave's OpenSubtitles 2018 lt_50k.txt, lowercase surface forms.
     "lt": ["ir", "aš", "tai", "kad", "tu", "ne", "taip", "jis", "ką", "čia"],
+    # da: da_50k.txt ranks 1-6 and 8-11 (lowercase surfaces, before lemmatisation).
+    "da": ["jeg", "det", "er", "du", "ikke", "at", "en", "og", "har", "vi"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -245,6 +247,19 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
         "inkaras",
         "plaktukas",
         "sraigė",
+    ],
+    # da: rare-but-real nouns at da_50k ranks 16,139-49,304.
+    "da": [
+        "kano",
+        "fyrtårn",
+        "grævling",
+        "pindsvin",
+        "lanterne",
+        "hvalros",
+        "trillebør",
+        "fingerbøl",
+        "mejsel",
+        "ambolt",
     ],
 }
 
