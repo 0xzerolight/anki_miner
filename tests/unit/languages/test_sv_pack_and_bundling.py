@@ -50,3 +50,32 @@ def test_the_model_licence_notice_ships():
     notice = ROOT / "licenses" / "sv_core_news_sm"
     assert (notice / "LICENSE").is_file()
     assert "CC BY-SA 4.0" in (notice / "README.md").read_text(encoding="utf-8")
+
+
+SEED_ANCHOR = 'fetch_language_pack_seeds.py "$RUNNER_TEMP/lang_pack_seeds"'
+
+
+def test_the_release_workflow_seeds_and_smokes_swedish():
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    smoke_lines = [line for line in workflow.splitlines() if "BUNDLE_SMOKE_LANGS:" in line]
+    assert smoke_lines and all("sv" in line.split(":", 1)[1].split() for line in smoke_lines)
+    seed_lines = [line for line in workflow.splitlines() if SEED_ANCHOR in line]
+    assert seed_lines and all("sv" in line.split() for line in seed_lines)
+
+
+def test_the_ci_pin_is_the_manifest_bytes():
+    ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert f"sv_core_news_sm-3.8.0-py3-none-any.whl#sha256={SV_WHEEL_SHA256}" in ci
+
+
+def test_the_model_is_listed_with_the_other_spacy_packages():
+    """test_spacy_model_ci_pins compares this tuple to the ci.yml lines, so the row cannot be skipped."""
+    from tests.unit.languages.test_spacy_runtime_pack import SPACY_MODEL_PACKAGES
+
+    assert "sv_core_news_sm" in SPACY_MODEL_PACKAGES
+
+
+def test_the_bundle_excludes_the_model_and_ships_its_notice():
+    spec = (ROOT / "anki_miner.spec").read_text(encoding="utf-8")
+    assert '"sv_core_news_sm",' in spec
+    assert "sv_core_news_sm_license_datas" in spec
