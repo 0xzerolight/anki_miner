@@ -46,7 +46,15 @@ REQUIRED_ASSETS = [
     "anki_miner/gui/resources/fonts/OFL.txt",
     "anki_miner/gui/resources/fonts/PROVENANCE.md",
 ]
-REQUIRED_WHEEL_LICENSES = ["licenses/local-audio-yomichan/LICENSE"]
+# Notices that a pyproject ``license-files`` entry promises and nothing else
+# verifies. A pruned or reordered glob drops one silently and the wheel still
+# builds; README.md is the only place the Yomitan attribution exists, since
+# GPLv3's text names no copyright holder.
+REQUIRED_WHEEL_LICENSES = [
+    "licenses/local-audio-yomichan/LICENSE",
+    "licenses/yomitan/COPYING.GPLv3",
+    "licenses/yomitan/README.md",
+]
 
 EXCLUDE_DIRS = {"__pycache__"}
 EXCLUDE_SUFFIXES = {".pyc", ".pyo"}
