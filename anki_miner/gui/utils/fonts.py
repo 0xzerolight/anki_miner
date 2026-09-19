@@ -140,6 +140,67 @@ def _register_bundled_japanese() -> str | None:
     return registered[0]
 
 
+#: Content-family resolutions for non-Japanese mining languages (S22), keyed by
+#: the style's (families, writing system, bundled face). Cleared with the rest.
+_content_families: dict[tuple[tuple[str, ...], str, str], tuple[str, ...]] = {}
+
+
+def _script_families(writing_system: str) -> list[str]:
+    """Families the font database lists for *writing_system*, a WritingSystem member name."""
+    listed = QFontDatabase.families(QFontDatabase.WritingSystem[writing_system])
+    return [name for name in listed if not name.startswith("@")]
+
+
+def _register_bundled_face(filename: str) -> str | None:
+    """Register ``gui/resources/fonts/<filename>`` and return the family Qt read from it.
+
+    ``None`` for a missing, unreadable or family-less file; the caller logs the
+    one line, so a bad asset never aborts styling.
+    """
+    path = get_resource_dir() / "fonts" / filename
+    if not path.is_file():
+        return None
+    font_id = QFontDatabase.addApplicationFont(str(path))
+    if font_id == -1:
+        return None
+    registered = QFontDatabase.applicationFontFamilies(font_id)
+    return registered[0] if registered else None
+
+
+def resolve_content_families(families: tuple[str, ...], writing_system: str, bundled_fallback: str) -> tuple[str, ...]:
+    """The family list a non-Japanese content surface draws with (S22).
+
+    ``writing_system == ""`` returns *families* untouched: a profile that names no
+    script keeps the pre-S22 behaviour exactly. Otherwise the font database says
+    which families cover that script. If any of *families* is among them the list
+    is returned untouched and the platform face wins. If none is, the profile's
+    bundled face is registered and put first -- here, lazily, because this runs
+    when a content widget is styled for the ACTIVE mining language, never at boot.
+    If that fails too, one warning is logged and Qt substitutes whatever it has.
+    Cached per argument triple; :func:`reset_font_cache` clears it.
+    """
+    if not writing_system or not _has_gui():
+        return families
+    key = (families, writing_system, bundled_fallback)
+    cached = _content_families.get(key)
+    if cached is not None:
+        return cached
+    resolved = families
+    if not set(_script_families(writing_system)).intersection(families):
+        registered = _register_bundled_face(bundled_fallback) if bundled_fallback else None
+        if registered:
+            resolved = (registered, *(name for name in families if name != registered))
+        else:
+            logger.warning(
+                "No installed %s font among %s and no bundled face registered (%s); mined text may render as boxes",
+                writing_system,
+                ", ".join(families),
+                bundled_fallback or "none declared",
+            )
+    _content_families[key] = resolved
+    return resolved
+
+
 def resolved_families() -> ResolvedFamilies:
     """Return (and cache) the interface, fixed-width and Japanese families.
 
@@ -160,9 +221,10 @@ def resolved_families() -> ResolvedFamilies:
 
 
 def reset_font_cache() -> None:
-    """Drop the resolved families and the stylesheet compiled from them."""
+    """Drop the resolved families, the content-family resolutions and the compiled stylesheet."""
     global _families
     _families = None
+    _content_families.clear()
     Theme._compiled_qss.clear()
 
 

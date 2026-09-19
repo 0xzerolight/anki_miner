@@ -189,6 +189,22 @@ class BuiltNote:
     used_bold_fallback: bool
 
 
+def _rtl_wrap(value: str, lang: str) -> str:
+    """Wrap one mined-content field for a right-to-left language (S21).
+
+    ``dir`` sets the paragraph direction, so end punctuation sits on the correct
+    side whatever direction the note type itself uses; ``lang`` (the profile
+    code) lets the card's WebView pick the language's glyph forms -- Persian
+    keheh, yeh and digits rather than the Arabic forms. Anki's duplicate check
+    and ``_strip_for_dedup`` both strip tags, so the dedup key is the bare text
+    either way. An empty value stays empty.
+    """
+    if not value:
+        return value
+    lang_attr = f' lang="{html.escape(lang, quote=True)}"' if lang else ""
+    return f'<div dir="rtl"{lang_attr}>{value}</div>'
+
+
 def build_note(
     item: CardPayload,
     config: AnkiMinerConfig,
@@ -196,6 +212,8 @@ def build_note(
     *,
     extra_optional_keys: frozenset[str] = frozenset(),
     extra_raw_html_keys: frozenset[str] = frozenset(),
+    content_direction: str = "ltr",
+    content_lang: str = "",
 ) -> BuiltNote:
     """Map one CardPayload to the note dict ``addNotes`` expects.
 
@@ -212,6 +230,11 @@ def build_note(
             markup, handled like ``_RAW_HTML_FIELD_KEYS``: emitted verbatim,
             omitted when empty. Both default empty, so the three-argument call
             — ja/ko/zh and the frozen engine-goldens exporter — is unchanged.
+        content_direction: The active profile's ``content_style.direction``.
+            ``"rtl"`` wraps the word and sentence fields in
+            ``<div dir="rtl" lang=…>``; anything else leaves every field as
+            before, so the three-argument call is unchanged.
+        content_lang: The profile code written as that wrapper's ``lang``.
 
     Returns:
         The note dict plus flags recording whether the bolded-sentence path
@@ -283,9 +306,14 @@ def build_note(
     else:
         sentence_furigana_field = html.escape(word.sentence_furigana)
 
+    word_field = html.escape(word.mined_form)
+    if content_direction == "rtl":
+        word_field = _rtl_wrap(word_field, content_lang)
+        sentence_field = _rtl_wrap(sentence_field, content_lang)
+
     # Build fields, skipping any with empty config mapping
     field_data = {
-        "word": html.escape(word.mined_form),
+        "word": word_field,
         "sentence": sentence_field,
         "definition": definition or "",
         "glossary": glossary_html,

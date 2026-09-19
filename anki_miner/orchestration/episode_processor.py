@@ -1828,6 +1828,9 @@ class EpisodeProcessor:
         definition_mapped = bool(self.config.anki_fields.get("definition"))
         styling_on = glossary_mapped or definition_mapped
         episode_dict_css_entries = self.definition_service.css_entries() if styling_on else []
+        # S21: an rtl language's blocks carry the example-sentence rule; the
+        # profile says which (card_style_block.RTL_GLOSSARY_CSS).
+        style_direction = self.profile.content_style.direction
         for (word, media), definition, glossary, (pitch_position, pitch_category) in zip(
             media_results, definitions, glossaries, pitch_data, strict=True
         ):
@@ -1885,7 +1888,9 @@ class EpisodeProcessor:
                 extra_fields["frequency_sort"] = str(word.frequency_harmonic_rank)
             if glossary:
                 extra_fields["glossary"] = (
-                    attach_card_style_block(glossary, dict_css_entries=episode_dict_css_entries)
+                    attach_card_style_block(
+                        glossary, dict_css_entries=episode_dict_css_entries, direction=style_direction
+                    )
                     if glossary_mapped
                     else glossary
                 )
@@ -1905,7 +1910,9 @@ class EpisodeProcessor:
             # field, which JS note types never render alongside it.
             card_definition = definition
             if definition_mapped:
-                card_definition = attach_card_style_block(definition, dict_css_entries=episode_dict_css_entries)
+                card_definition = attach_card_style_block(
+                    definition, dict_css_entries=episode_dict_css_entries, direction=style_direction
+                )
 
             self._apply_render_hooks(word, card_definition, extra_fields)
 

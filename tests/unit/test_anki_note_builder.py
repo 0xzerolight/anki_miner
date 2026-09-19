@@ -7,9 +7,13 @@ keys, so the default wire stays byte-identical.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
+import pytest
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import CardPayload, MediaData, TokenizedWord
-from anki_miner.services.anki_note_builder import build_note, configured_target_field_names
+from anki_miner.services.anki_note_builder import _strip_for_dedup, build_note, configured_target_field_names
 
 
 def _word(**overrides) -> TokenizedWord:
@@ -251,3 +255,64 @@ def test_sentence_translation_is_skipped_when_unmapped(test_config, make_tokeniz
     built = build_note(item, test_config, stored_files=set())
 
     assert "Hello." not in built.note["fields"].values()
+
+
+class TestRtlContentWrapper:
+    """S21 card side: an rtl language's word and sentence carry dir + lang; nothing else moves.
+
+    The content is Japanese on purpose: the wrapper is text-agnostic, and RTL
+    literals stay out of .py files.
+    """
+
+    @staticmethod
+    def _fields(config, word, **kwargs) -> dict:
+        item = CardPayload(word=word, media=MediaData(), definition="def")
+        return build_note(item, config, stored_files=set(), **kwargs).note["fields"]
+
+    def test_word_and_sentence_are_wrapped(self, test_config, make_tokenized_word):
+        fields = self._fields(test_config, make_tokenized_word(), content_direction="rtl", content_lang="fa")
+        assert fields["word"] == '<div dir="rtl" lang="fa">食べる</div>'
+        assert fields["sentence"] == '<div dir="rtl" lang="fa">日本語を食べる。</div>'
+
+    def test_the_bolded_sentence_is_wrapped_whole(self, test_config, make_tokenized_word):
+        word = make_tokenized_word()
+        word.sentence_bolded = "日本語を<b>食べる</b>。"
+        config = replace(test_config, bold_target_in_sentence=True)
+        fields = self._fields(config, word, content_direction="rtl", content_lang="ar")
+        assert fields["sentence"] == '<div dir="rtl" lang="ar">日本語を<b>食べる</b>。</div>'
+
+    def test_every_other_field_is_untouched(self, test_config, make_tokenized_word):
+        config = replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "expression_reading": "Reading", "sentence_translation": "Tr"},
+        )
+        word = make_tokenized_word(expression_reading="たべる")
+        word.sentence_translation = "I eat."
+        legacy = self._fields(config, word)
+        rtl = self._fields(config, word, content_direction="rtl", content_lang="he")
+        assert set(rtl) == set(legacy)
+        assert {k: v for k, v in rtl.items() if k not in ("word", "sentence")} == {
+            k: v for k, v in legacy.items() if k not in ("word", "sentence")
+        }
+
+    def test_an_empty_sentence_stays_empty(self, test_config, make_tokenized_word):
+        fields = self._fields(test_config, make_tokenized_word(sentence=""), content_direction="rtl", content_lang="he")
+        assert fields["sentence"] == ""
+
+    def test_lang_is_optional_and_escaped(self, test_config, make_tokenized_word):
+        word = make_tokenized_word()
+        assert self._fields(test_config, word, content_direction="rtl")["word"] == '<div dir="rtl">食べる</div>'
+        assert self._fields(test_config, word, content_direction="rtl", content_lang='x"y')["word"] == (
+            '<div dir="rtl" lang="x&quot;y">食べる</div>'
+        )
+
+    def test_the_dedup_key_is_the_bare_word(self, test_config, make_tokenized_word):
+        fields = self._fields(test_config, make_tokenized_word(), content_direction="rtl", content_lang="fa")
+        assert _strip_for_dedup(fields["word"]) == "食べる"
+
+    @pytest.mark.parametrize("lang", ["", "ja", "ko"])
+    def test_ltr_builds_the_legacy_note(self, test_config, make_tokenized_word, lang):
+        item = CardPayload(word=make_tokenized_word(), media=MediaData(), definition="def")
+        assert build_note(item, test_config, set(), content_direction="ltr", content_lang=lang) == build_note(
+            item, test_config, set()
+        )

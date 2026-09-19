@@ -65,8 +65,14 @@ ASS_DRAWING_RE = re.compile(r"\\p[1-9]")
 _PAREN_GROUP_RE = re.compile(r"[（(][^（）()]*[）)]")
 
 #: What may remain in a cue that carries no speech: whitespace, music glyphs,
-#: prolonged-sound/dash marks, ellipses and bare punctuation.
-_NON_SPEECH_RESIDUE_RE = re.compile(r"^[\s♪♫♬♩〜～ー―—\-…・.。、,!?！？~]*$")
+#: prolonged-sound/dash marks, ellipses and bare punctuation -- Latin, CJK,
+#: Arabic (question mark, comma, semicolon) and Hebrew (geresh, gershayim,
+#: maqaf). The right-to-left characters are named escapes, which ``re`` expands.
+_NON_SPEECH_RESIDUE_RE = re.compile(
+    r"^[\s♪♫♬♩〜～ー―—\-…・.。、,!?！？~"
+    r"\N{ARABIC QUESTION MARK}\N{ARABIC COMMA}\N{ARABIC SEMICOLON}"
+    r"\N{HEBREW PUNCTUATION GERESH}\N{HEBREW PUNCTUATION GERSHAYIM}\N{HEBREW PUNCTUATION MAQAF}]*$"
+)
 
 #: Minimum surviving cues for a cleaned copy to be worth aligning. Below this
 #: the drop list itself is suspect (wrong style names, annotation-heavy file)

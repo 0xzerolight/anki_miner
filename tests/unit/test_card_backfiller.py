@@ -886,6 +886,24 @@ class TestScanDefinitionGlossary:
             assert changes[key].endswith("</style>")
             assert changes[key].count("<style>") == 1
 
+    def test_rtl_profile_proposals_end_with_the_rtl_rule(self, backfill_config, monkeypatch):
+        # Backfill bytes must equal fresh-mine bytes for an rtl language too.
+        from anki_miner.languages.registry import get_profile as real_get_profile
+        from anki_miner.services import card_backfiller
+        from anki_miner.services.dictionary.card_style_block import RTL_GLOSSARY_CSS
+
+        ja = real_get_profile("ja")
+        rtl = replace(ja, content_style=replace(ja.content_style, direction="rtl"))
+        monkeypatch.setattr(card_backfiller, "get_profile", lambda code: rtl)
+        anki = FakeAnkiService({1: _note(1, word="猫", ExpressionReading="ねこ", Glossary="", definition="")})
+        defs = FakeDefinitionService(defs={"猫": _GLOSS_HTML}, glossaries={"猫": _GLOSS_HTML})
+        plan = scan_backfill(anki, backfill_config, _services(defs=defs), _options({"definition", "glossary"}))
+        changes = _changes_by_key(plan, 1)
+        for key in ("definition", "glossary"):
+            assert changes[key].startswith(_GLOSS_HTML)
+            assert changes[key].endswith("\n" + RTL_GLOSSARY_CSS + "</style>")
+            assert changes[key].count("<style>") == 1
+
     def test_markupless_definition_gets_no_block(self, backfill_config):
         # A plain-text proposal (no miner markup) is written verbatim — a block
         # on it would be field-LEADING after an empty body, and there is nothing

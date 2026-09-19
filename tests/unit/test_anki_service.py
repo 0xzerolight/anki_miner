@@ -4921,6 +4921,31 @@ class TestProfileExtraFieldKeys:
             assert keys
             assert keys <= OPTIONAL_FIELD_KEYS
 
+    @pytest.mark.parametrize("code", ["ja", "ko", "zh"])
+    def test_shipped_languages_thread_ltr_and_their_code(self, test_config, code):
+        from dataclasses import replace
+
+        service = AnkiService(replace(test_config, language=code))
+
+        assert (service._content_direction, service._content_lang) == ("ltr", code)
+
+    def test_an_rtl_profile_wraps_the_word_in_every_built_note(self, test_config, make_tokenized_word):
+        """The one _build_note seam feeds the dedup probe, the addibility probe and the write."""
+        from dataclasses import replace
+        from unittest.mock import patch as _patch
+
+        from anki_miner.languages.registry import get_profile
+
+        ja = get_profile("ja")
+        stub_profile = replace(ja, content_style=replace(ja.content_style, direction="rtl"))
+        with _patch("anki_miner.languages.registry.get_profile", return_value=stub_profile):
+            service = AnkiService(test_config)
+        item = CardPayload(word=make_tokenized_word(), media=MediaData(), definition="def")
+
+        fields = service._build_note(item, set()).note["fields"]
+
+        assert fields["word"] == '<div dir="rtl" lang="ja">食べる</div>'
+
 
 class TestRejectedNoteNamesTheWord:
     """A rejection names the word on the card, not its index in a probe batch.

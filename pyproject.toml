@@ -270,10 +270,11 @@ include-package-data = true
 "anki_miner.services.dictionary.resources" = ["*.css"]
 "anki_miner.resources.wordsets" = ["*.txt"]
 "anki_miner.gui.resources.translations" = ["*.ts", "*.qm"]
-# Last-resort Japanese fallback face, its licence and its provenance record.
-# Declared explicitly rather than left to MANIFEST.in: a wheel that dropped the
-# font would render tofu on a bare Linux install and nothing would say why.
-"anki_miner.gui.resources.fonts" = ["*.otf", "*.txt", "*.md"]
+# Last-resort fallback faces (Japanese, and each mining language's own), their
+# licences and the provenance record. Declared explicitly rather than left to
+# MANIFEST.in: a wheel that dropped a font would render tofu on a bare Linux
+# install and nothing would say why.
+"anki_miner.gui.resources.fonts" = ["*.otf", "*.ttf", "*.txt", "*.md"]
 
 [tool.setuptools.dynamic]
 version = {attr = "anki_miner.__version__"}

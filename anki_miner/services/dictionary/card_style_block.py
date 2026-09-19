@@ -261,7 +261,23 @@ def css_witnesses(html_texts: Iterable[str]) -> frozenset[str]:
     return frozenset(groups)
 
 
-def build_card_style_block(*, dict_css: str, card_html: str) -> str:
+#: Appended AFTER the base sheet and the scoped dictionary CSS, inside the same
+#: per-field block, for a right-to-left mining language only (S21; the profile's
+#: ``content_style.direction``). The glossary stays left-to-right -- wty's
+#: ar/fa/he glosses are English -- but the native example sentence each gloss
+#: carries (``data-sc-content="example-sentence-a"``: ~5,000 per wty ar/fa/he
+#: dictionary, a quarter or more ending in ASCII punctuation) would show that
+#: punctuation on the wrong end of an LTR paragraph. ``unicode-bidi: plaintext``
+#: gives each such block the direction of its own first strong character: an
+#: Arabic or Hebrew example reads right-to-left, a Latin one stays left-to-right.
+#: Guarded by ``ol[data-count]`` like every glossary.css rule, one line, and free
+#: of ``[data-dictionary=...]`` selectors, so the restyler carries it verbatim as
+#: part of the block tail and never reads it as a dictionary's own CSS.
+#: glossary.css itself is never edited (it is embedded in every card).
+RTL_GLOSSARY_CSS = '.yomitan-glossary ol[data-count] [data-sc-content="example-sentence-a"]{unicode-bidi:plaintext}'
+
+
+def build_card_style_block(*, dict_css: str, card_html: str, direction: str = "ltr") -> str:
     """Assemble the self-contained ``<style>`` block for ONE field.
 
     ``[witness-selected base variant] + [dict_css]``, wrapped in a single
@@ -274,7 +290,8 @@ def build_card_style_block(*, dict_css: str, card_html: str) -> str:
     outputs diverge and the restyler rewrites fresh cards forever — and
     field-isolating note types (module docstring) never see the other field
     anyway. ``dict_css`` is the already-scoped per-dictionary CSS (filtered to
-    this field via ``filter_dict_css_entries``), embedded verbatim. Returns
+    this field via ``filter_dict_css_entries``), embedded verbatim.
+    ``direction == "rtl"`` appends :data:`RTL_GLOSSARY_CSS` as the last section. Returns
     ``""`` only if every section is empty (the core is never empty, so in
     practice this always returns a block).
     """
@@ -282,6 +299,8 @@ def build_card_style_block(*, dict_css: str, card_html: str) -> str:
     scoped = dict_css.strip()
     if scoped:
         sections.append(scoped)
+    if direction == "rtl":
+        sections.append(RTL_GLOSSARY_CSS)
     body = "\n".join(section for section in sections if section)
     if not body.strip():
         return ""
@@ -319,7 +338,9 @@ def filter_dict_css_entries(field_html: str, entries: Iterable[tuple[str, str, s
     return "\n\n".join(css for dict_id, display_name, css in entries if dict_id in ids or display_name in legacy_titles)
 
 
-def attach_card_style_block(field_html: str, *, dict_css_entries: Iterable[tuple[str, str, str]]) -> str:
+def attach_card_style_block(
+    field_html: str, *, dict_css_entries: Iterable[tuple[str, str, str]], direction: str = "ltr"
+) -> str:
     """Return ``field_html`` with its self-contained TRAILING ``<style>`` block.
 
     The one sanctioned attach seam for fresh writers (mining, backfill); it
@@ -337,11 +358,14 @@ def attach_card_style_block(field_html: str, *, dict_css_entries: Iterable[tuple
     stamped (fresh renders are — ``indexed_provider._render``); legacy bodies
     need ``_stamp_styled_envelopes`` first, which this helper deliberately does
     not do (stamping needs the carried-CSS gate only the restyler has).
+    ``direction`` is the active profile's ``content_style.direction`` (see
+    :data:`RTL_GLOSSARY_CSS`).
     """
     if not field_html or any(token not in field_html for token in _MINER_MARKUP_TOKENS):
         return field_html
     block = build_card_style_block(
         dict_css=filter_dict_css_entries(field_html, dict_css_entries),
         card_html=field_html,
+        direction=direction,
     )
     return field_html + block

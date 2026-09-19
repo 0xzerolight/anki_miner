@@ -462,6 +462,23 @@ class TestRestyleField:
     def _restyle(value, entries=(), current_dict_css=""):
         return card_restyler._restyle_field(value, list(entries), current_dict_css)
 
+    @pytest.mark.parametrize(
+        ("body", "entries"),
+        [
+            (BARE, ()),
+            (BARE_STAMPED, (("x-id", "X", '.yomitan-glossary [data-dictionary="X"]{color:red}'),)),
+        ],
+        ids=["no-dict-css", "dict-css"],
+    )
+    def test_a_freshly_mined_rtl_field_is_already_current(self, body, entries):
+        # Writer convergence (S21): the RTL rule rides the block tail, which the
+        # restyler carries verbatim, so a restyle of a fresh RTL card is a no-op.
+        from anki_miner.services.dictionary.card_style_block import RTL_GLOSSARY_CSS
+
+        mined = attach_card_style_block(body, dict_css_entries=list(entries), direction="rtl")
+        assert mined.endswith("\n" + RTL_GLOSSARY_CSS + "</style>")
+        assert self._restyle(mined, entries) == mined
+
     def test_unclosed_our_style_returns_none(self):
         assert self._restyle(BARE + f"<style>{_owned('ol[data-count]{}')}") is None
 

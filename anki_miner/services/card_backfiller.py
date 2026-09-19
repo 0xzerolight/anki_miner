@@ -439,7 +439,10 @@ def _scan_backfill_impl(
     # 1B.9 shape: service_factory hands the same callable to
     # ChainedExpressionAudioFetcher). None is Japanese and keeps
     # backfill_audio.word_audio_candidates.
-    audio_candidates = get_profile(language).audio.candidates
+    profile = get_profile(language)
+    audio_candidates = profile.audio.candidates
+    # S21: mining's rtl block rule, so backfilled bytes equal fresh-mine bytes.
+    style_direction = profile.content_style.direction
 
     scanned = skipped_no_identity = identical_skips = 0
     guessed_reading_skips = 0
@@ -497,6 +500,7 @@ def _scan_backfill_impl(
                 expression_audio_fetcher=expression_audio_fetcher,
                 tagger=tagger,
                 audio_candidates=audio_candidates,
+                style_direction=style_direction,
                 is_cancelled=is_cancelled,
             )
             identical_skips += note_identicals
@@ -808,6 +812,7 @@ def _compute_note_changes(
     expression_audio_fetcher: Any = None,
     tagger: Any = None,
     audio_candidates: Callable[[Any], list[tuple[str, str]]] | None = None,
+    style_direction: str = "ltr",
     is_cancelled: Callable[[], bool] | None = None,
 ) -> tuple[list[FieldChange], int, int]:
     """Emit FieldChanges for one note under the fill/overwrite policy.
@@ -852,7 +857,9 @@ def _compute_note_changes(
     # for legacy bodies).
     for key in ("definition", "glossary"):
         if key in proposals:
-            proposals[key] = attach_card_style_block(proposals[key], dict_css_entries=dict_css_entries)
+            proposals[key] = attach_card_style_block(
+                proposals[key], dict_css_entries=dict_css_entries, direction=style_direction
+            )
 
     # Word audio, after the style-block loop (it carries no markup to stamp).
     # Fillability is checked HERE, before the fetch, rather than left to the
