@@ -60,6 +60,36 @@ class TestNonSpeechText:
     def test_speech(self, text):
         assert not _is_non_speech_text(text)
 
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "\N{ARABIC QUESTION MARK}",
+            "\N{ARABIC COMMA}",
+            "\N{ARABIC SEMICOLON}",
+            "...\N{ARABIC QUESTION MARK}",
+            "\N{HEBREW PUNCTUATION GERESH}",
+            "\N{HEBREW PUNCTUATION GERSHAYIM}",
+            "\N{HEBREW PUNCTUATION MAQAF}",
+            "\N{EIGHTH NOTE} \N{HEBREW PUNCTUATION GERSHAYIM} \N{EIGHTH NOTE}",
+        ],
+    )
+    def test_arabic_and_hebrew_punctuation_is_residue(self, text):
+        assert _is_non_speech_text(text)
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            # salam + question mark
+            "\N{ARABIC LETTER SEEN}\N{ARABIC LETTER LAM}\N{ARABIC LETTER ALEF}\N{ARABIC LETTER MEEM}"
+            "\N{ARABIC QUESTION MARK}",
+            # shalom + maqaf
+            "\N{HEBREW LETTER SHIN}\N{HEBREW LETTER LAMED}\N{HEBREW LETTER VAV}\N{HEBREW LETTER FINAL MEM}"
+            "\N{HEBREW PUNCTUATION MAQAF}",
+        ],
+    )
+    def test_arabic_and_hebrew_words_stay_speech(self, text):
+        assert not _is_non_speech_text(text)
+
 
 class TestCleanReference:
     def test_drops_music_and_annotation_only_cues(self, tmp_path):
