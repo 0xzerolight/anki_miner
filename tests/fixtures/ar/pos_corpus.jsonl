@@ -1,0 +1,11 @@
+{"id": "ar01", "sentence": "ذهب الطالب إلى المدرسة صباحاً.", "must_mine": ["ذهب", "طالب", "مدرسة", "صباح"], "must_not_mine": ["إلى", "الطالب", "المدرسة", "صباحا"], "note": "the smoke sentence: verb, article-bearing nouns and an accusative noun all front as lemmas"}
+{"id": "ar02", "sentence": "وسيكتبونها للطلاب غداً.", "must_mine": ["كتب", "طالب", "غدا"], "must_not_mine": ["وسيكتبونها", "للطلاب", "يكتبون", "طلاب", "غد"], "note": "clitic chains mine their lemma; ghadan is a lexicalised tanween adverb"}
+{"id": "ar03", "sentence": "شكراً جزيلاً، هذا مهم جداً.", "must_mine": ["شكرا", "مهم", "جدا"], "must_not_mine": ["شكر", "جد", "هذا"], "note": "tanween adverbs keep their own lemma (KNOWN MISS: jazilan lemmatises to jazl)"}
+{"id": "ar04", "sentence": "مش عارف اللي حصل.", "must_mine": ["حصل"], "must_not_mine": ["مش", "اللي", "مشّ"], "note": "dialect function words are unknown and excluded (KNOWN MISS: arif argmaxes to a proper noun)"}
+{"id": "ar05", "sentence": "شاهدت Netflix لمدة 3 ساعات.", "must_mine": ["شاهد", "مدة", "ساعة"], "must_not_mine": ["Netflix", "3", "لمدة", "ساعات"], "note": "Latin words and digits are emitted for span alignment and never mined"}
+{"id": "ar06", "sentence": "ذَهَبَ الوَلَدُ إِلَى البَيْتِ.", "must_mine": ["ذهب", "ولد", "بيت"], "must_not_mine": ["الولد", "البيت", "إلى"], "note": "a fully vocalised children's line mines unvocalised lemmas; the sentence keeps its tashkeel"}
+{"id": "ar07", "sentence": "انا ذاهب الى السوق.", "must_mine": ["ذاهب", "سوق"], "must_not_mine": ["انا", "الى", "أنا", "إلى"], "note": "hamza-less function words are never mined"}
+{"id": "ar08", "sentence": "الأولاد يلعبون مع الرجال.", "must_mine": ["ولد", "لعب", "رجل"], "must_not_mine": ["أولاد", "رجال", "مع"], "note": "broken plurals mine their singular lemma"}
+{"id": "ar09", "sentence": "انتظري هنا!", "must_mine": ["هنا"], "must_not_mine": ["انتظري"], "note": "KNOWN MISS: the imperative has no analysis, so it is unknown and excluded by default"}
+{"id": "ar10", "sentence": "هل كتبت الرسالة؟", "must_mine": ["كتب", "رسالة"], "must_not_mine": ["هل", "الرسالة"], "note": "the Arabic question mark is punctuation"}
+{"id": "ar11", "sentence": "كتـــاب جديد ﻻ يكفي.", "must_mine": ["كتاب", "جديد", "كفى"], "must_not_mine": ["لا", "كتـــاب"], "note": "normalize folds the lam-alef presentation form and strips tatweel before tokenizing"}

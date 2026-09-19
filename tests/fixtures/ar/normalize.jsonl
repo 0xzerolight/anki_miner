@@ -1,0 +1,12 @@
+{"id": "presentation-lam-alef", "text": "\ufefb", "normalized": "\u0644\u0627", "folded": "\u0644\u0627"}
+{"id": "presentation-isolated-beh", "text": "\ufe8f\ufe98", "normalized": "\u0628\u062a", "folded": "\u0628\u062a"}
+{"id": "tatweel", "text": "\u0643\u062a\u0640\u0640\u0627\u0628", "normalized": "\u0643\u062a\u0627\u0628", "folded": "\u0643\u062a\u0627\u0628"}
+{"id": "rlm-and-rle", "text": "\u200f\u202b\u0645\u0631\u062d\u0628\u0627\u202c", "normalized": "\u0645\u0631\u062d\u0628\u0627", "folded": "\u0645\u0631\u062d\u0628\u0627"}
+{"id": "zwnj-kept-then-folded", "text": "\u0645\u06cc\u200c\u0631\u0648\u0645", "normalized": "\u0645\u06cc\u200c\u0631\u0648\u0645", "folded": "\u0645\u06cc\u0631\u0648\u0645"}
+{"id": "tashkeel-kept-then-folded", "text": "\u0643\u0650\u062a\u064e\u0627\u0628\u064c", "normalized": "\u0643\u0650\u062a\u064e\u0627\u0628\u064c", "folded": "\u0643\u062a\u0627\u0628"}
+{"id": "dagger-alif-folded", "text": "\u0647\u0670\u0630\u064e\u0627", "normalized": "\u0647\u0670\u0630\u064e\u0627", "folded": "\u0647\u0630\u0627"}
+{"id": "digits-kept", "text": "\u0663\u0664", "normalized": "\u0663\u0664", "folded": "\u0663\u0664"}
+{"id": "hamza-seats-not-folded", "text": "\u0623\u064e\u0646\u064e\u0651", "normalized": "\u0623\u064e\u0646\u064e\u0651", "folded": "\u0623\u0646"}
+{"id": "alef-maqsura-not-folded", "text": "\u0645\u0635\u0637\u0641\u0649", "normalized": "\u0645\u0635\u0637\u0641\u0649", "folded": "\u0645\u0635\u0637\u0641\u0649"}
+{"id": "decomposed-hamza-composes", "text": "\u0627\u0654", "normalized": "\u0623", "folded": "\u0623"}
+{"id": "bom-stripped", "text": "\ufeff\u0646\u0639\u0645", "normalized": "\u0646\u0639\u0645", "folded": "\u0646\u0639\u0645"}

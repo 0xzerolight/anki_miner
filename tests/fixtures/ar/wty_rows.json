@@ -1,0 +1,4620 @@
+{
+ "_comment": "Real wty-ar-en rows. A card mined with them carries the dictionary's CC BY-SA 4.0; the calima-msa-r13 analyzer data that chose the lemma is GPL-2 (licenses/calima-msa-r13/).",
+ "source": "wty-ar-en revision 2026.09.19 (huggingface.co/datasets/daxida/wty-release)",
+ "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0. Attribution: https://en.wiktionary.org/wiki/جميل#Arabic, https://en.wiktionary.org/wiki/ذهب#Arabic, https://en.wiktionary.org/wiki/شكرا#Arabic, https://en.wiktionary.org/wiki/طالب#Arabic, https://en.wiktionary.org/wiki/طلاب#Arabic, https://en.wiktionary.org/wiki/كتاب#Arabic, https://en.wiktionary.org/wiki/كتب#Arabic, https://en.wiktionary.org/wiki/مدرسة#Arabic",
+ "index": {
+  "title": "wty-ar-en",
+  "format": 3,
+  "revision": "2026.09.19",
+  "sequenced": true,
+  "sourceLanguage": "ar",
+  "targetLanguage": "en",
+  "attribution": "https://kaikki.org/"
+ },
+ "tag_bank": [
+  [
+   "fem",
+   "gender-feminine",
+   -1,
+   "feminine",
+   1
+  ],
+  [
+   "masc",
+   "gender-masculine",
+   -1,
+   "masculine",
+   1
+  ],
+  [
+   "uncount",
+   "grammar",
+   0,
+   "uncountable",
+   0
+  ],
+  [
+   "adj",
+   "partOfSpeech",
+   -2,
+   "adjective",
+   2
+  ],
+  [
+   "intj",
+   "partOfSpeech",
+   -2,
+   "interjection",
+   2
+  ],
+  [
+   "n",
+   "partOfSpeech",
+   -2,
+   "noun",
+   2
+  ],
+  [
+   "v",
+   "partOfSpeech",
+   -2,
+   "verb",
+   2
+  ],
+  [
+   "vt",
+   "partOfSpeech",
+   -2,
+   "transitive verb",
+   2
+  ],
+  [
+   "name",
+   "partOfSpeech",
+   -1,
+   "name",
+   1
+  ],
+  [
+   "non-lemma",
+   "",
+   10,
+   "non-lemma",
+   -10
+  ]
+ ],
+ "term_rows": [
+  [
+   "ذهب",
+   "ذَهَبَ",
+   "v",
+   "v",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "ذَهَبَ • (ḏahaba) I (non-past يَذْهَبُ (yaḏhabu), verbal noun ذَهَاب (ḏahāb) or مَذْهَب (maḏhab))"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to go, to travel",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": "إِلَى أَيْنَ أَنْتَ ذَاهِبٌ؟"
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "Where are you going?"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to go away, to leave, to depart"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to disappear, to vanish"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to decline, to dwindle"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to perish, to die, to be destroyed"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to abduct, to steal, to sweep away, to annihilate"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to lead someone, to conduct someone, to take someone along"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to think, to believe, to hold the view, to be of the opinion",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": "فأمّا الْبَرِيد ففيه خلاف وذهب قوم إلى أنه بالبادية اثنا عشر ميلا وبالشام وخراسان ستة أميال"
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "About the postal route there is disagreement. Folks believed that in the desert it is twelve miles and in Syria and Khorasan six miles."
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to escape, to slip, to lose sight of, to be forgotten"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to ignore, to skip, to omit"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to prepare to, to be about to"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/ذهب#Arabic",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Arabic/meaning/ذ/ذه/ذهب.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "ذهب",
+   "ذَهَّبَ",
+   "v",
+   "v",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "ذَهَّبَ • (ḏahhaba) II (non-past يُذَهِّبُ (yuḏahhibu), verbal noun تَذْهِيب (taḏhīb))"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to gild"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/ذهب#Arabic",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Arabic/meaning/ذ/ذه/ذهب.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "ذهب",
+   "ذَهَب",
+   "n uncount masc",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "ذَهَب • (ḏahab) m"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "A Central Semitic innovation. Cognate with Hebrew זָהָב (zāhāḇ), Classical Syriac ܕܗܒܐ (dahbā), Old South Arabian 𐩹𐩠𐩨 (ḏhb)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "gold"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "gold coin"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/ذهب#Arabic",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Arabic/meaning/ذ/ذه/ذهب.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كِتَاب",
+   "n masc",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "كِتَاب • (kitāb) m (plural كُتُب (kutub))"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "book"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "letter, note, paper, piece of writing, message"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "the Scripture, the Qur'an or the Bible",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": "الْكِتَاب"
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "the Qur'an; the Bible"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "record, document, deed, contract"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "a marriage contract."
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/كتاب#Arabic",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Arabic/meaning/ك/كت/كتاب.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّاب",
+   "n masc",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "كُتَّاب • (kuttāb) m (plural كَتَاتِيب (katātīb))"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "a traditional school for teaching Qur'an"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/كتاب#Arabic",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Arabic/meaning/ك/كت/كتاب.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيل",
+   "adj",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "جَمِيل • (jamīl) (feminine جَمِيلَة (jamīla), masculine plural جَمِيلُون (jamīlūn) or جُمَلَاء (jumalāʔ), feminine plural جَمِيلَات (jamīlāt) or جَمَائِل (jamāʔil), elative أَجْمَل (ʔajmal))"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "beautiful",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "زَرْتُ مَكَانًا ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "جَمِيلًا"
+                   },
+                   " وَمُثِيرًا لِلْإِعْجَابِ فِي رِحْلَتِي."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "I visited a beautiful and stunning place on my trip"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "pretty"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "handsome, fair, elegant"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "well-bred, of good manners",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": "أَيُّهَٰذَا الشَّاكِي وَمَا بِكَ دَاءٌ\nكُنْ جَمِيلًا تَرَ الْوُجُودَ جَمِيلًا\nʔayyuhāḏā š-šākī wamā bika dāʔun"
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "O! who be this complainant, and what is thine ailment?\nBe courteous [thyself! and] thou shall see a beautiful existence."
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-c"
+                  },
+                  "content": "a. 1957, Elia Abu Madi (also known as Īlya bin Ḍāhir Abū Māḍi, and as Elia D. Madey; 1890-1957)"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "good, excellent"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/جميل#Arabic",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Arabic/meaning/ج/جم/جميل.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيل",
+   "name masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "جَمِيل • (jamīl) m (feminine جَمِيلَة (jamīla))"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "a male given name, Jamil and Jameel, feminine equivalent جَمِيلَة (jamīla)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/جميل#Arabic",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Arabic/meaning/ج/جم/جميل.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيل",
+   "n uncount masc",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "جَمِيل • (jamīl) m\n(uncountable)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "good deed, favor, benefit"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "good quality"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "melted fat"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/جميل#Arabic",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Arabic/meaning/ج/جم/جميل.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كَتَبَ",
+   "v vt",
+   "v",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "كَتَبَ • (kataba) I (non-past يَكْتُبُ (yaktubu), verbal noun كِتَابَة (kitāba) or كَتْب (katb) or كِتَاب (kitāb))\n(transitive)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Proto-West Semitic *katab-, but the sense \"to write\" has long been considered a borrowing from another Central Semitic language, perhaps denominally from كِتَاب (kitāb)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to mark (symbols, shapes, graphs, glyphs, letters, and the like) on a surface, to write, to inscribe"
+           ]
+          },
+          {
+           "tag": "ul",
+           "content": [
+            {
+             "tag": "li",
+             "content": [
+              "to draw (figures)"
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              "to cut (figures)"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to produce or generate by writing"
+           ]
+          },
+          {
+           "tag": "ul",
+           "content": [
+            {
+             "tag": "li",
+             "content": [
+              "to write up, to compose, to draw up, to draft"
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              "to set down figures with a typewriter or a keyboard, to typewrite or keyboard, to type"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to put down in writing, to write down; to record; to register; to track",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": "وَٱللَّهُ يَكْتُبُ مَا يُبَيِّتُونَ فَأَعْرِضْ عَنْهُمْ وَتَوَكَّلْ عَلَى ٱللَّهِ"
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "But God ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "records"
+                   },
+                   " what they scheme by night; so turn away from them and rely upon Allah."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-c"
+                  },
+                  "content": "609–632 CE, Qur'an, 4:81"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "tag": "ul",
+           "content": [
+            {
+             "tag": "li",
+             "content": [
+              "to write down (an event, such as a destiny or a fatality); to destine or predestine; to foreordain",
+              {
+               "tag": "details",
+               "data": {
+                "content": "details-entry-examples"
+               },
+               "content": [
+                {
+                 "tag": "summary",
+                 "data": {
+                  "content": "summary-entry"
+                 },
+                 "content": "1 example"
+                },
+                {
+                 "tag": "div",
+                 "data": {
+                  "content": "extra-info"
+                 },
+                 "content": {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence"
+                  },
+                  "content": [
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-a"
+                    },
+                    "content": [
+                     "قُل لَنْ يُصِيبَنَا إِلَّا مَا ",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "كَتَبَ"
+                     },
+                     " اللَّهُ لَنَا"
+                    ]
+                   },
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-b"
+                    },
+                    "content": [
+                     "Say \"Never will we be struck except by what Allah ",
+                     {
+                      "tag": "span",
+                      "data": {
+                       "content": "bold-text"
+                      },
+                      "content": "has decreed"
+                     },
+                     " for us...\""
+                    ]
+                   },
+                   {
+                    "tag": "div",
+                    "data": {
+                     "content": "example-sentence-c"
+                    },
+                    "content": "609–632 CE, Qur'an, 9:51"
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              "to write down (an ordinance, a law, a commandment, or the like); to prescribe"
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              "to bequeath"
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/كتب#Arabic",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Arabic/meaning/ك/كت/كتب.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كَتَّبَ",
+   "v vt",
+   "v",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "كَتَّبَ • (kattaba) II (non-past يُكَتِّبُ (yukattibu), verbal noun تَكْتِيب (taktīb))"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Form-II causative of كَتَبَ (kataba, “to write”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to cause to write, to make someone write"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to deploy in squadrons"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/كتب#Arabic",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Arabic/meaning/ك/كت/كتب.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "شكرا",
+   "شُكْرًا",
+   "intj",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "شُكْرًا • (šukran)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Adverbial accusative of شُكْر (šukr, “thankfulness”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "thanks"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/شكرا#Arabic",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Arabic/meaning/ش/شك/شكرا.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "طالب",
+   "طَالِب",
+   "n masc",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "طَالِب • (ṭālib) m (plural طَالِبُون (ṭālibūn) or طَلَبَة (ṭalaba) or طُلَّاب (ṭullāb), feminine طَالِبَة (ṭāliba))"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Derived from the active participle of طَلَبَ (ṭalaba)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "seeker, pursuer"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "student"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "scholar"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "claimant"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "applicant, petitioner"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "candidate"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/طالب#Arabic",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Arabic/meaning/ط/طا/طالب.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "طالب",
+   "طَالَبَ",
+   "v",
+   "v",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "طَالَبَ • (ṭālaba) III (non-past يُطَالِبُ (yuṭālibu), verbal noun مُطَالَبَة (muṭālaba) or طِلَاب (ṭilāb))"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to request, to demand, to ask for"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/طالب#Arabic",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Arabic/meaning/ط/طا/طالب.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مَدْرَسَة",
+   "n fem",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "مَدْرَسَة • (madrasa) f (plural مَدْرَسَات (madrasāt) or مَدَارِس (madāris))"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Noun of place from the verb دَرَسَ (darasa)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "school, academy",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "يَجِبُ عَلَيْكَ أَنْ تَذْهَبَ إِلَى ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "ٱلْمَدْرَسَةِ"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "You must go to school."
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/مدرسة#Arabic",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Arabic/meaning/م/مد/مدرسة.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "ذهب",
+   "ذَهَبَ",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "ذهب",
+     [
+      "third-person singular masculine past perfective active indicative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "ذهب",
+   "ذُهِبَ",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "ذهب",
+     [
+      "third-person singular masculine past perfective passive indicative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "ذهب",
+   "ذَهَّبَ",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "ذهب",
+     [
+      "third-person singular masculine past perfective active indicative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "ذهب",
+   "ذَهِّبْ",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "ذهب",
+     [
+      "second-person singular masculine imperative active"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "ذهب",
+   "ذُهِّبَ",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "ذهب",
+     [
+      "third-person singular masculine past perfective passive indicative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "ذهب",
+   "ذَهَب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "ذهب",
+     [
+      "informal singular construct triptote"
+     ]
+    ],
+    [
+     "ذهب",
+     [
+      "informal singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "ذهب",
+   "ذَهَبٌ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "ذهب",
+     [
+      "nominative singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "ذهب",
+   "ذَهَبُ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "ذهب",
+     [
+      "nominative singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "ذهب",
+   "ذَهَبَ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "ذهب",
+     [
+      "accusative singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "ذهب",
+   "ذَهَبٍ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "ذهب",
+     [
+      "genitive singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "ذهب",
+   "ذَهَبِ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "ذهب",
+     [
+      "genitive singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كِتَاب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كَتَبَ",
+     [
+      "verbal noun"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كِتَاب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كَاتَبَ",
+     [
+      "verbal noun"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كُتُب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "informal plural broken-form construct triptote"
+     ]
+    ],
+    [
+     "كتاب",
+     [
+      "informal plural indefinite broken-form triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كِتَاب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "informal singular construct triptote"
+     ]
+    ],
+    [
+     "كتاب",
+     [
+      "informal singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كِتَابٌ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "nominative singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كِتَابُ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "nominative singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كِتَابَ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "accusative singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كِتَابٍ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "genitive singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كِتَابِ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "genitive singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كُتُبٌ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "nominative plural indefinite broken-form triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كُتُبُ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "nominative plural broken-form construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كُتُبَ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "accusative plural broken-form construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كُتُبٍ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "genitive plural indefinite broken-form triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كُتُبِ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "genitive plural broken-form construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّاب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كَاتِب",
+     [
+      "plural"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّاب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "informal singular construct triptote"
+     ]
+    ],
+    [
+     "كتاب",
+     [
+      "informal singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّابٌ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "nominative singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّابُ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "nominative singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّابَ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "accusative singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّابٍ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "genitive singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّابِ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتاب",
+     [
+      "genitive singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيل",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "جميل",
+     [
+      "informal singular indefinite masculine triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيلٌ",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "جميل",
+     [
+      "nominative singular indefinite masculine triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيلٍ",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "جميل",
+     [
+      "genitive singular indefinite masculine triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيل",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "جميل",
+     [
+      "informal singular definite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيلٌ",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "جميل",
+     [
+      "nominative singular definite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيلٍ",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "جميل",
+     [
+      "genitive singular definite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيل",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "جميل",
+     [
+      "informal singular construct triptote"
+     ]
+    ],
+    [
+     "جميل",
+     [
+      "informal singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيلٌ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "جميل",
+     [
+      "nominative singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيلُ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "جميل",
+     [
+      "nominative singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيلَ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "جميل",
+     [
+      "accusative singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيلٍ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "جميل",
+     [
+      "genitive singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيلِ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "جميل",
+     [
+      "genitive singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كَتْب",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "noun-from-verb"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كِتَاب",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "noun-from-verb"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كَتَبَ",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "third-person singular masculine past perfective active indicative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كُتِبَ",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "third-person singular masculine past perfective passive indicative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كَتْب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كَتَبَ",
+     [
+      "verbal noun"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كَتْب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "informal singular construct triptote"
+     ]
+    ],
+    [
+     "كتب",
+     [
+      "informal singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كَتْبٌ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "nominative singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كَتْبُ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "nominative singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كَتْبَ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "accusative singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كَتْبٍ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "genitive singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كَتْبِ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "genitive singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كَتَّبَ",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "third-person singular masculine past perfective active indicative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كَتِّبْ",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "second-person singular masculine imperative active"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كُتِّبَ",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "third-person singular masculine past perfective passive indicative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كُتُب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كِتَاب",
+     [
+      "plural"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كِتَاب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "Arabic"
+     ]
+    ],
+    [
+     "كتب",
+     [
+      "Classical"
+     ]
+    ],
+    [
+     "كتب",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "كتب",
+     [
+      "masculine"
+     ]
+    ],
+    [
+     "كتب",
+     [
+      "transitive"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كُتُب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "plural"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كِتٰب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "informal singular construct triptote"
+     ]
+    ],
+    [
+     "كتب",
+     [
+      "informal singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كِتٰبٌ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "nominative singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كِتٰبُ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "nominative singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كِتٰبَ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "accusative singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كِتٰبٍ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "genitive singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتب",
+   "كِتٰبِ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كتب",
+     [
+      "genitive singular construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طلاب",
+   "طُلَّاب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "طالب",
+     [
+      "informal plural indefinite masculine ar-infl-a broken-form triptote"
+     ]
+    ],
+    [
+     "طالب",
+     [
+      "informal plural indefinite masculine sound-form"
+     ]
+    ],
+    [
+     "طالب",
+     [
+      "informal plural masculine ar-infl-a broken-form construct triptote"
+     ]
+    ],
+    [
+     "طالب",
+     [
+      "informal plural masculine construct sound-form"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طالب",
+   "طَالِب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "طالب",
+     [
+      "informal singular indefinite masculine triptote"
+     ]
+    ],
+    [
+     "طالب",
+     [
+      "informal singular masculine construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طالب",
+   "طَالِبٌ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "طالب",
+     [
+      "nominative singular indefinite masculine triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طالب",
+   "طَالِبُ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "طالب",
+     [
+      "nominative singular masculine construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طالب",
+   "طَالِبَ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "طالب",
+     [
+      "accusative singular masculine construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طالب",
+   "طَالِبٍ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "طالب",
+     [
+      "genitive singular indefinite masculine triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طالب",
+   "طَالِبِ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "طالب",
+     [
+      "genitive singular masculine construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طلاب",
+   "طُلَّابٌ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "طالب",
+     [
+      "nominative plural indefinite masculine ar-infl-a broken-form triptote"
+     ]
+    ],
+    [
+     "طالب",
+     [
+      "nominative plural indefinite masculine sound-form"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طلاب",
+   "طُلَّابُ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "طالب",
+     [
+      "nominative plural masculine ar-infl-a broken-form construct triptote"
+     ]
+    ],
+    [
+     "طالب",
+     [
+      "nominative plural masculine construct sound-form"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طلاب",
+   "طُلَّابَ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "طالب",
+     [
+      "accusative plural masculine ar-infl-a broken-form construct triptote"
+     ]
+    ],
+    [
+     "طالب",
+     [
+      "accusative plural masculine construct sound-form"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طلاب",
+   "طُلَّابٍ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "طالب",
+     [
+      "genitive plural indefinite masculine ar-infl-a broken-form triptote"
+     ]
+    ],
+    [
+     "طالب",
+     [
+      "genitive plural indefinite masculine sound-form"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طلاب",
+   "طُلَّابِ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "طالب",
+     [
+      "genitive plural masculine ar-infl-a broken-form construct triptote"
+     ]
+    ],
+    [
+     "طالب",
+     [
+      "genitive plural masculine construct sound-form"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طلاب",
+   "طِلَاب",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "طالب",
+     [
+      "noun-from-verb"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طالب",
+   "طَالَبَ",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "طالب",
+     [
+      "third-person singular masculine past perfective active indicative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طالب",
+   "طَالِبْ",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "طالب",
+     [
+      "second-person singular masculine imperative active"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طالب",
+   "طَالِب",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "طلب",
+     [
+      "active participle"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مَدْرَسَة",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرسة",
+     [
+      "informal singular ar-infl-a construct triptote"
+     ]
+    ],
+    [
+     "مدرسة",
+     [
+      "informal singular indefinite ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مَدْرَسَةٌ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرسة",
+     [
+      "nominative singular indefinite ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مَدْرَسَةُ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرسة",
+     [
+      "nominative singular ar-infl-a construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مَدْرَسَةً",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرسة",
+     [
+      "accusative singular indefinite ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مَدْرَسَةَ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرسة",
+     [
+      "accusative singular ar-infl-a construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مَدْرَسَةٍ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرسة",
+     [
+      "genitive singular indefinite ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مَدْرَسَةِ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرسة",
+     [
+      "genitive singular ar-infl-a construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرِّسَة",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مُدَرِّس",
+     [
+      "female equivalent"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرِّسَة",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرسة",
+     [
+      "informal singular ar-infl-a construct triptote"
+     ]
+    ],
+    [
+     "مدرسة",
+     [
+      "informal singular indefinite ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرِّسَةٌ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرسة",
+     [
+      "nominative singular indefinite ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرِّسَةُ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرسة",
+     [
+      "nominative singular ar-infl-a construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرِّسَةً",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرسة",
+     [
+      "accusative singular indefinite ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرِّسَةَ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرسة",
+     [
+      "accusative singular ar-infl-a construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرِّسَةٍ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرسة",
+     [
+      "genitive singular indefinite ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرِّسَةِ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرسة",
+     [
+      "genitive singular ar-infl-a construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرَّسَة",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "مُدَرَّس",
+     [
+      "singular feminine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيل",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "جمل",
+     [
+      "active participle"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّاب",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "كاتب",
+     [
+      "informal plural indefinite masculine ar-infl-a broken-form triptote"
+     ]
+    ],
+    [
+     "كاتب",
+     [
+      "informal plural indefinite masculine sound-form"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّابٌ",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "كاتب",
+     [
+      "nominative plural indefinite masculine ar-infl-a broken-form triptote"
+     ]
+    ],
+    [
+     "كاتب",
+     [
+      "nominative plural indefinite masculine sound-form"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّابٍ",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "كاتب",
+     [
+      "genitive plural indefinite masculine ar-infl-a broken-form triptote"
+     ]
+    ],
+    [
+     "كاتب",
+     [
+      "genitive plural indefinite masculine sound-form"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّاب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كاتب",
+     [
+      "informal plural ar-infl-a broken-form construct triptote"
+     ]
+    ],
+    [
+     "كاتب",
+     [
+      "informal plural indefinite ar-infl-a broken-form triptote"
+     ]
+    ],
+    [
+     "كاتب",
+     [
+      "informal plural indefinite masculine sound-form"
+     ]
+    ],
+    [
+     "كاتب",
+     [
+      "informal plural masculine construct sound-form"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّابٌ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كاتب",
+     [
+      "nominative plural indefinite ar-infl-a broken-form triptote"
+     ]
+    ],
+    [
+     "كاتب",
+     [
+      "nominative plural indefinite masculine sound-form"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّابُ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كاتب",
+     [
+      "nominative plural ar-infl-a broken-form construct triptote"
+     ]
+    ],
+    [
+     "كاتب",
+     [
+      "nominative plural masculine construct sound-form"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّابَ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كاتب",
+     [
+      "accusative plural ar-infl-a broken-form construct triptote"
+     ]
+    ],
+    [
+     "كاتب",
+     [
+      "accusative plural masculine construct sound-form"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّابٍ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كاتب",
+     [
+      "genitive plural indefinite ar-infl-a broken-form triptote"
+     ]
+    ],
+    [
+     "كاتب",
+     [
+      "genitive plural indefinite masculine sound-form"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "كتاب",
+   "كُتَّابِ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "كاتب",
+     [
+      "genitive plural ar-infl-a broken-form construct triptote"
+     ]
+    ],
+    [
+     "كاتب",
+     [
+      "genitive plural masculine construct sound-form"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "شكرا",
+   "شَكَرَا",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "شكر",
+     [
+      "third-person masculine past perfective active indicative dual"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "شكرا",
+   "شُكِرَا",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "شكر",
+     [
+      "third-person masculine past perfective passive indicative dual"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "شكرا",
+   "شُكْرًا",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "شكر",
+     [
+      "accusative singular indefinite triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرِّسَة",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرس",
+     [
+      "informal singular feminine ar-infl-a construct triptote"
+     ]
+    ],
+    [
+     "مدرس",
+     [
+      "informal singular indefinite feminine ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرِّسَةٌ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرس",
+     [
+      "nominative singular indefinite feminine ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرِّسَةُ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرس",
+     [
+      "nominative singular feminine ar-infl-a construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرِّسَةً",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرس",
+     [
+      "accusative singular indefinite feminine ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرِّسَةَ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرس",
+     [
+      "accusative singular feminine ar-infl-a construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرِّسَةٍ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرس",
+     [
+      "genitive singular indefinite feminine ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرِّسَةِ",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "مدرس",
+     [
+      "genitive singular feminine ar-infl-a construct triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرَّسَة",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "مدرس",
+     [
+      "informal singular indefinite feminine ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرَّسَةٌ",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "مدرس",
+     [
+      "nominative singular indefinite feminine ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرَّسَةً",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "مدرس",
+     [
+      "accusative singular indefinite feminine ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "مدرسة",
+   "مُدَرَّسَةٍ",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "مدرس",
+     [
+      "genitive singular indefinite feminine ar-infl-a triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طلاب",
+   "طُلَّاب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "طَالِب",
+     [
+      "plural"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "طالب",
+   "طَالِب",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "طالبة",
+     [
+      "masculine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "جميل",
+   "جَمِيل",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "جميلة",
+     [
+      "masculine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "شكرا",
+   "شُكُرًا",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "شكور",
+     [
+      "accusative plural indefinite masculine/feminine broken-form triptote"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ]
+ ]
+}
