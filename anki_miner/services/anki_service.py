@@ -201,6 +201,10 @@ class AnkiService:
         self._extra_raw_html_keys = frozenset(
             spec.key for spec in profile.extra_card_fields if spec.raw_html
         ) - frozenset(_RAW_HTML_FIELD_KEYS)
+        # S21: an rtl language's word and sentence fields carry dir + lang.
+        # Every shipped profile is ltr, so build_note stays byte-identical.
+        self._content_direction = profile.content_style.direction
+        self._content_lang = profile.code
         # Unannotated on purpose: mypy takes the narrowed ScriptSupport from the
         # parameter, and an annotation here would be evaluated at runtime on
         # Python <= 3.13 (this module has no `from __future__ import
@@ -788,9 +792,9 @@ class AnkiService:
     def _build_note(self, item: CardPayload, stored_files: set[str]) -> BuiltNote:
         """``build_note`` with this language's extra card-field keys attached.
 
-        The one place the two profile-derived key sets meet the builder, so the
-        dedup probe, the addibility probe and the submitted note are all mapped
-        the same way.
+        The one place the profile-derived key sets and content direction meet
+        the builder, so the dedup probe, the addibility probe and the submitted
+        note are all mapped the same way.
         """
         return build_note(
             item,
@@ -798,6 +802,8 @@ class AnkiService:
             stored_files,
             extra_optional_keys=self._extra_optional_keys,
             extra_raw_html_keys=self._extra_raw_html_keys,
+            content_direction=self._content_direction,
+            content_lang=self._content_lang,
         )
 
     def create_cards_batch(
