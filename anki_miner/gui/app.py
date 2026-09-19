@@ -200,6 +200,14 @@ def _run_bundled_smoke() -> int:
         if not frozen:
             raise RuntimeError("not running from a PyInstaller bundle")
 
+        # Unit tests inject a fake truststore; only the real bundle proves its
+        # macOS and Linux backends load. Injection fails open, and without it
+        # the update check and the yt-dlp install fail certificate verification.
+        from anki_miner.gui import launch
+
+        if not launch.TRUSTSTORE_INJECTED:
+            raise RuntimeError("System trust store was not injected")
+
         managed = ytdlp_download_dir() / ytdlp_binary_name()
         # No config is loaded this early; the only field the resolver reads is the
         # override, which a fresh smoke home never has.
@@ -2049,7 +2057,7 @@ def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
                 from anki_miner.gui import launch
 
                 if not launch.TRUSTSTORE_INJECTED:
-                    raise RuntimeError("Windows trust store was not injected")
+                    raise RuntimeError("System trust store was not injected")
 
             if not window.close():
                 raise RuntimeError("main window refused installer-smoke close")
