@@ -237,10 +237,19 @@ def _create_windows_app_mutex() -> None:
         )
 
 
-def _inject_windows_truststore() -> None:
+def _inject_system_truststore() -> None:
+    """Verify HTTPS against the OS trust store in every frozen build.
+
+    A bundle's OpenSSL looks for CA certificates under the build host's
+    directory: Homebrew's ``/opt/homebrew/etc/openssl@3`` on macOS,
+    ``/usr/lib/ssl`` on Linux. A Mac without Homebrew OpenSSL, or a
+    non-Debian distro running the AppImage, has no certificates there, so
+    every stdlib HTTPS call (the update check, the yt-dlp install) failed
+    verification. ``requests`` was unaffected because it reads certifi.
+    """
     global TRUSTSTORE_INJECTED
     TRUSTSTORE_INJECTED = False
-    if not (getattr(sys, "frozen", False) and sys.platform == "win32"):
+    if not getattr(sys, "frozen", False):
         return
     if any(name in os.environ for name in _CA_ENV_VARS):
         return
@@ -250,7 +259,7 @@ def _inject_windows_truststore() -> None:
         truststore.inject_into_ssl()
     except Exception:
         logging.getLogger(__name__).warning(
-            "Failed to inject Windows trust store; continuing with default TLS verification",
+            "Failed to inject system trust store; continuing with default TLS verification",
             exc_info=True,
         )
         return
@@ -279,7 +288,7 @@ def main() -> int:
 
     _install_early_crash_sink()
     _create_windows_app_mutex()
-    _inject_windows_truststore()
+    _inject_system_truststore()
 
     from anki_miner.gui.app import main as app_main
 

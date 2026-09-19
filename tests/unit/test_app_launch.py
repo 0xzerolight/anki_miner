@@ -36,14 +36,14 @@ from anki_miner.gui import launch
 raise SystemExit(launch.main())
 """
 
-WINDOWS_TRUSTSTORE_PROBE = r"""
+TRUSTSTORE_PROBE = r"""
 import builtins
 import sys
 
 from anki_miner.gui import launch
 
-sys.frozen = True
-sys.platform = "win32"
+sys.frozen = __FROZEN__
+sys.platform = __PLATFORM__
 
 real_import = builtins.__import__
 
@@ -59,6 +59,11 @@ except ImportError as exc:
     assert str(exc) == "stop after bootstrap"
 print(f"TRUSTSTORE_INJECTED={launch.TRUSTSTORE_INJECTED}")
 """
+
+
+def _truststore_probe(platform: str = "win32", *, frozen: bool = True) -> str:
+    return TRUSTSTORE_PROBE.replace("__FROZEN__", repr(frozen)).replace("__PLATFORM__", repr(platform))
+
 
 PATH_HOME_FAILURE_PROBE = r"""
 import logging
@@ -291,7 +296,7 @@ def test_main_creates_app_mutex_after_early_sink_before_heavy_imports(
     calls = []
     monkeypatch.setattr(launch, "_install_early_crash_sink", lambda: calls.append("sink"))
     monkeypatch.setattr(launch, "_create_windows_app_mutex", lambda: calls.append("mutex"))
-    monkeypatch.setattr(launch, "_inject_windows_truststore", lambda: calls.append("truststore"))
+    monkeypatch.setattr(launch, "_inject_system_truststore", lambda: calls.append("truststore"))
     fake_app = ModuleType("anki_miner.gui.app")
     fake_app.main = lambda: calls.append("app") or 0  # type: ignore[attr-defined]
     monkeypatch.setitem(sys.modules, "anki_miner.gui.app", fake_app)
@@ -309,7 +314,7 @@ def test_ffsubsync_child_flag_dispatches_before_any_bootstrap(
     calls = []
     monkeypatch.setattr(launch, "_install_early_crash_sink", lambda: calls.append("sink"))
     monkeypatch.setattr(launch, "_create_windows_app_mutex", lambda: calls.append("mutex"))
-    monkeypatch.setattr(launch, "_inject_windows_truststore", lambda: calls.append("truststore"))
+    monkeypatch.setattr(launch, "_inject_system_truststore", lambda: calls.append("truststore"))
     # Stubbed for the order assertion, and because the real one adds a root
     # handler and the process-wide log hooks for the rest of the session.
     monkeypatch.setattr(launch, "_install_child_log_sink", lambda: calls.append("child sink"))
@@ -343,7 +348,7 @@ def test_multiprocessing_helper_argv_diverts_before_any_bootstrap(
     calls = []
     monkeypatch.setattr(launch, "_install_early_crash_sink", lambda: calls.append("sink"))
     monkeypatch.setattr(launch, "_create_windows_app_mutex", lambda: calls.append("mutex"))
-    monkeypatch.setattr(launch, "_inject_windows_truststore", lambda: calls.append("truststore"))
+    monkeypatch.setattr(launch, "_inject_system_truststore", lambda: calls.append("truststore"))
     monkeypatch.setattr(launch, "_install_child_log_sink", lambda: calls.append("child sink"))
     fake_app = ModuleType("anki_miner.gui.app")
     fake_app.main = lambda: calls.append("app") or 0  # type: ignore[attr-defined]
@@ -503,7 +508,14 @@ def test_unwritable_home_falls_back_to_temp_log(tmp_path: Path) -> None:
     assert not (blocked_parent / "home" / "anki_miner.log").exists()
 
 
-def test_frozen_windows_injects_truststore_and_sets_flag(tmp_path: Path) -> None:
+@pytest.mark.parametrize("platform", ["win32", "darwin", "linux"])
+def test_frozen_build_injects_truststore_and_sets_flag(tmp_path: Path, platform: str) -> None:
+    """Every frozen build needs the OS trust store, not only Windows.
+
+    A bundle's OpenSSL looks for CA certificates under the build host's
+    directory (Homebrew's on macOS, ``/usr/lib/ssl`` on Linux), which most
+    user machines do not have, so stdlib HTTPS fails certificate verification.
+    """
     fake_modules = tmp_path / "fake-modules"
     marker = tmp_path / "injected"
     _write_fake_truststore(
@@ -519,15 +531,39 @@ def test_frozen_windows_injects_truststore_and_sets_flag(tmp_path: Path) -> None
         TRUSTSTORE_MARKER=str(marker),
     )
 
-    result = _run_probe(WINDOWS_TRUSTSTORE_PROBE, env)
+    result = _run_probe(_truststore_probe(platform), env)
 
     assert result.returncode == 0, result.stderr
     assert marker.read_text(encoding="utf-8") == "yes"
     assert "TRUSTSTORE_INJECTED=True" in result.stdout
 
 
+def test_unfrozen_run_leaves_ssl_alone(tmp_path: Path) -> None:
+    fake_modules = tmp_path / "fake-modules"
+    marker = tmp_path / "imported"
+    _write_fake_truststore(
+        fake_modules,
+        "import os\n"
+        "with open(os.environ['TRUSTSTORE_MARKER'], 'w', encoding='utf-8') as stream:\n"
+        "    stream.write('imported')\n"
+        "def inject_into_ssl():\n"
+        "    raise AssertionError('a source or pip install keeps its own TLS setup')\n",
+    )
+    env = _subprocess_env(
+        tmp_path / "home",
+        PYTHONPATH=os.pathsep.join((str(fake_modules), os.environ.get("PYTHONPATH", ""))),
+        TRUSTSTORE_MARKER=str(marker),
+    )
+
+    result = _run_probe(_truststore_probe("darwin", frozen=False), env)
+
+    assert result.returncode == 0, result.stderr
+    assert not marker.exists()
+    assert "TRUSTSTORE_INJECTED=False" in result.stdout
+
+
 @pytest.mark.parametrize("ca_env", CA_ENV_VARS)
-def test_frozen_windows_skips_truststore_when_ca_env_is_set(tmp_path: Path, ca_env: str) -> None:
+def test_frozen_build_skips_truststore_when_ca_env_is_set(tmp_path: Path, ca_env: str) -> None:
     fake_modules = tmp_path / "fake-modules"
     marker = tmp_path / "imported"
     _write_fake_truststore(
@@ -545,7 +581,7 @@ def test_frozen_windows_skips_truststore_when_ca_env_is_set(tmp_path: Path, ca_e
     )
     env[ca_env] = str(tmp_path / "corporate-ca.pem")
 
-    result = _run_probe(WINDOWS_TRUSTSTORE_PROBE, env)
+    result = _run_probe(_truststore_probe(), env)
 
     assert result.returncode == 0, result.stderr
     assert not marker.exists()
@@ -564,12 +600,12 @@ def test_truststore_injection_failure_logs_one_warning_and_fails_open(tmp_path: 
         PYTHONPATH=os.pathsep.join((str(fake_modules), os.environ.get("PYTHONPATH", ""))),
     )
 
-    result = _run_probe(WINDOWS_TRUSTSTORE_PROBE, env)
+    result = _run_probe(_truststore_probe(), env)
 
     assert result.returncode == 0, result.stderr
     assert "TRUSTSTORE_INJECTED=False" in result.stdout
     log_text = (home / "anki_miner.log").read_text(encoding="utf-8")
-    assert log_text.count("Failed to inject Windows trust store") == 1
+    assert log_text.count("Failed to inject system trust store") == 1
     assert "RuntimeError: truststore unavailable" in log_text
 
 

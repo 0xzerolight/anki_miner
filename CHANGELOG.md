@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 
+- **Check for Updates and the yt-dlp install work on macOS.** Both failed certificate verification on any Mac without Homebrew OpenSSL, and Help → Check for Updates only ever said "The update check failed; try again later." The bundle's OpenSSL looks for CA certificates in the build machine's Homebrew directory (`/opt/homebrew/etc/openssl@3`), and PyInstaller points nothing at the bundled certifi file, so stdlib HTTPS had no trusted roots; dictionary and audio downloads go through `requests`, which reads certifi, and never broke. Every frozen build now verifies against the operating system's trust store, as the Windows build already did. That also covers the AppImage on distributions without Debian's `/usr/lib/ssl`, such as Fedora and Arch. A copy on 3.4.0 or earlier cannot update itself to this fix; install it from the release page.
+
 ### Removed
 
 ## [3.4.0] - 2026-09-18
