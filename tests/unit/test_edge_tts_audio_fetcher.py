@@ -2,11 +2,18 @@
 
 from __future__ import annotations
 
+import logging
+import ssl
 from pathlib import Path
 
 import pytest
+from websockets.datastructures import Headers
+from websockets.exceptions import ConnectionClosedError, InvalidStatus
+from websockets.frames import Close
+from websockets.http11 import Response
 
 from anki_miner.services import edge_tts_audio_fetcher as edge
+from anki_miner.services.audio_fetch_common import reset_fetch_outcome_rate_limit
 from anki_miner.services.edge_tts_audio_fetcher import EDGE_CLIENT, EdgeTtsAudioFetcher, sec_ms_gec
 
 MODULE = "anki_miner.services.edge_tts_audio_fetcher"
@@ -224,3 +231,82 @@ def test_a_transport_failure_returns_none_and_never_raises(tmp_path, connector):
     assert fetcher.fetch("knjiga", "") is None
     assert sum(fetcher.stats().values()) == 1
     assert not (tmp_path / "edgetts" / f"edgetts_{VOICE}_knjiga_.mp3").exists()
+
+
+@pytest.fixture(autouse=True)
+def _fresh_outcome_counters():
+    reset_fetch_outcome_rate_limit()
+    yield
+    reset_fetch_outcome_rate_limit()
+
+
+def forbidden() -> InvalidStatus:
+    return InvalidStatus(Response(403, "Forbidden", Headers()))
+
+
+def unsupported_voice() -> ConnectionClosedError:
+    return ConnectionClosedError(Close(1007, "Unsupported voice xx-XX-NobodyNeural."), None)
+
+
+FAILURES = {
+    # id: (stream or exception at connect, bucket, log reason)
+    "token_rejected": (forbidden, "http_status", "http_status"),
+    "handshake_timeout": (lambda: TimeoutError("timed out during opening handshake"), "timeout", "transport"),
+    "tls": (lambda: ssl.SSLCertVerificationError("certificate verify failed"), "ssl", "transport"),
+    "unreachable": (lambda: OSError("Name or service not known"), "connection", "transport"),
+    "unexpected": (lambda: RuntimeError("boom"), "connection", "transport"),
+    "recv_timeout": (lambda: [TURN_START, TimeoutError()], "timeout", "transport"),
+    "unsupported_voice": (lambda: [unsupported_voice()], "connection", "closed"),
+    "short_frame": (lambda: [TURN_START, b"\x00"], "non_audio", "short_frame"),
+    "header_overrun": (lambda: [TURN_START, b"\x00\xffPath:audio"], "non_audio", "header_overrun"),
+    "unexpected_frame": (lambda: [TURN_START, audio_frame(b"x", path=b"turn.start")], "non_audio", "unexpected_frame"),
+    "no_audio": (
+        lambda: [TURN_START, RESPONSE, audio_frame(b"", content_type=False), TURN_END],
+        "non_audio",
+        "empty_body",
+    ),
+    "not_mp3": (lambda: [TURN_START, audio_frame(b"<html>throttled</html>"), TURN_END], "non_audio", "not_mp3"),
+}
+
+
+@pytest.mark.parametrize("case", sorted(FAILURES))
+def test_a_failure_is_a_logged_miss_that_leaves_no_file(tmp_path, connector, caplog, case):
+    make_stream, bucket, reason = FAILURES[case]
+    connector(make_stream())
+    fetcher = make(tmp_path)
+
+    with caplog.at_level(logging.DEBUG, logger=MODULE):
+        assert fetcher.fetch("knjiga", "") is None
+
+    assert fetcher.stats()[bucket] == 1
+    assert sum(fetcher.stats().values()) == 1
+    assert "source=edgetts" in caplog.text
+    assert f"reason={reason}" in caplog.text
+    assert list((tmp_path / "edgetts").iterdir()) == []  # no mp3, no .miss, no staging file
+
+
+def test_the_log_names_the_status_and_the_close_reason(tmp_path, connector, caplog):
+    connector(forbidden(), [unsupported_voice()])
+    fetcher = make(tmp_path)
+
+    with caplog.at_level(logging.DEBUG, logger=MODULE):
+        fetcher.fetch("knjiga", "")
+        fetcher.fetch("miza", "")
+
+    assert "status=403" in caplog.text
+    assert "Unsupported voice xx-XX-NobodyNeural." in caplog.text
+
+
+def test_an_oversized_stream_is_abandoned(tmp_path, connector, monkeypatch):
+    monkeypatch.setattr(f"{MODULE}.MAX_AUDIO_BYTES", 100)
+    connector([TURN_START, audio_frame(MP3[:80]), audio_frame(MP3[80:160]), TURN_END])
+    fetcher = make(tmp_path)
+
+    assert fetcher.fetch("knjiga", "") is None
+    assert fetcher.stats()["non_audio"] == 1
+
+
+def test_memory_error_is_not_swallowed(tmp_path, connector):
+    connector(MemoryError())
+    with pytest.raises(MemoryError):
+        make(tmp_path).fetch("knjiga", "")

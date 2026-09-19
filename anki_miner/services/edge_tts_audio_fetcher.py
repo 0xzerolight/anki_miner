@@ -26,6 +26,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import ssl
 import time
 import uuid
 from collections.abc import Callable
@@ -33,6 +34,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from xml.sax.saxutils import escape
 
+from websockets.exceptions import ConnectionClosed, InvalidStatus
 from websockets.sync.client import ClientConnection
 from websockets.sync.client import connect as _ws_connect
 from websockets.typing import Origin
@@ -185,6 +187,28 @@ def _read_audio(connection: ClientConnection) -> bytes:
                 raise _MalformedStream("oversize")
 
 
+def _classify_failure(exc: Exception) -> tuple[str, str, int | None]:
+    """(FAILURE_KEYS bucket, log reason, HTTP status) for what a synthesis raised.
+
+    Most specific first: ``ssl.SSLError`` and ``TimeoutError`` are both
+    ``OSError`` subclasses, and a TLS failure is the one worth naming.
+    """
+    if isinstance(exc, _MalformedStream):
+        return "non_audio", exc.reason, None
+    if isinstance(exc, InvalidStatus):
+        # A rotated token scheme or a refused Sec-MS-GEC: 403 on every word.
+        return "http_status", "http_status", exc.response.status_code
+    if isinstance(exc, ssl.SSLError):
+        return "ssl", "transport", None
+    if isinstance(exc, TimeoutError):
+        return "timeout", "transport", None
+    if isinstance(exc, ConnectionClosed):
+        # The service refuses SSML it cannot speak (an unknown voice) by
+        # closing with 1007 and the reason, which the error field carries.
+        return "connection", "closed", None
+    return "connection", "transport", None
+
+
 class EdgeTtsAudioFetcher:
     """Synthesizes word pronunciation audio with a Microsoft Edge read-aloud voice.
 
@@ -279,16 +303,21 @@ class EdgeTtsAudioFetcher:
         # Broad on purpose: websockets, ssl and the socket layer raise many
         # types, and the Phase-3 loop has no try/except by design.
         except Exception as exc:
-            self._failure_counts["connection"] += 1
-            log_fetch_outcome(
-                logger,
-                "edgetts",
-                mined_form,
-                reading,
-                EDGE_TTS_ENDPOINT,
-                reason="transport",
-                error=f"{type(exc).__name__}: {scrub_url_secrets(str(exc), EDGE_TTS_ENDPOINT, 'edgetts')}",
-            )
+            bucket, reason, status = _classify_failure(exc)
+            self._failure_counts[bucket] += 1
+            if isinstance(exc, _MalformedStream):
+                log_fetch_outcome(logger, "edgetts", mined_form, reading, EDGE_TTS_ENDPOINT, reason=reason)
+            else:
+                log_fetch_outcome(
+                    logger,
+                    "edgetts",
+                    mined_form,
+                    reading,
+                    EDGE_TTS_ENDPOINT,
+                    status=status,
+                    reason=reason,
+                    error=f"{type(exc).__name__}: {scrub_url_secrets(str(exc), EDGE_TTS_ENDPOINT, 'edgetts')}",
+                )
             return None
 
     def _synthesize(self, text: str) -> bytes:
