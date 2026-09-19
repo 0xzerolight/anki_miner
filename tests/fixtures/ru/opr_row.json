@@ -1,0 +1,1287 @@
+{
+ "_comment": "Real opr-ru-en rows: every row whose folded term is one of the fixture words, lemma and non-lemma rows alike, so the stressed-headword seam (S24) sees exactly what production sees.",
+ "source": "opr-ru-en revision 2026.03.01 (https://github.com/ImenaOphelia/openrussian-to-yomitan)",
+ "license": "CC BY-SA 4.0 (OpenRussian, https://en.openrussian.org/)",
+ "index": {
+  "format": 3,
+  "revision": "2026.03.01",
+  "sequenced": true,
+  "author": "ImenaOphelia",
+  "url": "https://github.com/ImenaOphelia/openrussian-to-yomitan",
+  "description": "OpenRussian",
+  "attribution": "https://en.openrussian.org/",
+  "sourceLanguage": "ru",
+  "targetLanguage": "en",
+  "title": "opr-ru-en"
+ },
+ "tag_bank": [
+  [
+   "both",
+   "",
+   -1,
+   "perfective and imperfective",
+   1
+  ],
+  [
+   "pf",
+   "",
+   -1,
+   "perfective",
+   1
+  ],
+  [
+   "ipf",
+   "",
+   -1,
+   "imperfective",
+   1
+  ],
+  [
+   "fem",
+   "",
+   -1,
+   "feminine",
+   1
+  ],
+  [
+   "masc",
+   "",
+   -1,
+   "masculine",
+   1
+  ],
+  [
+   "neut",
+   "",
+   -1,
+   "neuter",
+   1
+  ],
+  [
+   "masc-fem",
+   "",
+   -1,
+   "masculine and feminine",
+   1
+  ],
+  [
+   "pl",
+   "",
+   -1,
+   "plural",
+   1
+  ],
+  [
+   "adj",
+   "partOfSpeech",
+   -1,
+   "adjective",
+   1
+  ],
+  [
+   "n",
+   "partOfSpeech",
+   -1,
+   "noun",
+   1
+  ],
+  [
+   "v",
+   "partOfSpeech",
+   -1,
+   "verb",
+   1
+  ],
+  [
+   "adv",
+   "partOfSpeech",
+   -1,
+   "adverb",
+   1
+  ],
+  [
+   "exp",
+   "partOfSpeech",
+   -1,
+   "expression",
+   1
+  ],
+  [
+   "oth",
+   "partOfSpeech",
+   -1,
+   "other",
+   1
+  ]
+ ],
+ "term_rows": [
+  [
+   "уже",
+   "уже́",
+   "oth",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "details",
+         "data": {
+          "content": "details-entry-Usage"
+         },
+         "content": [
+          {
+           "tag": "summary",
+           "data": {
+            "content": "summary-entry"
+           },
+           "content": "Usage"
+          },
+          {
+           "tag": "div",
+           "data": {
+            "content": "Usage-content"
+           },
+           "content": "used only in statement or questions not in negative sentences."
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "already, by this time, by now, ready, no longer"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.openrussian.org/ru/%D1%83%D0%B6%D0%B5",
+         "content": "OpenRussian"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "уже",
+   "уже́",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "уже",
+     [
+      "infinitive"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "дом",
+   "дом",
+   "n masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "house, home, house-hold"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.openrussian.org/ru/%D0%B4%D0%BE%D0%BC",
+         "content": "OpenRussian"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "дом",
+   "до́м",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "дом",
+     [
+      "nominative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "дом",
+   "до́м",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "дом",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "уже",
+   "уже́",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "уж",
+     [
+      "prepositional singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "книга",
+   "кни́га",
+   "n fem",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "book, volume"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.openrussian.org/ru/%D0%BA%D0%BD%D0%B8%D0%B3%D0%B0",
+         "content": "OpenRussian"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "книга",
+   "кни́га",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "книга",
+     [
+      "nominative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "читать",
+   "чита́ть",
+   "v ipf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "read"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.openrussian.org/ru/%D1%87%D0%B8%D1%82%D0%B0%D1%82%D1%8C",
+         "content": "OpenRussian"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "чёрный",
+   "чёрный",
+   "adj",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "black",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "example-highlight"
+                    },
+                    "content": "чёрным"
+                   },
+                   " по бе́лому"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "in black and white"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "(colloquial) dark, swarthy, dark-haired"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "rough, coarse ()"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.openrussian.org/ru/%D1%87%D1%91%D1%80%D0%BD%D1%8B%D0%B9",
+         "content": "OpenRussian"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "чёрный",
+   "чёрный",
+   "n masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "black"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "ferrous metal",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "чёрная металлурги́я"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "iron and steel industry"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.openrussian.org/ru/%D1%87%D1%91%D1%80%D0%BD%D1%8B%D0%B9",
+         "content": "OpenRussian"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "вчера",
+   "вчера́",
+   "adv",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "yesterday"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.openrussian.org/ru/%D0%B2%D1%87%D0%B5%D1%80%D0%B0",
+         "content": "OpenRussian"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "вчера",
+   "вчера́",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "вчера",
+     [
+      "infinitive"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "интересный",
+   "интере́сный",
+   "adj",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "interesting"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.openrussian.org/ru/%D0%B8%D0%BD%D1%82%D0%B5%D1%80%D0%B5%D1%81%D0%BD%D1%8B%D0%B9",
+         "content": "OpenRussian"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "уже",
+   "у́же",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "узкий",
+     [
+      "comparative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "студент",
+   "студе́нт",
+   "n masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "details",
+         "data": {
+          "content": "details-entry-Usage"
+         },
+         "content": [
+          {
+           "tag": "summary",
+           "data": {
+            "content": "summary-entry"
+           },
+           "content": "Usage"
+          },
+          {
+           "tag": "div",
+           "data": {
+            "content": "Usage-content"
+           },
+           "content": "Ученик is for high school students.  If you are talking about some who attends university then use студент"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "student"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.openrussian.org/ru/%D1%81%D1%82%D1%83%D0%B4%D0%B5%D0%BD%D1%82",
+         "content": "OpenRussian"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "студент",
+   "студе́нт",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "студент",
+     [
+      "nominative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "прочитать",
+   "прочита́ть",
+   "v pf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "read, spend reading"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "give (public speaking)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Сотрудники Центра ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "example-highlight"
+                    },
+                    "content": "прочитают"
+                   },
+                   " лекции на самые волнующие тематики современности"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "The Center's staff will give lectures on the most exciting topics of our time"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.openrussian.org/ru/%D0%BF%D1%80%D0%BE%D1%87%D0%B8%D1%82%D0%B0%D1%82%D1%8C",
+         "content": "OpenRussian"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "ёлка",
+   "ёлка",
+   "n fem",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "(small) spruce, spruce tree (diminutive of ель)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "Christmas tree"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "jolka festival (on 31 Dec.)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.openrussian.org/ru/%D1%91%D0%BB%D0%BA%D0%B0",
+         "content": "OpenRussian"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "елка",
+   "ёлка",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "ёлка",
+     [
+      "nominative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "за́мок",
+   "n masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "castle"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.openrussian.org/ru/%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+         "content": "OpenRussian"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "за́мок",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "замок",
+     [
+      "nominative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "за́мок",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "замок",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "замо́к",
+   "n masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "lock",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "на ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "example-highlight"
+                    },
+                    "content": "замке"
+                   },
+                   "́"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "under lock and key"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.openrussian.org/ru/%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+         "content": "OpenRussian"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "замо́к",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "замок",
+     [
+      "nominative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "замо́к",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "замок",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ]
+ ]
+}
