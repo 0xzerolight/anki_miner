@@ -180,7 +180,10 @@ def test_ja_scan_keeps_todays_ladder(ja_config, ja_tagger, tmp_path):
 
 def test_empty_profile_ladder_fetches_nothing(zh_config, no_tagger, monkeypatch):
     """A profile ladder that yields no pair costs no request and proposes nothing."""
-    profile = SimpleNamespace(audio=SimpleNamespace(candidates=lambda word: []))
+    profile = SimpleNamespace(
+        audio=SimpleNamespace(candidates=lambda word: []),
+        content_style=SimpleNamespace(direction="ltr"),
+    )
     monkeypatch.setattr("anki_miner.services.card_backfiller.get_profile", lambda code: profile)
     anki = FakeAnkiService(
         {1: _note(1, word="电脑", Reading="diàn nǎo", WordAudio="")},
