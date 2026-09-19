@@ -8,6 +8,7 @@ import pytest
 
 from anki_miner.services.dictionary.card_style_block import (
     ALL_GROUPS,
+    RTL_GLOSSARY_CSS,
     _minify_css,
     attach_card_style_block,
     base_css_variant,
@@ -322,6 +323,43 @@ class TestAttachCardStyleBlock:
         # self-containment (writer convergence depends on it).
         out = attach_card_style_block(MINER_FIELD, dict_css_entries=[])
         assert out == MINER_FIELD + f"<style>{base_css_variant(css_witnesses([MINER_FIELD]))}</style>"
+
+
+class TestRtlGlossaryCss:
+    """S21: an rtl language's block gains one rule AFTER base + dict CSS, inside the same <style>."""
+
+    def test_rtl_appends_the_rule_after_base_and_dict_css(self):
+        base = base_css_variant(css_witnesses([MINER_FIELD]))
+        out = build_card_style_block(dict_css=".d{color:red}", card_html=MINER_FIELD, direction="rtl")
+        assert out == f"<style>{base}\n.d{{color:red}}\n{RTL_GLOSSARY_CSS}</style>"
+
+    def test_rtl_without_dict_css(self):
+        base = base_css_variant(css_witnesses([MINER_FIELD]))
+        out = build_card_style_block(dict_css="", card_html=MINER_FIELD, direction="rtl")
+        assert out == f"<style>{base}\n{RTL_GLOSSARY_CSS}</style>"
+
+    def test_ltr_is_the_legacy_block(self):
+        assert build_card_style_block(dict_css=".d{}", card_html=MINER_FIELD, direction="ltr") == (
+            build_card_style_block(dict_css=".d{}", card_html=MINER_FIELD)
+        )
+
+    def test_attach_threads_the_direction(self):
+        base = base_css_variant(css_witnesses([MINER_FIELD]))
+        out = attach_card_style_block(MINER_FIELD, dict_css_entries=[], direction="rtl")
+        assert out == MINER_FIELD + f"<style>{base}\n{RTL_GLOSSARY_CSS}</style>"
+
+    def test_attach_leaves_a_markupless_field_alone_even_when_rtl(self):
+        assert attach_card_style_block("plain", dict_css_entries=[], direction="rtl") == "plain"
+
+    def test_the_rule_keeps_the_glossary_css_discipline(self):
+        # Guarded by miner-only markup (never restyles a Yomitan export), one line
+        # (the restyler splits the block at the base's first newline), already
+        # minified, and no [data-dictionary=...] selector the restyler's stamping
+        # gate could mistake for a dictionary's own CSS.
+        assert RTL_GLOSSARY_CSS.startswith(".yomitan-glossary ol[data-count] ")
+        assert "\n" not in RTL_GLOSSARY_CSS
+        assert _minify_css(RTL_GLOSSARY_CSS) == RTL_GLOSSARY_CSS
+        assert "[data-dictionary" not in RTL_GLOSSARY_CSS
 
 
 class TestMinifyCss:
