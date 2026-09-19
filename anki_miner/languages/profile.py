@@ -255,11 +255,24 @@ class ContentTextStyle:
     ``font_role`` == "japanese" routes to gui/utils/fonts.py's existing helpers
     byte-identically. ``families`` is the ordered candidate face list.
     ``wrap`` is the soft-wrap transform; ja == phrase_wrap.phrase_wrap_ja.
+
+    The three trailing fields are the S21/S22 seam; their defaults are the
+    pre-seam behaviour, so a profile that sets none of them is unchanged.
+    ``direction`` ("ltr" | "rtl") flips the content widgets and wraps the card's
+    word and sentence fields (gui/utils/content_text.py, anki_note_builder).
+    ``writing_system`` is a ``QFontDatabase.WritingSystem`` member name
+    ("Arabic", "Hebrew", "Thai"); when set, ``families`` is probed against the
+    faces installed for that script. ``bundled_fallback`` is a face basename under
+    gui/resources/fonts/, registered only when that probe finds none
+    (gui/utils/fonts.py::resolve_content_families).
     """
 
     font_role: str
     families: tuple[str, ...]
     wrap: Callable[[str], str]
+    direction: str = "ltr"
+    writing_system: str = ""
+    bundled_fallback: str = ""
 
 
 @dataclass(frozen=True)

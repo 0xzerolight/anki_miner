@@ -1,12 +1,21 @@
 # Bundled font provenance
 
-One font ships with Anki Miner, and only as a last resort: it is registered at
-startup **only** when the machine's own font database lists no Japanese-capable
-family at all (see `anki_miner/gui/utils/fonts.py`). On any desktop that already
-has a Japanese face — every Windows and macOS install, and any Linux install
-with a CJK font package — this file is never loaded. Decision D44-B: the
-interface and fixed-width faces come from the operating system; no Latin
-typeface is bundled.
+Fonts ship with Anki Miner only as a last resort, and none replaces a face the
+machine already has. Decision D44-B: the interface and fixed-width faces come
+from the operating system; no Latin typeface is bundled.
+
+- **Noto Sans JP** is registered at startup **only** when the machine's own
+  font database lists no Japanese-capable family at all (see
+  `anki_miner/gui/utils/fonts.py`). On any desktop that already has a Japanese
+  face — every Windows and macOS install, and any Linux install with a CJK font
+  package — this file is never loaded. `OFL.txt` is its licence.
+- **A mining language's face** — the file a language profile names in
+  `ContentTextStyle.bundled_fallback` — is registered only while that language
+  is the active mining language, and only when none of the families the profile
+  lists is installed for its script (`resolve_content_families` in the same
+  module). Each such face has its own section below carrying its SHA-256, and
+  its own licence file beside it, `OFL-<Name>.txt`: the upstream OFL with that
+  project's copyright line.
 
 ## NotoSansJP-Regular.otf
 
@@ -33,10 +42,10 @@ Name were changed. Nothing here is modified, so the name stays.
 ## Verifying
 
 ```sh
-sha256sum anki_miner/gui/resources/fonts/NotoSansJP-Regular.otf
+sha256sum anki_miner/gui/resources/fonts/<file>
 ```
 
-must print the digest in the table above. `scripts/check_wheel_assets.py`
-asserts both files are present on disk and inside the built wheel; the
-PyInstaller bundle picks the directory up through the whole-`resources` tree
-already declared in `anki_miner.spec`.
+must print the digest in that file's table. `scripts/check_wheel_assets.py`
+asserts every face and licence listed in its `REQUIRED_ASSETS` is present on
+disk and inside the built wheel; the PyInstaller bundle picks the directory up
+through the whole-`resources` tree already declared in `anki_miner.spec`.
