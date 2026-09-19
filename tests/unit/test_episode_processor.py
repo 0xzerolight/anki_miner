@@ -4862,6 +4862,45 @@ class TestGlossaryFetch:
         assert "ol[data-count]" in definition  # base sheet embedded
         assert '[data-dictionary="X"]{color:red}' in definition  # scoped dict CSS embedded
 
+    def test_rtl_profile_block_ends_with_the_rtl_rule(self, test_config, mock_services, tmp_path):
+        # S21: the processor passes its profile's direction to the one attach
+        # seam, so an rtl language's definition block carries the example rule.
+        from anki_miner.languages.registry import get_profile
+        from anki_miner.services.dictionary.card_style_block import RTL_GLOSSARY_CSS
+
+        processor = build_processor(config=test_config, **mock_services)
+        ja = get_profile("ja")
+        processor.profile = replace(ja, content_style=replace(ja.content_style, direction="rtl"))
+        video, sub = self._seed_happy_path(mock_services, tmp_path)
+        definition_html = (
+            '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="X">1. to eat</li></ol></div>'
+        )
+        mock_services["definition_service"].get_definitions_batch.return_value = [definition_html]
+        mock_services["definition_service"].css_entries.return_value = []
+
+        processor.process_episode(video, sub)
+
+        definition = mock_services["anki_service"].create_cards_batch.call_args[0][0][0].definition
+        assert definition.startswith(definition_html)
+        assert definition.endswith("\n" + RTL_GLOSSARY_CSS + "</style>")
+        assert definition.count("<style>") == 1
+
+    def test_ltr_profile_block_has_no_rtl_rule(self, test_config, mock_services, tmp_path):
+        from anki_miner.services.dictionary.card_style_block import RTL_GLOSSARY_CSS
+
+        processor = build_processor(config=test_config, **mock_services)
+        video, sub = self._seed_happy_path(mock_services, tmp_path)
+        mock_services["definition_service"].get_definitions_batch.return_value = [
+            '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="X">1. to eat</li></ol></div>'
+        ]
+        mock_services["definition_service"].css_entries.return_value = []
+
+        processor.process_episode(video, sub)
+
+        definition = mock_services["anki_service"].create_cards_batch.call_args[0][0][0].definition
+        assert definition.endswith("</style>")
+        assert RTL_GLOSSARY_CSS not in definition
+
     def test_both_mapped_fields_each_self_contained(self, test_config, mock_services, tmp_path):
         # Kiku-class regression (per-field delivery): with BOTH definition and
         # glossary mapped, EACH field carries its own trailing block — JS note
