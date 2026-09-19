@@ -100,6 +100,7 @@ typing_extensions==4.15.0
 unidic-lite==1.0.8
 urllib3==2.7.0
 webrtcvad-wheels==2.0.14
+websockets==17.1
 yt-dlp==2026.6.9
 
 # [zh] EXTRA — PINNED
