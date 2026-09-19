@@ -122,6 +122,17 @@ class TestTheReadingTextBuffer:
 
         assert text_tab.text_edit.receivers(text_tab.text_edit.textChanged) == 2
 
+    def test_an_rtl_switch_flips_the_buffer_and_ja_unflips_it(self, text_tab):
+        from PyQt6.QtCore import Qt
+
+        text_tab.set_content_style(dataclasses.replace(ZH, direction="rtl"))
+        assert text_tab.text_edit.layoutDirection() == Qt.LayoutDirection.RightToLeft
+
+        text_tab.set_content_style(JA)
+
+        assert text_tab.text_edit.layoutDirection() == Qt.LayoutDirection.LeftToRight
+        assert not text_tab.text_edit.testAttribute(Qt.WidgetAttribute.WA_SetLayoutDirection)
+
 
 def _session(name: str) -> MiningSession:
     from datetime import datetime
