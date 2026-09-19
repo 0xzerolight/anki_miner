@@ -1,0 +1,10 @@
+pymorphy3-dicts-ru 2.4.417150.4580142 - Russian dictionaries for pymorphy3
+Package: https://pypi.org/project/pymorphy3-dicts-ru/2.4.417150.4580142/
+Source: https://github.com/no-plagiarism/pymorphy3-dicts
+Code licence: MIT
+Data: OpenCorpora dictionary revision 417150 (https://opencorpora.org/), CC BY-SA 3.0
+  https://creativecommons.org/licenses/by-sa/3.0/
+
+The wheel this application downloads is
+pymorphy3_dicts_ru-2.4.417150.4580142-py2.py3-none-any.whl, unmodified. Its URL and SHA-256 digest
+are pinned in anki_miner/languages/ru/pack.py.
