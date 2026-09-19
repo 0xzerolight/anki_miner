@@ -92,7 +92,11 @@ class AudioSourceEntry:
     ~/.anki_miner/audio_packs/<pack_id>/.
     JPod101 entries are the always-available online fallback; pack_id is None.
     GoogleTTS entries are a synthetic Google Translate TTS online fallback;
-    pack_id is None (like jpod101).
+    pack_id is None (like jpod101). ``edgetts`` entries are the synthetic
+    Microsoft Edge read-aloud fallback (services/edge_tts_audio_fetcher.py);
+    pack_id is None. The voice is the active profile's
+    ``AudioDefaults.edge_voice``, so an entry for a language with no Edge
+    voice builds nothing.
 
     ``custom`` / ``custom_json`` entries are user-configured URL-template sources
     (the local-audio-yomichan integration contract). ``url`` holds the template
@@ -108,6 +112,7 @@ class AudioSourceEntry:
         "googletts",
         "custom",
         "custom_json",
+        "edgetts",
     ]
     pack_id: str | None = None
     url: str | None = None

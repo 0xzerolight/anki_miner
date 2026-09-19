@@ -64,7 +64,9 @@ def _robust_rmtree(target: Path) -> RmtreeOutcome:
 class _AddSourceDialog(QDialog):
     """Prompt for a new online audio source: a kind + a URL template.
 
-    Both kinds (``custom``/``custom_json``) require a URL template.
+    Both custom kinds (``custom``/``custom_json``) require a URL template. The
+    Edge read-aloud kind takes none — it speaks with the mining language's own
+    voice — and is listed only when the caller offers it.
     """
 
     # (kind, English label). Labels go through self.tr at construction.
@@ -77,7 +79,7 @@ class _AddSourceDialog(QDialog):
         ("custom", "Custom URL (a direct audio file URL)"),
     ]
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget | None = None, *, offer_edge_tts: bool = False) -> None:
         super().__init__(parent)
         self.setWindowTitle(self.tr("Add Audio Source"))
         layout = QVBoxLayout(self)
@@ -86,6 +88,8 @@ class _AddSourceDialog(QDialog):
         self._kind_combo = QComboBox()
         for kind, label in self._KINDS:
             self._kind_combo.addItem(self.tr(label), kind)
+        if offer_edge_tts:
+            self._kind_combo.addItem(self.tr("Microsoft Edge read-aloud (synthetic TTS)"), "edgetts")
         self._kind_combo.currentIndexChanged.connect(self._on_kind_changed)
         layout.addWidget(self._kind_combo)
 
@@ -166,6 +170,9 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         super().__init__(self.tr("Audio"), parent=parent)
         self._packs_root = packs_root
         self._release_callback: Callable[[], bool] | None = None
+        # Whether the mining language names an Edge voice; SettingsTab sets it
+        # from the profile on every config load (set_edge_tts_available).
+        self._edge_tts_available = False
         self._strings = _ChainPanelStrings(
             loading=self.tr("Loading…"),
             retry_label=self.tr("Retry"),
@@ -189,6 +196,14 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
     def set_release_callback(self, cb: Callable[[], bool] | None) -> None:
         """Wire the pre-remove resource-release hook."""
         self._release_callback = cb
+
+    def set_edge_tts_available(self, available: bool) -> None:
+        """Whether the mining language names an Edge voice (``AudioDefaults.edge_voice``).
+
+        Only then does Add audio source -> Online Source offer the Edge
+        read-aloud kind: for any other language the entry would build nothing.
+        """
+        self._edge_tts_available = available
 
     def request_resource_release(self) -> bool:
         """Ask the app to close cached resource handles before replacement."""
@@ -458,7 +473,10 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             return
         token = self.hold_mutation("add-online-source")
         try:
-            dialog = _AddSourceDialog(self)
+            # One Edge leg is enough: the voice is the language's, so a second
+            # entry would synthesise the same file.
+            offer_edge_tts = self._edge_tts_available and not any(e.kind == "edgetts" for e in self.get_chain())
+            dialog = _AddSourceDialog(self, offer_edge_tts=offer_edge_tts)
             if dialog.exec() != QDialog.DialogCode.Accepted:
                 return
             self.add_source_entry(
@@ -491,6 +509,8 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
             )
         if entry.kind == "googletts":
             return self.tr("Google Translate (synthetic TTS)"), "online", None, False, False
+        if entry.kind == "edgetts":
+            return self.tr("Microsoft Edge (synthetic TTS)"), "online", None, False, False
         if entry.kind in ("custom", "custom_json"):
             label = self.tr("Custom JSON") if entry.kind == "custom_json" else self.tr("Custom URL")
             return (f"{label}: {entry.url}" if entry.url else label), "custom", None, False, False

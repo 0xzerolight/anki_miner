@@ -49,6 +49,15 @@ dependencies = [
     "psutil>=7.0.0",
     "packaging>=25.0",
     "gtts>=2.5,<3",
+    # Runtime: services/edge_tts_audio_fetcher.py speaks the Microsoft Edge
+    # read-aloud WebSocket (the edgetts word-audio kind) with its own client.
+    # BSD-3-Clause, pure Python. Never the LGPLv3 edge-tts package. Floor 15.0:
+    # its changelog's "Client connections use SOCKS and HTTP proxies
+    # automatically" is when the sync client started honouring system proxy
+    # settings as requests/gtts do; everything else used (sync connect with
+    # origin/user_agent_header/open_timeout/close_timeout, recv(timeout=),
+    # InvalidStatus) is in the 11.0 sdist already.
+    "websockets>=15.0",
     # Runtime: scrape_audio_fetchers.py parses JPod101/Jisho HTML with lxml.html
     # (eagerly imported via the audio-fetcher chain, so it must ship in the bundle
     # and pip installs, not just [dev]). Also used build-time by

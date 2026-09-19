@@ -33,6 +33,7 @@ from anki_miner.services.audio_packs.registry import AudioPackRegistry
 from anki_miner.services.custom_audio_fetcher import CustomAudioFetcher, custom_audio_slug
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.dictionary.registry import DictionaryRegistry
+from anki_miner.services.edge_tts_audio_fetcher import EdgeTtsAudioFetcher
 from anki_miner.services.expression_audio_fetcher import ChainedExpressionAudioFetcher, JPod101AudioFetcher
 from anki_miner.services.frequency.multi_frequency_service import MultiFrequencyService
 from anki_miner.services.frequency.registry import FrequencySourceRegistry
@@ -486,6 +487,9 @@ def _build_expression_audio_fetcher(
     :class:`~anki_miner.services.expression_audio_fetcher.JPod101AudioFetcher`;
     ``kind="googletts"`` entries become
     :class:`~anki_miner.services.google_translate_audio_fetcher.GoogleTranslateAudioFetcher`;
+    ``kind="edgetts"`` entries become
+    :class:`~anki_miner.services.edge_tts_audio_fetcher.EdgeTtsAudioFetcher`
+    speaking with the profile's ``AudioDefaults.edge_voice`` (none when it is "");
     ``kind="pack"`` entries are resolved against :class:`AudioPackRegistry`;
     ``kind="custom"``/``"custom_json"`` entries become
     :class:`~anki_miner.services.custom_audio_fetcher.CustomAudioFetcher` (cached
@@ -523,6 +527,7 @@ def _build_expression_audio_fetcher(
     audio_cache_root = ANKI_MINER_HOME / "audio_cache"
     jpod_cache = audio_cache_root / "jpod101"
     googletts_cache = audio_cache_root / "googletts"
+    edgetts_cache = audio_cache_root / "edgetts"
     pack_cache = audio_cache_root / "local_packs"
 
     # Scan only when needed — see _load_audio_pack_registry for the predicate.
@@ -554,6 +559,18 @@ def _build_expression_audio_fetcher(
                     delay=config.expression_audio_delay,
                     gtts_lang=gtts_lang,
                     cache_stem_prefix=audio.cache_stem_prefix,
+                    speakable=audio.speakable,
+                )
+            )
+        elif entry.kind == "edgetts":
+            if not audio.edge_voice:
+                # A language with no Edge voice (edge_voice == "") has no leg.
+                continue
+            fetchers.append(
+                EdgeTtsAudioFetcher(
+                    cache_dir=edgetts_cache,
+                    delay=config.expression_audio_delay,
+                    voice=audio.edge_voice,
                     speakable=audio.speakable,
                 )
             )

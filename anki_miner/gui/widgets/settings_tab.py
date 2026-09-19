@@ -1218,6 +1218,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # and only one rescan is triggered.
             self.audio_panel.set_packs_root(self.config.audio_packs_root)
             self.audio_panel.set_chain(self.config.expression_audio_chain)
+            # The Edge read-aloud kind is offered only for a language that names
+            # an Edge voice; the voice is profile data, not a setting.
+            from anki_miner.languages.registry import config_language, get_profile
+
+            self.audio_panel.set_edge_tts_available(bool(get_profile(config_language(self.config)).audio.edge_voice))
             self.audio_panel.set_reading_tts(
                 self.config.reading_tts_enabled,
                 self.config.reading_tts_google_enabled,

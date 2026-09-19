@@ -24,6 +24,13 @@ logger = logging.getLogger(__name__)
 _CONFIG_MAX_BYTES = 2 * 1024 * 1024
 _INVALID_CONFIG = object()
 
+#: Every ``AudioSourceEntry.kind`` this build loads. A persisted entry of any
+#: other kind is dropped and the rest of its chain kept — that is how an older
+#: build survives a newer build's chain. Serves the top-level chain, every chain
+#: parked in ``language_stash`` and settings profiles. Pinned to the Literal by
+#: tests/unit/test_audio_source_kinds.py.
+_AUDIO_SOURCE_KINDS = ("pack", "jpod101", "googletts", "custom", "custom_json", "edgetts")
+
 
 class _ConfigReadError(ValueError):
     pass
@@ -882,13 +889,7 @@ class GUIConfigManager:
         for item in raw_chain:
             if isinstance(item, dict):
                 kind = item.get("kind")
-                if kind in (
-                    "pack",
-                    "jpod101",
-                    "googletts",
-                    "custom",
-                    "custom_json",
-                ):
+                if kind in _AUDIO_SOURCE_KINDS:
                     chain.append(
                         AudioSourceEntry(
                             kind=kind,
@@ -902,8 +903,10 @@ class GUIConfigManager:
         # Append-if-missing: existing users whose persisted chain predates
         # googletts gain a disabled entry so the Settings UI can list it.
         # Disabled-by-default => factory skips it => pre-feature behaviour
-        # preserved; the entry only needs to exist for the UI.
-        if not any(entry.kind == "googletts" for entry in chain):
+        # preserved; the entry only needs to exist for the UI. A chain holding
+        # edgetts postdates googletts by construction — it is the default leg of
+        # a language with no Google voice, where the row would be dead.
+        if not any(entry.kind in ("googletts", "edgetts") for entry in chain):
             chain.append(AudioSourceEntry(kind="googletts", enabled=False))
         data["expression_audio_chain"] = tuple(chain)
         return data

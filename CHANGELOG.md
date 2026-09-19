@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Word audio from Microsoft Edge's read-aloud voices.** A new synthetic word-audio source for a mining language whose profile names an Edge voice, and the default one for a language Google Translate has no voice for; Settings → Audio → Add audio source → Online Source lists it where it applies. It talks to Edge's keyless read-aloud service through Anki Miner's own client (no `edge-tts` code), caches each word once under `audio_cache/edgetts/`, and treats a failure as transient — retried on the next run, never remembered as a miss. `websockets` becomes a dependency.
+
 ### Changed
 
 ### Fixed
