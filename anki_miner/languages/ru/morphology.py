@@ -21,12 +21,14 @@ closers.
 from __future__ import annotations
 
 import dataclasses
+import re
 import unicodedata
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from types import MappingProxyType
 from typing import Any
 
 from anki_miner.languages._spaced.keys import CasefoldDictKeys, spaced_dedup_fold
+from anki_miner.languages._spaced.morphology import case_lemma
 from anki_miner.languages._spaced.pos import UPOS_ALLOWED
 from anki_miner.languages._spaced.script import (
     BRACKETS_PATTERN,
@@ -37,6 +39,7 @@ from anki_miner.languages._spaced.script import (
 )
 from anki_miner.languages._spaced.sentence import sentence_rules
 from anki_miner.languages.ru.abbreviations import RU_ABBREVIATIONS
+from anki_miner.languages.token import LanguageToken
 
 RU_MODEL_PACKAGE = "ru_core_news_sm"
 #: What spaCy's Russian lemmatizer imports beside the model; both travel in the ru pack (plan D4, D15).
@@ -122,3 +125,62 @@ RU_SUBTITLE_REGEX = "|".join(
 
 #: noun_gender labels (spec §4.8), as Russian dictionaries abbreviate the three genders.
 RU_GENDER_LABELS: Mapping[str, str] = MappingProxyType({"masc": "м.", "fem": "ж.", "neut": "с."})
+
+
+_HYPHENATED = re.compile(r"[^\W\d_]+(?:-[^\W\d_]+)+")
+
+#: ``spacy.lang.ru.lemmatizer.oc2ud``: an OpenCorpora tag string -> (UPOS, features).
+ToUpos = Callable[[str], tuple[str, dict[str, str]]]
+
+
+def _yo_blind(text: str) -> str:
+    return text.lower().replace("ё", "е")
+
+
+class RuLemmaRepair:
+    """Tokenizer post-pass over spaCy's own pymorphy3 analyser, bound once the model is loaded (plan D7).
+
+    1. A joined hyphenated token (кто-то, по-русски, интернет-магазине) takes POS, lemma and morph
+       from pymorphy3's first known parse: the model never saw these as one token and tags them at
+       random (Когда-то as PUNCT). An unknown one (диван-кровать) keeps the model's answer.
+    2. A content token whose lemma is its own surface (yo-blind) takes the one normal form that
+       pymorphy3's known parses of the same UPOS agree on (вяжет -> вязать, Успокойся ->
+       успокоиться), else its lower-cased original surface, which restores the yo the tagging copy
+       took out.
+    Not repaired: a token whose POS no parse shares (дыша as NOUN), a participle tagged ADJ.
+    """
+
+    def __init__(self) -> None:
+        self._analyzer: Any = None
+        self._to_upos: ToUpos | None = None
+
+    def bind(self, analyzer: Any, to_upos: ToUpos) -> None:
+        self._analyzer = analyzer
+        self._to_upos = to_upos
+
+    def __call__(self, tokens: list[LanguageToken]) -> list[LanguageToken]:
+        if self._analyzer is None or self._to_upos is None:
+            raise RuntimeError("RuLemmaRepair runs only after bind()")
+        for token in tokens:
+            if _HYPHENATED.fullmatch(token.surface):
+                self._retag(token, self._to_upos)
+            elif token.feature.pos1 in RU_ALLOWED_POS and _yo_blind(token.feature.lemma) == _yo_blind(token.surface):
+                self._relemmatise(token, self._to_upos)
+        return tokens
+
+    def _known(self, word: str) -> list[Any]:
+        return [parse for parse in self._analyzer.parse(word) if parse.is_known]
+
+    def _retag(self, token: LanguageToken, to_upos: ToUpos) -> None:
+        parses = self._known(token.surface)
+        if not parses:
+            return
+        pos, features = to_upos(str(parses[0].tag))
+        token.feature.pos1 = pos
+        token.feature.lemma = case_lemma(parses[0].normal_form, pos)
+        token.morph = "|".join(f"{name}={value}" for name, value in sorted(features.items()))
+
+    def _relemmatise(self, token: LanguageToken, to_upos: ToUpos) -> None:
+        pos = token.feature.pos1
+        lemmas = {parse.normal_form for parse in self._known(token.surface) if to_upos(str(parse.tag))[0] == pos}
+        token.feature.lemma = lemmas.pop() if len(lemmas) == 1 else token.surface.lower()
