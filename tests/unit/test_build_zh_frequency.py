@@ -73,7 +73,7 @@ def test_the_sample_counts_are_folded_han_keys(counts):
 def test_the_two_scripts_count_as_one_word(counts):
     # 我们/我們 and 这里/這裏 both appear in the sample; a key is only ever the folded spelling.
     assert counts["我们"] >= 6 and counts["这里"] >= 3
-    assert not {"我們", "這裏", "什麼", "醫院"} & set(counts)
+    assert not {"我們", "這裏", "什麼"} & set(counts)  # all three are in the sample, none is a key
 
 
 def test_function_words_and_names_are_kept(counts):
