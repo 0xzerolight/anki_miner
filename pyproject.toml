@@ -25,6 +25,7 @@ license-files = [
     "anki_miner/gui/resources/fonts/OFL.txt",
     "anki_miner/gui/resources/fonts/OFL-NotoNaskhArabic.txt",
     "anki_miner/gui/resources/fonts/OFL-NotoSansThai.txt",
+    "anki_miner/gui/resources/fonts/OFL-NotoSansHebrew.txt",
     # hazm, shekar and Wiktionary ship both files each, for the yomitan reason:
     # the attribution — what was ported, what was derived, from which build — is
     # in README.md, which links its licence text relatively. These three are the
