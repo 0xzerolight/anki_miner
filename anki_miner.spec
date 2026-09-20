@@ -411,6 +411,15 @@ if os.path.isdir(calima_msa_r13_license_dir):
     calima_msa_r13_license_datas.append(
         (calima_msa_r13_license_dir, os.path.join("licenses", "calima-msa-r13"))
     )
+# sl_core_news_sm (Slovenian spaCy model) CC BY-SA 4.0 notices: shipped whenever the
+# license dir exists. Lands at sys._MEIPASS/licenses/sl_core_news_sm/. The model is a
+# language pack, never bundled; the notice travels because the app delivers it.
+sl_core_news_sm_license_dir = os.path.join(project_root, "licenses", "sl_core_news_sm")
+sl_core_news_sm_license_datas = []
+if os.path.isdir(sl_core_news_sm_license_dir):
+    sl_core_news_sm_license_datas.append(
+        (sl_core_news_sm_license_dir, os.path.join("licenses", "sl_core_news_sm"))
+    )
 
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
@@ -600,7 +609,8 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + ru_core_news_sm_license_datas
     + pymorphy3_dicts_ru_license_datas
     + camel_tools_license_datas
-    + calima_msa_r13_license_datas,
+    + calima_msa_r13_license_datas
+    + sl_core_news_sm_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",
@@ -800,6 +810,7 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "pt_core_news_sm",
         "ro_core_news_sm",
         "ru_core_news_sm",
+        "sl_core_news_sm",
         "sv_core_news_sm",
         # pymorphy3 and its Russian dictionaries: ru pack content (spaCy's ru lemmatizer imports them).
         "dawg_python",
