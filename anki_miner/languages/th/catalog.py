@@ -35,4 +35,27 @@ TH_CATALOG: tuple[ResourceSpec, ...] = (
             "downloaded from upstream source."
         ),
     ),
+    # Both frequency assets are BUILT by scripts/convert_tnc_thai_frequency.py out
+    # of the lists inside the pythainlp wheel and published as release data. The
+    # dated filename is never reused: a corrected list ships under a new date, so
+    # a URL that once resolved always returns the same bytes, which is what the
+    # network-marked test in test_th_frequency_asset.py re-checks.
+    ResourceSpec(
+        id="tnc-th",
+        kind="freq",
+        display_name="Thai National Corpus frequency",
+        url=(
+            "https://github.com/0xzerolight/anki_miner/releases/download/" "resources-2026-09-20/tnc-th-2026-09-20.zip"
+        ),
+        license_note="Thai National Corpus word list via PyThaiNLP, CC0. Built by scripts/convert_tnc_thai_frequency.py.",
+    ),
+    ResourceSpec(
+        id="ttc-th",
+        kind="freq",
+        display_name="Thai textbook corpus frequency",
+        url=(
+            "https://github.com/0xzerolight/anki_miner/releases/download/" "resources-2026-09-20/ttc-th-2026-09-20.zip"
+        ),
+        license_note="Thai Textbook Corpus word list via PyThaiNLP, CC0. Built by scripts/convert_tnc_thai_frequency.py.",
+    ),
 )

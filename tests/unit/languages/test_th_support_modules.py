@@ -52,7 +52,7 @@ def test_content_style_declares_the_thai_writing_system_and_the_bundled_face():
 
 def test_catalog_lists_the_wiktionary_dictionary():
     ids = [spec.id for spec in TH_CATALOG]
-    assert ids == ["wty-th-en"]
+    assert ids == ["wty-th-en", "tnc-th", "ttc-th"]
     spec = TH_CATALOG[0]
     assert spec.kind in RESOURCE_KINDS and spec.kind == "dict"
     assert spec.url.endswith("/latest/dict/th/en/wty-th-en.zip")
@@ -63,3 +63,11 @@ def test_catalog_lists_the_wiktionary_dictionary():
 def test_availability_names_pythainlp_and_says_nothing_when_it_is_there():
     assert TH_REQUIRED_PACKAGES == ("pythainlp",)
     assert th_missing_required_reason() is None  # pythainlp is installed in .venv and PY311
+
+
+def test_catalog_lists_the_two_self_hosted_frequency_assets():
+    for spec in TH_CATALOG[1:]:
+        assert spec.kind == "freq"
+        assert spec.lemmatise is False  # Thai has no inflection to aggregate
+        assert "CC0" in spec.license_note
+        assert spec.url.startswith("https://github.com/0xzerolight/anki_miner/releases/download/resources-")
