@@ -1,4 +1,4 @@
-"""yue content typography DATA (spec F.1) -- face candidates and the wrap.
+"""yue content typography DATA (spec F.1) -- face candidates, the wrap, the card tag.
 
 Data only. Nothing here imports ``anki_miner.gui``: ``languages`` carries no
 import-time edge into ``gui`` (pinned by
@@ -16,9 +16,14 @@ bundle size.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from anki_miner.languages.profile import ContentTextStyle
 
-__all__ = ["YUE_CONTENT_STYLE", "YUE_FONT_FAMILIES", "yue_cjk_wrap"]
+if TYPE_CHECKING:
+    from anki_miner.config.config import AnkiMinerConfig
+
+__all__ = ["YUE_CONTENT_STYLE", "YUE_FONT_FAMILIES", "yue_card_lang", "yue_cjk_wrap"]
 
 #: Installed Han faces in preference order, Hong Kong first.
 YUE_FONT_FAMILIES: tuple[str, ...] = (
@@ -46,6 +51,18 @@ def yue_cjk_wrap(text: str) -> str:
     return text
 
 
+def yue_card_lang(word: str, config: AnkiMinerConfig) -> str:
+    """BCP-47 tag for the Cantonese text on a card: always traditional Chinese.
+
+    Cantonese is written in traditional Han, and the profile code ``yue`` is no
+    use to a reviewer's font fallback -- no CJK face declares it, so the tag
+    that actually routes 骨 and 直 to Chinese shapes rather than Japanese ones
+    is the script subtag. ``word`` and ``config`` are the one cross-language
+    resolver signature and are unused here.
+    """
+    return "zh-Hant"
+
+
 YUE_CONTENT_STYLE = ContentTextStyle(
     font_role="yue",
     families=YUE_FONT_FAMILIES,
@@ -53,4 +70,5 @@ YUE_CONTENT_STYLE = ContentTextStyle(
     direction="ltr",
     writing_system="TraditionalChinese",
     bundled_fallback="",
+    card_lang=yue_card_lang,
 )
