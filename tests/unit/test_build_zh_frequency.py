@@ -53,6 +53,16 @@ def test_the_key_is_the_folded_front_and_han_less_tokens_are_dropped(surface, ke
     assert bzf.frequency_key(surface) == key
 
 
+def test_a_key_is_exactly_the_front_a_simplified_run_mines():
+    # The whole point of re-segmenting: a rank is found without a fallback because
+    # the key and the card front come out of the same fold.
+    from anki_miner.languages.zh.support import ZhMinedFormPolicy
+
+    policy = ZhMinedFormPolicy("simplified")
+    for surface in ("什麼", "醫院", "這裏", "华盛顿", "麵"):
+        assert bzf.frequency_key(surface) == policy.mined_form("n", surface, surface, surface)
+
+
 def test_the_sample_counts_are_folded_han_keys(counts):
     assert counts
     assert all(key == script_key(key) and unicodedata.is_normalized("NFC", key) for key in counts)
