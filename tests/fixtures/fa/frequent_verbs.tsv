@@ -1,0 +1,39 @@
+# surface	infinitive	rank
+# Every token in the first 200 rows of hermitdave/FrequencyWords OpenSubtitles 2018
+# fa_50k.txt that the Persian tokenizer classifies V, with the infinitive the REAL
+# hazm tables resolve it to and its rank in that list. Measured 2026-09-20 against
+# the pinned hazm 0.12.1 data; 27 of the top 200, 155 of the top 1,000.
+# The register-gap floor (spec C.2 risk row): nine of these are colloquial Tehrani
+# spellings that only colloquial.tsv answers, and four carry the Arabic yeh that
+# only fa_normalize unifies. verbs.dat and colloquial.tsv are both committed in
+# full, so these rows would also resolve on the fixtures; the point of running
+# them against the pack is that the pack is what a user actually gets.
+# Known miss, recorded not patched: kari (rank 155) resolves to kashtan (to
+# plant) rather than kar (work) - a homograph the first-line-wins verb table owns.
+بود	بودن	18
+کنم	کردن	19
+دارم	داشتن	41
+کردم	کردن	53
+کني	کردن	55
+داري	داشتن	64
+شد	شدن	65
+ميکنم	کردن	79
+کرد	کردن	83
+کنيم	کردن	88
+بودم	بودن	104
+ميکني	کردن	113
+ميخوام	خواستن	126
+ميدوني	دانستن	145
+داريم	داشتن	148
+کاري	کاشتن	155
+بدم	دادن	158
+بريم	رفتن	159
+کنی	کردن	161
+گفتم	گفتن	167
+ميخواي	خواستن	168
+بگم	گفتن	171
+گفت	گفتن	176
+برم	رفتن	183
+کنيد	کردن	187
+دونم	دانستن	189
+خوام	خواستن	190
