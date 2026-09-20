@@ -517,6 +517,43 @@ class TestInstall:
         assert (root / "xxmodel" / "model.bin").read_bytes() == b"weights"
         assert installer.is_installed("xx") is True
 
+    def test_only_the_matching_abi_sibling_of_a_component_is_installed(self, home, downloader, monkeypatch) -> None:
+        """opencc's shape: one component per CPython ABI, all named the same.
+
+        The siblings are alternatives extracting to one directory, so the
+        installer must fetch exactly one, count exactly one in its progress
+        line, and fetch none at all on a second run.
+        """
+        pack = LanguagePack(
+            code="xx",
+            approx_download_mb=1,
+            components=tuple(
+                PackComponent(
+                    import_name="xxpkg",
+                    required=False,
+                    sentinels=("__init__.py", "data.txt"),
+                    abi=abi,
+                    universal=_WHEEL_SPEC,
+                )
+                for abi in ((3, 98), sys.version_info[:2], (3, 99))
+            ),
+        )
+        monkeypatch.setattr(installer, "load_pack", lambda _code: pack)
+        monkeypatch.setattr(core, "find_spec", lambda _name: None)
+        root = installer.language_pack_root("xx")
+        lines: list[str] = []
+
+        installer.install_language_pack("xx", root, progress=lambda _done, _total, message: lines.append(message))
+
+        assert downloader.urls == [_WHEEL_SPEC.url]
+        assert set(lines) == {"XX pack (1/1): downloading"}
+        assert installer.component_path("xx", "xxpkg") == root / "xxpkg"
+
+        downloader.urls.clear()
+        installer.install_language_pack("xx", root)
+
+        assert downloader.urls == []
+
     def test_excluded_and_out_of_prefix_members_never_land(self, home, synthetic_pack, downloader, monkeypatch) -> None:
         monkeypatch.setattr(core, "find_spec", lambda _name: None)
         root = installer.language_pack_root("xx")

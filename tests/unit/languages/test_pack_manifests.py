@@ -1,12 +1,18 @@
 """The pack manifests are the single source of truth for pack pins."""
 
 import importlib
+import platform
+import sys
 from importlib.util import find_spec
 from pathlib import Path
+
+import pytest
 
 import anki_miner.languages
 from anki_miner.languages import AVAILABLE_LANGUAGES, SHARED_PACK_CODES
 from anki_miner.languages.pack_spec import ArtifactSpec, LanguagePack
+from anki_miner.services.language_pack_installer import combined_download_mb
+from anki_miner.services.pack_installer import artifact_for
 
 _RELEASE_PLATFORMS = (("linux", "x86_64"), ("win32", "AMD64"), ("darwin", "arm64"), ("darwin", "x86_64"))
 #: Every host a pinned artifact may come from: PyPI, the spaCy model releases,
@@ -97,9 +103,64 @@ def test_only_declared_root_members_are_promoted_to_a_pack_root():
                 assert spec.root_members == ()
 
 
+#: Every CPython ``pyproject.toml``'s ``requires-python`` admits, and that opencc
+#: publishes a wheel for. A new one here is a new sibling in the zh manifest.
+_SUPPORTED_PYTHONS = ((3, 11), (3, 12), (3, 13), (3, 14))
+#: The five (sys.platform, machine) pairs every opencc sibling pins: the release
+#: matrix plus Linux arm64, which users build on and the release does not.
+_OPENCC_PLATFORMS = (
+    ("linux", "x86_64"),
+    ("linux", "aarch64"),
+    ("win32", "AMD64"),
+    ("darwin", "arm64"),
+    ("darwin", "x86_64"),
+)
+
+
+def _opencc_components():
+    return [comp for comp in _packs()["zh"].components if comp.import_name == "opencc"]
+
+
 def test_the_opencc_abi_pin_matches_the_bundle_python():
+    """One sibling is the bundle's own interpreter, so a frozen build is served."""
     from anki_miner.services.asr.onnx_pack_installer import _BUNDLE_PYTHON
 
-    zh = _packs()["zh"]
-    opencc = next(c for c in zh.components if c.import_name == "opencc")
-    assert opencc.abi == _BUNDLE_PYTHON
+    assert [comp.abi for comp in _opencc_components()].count(_BUNDLE_PYTHON) == 1
+
+
+def test_opencc_is_pinned_for_every_python_the_project_supports():
+    """``PackComponent`` carries one ABI, so opencc is declared once per CPython.
+
+    Traditional input is cut and read through OpenCC (``zh/tokenizer.py``,
+    ``zh/reading.py``), so a pip user on 3.11/3.13/3.14 who takes the in-app
+    pack has to be served a wheel rather than silently skipped.
+    """
+    components = _opencc_components()
+    assert sorted(comp.abi for comp in components) == sorted(_SUPPORTED_PYTHONS)
+    for comp in components:
+        assert comp.required is False, comp.abi
+        assert comp.universal is None and set(comp.per_platform) == set(_OPENCC_PLATFORMS), comp.abi
+
+
+@pytest.mark.parametrize("host", _OPENCC_PLATFORMS, ids=lambda pair: "-".join(pair))
+@pytest.mark.parametrize("abi", _SUPPORTED_PYTHONS, ids=lambda abi: f"{abi[0]}.{abi[1]}")
+def test_exactly_one_opencc_artifact_resolves_on_each_supported_python(monkeypatch, abi, host):
+    """The siblings are alternatives, not additions.
+
+    They all extract to the same ``opencc/`` directory, so a second one
+    resolving would download the same package twice into itself.
+    """
+    # The installer core reads these two module attributes directly.
+    monkeypatch.setattr(sys, "version_info", (*abi, 0, "final", 0))
+    monkeypatch.setattr(sys, "platform", host[0])
+    monkeypatch.setattr(platform, "machine", lambda: host[1])
+
+    resolved = [comp for comp in _opencc_components() if artifact_for(comp) is not None]
+
+    assert [comp.abi for comp in resolved] == [abi]
+
+
+def test_the_zh_download_figure_counts_one_opencc_wheel():
+    """jieba's sdist, pypinyin's wheel and ONE ~2.4 MB opencc wheel."""
+    assert _packs()["zh"].approx_download_mb == 23
+    assert combined_download_mb("zh") == 23

@@ -136,9 +136,9 @@ def build_profile() -> LanguageProfile:
         card_field_defaults=ZH_CARD_FIELD_DEFAULTS,
         render_hooks=ZH_RENDER_HOOKS,
         content_style=ZH_CONTENT_STYLE,
-        # Required packages only. OpenCC absent leaves the variant lookups empty
-        # and mining working, so gating on it would take the language off the
-        # selector and refuse the switch over a degraded feature.
+        # Required packages only. OpenCC absent still mines: simplified input
+        # never reaches a converter and traditional input degrades rather than
+        # stopping, so gating on it would take the language off the selector.
         unavailable_reason=zh_missing_required_reason,
         extra_card_fields=ZH_EXTRA_CARD_FIELDS,
         smoke_sentence=ZH_SMOKE_SENTENCE,
