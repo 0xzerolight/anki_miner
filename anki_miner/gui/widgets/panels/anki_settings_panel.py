@@ -75,6 +75,14 @@ _HOOK_FIELD_ROW_TEXTS: dict[str, tuple[str, str]] = {
             "Stores the hanja characters contained in the word. Blank = skip.",
         ),
     ),
+    "hanviet": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Hán Việt Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the Chinese characters a Sino-Vietnamese word comes from, read from the dictionary entry. "
+            "Blank = skip.",
+        ),
+    ),
     "pos": (
         QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Part of Speech Field"),
         QT_TRANSLATE_NOOP(

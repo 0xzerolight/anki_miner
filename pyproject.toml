@@ -48,6 +48,9 @@ license-files = [
     "licenses/zeyrek/README.md",
     "licenses/camel-tools/LICENSE",
     "licenses/camel-tools/README.md",
+    # viet_text_tools (MIT) travels with the tone fold ported into languages/vi/tones.py.
+    "licenses/viet_text_tools/LICENSE",
+    "licenses/viet_text_tools/README.md",
 ]
 authors = [
     {name = "Anki Miner Contributors"}
@@ -268,6 +271,13 @@ ru = [
     "pymorphy3>=2.0.6",
     "pymorphy3-dicts-ru",
 ]
+# Vietnamese mining engine. underthesea (Apache-2.0) segments and POS-tags with CRF models
+# inside its wheel; underthesea-core is its Rust extension (per-CPython wheels, cp310-cp314).
+# Capped below 9.6: the tokenizer loads the v2.0 POS model from its path inside the package,
+# because pos_tag(model="v2.0") raises UnboundLocalError on every call after the first (9.5.0).
+vi = [
+    "underthesea>=9.5,<9.6",
+]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
 # Thai mining engine: PyThaiNLP (Apache-2.0, pure Python) carries the newmm
@@ -291,7 +301,7 @@ uk = [
 ]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
-languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]", "anki-miner[nb]", "anki-miner[ro]", "anki-miner[el]", "anki-miner[fi]", "anki-miner[hu]", "anki-miner[hr]", "anki-miner[sv]", "anki-miner[pl]", "anki-miner[lt]", "anki-miner[da]", "anki-miner[tr]", "anki-miner[ru]", "anki-miner[th]", "anki-miner[sl]", "anki-miner[uk]"]
+languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]", "anki-miner[nb]", "anki-miner[ro]", "anki-miner[el]", "anki-miner[fi]", "anki-miner[hu]", "anki-miner[hr]", "anki-miner[sv]", "anki-miner[pl]", "anki-miner[lt]", "anki-miner[da]", "anki-miner[tr]", "anki-miner[ru]", "anki-miner[th]", "anki-miner[sl]", "anki-miner[uk]", "anki-miner[vi]"]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
@@ -458,6 +468,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["pythainlp.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["underthesea.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

@@ -61,6 +61,7 @@ PROBE = {
     "fa": "می\N{ZERO WIDTH NON-JOINER}روم",
     "sl": "knjige",
     "uk": "читала",
+    "vi": "kỹ thuật",
 }
 
 #: Every capability name any profile is allowed to declare. A typo'd flag is a
@@ -108,6 +109,8 @@ CAPABILITY_VOCABULARY = frozenset(
         "persian_romanization",
         "persian_register",
         "persian_stems",
+        # Vietnamese Sino-Vietnamese characters (C.4).
+        "hanviet",
     }
 )
 
@@ -139,6 +142,8 @@ EXTRA_HOOK_FIELDS = {
     "reading_romanized",
     "colloquial_form",
     "present_stem",
+    # Vietnamese Sino-Vietnamese characters (C.4).
+    "hanviet",
 }
 
 
