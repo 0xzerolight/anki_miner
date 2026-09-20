@@ -52,6 +52,7 @@ PROBE = {
     "lt": "knygos",
     "da": "gik",
     "tr": "kitapları",
+    "id": "membeli",
 }
 
 #: Every capability name any profile is allowed to declare. A typo'd flag is a
@@ -79,6 +80,11 @@ CAPABILITY_VOCABULARY = frozenset(
         "regional_variants",
         # Verb aspect (Ruling S1, spaCy 10): hr, el, pl.
         "aspect_pairs",
+        # Shared root key (ruling R-ROOT): ar, he, id.
+        "word_root",
+        # Indonesian affixes and register (C.5).
+        "indonesian_affixes",
+        "indonesian_register",
     }
 )
 
@@ -96,6 +102,10 @@ EXTRA_HOOK_FIELDS = {
     "noun_article",
     "noun_plural",
     "aspect_pair",
+    # Shared root key (ruling R-ROOT): ar, he, id.
+    "root",
+    "affixes",
+    "formal_form",
 }
 
 

@@ -68,6 +68,9 @@ HOOK_ROWS = [
     ("da", "noun_article", "noun_article_field_input", "noun_article"),
     ("da", "noun_gender", "noun_gender_field_input", "noun_gender"),
     ("tr", "pos", "pos_field_input", "pos_tag"),
+    ("id", "root", "root_field_input", "word_root"),
+    ("id", "affixes", "affixes_field_input", "indonesian_affixes"),
+    ("id", "formal_form", "formal_form_field_input", "indonesian_register"),
 ]
 
 
