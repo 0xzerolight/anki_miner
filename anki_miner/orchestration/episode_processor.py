@@ -168,6 +168,23 @@ def _position_label(seconds: float, unit_labels: Mapping[int, str] | None) -> st
     return label or _format_timestamp(seconds)
 
 
+def _attach_position_labels(words: list[TokenizedWord], unit_labels: Mapping[int, str] | None) -> None:
+    """Set ``position_label`` on ``words`` and on their sentence candidates.
+
+    Must run AFTER :meth:`WordFilterService.attach_sentence_candidates`: a
+    candidate is a ``dataclasses.replace`` of its parent onto ANOTHER line, so
+    it inherits the parent's label and would print the wrong position the
+    moment the user picked it. ``attach_line_unknown_counts`` stamps candidates
+    for the same reason.
+
+    Mutates in place; display/sort-only data for the curator (Issue #129).
+    """
+    for word in words:
+        word.position_label = _position_label(word.start_time, unit_labels)
+        for candidate in word.sentence_candidates:
+            candidate.position_label = _position_label(candidate.start_time, unit_labels)
+
+
 # Strips a contiguous trailing run of ``[...]`` groups plus an optional
 # ``-ReleaseGroup`` suffix (Issue #83). ``[^\]]*`` (no nested brackets) keeps this
 # linear-time and confines the match to a *trailing* block, so mid-title brackets
@@ -2353,6 +2370,10 @@ class EpisodeProcessor:
         # Attach per-run occurrence counts for the curator's "Occurrences"
         # column/sort (Issue #88).
         self.word_filter.attach_occurrence_counts(unknown_words, occurrence_counts)
+        # Where each word sits in the source, for the curator's Position column
+        # (Issue #129) — the same string the card's Source field will carry.
+        # After the candidates, which it stamps too.
+        _attach_position_labels(unknown_words, ctx.unit_labels)
         # Zero-network probe of the run's audio chain for the curator's Audio
         # column: local caches and pack indexes only, on the worker thread,
         # before the callback, on both mining paths. No-op when the run maps no
