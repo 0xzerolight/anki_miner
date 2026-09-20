@@ -785,6 +785,14 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "opencc",
         "kiwipiepy",
         "kiwipiepy_model",
+        # Vietnamese (languages/vi/pack.py, hand-written): underthesea and its Rust core, plus the
+        # two pure-Python modules its model loader needs (joblib 1.6 no longer vendors cloudpickle).
+        # Neither of the last two is in requirements.lock, so the base install never has them;
+        # a dev building from a `.[languages]` venv would otherwise ship all four.
+        "underthesea",
+        "underthesea_core",
+        "joblib",
+        "cloudpickle",
         # The spaCy engine (languages/_spacy/pack.py, generated) and every spaCy
         # model package are language packs, never bundle content: a dev building
         # from a `.[languages]` venv would otherwise ship them.
