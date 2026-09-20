@@ -23,6 +23,16 @@ from anki_miner.services.subtitle_parser import SubtitleParserService
 ZH_STUTTER = "钱…钱不见了…全都没了。"
 YUE_STUTTER = "錢…錢唔見咗…全部冇晒。"
 
+#: 大家好。 with 大 written as the Kangxi radical U+2F24, the substitution OCR
+#: and legacy sources make. Escaped rather than pasted because the radical
+#: renders identically to the ideograph -- in an editor as much as on a card.
+ZH_RADICAL_LINE = "\u2f24家好。"
+
+#: Everything the Japanese caption strip deletes and Chinese keeps: a
+#: continuation arrow (➡), a device marker (📱), a private-use codepoint,
+#: U+FFFD, and a squared unit the compatibility fold would rewrite to "m2".
+ZH_DECORATED_LINE = "➡ 这个房子有120㎡📱\ue000\ufffd。"
+
 
 def _attest_nothing(surfaces: list[str]) -> set[str]:
     return set()
@@ -46,11 +56,19 @@ def _factory_kwargs(monkeypatch, code: str) -> dict[str, object]:
     return seen
 
 
-def _mine(parser, line: str) -> set[str]:
+def _words(parser, line: str):
     words, _index, _counts = parser.parse_text_units(
         [ReadingUnit(text=line, index=0, location_label="t")], want_line_index=False
     )
-    return {word.mined_form for word in words}
+    return words
+
+
+def _mine(parser, line: str) -> set[str]:
+    return {word.mined_form for word in _words(parser, line)}
+
+
+def _sentences(parser, line: str) -> set[str]:
+    return {word.sentence for word in _words(parser, line)}
 
 
 class TestTheEllipsisGuardSeam:
@@ -86,3 +104,13 @@ class TestTheNormaliseSeam:
 
     def test_the_ja_parser_keeps_the_japanese_pair(self, test_config) -> None:
         assert SubtitleParserService(test_config).normalize is None
+
+    def test_a_radical_substituted_line_still_mines_its_word(self) -> None:
+        assert _mine(_parser("zh"), ZH_RADICAL_LINE) == {"大家", "好"}
+
+    def test_the_stored_sentence_shows_the_unified_ideograph(self) -> None:
+        assert _sentences(_parser("zh"), ZH_RADICAL_LINE) == {"大家好。"}
+
+    def test_caption_decoration_and_squared_units_survive(self) -> None:
+        """What the subtitle wrote is what the card shows; only radicals fold."""
+        assert _sentences(_parser("zh"), ZH_DECORATED_LINE) == {ZH_DECORATED_LINE}
