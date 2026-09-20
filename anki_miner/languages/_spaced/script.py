@@ -1,4 +1,4 @@
-"""Latin and Greek script gates for spaCy languages (and the Latin subtitle regex defaults)."""
+"""Latin, Greek and Cyrillic script gates for spaCy languages (and the Latin subtitle regex defaults)."""
 
 from __future__ import annotations
 
@@ -73,6 +73,43 @@ class GreekScript:
 
     def contains_target_script(self, text: str) -> bool:
         return any(is_greek_letter(char) for char in text)
+
+
+#: Cyrillic, Cyrillic Supplement, Extended-C, Extended-A, Extended-B. Letters only: the titlo and the
+#: other combining marks (U+0483-0489) are not alphabetic, so they never make a line "Cyrillic".
+_CYRILLIC_BLOCKS: tuple[tuple[int, int], ...] = (
+    (0x0400, 0x04FF),
+    (0x0500, 0x052F),
+    (0x1C80, 0x1C8F),
+    (0x2DE0, 0x2DFF),
+    (0xA640, 0xA69F),
+)
+
+
+def is_cyrillic_letter(char: str) -> bool:
+    """True when *char* is an alphabetic character from a Cyrillic block."""
+    if not char.isalpha():
+        return False
+    code = ord(char)
+    return any(low <= code <= high for low, high in _CYRILLIC_BLOCKS)
+
+
+class CyrillicScript:
+    """ScriptSupport for Cyrillic languages (ru, uk): no script toggles; the gate is "has a Cyrillic letter".
+
+    Like :class:`LatinScript` it cannot tell two languages of its script apart (S15): a Bulgarian or
+    Serbian deck passes a Russian scan. The first-switch deck checklist and the scoped
+    ``excluded_decks`` carry that load, not this class.
+    """
+
+    def filter_options(self) -> tuple[ScriptFilterOption, ...]:
+        return ()
+
+    def matches(self, option_id: str, form: str) -> bool:
+        return False
+
+    def contains_target_script(self, text: str) -> bool:
+        return any(is_cyrillic_letter(char) for char in text)
 
 
 # --- S10: the Latin subtitle-cleanup default ---------------------------------
