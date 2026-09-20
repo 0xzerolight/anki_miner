@@ -10,7 +10,13 @@ from __future__ import annotations
 from typing import Any
 
 from anki_miner.languages.profile import ScriptFilterOption
-from anki_miner.languages.zh.variants import normalize_zh, to_script, to_simplified, variant_candidates
+from anki_miner.languages.zh.variants import (
+    normalize_zh,
+    to_script,
+    to_simplified,
+    to_traditional,
+    variant_candidates,
+)
 from anki_miner.utils.ja_normalize import is_cjk_ideograph
 
 
@@ -69,10 +75,11 @@ class ZhDictKeyFolding:
 
         Read by ``IndexedFreqProvider`` only when a source has no row for the
         term. The Taiwan-aware simplified spelling leads (看著 -> 看着), then
-        the lookup ladder's s2t/t2s variants. An ambiguous word takes the shared
-        spelling's rank (麵 -> 面), which is closer than no rank at all.
+        the Taiwan traditional one (接着 -> 接著), then the lookup ladder's
+        s2t/t2s variants. An ambiguous word takes the shared spelling's rank
+        (麵 -> 面), which is closer than no rank at all.
         """
-        candidates = [to_simplified(term), *variant_candidates(term)[1:]]
+        candidates = [to_simplified(term), to_traditional(term), *variant_candidates(term)[1:]]
         return [c for c in dict.fromkeys(candidates) if c and c != term]
 
 
@@ -110,7 +117,13 @@ class ZhLookupStrategy:
     ``0`` — the value ``DefinitionService._fallback_candidates`` already uses
     for orth_base and the kana folds. ``orth_base`` and ``ctype`` are part of
     the one cross-language signature and are unused here.
+
+    The Taiwan traditional spelling leads the generic s2t one: it is what
+    ``to_script`` writes on the card, so a traditional-only dictionary indexed
+    from the same standard (為什麼, not s2t's 爲什麼) is reachable. Dedup is
+    explicit because the two agree for most words.
     """
 
     def candidates(self, word: str, orth_base: str, ctype: str | None) -> list[tuple[str, int]]:
-        return [(candidate, 0) for candidate in variant_candidates(word) if candidate and candidate != word]
+        ladder = dict.fromkeys([to_traditional(word), *variant_candidates(word)])
+        return [(candidate, 0) for candidate in ladder if candidate and candidate != word]
