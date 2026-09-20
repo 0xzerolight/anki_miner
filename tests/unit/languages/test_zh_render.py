@@ -42,8 +42,8 @@ def wcag_contrast(foreground: str, background: str) -> float:
     return (lighter + 0.05) / (darker + 0.05)
 
 
-def _word(mined_form="银行", definition_html=""):
-    return SimpleNamespace(mined_form=mined_form, definition_html=definition_html)
+def _word(mined_form="银行", definition_html="", sentence=""):
+    return SimpleNamespace(mined_form=mined_form, definition_html=definition_html, sentence=sentence)
 
 
 def test_hook_field_names_are_logical_keys():
@@ -54,9 +54,10 @@ def test_hook_field_names_are_logical_keys():
     ]
 
 
-#: A simplified front is the one case OpenCC has to place: every other front
-#: falls to the traditional half, which is where a missing OpenCC lands anyway.
-_NEEDS_OPENCC = frozenset({"个人"})
+#: A script-distinct front is the only case OpenCC has to place: a front spelt
+#: the same in both scripts falls through to the sentence, then to the default,
+#: which is where a missing OpenCC lands anyway.
+_NEEDS_OPENCC = frozenset({"个人", "個人", "裏面"})
 
 
 @pytest.mark.parametrize(
@@ -67,8 +68,11 @@ _NEEDS_OPENCC = frozenset({"个人"})
         ("car; CL:輛|辆[liang4]", "traditional", "汽車", "輛"),
         ("<li>CL:個|个[ge4]</li>", "", "个人", "个"),
         ("<li>CL:個|个[ge4]</li>", "", "個人", "個"),
-        ("dog; CL:隻|只[zhi1],條|条[tiao2]", "", "狗", "隻"),
-        ("friend; CL:個|个[ge4]", "", "朋友", "個"),
+        # 裏 is traditional but not the Taiwan spelling, so s2tw rewrites it to
+        # 裡: only the simplifying test can place a mainland-traditional front.
+        ("inside; CL:個|个[ge4]", "", "裏面", "個"),
+        ("dog; CL:隻|只[zhi1],條|条[tiao2]", "", "狗", "只"),
+        ("friend; CL:個|个[ge4]", "", "朋友", "个"),
         ("only one; CL:隻|只[zhi1]", "simplified", "鸟", "只"),
         ("to watch; CL:套[tou3]", "", "戲", "套"),
         ("no classifier here", "simplified", "银行", None),
@@ -83,12 +87,34 @@ def test_measure_word_parses_cc_cedict_cl_gloss(gloss, variant, front, expected)
     assert out == ({"measure_word": expected} if expected else {})
 
 
-def test_a_front_opencc_cannot_place_takes_the_traditional_half(monkeypatch):
-    """No OpenCC is the yue install, and an unplaceable front leaves only yue's script."""
+@pytest.mark.parametrize(
+    ("sentence", "expected"),
+    [("那只狗在门口等他。", "只"), ("那隻狗在門口等他。", "隻")],
+)
+def test_a_script_invariant_front_reads_the_sentence(sentence, expected):
+    """狗 is spelt the same in both scripts; the line it came from is not."""
+    pytest.importorskip("opencc")
+    config = dataclasses.replace(AnkiMinerConfig(), script_variant="")
+    word = _word("狗", "dog; CL:隻|只[zhi1],條|条[tiao2]", sentence=sentence)
+    assert ZhMeasureWordHook().render(word, config=config) == {"measure_word": expected}
+
+
+@pytest.mark.parametrize(("prefer", "expected"), [("simplified", "只"), ("traditional", "隻")])
+def test_a_front_and_sentence_with_no_script_fall_to_the_hook_default(prefer, expected):
+    """Nothing about 狗 alone says which script the card is in; the hook's own default does."""
+    config = dataclasses.replace(AnkiMinerConfig(), script_variant="")
+    word = _word("狗", "dog; CL:隻|只[zhi1],條|条[tiao2]")
+    assert ZhMeasureWordHook(prefer=prefer).render(word, config=config) == {"measure_word": expected}
+
+
+@pytest.mark.parametrize(("prefer", "expected"), [("simplified", "辆"), ("traditional", "輛")])
+def test_without_opencc_every_text_falls_to_the_hook_default(monkeypatch, prefer, expected):
+    """No OpenCC is the default yue install: neither test can place front or sentence."""
+    monkeypatch.setattr("anki_miner.languages.zh.render.to_simplified", lambda text: text)
     monkeypatch.setattr("anki_miner.languages.zh.render.to_traditional", lambda text: text)
     config = dataclasses.replace(AnkiMinerConfig(), script_variant="")
-    out = ZhMeasureWordHook().render(_word("汽车", "car; CL:輛|辆[liang4]"), config=config)
-    assert out == {"measure_word": "輛"}
+    word = _word("汽车", "car; CL:輛|辆[liang4]", sentence="这辆汽车很贵。")
+    assert ZhMeasureWordHook(prefer=prefer).render(word, config=config) == {"measure_word": expected}
 
 
 def test_traditional_hook_emits_only_a_real_variant(monkeypatch):

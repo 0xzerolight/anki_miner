@@ -5,7 +5,8 @@ them into ``extra_fields`` and ``anki_note_builder`` maps key -> Anki field name
 An unmapped key is skipped by the existing empty-name rule, so every hook field
 is opt-in exactly like frequency/pitch/expression_audio.
 
-``ZhMeasureWordHook`` is imported UNCHANGED (R32): CC-CEDICT-Canto writes
+``ZhMeasureWordHook`` is imported UNCHANGED (R32), built traditional-first
+because that is the script every yue card is in: CC-CEDICT-Canto writes
 classifiers inline as ``CL:套[tou3]`` in 2,458 of its 166,267 rows (measured
 2026-09-20) and CC-Canto in none, so the field fills only when the
 CC-CEDICT-Canto slot is the hit -- and the bracketed reading there is Mandarin
@@ -71,4 +72,4 @@ class YueJyutpingHook:
         return {"expression_jyutping": spans}
 
 
-YUE_RENDER_HOOKS: tuple[CardRenderHook, ...] = (ZhMeasureWordHook(), YueJyutpingHook())
+YUE_RENDER_HOOKS: tuple[CardRenderHook, ...] = (ZhMeasureWordHook(prefer="traditional"), YueJyutpingHook())

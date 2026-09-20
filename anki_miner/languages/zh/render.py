@@ -13,7 +13,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from anki_miner.languages.zh.reading import pinyin_syllables
-from anki_miner.languages.zh.variants import to_traditional
+from anki_miner.languages.zh.variants import to_simplified, to_traditional
 
 if TYPE_CHECKING:  # annotation-only: keeps profile.py's resource_catalog import out of the runtime path
     from anki_miner.config.config import AnkiMinerConfig
@@ -36,12 +36,21 @@ class ZhMeasureWordHook:
     the half the card shows follows ``config.script_variant`` — printing both
     put a traditional glyph on a simplified learner's card and read as two
     classifiers. The halves are PICKED, never converted: ``to_script`` does not
-    fold 隻 to 只, and the dictionary already supplies the pair. A front-derived
-    choice covers a config with no script variant (yue, which is traditional).
+    fold 隻 to 只, and the dictionary already supplies the pair.
+
+    With no variant set ("As written", and every yue card) the card's script is
+    read off the text itself, front before sentence, and ``prefer`` is the
+    answer when neither carries a script — a front spelt the same in both
+    (狗, 朋友, and every Cantonese-only glyph), or an install with no OpenCC,
+    which is what ``anki-miner[yue]`` is. yue therefore builds this hook
+    traditional-first; zh takes the default.
 
     First classifier only, deliberately: a word with several (``CL:部,片,張|张``)
     gets the one CC-CEDICT lists first, not a list the field cannot hold.
     """
+
+    def __init__(self, prefer: str = "simplified") -> None:
+        self._prefer = prefer
 
     def field_names(self) -> tuple[str, ...]:
         return ("measure_word",)
@@ -56,25 +65,34 @@ class ZhMeasureWordHook:
             return {}
         if len(halves) == 1:
             return {"measure_word": halves[0]}
-        return {"measure_word": halves[-1] if _wants_simplified(word, config) else halves[0]}
+        return {"measure_word": halves[-1] if self._wants_simplified(word, config) else halves[0]}
+
+    def _wants_simplified(self, word: Any, config: AnkiMinerConfig) -> bool:
+        """Whether the card's script is simplified, from the setting or the text."""
+        variant = getattr(config, "script_variant", "")
+        if variant:
+            return variant == "simplified"
+        for text in (getattr(word, "mined_form", ""), getattr(word, "sentence", "")):
+            simplified = _script_is_simplified(text or "")
+            if simplified is not None:
+                return simplified
+        return self._prefer == "simplified"
 
 
-def _wants_simplified(word: Any, config: AnkiMinerConfig) -> bool:
-    """Whether the card's script is simplified, from the setting or the front.
+def _script_is_simplified(text: str) -> bool | None:
+    """Which script ``text`` is written in, or ``None`` when it does not say.
 
-    zh always carries a variant (its scoped default is "simplified"), so the
-    front branch is for a config that has none — yue's, whose cards are
-    traditional. Only positive evidence flips it: a front with a traditional
-    spelling of its own (汽车 -> 汽車) is simplified text. A script-invariant
-    front (狗, 朋友, 睇) proves nothing and stays traditional, and so does every
-    front where ``to_traditional`` returns its input because OpenCC is absent —
-    the yue extra installs none.
+    Traditional evidence is tested first: a text with a simplified spelling of
+    its own (裏, 汽車) is traditional, whichever standard spelt it. Only then
+    does a text with a traditional spelling of its own count as simplified.
+    Both converters return their input when OpenCC is absent, so an install
+    without it answers ``None`` for everything rather than guessing.
     """
-    variant = getattr(config, "script_variant", "")
-    if variant:
-        return variant == "simplified"
-    front = getattr(word, "mined_form", "") or ""
-    return to_traditional(front) != front
+    if to_simplified(text) != text:
+        return False
+    if to_traditional(text) != text:
+        return True
+    return None
 
 
 class ZhTraditionalHook:

@@ -6,9 +6,10 @@ LanguageProfile -- never needs the ``anki-miner[yue]`` extra installed.
 Availability is reported by ``languages.yue.availability``.
 
 **Contract with zh (R32).** This package imports from zh exactly one symbol,
-``zh.render.ZhMeasureWordHook``, and makes no zh-side change of any kind. That
-hook pulls ``zh.reading`` and ``zh.variants`` at module level, but both import
-their engines function-locally, so no jieba, pypinyin or opencc is loaded.
+``zh.render.ZhMeasureWordHook``, which it constructs traditional-first and
+neither subclasses nor branches on. That hook pulls ``zh.reading`` and
+``zh.variants`` at module level, but both import their engines
+function-locally, so no jieba, pypinyin or opencc is loaded.
 ``zh.tokenizer``, ``zh.audio``, ``zh.catalog``, ``zh.pack``, ``zh.support`` and
 ``zh.style`` are never imported: the mined-form, ladder and folding shapes are
 reimplemented in ``support.py`` and the ``SentenceRules`` literal below is
