@@ -12,7 +12,7 @@ import html
 import re
 from typing import TYPE_CHECKING, Any
 
-from anki_miner.languages.zh.reading import pinyin_syllables
+from anki_miner.languages.zh.reading import pinyin_syllables, syllable_tone
 from anki_miner.languages.zh.variants import to_traditional
 
 if TYPE_CHECKING:  # annotation-only: keeps profile.py's resource_catalog import out of the runtime path
@@ -113,13 +113,24 @@ class ZhToneColorHook:
     Syllables are joined with a SPACE, not concatenated: pinyin is a
     romanisation whose word boundaries are the spaces (yín háng, not yínháng),
     and the coloured field has to read like the plain one beside it.
+
+    The syllables are the word's OWN reading, split back apart, not a fresh
+    reading of the front: the two fields sit next to each other on the card and
+    a dictionary-reconciled reading would otherwise be coloured as the reading
+    it replaced. Recomputing is the fallback for a word that carries none —
+    a Deck Builder front with no entry, or any caller that is not a mined word.
     """
 
     def field_names(self) -> tuple[str, ...]:
         return ("expression_pinyin",)
 
     def render(self, word: Any, *, config: AnkiMinerConfig) -> dict[str, str]:
-        syllables = pinyin_syllables(getattr(word, "mined_form", "") or "")
+        reading = (getattr(word, "expression_reading", "") or "").split()
+        syllables = (
+            [(piece, syllable_tone(piece)) for piece in reading]
+            if reading
+            else pinyin_syllables(getattr(word, "mined_form", "") or "")
+        )
         if not syllables:
             return {}
         if not config.reading_tone_color:
