@@ -31,11 +31,11 @@ class _FakeValidation:
 
 @pytest.fixture
 def wizard_factory(qtbot, monkeypatch):
-    """Build a wizard whose live checks never reach disk or Anki."""
+    """Build a wizard that offers the page and whose live checks stay offline."""
 
-    def build(config):
+    def build(config, *, offer_mining_language=True):
         monkeypatch.setattr(SetupWizard, "validation_service", lambda self: _FakeValidation())
-        wiz = SetupWizard(config)
+        wiz = SetupWizard(config, offer_mining_language=offer_mining_language)
         qtbot.addWidget(wiz)
         return wiz
 
@@ -70,6 +70,26 @@ def test_the_language_page_is_the_second_step(wizard_factory, test_config):
     assert wiz.page(ids[0]) is wiz.theme_page
     assert wiz.page(ids[1]) is wiz.language_page
     assert wiz.page(ids[2]) is wiz.ankiconnect_page
+
+
+def test_a_wizard_that_was_not_asked_has_no_language_step(wizard_factory, test_config):
+    """The default shape is the six pages the wizard had before this step existed."""
+    wiz = wizard_factory(test_config, offer_mining_language=False)
+
+    ids = wiz.pageIds()
+    assert len(ids) == 6
+    assert wiz.language_page is None
+    assert wiz.page(ids[0]) is wiz.theme_page
+    assert wiz.page(ids[1]) is wiz.ankiconnect_page
+
+
+def test_a_wizard_without_the_page_has_nothing_to_revert_on_a_walk_away(wizard_factory, test_config):
+    """The close funnel's revert is the language page's, so it cannot fire without one."""
+    wiz = wizard_factory(test_config, offer_mining_language=False)
+
+    wiz.reject()
+
+    assert wiz.working_config() == test_config
 
 
 def test_the_page_never_blocks_next(wizard_factory, test_config):
@@ -304,7 +324,7 @@ def test_a_cancelled_run_returns_the_language_it_was_given(qtbot, monkeypatch, t
 
     monkeypatch.setattr(sw_mod.SetupWizard, "exec", fake_exec)
 
-    outcome = run_setup_wizard(None, test_config)
+    outcome = run_setup_wizard(None, test_config, offer_mining_language=True)
 
     assert outcome.config == test_config
 
@@ -334,7 +354,7 @@ def test_a_config_naming_an_unofferable_language_is_left_alone(monkeypatch, wiza
 
 
 def test_the_page_never_routes_through_the_first_visit_controller(monkeypatch, wizard_factory, test_config):
-    """The deck-exclusion prompt belongs to the Settings switch, not to setup."""
+    """The deck checklist comes after the wizard has closed, never from inside it."""
     import anki_miner.gui.controllers.language_switch as controller
 
     def _boom(*args, **kwargs):

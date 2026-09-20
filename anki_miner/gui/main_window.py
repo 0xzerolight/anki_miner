@@ -1551,7 +1551,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 # deferral. The re-runnable Tools entry still cancels, because
                 # there a migration really can be in flight.
                 try:
-                    outcome = run_setup_wizard(self, self.config)
+                    outcome = run_setup_wizard(self, self.config, offer_mining_language=True)
                 except Exception:
                     logger.exception("Setup wizard failed")
                     return

@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from typing import cast
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import QAbstractButton, QDialog, QPushButton, QWidget, QWizard
+from PyQt6.QtWidgets import QAbstractButton, QDialog, QPushButton, QWidget, QWizard, QWizardPage
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
@@ -67,13 +67,24 @@ class SetupWizard(QWizard):
 
     _close_check_requested = pyqtSignal(int)
 
-    def __init__(self, config: AnkiMinerConfig, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        config: AnkiMinerConfig,
+        parent: QWidget | None = None,
+        *,
+        offer_mining_language: bool = False,
+    ) -> None:
         """Build the wizard around a copy of ``config``.
 
         Args:
             config: The starting configuration. A copy is held as the working
                 config so a zero-touch skip is a no-op.
             parent: Optional Qt parent.
+            offer_mining_language: Register the mining-language step. Only the
+                first-run offer asks: that is the one run that happens before
+                the user has found Settings → Mining Language. A re-run from
+                Tools leaves the language to that selector, whose guarded
+                switch can do what a wizard mid-flow cannot.
         """
         super().__init__(parent)
         self._close_check_requested.connect(  # type: ignore[call-arg]
@@ -119,25 +130,27 @@ class SetupWizard(QWizard):
 
         # Pages in order. Theme goes first: it is the only step with nothing to
         # detect and nothing that can fail, so it costs the user nothing and
-        # every page after it wears their own pick. The mining language comes
-        # second, ahead of everything it decides: deck, note type and the
-        # recommended catalog are all that language's own.
+        # every page after it wears their own pick. When the mining language is
+        # asked at all it comes second, ahead of everything it decides: deck,
+        # note type and the recommended catalog are all that language's own.
         self.theme_page = ThemePage(self)
-        self.language_page = MiningLanguagePage(self)
+        self.language_page = MiningLanguagePage(self) if offer_mining_language else None
         self.ankiconnect_page = AnkiConnectPage(self)
         self.deck_page = DeckPage(self)
         self.notetype_page = NoteTypePage(self)
         self.resources_page = ResourcesPage(self)
         self.done_page = DonePage(self)
-        for page in (
-            self.theme_page,
-            self.language_page,
+        ordered: list[QWizardPage] = [self.theme_page]
+        if self.language_page is not None:
+            ordered.append(self.language_page)
+        ordered += [
             self.ankiconnect_page,
             self.deck_page,
             self.notetype_page,
             self.resources_page,
             self.done_page,
-        ):
+        ]
+        for page in ordered:
             self.addPage(page)
 
         # Every page here can hold Japanese text in a field, so no button may be
@@ -321,7 +334,8 @@ class SetupWizard(QWizard):
 
         The mining language is deliberately absent: it is not editor state but
         a committed switch, made by leaving the language page forward and taken
-        back again by ``done()`` on every path but an accepted Finish.
+        back again by ``done()`` on every path but an accepted Finish. A wizard
+        that never registered that page has no such switch to keep or drop.
         """
         self.theme_page.stage_current_edits()
         self.ankiconnect_page.stage_current_edits()
@@ -352,7 +366,7 @@ class SetupWizard(QWizard):
         # note type) the revert has to overwrite. Everything the wizard is
         # walked away from is kept; only a mining language nobody confirmed
         # with Finish is not.
-        if result != QDialog.DialogCode.Accepted.value:
+        if self.language_page is not None and result != QDialog.DialogCode.Accepted.value:
             self.language_page.revert_language_change()
         self.notetype_page.prepare_for_close()
         self._closing = True
@@ -364,7 +378,12 @@ class SetupWizard(QWizard):
         self._finish_close_if_ready()
 
 
-def run_setup_wizard(parent: QWidget | None, config: AnkiMinerConfig) -> SetupWizardOutcome:
+def run_setup_wizard(
+    parent: QWidget | None,
+    config: AnkiMinerConfig,
+    *,
+    offer_mining_language: bool = False,
+) -> SetupWizardOutcome:
     """Run the wizard and return partial config, offer consumption, first action.
 
     Accepted and explicit Skip consume the first-run offer. Window close, Esc,
@@ -374,11 +393,13 @@ def run_setup_wizard(parent: QWidget | None, config: AnkiMinerConfig) -> SetupWi
     Args:
         parent: Optional Qt parent for the modal.
         config: The current configuration.
+        offer_mining_language: Ask which language is being mined. See
+            :class:`SetupWizard`.
 
     Returns:
         The wizard's typed outcome.
     """
-    wizard = SetupWizard(config, parent)
+    wizard = SetupWizard(config, parent, offer_mining_language=offer_mining_language)
     result = wizard.exec()
     accepted = result == QDialog.DialogCode.Accepted.value
     return SetupWizardOutcome(

@@ -161,12 +161,13 @@ class TestThemePage:
         first_id = wiz.pageIds()[0]
         assert wiz.page(first_id) is wiz.theme_page
 
-    def test_wizard_now_has_seven_pages(self, qtbot):
+    @pytest.mark.parametrize(("offer_language", "expected"), [(False, 6), (True, 7)])
+    def test_wizard_page_count_follows_the_language_offer(self, qtbot, offer_language, expected):
         from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
-        wiz = SetupWizard(AnkiMinerConfig())
+        wiz = SetupWizard(AnkiMinerConfig(), offer_mining_language=offer_language)
         qtbot.addWidget(wiz)
-        assert len(wiz.pageIds()) == 7
+        assert len(wiz.pageIds()) == expected
 
     def test_theme_page_never_blocks_next(self, qtbot):
         from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
@@ -270,12 +271,13 @@ def test_wizard_has_skip_setup_button_wired_to_reject(qtbot, wiz_config):
     assert btn.text() == "Skip Setup"
 
 
-def test_wizard_adds_seven_pages(qtbot, wiz_config):
+@pytest.mark.parametrize(("offer_language", "expected"), [(False, 6), (True, 7)])
+def test_wizard_adds_the_pages_its_caller_asked_for(qtbot, wiz_config, offer_language, expected):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
-    wiz = SetupWizard(wiz_config)
+    wiz = SetupWizard(wiz_config, offer_mining_language=offer_language)
     qtbot.addWidget(wiz)
-    assert len(wiz.pageIds()) == 7
+    assert len(wiz.pageIds()) == expected
 
 
 def test_wizard_done_defers_close_without_blocking_for_stubborn_worker(qtbot, wiz_config):

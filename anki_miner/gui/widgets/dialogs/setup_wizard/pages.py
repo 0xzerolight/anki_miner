@@ -220,12 +220,14 @@ class ThemePage(QWizardPage):
 
 
 class MiningLanguagePage(QWizardPage):
-    """Step 2: name the language being mined.
+    """Name the language being mined; registered on the first run only.
 
-    Second, and not a selector found in Settings afterwards: every step from
-    here on -- deck, note type, recommended resources -- is derived from the
-    mining language, so a Mandarin learner who answers here is set up for
-    Mandarin instead of being walked through a Japanese setup first.
+    Second when it is registered at all, and not a selector found in Settings
+    afterwards: every step from here on -- deck, note type, recommended
+    resources -- is derived from the mining language, so a Mandarin learner who
+    answers here is set up for Mandarin instead of being walked through a
+    Japanese setup first. A wizard re-run from Tools does not ask, because by
+    then the Settings selector and its guarded switch are a click away.
 
     The list is the one Settings offers, which already drops a language whose
     engine this build cannot supply. Installing one stays in Settings -> Mining
@@ -361,7 +363,7 @@ class MiningLanguagePage(QWizardPage):
 
 
 class AnkiConnectPage(QWizardPage):
-    """Step 3: verify AnkiConnect is reachable; guide install if not."""
+    """Step 1: verify AnkiConnect is reachable; guide install if not."""
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
@@ -489,7 +491,7 @@ class AnkiConnectPage(QWizardPage):
 
 
 class DeckPage(QWizardPage):
-    """Step 4: choose the target deck (must already exist in Anki)."""
+    """Step 2: choose the target deck (must already exist in Anki)."""
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
@@ -593,7 +595,7 @@ class DeckPage(QWizardPage):
 
 
 class NoteTypePage(_LiveCheckPage):
-    """Step 5 (richest): choose a note type, auto-map its fields, warn on gaps."""
+    """Step 3 (richest): choose a note type, auto-map its fields, warn on gaps."""
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
@@ -987,7 +989,7 @@ class NoteTypePage(_LiveCheckPage):
 
 
 class ResourcesPage(_LiveCheckPage):
-    """Step 6: install the recommended resources. A dictionary is required.
+    """Step 4: install the recommended resources. A dictionary is required.
 
     The dictionary used to be labelled optional, so setup could be completed in
     a state guaranteed to fail the first mine: without one, every mined card
@@ -1359,7 +1361,7 @@ def _final_sweep(validation: ValidationService) -> dict[str, bool]:
 
 
 class DonePage(_LiveCheckPage):
-    """Step 7: re-verify the whole setup, then offer the first real action.
+    """Step 5: re-verify the whole setup, then offer the first real action.
 
     The old summary read the AnkiConnect page's cached ``_reachable`` flag and
     counted the mapped fields in config — both of which were true several
