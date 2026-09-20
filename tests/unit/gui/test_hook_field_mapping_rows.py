@@ -67,6 +67,7 @@ HOOK_ROWS = [
     ("da", "pos", "pos_field_input", "pos_tag"),
     ("da", "noun_article", "noun_article_field_input", "noun_article"),
     ("da", "noun_gender", "noun_gender_field_input", "noun_gender"),
+    ("tr", "pos", "pos_field_input", "pos_tag"),
 ]
 
 
