@@ -133,12 +133,15 @@ def _resolve_gaiji(line: str) -> str:
 _RUBY_RE = re.compile(r"《[^》]*》")
 
 # A ruby span *attached* to base text: the ｜ base-marker and its bounded base
-# through 《, or a kanji/kana run directly before 《. A bare, standalone 《…》
+# through 《, or a kanji/kana run directly before 《 — in either case holding a
+# kana reading, which is what an Aozora ruby always is. A bare, standalone 《…》
 # (a plain novel using the double-angle bracket as title/quotation punctuation)
 # has whitespace / line-start / punctuation before 《 and is NOT ruby — so it
 # must not, on its own, mark a file as Aozora (Bug Y4: doing so dropped the first
-# block as a "header" and stripped every 《…》 span silently).
-_RUBY_ATTACHED_RE = re.compile(r"｜[^｜《》\r\n]+《|[々぀-ヿ一-鿿]《")
+# block as a "header" and stripped every 《…》 span silently). The kana reading is
+# what keeps Chinese out: there 他读了《红楼梦》 is a work title, and the character
+# before 《 (or a ｜ used as a chapter separator earlier in the line) is no signal.
+_RUBY_ATTACHED_RE = re.compile(r"(?:｜[^｜《》\r\n]+|[々぀-ヿ一-鿿])《[ぁ-ヿ]")
 
 
 def _strip_ruby(line: str) -> str:
@@ -233,7 +236,7 @@ def _is_aozora(text: str) -> bool:
     work title / quotation with the double-angle bracket, and treating that as
     Aozora dropped its first block as a "header" and stripped every ``《…》``
     span (Bug Y4). Require a real Aozora signal: an accent/annotation marker
-    ``［＃``, ruby *attached* to a kanji/kana base, or a header ruler line.
+    ``［＃``, a kana ruby *attached* to a base, or a header ruler line.
     """
     if "［＃" in text:
         return True
