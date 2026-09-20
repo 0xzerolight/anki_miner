@@ -49,6 +49,11 @@ REQUIRED_ASSETS = [
     "anki_miner/gui/resources/fonts/NotoSansThai-Regular.ttf",
     "anki_miner/gui/resources/fonts/OFL-NotoSansThai.txt",
     "anki_miner/gui/resources/fonts/PROVENANCE.md",
+    # The Persian face and its own OFL, for the same reason as the Japanese one:
+    # a mining language's bundled fallback loads only on a machine with no face
+    # for its script, so nothing in the suite notices if it goes missing.
+    "anki_miner/gui/resources/fonts/Vazirmatn-Regular.ttf",
+    "anki_miner/gui/resources/fonts/OFL-Vazirmatn.txt",
     # The Persian tokenizer's derived tables: RESOURCE_DIRS does not cover
     # languages/<code>/data, so nothing else notices if a table vanishes from
     # disk and wheel together. The symptom is silent — every Persian compound

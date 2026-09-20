@@ -21,6 +21,7 @@ license = "GPL-3.0-or-later"
 # analyzer is ported in-tree.
 license-files = [
     "LICENSE",
+    "anki_miner/gui/resources/fonts/OFL-Vazirmatn.txt",
     "anki_miner/gui/resources/fonts/OFL.txt",
     "anki_miner/gui/resources/fonts/OFL-NotoNaskhArabic.txt",
     "anki_miner/gui/resources/fonts/OFL-NotoSansThai.txt",
