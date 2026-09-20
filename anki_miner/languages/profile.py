@@ -210,11 +210,13 @@ class AudioDefaults:
 class CaptionLangs:
     """yt-dlp caption + audio-track parameters (services/youtube_fetcher.py).
 
-    ``primary`` is the single code probed in ``subs``/``automatic_captions``
-    (:169, :393) and used as the --sub-lang value; ``orig_codes`` are the ASR-
-    native marker keys (:396); ``codes`` is the full ordered request list;
-    ``audio_pattern`` is the format-selector regex body (:577, :410);
-    ``bare_fallback`` allows accepting the bare code when no -orig exists.
+    ``codes`` is the full ordered request list: every code probed in
+    ``subs``/``automatic_captions``, the joined --sub-lang value, and the
+    preference order a fetch's output files are resolved by. ``primary`` is one
+    of ``codes`` and the one the auto-dub relaxation keys on; ``orig_codes``
+    are the ASR-native marker keys; ``audio_pattern`` is the format-selector
+    regex body; ``bare_fallback`` allows accepting the bare code when no -orig
+    exists.
     """
 
     primary: str

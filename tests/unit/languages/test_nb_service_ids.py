@@ -81,10 +81,10 @@ def test_the_download_tab_asks_yt_dlp_for_both_codes(nb_config):
         # Nynorsk and Swedish are other languages; another -orig names a non-Norwegian original
         ({"no": [{}]}, "nn", False),
         ({"no": [{}], "sv-orig": [{}]}, "", False),
-        # the probe key is no; a bare nb auto track alone is not probed (R27 primary).
+        # both codes are probed, so a bare nb auto track answers on its own.
         # This row pins the CODE PATH, not a claim about YouTube's real key — see the
         # "single unverified R27 id" note in the plan (B14 addendum).
-        ({"nb": [{}]}, "", False),
+        ({"nb": [{}]}, "", True),
     ],
 )
 def test_caption_codes_detect_native_norwegian(automatic, language, native):
@@ -100,9 +100,9 @@ def test_the_audio_track_pattern_takes_no_and_nb_only(language, present):
     assert YouTubeFetcherService._has_ja_audio_track(data, captions=get_profile("nb").captions) is present
 
 
-def test_fetch_cmd_asks_for_no_captions_and_a_norwegian_dub(nb_config, tmp_path):
+def test_fetch_cmd_asks_for_both_codes_and_a_norwegian_dub(nb_config, tmp_path):
     cmd = YouTubeFetcherService(nb_config)._build_fetch_cmd("https://y", tmp_path, "auto_dub", fallback_allowed=False)
-    assert cmd[cmd.index("--sub-lang") + 1] == "no"
+    assert cmd[cmd.index("--sub-lang") + 1] == "no,nb"
     assert cmd[cmd.index("--format") + 1].endswith("+bestaudio[language~='^n[ob](-|$)']")
 
 

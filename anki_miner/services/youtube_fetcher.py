@@ -198,7 +198,7 @@ class YouTubeFetcherService:
         captions = self._captions()
         subs = data.get("subtitles") or {}
         auto_captions = data.get("automatic_captions") or {}
-        has_manual_ja = bool(subs.get(captions.primary))
+        has_manual_ja = any(subs.get(code) for code in captions.codes)
         has_auto_ja = self._has_native_auto_ja(data, captions=captions)
         # Auto-dub relaxation: machine-translated ja captions are normally
         # rejected because they do not match the audio — but when YouTube also
@@ -407,7 +407,10 @@ class YouTubeFetcherService:
         ``ja-orig``; an English video exposes ``ja`` (machine-translated) plus
         ``en-orig`` and no ``ja-orig``.
 
-        Three steps, in order:
+        The track itself is looked up under every code the profile lists, not one
+        fixed key: YouTube files a Chinese ASR track under ``zh-Hans`` or
+        ``zh-Hant`` depending on the video. The steps below then decide whether
+        the track that answered is native, in order:
 
         1. ``ja-orig`` present -> native.
         2. Some *other* ``<lang>-orig`` present -> not native. The ``-orig`` machinery
@@ -428,12 +431,11 @@ class YouTubeFetcherService:
         ``captions=None`` means the Japanese literals, so an unbound call keeps
         the pre-profile behaviour exactly.
         """
-        primary = "ja" if captions is None else captions.primary
         orig_keys = ("ja-orig",) if captions is None else captions.orig_codes
         codes = ("ja",) if captions is None else captions.codes
         accept_bare = True if captions is None else captions.bare_fallback
         auto = data.get("automatic_captions") or {}
-        if not auto.get(primary):
+        if not any(auto.get(code) for code in codes):
             return False
 
         if any(auto.get(key) for key in orig_keys):
@@ -675,8 +677,13 @@ class YouTubeFetcherService:
         if sub_mode != "transcribe":
             cmd.extend(
                 [
+                    # Every code the profile lists, in preference order: yt-dlp
+                    # fullmatches each one, so asking for a single code rejected
+                    # the regional and other-script spellings of the same
+                    # language. Several requested codes can mean several files;
+                    # _resolve_outputs picks by that same order.
                     "--sub-lang",
-                    captions.primary,
+                    ",".join(captions.codes),
                     # YouTube serves srt among its caption formats, so ask for it
                     # outright. The old "vtt/best" + "--convert-subs srt" pair
                     # predates that and paid an ffmpeg postprocessor to reach the
@@ -868,10 +875,9 @@ class YouTubeFetcherService:
         from anki_miner.languages.registry import config_language, get_profile
 
         captions = self._captions()
-        suffixes = tuple(f".{code}." for code in dict.fromkeys((captions.primary, *captions.codes)))
         candidates = list(workspace.glob(f"{video_id}*"))
         video_candidates: list[Path] = []
-        subtitle_candidates: list[Path] = []
+        by_code: dict[str, list[Path]] = {}
         for c in candidates:
             # Normally "<id>.ja.srt" (the first --sub-format tier). Accept
             # "<id>.ja.vtt" too: the tier list falls through to vtt on a source that
@@ -882,8 +888,12 @@ class YouTubeFetcherService:
             # No "ja-orig" handling here on purpose: yt-dlp matches --sub-lang with a
             # regex fullmatch, so "ja" can never select the "ja-orig" track and such a
             # file can never be written.
-            if any(c.name.endswith(f"{s}srt") or c.name.endswith(f"{s}vtt") for s in suffixes):
-                subtitle_candidates.append(c)
+            code = next(
+                (code for code in captions.codes if c.name.endswith(f".{code}.srt") or c.name.endswith(f".{code}.vtt")),
+                None,
+            )
+            if code is not None:
+                by_code.setdefault(code, []).append(c)
                 continue
             if c.suffix.lower() in _VIDEO_EXTS:
                 video_candidates.append(c)
@@ -893,9 +903,15 @@ class YouTubeFetcherService:
             logger.warning("youtube fetch ambiguous video outputs: workspace=%s names=%s", workspace, names)
             raise YouTubeFetchError("The download left more than one video file.")
 
-        # Prefer srt when both survive — one fetch writes a single subtitle, so a
-        # second one is a leftover from an earlier run in a reused workspace, not an
-        # ambiguity. Only complain about a genuine tie.
+        # --sub-lang asks for every code the profile lists, so a video carrying
+        # both scripts legitimately leaves one file per code. The codes order is
+        # the preference list, so take the earliest code that was written and
+        # judge ambiguity within it alone.
+        subtitle_candidates = next((by_code[code] for code in captions.codes if code in by_code), [])
+
+        # Prefer srt when both survive — one fetch writes a single subtitle per
+        # code, so a second one is a leftover from an earlier run in a reused
+        # workspace, not an ambiguity. Only complain about a genuine tie.
         srt_candidates = [p for p in subtitle_candidates if p.name.endswith(".srt")]
         preferred = srt_candidates or subtitle_candidates
         if len(preferred) > 1:

@@ -57,11 +57,12 @@ def test_the_profile_codes_pick_the_spanish_track(tmp_path):
 @pytest.mark.parametrize(
     ("data", "native"),
     [
-        # The fetcher's rule (youtube_fetcher.py `_has_native_auto_ja`, ES-5): the primary key must exist; an es-orig
-        # key means native; another *-orig means translated; no *-orig falls back to `language` (empty = native).
+        # The fetcher's rule (youtube_fetcher.py `_has_native_auto_ja`, ES-5): one of the profile's codes must exist;
+        # an es-orig key means native; another *-orig means translated; no *-orig falls back to `language` (empty =
+        # native).
         ({"automatic_captions": {"es": [{}], "es-orig": [{}]}}, True),
         ({"automatic_captions": {"es": [{}], "es-419": [{}], "es-orig": [{}]}}, True),
-        ({"automatic_captions": {"es-419": [{}], "es-orig": [{}]}}, False),  # no primary "es" key
+        ({"automatic_captions": {"es-419": [{}], "es-orig": [{}]}}, True),  # es-419 is a listed code
         ({"automatic_captions": {"es": [{}], "en-orig": [{}]}}, False),  # machine-translated from English
         ({"automatic_captions": {"es": [{}]}}, True),  # no *-orig and no language: native
         ({"automatic_captions": {"es": [{}]}, "language": "en"}, False),

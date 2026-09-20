@@ -36,6 +36,7 @@ def test_zh_profile_identity_and_capabilities():
     assert profile.audio_track_codes == frozenset({"chi", "zho", "zh", "chinese", "cmn"})
     assert profile.import_encodings == ("utf-8-sig", "gb18030", "big5")
     assert profile.captions.primary == "zh-Hans"
+    assert profile.captions.codes == ("zh-Hans", "zh-CN", "zh-Hant", "zh-TW", "zh")
     assert profile.captions.orig_codes == ("zh-Hans-orig", "zh-Hant-orig")
     assert profile.captions.audio_pattern == "^zh(-|$)"
     assert profile.captions.bare_fallback is True
