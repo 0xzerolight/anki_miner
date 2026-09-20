@@ -117,6 +117,21 @@ _HOOK_FIELD_ROW_TEXTS: dict[str, tuple[str, str]] = {
         QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Formal Form Field"),
         QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Stores the standard spelling of a colloquial word. Blank = skip."),
     ),
+    # Arabic (spec C.1): the dictionary's grammar line and the clitic split of the word you saw.
+    "expression_grammar": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Grammar Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the dictionary's grammar line: gender and plurals, or a verb's form and verbal noun. Blank = skip.",
+        ),
+    ),
+    "clitic_segmentation": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Segmentation Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores how the word you saw splits into prefixes, stem and suffixes. Blank = skip.",
+        ),
+    ),
 }
 
 # Keywords used by populate_from_field_list to auto-map Anki field names.

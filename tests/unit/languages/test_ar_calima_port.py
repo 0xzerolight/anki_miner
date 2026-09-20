@@ -51,9 +51,15 @@ def test_the_port_returns_upstreams_analyses(analyzer, row):
 
 
 def test_importing_the_port_loads_only_the_standard_library():
-    """What the import ADDS must be stdlib: a bare interpreter already carries the venv's bootstrap."""
+    """What the import ADDS must be stdlib: a bare interpreter already carries the venv's bootstrap.
+
+    The snapshot is taken with ``languages.ar`` already imported, because importing anything inside
+    the package runs the profile module, and that legitimately pulls the app's own dependencies
+    (PyQt6, pysubs2). What the port adds on top of its own package is what this pins.
+    """
     probe = (
         "import sys\n"
+        "import anki_miner.languages.ar\n"
         "tops = lambda: {m.split('.')[0] for m in list(sys.modules)}\n"
         "before = tops()\n"
         "import anki_miner.languages.ar._calima.analyzer\n"
