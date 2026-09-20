@@ -14,6 +14,7 @@ import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages.zh.render import (
+    _TONE_COLORS,
     ZH_RENDER_HOOKS,
     ZhMeasureWordHook,
     ZhToneColorHook,
@@ -22,6 +23,23 @@ from anki_miner.languages.zh.render import (
 
 TONE_ON = dataclasses.replace(AnkiMinerConfig(), reading_tone_color=True)
 TONE_OFF = dataclasses.replace(AnkiMinerConfig(), reading_tone_color=False)
+
+#: The two backgrounds an Anki card is actually read on: the stock white card
+#: and Anki's own night mode. Shared with the yue palette test.
+CARD_BACKGROUNDS = ("#ffffff", "#2f2f31")
+MIN_CONTRAST = 3.5
+
+
+def wcag_contrast(foreground: str, background: str) -> float:
+    """WCAG 2.x contrast ratio between two opaque sRGB hex colours."""
+
+    def luminance(color: str) -> float:
+        channels = (int(color[index : index + 2], 16) / 255 for index in (1, 3, 5))
+        linear = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in channels]
+        return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
+
+    lighter, darker = sorted((luminance(foreground), luminance(background)), reverse=True)
+    return (lighter + 0.05) / (darker + 0.05)
 
 
 def _word(mined_form="银行", definition_html=""):
@@ -74,9 +92,16 @@ def test_tone_colour_spans_are_self_contained_and_escaped(monkeypatch):
     )
     html_out = ZhToneColorHook().render(_word("银行"), config=TONE_ON)["expression_pinyin"]
     assert html_out.count("<span style=") == 2
-    assert "color:#e08a00" in html_out and "color:#8a8a8a" in html_out
+    assert "color:#be7500" in html_out and "color:#868686" in html_out
     assert "háng&lt;" in html_out
     assert "class=" not in html_out  # no note-type-global CSS dependency
+
+
+@pytest.mark.parametrize("background", CARD_BACKGROUNDS)
+@pytest.mark.parametrize(("tone", "color"), sorted(_TONE_COLORS.items()))
+def test_every_tone_colour_is_readable_on_both_card_backgrounds(tone, color, background):
+    """One inline colour, two backgrounds: the palette lives in the band that clears both."""
+    assert wcag_contrast(color, background) >= MIN_CONTRAST, (tone, color, background)
 
 
 def test_tone_colour_keeps_the_syllable_separator(monkeypatch):

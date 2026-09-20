@@ -11,7 +11,8 @@ import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.languages.yue.reading import YueReadingSupport, jyutping_syllables, word_jyutping
-from anki_miner.languages.yue.render import YUE_RENDER_HOOKS, YueJyutpingHook
+from anki_miner.languages.yue.render import _TONE_COLORS, YUE_RENDER_HOOKS, YueJyutpingHook
+from tests.unit.languages.test_zh_render import CARD_BACKGROUNDS, MIN_CONTRAST, wcag_contrast
 
 FIXTURE = Path(__file__).parents[2] / "fixtures" / "yue" / "jyutping.jsonl"
 ROWS = [json.loads(line) for line in FIXTURE.read_text(encoding="utf-8").splitlines() if line]
@@ -46,7 +47,14 @@ def test_the_hook_emits_plain_jyutping_when_tone_colour_is_off():
 def test_the_hook_colours_six_tones():
     config = replace(AnkiMinerConfig(), reading_tone_color=True)
     rendered = YueJyutpingHook().render(SimpleNamespace(mined_form="香港"), config=config)["expression_jyutping"]
-    assert rendered == '<span style="color:#e02020">hoeng1</span> <span style="color:#e08a00">gong2</span>'
+    assert rendered == '<span style="color:#e75353">hoeng1</span> <span style="color:#be7500">gong2</span>'
+
+
+@pytest.mark.parametrize("background", CARD_BACKGROUNDS)
+@pytest.mark.parametrize(("tone", "color"), sorted(_TONE_COLORS.items()))
+def test_every_tone_colour_is_readable_on_both_card_backgrounds(tone, color, background):
+    """Six tones held to the same band as zh's five."""
+    assert wcag_contrast(color, background) >= MIN_CONTRAST, (tone, color, background)
 
 
 def test_the_hook_emits_nothing_for_a_word_with_no_reading():
