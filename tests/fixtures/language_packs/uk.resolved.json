@@ -1,0 +1,89 @@
+{
+  "approx_download_mb": 24,
+  "code": "uk",
+  "components": [
+    {
+      "abi": null,
+      "import_name": "uk_core_news_sm",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py",
+        "uk_core_news_sm-3.8.0/config.cfg",
+        "uk_core_news_sm-3.8.0/meta.json"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "uk_core_news_sm-3.8.0-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "uk_core_news_sm/",
+        "root_members": [],
+        "sha256": "d20adb50b42c0dcfdedf4994dabcb96789a64983a9ab560d0c6c38a59e8efb58",
+        "size": 14908659,
+        "url": "https://github.com/explosion/spacy-models/releases/download/uk_core_news_sm-3.8.0/uk_core_news_sm-3.8.0-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "pymorphy3",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "pymorphy3-2.0.6-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "pymorphy3/",
+        "root_members": [],
+        "sha256": "0254317c02ce3ea17e080b7fc9d675e44662b3a5296bae68605b7a41d25b36c3",
+        "size": 53900,
+        "url": "https://files.pythonhosted.org/packages/18/4b/59bac03278033e293d1405ed42fb6c6252c25f40c50f509c615caeaa3b71/pymorphy3-2.0.6-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "dawg_python",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "dawg2_python-0.9.0-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "dawg_python/",
+        "root_members": [],
+        "sha256": "4fab6fc097bd176cd783cd8421b757348ea5a460789e53b0f6bb64831380bab5",
+        "size": 9331,
+        "url": "https://files.pythonhosted.org/packages/84/3b/7fb4c1a8df59cb80f5f7ecb9646280e000f9ba2ccff8710205dc9aa4604f/dawg2_python-0.9.0-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "pymorphy3_dicts_uk",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "pymorphy3_dicts_uk-2.4.1.1.1663094765-py2.py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "pymorphy3_dicts_uk/",
+        "root_members": [
+          "pymorphy3_dicts_uk-2.4.1.1.1663094765.dist-info/"
+        ],
+        "sha256": "6af1e389b69e7e90ef7d50b20e3955a0c78383317a15d9ade5979f1536354733",
+        "size": 8201207,
+        "url": "https://files.pythonhosted.org/packages/60/1a/310e767e0dd9ad414c11f9b969735b8e7af90c38b7372ebc3a086f3c1249/pymorphy3_dicts_uk-2.4.1.1.1663094765-py2.py3-none-any.whl"
+      }
+    }
+  ],
+  "requires": [
+    "_spacy"
+  ]
+}

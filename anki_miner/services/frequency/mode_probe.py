@@ -117,6 +117,9 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     # sl: the top ten of hermitdave's OpenSubtitles 2018 sl_50k.txt. The probe votes on raw surface
     # forms, before the catalogue row's lemmatise=True aggregates them.
     "sl": ["je", "ne", "da", "se", "v", "sem", "to", "in", "si", "kaj"],
+    # uk: hermitdave uk_50k.txt ranks 1-10. The list carries Russian rows from mixed subtitle
+    # files (что, ты), which is what it actually contains and therefore what the probe votes with.
+    "uk": ["я", "не", "в", "що", "на", "це", "ти", "что", "так", "у"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -356,6 +359,19 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
         "lopata",
         "jazbec",
         "mrož",
+    ],
+    # uk: rare-but-real nouns at uk_50k ranks 17,205-44,521 (телескоп ... білка).
+    "uk": [
+        "телескоп",
+        "вагон",
+        "компас",
+        "ліхтарик",
+        "якір",
+        "бочка",
+        "цвях",
+        "ліхтар",
+        "кухоль",
+        "білка",
     ],
 }
 

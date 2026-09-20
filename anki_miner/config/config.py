@@ -39,6 +39,7 @@ _LANGUAGE_CODES: tuple[str, ...] = (
     "th",
     "fa",
     "sl",
+    "uk",
 )
 
 # Deliberate duplicate of anki_miner.languages.SCRIPT_VARIANT_IDS, for the same

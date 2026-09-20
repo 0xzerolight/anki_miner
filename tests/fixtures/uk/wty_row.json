@@ -1,0 +1,2565 @@
+{
+ "license": "Wiktionary via kaikki.org, CC BY-SA 4.0; Yomitan build by wiktionary-to-yomitan (yomidevs), revision 2026.09.19. Rows for 17 headwords, copied unmodified.",
+ "index": {
+  "title": "wty-uk-en",
+  "format": 3,
+  "revision": "2026.09.19",
+  "sequenced": true,
+  "author": "wty contributors",
+  "url": "https://github.com/yomidevs/wiktionary-to-yomitan",
+  "description": "Dictionaries for various language pairs generated from Wiktionary data, via Kaikki and wty.",
+  "attribution": "https://kaikki.org/",
+  "sourceLanguage": "uk",
+  "targetLanguage": "en",
+  "isUpdatable": true,
+  "indexUrl": "https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/index/wty-uk-en-index.json?download=true",
+  "downloadUrl": "https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/uk/en/wty-uk-en.zip?download=true"
+ },
+ "tag_bank": [
+  [
+   "inanim",
+   "animacy",
+   0,
+   "inanimate",
+   0
+  ],
+  [
+   "impf",
+   "aspect",
+   0,
+   "imperfective",
+   0
+  ],
+  [
+   "pf",
+   "aspect",
+   0,
+   "perfective",
+   0
+  ],
+  [
+   "fem",
+   "gender-feminine",
+   -1,
+   "feminine",
+   1
+  ],
+  [
+   "masc",
+   "gender-masculine",
+   -1,
+   "masculine",
+   1
+  ],
+  [
+   "neut",
+   "gender-neuter",
+   -1,
+   "neuter",
+   1
+  ],
+  [
+   "uncount",
+   "grammar",
+   0,
+   "uncountable",
+   0
+  ],
+  [
+   "adj",
+   "partOfSpeech",
+   -2,
+   "adjective",
+   2
+  ],
+  [
+   "adv",
+   "partOfSpeech",
+   -2,
+   "adverb",
+   2
+  ],
+  [
+   "n",
+   "partOfSpeech",
+   -2,
+   "noun",
+   2
+  ],
+  [
+   "v",
+   "partOfSpeech",
+   -2,
+   "verb",
+   2
+  ],
+  [
+   "vt",
+   "partOfSpeech",
+   -2,
+   "transitive verb",
+   2
+  ],
+  [
+   "derog",
+   "register",
+   0,
+   "derogatory",
+   0
+  ],
+  [
+   "fig",
+   "usage",
+   0,
+   "figurative",
+   0
+  ],
+  [
+   "non-lemma",
+   "",
+   10,
+   "non-lemma",
+   -10
+  ]
+ ],
+ "term_rows": [
+  [
+   "собака",
+   "",
+   "n fem masc",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "соба́ка • (sobáka) m animal or f animal (genitive соба́ки, nominative plural соба́ки, genitive plural соба́к, diminutive соба́чка)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Old Ruthenian соба́ка (sobáka), from Old East Slavic собака (sobaka), from Proto-Slavic *sobaka, derived from Middle Iranian *sabāka-, from West Iranian *spaka, from Proto-Iranian *cwā́, from Proto-Indo-European *ḱwṓ."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "dog (animal)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/собака#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/с/со/собака.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "собака",
+   "",
+   "n derog fig fem masc",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "соба́ка • (sobáka) m pers or f pers (genitive соба́ки, nominative plural соба́ки, genitive plural соба́к)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Old Ruthenian соба́ка (sobáka), from Old East Slavic собака (sobaka), from Proto-Slavic *sobaka, derived from Middle Iranian *sabāka-, from West Iranian *spaka, from Proto-Iranian *cwā́, from Proto-Indo-European *ḱwṓ."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "scoundrel, detestable person"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/собака#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/с/со/собака.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "",
+   "n inanim masc",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "за́мок • (zámok) m inan (genitive за́мку, nominative plural за́мки, genitive plural за́мків)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Borrowed from Polish zamek (“castle”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "castle"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/замок#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/з/за/замок.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "",
+   "n inanim masc",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "замо́к • (zamók) m inan (genitive замка́, nominative plural замки́, genitive plural замкі́в)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Proto-Slavic *zamъkъ, deverbal from *zamъknǫti."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "lock"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/замок#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/з/за/замок.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "пити",
+   "",
+   "v vt impf",
+   "v",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "пи́ти • (pýty) impf (perfective ви́пити or попи́ти)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Old Ruthenian пи́ти (píti), from Old East Slavic пити (piti), from Proto-Slavic *piti (“to drink”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to drink"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/пити#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/п/пи/пити.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "студент",
+   "",
+   "n masc",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "студе́нт • (studént) m pers (genitive студе́нта, nominative plural студе́нти, genitive plural студе́нтів, female equivalent студе́нтка, relational adjective студе́нтський)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Ultimately from Latin studēns. ."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "male student (in university or college)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/студент#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/с/ст/студент.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "читати",
+   "",
+   "v vt impf",
+   "v",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "чита́ти • (čytáty) impf (perfective прочита́ти)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Proto-Slavic *čitati. Cognates include Russian чита́ть (čitátʹ), Belarusian чыта́ць (čytácʹ), Serbo-Croatian чи́тати, and Polish czytać."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to read"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/читати#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/ч/чи/читати.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "дім",
+   "",
+   "n inanim masc",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "дім • (dim) m inan (genitive до́му, nominative plural доми́, genitive plural домі́в, relational adjective дома́шній or домови́й, diminutive дімо́к or до́мик)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Old Ruthenian домъ (dom), from Old East Slavic домъ (domŭ), from Proto-Slavic *dȍmъ."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "house, home"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "building"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/дім#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/д/ді/дім.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "книжка",
+   "",
+   "n fem inanim",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "кни́жка • (knýžka) f inan (genitive кни́жки, nominative plural книжки́, genitive plural книжо́к, relational adjective книжко́вий, diminutive кни́жечка)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "кни́га (knýha) + -ка (-ka). See Polish książka."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "book",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": "Holonym: бібліоте́ка (bibliotéka)"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/книжка#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/к/кн/книжка.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "кіт",
+   "",
+   "n masc",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "кіт • (kit) m animal (genitive кота́, nominative plural коти́, genitive plural коті́в, female equivalent кі́шка, diminutive ко́тик or кото́к or коту́сь or кицю́ня, augmentative котя́ра)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Old East Slavic котъ (kotŭ), from Proto-Slavic *kotъ."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "male cat, tomcat (domestic feline; member of Felidae family)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/кіт#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/к/кі/кіт.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "прочитати",
+   "",
+   "v vt pf",
+   "v",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "прочита́ти • (pročytáty) pf (imperfective чита́ти or прочи́тувати)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From про- (pro-, prefix) + чита́ти (čytáty, “to read”, imperfective verb)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to read"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/прочитати#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/п/пр/прочитати.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "цікавий",
+   "",
+   "adj",
+   "adj",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "ціка́вий • (cikávyj) (comparative цікаві́ший or ціка́віший, superlative найцікаві́ший, adverb ціка́во)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Etymology tree\nProto-Indo-European *tekʷ-\nProto-Balto-Slavic *tek-\nProto-Slavic *teťi\nOld Polish ciec\nPolish ciec\nProto-Indo-European *-h₂\nProto-Indo-European *-éh₂\nProto-Indo-European *-yéti\nProto-Indo-European *-eh₂yéti\nProto-Balto-Slavic *-ā́ˀtei\nProto-Slavic *-ati\nOld Polish -ać\nPolish -ać\nPolish ciekać\nProto-Slavic *-avъ\nOld Polish -awy\nPolish -awy\nPolish ciekawybor.\nUkrainian цікавий\nBorrowed from Polish ciekawy."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "interesting"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "curious, inquisitive, prying"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/цікавий#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/ц/ці/цікавий.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "м'яч",
+   "",
+   "n inanim masc",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "м'яч • (mʺjač) m inan (genitive м'яча́, nominative plural м'ячі́, genitive plural м'ячі́в, diminutive м'я́чик)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Proto-Slavic *męčь, related to м'який (mʺjakyj). Cognate with Russian мяч (mjač), Belarusian мяч (mjač), Czech míč, Slovene mȇč."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "ball (object for playing games)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/м'яч#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/м/м'/м'яч.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "підлога",
+   "",
+   "n uncount fem inanim",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "підло́га • (pidlóha) f inan (genitive підло́ги, uncountable, relational adjective підло́говий)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From під- (pid-) + ло̀жити (lòžyty). Cognate with Carpathian Rusyn підл'ога (pidlʺoha), Polish podłoga."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "floor (bottom or lower part of any room)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/підлога#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/п/пі/підлога.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "ґудзик",
+   "",
+   "n inanim masc",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "ґу́дзик • (gúdzyk) m inan (genitive ґу́дзика, nominative plural ґу́дзики, genitive plural ґу́дзиків, diminutive ґу́дзичок)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Polish guzik or from ґудз (gudz, “button (rare)”) + -ик (-yk)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "button (knob or small disc serving as a fastener)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/ґудзик#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/ґ/ґу/ґудзик.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "учора",
+   "",
+   "adv",
+   "adv",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "учо́ра • (učóra)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "yesterday"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/учора#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/у/уч/учора.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "здоров'я",
+   "",
+   "n uncount inanim neut",
+   "n",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "здоро́в'я • (zdoróvʺja) n inan (genitive здоро́в'я, uncountable, diminutive здоро́в'ячко)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Proto-Slavic *sъdorvьje. Morphologically, from здоро́вий (zdoróvyj) + -'я (-ʺja)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "health"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/здоров'я#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/з/зд/здоров'я.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "з'їсти",
+   "",
+   "v pf",
+   "v",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "з'ї́сти • (zʺjísty) pf (imperfective ї́сти or з'їда́ти)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From з- (z-) + ї́сти (jísty)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              }
+             ]
+            },
+            "to eat (consume)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to eat (consume a meal)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/з'їсти#Ukrainian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Ukrainian/meaning/з/з'/з'їсти.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "за́мок",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "замок",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "замо́к",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "замок",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "пити",
+   "пи́ти",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "пити",
+     [
+      "imperfective infinitive"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "прочитати",
+   "прочита́ти",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "читати",
+     [
+      "perfective"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "читати",
+   "чита́ти",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "читати",
+     [
+      "imperfective infinitive"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "з'їсти",
+   "з'ї́сти",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "їсти",
+     [
+      "perfective"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "кіт",
+   "",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "кішка",
+     [
+      "masculine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "читати",
+   "чита́ти",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "прочитати",
+     [
+      "imperfective"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "прочитувати",
+   "прочи́тувати",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "прочитати",
+     [
+      "imperfective"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "прочитати",
+   "прочита́ти",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "прочитати",
+     [
+      "perfective infinitive"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "студент",
+   "студе́нт",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "студентка",
+     [
+      "masculine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "цікавий",
+   "ціка́вий",
+   "non-lemma",
+   "adj",
+   0,
+   [
+    [
+     "цікавий",
+     [
+      "accusative singular masculine inanimate"
+     ]
+    ],
+    [
+     "цікавий",
+     [
+      "nominative/vocative singular masculine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "ґудзик",
+   "ґу́дзик",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "ґудзик",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "здоров'я",
+   "здоро́в'я",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "здоров'я",
+     [
+      "genitive/accusative/vocative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "учора",
+   "учо́ра",
+   "non-lemma",
+   "adv",
+   0,
+   [
+    [
+     "вчора",
+     [
+      "alternative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "з'їсти",
+   "з'ї́сти",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "з'їсти",
+     [
+      "perfective infinitive"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "з'їсти",
+   "з'ї́сти",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "з'їдати",
+     [
+      "perfective"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "пити",
+   "пи́ти",
+   "non-lemma",
+   "v",
+   0,
+   [
+    [
+     "випити",
+     [
+      "imperfective"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "кіт",
+   "",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "кітка",
+     [
+      "masculine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "здоров'я",
+   "здоро́в'я",
+   "non-lemma",
+   "n",
+   0,
+   [
+    [
+     "здоровля",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "здоровля",
+     [
+      "alternative"
+     ]
+    ],
+    [
+     "здоровля",
+     [
+      "dialectal"
+     ]
+    ],
+    [
+     "здоровля",
+     [
+      "inanimate"
+     ]
+    ],
+    [
+     "здоровля",
+     [
+      "neuter"
+     ]
+    ],
+    [
+     "здоровля",
+     [
+      "uncountable"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ]
+ ]
+}

@@ -89,6 +89,7 @@ jobs:
           "ru_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/ru_core_news_sm-3.8.0/ru_core_news_sm-3.8.0-py3-none-any.whl#sha256=69978d47b43e2c4f329bebdb155e8e9d3861bba1a58ba25551419dae7d7e07fc"
           "sl_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/sl_core_news_sm-3.8.0/sl_core_news_sm-3.8.0-py3-none-any.whl#sha256=d6d11f38c917d59b0fe52a15da09963bdc8011d2be288f75371e734065b6911c"
           "sv_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/sv_core_news_sm-3.8.0/sv_core_news_sm-3.8.0-py3-none-any.whl#sha256=be4929fb30523dca0b6672f999cdbf4d64f165419f1eed0014ca3a36599b8b4d"
+          "uk_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/uk_core_news_sm-3.8.0/uk_core_news_sm-3.8.0-py3-none-any.whl#sha256=d20adb50b42c0dcfdedf4994dabcb96789a64983a9ab560d0c6c38a59e8efb58"
       # hu_core_news_md is a HuggingFace asset named hu_core_news_md-any-py3-none-any.whl;
       # `any` is no version, so pip refuses it as a URL requirement. Download it, check the
       # sha256 languages/hu/pack.py pins (test_spacy_model_ci_pins.py), and install it under

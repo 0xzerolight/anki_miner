@@ -173,6 +173,7 @@ def test_the_panel_anchors_the_selector_and_every_pack_row(qtbot):
         "mining_language.language_pack_ar",
         "mining_language.language_pack_sl",
         "mining_language.language_pack_th",
+        "mining_language.language_pack_uk",
         "mining_language.language_pack_fa",
     }
 

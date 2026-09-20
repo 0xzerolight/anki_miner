@@ -35,6 +35,7 @@ SPACY_MODEL_PACKAGES = (
     "ru_core_news_sm",
     "sl_core_news_sm",
     "sv_core_news_sm",
+    "uk_core_news_sm",
 )
 
 

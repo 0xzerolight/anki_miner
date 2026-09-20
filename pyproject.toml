@@ -281,9 +281,17 @@ th = [
 sl = [
     "spacy>=3.8,<3.8.15",
 ]
+# Ukrainian mining engine (same spaCy cap as en, R3) plus pymorphy3, which uk_core_news_sm's
+# lemmatizer imports, and its Ukrainian dictionaries (GPL-3.0, the LanguageTool dict_uk word list).
+# The model is a GitHub release asset: pip users download it in Settings -> Mining Language.
+uk = [
+    "spacy>=3.8,<3.8.15",
+    "pymorphy3>=2.0.6",
+    "pymorphy3-dicts-uk",
+]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
-languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]", "anki-miner[nb]", "anki-miner[ro]", "anki-miner[el]", "anki-miner[fi]", "anki-miner[hu]", "anki-miner[hr]", "anki-miner[sv]", "anki-miner[pl]", "anki-miner[lt]", "anki-miner[da]", "anki-miner[tr]", "anki-miner[ru]", "anki-miner[th]", "anki-miner[sl]"]
+languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]", "anki-miner[nb]", "anki-miner[ro]", "anki-miner[el]", "anki-miner[fi]", "anki-miner[hu]", "anki-miner[hr]", "anki-miner[sv]", "anki-miner[pl]", "anki-miner[lt]", "anki-miner[da]", "anki-miner[tr]", "anki-miner[ru]", "anki-miner[th]", "anki-miner[sl]", "anki-miner[uk]"]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",

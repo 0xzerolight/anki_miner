@@ -94,6 +94,29 @@ def is_cyrillic_letter(char: str) -> bool:
     return any(low <= code <= high for low, high in _CYRILLIC_BLOCKS)
 
 
+#: The marks a Cyrillic text writes stress with: an acute, rarely a grave.
+_STRESS_MARKS = frozenset("\N{COMBINING GRAVE ACCENT}\N{COMBINING ACUTE ACCENT}")
+
+
+def strip_cyrillic_stress(text: str) -> str:
+    """NFD, drop a grave or acute that follows a Cyrillic letter, NFC. Idempotent; й and ё stay.
+
+    Learner texts and some subtitles mark stress with an acute: a marked ``читал книгу`` tags as two
+    PROPN tokens unless the marks go, and a marked ``кни<acute>жка чита<acute>ла`` tags NUM + NOUN.
+    Only a mark on a Cyrillic letter goes, so ``café`` in a Cyrillic line keeps its accent, and
+    й and ё are letters in their own right (breve, diaeresis) rather than marked vowels.
+    """
+    out: list[str] = []
+    base = ""
+    for char in unicodedata.normalize("NFD", text):
+        if not unicodedata.combining(char):
+            base = char
+        elif char in _STRESS_MARKS and is_cyrillic_letter(base):
+            continue
+        out.append(char)
+    return unicodedata.normalize("NFC", "".join(out))
+
+
 class CyrillicScript:
     """ScriptSupport for Cyrillic languages (ru, uk): no script toggles; the gate is "has a Cyrillic letter".
 
