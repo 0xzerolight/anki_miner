@@ -362,6 +362,10 @@ include-package-data = true
 # hazm's own .dat files). anki_miner.spec collects the same directory for the
 # frozen bundle — this entry is wheel-only.
 "anki_miner.languages.fa.data" = ["*.tsv"]
+# The simplified-only character set derived from CC-CEDICT-Canto: the data the
+# deferred S15 deck-sampling predicate will read (spec section 9). No runtime
+# code opens it yet, so the frozen bundle collects nothing for it.
+"anki_miner.languages.yue.data" = ["*.txt"]
 # Last-resort fallback faces (Japanese, and each mining language's own), their
 # licences and the provenance record. Declared explicitly rather than left to
 # MANIFEST.in: a wheel that dropped a font would render tofu on a bare Linux
