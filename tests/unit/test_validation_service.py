@@ -235,6 +235,24 @@ class TestValidationService:
             assert success is False
             assert "not found" in message.lower()
 
+        def test_an_unset_note_type_says_none_is_chosen(self, test_config):
+            """zh ships no note type name, so '' is a step not done, not a typo."""
+            from dataclasses import replace
+
+            from anki_miner.services.anki_note_builder import no_note_type_message
+
+            service = ValidationService(replace(test_config, anki_note_type=""))
+
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"result": ["Basic", "Cloze"], "error": None}
+
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
+                success, message = service._check_note_type_exists()
+
+            assert success is False
+            assert message == no_note_type_message()
+            assert "''" not in message
+
         def test_generic_exception(self, test_config):
             """Generic exception should be caught and reported."""
             service = ValidationService(test_config)
@@ -876,6 +894,21 @@ class TestValidationService:
 
             assert success is False
             assert "IsClickCard" in message
+
+        def test_an_unset_note_type_never_reaches_anki(self, test_config):
+            """modelFieldNames("") answers with an error that reads as a fault."""
+            from dataclasses import replace
+
+            from anki_miner.services.anki_note_builder import no_note_type_message
+
+            service = ValidationService(replace(test_config, anki_note_type=""))
+
+            with patch("anki_miner.services._ankiconnect.requests.post") as post:
+                success, message = service._check_field_names_exist()
+
+            assert success is False
+            assert message == no_note_type_message()
+            assert post.call_count == 0
 
         def test_error_response_returns_failure(self, test_config):
             service = ValidationService(test_config)

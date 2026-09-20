@@ -113,6 +113,15 @@ _AUTOSAVE_DEBOUNCE_MS = 1000
 # quarter of itself across those two faces.
 _NAV_WIDTH_LINES = 11
 
+# Destinations a mining language can lack entirely, keyed by their stable
+# navigator key over the profile capability that keeps them on the rail. The
+# panel-level gate (gui/utils/language_gate.py) hides rows inside a page; this
+# is the same decision one level up, for a page whose whole subject a language
+# does not have. Its rows are QListWidgetItems rather than widgets, so the
+# capability check is spelled out in _apply_navigator_language_gate instead of
+# going through apply_language_gate.
+_LANGUAGE_GATED_DESTINATIONS: dict[str, str] = {"pitch": "pitch"}
+
 
 @runtime_checkable
 class _SavePathPanel(Protocol):
@@ -650,6 +659,45 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 item.text(),
             )
             item.setSizeHint(QSize(content, wrapped.height() + padding.height()))
+
+    def _apply_navigator_language_gate(self) -> None:
+        """Keep the rail to the destinations the active mining language has.
+
+        Re-derived on every ``_load_config``, like the panels' own gate, and
+        two-way for the same reason: a switch away and back has to put the row
+        back rather than leave it hidden until the next launch.
+
+        A hidden row that is still the selected one would leave its page on
+        screen with nothing on the rail pointing at it, so the selection moves
+        to the first destination that survived. The page itself stays built and
+        indexed — a deep link to a setting on it still resolves.
+        """
+        from anki_miner.languages.registry import config_language, get_profile
+
+        capabilities = get_profile(config_language(self.config)).capabilities
+        hid_current = False
+        for key, capability in _LANGUAGE_GATED_DESTINATIONS.items():
+            item = self._nav_item(key)
+            if item is None:
+                continue
+            item.setHidden(capability not in capabilities)
+            hid_current = hid_current or (item.isHidden() and item is self.nav_list.currentItem())
+        if hid_current:
+            self.nav_list.setCurrentItem(self._first_visible_destination())
+
+    def _first_visible_destination(self) -> QListWidgetItem | None:
+        """The topmost navigator row that is a destination and is on the rail."""
+        for row in range(self.nav_list.count()):
+            item = self.nav_list.item(row)
+            if item is not None and not item.isHidden() and item.data(Qt.ItemDataRole.UserRole):
+                return item
+        return None
+
+    def _gated_away_destinations(self) -> frozenset[str]:
+        """The stable keys whose rows the language gate has taken off the rail."""
+        return frozenset(
+            key for key in _LANGUAGE_GATED_DESTINATIONS if (item := self._nav_item(key)) is not None and item.isHidden()
+        )
 
     def _nav_item(self, key: str) -> QListWidgetItem | None:
         """The navigator row carrying ``key``, or ``None`` if there is none."""
@@ -1251,6 +1299,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # UI panel is outside _save_panels (it persists via its own signals),
             # so it owns its whole repaint here — signal-safe by construction.
             self.ui_panel.load_from_config(self.config)
+
+            # Last, and beside the panels' own gate: every page has been
+            # repainted for the incoming language by now, so a selection this
+            # moves lands on a page that is already current.
+            self._apply_navigator_language_gate()
         finally:
             self._loading = False
 
@@ -1394,6 +1447,15 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         focuses and flashes something the user cannot see.
         """
         entries = build_entries(self.setting_search_sources())
+        # A whole destination the gate took off the rail answers the same way a
+        # gated row does. Its controls are still laid out on their page, so the
+        # per-anchor check cannot see it — the page is what is gone, and a
+        # result leading there would switch to a page the rail cannot return to.
+        gated_away = self._gated_away_destinations()
+        if gated_away:
+            entries = tuple(
+                replace(entry, visible=False) if entry.page_key in gated_away else entry for entry in entries
+            )
         self._search_entries = {entry.stable_id: entry for entry in entries}
         self.search_box.set_entries(tuple(entry for entry in entries if entry.visible))
 

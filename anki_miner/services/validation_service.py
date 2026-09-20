@@ -19,6 +19,7 @@ from anki_miner.services.anki_note_builder import (
     configured_target_field_names,
     field_mapping_error,
     field_target_collision_message,
+    no_note_type_message,
 )
 from anki_miner.services.resource_staleness import format_stale_family_message
 from anki_miner.utils import ensure_directory
@@ -1077,6 +1078,17 @@ class ValidationService:
             )
 
         note_type = self.config.anki_note_type
+        if not note_type:
+            # Nothing was picked, so the collection's own list answers a
+            # question nobody asked. It stays in the receipt for the log.
+            return _record(
+                "note-type",
+                False,
+                no_note_type_message(),
+                note_type=note_type,
+                reason="unset",
+                available=capped(models),
+            )
         if note_type in models:
             return _record("note-type", True, f"Note type '{note_type}' found", note_type=note_type, models=len(models))
         available = ", ".join(models[:5])
@@ -1096,6 +1108,12 @@ class ValidationService:
         Returns:
             Tuple of (success, message)
         """
+        if not self.config.anki_note_type:
+            # AnkiConnect answers modelFieldNames("") with an error, which this
+            # method renders as "Error fetching fields" — a broken connection,
+            # for a note type nobody has picked. The wizard calls this check on
+            # its own, so it has to answer the real question by itself.
+            return _record("field-mapping", False, no_note_type_message(), note_type="", reason="no-note-type")
         try:
             actual_fields_list = (
                 post_action(

@@ -64,6 +64,17 @@ def configured_target_field_names(config: AnkiMinerConfig) -> set[str]:
     return field_names
 
 
+def no_note_type_message() -> str:
+    """The one sentence for a config that names no note type at all.
+
+    A profile can ship without one (zh does), so the first run of a language
+    reaches every note-type check with an empty name. Reporting that as a note
+    type Anki does not have describes a typo nobody made; the step is simply
+    still open. Shared with ``validation_service`` so both surfaces say it once.
+    """
+    return "No note type is chosen yet — pick one in Settings → Cards & Anki."
+
+
 def missing_note_type_message(note_type: str, available: list[str]) -> str:
     """The one sentence every note-type-not-found check raises.
 
@@ -76,6 +87,8 @@ def missing_note_type_message(note_type: str, available: list[str]) -> str:
     # sentence (A8-34): the Settings panel this points at shows the same list
     # live, so it belongs in the log rather than in a banner summary.
     logger.warning("Anki note type missing: wanted=%s available=%s", note_type, sorted(available))
+    if not note_type:
+        return no_note_type_message()
     return f"Note type '{note_type}' is not in Anki — pick one in Settings → Cards & Anki."
 
 

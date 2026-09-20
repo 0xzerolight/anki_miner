@@ -1022,7 +1022,8 @@ class ResourcesPage(_LiveCheckPage):
         self._dictionary_ready = False
 
         self.setTitle(self.tr("Recommended Resources"))
-        self.setSubTitle(self.tr("Frequency and pitch accent are optional. A dictionary is required."))
+        # The subtitle is set by _rebuild_catalog_rows, from the kinds the
+        # active language's catalog actually offers.
 
         layout = QVBoxLayout(self)
 
@@ -1115,6 +1116,7 @@ class ResourcesPage(_LiveCheckPage):
             return
         self._specs_language = language
         self._specs = list(get_profile(language).catalog)
+        self.setSubTitle(self._subtitle_for_kinds({spec.kind for spec in self._specs}))
 
         while (item := self._catalog_rows_layout.takeAt(0)) is not None:
             widget = item.widget()
@@ -1158,6 +1160,25 @@ class ResourcesPage(_LiveCheckPage):
             if self._specs
             else self.tr("No recommended resources for this language. Import a dictionary in Settings → Dictionaries.")
         )
+
+    def _subtitle_for_kinds(self, kinds: set[str]) -> str:
+        """Name the optional families this catalog has, and nothing else.
+
+        A whole sentence per combination rather than a stitched-together one:
+        the optional clause and the required one share a subject in several
+        languages, and a translator handed two fragments cannot make them
+        agree. ja carries all three kinds, so its sentence is unchanged and
+        keeps its existing translations.
+        """
+        has_freq = "freq" in kinds
+        has_pitch = "pitch" in kinds
+        if has_freq and has_pitch:
+            return self.tr("Frequency and pitch accent are optional. A dictionary is required.")
+        if has_freq:
+            return self.tr("Frequency is optional. A dictionary is required.")
+        if has_pitch:
+            return self.tr("Pitch accent is optional. A dictionary is required.")
+        return self.tr("A dictionary is required.")
 
     def _sync_download_button(self) -> None:
         """Nothing ticked is not a run: an empty spec list reports success for no work."""
