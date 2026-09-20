@@ -39,8 +39,7 @@ def test_sentence_rules_do_not_treat_the_space_as_a_terminator():
     assert rules.ellipses == frozenset("…")
     assert rules.space_aware is False
     assert rules.abbreviations == frozenset()
-    # `split_on_whitespace` is S9: the FIELD does not exist on SentenceRules yet.
-    # Task 9 adds it, sets it in build_profile and asserts it here.
+    assert rules.split_on_whitespace is True  # S9, landed in Task 9
 
 
 def test_encodings_are_utf8_then_cp874():

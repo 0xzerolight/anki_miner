@@ -148,6 +148,11 @@ class SentenceRules:
     #: also switches on the ASCII ellipsis rule (``...`` does not terminate);
     #: empty — ja, ko, zh — keeps every split the splitter made before Stage S.
     abbreviations: frozenset[str] = frozenset()
+    #: A whitespace run at depth 0 ends the sentence (S9). Thai writes almost no
+    #: terminator punctuation, so without this a chapter comes back as one
+    #: sentence; the space IS its clause boundary. Reading-tab loaders only —
+    #: subtitle cues are already sentences. Terminators still apply.
+    split_on_whitespace: bool = False
 
 
 @dataclass(frozen=True)

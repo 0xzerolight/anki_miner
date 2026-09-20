@@ -96,7 +96,7 @@ def build_profile() -> LanguageProfile:
             openers=frozenset('“‘("'),
             closers=frozenset('”’)"'),
             space_aware=False,
-            # split_on_whitespace=True arrives in Task 9, with the field.
+            split_on_whitespace=True,
         ),
         normalize=normalize_th,
         dict_keys=ThaiDictKeyFolding(),
