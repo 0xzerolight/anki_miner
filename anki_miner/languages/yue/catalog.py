@@ -59,6 +59,29 @@ YUE_CATALOG: tuple[ResourceSpec, ...] = (
             "CC-CEDICT - CC BY-SA 3.0; Cantonese readings (c) Pleco, CC BY-SA 3.0; " "Yomitan build by MarvNC."
         ),
     ),
+    # BUILT by scripts/build_yue_frequency.py out of the two corpora inside the
+    # pycantonese wheel and published as release data (R30): Cantonese is not on
+    # hermitdave, wordfreq has no yue, and words.hk publishes no counts under a
+    # licence that allows hosting. rank-based rather than th's occurrence-based
+    # counts because this list MERGES two corpora about seven times apart in
+    # size, where a summed count is not a count of anything while the merged
+    # rank is exactly what max_frequency_rank reads. The dated filename is never
+    # reused -- a corrected list ships under a new date, so a URL that once
+    # resolved always returns the same bytes, which is what the network-marked
+    # test in test_yue_frequency_asset.py re-checks.
+    ResourceSpec(
+        id="hkcancor-yue",
+        kind="freq",
+        display_name="HKCanCor + CTCPC Cantonese frequency",
+        url=(
+            "https://github.com/0xzerolight/anki_miner/releases/download/"
+            "resources-2026-09-20/hkcancor-yue-2026-09-20.zip"
+        ),
+        license_note=(
+            "HKCanCor (Luke and Wong 2015), CC BY 4.0; CTCPC, CC0 1.0. Both bundled with "
+            "PyCantonese. Built by scripts/build_yue_frequency.py."
+        ),
+    ),
     ResourceSpec(
         id="wty-yue-en",
         kind="dict",
