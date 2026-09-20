@@ -1,5 +1,6 @@
 """Tests for dictionary SQLite storage layer."""
 
+import itertools
 import json
 import sqlite3
 import unicodedata
@@ -2118,3 +2119,139 @@ class TestRedirectRows:
             assert found[("語", "ご")] == {7, -7}
         finally:
             conn.close()
+
+
+class _PlainKeys:
+    """A folding pair with no row-demotion rank — the 31 profiles that have none.
+
+    NFC on both halves, every row kept, so the only thing separating it from
+    ``_RankingKeys`` is the optional method.
+    """
+
+    def fold_term(self, s: str) -> str:
+        return unicodedata.normalize("NFC", s)
+
+    def fold_reading(self, s: str | None) -> str | None:
+        return unicodedata.normalize("NFC", s) if s is not None else None
+
+    def homograph_keep_mask(self, word, rows, lemma=None):
+        return [True] * len(rows)
+
+
+class _RankingKeys(_PlainKeys):
+    """The same pair, carrying the optional row-demotion rank.
+
+    The storage seam is what is under test here, not any language's own pattern
+    list: a row whose content says ``pointer`` states no sense of its own.
+    """
+
+    def sense_rank(self, content: str) -> int:
+        return 1 if "pointer" in content else 0
+
+
+_SENSE = DictRow(term="干", reading="gān", content="<div>dry</div>", sequence=4429)
+_SURNAME = DictRow(term="干", reading="gān", content="<div>pointer: surname</div>", sequence=4428)
+_VARIANT = DictRow(term="干", reading="gān", content="<div>pointer: variant</div>", sequence=4425)
+
+
+class TestSenseRankDemotion:
+    """A profile-supplied row rank reorders rows INSIDE one reading-priority group.
+
+    Nothing is dropped and no other tiebreak moves: the index's own sequence
+    order still decides among the rows that state a sense and among the rows
+    that only point elsewhere.
+    """
+
+    @pytest.mark.parametrize("order", list(itertools.permutations([_SENSE, _SURNAME, _VARIANT])))
+    def test_a_pointer_row_never_leads_whatever_the_index_order(self, tmp_path: Path, order):
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, list(order))
+        conn = open_readonly(db)
+        try:
+            contents = [c for c, _tags, _seq in lookup(conn, "干", "gān", keys=_RankingKeys())]
+        finally:
+            conn.close()
+        assert contents == [_SENSE.content, _VARIANT.content, _SURNAME.content]
+
+    def test_without_the_rank_the_index_order_stands(self, tmp_path: Path):
+        """ja invariance: a folding pair with no rank orders exactly as before."""
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, [_SENSE, _SURNAME, _VARIANT])
+        conn = open_readonly(db)
+        try:
+            plain = [c for c, _tags, _seq in lookup(conn, "干", "gān")]
+            no_rank = [c for c, _tags, _seq in lookup(conn, "干", "gān", keys=_PlainKeys())]
+        finally:
+            conn.close()
+        assert plain == [_VARIANT.content, _SURNAME.content, _SENSE.content]
+        assert no_rank == plain
+
+    def test_nothing_is_dropped_and_each_side_keeps_its_own_order(self, tmp_path: Path):
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        rows = [
+            DictRow(term="干", reading="gān", content="<div>pointer: a</div>", sequence=1),
+            DictRow(term="干", reading="gān", content="<div>sense: a</div>", sequence=2),
+            DictRow(term="干", reading="gān", content="<div>pointer: b</div>", sequence=3),
+            DictRow(term="干", reading="gān", content="<div>sense: b</div>", sequence=4),
+        ]
+        bulk_insert(db, rows)
+        conn = open_readonly(db)
+        try:
+            contents = [c for c, _tags, _seq in lookup(conn, "干", "gān", keys=_RankingKeys())]
+        finally:
+            conn.close()
+        assert sorted(contents) == sorted(row.content for row in rows)
+        assert contents == [
+            "<div>sense: a</div>",
+            "<div>sense: b</div>",
+            "<div>pointer: a</div>",
+            "<div>pointer: b</div>",
+        ]
+
+    def test_the_reading_boost_still_outranks_the_demotion(self, tmp_path: Path):
+        """Demotion is a tiebreak, not a new leading key: a matching-reading
+        pointer still beats a sense the reader's reading does not select."""
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(
+            db,
+            [
+                DictRow(term="干", reading="gàn", content="<div>to do</div>", sequence=37998),
+                DictRow(term="干", reading="gān", content="<div>pointer: surname</div>", sequence=4428),
+            ],
+        )
+        conn = open_readonly(db)
+        try:
+            contents = [c for c, _tags, _seq in lookup(conn, "干", "gān", keys=_RankingKeys())]
+        finally:
+            conn.close()
+        assert contents == ["<div>pointer: surname</div>", "<div>to do</div>"]
+
+    def test_lookup_many_matches_lookup_row_for_row(self, tmp_path: Path):
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, [_SURNAME, _SENSE, _VARIANT])
+        conn = open_readonly(db)
+        try:
+            keys = _RankingKeys()
+            batch = lookup_many(conn, [("干", "gān"), ("干", None)], keys=keys)
+            assert batch["干"] == lookup(conn, "干", "gān", keys=keys)
+        finally:
+            conn.close()
+
+    def test_the_variant_fallback_demotes_too(self, tmp_path: Path):
+        """``lookup_with_rules`` renders a card through the same path, so a
+        traditional front reaching its entry by spelling variant gets the same
+        lead as the direct hit."""
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, [_SURNAME, _SENSE, _VARIANT])
+        conn = open_readonly(db)
+        try:
+            contents = [c for c, _tags, _seq, _rules in lookup_with_rules(conn, "干", keys=_RankingKeys())]
+        finally:
+            conn.close()
+        assert contents[0] == _SENSE.content

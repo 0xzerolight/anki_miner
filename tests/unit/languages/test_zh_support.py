@@ -146,3 +146,60 @@ class TestTaiwanSpellingIsACandidate:
     def test_candidates_hold_each_spelling_once(self):
         candidates = ZhLookupStrategy().candidates("银行", "", None)
         assert [c for c, _ in candidates] == list(dict.fromkeys(c for c, _ in candidates))
+
+
+def _cedict_row(*glosses: str) -> str:
+    """One CC-CEDICT row's stored ``content``, shaped as the importer renders it."""
+    items = "".join(f'<li class="gloss-sc-li">{gloss}</li>' for gloss in glosses)
+    return (
+        '<li class="gloss-item"><div class="gloss-content">'
+        '<ul class="gloss-sc-ul" data-sc-cccedict="definition">'
+        f"{items}</ul></div></li>"
+    )
+
+
+class TestSenseRank:
+    """Rows that state no sense of their own rank after the rows that do."""
+
+    @pytest.mark.parametrize(
+        "gloss",
+        [
+            "surname Gan",
+            "variant of 乾|干[gān]",
+            "old variant of 乾|干[gān]",
+            "(old) variant of 款[kuǎn]",
+            "archaic variant of 蒸[zhēng]",
+            "erhua variant of 一個勁|一个劲[yīgèjìn]",
+            "erhua form of 今兒|今儿[jīnr]",
+            "Japanese variant of 圓|圆",
+            "see 基友[jīyǒu]",
+            "see also 西皮[xīpí]",
+            "used in 㐖毒[xiédú]",
+        ],
+    )
+    def test_a_row_that_only_points_elsewhere_is_demoted(self, gloss):
+        assert ZhDictKeyFolding().sense_rank(_cedict_row(gloss)) == 1
+
+    @pytest.mark.parametrize(
+        "gloss",
+        [
+            "dry",
+            "to pay back; to return",
+            "see you next time",
+            "see through (a person, scheme, trick etc)",
+            "used in place names",
+            "abbr. for 三自愛國教會|三自爱国教会[sānzìàiguójiàohuì], Three-Self Patriotic Movement",
+        ],
+    )
+    def test_a_row_that_states_a_sense_keeps_its_rank(self, gloss):
+        assert ZhDictKeyFolding().sense_rank(_cedict_row(gloss)) == 0
+
+    def test_a_surname_beside_a_real_sense_keeps_its_rank(self):
+        assert ZhDictKeyFolding().sense_rank(_cedict_row("surname Wang", "king")) == 0
+
+    def test_every_gloss_must_point_elsewhere(self):
+        assert ZhDictKeyFolding().sense_rank(_cedict_row("variant of 乾|干[gān]", "surname Gan")) == 1
+
+    def test_content_with_no_gloss_items_keeps_its_rank(self):
+        """A dictionary this predicate cannot read is left where the index put it."""
+        assert ZhDictKeyFolding().sense_rank("<div>bank</div>") == 0

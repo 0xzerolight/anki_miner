@@ -209,6 +209,42 @@ def test_a_zh_index_imported_with_the_real_folding_is_queryable(test_config, tmp
     assert ja_side.lookup("Yín Háng") is None
 
 
+def _cedict_content(*glosses: str) -> str:
+    """One CC-CEDICT row's stored ``content``, shaped as the importer renders it."""
+    items = "".join(f'<li class="gloss-sc-li">{gloss}</li>' for gloss in glosses)
+    return (
+        '<li class="gloss-item"><div class="gloss-content">'
+        '<ul class="gloss-sc-ul" data-sc-cccedict="definition">'
+        f"{items}</ul></div></li>"
+    )
+
+
+def test_a_zh_card_leads_with_the_sense_not_the_surname(tmp_path):
+    """干 read gān opens on "dry", not on the surname and variant rows CC-CEDICT
+    happens to store ahead of it. Real zh folding, real index, real provider."""
+    db_path = tmp_path / "dicts" / "cedict-zh" / "index.sqlite"
+    db_path.parent.mkdir(parents=True)
+    create_index(db_path)
+    bulk_insert(
+        db_path,
+        [
+            DictRow(term="干", reading="gān", content=_cedict_content("old variant of 乾|干[gān]"), sequence=4425),
+            DictRow(term="干", reading="gān", content=_cedict_content("surname Gan"), sequence=4428),
+            DictRow(term="干", reading="gān", content=_cedict_content("dry", "dried food"), sequence=4429),
+        ],
+        keys=get_profile("zh").dict_keys,
+    )
+    write_meta(db_path, {"schema_version": str(SCHEMA_VERSION), "source_name": "CC-CEDICT", "language": "zh"})
+    provider = IndexedDictProvider("cedict-zh", db_path, display_name="CC-CEDICT", keys=get_profile("zh").dict_keys)
+    assert provider.load() is True
+
+    rendered = provider.lookup_many([("干", "gān")])["干"]
+
+    assert rendered is not None
+    assert rendered.index("dry") < rendered.index("surname Gan")
+    assert rendered.index("dry") < rendered.index("old variant of")
+
+
 def test_a_zh_card_carries_its_hook_fields_end_to_end(test_config, tmp_path, make_tokenized_word, monkeypatch):
     monkeypatch.setattr("anki_miner.languages.zh.render.to_traditional", lambda text: {"银行": "銀行"}.get(text, text))
     monkeypatch.setattr("anki_miner.languages.zh.render.pinyin_syllables", lambda text: [("yín", 2), ("háng", 2)])
