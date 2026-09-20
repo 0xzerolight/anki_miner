@@ -89,6 +89,8 @@ HOOK_ROWS = [
     ("uk", "noun_gender", "noun_gender_field_input", "noun_gender"),
     ("uk", "aspect_pair", "aspect_pair_field_input", "aspect_pairs"),
     ("vi", "hanviet", "hanviet_field_input", "hanviet"),
+    ("yue", "expression_jyutping", "expression_jyutping_field_input", "jyutping"),
+    ("yue", "measure_word", "measure_word_field_input", "measure_word"),
 ]
 
 

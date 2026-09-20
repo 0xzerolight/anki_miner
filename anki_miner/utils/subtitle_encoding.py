@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import codecs
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -102,6 +102,24 @@ _WHATWG_LABELS = {
     "utf_16": "utf-16le",
     "utf-16": "utf-16le",
 }
+
+#: Every Big5-family codec a profile ladder may name. The three gb18030 guards
+#: have to recognise the FAMILY, not the literal "big5": yue's ladder names
+#: ``big5hkscs`` (the only one of the three that can encode colloquial
+#: Cantonese -- big5 and cp950 both raise UnicodeEncodeError on 嘅), and a
+#: literal test would leave the guard dead for it, letting gb18030 decode the
+#: file into PUA mojibake. Ordered, so a ladder naming two takes the first.
+_BIG5_FAMILY = ("big5", "cp950", "big5hkscs")
+
+
+def big5_family_codec(ladder: Sequence[str]) -> str | None:
+    """The Big5-family codec ``ladder`` names, or None when it names none.
+
+    Public because ``services/reading/_util.py`` runs the same guard on the
+    Reading path and must not carry a second copy of this rule.
+    """
+    return next((codec for codec in ladder if codec in _BIG5_FAMILY), None)
+
 
 #: Bound on the head sniffed by :func:`detect_subtitle_encoding`. Real subtitle
 #: files (even a heavily-styled multi-hour .ass) run tens to a few hundred KB;
@@ -301,14 +319,14 @@ def load_with_fallback_encoding(
             subs = pysubs2.load(str(path), encoding=candidate)
             _log_decode(path, bom="-", ladder=ladder, tried=tried, chosen=candidate)
             return subs
-        if candidate == "gb18030" and "big5" in ladder:
+        if candidate == "gb18030" and (big5_codec := big5_family_codec(ladder)) is not None:
             if head is None:
                 head = _read_head(path)
             # gb18030 accepts every valid Big5 sequence and decodes it into PUA
             # garbage without raising, so first-success could never reach the
-            # big5 leg. Step over gb18030 only when its own result carries that
+            # Big5 leg. Step over gb18030 only when its own result carries that
             # signature; a real GB18030 file scores zero and is unaffected.
-            if prefers_big5(head):
+            if prefers_big5(head, big5_codec):
                 continue
         tried.append(candidate)
         if is_single_byte_codec(candidate):
@@ -394,9 +412,12 @@ def detect_subtitle_encoding(
                 continue
             return _WHATWG_LABELS.get(candidate)
         # Same guard as the load path: gb18030 names itself for Big5 bytes
-        # unless its own decode is PUA mojibake and big5's is clean.
-        if candidate == "gb18030" and "big5" in ladder and prefers_big5(head):
-            continue
+        # unless its own decode is PUA mojibake and the ladder's Big5 codec's
+        # is clean.
+        if candidate == "gb18030":
+            big5_codec = big5_family_codec(ladder)
+            if big5_codec is not None and prefers_big5(head, big5_codec):
+                continue
         if _single_byte_leg_fails(head, candidate, script_check):
             continue
         try:

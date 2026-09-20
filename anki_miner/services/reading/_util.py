@@ -16,7 +16,11 @@ from pathlib import Path
 
 from anki_miner.exceptions import SetupError
 from anki_miner.utils.cjk_encoding import prefers_big5
-from anki_miner.utils.subtitle_encoding import is_single_byte_codec, plausible_single_byte_text
+from anki_miner.utils.subtitle_encoding import (
+    big5_family_codec,
+    is_single_byte_codec,
+    plausible_single_byte_text,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -184,8 +188,12 @@ def _decode(
             # carries that signature; a real GB18030 file scores zero and is
             # unaffected. Reordering the ladder instead would mis-decode the GB
             # majority, which decodes cleanly (and wrongly) under big5.
-            if encoding == "gb18030" and "big5" in encodings and prefers_big5(raw):
-                continue
+            # The FAMILY, not the literal "big5": yue's ladder names big5hkscs,
+            # and a literal test would leave this guard dead for it.
+            if encoding == "gb18030":
+                big5_codec = big5_family_codec(encodings)
+                if big5_codec is not None and prefers_big5(raw, big5_codec):
+                    continue
             try:
                 text = raw.decode(encoding)
             except (UnicodeDecodeError, LookupError):

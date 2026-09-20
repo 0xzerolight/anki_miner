@@ -478,6 +478,10 @@ CAPABILITIES: tuple[Capability, ...] = (
             "українська",
             "vietnamese",
             "tiếng việt",
+            "cantonese",
+            "粵語",
+            "廣東話",
+            "jyutping",
             "hangul",
             "switch language",
             "ja",
@@ -510,6 +514,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "sl",
             "uk",
             "vi",
+            "yue",
         ),
     ),
     # --- Filtering ---------------------------------------------------------

@@ -122,6 +122,10 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     "uk": ["я", "не", "в", "що", "на", "це", "ти", "что", "так", "у"],
     # vi: ranks 1-22 of opensubtitles-vi-word-2026.09.19 (the folded, word-segmented asset).
     "vi": ["tôi", "không", "là", "có", "được", "anh", "này", "của", "cho", "một"],
+    # yue: the ten commonest words of the HKCanCor+CTCPC list built by
+    # scripts/build_yue_frequency.py, ranks 1-16. Cantonese is not on
+    # hermitdave and wordfreq has no yue, so that asset is the catalogue source.
+    "yue": ["我", "你", "佢", "係", "唔", "嘅", "喺", "咗", "都", "好"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -388,6 +392,11 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
         "tổ ong",
         "cối xay",
     ],
+    # yue: concrete nouns present in that same list at ranks 26,370-103,102.
+    # The spec's draft set is not used verbatim: 蝴蝶, 梯子, 錘仔 and 風箏 are
+    # ABSENT from the built list (a term with no row never votes) and 彩虹,
+    # 火山 and 蜘蛛 sit inside the top 4,500, which is not "less common".
+    "yue": ["顯微鏡", "螞蟻", "窗簾", "燈塔", "松鼠", "企鵝", "青蛙", "雨傘", "長頸鹿", "蝸牛"],
 }
 
 

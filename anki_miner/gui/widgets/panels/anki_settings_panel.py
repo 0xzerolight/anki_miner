@@ -176,6 +176,14 @@ _HOOK_FIELD_ROW_TEXTS: dict[str, tuple[str, str]] = {
             "Stores the stem a verb's present-tense forms are built on. Blank = skip.",
         ),
     ),
+    # Cantonese (spec F.1). measure_word is zh's key and already has its row.
+    "expression_jyutping": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Jyutping Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the jyutping reading, tone-coloured when that setting is on. Blank = skip.",
+        ),
+    ),
 }
 
 # Keywords used by populate_from_field_list to auto-map Anki field names.
