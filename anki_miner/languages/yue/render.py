@@ -29,8 +29,10 @@ if TYPE_CHECKING:  # annotation-only: keeps profile.py's resource_catalog import
 #: Six tones, six colours. Cantonese has no single community convention the way
 #: Mandarin does, so this is a default in profile data rather than a setting:
 #: 1 red, 2 orange, 3 green, 4 blue, 5 purple, 6 grey. Tone 0 (a syllable with
-#: no digit, which only imported data produces) takes the neutral grey.
-_TONE_COLORS = {1: "#e02020", 2: "#e08a00", 3: "#1a9e3a", 4: "#1f6fe0", 5: "#8a3fc4", 6: "#8a8a8a"}
+#: no digit, which only imported data produces) takes the neutral grey. The five
+#: shared hues are zh's, in the same both-backgrounds lightness band (see the
+#: note on ``zh.render._TONE_COLORS``); purple joins them there.
+_TONE_COLORS = {1: "#e75353", 2: "#be7500", 3: "#199a39", 4: "#4286e5", 5: "#a66dd2", 6: "#868686"}
 _NEUTRAL = _TONE_COLORS[6]
 
 

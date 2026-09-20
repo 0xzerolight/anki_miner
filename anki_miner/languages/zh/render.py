@@ -23,26 +23,58 @@ if TYPE_CHECKING:  # annotation-only: keeps profile.py's resource_catalog import
 # Capture the first group, stop at the first separator or tag boundary.
 _CL_RE = re.compile(r"CL\s*:\s*([^\s;,<]+)")
 # 1 red / 2 orange / 3 green / 4 blue / 5 grey (surveyed convention, spec 9.1).
-_TONE_COLORS = {1: "#e02020", 2: "#e08a00", 3: "#1a9e3a", 4: "#1f6fe0", 5: "#8a8a8a"}
+# Each hue's lightness sits in the one band that clears 3.5:1 on BOTH a stock
+# white Anki card and Anki night mode (#2f2f31): an inline colour cannot adapt
+# to the theme, and 4.5:1 on white would force under 3:1 on night mode.
+_TONE_COLORS = {1: "#e75353", 2: "#be7500", 3: "#199a39", 4: "#4286e5", 5: "#868686"}
 
 
 class ZhMeasureWordHook:
-    """Measure word / classifier, best-effort from the fetched CC-CEDICT gloss."""
+    """Measure word / classifier, best-effort from the fetched CC-CEDICT gloss.
+
+    CC-CEDICT writes a two-script classifier as ``trad|simp`` (``CL:輛|辆``), so
+    the half the card shows follows ``config.script_variant`` — printing both
+    put a traditional glyph on a simplified learner's card and read as two
+    classifiers. The halves are PICKED, never converted: ``to_script`` does not
+    fold 隻 to 只, and the dictionary already supplies the pair. A front-derived
+    choice covers a config with no script variant (yue, which is traditional).
+
+    First classifier only, deliberately: a word with several (``CL:部,片,張|张``)
+    gets the one CC-CEDICT lists first, not a list the field cannot hold.
+    """
 
     def field_names(self) -> tuple[str, ...]:
         return ("measure_word",)
 
     def render(self, word: Any, *, config: AnkiMinerConfig) -> dict[str, str]:
-        del config  # the classifier is always emitted when the gloss carries one
         match = _CL_RE.search(getattr(word, "definition_html", "") or "")
         if not match:
             return {}
-        forms: list[str] = []
-        for part in match.group(1).split("|"):
-            form = part.split("[")[0].strip()
-            if form and form not in forms:
-                forms.append(form)
-        return {"measure_word": "/".join(forms)} if forms else {}
+        halves = [part.split("[")[0].strip() for part in match.group(1).split("|")]
+        halves = [half for half in halves if half]
+        if not halves:
+            return {}
+        if len(halves) == 1:
+            return {"measure_word": halves[0]}
+        return {"measure_word": halves[-1] if _wants_simplified(word, config) else halves[0]}
+
+
+def _wants_simplified(word: Any, config: AnkiMinerConfig) -> bool:
+    """Whether the card's script is simplified, from the setting or the front.
+
+    zh always carries a variant (its scoped default is "simplified"), so the
+    front branch is for a config that has none — yue's, whose cards are
+    traditional. Only positive evidence flips it: a front with a traditional
+    spelling of its own (汽车 -> 汽車) is simplified text. A script-invariant
+    front (狗, 朋友, 睇) proves nothing and stays traditional, and so does every
+    front where ``to_traditional`` returns its input because OpenCC is absent —
+    the yue extra installs none.
+    """
+    variant = getattr(config, "script_variant", "")
+    if variant:
+        return variant == "simplified"
+    front = getattr(word, "mined_form", "") or ""
+    return to_traditional(front) != front
 
 
 class ZhTraditionalHook:

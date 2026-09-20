@@ -150,10 +150,10 @@ class TestToneColourOnCorrectedReadings:
 
     def test_erhua_is_one_span_not_two(self) -> None:
         # The phantom 儿 used to get an orange tone-2 span of its own.
-        assert self._render("这儿") == '<span style="color:#1f6fe0">zhèr</span>'
+        assert self._render("这儿") == '<span style="color:#4286e5">zhèr</span>'
 
     def test_a_citation_tone_moves_the_span_colour(self) -> None:
-        assert self._render("一个").startswith('<span style="color:#e02020">yī</span>')
+        assert self._render("一个").startswith('<span style="color:#e75353">yī</span>')
 
 
 class TestZhReadingSupport:
