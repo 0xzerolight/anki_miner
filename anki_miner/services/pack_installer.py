@@ -1,7 +1,8 @@
 """Generic in-app installer for downloadable dependency packs.
 
 Stateless, GUI-free service. A *pack* is a set of :class:`PackComponent`s —
-each one top-level Python package pinned to a sha256-verified PyPI artifact —
+each one top-level Python package (or data directory) pinned to a sha256-verified
+artifact —
 installed into one managed root directory that is then appended to
 ``sys.path`` so a plain ``import <name>`` resolves. Two adapters build on it:
 
@@ -497,7 +498,9 @@ def _extract_component(part_path: Path, root: Path, comp: PackComponent, spec: A
     root_stage = staging / "__root__"
     try:
         try:
-            if spec.kind == "wheel":
+            if spec.kind in ("wheel", "zip"):
+                # "zip" is a plain data archive: _extract_wheel handles any zip, and a flat one
+                # (member_prefix "") extracts whole.
                 extracted = _extract_wheel(part_path, pkg_dir, root_stage, spec)
             else:
                 extracted = _extract_sdist(part_path, pkg_dir, root_stage, spec)
@@ -516,8 +519,12 @@ def _extract_component(part_path: Path, root: Path, comp: PackComponent, spec: A
         # A repackaged wheel that moved or dropped the extension module must
         # refuse here, not promote a package dir whose import raises.
         missing += [prefix + "*" for prefix in spec.root_members if not root_member_present(root_stage, prefix)]
+        # Data archives pin their payload as well as the served archive (see ArtifactSpec).
+        missing += [relative for relative, _digest in spec.inner_sha256 if not (pkg_dir / relative).is_file()]
         if missing:
             raise SetupError(f"the {comp.import_name} archive is missing {', '.join(missing)}")
+        for relative, digest in spec.inner_sha256:
+            verify_sha256(pkg_dir / relative, digest, f"{comp.import_name} {relative}")
 
         _promote_root_members(root_stage, root)
         atomic_replace_dir(pkg_dir, root / comp.import_name)
