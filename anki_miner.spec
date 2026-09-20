@@ -867,6 +867,11 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         # the exclude is what keeps a transitive pull from silently adding it.
         "pythainlp",
         "tzdata",
+        # The Cantonese engine (languages/yue/pack.py) is a language pack, never
+        # bundle content: pycantonese is a 42 MB wheel and rustling is its
+        # compiled core. Excluding them is what makes their absence a guarantee.
+        "pycantonese",
+        "rustling",
         # yt-dlp is a SUBPROCESS, never an import: every call site spawns the
         # executable, so the Python package was collected wholesale for no runtime
         # benefit (~16 MB, 13 MB of it extractors) and is dropped here. The frozen

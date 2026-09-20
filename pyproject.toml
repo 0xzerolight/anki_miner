@@ -286,6 +286,13 @@ vi = [
 th = [
     "pythainlp>=5.3.7,<6",
 ]
+# Cantonese mining engine: pycantonese (MIT) carries the segmenter, the
+# universal POS tagger and the jyutping data, and pulls rustling (MIT), its
+# compiled core. Capped below 6 because the segment/pos_tag/
+# characters_to_jyutping signatures this code calls are 5.x.
+yue = [
+    "pycantonese>=5.0,<6",
+]
 # Slovenian mining engine (same spaCy cap as en). The sl_core_news_sm model is a
 # sha256-pinned pack, not a dependency (frozen bundles ship no spaCy model).
 sl = [
@@ -301,7 +308,7 @@ uk = [
 ]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
-languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]", "anki-miner[nb]", "anki-miner[ro]", "anki-miner[el]", "anki-miner[fi]", "anki-miner[hu]", "anki-miner[hr]", "anki-miner[sv]", "anki-miner[pl]", "anki-miner[lt]", "anki-miner[da]", "anki-miner[tr]", "anki-miner[ru]", "anki-miner[th]", "anki-miner[sl]", "anki-miner[uk]", "anki-miner[vi]"]
+languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]", "anki-miner[nb]", "anki-miner[ro]", "anki-miner[el]", "anki-miner[fi]", "anki-miner[hu]", "anki-miner[hr]", "anki-miner[sv]", "anki-miner[pl]", "anki-miner[lt]", "anki-miner[da]", "anki-miner[tr]", "anki-miner[ru]", "anki-miner[th]", "anki-miner[sl]", "anki-miner[uk]", "anki-miner[vi]", "anki-miner[yue]"]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
@@ -472,6 +479,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["underthesea.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pycantonese.*", "rustling.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
