@@ -114,6 +114,9 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     # fa: fa_50k ranks 2-115 (va, dar, be, az, ke, in, ra, ba, ast, baraye).
     # Right-to-left data in a left-to-right list: the ranks are the check.
     "fa": ["و", "در", "به", "از", "که", "این", "را", "با", "است", "برای"],
+    # sl: the top ten of hermitdave's OpenSubtitles 2018 sl_50k.txt. The probe votes on raw surface
+    # forms, before the catalogue row's lemmatise=True aggregates them.
+    "sl": ["je", "ne", "da", "se", "v", "sem", "to", "in", "si", "kaj"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -340,6 +343,19 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
         "نردبان",
         "چکش",
         "پروانه",
+    ],
+    # sl: concrete nouns that are in sl_50k.txt (ranks 15,108-42,113), so each one really votes.
+    "sl": [
+        "sidro",
+        "daljnogled",
+        "teleskop",
+        "svetilnik",
+        "panj",
+        "glavnik",
+        "kanu",
+        "lopata",
+        "jazbec",
+        "mrož",
     ],
 }
 

@@ -1,0 +1,25 @@
+{
+  "source": "Microsoft Edge read-aloud voice list, fetched 2026-09-20 (322 voices); the two sl-SI entries, verbatim.",
+  "voices": [
+    {
+      "Name": "Microsoft Server Speech Text to Speech Voice (sl-SI, PetraNeural)",
+      "ShortName": "sl-SI-PetraNeural",
+      "Gender": "Female",
+      "Locale": "sl-SI",
+      "LocaleName": "Slovenian (Slovenia)",
+      "SuggestedCodec": "audio-24khz-48kbitrate-mono-mp3",
+      "FriendlyName": "Microsoft Petra Online (Natural) - Slovenian (Slovenia)",
+      "Status": "GA"
+    },
+    {
+      "Name": "Microsoft Server Speech Text to Speech Voice (sl-SI, RokNeural)",
+      "ShortName": "sl-SI-RokNeural",
+      "Gender": "Male",
+      "Locale": "sl-SI",
+      "LocaleName": "Slovenian (Slovenia)",
+      "SuggestedCodec": "audio-24khz-48kbitrate-mono-mp3",
+      "FriendlyName": "Microsoft Rok Online (Natural) - Slovenian (Slovenia)",
+      "Status": "GA"
+    }
+  ]
+}
