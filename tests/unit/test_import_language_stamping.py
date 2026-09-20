@@ -296,37 +296,40 @@ def test_resource_download_worker_stamps_its_importers(qapp, tmp_path, monkeypat
 
 
 @pytest.mark.parametrize("language", ["zh", "ja"])
-def test_download_dialog_stamps_the_catalog_language(qapp, tmp_path, monkeypatch, language):
-    """The recommended set IS the ja catalog, so the stamp is ja in every session.
+def test_download_dialog_stamps_the_session_language(qapp, tmp_path, monkeypatch, language):
+    """A run downloads its own profile's catalog, so it stamps its own language.
 
-    Stamping the active language would both mislabel JMdict and fold it out of
-    the ja chain filter, leaving it downloaded but unqueryable. Per-profile
-    catalog routing lands with the setup-wizard task (2B.8).
+    Stamping ja on a zh session's CC-CEDICT folds the dictionary out of the zh
+    chain filter, leaving it downloaded but unqueryable.
     """
     from unittest.mock import MagicMock
 
     from anki_miner.gui.widgets.dialogs import resource_download_dialog as mod
-    from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
+    from anki_miner.languages.registry import config_language, get_profile
 
     seen: list[dict] = []
     monkeypatch.setattr(mod, "ResourceDownloadWorker", lambda *a, **kw: (seen.append(kw), MagicMock())[1])
 
+    config = dataclasses.replace(_config(language), dicts_root=tmp_path, freqs_root=tmp_path, pitch_root=tmp_path)
     session = mod.ResourceDownloadSession(
         None,
-        dataclasses.replace(_config(language), dicts_root=tmp_path, freqs_root=tmp_path, pitch_root=tmp_path),
-        specs=RECOMMENDED_DEFAULT_SET,
+        config,
+        specs=get_profile(config_language(config)).catalog,
         activate=lambda _s: None,
     )
     monkeypatch.setattr(mod, "ResourceDownloadWindow", MagicMock())
     assert session.start() is True
 
     assert seen
-    # Omit-when-ja: no keyword at all, so the ja call stays byte-identical.
-    assert "language" not in seen[0]
+    if language == "ja":
+        # Omit-when-ja: no keyword at all, so the ja call stays byte-identical.
+        assert "language" not in seen[0]
+    else:
+        assert seen[0]["language"] == language
 
 
-def test_download_from_a_zh_session_indexes_a_ja_slot(qapp, tmp_path, monkeypatch):
-    """End of the same thread: the slot's meta.language is ja, not the session's.
+def test_download_from_a_zh_session_indexes_a_zh_slot(qapp, tmp_path, monkeypatch):
+    """End of the same thread: the slot's meta.language is the session's.
 
     The worker the zh session builds is constructed for real and then run on
     this thread, so the assertion is on the importer call the download actually
@@ -372,7 +375,7 @@ def test_download_from_a_zh_session_indexes_a_ja_slot(qapp, tmp_path, monkeypatc
     assert built, "the session must build a download worker"
     built[0].run()
 
-    assert stamped == ["ja"]
+    assert stamped == ["zh"]
 
 
 # ---------------------------------------------------------------------------

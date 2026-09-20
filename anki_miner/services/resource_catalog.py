@@ -79,9 +79,9 @@ RECOMMENDED_DEFAULT_SET: tuple[ResourceSpec, ...] = (
     ),
 )
 
-# Pinned on-disk slots for the recommended dict resources. Consumed by the
-# per-row Re-import guard (a catalog slot accepts a newer, same-base zip whose
-# title-derived id would otherwise differ) and available for boundary tests.
+# Pinned on-disk slots for this catalog's dict resources. The per-row Re-import
+# guard derives its own set from the *active* profile's catalog, so this is the
+# boundary-test anchor for the Japanese one: every dict spec above must be in it.
 CATALOG_DICT_SLOT_IDS: frozenset[str] = frozenset(s.id for s in RECOMMENDED_DEFAULT_SET if s.kind == "dict")
 
 # Former catalog dict slots. Users who installed these via an earlier wizard

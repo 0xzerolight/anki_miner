@@ -37,7 +37,7 @@ from anki_miner.gui.workers.resource_download_worker import (
     ResourcePhase,
     ResourceProgress,
 )
-from anki_miner.services.resource_catalog import ResourceSpec
+from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET, ResourceSpec
 
 MOD = "anki_miner.gui.widgets.dialogs.resource_download_dialog"
 
@@ -137,6 +137,7 @@ def _start(
         release_resources=release,
         task_registry=registry,
         adopt_worker=adopt,
+        specs=RECOMMENDED_DEFAULT_SET,
         **extra,
     )
     assert session.start()
@@ -165,6 +166,7 @@ def test_release_false_aborts_without_downloading(parent, monkeypatch):
             create_default_config(),
             activate=lambda _s: None,
             release_resources=lambda: False,
+            specs=RECOMMENDED_DEFAULT_SET,
         )
 
     assert session is None
@@ -186,6 +188,7 @@ def test_release_true_proceeds_to_the_worker(parent, monkeypatch, tmp_path, qtbo
         create_default_config(),
         activate=lambda _s: None,
         release_resources=lambda: True,
+        specs=RECOMMENDED_DEFAULT_SET,
     )
 
     assert isinstance(session, ResourceDownloadSession)
@@ -365,6 +368,7 @@ def test_mutation_lease_is_released_when_initial_resource_release_raises(parent)
         activate=lambda _summary: None,
         release_resources=release_resources,
         acquire_mutation=acquire,
+        specs=RECOMMENDED_DEFAULT_SET,
     )
 
     with pytest.raises(RuntimeError, match="release exploded"):
@@ -395,6 +399,7 @@ def test_mutation_lease_is_released_before_a_raising_blocked_reporter(parent):
         release_resources=release_resources,
         acquire_mutation=acquire,
         blocked=report_blocked,
+        specs=RECOMMENDED_DEFAULT_SET,
     )
 
     with pytest.raises(RuntimeError, match="reporter exploded"):
@@ -614,6 +619,7 @@ def test_changed_live_root_refuses_activation(parent, monkeypatch, tmp_path, qtb
         parent,
         base,
         activate=lambda result: apply_download_summary(live, result),
+        specs=RECOMMENDED_DEFAULT_SET,
     )
     session.finished.connect(outcomes.append)
     assert session.start()
@@ -789,6 +795,7 @@ def test_running_registry_rejects_second_start_and_reveals_retained_session(pare
         create_default_config(),
         activate=lambda _summary: None,
         task_registry=registry,
+        specs=RECOMMENDED_DEFAULT_SET,
     )
     assert first is not None
     assert workers[0].started_event.wait(2.0)
@@ -802,6 +809,7 @@ def test_running_registry_rejects_second_start_and_reveals_retained_session(pare
             create_default_config(),
             activate=lambda _summary: None,
             task_registry=registry,
+            specs=RECOMMENDED_DEFAULT_SET,
         )
         qtbot.wait(20)
 
@@ -1002,8 +1010,6 @@ def test_outcome_reports_activation_separately_from_import():
 
 def test_start_resource_download_forwards_a_spec_subset(qtbot, monkeypatch):
     """A page-level picker is worthless if the entry point drops the choice."""
-    from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
-
     parent = QWidget()
     qtbot.addWidget(parent)
     only_pitch = [s for s in RECOMMENDED_DEFAULT_SET if s.kind == "pitch"]
@@ -1025,19 +1031,14 @@ def test_start_resource_download_forwards_a_spec_subset(qtbot, monkeypatch):
     assert seen == [only_pitch]
 
 
-def test_start_resource_download_defaults_to_the_whole_catalog(qtbot, monkeypatch):
-    """Tools -> Download Recommended Resources passes no specs and must not narrow."""
-    from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
-
+def test_start_resource_download_refuses_an_empty_catalog(qtbot, monkeypatch):
+    """Nothing to download is not a run: no window, no worker, no task."""
     parent = QWidget()
     qtbot.addWidget(parent)
-    seen: list[object] = []
+    built = MagicMock()
+    monkeypatch.setattr(mod, "ResourceDownloadWorker", built)
 
-    def fake_start(self):
-        seen.append(list(self._specs))
-        return True
+    session = start_resource_download(parent, create_default_config(), activate=lambda _s: None, specs=())
 
-    monkeypatch.setattr(ResourceDownloadSession, "start", fake_start)
-    start_resource_download(parent, create_default_config(), activate=lambda _s: None)
-
-    assert seen == [list(RECOMMENDED_DEFAULT_SET)]
+    assert session is None
+    built.assert_not_called()

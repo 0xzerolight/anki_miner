@@ -177,6 +177,22 @@ def test_tools_resource_download_starts_in_the_background_without_a_modal(main_w
     assert main_window._resource_download_session is not None
 
 
+@pytest.mark.parametrize("language", ["zh", "ja"])
+def test_tools_resource_download_offers_the_session_languages_catalog(main_window, monkeypatch, language):
+    """The Tools entry downloads what the mining language actually needs."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod
+    from anki_miner.languages.registry import get_profile
+
+    captured = {}
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: captured.update(kw) or MagicMock())
+    monkeypatch.setattr(main_window.background_tasks, "cancel_jmdict_migration", lambda: None)
+    main_window.config = replace(main_window.config, language=language)
+
+    main_window._download_recommended_resources()
+
+    assert list(captured["specs"]) == list(get_profile(language).catalog)
+
+
 def test_starting_the_download_takes_no_mutation_lease(main_window, monkeypatch, qtbot):
     """D15: the lease belongs to activation, not to the whole several-hundred-MB run."""
     from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod

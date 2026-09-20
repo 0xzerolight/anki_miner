@@ -324,3 +324,46 @@ class TestCatalogSlotBaseMatches:
         flow = _make_flow(tmp_path / "dicts")
         fresh = build_yomitan_zip(tmp_path / "src" / "j.zip", title="Jitendex.org [2026-06-06]")
         assert flow._catalog_slot_base_matches("jitendex", fresh) is False
+
+
+class TestSavedSourceMatchesFollowTheActiveProfile:
+    """The pinned slots are the mining language's catalog, not Japanese's."""
+
+    def test_zh_catalog_slot_accepts_a_newer_dated_zip(self, tmp_path: Path):
+        dicts_root = tmp_path / "dicts"
+        flow = _make_flow(dicts_root)
+        flow._get_config().language = "zh"
+        _seed_slot(dicts_root, "cc-cedict", "CC-CEDICT [2025-11-05]")
+        fresh = build_yomitan_zip(tmp_path / "src" / "c.zip", title="CC-CEDICT [2026-06-06]")
+
+        assert flow._saved_yomitan_source_matches("cc-cedict", fresh) is True
+
+    def test_ja_catalog_slot_still_accepts_a_newer_dated_zip(self, tmp_path: Path):
+        dicts_root = tmp_path / "dicts"
+        flow = _make_flow(dicts_root)
+        flow._get_config().language = "ja"
+        _seed_slot(dicts_root, "jmdict-english", "JMdict [2025-11-05]")
+        fresh = build_yomitan_zip(tmp_path / "src" / "j.zip", title="JMdict [2026-06-06]")
+
+        assert flow._saved_yomitan_source_matches("jmdict-english", fresh) is True
+
+    def test_another_languages_catalog_slot_is_not_pinned(self, tmp_path: Path):
+        # Only the active profile's slots are pinned: a ja session re-importing
+        # a zh slot falls back to the derived-id match, which a dated title
+        # never satisfies.
+        dicts_root = tmp_path / "dicts"
+        flow = _make_flow(dicts_root)
+        flow._get_config().language = "ja"
+        _seed_slot(dicts_root, "cc-cedict", "CC-CEDICT [2025-11-05]")
+        fresh = build_yomitan_zip(tmp_path / "src" / "c.zip", title="CC-CEDICT [2026-06-06]")
+
+        assert flow._saved_yomitan_source_matches("cc-cedict", fresh) is False
+
+    def test_legacy_slot_stays_pinned_in_every_session(self, tmp_path: Path):
+        dicts_root = tmp_path / "dicts"
+        flow = _make_flow(dicts_root)
+        flow._get_config().language = "zh"
+        _seed_slot(dicts_root, "jitendex", "Jitendex.org [2025-11-05]")
+        fresh = build_yomitan_zip(tmp_path / "src" / "j.zip", title="Jitendex.org [2026-06-06]")
+
+        assert flow._saved_yomitan_source_matches("jitendex", fresh) is True
