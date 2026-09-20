@@ -27,6 +27,7 @@ from __future__ import annotations
 import logging
 import re
 from bisect import bisect_left
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -101,15 +102,26 @@ def _is_non_dialogue_event(event: pysubs2.SSAEvent) -> bool:
     return _is_non_speech_text(event.plaintext.strip())
 
 
-def _load(path: Path) -> pysubs2.SSAFile:
-    # Deliberately on the default ladder: this module only re-times cues for
-    # alignment (its text never reaches the pipeline) and none of
-    # clean_reference / clean_for_alignment / map_deltas_back carries a config
-    # to take a language ladder from. The detector leg still covers big5/gb18030.
+def _load(
+    path: Path,
+    *,
+    encodings: tuple[str, ...] | None = None,
+    script_check: Callable[[str], bool] | None = None,
+) -> pysubs2.SSAFile:
+    """Load *path*, falling back to the caller's ladder when UTF-8 fails.
+
+    *encodings* is the mining language's ``get_profile(...).import_encodings``,
+    threaded down from the retime orchestrator. ``None`` (never ``()``) is the
+    built-in Japanese ladder — the right answer for ``clean_reference``, whose
+    input is an ffmpeg-extracted UTF-8 temp, and for a caller reading cue
+    timings only. It is the wrong one for the user's own subtitle: GB18030 and
+    Big5 bytes decode as EUC-JP into plausible-looking kanji without raising,
+    and ``map_deltas_back`` saves what it read.
+    """
     try:
         return pysubs2.load(str(path))
     except UnicodeDecodeError as exc:
-        return load_with_fallback_encoding(path, exc)
+        return load_with_fallback_encoding(path, exc, encodings=encodings, script_check=script_check)
 
 
 @dataclass(frozen=True)
@@ -171,16 +183,25 @@ class CleanedForAlignment:
         return self.total_events - len(self.kept_indices)
 
 
-def clean_for_alignment(src: Path, dest: Path) -> CleanedForAlignment | None:
+def clean_for_alignment(
+    src: Path,
+    dest: Path,
+    *,
+    encodings: tuple[str, ...] | None = None,
+    script_check: Callable[[str], bool] | None = None,
+) -> CleanedForAlignment | None:
     """Write a same-format copy of *src* to *dest* with non-dialogue cues dropped.
 
     Cues are only ever dropped, never rewritten, so the copy stays a strict
     subset the aligner sees in original order. Returns None when the file
     cannot be parsed or too few cues survive — the caller then aligns the
     original file directly, which is exactly the pre-cleaning behaviour.
+
+    *encodings* and *script_check* are the mining language's decode ladder; see
+    :func:`_load`.
     """
     try:
-        subs = _load(src)
+        subs = _load(src, encodings=encodings, script_check=script_check)
     except Exception:  # noqa: BLE001 — an unparsable input falls back to as-is alignment
         logger.warning("subtitle cleaner: could not parse %s", src, exc_info=True)
         return None
@@ -209,7 +230,13 @@ def clean_for_alignment(src: Path, dest: Path) -> CleanedForAlignment | None:
     return CleanedForAlignment(path=dest, kept_indices=kept_indices, total_events=total)
 
 
-def transcode_for_alignment(src: Path, dest: Path) -> CleanedForAlignment | None:
+def transcode_for_alignment(
+    src: Path,
+    dest: Path,
+    *,
+    encodings: tuple[str, ...] | None = None,
+    script_check: Callable[[str], bool] | None = None,
+) -> CleanedForAlignment | None:
     """Write *src* to *dest* in *dest*'s format, dropping only what cannot survive it.
 
     The escape hatch for a format the aligners cannot read at all: alass v2
@@ -229,9 +256,12 @@ def transcode_for_alignment(src: Path, dest: Path) -> CleanedForAlignment | None
     Returns None when *src* cannot be parsed or *dest* cannot be written; the
     caller then aligns the original directly, which is the pre-transcode
     behaviour.
+
+    *encodings* and *script_check* are the mining language's decode ladder; see
+    :func:`_load`.
     """
     try:
-        subs = _load(src)
+        subs = _load(src, encodings=encodings, script_check=script_check)
     except Exception:  # noqa: BLE001 — an unparsable input falls back to as-is alignment
         logger.warning("subtitle cleaner: could not parse %s for transcode", src, exc_info=True)
         return None
@@ -261,6 +291,9 @@ def map_deltas_back(
     synced_clean: Path,
     kept_indices: list[int],
     out: Path,
+    *,
+    encodings: tuple[str, ...] | None = None,
+    script_check: Callable[[str], bool] | None = None,
 ) -> bool:
     """Apply the aligner's timing changes to the untouched *original* file.
 
@@ -274,10 +307,14 @@ def map_deltas_back(
     Writes the result to *out* in the original's format (styles and all lines
     preserved). Returns False when the cue counts do not match — the aligner
     dropped or merged cues and the mapping would be wrong.
+
+    *encodings* and *script_check* are the mining language's decode ladder; see
+    :func:`_load`. This is the load whose text reaches disk, so a ladder that
+    does not match the user's subtitle writes mojibake into *out*.
     """
     try:
-        subs = _load(original)
-        synced = _load(synced_clean)
+        subs = _load(original, encodings=encodings, script_check=script_check)
+        synced = _load(synced_clean, encodings=encodings, script_check=script_check)
     except Exception:  # noqa: BLE001 — parse failure means the candidate is unusable
         logger.warning("subtitle cleaner: map-back parse failed", exc_info=True)
         return False

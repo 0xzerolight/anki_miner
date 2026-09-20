@@ -43,6 +43,7 @@ from pathlib import Path
 from PyQt6.QtCore import QCoreApplication
 
 from anki_miner.exceptions.subtitle import AlassNotFoundError
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.retime_reference import ReferenceOverride, resolve_reference
 from anki_miner.services.subtitle_cleaner import (
     clean_for_alignment,
@@ -57,6 +58,7 @@ from anki_miner.utils.audio_track_detector import get_media_duration_seconds
 from anki_miner.utils.ffmpeg_resolver import resolve_ffprobe
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.subtitle_encoding import script_check_kwarg
 
 logger = logging.getLogger(__name__)
 
@@ -162,13 +164,27 @@ def retime_subtitle(
         reference_path = reference.path if reference is not None else video
         sub_reference = reference is not None and reference.kind == "subtitle"
 
+        # The user's subtitle is decoded with the mining language's ladder, not
+        # the built-in Japanese one: map_deltas_back saves what it read, so a
+        # Chinese file that lost its gb18030/big5 legs is mojibake on disk.
+        profile = get_profile(config_language(config))
         align_suffix = _alignment_suffix(in_sub)
-        cleaned = clean_for_alignment(in_sub, tmp_dir / (out_sub.stem + ".retime-clean" + align_suffix))
+        cleaned = clean_for_alignment(
+            in_sub,
+            tmp_dir / (out_sub.stem + ".retime-clean" + align_suffix),
+            encodings=profile.import_encodings,
+            **script_check_kwarg(profile.import_encodings, profile.script),
+        )
         if cleaned is None and align_suffix != in_sub.suffix.lower():
             # Cleaning declined, but no engine can read this format as-is. Keep
             # every representable cue rather than dropping non-dialogue: the
             # cue floor is already unmet, so there is nothing to spare.
-            cleaned = transcode_for_alignment(in_sub, tmp_dir / (out_sub.stem + ".retime-clean" + align_suffix))
+            cleaned = transcode_for_alignment(
+                in_sub,
+                tmp_dir / (out_sub.stem + ".retime-clean" + align_suffix),
+                encodings=profile.import_encodings,
+                **script_check_kwarg(profile.import_encodings, profile.script),
+            )
         if cleaned is not None:
             temps.append(cleaned.path)
             if cleaned.dropped:
@@ -230,7 +246,14 @@ def retime_subtitle(
             if result.ok and cleaned is not None:
                 mapped = tmp_dir / f"{out_sub.stem}.retime-map-{len(attempts)}{out_sub.suffix}"
                 temps.append(mapped)
-                if map_deltas_back(in_sub, candidate, cleaned.kept_indices, mapped):
+                if map_deltas_back(
+                    in_sub,
+                    candidate,
+                    cleaned.kept_indices,
+                    mapped,
+                    encodings=profile.import_encodings,
+                    **script_check_kwarg(profile.import_encodings, profile.script),
+                ):
                     final_candidate = mapped
                 else:
                     attempts.append(f"{label}: aligner changed the cue count; discarded")
