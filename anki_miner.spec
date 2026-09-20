@@ -338,6 +338,12 @@ da_core_news_sm_license_dir = os.path.join(project_root, "licenses", "da_core_ne
 da_core_news_sm_license_datas = []
 if os.path.isdir(da_core_news_sm_license_dir):
     da_core_news_sm_license_datas.append((da_core_news_sm_license_dir, os.path.join("licenses", "da_core_news_sm")))
+# zeyrek (Turkish morphological analyzer) MIT notice: languages/tr/analyzer.py ports two of its methods.
+# Lands at sys._MEIPASS/licenses/zeyrek/. zeyrek itself is a language pack, never bundled.
+zeyrek_license_dir = os.path.join(project_root, "licenses", "zeyrek")
+zeyrek_license_datas = []
+if os.path.isdir(zeyrek_license_dir):
+    zeyrek_license_datas.append((zeyrek_license_dir, os.path.join("licenses", "zeyrek")))
 
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
@@ -510,7 +516,8 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + hr_core_news_sm_license_datas
     + sv_core_news_sm_license_datas
     + lt_core_news_sm_license_datas
-    + da_core_news_sm_license_datas,
+    + da_core_news_sm_license_datas
+    + zeyrek_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",
@@ -710,6 +717,13 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "pt_core_news_sm",
         "ro_core_news_sm",
         "sv_core_news_sm",
+        # The Turkish engine (languages/tr/pack.py, generated) is a language pack, never
+        # bundle content: zeyrek and the nltk/regex/defusedxml it imports. NOT colorama
+        # (the spaCy block's reason) and not numpy, click or tqdm (bundle pins).
+        "defusedxml",
+        "nltk",
+        "regex",
+        "zeyrek",
         # yt-dlp is a SUBPROCESS, never an import: every call site spawns the
         # executable, so the Python package was collected wholesale for no runtime
         # benefit (~16 MB, 13 MB of it extractors) and is dropped here. The frozen

@@ -85,6 +85,9 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     "lt": ["ir", "aš", "tai", "kad", "tu", "ne", "taip", "jis", "ką", "čia"],
     # da: da_50k.txt ranks 1-6 and 8-11 (lowercase surfaces, before lemmatisation).
     "da": ["jeg", "det", "er", "du", "ikke", "at", "en", "og", "har", "vi"],
+    # tr: the top 10 of hermitdave/FrequencyWords OpenSubtitles 2018 tr_50k.txt,
+    # the default catalogue source, which is imported before lemmatisation.
+    "tr": ["bir", "bu", "ne", "ve", "için", "mi", "de", "o", "ben", "çok"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -261,6 +264,9 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
         "mejsel",
         "ambolt",
     ],
+    # tr: rare-but-real nouns present in that same list at ranks 11,552-42,003
+    # (agglutination spreads a lemma over many rows, the hu case).
+    "tr": ["sincap", "baykuş", "kova", "şömine", "kirpi", "pusula", "süpürge", "çapa", "beşik", "sepet"],
 }
 
 

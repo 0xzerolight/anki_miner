@@ -51,6 +51,7 @@ PROBE = {
     "pl": "książki",
     "lt": "knygos",
     "da": "gik",
+    "tr": "kitapları",
 }
 
 #: Every capability name any profile is allowed to declare. A typo'd flag is a

@@ -21,6 +21,8 @@ license-files = [
     "licenses/local-audio-yomichan/LICENSE",
     "licenses/yomitan/COPYING.GPLv3",
     "licenses/yomitan/README.md",
+    "licenses/zeyrek/LICENSE",
+    "licenses/zeyrek/README.md",
 ]
 authors = [
     {name = "Anki Miner Contributors"}
@@ -228,9 +230,14 @@ lt = [
 da = [
     "spacy>=3.8,<3.8.15",
 ]
+# Turkish mining engine: zeyrek (MIT, pure Python, with the Zemberek lexicon) pulls nltk and
+# regex. languages/tr/analyzer.py subclasses zeyrek 0.1.3 internals, hence the exact-minor cap.
+tr = [
+    "zeyrek>=0.1.3,<0.1.4",
+]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
-languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]", "anki-miner[nb]", "anki-miner[ro]", "anki-miner[el]", "anki-miner[fi]", "anki-miner[hu]", "anki-miner[hr]", "anki-miner[sv]", "anki-miner[pl]", "anki-miner[lt]", "anki-miner[da]"]
+languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]", "anki-miner[nb]", "anki-miner[ro]", "anki-miner[el]", "anki-miner[fi]", "anki-miner[hu]", "anki-miner[hr]", "anki-miner[sv]", "anki-miner[pl]", "anki-miner[lt]", "anki-miner[da]", "anki-miner[tr]"]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
@@ -384,6 +391,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["spacy.*", "thinc.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["zeyrek.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
