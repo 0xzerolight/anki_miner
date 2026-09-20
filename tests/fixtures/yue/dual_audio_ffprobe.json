@@ -1,0 +1,34 @@
+{
+  "streams": [
+    {
+      "index": 0,
+      "codec_type": "video",
+      "codec_name": "h264"
+    },
+    {
+      "index": 1,
+      "codec_type": "audio",
+      "codec_name": "aac",
+      "tags": {
+        "language": "yue",
+        "title": "Cantonese"
+      }
+    },
+    {
+      "index": 2,
+      "codec_type": "audio",
+      "codec_name": "aac",
+      "tags": {
+        "language": "jpn"
+      }
+    },
+    {
+      "index": 3,
+      "codec_type": "audio",
+      "codec_name": "aac",
+      "tags": {
+        "language": "chi"
+      }
+    }
+  ]
+}
