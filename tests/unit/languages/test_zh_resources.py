@@ -10,6 +10,7 @@ from anki_miner.config import AnkiMinerConfig, AudioSourceEntry
 from anki_miner.languages.profile import AudioDefaults, LanguageProfile
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
+from anki_miner.languages.zh import catalog as zh_catalog
 from anki_miner.languages.zh import variants
 from anki_miner.languages.zh.audio import ZH_AUDIO, zh_audio_candidates
 from anki_miner.languages.zh.catalog import ZH_CATALOG
@@ -122,3 +123,14 @@ class TestZhCatalog:
 
     def test_the_dictionary_slot_is_pinned(self) -> None:
         assert [spec.id for spec in ZH_CATALOG if spec.kind == "dict"] == ["cc-cedict"]
+
+    def test_the_frequency_slot_is_the_first_party_opensubtitles_asset(self) -> None:
+        by_id = {spec.id: spec for spec in ZH_CATALOG}
+        assert set(by_id) == {"cc-cedict", "opensubtitles-zh-word"}
+        frequency = by_id["opensubtitles-zh-word"]
+        assert frequency.kind == "freq" and frequency.lemmatise is False  # keys are already folded words
+        assert frequency.url == zh_catalog.OPENSUBTITLES_ZH_WORD_URL
+        assert frequency.url.startswith(
+            "https://github.com/0xzerolight/anki_miner/releases/download/resources-2026-09-"
+        )
+        assert "ODC-BY 1.0" in frequency.license_note
