@@ -40,7 +40,7 @@ import html
 import logging
 import re
 from collections import Counter
-from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
@@ -135,6 +135,26 @@ def hook_field_groups(specs: Iterable[CardFieldSpec]) -> dict[str, tuple[str, ..
     here names it.
     """
     return {spec.key: (spec.key,) for spec in specs}
+
+
+def selected_hook_field_keys(config: AnkiMinerConfig, field_keys: Iterable[str]) -> frozenset[str]:
+    """The active profile's own card fields among ``field_keys``."""
+    specs = get_profile(config_language(config)).extra_card_fields
+    return frozenset(spec.key for spec in specs) & frozenset(field_keys)
+
+
+def definition_lookup_keys(config: AnkiMinerConfig, field_keys: Iterable[str]) -> frozenset[str]:
+    """``field_keys`` widened by the definition a hook field rides on.
+
+    A hook field rides the definition lookup: zh's measure word parses the
+    ``CL:`` marker out of the fetched gloss, so ticking that group alone has to
+    fetch one. Nothing is proposed for the definition field itself unless the
+    user picked it — this widens the lookup, never the writes. The scan and the
+    worker's staleness gate both read it, so a hook-only run cannot reach a
+    stale dictionary chain without being told to reimport.
+    """
+    keys = frozenset(field_keys)
+    return keys | {"definition"} if selected_hook_field_keys(config, keys) else keys
 
 
 @dataclass(frozen=True)
@@ -471,7 +491,7 @@ def _scan_backfill_impl(
     style_direction = profile.content_style.direction
     # The language's own card fields, filled by the same hooks mining runs.
     # Empty for Japanese, whose fields are all rendered inline in _phase5_create.
-    hook_keys = frozenset(spec.key for spec in profile.extra_card_fields) & selected
+    hook_keys = selected_hook_field_keys(config, selected)
     # A mined hook value reaches the card through build_note, which inserts a
     # raw_html field verbatim and html.escape()s every other one. A backfilled
     # value goes straight into the note, so that pass has to happen here or the
@@ -485,11 +505,7 @@ def _scan_backfill_impl(
     # render fields in isolation).
     want_styling = bool(selected & {"definition", "glossary"}) or bool(hook_keys)
     dict_css_entries = collect_dictionary_css_entries(config) if want_styling else []
-    # A hook field rides the definition lookup: zh's measure word parses the
-    # CL: marker out of the fetched gloss, so ticking that group alone has to
-    # fetch one. Nothing is proposed for the definition field itself unless the
-    # user picked it — this widens the lookup, never the writes.
-    definition_lookups = selected | {"definition"} if hook_keys else selected
+    definition_lookups = definition_lookup_keys(config, selected)
 
     scanned = skipped_no_identity = identical_skips = 0
     guessed_reading_skips = 0
@@ -783,7 +799,7 @@ def _resolve_context(
 def _chunk_definition_lookups(
     definition_service: Any,
     contexts: list[_NoteContext],
-    lookups: set[str],
+    lookups: Collection[str],
     *,
     is_cancelled: Callable[[], bool] | None = None,
 ) -> tuple[list[str | None], list[str | None]]:
