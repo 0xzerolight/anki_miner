@@ -166,9 +166,12 @@ def offer_first_visit_setup(
     display_name = getattr(get_profile(config_language(config)), "display_name", config.language)
     parent = window if isinstance(window, QWidget) else None
     choice, chosen = _first_visit_choice(parent, display_name, decks, ticked, offer_setup)
-    if choice == FIRST_VISIT_EXCLUDE and chosen:
+    # The ticks are the user's answer to the deck question and the wizard is a
+    # separate action on the same dialog, so the setup button keeps that answer
+    # too - and keeps it BEFORE the wizard opens on top of this config.
+    if choice in (FIRST_VISIT_EXCLUDE, FIRST_VISIT_SETUP) and chosen:
         window.update_config(replace(config, excluded_decks=(*config.excluded_decks, *chosen)))
-    elif choice == FIRST_VISIT_SETUP:
+    if choice == FIRST_VISIT_SETUP:
         wizard = getattr(window, "_run_setup_wizard_tool", None)
         if callable(wizard):
             wizard()
