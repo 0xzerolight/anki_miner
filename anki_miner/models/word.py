@@ -189,6 +189,13 @@ class TokenizedWord:
     # the three states and its background prefetch resolves the Nones; nothing
     # on the card path reads it.
     expression_audio_available: bool | None = None
+    # Where in the source this word was found, spelled exactly as the card's
+    # Source field will spell it: "00:31:07" on a video or YouTube run, the
+    # reading unit's own page/chapter/paragraph label ("p.42", "ch.3", "¶12")
+    # on a reading run. Display/sort-only, stamped by the curation step from
+    # episode_processor._position_label; "" means not computed. ONE reader: the
+    # Word Curator's Position column (Issue #129).
+    position_label: str = ""
     pos: str | None = None  # MeCab pos1 (動詞/形容詞/名詞/...) — used for kifuku/odaka distinction
     # Character offsets of the target morpheme within ``sentence`` (post-filter).
     # -1 sentinel means "not tracked" — card builder falls back to plain escape.

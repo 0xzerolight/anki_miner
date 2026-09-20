@@ -98,6 +98,11 @@ TRANSLATION_COLUMN = 9
 #: hidden unless the run mines expression audio.
 AUDIO_COLUMN = 10
 
+#: Where the word sits in what is being mined: a HH:MM:SS timestamp on a video
+#: run, the reading unit's own page/chapter label otherwise. Always shown — the
+#: stamp covers every mining path (Issue #129).
+POSITION_COLUMN = 11
+
 #: Table column : side column, as stretch factors. Also the ratio the split
 #: opens at, so the first frame and every resize after it agree.
 _MAIN_SPLIT_STRETCH = (3, 2)
@@ -579,7 +584,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         # Table
         self.table = QTableWidget()
-        self.table.setColumnCount(11)
+        self.table.setColumnCount(12)
         self.table.setHorizontalHeaderLabels(
             [
                 "",
@@ -593,6 +598,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 self.tr("Sentence length"),
                 self.tr("Translation"),
                 self.tr("Audio"),
+                self.tr("Position"),
             ]
         )
         # Occurrences and the Sentences picker count different things, and a user
@@ -640,6 +646,16 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                     "✓ found, ✗ not found, - not checked yet. Words are checked while this "
                     "window is open, so a word you keep already has its audio ready. The "
                     "check never changes which words you can mine."
+                )
+            )
+        position_header = self.table.horizontalHeaderItem(POSITION_COLUMN)
+        if position_header is not None:
+            position_header.setToolTip(
+                self.tr(
+                    "Where this word appears in what you are mining: a timestamp for "
+                    "video, a page or chapter for reading.\n\n"
+                    "Sort by it to work through a long recording in order — then "
+                    "highlight the rows up to where you stopped and include those."
                 )
             )
 
@@ -910,7 +926,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             8,
             TRANSLATION_COLUMN,
             AUDIO_COLUMN,
-        ):  # mined form, surface, reading, rank, count, signals, translation, audio
+            POSITION_COLUMN,
+        ):  # mined form, surface, reading, rank, count, signals, translation, audio, position
             header_view.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
         header_view.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)  # sentence
 
@@ -1737,6 +1754,15 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 self._make_readonly_item(text, role=CellRole.STATE, sort_value=sort_value, tooltip=tooltip),
             )
 
+            # Its own tooltip name: the loops above bind ``tooltip`` as a plain
+            # str, and only a season row carries one here.
+            for column, text, sort_value, episode in self._position_cell_values(word, shown):
+                self.table.setItem(
+                    row,
+                    column,
+                    self._make_readonly_item(text, role=CellRole.NUMBER, sort_value=sort_value, tooltip=episode),
+                )
+
         self.table.blockSignals(False)
         self.table.setSortingEnabled(True)
 
@@ -1801,6 +1827,44 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         return (
             (7, "-" if unknowns <= 0 else str(unknowns), float("inf") if unknowns <= 0 else float(unknowns)),
             (8, str(length), float(length)),
+        )
+
+    @staticmethod
+    def _position_cell_values(
+        word: TokenizedWord, chosen: TokenizedWord
+    ) -> tuple[tuple[int, str, float, str | None], ...]:
+        """``(column, text, sort_value, tooltip)`` for the Position column.
+
+        One spec for :meth:`_populate_table` and :meth:`_apply_pick_to_row`, like
+        :meth:`_signal_cell_values` beside it — a sentence PICK is another line
+        and therefore another position, so the cell has to move with it.
+
+        Falls back to ``word`` when ``chosen`` carries no label. That is the
+        sentence EDIT path: the editor hands back a freshly parsed token the
+        processor never stamped, and an edit does not move the word off its own
+        cue, so blanking the cell would lose the one fact this column exists to
+        show. (Unlike Freq. Rank, which legitimately prints "-" there.)
+
+        The tooltip names the episode on a season row, where one table pools
+        several videos and a bare timestamp is ambiguous. The sort key stays the
+        raw seconds: across episodes that groups "the first five minutes of
+        every episode", which is the only thing a cross-episode time sort can
+        mean, and the tooltip is what tells the rows apart.
+
+        An unstamped word — the plain-ctor path, with no run behind it — prints
+        "-" and carries ``inf`` so it sorts last ascending, exactly like an
+        unranked Freq. Rank.
+        """
+        source = chosen if chosen.position_label else word
+        label = source.position_label
+        video = source.video_file
+        return (
+            (
+                POSITION_COLUMN,
+                label or "-",
+                float(source.start_time) if label else float("inf"),
+                video.name if video is not None else None,
+            ),
         )
 
     def _audio_cell_value(self, state: bool | None) -> tuple[str, float, str]:
@@ -2493,6 +2557,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 item = self.table.item(row, column)
                 if item is not None:
                     update_table_item(item, text, sort_value=sort_value)
+            for column, text, sort_value, episode in self._position_cell_values(word, chosen):
+                item = self.table.item(row, column)
+                if item is not None:
+                    update_table_item(item, text, sort_value=sort_value, tooltip=episode)
         finally:
             if sorting:
                 self.table.setSortingEnabled(True)
