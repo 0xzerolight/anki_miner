@@ -59,6 +59,17 @@ class TestTheFaceList:
         assert len(set(ZH_FONT_FAMILIES)) == len(ZH_FONT_FAMILIES)
 
 
+class TestTheProbedWritingSystem:
+    def test_simplified_chinese_is_declared_with_no_bundled_face(self):
+        assert ZH_CONTENT_STYLE.writing_system == "SimplifiedChinese"
+        assert ZH_CONTENT_STYLE.bundled_fallback == ""
+
+    def test_the_writing_system_is_a_real_qt_member(self):
+        from PyQt6.QtGui import QFontDatabase
+
+        assert hasattr(QFontDatabase.WritingSystem, ZH_CONTENT_STYLE.writing_system)
+
+
 class TestTheProfileUsesIt:
     def test_the_zh_profile_content_style_is_this_one(self):
         style = get_profile("zh").content_style

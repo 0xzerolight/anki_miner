@@ -28,13 +28,13 @@ ROOT = Path(__file__).resolve().parents[3]
 CODES = sorted(available_languages())
 FONTS_DIR = "anki_miner/gui/resources/fonts"
 
-#: The 21 languages that shipped before this seam. Pinned, not derived: they must
-#: stay left-to-right with no probe and no face, so every ja/ko/zh/Latin surface and
-#: card stays byte-identical. A later language is not added here.
+#: The languages that shipped before this seam and still declare nothing. Pinned,
+#: not derived: they must stay left-to-right with no probe and no face, so every
+#: ja/ko/Latin surface and card stays byte-identical. zh left the list when it
+#: declared SimplifiedChinese; a later language is not added here.
 SHIPPED_BEFORE_THE_SEAM = (
     "ja",
     "ko",
-    "zh",
     "en",
     "ca",
     "de",

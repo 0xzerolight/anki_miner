@@ -50,4 +50,14 @@ def zh_cjk_wrap(text: str) -> str:
     return text
 
 
-ZH_CONTENT_STYLE = ContentTextStyle(font_role="zh", families=ZH_FONT_FAMILIES, wrap=zh_cjk_wrap)
+#: ``writing_system`` turns on the installed-face probe and its one "may render
+#: as boxes" warning; ``bundled_fallback`` stays empty because a Han face is far
+#: too large to ship, the same call yue makes. Declaring Simplified costs a
+#: spurious warning on a machine carrying traditional faces only, which pan-CJK
+#: Noto rules out and a second probe would not be worth.
+ZH_CONTENT_STYLE = ContentTextStyle(
+    font_role="zh",
+    families=ZH_FONT_FAMILIES,
+    wrap=zh_cjk_wrap,
+    writing_system="SimplifiedChinese",
+)
