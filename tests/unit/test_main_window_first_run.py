@@ -709,6 +709,40 @@ def test_a_wizard_that_changed_no_language_runs_no_ceremony(main_window, monkeyp
     assert calls == []
 
 
+def test_the_first_run_ceremony_leaves_exactly_one_prewarm_worker(main_window, monkeypatch):
+    """The real ceremony, then the boot continuation that owns the one-shot.
+
+    Both warm the same already-committed config, so a worker from each would
+    leave the second replacing the first on the controller while it runs - and
+    a prewarm alive before the stale-resource prompt is exactly what
+    ``release_dictionary_resources`` refuses.
+    """
+    from anki_miner.gui.controllers import language_switch
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
+    from anki_miner.gui.workers import prewarm_worker as prewarm_module
+    from anki_miner.languages.switching import switch_language
+
+    monkeypatch.setattr(language_switch, "offer_first_visit_setup", lambda *a, **kw: None)
+    monkeypatch.setattr(type(main_window), "reveal_capability", lambda self, target: None)
+    adopted: list[object] = []
+    monkeypatch.setattr(prewarm_module, "PrewarmWorker", lambda config: MagicMock())
+    monkeypatch.setattr(main_window.background_tasks, "set_prewarm", adopted.append)
+    main_window._prewarm_started = False
+
+    main_window._commit_setup_wizard_outcome(
+        SetupWizardOutcome(
+            config=switch_language(main_window.config, "zh"),
+            consumes_first_run_offer=True,
+        ),
+        first_run_offer=True,
+    )
+    # What the stale-resource scan's continuation does once the offer is over.
+    main_window._start_prewarm()
+
+    assert len(adopted) == 1
+    assert main_window.get_config().language == "zh"
+
+
 def test_a_cancelled_wizard_runs_no_ceremony(main_window, monkeypatch):
     """A walk-away hands back the language it was given, so nothing is owed."""
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome

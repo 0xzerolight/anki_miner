@@ -1049,8 +1049,12 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         Not ``_start_prewarm``: that one is one-shot by design (boot), guarded
         by ``self._prewarm_started``. A switch legitimately re-runs it, but
         never on top of a live worker.
+
+        Nothing to restart before boot has warmed anything — the first-run
+        wizard switches language *while* boot's own prewarm is still pending,
+        and that one already reads the config this switch just wrote.
         """
-        if still_running(self.background_tasks.prewarm_worker):
+        if not self._prewarm_started or still_running(self.background_tasks.prewarm_worker):
             return
         from anki_miner.gui.workers import prewarm_worker as prewarm_module
 
