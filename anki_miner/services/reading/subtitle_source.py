@@ -66,6 +66,7 @@ def load(
     encodings: tuple[str, ...] | None = None,
     script_check: Callable[[str], bool] | None = None,
     normalize: Callable[[str], str] | None = None,
+    has_target_script: Callable[[str], bool] | None = None,
 ) -> ReadingDocument:
     """Load a subtitle file into a per-cue :class:`ReadingDocument`.
 
@@ -75,6 +76,8 @@ def load(
     ``script_check`` validates a single-byte ladder leg (``_util._decode``).
     ``normalize`` is the run parser's text normaliser, so each cue is cleaned
     exactly as the parser cleans a subtitle line (``None`` = the Japanese pair).
+    ``has_target_script`` is that parser's bilingual-cue line gate — a different
+    job from ``script_check``, which judges a decode, not a cue line.
 
     Raises:
         SetupError: unreadable file or unparseable subtitle content.
@@ -115,7 +118,7 @@ def load(
         # Skip ASS/SSA Comment events (same guard as parse_raw_entries).
         if getattr(event, "is_comment", None) is True:
             continue
-        cue_text = clean_subtitle_text(event.text, normalize=normalize)
+        cue_text = clean_subtitle_text(event.text, normalize=normalize, has_target_script=has_target_script)
         if not cue_text:
             continue
         units.append(

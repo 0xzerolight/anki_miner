@@ -371,6 +371,7 @@ class SubtitleParserService:
         compound_matching: bool = True,
         token_post_pass: TokenPostPass | None = None,
         normalize: Callable[[str], str] | None = None,
+        has_target_script: Callable[[str], bool] | None = None,
         sentence_annotation: bool = True,
         attested_reading_fallback: bool = False,
     ):
@@ -471,6 +472,12 @@ class SubtitleParserService:
                 reading units (``LanguageProfile.normalize``), replacing the
                 Japanese pair in :func:`clean_subtitle_text`. ``None`` — every
                 ja/ko/zh parser — keeps the Japanese pair.
+            has_target_script: The mining language's script gate
+                (``LanguageProfile.ScriptSupport.contains_target_script``),
+                which makes :func:`clean_subtitle_text` drop the lines of a
+                multi-line cue written in another script — the English half of
+                a bilingual zh subtitle. ``None`` — every ja/ko path — keeps
+                every physical line of every cue.
             sentence_annotation: Whether to generate the sentence
                 furigana/reading fields from the token stream. They assume
                 contiguous kana-bearing tokens: for a language with no
@@ -514,6 +521,10 @@ class SubtitleParserService:
         self._form_lookup = form_lookup
         # Cue/unit text normaliser (spec S5); None ⇒ the Japanese pair verbatim.
         self._normalize = normalize
+        # Bilingual-cue line gate; None ⇒ every physical line of a cue is kept.
+        # Injected once per instance, so the per-FILE line cache below can never
+        # replay line state tokenized under a different gate.
+        self._has_target_script = has_target_script
         # Sentence furigana/reading generation (spec 6.1 #2); False ⇒ the three
         # annotation fields stay "".
         self._sentence_annotation = sentence_annotation
@@ -789,6 +800,11 @@ class SubtitleParserService:
         return self._normalize
 
     @property
+    def has_target_script(self) -> Callable[[str], bool] | None:
+        """The injected bilingual-cue line gate (None = keep every line). Read by the reading worker."""
+        return self._has_target_script
+
+    @property
     def ambiguous_reading_count(self) -> int:
         """Number of distinct real-token card fronts needing reading review."""
         return len(self._ambiguous_readings)
@@ -900,14 +916,15 @@ class SubtitleParserService:
         """Full per-line text pipeline shared by the mining and display paths.
 
         Order: markup strip → JP normalization → per-physical-line annotation
-        strip (always on) → whitespace collapse → ``_apply_text_filter``.
+        strip (always on) → other-script line drop (only where a language
+        injected the gate) → whitespace collapse → ``_apply_text_filter``.
         Applied identically
         by ``_iter_parsed_lines`` (mining) and ``parse_raw_entries`` (display) so
         the shown cue text matches what mining tokenizes. A line that collapses
         to empty is skipped by each caller's existing ``if not text: continue``
         guard.
         """
-        cleaned = clean_subtitle_text(raw_text, normalize=self._normalize)
+        cleaned = clean_subtitle_text(raw_text, normalize=self._normalize, has_target_script=self._has_target_script)
         return self._apply_text_filter(cleaned)
 
     def _load_subs(self, subtitle_file: Path, *, encodings: tuple[str, ...] | None = None):
