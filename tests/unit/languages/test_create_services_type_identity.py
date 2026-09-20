@@ -301,6 +301,11 @@ JA_PARSER_KEYWORDS = {
     "kana_attest_lookup",
     "term_common_lookup",
     "term_rules_lookup",
+    # R36's row read, built beside the five above and passed to every language.
+    # ja stores it and never reads it: the seam's only reader is a profile's
+    # ``token_post_pass``, which ja does not inject
+    # (tests/unit/test_subtitle_parser_form_lookup.py).
+    "form_lookup",
 }
 
 

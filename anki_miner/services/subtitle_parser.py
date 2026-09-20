@@ -33,6 +33,7 @@ from anki_miner.services.deinflection import (
 from anki_miner.services.masu_stem_nominalizer import MasuStemNominalizer
 from anki_miner.services.morphology import (
     AttestLookup,
+    FormLookup,
     ReadingLookup,
     SyntheticToken,
     TokenInclusionRule,
@@ -361,6 +362,7 @@ class SubtitleParserService:
         kana_attest_lookup: KanaAttestLookup | None = None,
         term_common_lookup: TermCommonLookup | None = None,
         term_rules_lookup: TermRulesLookup | None = None,
+        form_lookup: FormLookup | None = None,
         *,
         mined_form_policy: "MinedFormPolicy | None" = None,
         reading_support: "ReadingSupport | None" = None,
@@ -448,14 +450,23 @@ class SubtitleParserService:
                 print ``NewYork``). ``True`` — every ja path, and ko/zh today —
                 keeps the pre-seam gate exactly: built whenever a term lookup is
                 wired.
+            form_lookup: Optional batch read of a term's ``(content, tags)`` rows
+                from the enabled offline chain (spec R36,
+                ``DefinitionService.offline_term_rows``). Handed to
+                ``token_post_pass`` as its third argument and read NOWHERE else,
+                so only a language that injects a post-pass can reach it: every
+                other path — ja/ko/zh included — is byte-identical whether this
+                is wired or not. Hebrew's ``HebrewLemmaPass`` is its only reader
+                today; it resolves a card front against the dictionary's own form
+                table, which the existence-only ``term_lookup`` cannot do.
             token_post_pass: Optional language post-pass over the RAW tagger
                 tokens (spec §4.3 item 2(b): separable-verb reattachment gated on
                 dictionary attestation). Called once per line as
-                ``token_post_pass(raw_tokens, attest, None)`` — ``attest`` is the
-                parser's memoised existence probe (None without a dictionary),
-                the third argument is reserved for R36's form lookup — before
-                every merge pass, and its result IS the line's raw token list.
-                ``None`` — every ja/ko/zh path — runs nothing.
+                ``token_post_pass(raw_tokens, attest, form_lookup)`` — ``attest``
+                is the parser's memoised existence probe and ``form_lookup`` the
+                R36 row read, both None without a dictionary — before every merge
+                pass, and its result IS the line's raw token list. ``None`` —
+                every ja/ko/zh path — runs nothing.
             normalize: The mining language's text normaliser for cue text and
                 reading units (``LanguageProfile.normalize``), replacing the
                 Japanese pair in :func:`clean_subtitle_text`. ``None`` — every
@@ -497,6 +508,10 @@ class SubtitleParserService:
         # Language post-pass over the raw tagger tokens (§4.3 item 2(b)); None ⇒
         # the tagger output is the raw token list, verbatim.
         self._token_post_pass = token_post_pass
+        # R36's form lookup, read ONLY as the post-pass's third argument: a parser
+        # without a post-pass never touches it, so wiring it changes nothing for
+        # any language but the one whose post-pass asks.
+        self._form_lookup = form_lookup
         # Cue/unit text normaliser (spec S5); None ⇒ the Japanese pair verbatim.
         self._normalize = normalize
         # Sentence furigana/reading generation (spec 6.1 #2); False ⇒ the three
@@ -1081,7 +1096,7 @@ class SubtitleParserService:
         raw_tokens = list(self._tagger()(text))
         self._tokenize_time_s += time.perf_counter() - tokenize_start
         if self._token_post_pass is not None:
-            raw_tokens = list(self._token_post_pass(raw_tokens, self._attest, None))
+            raw_tokens = list(self._token_post_pass(raw_tokens, self._attest, self._form_lookup))
         merged_tokens = self._merge_compound_suffixes(raw_tokens)
         # Language-specific merge (ko: 공부 + 하 → 공부하다). Placed with the other
         # merge passes and gated on the same probe; no probe ⇒ no merge.
