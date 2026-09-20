@@ -98,3 +98,18 @@ def test_the_smoke_leg_passes_in_process(tagger, monkeypatch, capsys):
     monkeypatch.setitem(tagger_provider._TAGGERS, "ar", LockedTagger(tagger))
     assert app_module._run_language_bundled_smoke("ar") == 0
     assert "BUNDLED_SMOKE_PASS: language ar" in capsys.readouterr().out
+
+
+def test_a_cp1256_file_mines_through_the_parser(ar_parser, tmp_path):
+    path = tmp_path / "ar.srt"
+    path.write_bytes((FIXTURES / "subtitle_cp1256.srt").read_bytes())
+    words = ar_parser.parse_subtitle_file(path)
+    assert {
+        "\u0630\u0647\u0628",
+        "\u0637\u0627\u0644\u0628",
+        "\u0645\u062f\u0631\u0633\u0629",
+        "\u0643\u062a\u0628",
+        "\u0631\u0633\u0627\u0644\u0629",
+    } <= {word.mined_form for word in words}
+    assert all("\N{REPLACEMENT CHARACTER}" not in word.sentence for word in words)
+    assert not any(word.sentence.startswith("-") for word in words)  # the SDH dialogue-dash default
