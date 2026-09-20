@@ -753,6 +753,21 @@ class SubtitleParserService:
             ",".join(f"{pos}:{count}" for pos, count in tags.most_common(5)),
         )
 
+    def _tagger(self) -> Any:
+        """The engine, re-acquired when a language switch released it (S23).
+
+        ``release_tagger`` drops the reference so the outgoing language's analyzer can be collected -
+        Arabic's holds ~400 MB. Re-acquiring costs nothing while the provider still caches the engine
+        (and ja's shared tagger is a module singleton); only an evicted language rebuilds.
+        """
+        if self.tagger is None:
+            self.tagger = get_shared_tagger() if self._tagger_language == "ja" else get_tagger(self._tagger_language)
+        return self.tagger
+
+    def release_tagger(self) -> None:
+        """Drop the engine reference; the next parse re-acquires one."""
+        self.tagger = None
+
     @property
     def normalize(self) -> Callable[[str], str] | None:
         """The injected normaliser (None = the Japanese pair). Read by the reading worker."""
@@ -788,7 +803,7 @@ class SubtitleParserService:
         if s not in self._fg_cache:
             if len(self._fg_cache) >= _FRONT_CACHE_CAP:
                 self._fg_cache.clear()
-            self._fg_cache[s] = generate_furigana(s, self.tagger)
+            self._fg_cache[s] = generate_furigana(s, self._tagger())
         return self._fg_cache[s]
 
     def _reading(self, s: str) -> str:
@@ -796,7 +811,7 @@ class SubtitleParserService:
         if s not in self._rd_cache:
             if len(self._rd_cache) >= _FRONT_CACHE_CAP:
                 self._rd_cache.clear()
-            self._rd_cache[s] = generate_reading(s, self.tagger)
+            self._rd_cache[s] = generate_reading(s, self._tagger())
         return self._rd_cache[s]
 
     def _attested_headword_reading(self, headword: str) -> str | None:
@@ -1063,7 +1078,7 @@ class SubtitleParserService:
         text-unit path so per-line tokenization stays in one place.
         """
         tokenize_start = time.perf_counter()
-        raw_tokens = list(self.tagger(text))
+        raw_tokens = list(self._tagger()(text))
         self._tokenize_time_s += time.perf_counter() - tokenize_start
         if self._token_post_pass is not None:
             raw_tokens = list(self._token_post_pass(raw_tokens, self._attest, None))
