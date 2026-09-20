@@ -1,8 +1,12 @@
 """Shared pure-stdlib helpers for the reading-tab source loaders.
 
-Internal-but-tested: this private module (leading underscore) has no public facade —
-``tests/unit/reading/test_reading_util.py`` imports it directly. The underscore stays
-and the module path is a stable test surface; do not rename it.
+Internal-but-tested: this private module (leading underscore) is imported directly by
+``tests/unit/reading/test_reading_util.py``. The underscore stays and the module path
+is a stable test surface; do not rename it.
+
+One name is public and imported from outside the reading package:
+:func:`decode_with_ladder`, the single ladder decoder the word lists and the
+Manage Known Words importer share so the Big5-versus-GB18030 rule exists once.
 """
 
 from __future__ import annotations
@@ -150,6 +154,64 @@ def _jp_ratio(text: str) -> float:
     return score / len(text)
 
 
+def decode_with_ladder(
+    raw: bytes,
+    *,
+    encodings: tuple[str, ...],
+    script_check: Callable[[str], bool] | None = None,
+) -> tuple[str, str]:
+    """Decode *raw* against *encodings*, first success wins; report the winner.
+
+    The one ladder decoder in the app: the reading loaders, the word lists and
+    the Manage Known Words importer all come through here, so the Big5 rule
+    below is written once. *encodings* is the mining language's
+    ``get_profile(...).import_encodings``; a caller with a default of its own
+    resolves it before calling, because ``()`` is an EMPTY ladder and never a
+    "use the default" sentinel.
+
+    Exactly ordered first-success, with no Japanese heuristic on top: nothing
+    here knows which of several successful decodes of another language's bytes
+    is the right one. Exhausting the ladder raises rather than returning a
+    replacement-character string, because a novel that decoded to U+FFFD noise
+    would mine into cards.
+
+    A single-byte leg (cp1252, cp1258, …) must also pass
+    ``plausible_single_byte_text`` with *script_check* — such codecs almost never
+    raise — and its result is NFC-composed: cp1258 decodes Vietnamese to
+    combining sequences, and the decoded text becomes the card sentence.
+
+    ``prefers_big5`` weighs the whole input, so a Big5 file under roughly ten
+    words scores below its threshold and gb18030 still wins it.
+
+    The winning encoding comes back with the text: mojibake is reported as "the
+    words are wrong", never as an encoding name, so a caller's receipt cannot
+    name the leg that produced it unless this says which one won.
+    """
+    for encoding in encodings:
+        # gb18030 accepts every valid Big5 sequence and decodes it into PUA
+        # garbage without raising, so first-success could never reach a big5
+        # leg further down. Step over gb18030 only when its own result
+        # carries that signature; a real GB18030 file scores zero and is
+        # unaffected. Reordering the ladder instead would mis-decode the GB
+        # majority, which decodes cleanly (and wrongly) under big5.
+        # The FAMILY, not the literal "big5": yue's ladder names big5hkscs,
+        # and a literal test would leave this guard dead for it.
+        if encoding == "gb18030":
+            big5_codec = big5_family_codec(encodings)
+            if big5_codec is not None and prefers_big5(raw, big5_codec):
+                continue
+        try:
+            text = raw.decode(encoding)
+        except (UnicodeDecodeError, LookupError):
+            continue
+        if is_single_byte_codec(encoding):
+            if not plausible_single_byte_text(text, script_check):
+                continue
+            return unicodedata.normalize("NFC", text), encoding
+        return text, encoding
+    raise SetupError("Text encoding could not be detected.")
+
+
 def _decode(
     raw: bytes,
     *,
@@ -158,9 +220,10 @@ def _decode(
 ) -> str:
     """Decode bytes: BOM sniff → strict utf-8 → cp932/euc_jp (JP-ratio tiebreak).
 
-    ``encodings`` is the mining language's ``get_profile(...).import_encodings``.
-    ``None`` — never ``()``, which is an EMPTY ladder — selects the built-in
-    Japanese path above, unchanged, and is what every Japanese call site passes.
+    ``encodings`` is the mining language's ``get_profile(...).import_encodings``
+    and hands the decode to :func:`decode_with_ladder`. ``None`` — never ``()``,
+    which is an EMPTY ladder — selects the built-in Japanese path below,
+    unchanged, and is what every Japanese call site passes.
 
     The two are not interchangeable for Japanese, and that is why the sentinel
     exists rather than ja simply handing over its own ladder: the built-in path
@@ -168,42 +231,9 @@ def _decode(
     bytes usually decode *without error* as cp932. A first-success ladder would
     stop at that mojibake, so ``("utf-8-sig", "cp932", "euc_jp")`` is a different
     decoder from this one, not a spelling of it.
-
-    A supplied ladder is exactly ordered first-success, with no Japanese
-    heuristic on top: nothing here knows which of several successful decodes of
-    another language's bytes is the right one. Exhausting it raises rather than
-    returning a replacement-character string, because a novel that decoded to
-    U+FFFD noise would mine into cards.
-
-    A single-byte leg (cp1252, cp1258, …) must also pass
-    ``plausible_single_byte_text`` with *script_check* — such codecs almost never
-    raise — and its result is NFC-composed: cp1258 decodes Vietnamese to
-    combining sequences, and the decoded text becomes the card sentence.
     """
     if encodings is not None:
-        for encoding in encodings:
-            # gb18030 accepts every valid Big5 sequence and decodes it into PUA
-            # garbage without raising, so first-success could never reach a big5
-            # leg further down. Step over gb18030 only when its own result
-            # carries that signature; a real GB18030 file scores zero and is
-            # unaffected. Reordering the ladder instead would mis-decode the GB
-            # majority, which decodes cleanly (and wrongly) under big5.
-            # The FAMILY, not the literal "big5": yue's ladder names big5hkscs,
-            # and a literal test would leave this guard dead for it.
-            if encoding == "gb18030":
-                big5_codec = big5_family_codec(encodings)
-                if big5_codec is not None and prefers_big5(raw, big5_codec):
-                    continue
-            try:
-                text = raw.decode(encoding)
-            except (UnicodeDecodeError, LookupError):
-                continue
-            if is_single_byte_codec(encoding):
-                if not plausible_single_byte_text(text, script_check):
-                    continue
-                return unicodedata.normalize("NFC", text)
-            return text
-        raise SetupError("Text encoding could not be detected.")
+        return decode_with_ladder(raw, encodings=encodings, script_check=script_check)[0]
     if raw[:3] == b"\xef\xbb\xbf":
         return raw.decode("utf-8-sig")
     if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):

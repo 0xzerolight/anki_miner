@@ -33,14 +33,14 @@ from __future__ import annotations
 import csv
 import json
 import logging
-import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from anki_miner.exceptions import SetupError
+from anki_miner.services.reading._util import decode_with_ladder
 from anki_miner.utils.logging_ext import log_summary
-from anki_miner.utils.subtitle_encoding import is_single_byte_codec, plausible_single_byte_text
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,12 @@ _ANKIMORPHS_LEMMA_HEADER = "morph-lemma"
 # "All Files (*)" dialog filter lets a user mis-pick a large file, so cap the
 # read rather than buffer+decode an arbitrary blob off-thread.
 _MAX_IMPORT_BYTES = 50 * 1024 * 1024
+
+#: Ladder for a caller that hands over no profile (tests, ad-hoc callers): the
+#: pre-profile Japanese pair. utf-8-sig strips a Windows/Excel BOM that would
+#: otherwise break json.loads and the exact first-cell header matches, and
+#: cp932 is what a Japanese Notepad/Excel export is written in.
+_DEFAULT_ENCODINGS = ("utf-8-sig", "cp932")
 
 
 class KnownWordsImportError(Exception):
@@ -259,34 +265,23 @@ def _decode(
     encodings: tuple[str, ...] | None = None,
     script_check: Callable[[str], bool] | None = None,
 ) -> tuple[str, str]:
-    # utf-8-sig strips a Windows/Excel BOM that would otherwise break
-    # json.loads and the exact first-cell header matches; the rest of the
-    # ladder is the mining language's (cp932 for Japanese Notepad/Excel
-    # exports). Every candidate failing => "undecodable", not "unreadable":
-    # the bytes were read, so only the encoding is at fault.
+    # The shared ladder decoder, not a second copy: a Taiwanese export is Big5,
+    # which gb18030 swallows into PUA mojibake without raising, and only that
+    # one has the guard for it.
     #
     # `is None`, not truthiness: `()` is an EMPTY ladder the caller asked for,
     # not a request for the Japanese default. Truthiness would decode a
     # profile's deliberately-empty ladder as Japanese.
-    #
-    # Returns the winning encoding alongside the text: a list that imported as
-    # nonsense words is a decode fault, and the import receipt cannot name the
-    # ladder leg that produced it unless this reports which one won.
-    #
-    # A single-byte leg (cp1252, cp1258, …) almost never raises, so it wins only
-    # when its text passes the mining script's check, and it is NFC-composed
-    # (cp1258 decodes Vietnamese to combining sequences) — spec S11/S5.
-    for encoding in ("utf-8-sig", "cp932") if encodings is None else encodings:
-        try:
-            text = raw.decode(encoding)
-        except (UnicodeDecodeError, LookupError):
-            continue
-        if is_single_byte_codec(encoding):
-            if not plausible_single_byte_text(text, script_check):
-                continue
-            text = unicodedata.normalize("NFC", text)
-        return text, encoding
-    raise KnownWordsImportError("undecodable")
+    try:
+        return decode_with_ladder(
+            raw,
+            encodings=_DEFAULT_ENCODINGS if encodings is None else encodings,
+            script_check=script_check,
+        )
+    except SetupError as exc:
+        # Every candidate failing => "undecodable", not "unreadable": the bytes
+        # were read, so only the encoding is at fault.
+        raise KnownWordsImportError("undecodable") from exc
 
 
 def _clean(value: Any) -> str:
