@@ -9,6 +9,12 @@ gender and aspect fields therefore come from the tagger's ``morph`` first and th
 chips second, which is the shipped ``GENDER_SOURCES`` order; the head line is the last resort, not
 the first.
 
+A Slovenian verb that is BOTH aspects carries no ``aspect_pair`` field, and that is deliberate. The
+shared hook answers from chips only when there is exactly one (two chips can be two lexemes), and
+neither other source can help here: this dictionary has 0 head lines saying "impf or pf" over all
+56,797 rows, and the model tags a biaspectual verb ``Vmb*`` with no ``Aspect`` feature at all
+(``videti`` -> ``Vmbn VerbForm=Inf``). Printing nothing beats guessing one of the two.
+
 **Frequency - OpenSubtitles 2018** (``hermitdave/FrequencyWords``, ``content/2018/sl/sl_50k.txt``,
 619,289 B, 100,952,811 occurrences), content CC BY-SA 4.0 (the repo's code is MIT): headerless
 ``word count`` lines over lowercased surface forms, imported in occurrence mode and lemmatised
