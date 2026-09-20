@@ -6,7 +6,7 @@
 {"id":"zh06","sentence":"今天太阳很大，这个城市的东西我不明白。","must_mine":["太阳","城市","东西","明白"],"must_not_mine":["的","，","。"],"note":"jieba's dictionary tags all four ns or nr, and all four are ordinary vocabulary"}
 {"id":"zh07","sentence":"这些东西都是新鲜的。","must_mine":["东西","新鲜","都","是"],"must_not_mine":["的","。"],"note":"新鲜 is another dictionary ns"}
 {"id":"zh08","sentence":"受台风影响，明天不上课。","must_mine":["台风","影响","明天","上课"],"must_not_mine":["，","。"],"note":"台风 is ns in jieba's dictionary — a weather word, not a place"}
-{"id":"zh09","sentence":"然后我们一起去喝咖啡吧。","must_mine":["然后","喝咖啡","我们","去"],"must_not_mine":["一起","吧","。"],"note":"jieba cuts 喝咖啡 as one nr token, so neither 喝 nor 咖啡 exists to mine separately; 一起 stays out as m"}
+{"id":"zh09","sentence":"然后我们一起去喝咖啡吧。","must_mine":["然后","我们","一起","去","喝"],"must_not_mine":["喝咖啡","。"],"note":"the fused 喝咖啡 row is gone, so the line cuts 喝|咖啡吧; 咖啡吧 is mined but no dictionary attests it, so 咖啡 is still not recovered here"}
 {"id":"zh10","sentence":"这是最主要的原因。","must_mine":["主要","原因","最"],"must_not_mine":["的","。"],"note":"区别词 b — jieba files 主要 in a class of its own"}
 {"id":"zh11","sentence":"所有的学生都来了。","must_mine":["所有","学生","都","来"],"must_not_mine":["的","了","。"],"note":"another b word a beginner meets in the first week"}
 {"id":"zh12","sentence":"整个房间一片黑暗。","must_mine":["整个","黑暗","房间"],"must_not_mine":["一片","。"],"note":"b and z in one line; 一片 stays out as m"}
@@ -19,9 +19,9 @@
 {"id":"zh19","sentence":"我跟朋友从学校走回来。","must_mine":["跟","从","朋友","学校"],"must_not_mine":["。"],"note":"介词 p — 跟 and 从 carry meaning a learner has to know"}
 {"id":"zh20","sentence":"为了考试，除了睡觉他都在看书。","must_mine":["为了","除了","在","考试","看书"],"must_not_mine":["，","。"],"note":"multi-character prepositions mine like the single-character ones"}
 {"id":"zh21","sentence":"关于这个问题，我对你的看法比他好。","must_mine":["关于","对","比","问题","看法"],"must_not_mine":["的","，","。"],"note":"three more p words in one line"}
-{"id":"zh22","sentence":"我买了三本书和两个杯子。","must_mine":["和","买","杯子"],"must_not_mine":["三","两个","了","。"],"note":"conjunction 和 mines; bare numerals m stay out"}
+{"id":"zh22","sentence":"我买了三本书和两个杯子。","must_mine":["和","买","杯子","书"],"must_not_mine":["两个","了","。"],"note":"conjunction 和 mines; bare numerals m stay out. 本书 is no longer one token, so 书 is reachable; the 三本 it leaves behind is mined but unattested and never cards"}
 {"id":"zh23","sentence":"这间房子大概有八十平方米。","must_mine":["房子","大概","有","间"],"must_not_mine":["八十","平方米","。"],"note":"numeral m and classifier q both stay out"}
-{"id":"zh24","sentence":"他一口气喝了两瓶啤酒。","must_mine":["一口气","啤酒"],"must_not_mine":["喝","两瓶","了","。"],"note":"成语 i mines; 喝 is a bound vg fragment here and stays excluded"}
+{"id":"zh24","sentence":"他一口气喝了两瓶啤酒。","must_mine":["一口气","啤酒","喝"],"must_not_mine":["两瓶","了","。"],"note":"成语 i mines; 喝 is a free verb jieba files under the bound-morpheme flag vg, and is retagged before the gate sees it"}
 {"id":"zh25","sentence":"你别生气了，我给你道个歉。","must_mine":["给","别生气"],"must_not_mine":["道","个","歉","了"],"note":"preposition 给 mines; the q classifiers and the ng fragment beside it do not"}
 {"id":"zh26","sentence":"这部手机支持5G网络和无线充电。","must_mine":["和","网络","充电","支持"],"must_not_mine":["5","G","。"],"note":"Latin runs are eng and digits m; the conjunction between them mines"}
 {"id":"zh27","sentence":"她说：“真的吗？”","must_mine":["说","真的","她"],"must_not_mine":["：","“","”","？","吗"],"note":"full-width colon and curly quotes are x"}
@@ -35,3 +35,10 @@
 {"id":"zh35","sentence":"他在台北車站附近租了套房。","must_mine":["台北","車站","套房","在","附近"],"must_not_mine":["了","。"],"note":"Taiwan vocabulary in traditional script"}
 {"id":"zh36","sentence":"妳今天怎麼看起來這麼累？","must_mine":["妳","累","看起來"],"must_not_mine":["？"],"note":"妳 is the Taiwan feminine 'you'; jieba tags it zg"}
 {"id":"zh37","sentence":"我們週末要不要去陽明山走走？","must_mine":["陽明山","週末","走走"],"must_not_mine":["？"],"note":"a traditional place name jieba reads as nr"}
+{"id":"zh38","sentence":"你等一下，我们一起去买一点水果。","must_mine":["一下","一起","一点","水果","买"],"must_not_mine":["，","。"],"note":"three adverb and quantity words jieba files as numerals; the retag reaches them after the cut"}
+{"id":"zh39","sentence":"这个多少钱？我等了半天，大概八点左右。","must_mine":["多少","半天","左右","钱","大概"],"must_not_mine":["八点","了","？"],"note":"a pronoun, a time word and a noun jieba tags m; the real numeral 八点 beside them still stays out"}
+{"id":"zh40","sentence":"我们班一共有二十个学生，他在研发中心工作。","must_mine":["一共","研发","学生","在"],"must_not_mine":["二十个","，","。"],"note":"jieba's 简称略语 class stays out; the adverb 一共 and the noun 研发 are retagged row by row"}
+{"id":"zh41","sentence":"我每天早上都喝咖啡。","must_mine":["喝","咖啡","每天","早上"],"must_not_mine":["喝咖啡","。"],"note":"a verb-object row jieba fused: deleting it gives back both words"}
+{"id":"zh42","sentence":"这封信很长，我还没看完。","must_mine":["信","很","长"],"must_not_mine":["封信","封","，","。"],"note":"the classifier+noun fusion is deleted, so 信 is mineable; the classifier 封 it leaves behind stays out as q"}
+{"id":"zh43","sentence":"我想喝一點熱茶。","must_mine":["一點","喝","熱茶","想"],"must_not_mine":["。"],"note":"traditional text: the cut runs on a simplified copy, so the 一点 retag reaches 一點 as written"}
+{"id":"zh44","sentence":"我吃过了，现在不饿。","must_mine":["吃","现在","饿"],"must_not_mine":["过","了","，","。"],"note":"jieba files the aspect marker and the verb 过 under one ug row, so the verb is deliberately unreachable"}
