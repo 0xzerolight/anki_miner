@@ -512,8 +512,11 @@ class AnkiSettingsPanel(FormPanel):
         # things auto-map cannot: the names the keyword table misses
         # (PitchCategories, MiscInfo), romaji pitch categories, and Senren's own
         # marker field names. Same combo + button row as Deck / Note Type above,
-        # so the panel gains a row, not a new kind of control.
-        self._add_labeled_field_with_button(
+        # so the panel gains a row, not a new kind of control. All three are
+        # Japanese note types, so the row rides the "note_presets" capability:
+        # applying one elsewhere writes furigana and pitch mappings the language
+        # cannot fill and every run's field check then rejects.
+        preset_row = self._add_labeled_field_with_button(
             anchor="note_type_preset",
             label_text=self.tr("Preset"),
             input_widget_name="preset_combo",
@@ -536,6 +539,10 @@ class AnkiSettingsPanel(FormPanel):
         self.preset_status.setObjectName("validation-status")
         self.preset_status.setWordWrap(True)
         self.add_widget(self.preset_status)
+
+        self._language_gate_pairs.extend(
+            (w, "note_presets") for w in (*field_row_widgets(self, preset_row), self.preset_status)
+        )
 
         # Auto-Map Fields button — prominent, immediately below the Note Type row
         self.fetch_fields_button = ModernButton(self.tr("Auto-Map Fields from Note Type"), variant="primary")
@@ -621,13 +628,14 @@ class AnkiSettingsPanel(FormPanel):
         self.expression_furigana_field_input.setPlaceholderText("ExpressionFurigana")
         self.add_field(self.tr("Expression Furigana Field"), self.expression_furigana_field_input)
 
-        # Expression Reading field (plain kana)
+        # Expression Reading field. Unannotated reading, whatever the language
+        # writes one in: kana for ja, pinyin for zh.
         self.expression_reading_field_input = QLineEdit()
         self.expression_reading_field_input.setPlaceholderText("ExpressionReading")
         self.add_field(
             self.tr("Expression Reading Field"),
             self.expression_reading_field_input,
-            helper=self.tr("Stores the expression as plain kana."),
+            helper=self.tr("Stores the expression's plain reading."),
         )
 
         # Sentence Furigana field
@@ -635,13 +643,13 @@ class AnkiSettingsPanel(FormPanel):
         self.sentence_furigana_field_input.setPlaceholderText("SentenceFurigana")
         self.add_field(self.tr("Sentence Furigana Field"), self.sentence_furigana_field_input)
 
-        # Sentence Reading field (plain kana)
+        # Sentence Reading field — same, for the whole line.
         self.sentence_reading_field_input = QLineEdit()
         self.sentence_reading_field_input.setPlaceholderText("SentenceReading")
         self.add_field(
             self.tr("Sentence Reading Field"),
             self.sentence_reading_field_input,
-            helper=self.tr("Stores the sentence as plain kana."),
+            helper=self.tr("Stores the sentence's plain reading."),
         )
 
         # One row per extra card field the registered profiles declare (Korean
@@ -672,10 +680,13 @@ class AnkiSettingsPanel(FormPanel):
         # Auxiliary Data Fields section
         self.add_section(self.tr("Auxiliary Data Fields"))
 
-        auxiliary_helper = QLabel(self.tr("Pitch fields need a source in Settings → Pitch Accent. Blank = skip."))
-        auxiliary_helper.setObjectName("helper-text")
-        auxiliary_helper.setWordWrap(True)
-        self.add_widget(auxiliary_helper)
+        # Paired with "pitch" below: the heading stays for frequency and source,
+        # but a language with no pitch rows must not be told to go and configure
+        # a source for them.
+        self._auxiliary_helper = QLabel(self.tr("Pitch fields need a source in Settings → Pitch Accent. Blank = skip."))
+        self._auxiliary_helper.setObjectName("helper-text")
+        self._auxiliary_helper.setWordWrap(True)
+        self.add_widget(self._auxiliary_helper)
 
         # Pitch Position field
         self.pitch_position_field_input = QLineEdit()
@@ -753,16 +764,16 @@ class AnkiSettingsPanel(FormPanel):
             ),
         )
 
-        # Card Type section. JP Mining Note-style note types render a card
-        # differently depending on which marker field holds an "x". The dropdown
-        # is the only visible control by default; the editable field names hide
-        # in a collapsible group for the rare fork that renames them.
+        # Card Type section. Some note types render a card differently depending
+        # on which marker field holds an "x" (JP Mining Note is the one the four
+        # default names come from). The mechanism is language-agnostic, so the
+        # section is never gated. The dropdown is the only visible control by
+        # default; the editable field names hide in a collapsible group for the
+        # rare fork that renames them.
         self.add_section(self.tr("Card Type"))
 
         card_type_helper = QLabel(
-            self.tr(
-                "For JP Mining Note-style note types: an “x” in a marker field selects " "how each mined card renders."
-            )
+            self.tr("Note types with marker fields render each mined card by which field holds an “x”.")
         )
         card_type_helper.setObjectName("helper-text")
         card_type_helper.setWordWrap(True)
@@ -840,6 +851,7 @@ class AnkiSettingsPanel(FormPanel):
             )
             for w in field_row_widgets(self, field)
         )
+        self._language_gate_pairs.append((self._auxiliary_helper, "pitch"))
 
         self.add_stretch()
 
@@ -856,7 +868,7 @@ class AnkiSettingsPanel(FormPanel):
         *,
         anchor: str,
         button_text: str = "",
-    ) -> None:
+    ) -> QWidget:
         """Add a labeled dropdown + inline refresh button as one compact form row.
 
         The input and button are wrapped in a container widget so the whole pair
@@ -878,6 +890,10 @@ class AnkiSettingsPanel(FormPanel):
             button_text: Button label, defaulting to "Refresh". The row was
                 built for the two combos that reload a list from Anki; a row
                 whose button does something else has to say so.
+
+        Returns:
+            The container holding the input and the button — the widget
+            ``field_row_widgets`` matches a language gate against.
         """
         # Container for input + button
         container = QWidget()
@@ -926,6 +942,7 @@ class AnkiSettingsPanel(FormPanel):
             anchor=anchor,
             anchor_focus=input_widget,
         )
+        return container
 
     @staticmethod
     def _align_row_buttons(*buttons: ModernButton) -> None:
