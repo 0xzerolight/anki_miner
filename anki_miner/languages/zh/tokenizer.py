@@ -21,6 +21,7 @@ from __future__ import annotations
 from typing import Any
 
 from anki_miner.languages.token import LanguageToken
+from anki_miner.languages.zh.overrides import ZH_FLAG_OVERRIDES, ZH_SPLIT_ENTRIES
 from anki_miner.languages.zh.variants import to_simplified
 from anki_miner.services.tagger import LockedTagger
 
@@ -32,18 +33,25 @@ class JiebaTagger:
         self._cutter = cutter
 
     def _segments(self, text: str) -> list[tuple[str, str]]:
-        """``(original-text slice, flag)`` per jieba segment of ``text``."""
+        """``(original-text slice, flag)`` per jieba segment of ``text``.
+
+        ``ZH_FLAG_OVERRIDES`` is applied here, after the cut, so a retag can
+        never move a token boundary; it is keyed on the simplified segment so
+        traditional text hits the same row. posseg's own ``word_tag_tab`` cannot
+        do this job: a run of single characters goes to the HMM, whose tags come
+        from ``char_state_tab``, and ``initialize()`` rebuilds the tab anyway.
+        """
         simplified = to_simplified(text)
         if len(simplified) == len(text):
             segments: list[tuple[str, str]] = []
             pos = 0
             for pair in self._cutter.cut(simplified):
                 end = pos + len(pair.word)
-                segments.append((text[pos:end], pair.flag))
+                segments.append((text[pos:end], ZH_FLAG_OVERRIDES.get(pair.word, pair.flag)))
                 pos = end
             if pos == len(text):
                 return segments
-        return [(pair.word, pair.flag) for pair in self._cutter.cut(text)]
+        return [(pair.word, ZH_FLAG_OVERRIDES.get(pair.word, pair.flag)) for pair in self._cutter.cut(text)]
 
     def __call__(self, text: str) -> list[LanguageToken]:
         tokens: list[LanguageToken] = []
@@ -80,7 +88,15 @@ def build_tagger() -> LockedTagger:
     process. ``LockedTagger`` is reused verbatim from the ja stack — jieba
     builds its prefix dictionary lazily on first cut and documents no thread
     safety, which is the same hazard the ja lock already covers.
+
+    ``del_word`` zeroes the row in THIS tokenizer's own ``FREQ`` (it also forces
+    the lazy ``initialize()``, moving that cost off the first cut). Its one
+    process-wide effect is ``finalseg.Force_Split_Words``, which only plain
+    ``jieba.cut`` consults — nothing here imports plain jieba.
     """
     import jieba.posseg
 
-    return LockedTagger(JiebaTagger(jieba.posseg.POSTokenizer()))
+    cutter = jieba.posseg.POSTokenizer()
+    for word in ZH_SPLIT_ENTRIES:
+        cutter.del_word(word)
+    return LockedTagger(JiebaTagger(cutter))
