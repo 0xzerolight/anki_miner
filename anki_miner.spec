@@ -775,6 +775,12 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "nltk",
         "regex",
         "zeyrek",
+        # The Thai engine (languages/th/pack.py) is a language pack, never bundle
+        # content: pythainlp, plus the tzdata its util.date needs on Windows. Nothing
+        # in anki_miner imports zoneinfo, so tzdata is not collected today either --
+        # the exclude is what keeps a transitive pull from silently adding it.
+        "pythainlp",
+        "tzdata",
         # yt-dlp is a SUBPROCESS, never an import: every call site spawns the
         # executable, so the Python package was collected wholesale for no runtime
         # benefit (~16 MB, 13 MB of it extractors) and is dropped here. The frozen
