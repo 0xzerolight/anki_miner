@@ -616,9 +616,9 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         id="dedup",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Avoid duplicate cards"),
+        title=QT_TRANSLATE_NOOP("Capabilities", "One word per sentence"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Skip making a second card for a word you've already mined this run."
+            "Capabilities", "Mine at most one word from each example sentence, skipping the rest."
         ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
