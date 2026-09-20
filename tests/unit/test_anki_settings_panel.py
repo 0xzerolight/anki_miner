@@ -426,6 +426,36 @@ def test_auto_map_fields_does_not_hijack_sentence_audio_for_expression_audio():
     assert result["expression_audio"] == "ExpressionAudio"
 
 
+def test_auto_map_fields_maps_a_chinese_note_type_word_field():
+    """Chinese Support Redux / HSK field lists map their word field."""
+    from anki_miner.gui.widgets.panels.anki_settings_panel import auto_map_fields  # noqa: PLC0415
+
+    hanzi = auto_map_fields(["Hanzi", "Traditional", "Pinyin", "Meaning", "Audio", "Sentence"])
+    assert hanzi["word"] == "Hanzi"
+    assert hanzi["sentence"] == "Sentence"
+
+    simplified = auto_map_fields(["Simplified", "Traditional", "Pinyin", "Meaning", "Example"])
+    assert simplified["word"] == "Simplified"
+    assert simplified["sentence"] == "Example"
+
+
+def test_auto_map_fields_maps_chinese_spelled_word_field_names():
+    """The Chinese spellings of "word" map too, not only the romanized ones."""
+    from anki_miner.gui.widgets.panels.anki_settings_panel import auto_map_fields  # noqa: PLC0415
+
+    for name in ("汉字", "漢字", "中文", "单词", "词语"):
+        assert auto_map_fields([name])["word"] == name
+
+
+def test_auto_map_fields_never_takes_traditional_as_the_word_field():
+    """Traditional has its own card field; it must never become the card front."""
+    from anki_miner.gui.widgets.panels.anki_settings_panel import auto_map_fields  # noqa: PLC0415
+
+    # Traditional sorts first on some note types -- Simplified still wins.
+    assert auto_map_fields(["Traditional", "Simplified", "Pinyin", "Meaning"])["word"] == "Simplified"
+    assert auto_map_fields(["Traditional", "Pinyin", "Meaning"])["word"] == ""
+
+
 def test_frequency_sort_field_get_set_roundtrip(qtbot):
     """Regression guard: frequency_sort must survive set -> get.
 
