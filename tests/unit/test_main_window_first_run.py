@@ -646,6 +646,85 @@ def test_accepted_finish_is_the_only_outcome_that_navigates(main_window, monkeyp
     assert len(committed) == 1
 
 
+# ---------------------------------------------------------------------------
+# A language the wizard changed owes what every durable change owes
+# ---------------------------------------------------------------------------
+
+
+def _record_language_ceremony(main_window, monkeypatch, order):
+    """Stub the durable-switch ceremony and the two steps it sits between."""
+    from anki_miner.gui.controllers import language_switch
+
+    calls: list[tuple] = []
+
+    def fake_commit(window, previous_config, *, flush, first_visit):
+        order.append("ceremony")
+        calls.append((window, previous_config, flush, first_visit))
+
+    monkeypatch.setattr(language_switch, "commit_language_change", fake_commit)
+    monkeypatch.setattr(type(main_window), "update_config", lambda self, cfg, **kw: order.append("commit"))
+    monkeypatch.setattr(type(main_window), "reveal_capability", lambda self, target: order.append("reveal"))
+    return calls
+
+
+def test_an_accepted_language_change_gets_the_durable_switch_ceremony(main_window, monkeypatch):
+    """Evict, prewarm and re-point the surfaces, then offer the deck checklist."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
+    from anki_miner.languages.switching import switch_language
+
+    order: list[str] = []
+    calls = _record_language_ceremony(main_window, monkeypatch, order)
+    before = main_window.config
+
+    main_window._commit_setup_wizard_outcome(
+        SetupWizardOutcome(
+            config=switch_language(before, "zh"),
+            consumes_first_run_offer=True,
+            open_video_mining=True,
+        ),
+        first_run_offer=True,
+    )
+
+    # The revealed screen must already be on the new language's surfaces.
+    assert order == ["commit", "ceremony", "reveal"]
+    assert calls == [(main_window, before, False, True)]
+
+
+def test_a_wizard_that_changed_no_language_runs_no_ceremony(main_window, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
+
+    order: list[str] = []
+    calls = _record_language_ceremony(main_window, monkeypatch, order)
+
+    main_window._commit_setup_wizard_outcome(
+        SetupWizardOutcome(
+            config=replace(main_window.config, anki_note_type="Lapis"),
+            consumes_first_run_offer=True,
+            open_video_mining=True,
+        ),
+        first_run_offer=True,
+    )
+
+    assert order == ["commit", "reveal"]
+    assert calls == []
+
+
+def test_a_cancelled_wizard_runs_no_ceremony(main_window, monkeypatch):
+    """A walk-away hands back the language it was given, so nothing is owed."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
+
+    order: list[str] = []
+    calls = _record_language_ceremony(main_window, monkeypatch, order)
+
+    main_window._commit_setup_wizard_outcome(
+        SetupWizardOutcome(config=main_window.config, consumes_first_run_offer=False),
+        first_run_offer=True,
+    )
+
+    assert order == ["commit"]
+    assert calls == []
+
+
 def _record_optional_boot_jobs(main_window, monkeypatch):
     started: list[str] = []
     for name in ("_run_validation", "_check_for_updates", "_maybe_migrate_jmdict", "_maybe_start_ytdlp_update"):
