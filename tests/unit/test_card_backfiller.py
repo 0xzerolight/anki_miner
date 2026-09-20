@@ -24,11 +24,13 @@ from anki_miner.services.card_backfiller import (
     _is_empty,
     _is_fillable,
     _reading_from_furigana,
+    _resolve_context,
     apply_backfill,
     scan_backfill,
 )
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.morphology import SyntheticToken
+from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.services.validation_service import ValidationService
 
 # ---------------------------------------------------------------------------
@@ -131,9 +133,20 @@ class FakeFrequencyService:
 
 
 class FakeDefinitionService:
-    def __init__(self, defs: dict[str, str] | None = None, glossaries: dict[str, str] | None = None):
+    def __init__(
+        self,
+        defs: dict[str, str] | None = None,
+        glossaries: dict[str, str] | None = None,
+        readings: dict[str, list[str]] | None = None,
+    ):
         self.defs = defs or {}
         self.glossaries = glossaries or {}
+        self.readings = readings or {}
+        self.reading_batches: list[list[str]] = []
+
+    def offline_term_readings(self, terms):
+        self.reading_batches.append(list(terms))
+        return {t: self.readings[t] for t in terms if t in self.readings}
 
     def get_definitions_batch(
         self,
@@ -1690,6 +1703,42 @@ class TestScanProfileCardFields:
         plan = scan_backfill(anki, zh_backfill_config, _services(), _options({"expression_pinyin"}))
         assert plan.absent_fields == ("Pinyin",)
         assert plan.notes == ()
+
+    def test_a_note_with_no_reading_gets_the_dictionary_s_own_reading(self, zh_backfill_config):
+        """Backfilled bytes equal fresh-mine bytes, and the mine reconciles."""
+        anki = _zh_anki(_note(1, word="先生", Pinyin=""))
+        defs = FakeDefinitionService(readings={"先生": ["xiānsheng"]})
+        plan = scan_backfill(anki, zh_backfill_config, _services(defs=defs), _options({"expression_pinyin"}))
+        mined = SimpleNamespace(mined_form="先生", expression_reading="xiān sheng", definition_html="")
+        expected = ZhToneColorHook().render(mined, config=zh_backfill_config)
+        assert _changes_by_key(plan, 1)["expression_pinyin"] == expected["expression_pinyin"]
+        assert defs.reading_batches == [["先生"]]
+
+    def test_the_attested_readings_are_fetched_once_per_chunk(self, zh_backfill_config):
+        anki = _zh_anki(_note(1, word="先生", Pinyin=""), _note(2, word="银行", Pinyin=""))
+        defs = FakeDefinitionService(readings={"先生": ["xiānsheng"]})
+        scan_backfill(anki, zh_backfill_config, _services(defs=defs), _options({"expression_pinyin"}))
+        assert defs.reading_batches == [["先生", "银行"]]
+
+    def test_a_multi_token_japanese_front_keeps_its_tokenizer_reading(self):
+        """The reconcile tier is gated on the capability, never on "has a profile reading".
+
+        A ja profile HAS reading support; asking it for a multi-token front's
+        reading returns the FIRST token's (気がする -> き), which is how this
+        gate goes wrong.
+        """
+        tagger = get_shared_tagger()
+        ja_reading = get_profile("ja").reading
+        ctx = _resolve_context(
+            1,
+            {"word": "気がする"},
+            "気がする",
+            {"word": "word"},
+            tagger,
+            None,
+            reading_support=ja_reading,
+        )
+        assert ctx.reading == "きがする"
 
     def test_japanese_declares_no_hook_fields(self, backfill_config):
         # The ja pipeline renders its own fields inline and must never route

@@ -183,6 +183,8 @@ def test_empty_profile_ladder_fetches_nothing(zh_config, no_tagger, monkeypatch)
     profile = SimpleNamespace(
         audio=SimpleNamespace(candidates=lambda word: []),
         content_style=SimpleNamespace(direction="ltr"),
+        # Tier (c) of the reading ladder; None is "derive it the ja way".
+        reading=None,
         # This scan reads the profile's card fields too; a ladder test declares
         # none rather than let the stub's shape decide what the scan proposes.
         extra_card_fields=(),
