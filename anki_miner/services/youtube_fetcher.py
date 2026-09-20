@@ -198,7 +198,7 @@ class YouTubeFetcherService:
         captions = self._captions()
         subs = data.get("subtitles") or {}
         auto_captions = data.get("automatic_captions") or {}
-        has_manual_ja = any(subs.get(code) for code in captions.codes)
+        has_manual_ja = any(subs.get(code) for code in captions.accepted_codes)
         has_auto_ja = self._has_native_auto_ja(data, captions=captions)
         # Auto-dub relaxation: machine-translated ja captions are normally
         # rejected because they do not match the audio — but when YouTube also
@@ -407,10 +407,12 @@ class YouTubeFetcherService:
         ``ja-orig``; an English video exposes ``ja`` (machine-translated) plus
         ``en-orig`` and no ``ja-orig``.
 
-        The track itself is looked up under every code the profile lists, not one
+        The track itself is looked up under every code the profile owns, not one
         fixed key: YouTube files a Chinese ASR track under ``zh-Hans`` or
-        ``zh-Hant`` depending on the video. The steps below then decide whether
-        the track that answered is native, in order:
+        ``zh-Hant`` depending on the video. ``own_codes`` keeps a profile whose
+        ``codes`` name another language as a fetch fallback (yue) from answering
+        for that language. The steps below then decide whether the track that
+        answered is native, in order:
 
         1. ``ja-orig`` present -> native.
         2. Some *other* ``<lang>-orig`` present -> not native. The ``-orig`` machinery
@@ -420,7 +422,10 @@ class YouTubeFetcherService:
            registration is conditional (it needs a non-empty ``translationLanguages``,
            which only web/mweb player responses carry, or an ``isTranslatable``
            track), so its absence proves nothing. Rejecting here would newly break
-           genuinely native videos.
+           genuinely native videos. The check reads all of ``codes``, not
+           ``own_codes``: a track the profile owns has already answered, and
+           ``language`` carries the video's own tag, which for Cantonese is as
+           often zh-HK as yue.
 
         The old per-track ``"from "`` / ``"translated"`` name check is deliberately
         gone: yt-dlp appends that marker only under ``if is_manual_subs``, so an
@@ -433,9 +438,10 @@ class YouTubeFetcherService:
         """
         orig_keys = ("ja-orig",) if captions is None else captions.orig_codes
         codes = ("ja",) if captions is None else captions.codes
+        accepted = ("ja",) if captions is None else captions.accepted_codes
         accept_bare = True if captions is None else captions.bare_fallback
         auto = data.get("automatic_captions") or {}
-        if not any(auto.get(code) for code in codes):
+        if not any(auto.get(code) for code in accepted):
             return False
 
         if any(auto.get(key) for key in orig_keys):
@@ -648,8 +654,11 @@ class YouTubeFetcherService:
         cmd: list[str] = [self._ytdlp(), "--ignore-config"]
         # yt-dlp already implements manual-preferred-with-auto-fallback: in
         # process_subtitles, manual subs load first and automatic_captions only fill
-        # languages not already present, so passing both flags writes exactly one
-        # file and prefers the manual track. No second invocation needed.
+        # languages not already present, so passing both flags needs no second
+        # invocation. That preference is per language code, though: with several
+        # codes in --sub-lang a video can leave a manual file under one and an auto
+        # file under another, and nothing on disk tells the two apart, so
+        # _resolve_outputs ranks them by the profile's code order either way.
         #
         # The auto flag is gated on fallback_allowed rather than passed
         # unconditionally, because for a non-Japanese-audio video

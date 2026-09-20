@@ -158,3 +158,57 @@ def test_resolve_outputs_still_rejects_two_files_for_one_code(zh_config, tmp_pat
     (tmp_path / "abc123.extra.zh-Hans.srt").write_bytes(b"1\n00:00:01,000 --> 00:00:02,000\nyo\n")
     with pytest.raises(YouTubeFetchError, match="more than one subtitle file"):
         YouTubeFetcherService(zh_config)._resolve_outputs(tmp_path, "abc123", "manual_only")
+
+
+def test_resolve_outputs_ranks_by_code_order_not_by_manual_or_auto(zh_config, tmp_path):
+    """--write-sub + --write-auto-sub prefer the manual track per code, not across codes.
+
+    A manual zh-Hant track and an auto zh-Hans one leave two files with nothing
+    on disk to tell them apart, so the profile's code order decides.
+    """
+    (tmp_path / "abc123.mp4").write_bytes(b"v")
+    (tmp_path / "abc123.zh-Hant.srt").write_bytes(b"1\n00:00:01,000 --> 00:00:02,000\nmanual\n")
+    (tmp_path / "abc123.zh-Hans.srt").write_bytes(b"1\n00:00:01,000 --> 00:00:02,000\nauto\n")
+    media = YouTubeFetcherService(zh_config)._resolve_outputs(tmp_path, "abc123", "manual_only")
+    assert media.subtitle_file.name == "abc123.zh-Hans.srt"
+
+
+# ---------------------------------------------------------------------------
+# yue is the one profile whose ``codes`` name another language: zh-Hant under
+# Cantonese audio is written Chinese (書面語), listed so a fetch can fall back
+# to it. ``own_codes`` is what the acceptance gates read, so a Mandarin video
+# subtitled in zh-Hant is not mistaken for a Cantonese one.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def yue_config(test_config):
+    return dataclasses.replace(test_config, language="yue")
+
+
+def test_manual_probe_refuses_written_chinese_for_cantonese(yue_config):
+    info = _probe(yue_config, subtitles={"zh-Hant": [{"ext": "vtt"}]}, automatic_captions={})
+    assert info.has_manual_ja_subs is False
+
+
+def test_manual_probe_accepts_a_cantonese_track(yue_config):
+    info = _probe(yue_config, subtitles={"yue": [{"ext": "vtt"}]}, automatic_captions={})
+    assert info.has_manual_ja_subs is True
+
+
+def test_native_auto_detection_refuses_written_chinese_for_cantonese():
+    captions = get_profile("yue").captions
+    mandarin = {"automatic_captions": {"zh-Hant": [{}]}, "language": "zh-Hant"}
+    assert YouTubeFetcherService._has_native_auto_ja(mandarin, captions=captions) is False
+    cantonese = {"automatic_captions": {"yue": [{}], "yue-orig": [{}]}}
+    assert YouTubeFetcherService._has_native_auto_ja(cantonese, captions=captions) is True
+
+
+def test_cantonese_still_requests_and_resolves_written_chinese(yue_config, tmp_path):
+    """Only the gates narrow: ``codes`` stays the request and resolve order."""
+    cmd = YouTubeFetcherService(yue_config)._build_fetch_cmd("https://y", tmp_path, "manual_only")
+    assert cmd[cmd.index("--sub-lang") + 1] == "yue,zh-HK,zh-Hant-HK,zh-Hant"
+    (tmp_path / "abc123.mp4").write_bytes(b"v")
+    (tmp_path / "abc123.zh-Hant.srt").write_bytes(b"1\n00:00:01,000 --> 00:00:02,000\nhi\n")
+    media = YouTubeFetcherService(yue_config)._resolve_outputs(tmp_path, "abc123", "manual_only")
+    assert media.subtitle_file.name == "abc123.zh-Hant.srt"
