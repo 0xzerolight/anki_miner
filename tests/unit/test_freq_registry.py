@@ -24,6 +24,7 @@ def _build_source(
     *,
     schema_version: int | None = None,
     is_categorical: str | None = None,
+    language: str | None = None,
 ) -> None:
     db_path = root / source_id / "index.sqlite"
     meta = {
@@ -34,6 +35,8 @@ def _build_source(
     }
     if is_categorical is not None:
         meta["is_categorical"] = is_categorical
+    if language is not None:
+        meta["language"] = language
     padded: list[storage.FreqRow] = [row if len(row) == 4 else (*row, None) for row in rows]
     storage.build_index(db_path, padded, meta)
 
@@ -379,3 +382,22 @@ def test_usable_enabled_requires_current_schema_and_entries(tmp_path: Path):
     )
 
     assert [m.source_id for m in reg.usable_enabled(config)] == ["good"]
+
+
+def test_usable_enabled_drops_slots_stamped_for_another_language(tmp_path: Path):
+    """``usable_enabled`` answers the question ``build_sources`` answers.
+
+    A cross-stamped slot is dropped from the chain, so counting it as usable
+    reports a ready frequency source over an empty chain.
+    """
+    _build_source(tmp_path, "ja-freq", [("猫", "ねこ", 100)], language="ja")
+    _build_source(tmp_path, "zh-freq", [("猫", None, 100)], language="zh")
+    reg = FrequencySourceRegistry(tmp_path)
+    reg.load()
+    chain = (FreqEntry(source_id="ja-freq"), FreqEntry(source_id="zh-freq"))
+
+    zh_config = AnkiMinerConfig(language="zh", freqs_root=tmp_path, frequency_chain=chain)
+    assert [m.source_id for m in reg.usable_enabled(zh_config)] == ["zh-freq"]
+
+    ja_config = AnkiMinerConfig(freqs_root=tmp_path, frequency_chain=chain)
+    assert [m.source_id for m in reg.usable_enabled(ja_config)] == ["ja-freq"]
