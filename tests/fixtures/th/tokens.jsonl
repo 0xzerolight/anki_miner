@@ -1,0 +1,12 @@
+{"sentence": "ผมชอบกินข้าวครับ", "surface": "กินข้าว", "pos1": "VERB", "pos2": "", "lemma": "กินข้าว", "mined_form": "กินข้าว", "note": "a compound newmm keeps whole"}
+{"sentence": "ผมชอบกินข้าวครับ", "surface": "ครับ", "pos1": "PART", "pos2": "stopword", "lemma": "ครับ", "mined_form": "ครับ", "note": "the polite particle: the stopword tier, whatever the model tagged it"}
+{"sentence": "มากๆ", "surface": "มาก", "pos1": "ADV", "pos2": "", "lemma": "มาก", "mined_form": "มาก", "note": "the repeated word itself stays mineable"}
+{"sentence": "มากๆ", "surface": "ๆ", "pos1": "PUNCT", "pos2": "mark", "lemma": "ๆ", "mined_form": "ๆ", "note": "the repetition mark is its own token and the mark tier"}
+{"sentence": "กรุงเทพฯ", "surface": "กรุงเทพฯ", "pos1": "NOUN", "pos2": "", "lemma": "กรุงเทพฯ", "mined_form": "กรุงเทพฯ", "note": "the abbreviation mark stays on its headword"}
+{"sentence": "๒๕๖๗", "surface": "๒๕๖๗", "pos1": "NUM", "pos2": "", "lemma": "๒๕๖๗", "mined_form": "๒๕๖๗", "note": "Thai digits are NUM, never a word"}
+{"sentence": "ดู Netflix กัน", "surface": "Netflix", "pos1": "X", "pos2": "", "lemma": "Netflix", "mined_form": "Netflix", "note": "a Latin run is X; perceptron/tud tags it VERB"}
+{"sentence": "สวัสดี​ครับ", "surface": "สวัสดี", "pos1": "VERB", "pos2": "", "lemma": "สวัสดี", "mined_form": "สวัสดี", "note": "the ZWSP is a word break, never a token"}
+{"sentence": "คุณจรัญไปโรงเรียน", "surface": "จรัญ", "pos1": "PROPN", "pos2": "name", "lemma": "จรัญ", "mined_form": "จรัญ", "note": "a given name absent from thai_words() is the name tier"}
+{"sentence": "เขาดื่มน้ำทุกวัน", "surface": "น้ำ", "pos1": "NOUN", "pos2": "", "lemma": "น้ำ", "mined_form": "น้ำ", "note": "D2: น้ำ is in the name corpora AND in thai_words(), so it is NOT the name tier"}
+{"sentence": "ไม่รู้ค่ะ นะคะ", "surface": "ค่ะ", "pos1": "NOUN", "pos2": "stopword", "lemma": "ค่ะ", "mined_form": "ค่ะ", "note": "the tagger calls ค่ะ a NOUN in context; the list is the gate"}
+{"sentence": "ฯลฯ", "surface": "ฯลฯ", "pos1": "PUNCT", "pos2": "mark", "lemma": "ฯลฯ", "mined_form": "ฯลฯ", "note": "et cetera is one token and the mark tier"}
