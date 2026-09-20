@@ -54,6 +54,7 @@ from anki_miner.services.word_list_service import WordListService
 from anki_miner.services.wordset_service import WordsetService
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.subtitle_encoding import script_check_kwarg
 
 logger = logging.getLogger(__name__)
 
@@ -940,7 +941,9 @@ def create_services(
             word_list_service = WordListService(
                 blacklist_path=config.blacklist_path if config.use_blacklist else None,
                 whitelist_path=config.whitelist_path if config.use_whitelist else None,
-                dedup_fold=get_profile(config_language(config)).dedup_fold,
+                dedup_fold=profile.dedup_fold,
+                encodings=profile.import_encodings,
+                **script_check_kwarg(profile.import_encodings, profile.script),
             )
             word_list_service.load()
         except MemoryError:

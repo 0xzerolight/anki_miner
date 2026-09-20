@@ -131,6 +131,21 @@ class TestFilterBundleTagger:
         assert bundle.tagger is None
 
 
+class TestFilterBundleWordLists:
+    """The scan bundle decodes word lists with the mining language's ladder."""
+
+    def test_a_chinese_blacklist_written_by_notepad_loads(self, test_config, tmp_path):
+        """GB18030 is Notepad's default on a mainland machine; UTF-8 dropped the file."""
+        bl = tmp_path / "blacklist.txt"
+        bl.write_bytes("的\n了\n是\n".encode("gb18030"))
+        config = dataclasses.replace(test_config, language="zh", use_blacklist=True, blacklist_path=bl)
+
+        bundle = worker_module._build_filter_bundle(config, None)
+
+        assert bundle.word_list_service is not None
+        assert bundle.word_list_service.is_blacklisted("的") is True
+
+
 class TestDeckFilterApplyWorker:
     def test_emits_result_and_logs_done(self, test_config, monkeypatch, caplog):
         monkeypatch.setattr(worker_module, "AnkiService", MagicMock())

@@ -81,6 +81,18 @@ def test_create_episode_processor_wires_same_fetcher(base_config):
 # ---------------------------------------------------------------------------
 
 
+def test_create_services_reads_word_lists_with_the_language_ladder(base_config, tmp_path):
+    """A GB18030 blacklist (Notepad's default in mainland China) used to be dropped."""
+    bl = tmp_path / "blacklist.txt"
+    bl.write_bytes("的\n了\n是\n".encode("gb18030"))
+    cfg = dataclasses.replace(base_config, language="zh", use_blacklist=True, blacklist_path=bl)
+
+    services = service_factory.create_services(cfg)
+
+    assert services.word_list_service is not None
+    assert services.word_list_service.is_blacklisted("的") is True
+
+
 def test_create_services_uses_provided_anki_service(base_config):
     """When anki_service is passed to create_services, the same instance is
     returned in Services (identity check — no new AnkiService is built)."""

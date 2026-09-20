@@ -6,8 +6,13 @@ from collections.abc import Callable
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services.reading._util import _decode
 
 logger = logging.getLogger(__name__)
+
+#: Ladder for a caller with no profile to hand over (tests, ad-hoc callers):
+#: UTF-8, with the BOM stripped rather than kept as part of the first entry.
+_DEFAULT_ENCODINGS = ("utf-8-sig",)
 
 
 class WordListService:
@@ -23,6 +28,8 @@ class WordListService:
         whitelist_path: Path | None = None,
         *,
         dedup_fold: Callable[[str], str] | None = None,
+        encodings: tuple[str, ...] = _DEFAULT_ENCODINGS,
+        script_check: Callable[[str], bool] | None = None,
     ):
         """Initialize the word list service.
 
@@ -32,8 +39,16 @@ class WordListService:
             dedup_fold: The mining language's comparison fold (S3), applied to
                 every entry at load and every probe; ``None`` keeps the NFC'd
                 entries and raw probes.
+            encodings: The mining language's ``import_encodings`` ladder — a
+                hand-made list is whatever the user's Notepad writes (GB18030 on
+                a mainland machine, Big5 on a Taiwanese one), and UTF-8 alone
+                dropped the whole file.
+            script_check: Validates a single-byte leg of that ladder
+                (``utils.subtitle_encoding.script_check_kwarg``).
         """
         self._dedup_fold = dedup_fold
+        self._encodings = encodings
+        self._script_check = script_check
         self._blacklist_path = blacklist_path
         self._whitelist_path = whitelist_path
         self._blacklist: set[str] = set()
@@ -102,8 +117,7 @@ class WordListService:
         """
         return frozenset(self._whitelist)
 
-    @staticmethod
-    def _read_word_file(path: Path) -> set[str]:
+    def _read_word_file(self, path: Path) -> set[str]:
         """Read a word list file.
 
         Args:
@@ -113,7 +127,7 @@ class WordListService:
             Set of words from the file.
 
         Raises:
-            SetupError: If the file cannot be read.
+            SetupError: If the file cannot be read or decoded.
         """
         if not path.exists():
             # The path is diagnostics, not the sentence (rule 5).
@@ -121,12 +135,17 @@ class WordListService:
             raise SetupError("Your word list file is missing.")
 
         try:
+            with path.open("rb") as f:
+                raw = f.read()
+            # The reading loaders' ladder decoder, not the known-words one: only
+            # this copy steps over gb18030 for a Big5 file, which gb18030
+            # otherwise decodes into PUA mojibake without raising.
+            text = _decode(raw, encodings=self._encodings, script_check=self._script_check)
             words: set[str] = set()
-            with path.open("r", encoding="utf-8") as f:
-                for line in f:
-                    stripped = unicodedata.normalize("NFC", line.strip())
-                    if stripped and not stripped.startswith("#"):
-                        words.add(stripped)
+            for line in text.splitlines():
+                stripped = unicodedata.normalize("NFC", line.strip())
+                if stripped and not stripped.startswith("#"):
+                    words.add(stripped)
             return words
         except MemoryError:
             raise
