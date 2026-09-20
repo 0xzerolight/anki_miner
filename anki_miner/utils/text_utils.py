@@ -54,7 +54,12 @@ def strip_subtitle_markup(text: str) -> str:
     return text
 
 
-def clean_subtitle_text(text: str, *, normalize: Callable[[str], str] | None = None) -> str:
+def clean_subtitle_text(
+    text: str,
+    *,
+    normalize: Callable[[str], str] | None = None,
+    has_target_script: Callable[[str], bool] | None = None,
+) -> str:
     """Remove formatting tags, then Japanese-normalize for tokenization.
 
     Markup stripping runs first, then one ``html.unescape`` pass, then
@@ -72,9 +77,16 @@ def clean_subtitle_text(text: str, *, normalize: Callable[[str], str] | None = N
     annotation strip and whitespace flattening stay shared. ``None`` is the
     Japanese pair, byte-identical to the pre-seam function.
 
+    ``has_target_script`` is the mining language's
+    ``LanguageProfile.ScriptSupport.contains_target_script``, and turns on the
+    bilingual-cue drop (:func:`_drop_other_script_lines`). ``None`` — every
+    language whose factory does not opt in — is byte-identical.
+
     Args:
         text: Raw subtitle text with possible formatting tags
         normalize: The mining language's normaliser, or None for the Japanese pair
+        has_target_script: The mining language's script gate, or None to keep
+            every physical line of a cue
 
     Returns:
         Cleaned, normalized text without formatting tags or annotations
@@ -91,7 +103,30 @@ def clean_subtitle_text(text: str, *, normalize: Callable[[str], str] | None = N
     else:
         text = normalize(text)
     text = strip_inline_annotations(text)
+    if has_target_script is not None:
+        text = _drop_other_script_lines(text, has_target_script)
     return " ".join(text.split())
+
+
+def _drop_other_script_lines(text: str, has_target_script: Callable[[str], bool]) -> str:
+    """Keep only the lines of a multi-line cue written in the mining script.
+
+    Bilingual subtitles (a Chinese line and an English translation in one cue)
+    are the norm for Chinese fansubs, and the flattened cue becomes the card's
+    Sentence, so the translation prints the answer alongside the word. Runs
+    while physical lines still exist, after the annotation strip so a line that
+    is only a speaker tag cannot vouch for the cue.
+
+    Two deliberate no-ops: a single-line cue is never touched (a mixed line like
+    ``我喜欢Netflix。`` is one sentence, not two languages), and a cue with no
+    matching line at all is left as written, so an all-English file still
+    reaches the tokenizer and the "mined no words" diagnostic still sees it.
+    """
+    lines = text.split("\n")
+    if len(lines) < 2:
+        return text
+    kept = [line for line in lines if has_target_script(line)]
+    return "\n".join(kept) if kept else text
 
 
 # Structural subtitle-annotation stripping (Task U1). ``strip_inline_annotations``
