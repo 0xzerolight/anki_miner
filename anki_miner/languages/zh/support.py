@@ -40,16 +40,18 @@ class ZhDictKeyFolding:
         return normalize_zh(s)
 
     def fold_reading(self, s: str | None) -> str | None:
-        """Fold a pinyin reading key: NFC, then casefold.
+        """Fold a pinyin reading key: NFC, casefold, then drop the spacing.
 
         Case varies between CC-CEDICT ports (``Zhōng Guó`` vs ``zhōng guó``)
-        and the readings this engine generates. Lowering is only safe because
-        it is applied SYMMETRICALLY: the zh importer folds reading keys with
-        this exact function before writing them, and every lookup folds the
-        query the same way. Fold on one side only and the miss is silent —
-        the row is there and is never found.
+        and so does syllable spacing: the ports write one run (``zhōngguó``)
+        while this engine spaces the syllables the card shows (``zhōng guó``).
+        Neither carries meaning a lookup can use, so both are folded away.
+        That is only safe because it is applied SYMMETRICALLY: the zh importer
+        folds reading keys with this exact function before writing them, and
+        every lookup folds the query the same way. Fold on one side only and
+        the miss is silent — the row is there and is never found.
         """
-        return normalize_zh(s).casefold() if s is not None else None
+        return "".join(normalize_zh(s).casefold().split()) if s is not None else None
 
     def homograph_keep_mask(self, word: str, rows: list[tuple[str, str]], lemma: str | None = None) -> list[bool]:
         """Rule A of ``storage._homograph_keep_mask`` (:284-287), and nothing else.

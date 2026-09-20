@@ -157,9 +157,10 @@ def _seed_zh_dict(dicts_root, dict_id="cedict-zh"):
     create_index(db_path)
     bulk_insert(
         db_path,
-        # Source case as a CC-CEDICT port ships it; the term is Han, so the row
-        # is reachable ONLY through its folded reading key.
-        [DictRow(term="銀行", reading="Yín Háng", content="<div>bank</div>", sequence=1)],
+        # Reading spelled as a CC-CEDICT port ships it - one unspaced,
+        # mixed-case run - while the engine generates "yín háng". The term is
+        # Han, so the row is reachable ONLY through its folded reading key.
+        [DictRow(term="銀行", reading="YínHáng", content="<div>bank</div>", sequence=1)],
         keys=get_profile("zh").dict_keys,
     )
     write_meta(
@@ -198,16 +199,17 @@ def test_a_zh_index_imported_with_the_real_folding_is_queryable(test_config, tmp
     assert isinstance(provider, IndexedDictProvider)
     assert provider._keys is get_profile("zh").dict_keys
     assert provider.load() is True
-    # Query cased as the source ships it and as the engine generates it: both
-    # resolve, because both sides casefold.
-    assert provider.lookup("Yín Háng") is not None
+    # Query cased and spaced as the engine generates it, and as the source
+    # ships it: both resolve, because both sides casefold and drop spacing.
     assert provider.lookup("yín háng") is not None
+    assert provider.lookup("YínHáng") is not None
 
-    # Asymmetry proof: the ja folding does not casefold, so the source-cased
-    # query finds nothing in the same file.
+    # Asymmetry proof: the ja folding neither casefolds nor drops spacing, so
+    # neither query finds anything in the same file.
     ja_side = IndexedDictProvider("cedict-zh", db_path, display_name="CC-CEDICT", keys=get_profile("ja").dict_keys)
     assert ja_side.load() is True
-    assert ja_side.lookup("Yín Háng") is None
+    assert ja_side.lookup("yín háng") is None
+    assert ja_side.lookup("YínHáng") is None
 
 
 def test_a_zh_card_carries_its_hook_fields_end_to_end(test_config, tmp_path, make_tokenized_word, monkeypatch):

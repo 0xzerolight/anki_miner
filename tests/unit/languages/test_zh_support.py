@@ -47,11 +47,11 @@ def test_fold_term_is_nfc():
     assert ZhDictKeyFolding().fold_term("兀") == "兀"
 
 
-def test_fold_reading_preserves_none_and_case_folds_pinyin():
+def test_fold_reading_preserves_none_case_folds_and_drops_spacing():
     folding = ZhDictKeyFolding()
     assert folding.fold_reading(None) is None
-    assert folding.fold_reading("Zhōng Guó") == "zhōng guó"
-    assert folding.fold_reading("nī hǎo") == "nī hǎo"
+    assert folding.fold_reading("Zhōng Guó") == "zhōngguó"
+    assert folding.fold_reading("nī hǎo") == "nīhǎo"
 
 
 def test_the_import_side_and_the_query_side_fold_identically():
@@ -59,7 +59,7 @@ def test_the_import_side_and_the_query_side_fold_identically():
     folding = ZhDictKeyFolding()
     stored = folding.fold_reading("Yín Háng")  # importer writes this key
     queried = folding.fold_reading("yín háng")  # lookup asks for this one
-    assert stored == queried
+    assert stored == queried == "yínháng"
 
 
 def test_rule_a_drops_reading_only_homographs():
