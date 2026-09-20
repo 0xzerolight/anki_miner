@@ -107,16 +107,43 @@ def test_the_normaliser_strips_what_a_windows_subtitle_tool_injects():
 # --------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("tag", ["heb", "iw"])
-def test_the_profile_codes_pick_the_hebrew_track(tmp_path, tag):
-    """``iw`` is the legacy 639-1 code an Israeli rip still writes into the container."""
-    proc = MagicMock(returncode=0, stdout=FFPROBE.read_text(encoding="utf-8"), stderr="")
+def _ffprobe_with(tag: str) -> str:
+    """The fixture with its two Hebrew streams collapsed onto ONE tag, beside the Japanese one."""
+    data = json.loads(FFPROBE.read_text(encoding="utf-8"))
+    streams = [s for s in data["streams"] if s["tags"]["language"] == "jpn"]
+    hebrew = next(s for s in data["streams"] if s["tags"]["language"] != "jpn")
+    hebrew = {**hebrew, "tags": {**hebrew["tags"], "language": tag}}
+    return json.dumps({"streams": [*streams, hebrew]})
+
+
+@pytest.mark.parametrize("tag", ["heb", "he", "iw", "hebrew"])
+def test_every_declared_code_picks_the_hebrew_track_on_its_own(tmp_path, tag):
+    """One code per run, so each entry of ``audio_track_codes`` is load-bearing by itself.
+
+    ``iw`` is the legacy 639-1 code an Israeli rip still writes; ``hebrew`` turns up in
+    hand-tagged files. A pin that never sees a code fail asserts nothing about it.
+    """
+    proc = MagicMock(returncode=0, stdout=_ffprobe_with(tag), stderr="")
     with patch("anki_miner.utils.audio_track_detector.subprocess.run", return_value=proc):
-        video = tmp_path / "trilingual.mkv"
+        video = tmp_path / "bilingual.mkv"
         stream = find_japanese_audio_stream(video, codes=get_profile("he").audio_track_codes)
-        assert stream is not None and stream.language_tag in {"heb", "iw"}
+        assert stream is not None and stream.language_tag == tag
         assert find_japanese_audio_stream(video, codes=JAPANESE_LANGUAGE_CODES).language_tag == "jpn"
-    assert tag in get_profile("he").audio_track_codes
+
+
+def test_a_code_outside_the_set_is_not_picked(tmp_path):
+    """The other half: the assertion above would pass on a set that matched everything."""
+    proc = MagicMock(returncode=0, stdout=_ffprobe_with("ara"), stderr="")
+    with patch("anki_miner.utils.audio_track_detector.subprocess.run", return_value=proc):
+        stream = find_japanese_audio_stream(tmp_path / "x.mkv", codes=get_profile("he").audio_track_codes)
+    assert stream is None or stream.language_tag != "ara"
+
+
+def test_the_fixture_carries_every_code_the_profile_claims_to_need():
+    """A fixture missing a code makes its pin vacuous (the yue lesson)."""
+    tags = {s["tags"]["language"] for s in json.loads(FFPROBE.read_text(encoding="utf-8"))["streams"]}
+    assert {"heb", "iw"} <= tags, "the two codes a real Israeli rip actually writes"
+    assert "jpn" in tags, "the control track the Japanese codes must still pick"
 
 
 def test_an_arabic_track_is_not_hebrew(tmp_path):
@@ -138,6 +165,18 @@ def test_the_caption_codes_are_the_probed_ones():
     assert captions.codes == ("iw", "he")
     assert captions.orig_codes == ("iw-orig", "he-orig")
     assert captions.audio_pattern == "^(iw|he)(-|$)"
+
+
+@pytest.mark.parametrize("code", ["iw", "he"])
+def test_each_caption_code_matches_the_audio_pattern_on_its_own(code):
+    """Both entries of ``codes`` are load-bearing: the pattern is what selects a dubbed track."""
+    import re
+
+    pattern = get_profile("he").captions.audio_pattern
+    assert re.match(pattern, code)
+    assert re.match(pattern, f"{code}-IL")
+    assert not re.match(pattern, f"x{code}")
+    assert not re.match(pattern, "ar")
 
 
 @pytest.mark.parametrize(
