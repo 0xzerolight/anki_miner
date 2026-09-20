@@ -171,8 +171,10 @@ class TokenizedWord:
     # word, and the card then leaves that field unwritten rather than stamping a
     # placeholder rank.
     frequency_harmonic_rank: int | None = None
-    # Times this word's lemma occurs in the current episode. Display/sort-only,
-    # attached on the interactive curation path (Issue #88); 0 when not computed.
+    # Times this word occurs in the current episode, counted on the mining
+    # language's comparison fold — a zh word's traditional and simplified
+    # spellings are one word, so they are one count. Display/sort-only, attached
+    # on the interactive curation path (Issue #88); 0 when not computed.
     occurrence_count: int = 0
     # Distinct unknown lemmas on this word's own subtitle line — the raw i+1
     # signal, since a count of 1 IS the i+1 condition. Display/sort-only,

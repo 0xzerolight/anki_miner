@@ -901,15 +901,47 @@ class WordFilterService:
                 lines = lines[:max_candidates]
             word.sentence_candidates = [self._swap_word_to_line(word, line) for line in lines]
 
+    def _counts_on_fold_key(self, counts: Mapping[str, int]) -> Mapping[str, int]:
+        """Re-key a lemma→count mapping onto the comparison fold, summing collisions.
+
+        The parser counts every occurrence under the lemma it saw, but a word's
+        identity is its folded ``mined_form``: under the zh script fold 頭髮 and
+        头发 are one word, so mixed-script material split that word's
+        occurrences across two keys and a lookup read only one of them — the
+        curator under-reported and the reading occurrence floor dropped words
+        that had cleared it.
+
+        Folding happens HERE and never at the count site
+        (``count_lemmas``/``parse_text_units``): ``corpus_aggregator.select``
+        derives the Deck Builder candidate set and its coverage % straight from
+        those Counter keys. A language with no fold (ja/ko) gets its own
+        mapping back untouched.
+        """
+        fold = self._dedup_fold
+        if fold is None:
+            return counts
+        folded: dict[str, int] = {}
+        for lemma, count in counts.items():
+            key = fold(lemma)
+            folded[key] = folded.get(key, 0) + count
+        return folded
+
+    def _count_key(self, lemma: str) -> str:
+        """The key ``lemma`` is counted under — see :meth:`_counts_on_fold_key`."""
+        return lemma if self._dedup_fold is None else self._dedup_fold(lemma)
+
     def attach_occurrence_counts(self, words: list[TokenizedWord], counts: Mapping[str, int]) -> None:
         """Set ``word.occurrence_count`` from in-episode lemma counts (Issue #88).
 
         ``counts`` is a lemma→occurrences mapping (e.g. the Counter from
-        ``SubtitleParserService.count_lemmas``). Lemmas absent from the mapping
-        get 0. Mutates ``words`` in place; display/sort-only data for the curator.
+        ``SubtitleParserService.count_lemmas``), read on the language's
+        comparison fold so a word that merges two spellings gets the sum of
+        both. Lemmas absent from the mapping get 0. Mutates ``words`` in place;
+        display/sort-only data for the curator.
         """
+        counts = self._counts_on_fold_key(counts)
         for word in words:
-            word.occurrence_count = counts.get(word.lemma, 0)
+            word.occurrence_count = counts.get(self._count_key(word.lemma), 0)
 
     def attach_line_unknown_counts(
         self,
@@ -956,6 +988,9 @@ class WordFilterService:
         """Filter words by cross-episode appearance count.
 
         Only keeps words that appear in at least `min_appearances` episodes.
+        Counts are read on the language's comparison fold, the same key
+        :meth:`attach_occurrence_counts` shows in the curator's Occurrences
+        column — the floor must not drop a word the column says cleared it.
 
         Args:
             words: List of words to filter.
@@ -968,4 +1003,5 @@ class WordFilterService:
         if min_appearances <= 1:
             return words
 
-        return [word for word in words if cross_episode_counts.get(word.lemma, 0) >= min_appearances]
+        counts = self._counts_on_fold_key(cross_episode_counts)
+        return [word for word in words if counts.get(self._count_key(word.lemma), 0) >= min_appearances]
