@@ -334,6 +334,14 @@
         <translation>Lưu các ký tự hanja có trong từ. Để trống = bỏ qua.</translation>
     </message>
     <message>
+        <source>Hán Việt Field</source>
+        <translation>Trường Hán Việt</translation>
+    </message>
+    <message>
+        <source>Stores the Chinese characters a Sino-Vietnamese word comes from, read from the dictionary entry. Blank = skip.</source>
+        <translation>Lưu các chữ Hán gốc của một từ Hán Việt, đọc từ mục từ điển. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
         <source>Part of Speech Field</source>
         <translation>Trường Từ loại</translation>
     </message>
@@ -372,6 +380,106 @@
     <message>
         <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
         <translation>Lưu thể của động từ, cùng với động từ tương ứng ở thể còn lại khi từ điển có nêu. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Root Field</source>
+        <translation>Trường Căn tố</translation>
+    </message>
+    <message>
+        <source>Stores the word's root, from the dictionary entry. Blank = skip.</source>
+        <translation>Lưu căn tố của từ, lấy từ mục từ điển. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Affixes Field</source>
+        <translation>Trường Phụ tố</translation>
+    </message>
+    <message>
+        <source>Stores the prefixes and suffixes around the root, from the dictionary entry. Blank = skip.</source>
+        <translation>Lưu các tiền tố và hậu tố quanh căn tố, lấy từ mục từ điển. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Formal Form Field</source>
+        <translation>Trường Dạng trang trọng</translation>
+    </message>
+    <message>
+        <source>Stores the standard spelling of a colloquial word. Blank = skip.</source>
+        <translation>Lưu cách viết chuẩn của một từ khẩu ngữ. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Grammar Field</source>
+        <translation>Trường Ngữ pháp</translation>
+    </message>
+    <message>
+        <source>Stores the dictionary's grammar line: gender and plurals, or a verb's form and verbal noun. Blank = skip.</source>
+        <translation>Lưu dòng ngữ pháp của từ điển: giống và số nhiều, hoặc dạng của động từ và danh động từ. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Segmentation Field</source>
+        <translation>Trường Phân tách</translation>
+    </message>
+    <message>
+        <source>Stores how the word you saw splits into prefixes, stem and suffixes. Blank = skip.</source>
+        <translation>Lưu cách từ bạn gặp được tách thành tiền tố, thân từ và hậu tố. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Reading Field</source>
+        <translation>Trường Cách đọc</translation>
+    </message>
+    <message>
+        <source>Stores the Paiboon reading parsed from the dictionary entry. Blank = skip.</source>
+        <translation>Lưu cách đọc Paiboon được phân tích từ mục từ điển. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Classifier Field</source>
+        <translation>Trường Loại từ</translation>
+    </message>
+    <message>
+        <source>Stores the noun classifier stated by the dictionary entry. Blank = skip.</source>
+        <translation>Lưu loại từ của danh từ do mục từ điển nêu. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Romanization Field</source>
+        <translation>Trường Latinh hóa</translation>
+    </message>
+    <message>
+        <source>Stores the word's Latin spelling, from the dictionary entry. Blank = skip.</source>
+        <translation>Lưu cách viết Latinh của từ, lấy từ mục từ điển. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Colloquial Form Field</source>
+        <translation>Trường Dạng khẩu ngữ</translation>
+    </message>
+    <message>
+        <source>Stores the everyday spelling the line used, when the front is the standard one. Blank = skip.</source>
+        <translation>Lưu cách viết thường ngày mà dòng đó đã dùng, khi mặt trước thẻ là dạng chuẩn. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Present Stem Field</source>
+        <translation>Trường Thân từ hiện tại</translation>
+    </message>
+    <message>
+        <source>Stores the stem a verb's present-tense forms are built on. Blank = skip.</source>
+        <translation>Lưu thân từ dùng để tạo các dạng thì hiện tại của động từ. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Jyutping Field</source>
+        <translation>Trường Jyutping</translation>
+    </message>
+    <message>
+        <source>Stores the jyutping reading, tone-coloured when that setting is on. Blank = skip.</source>
+        <translation>Lưu cách đọc jyutping, được tô màu theo thanh điệu khi tùy chọn đó bật. Để trống = bỏ qua.</translation>
+    </message>
+    <message>
+        <source>Transliteration Field</source>
+        <translation>Trường Chuyển tự</translation>
+    </message>
+    <message>
+        <source>Binyan Field</source>
+        <translation>Trường Binyan</translation>
+    </message>
+    <message>
+        <source>Stores the verb pattern the dictionary names, such as pa'al or hif'il. Blank = skip.</source>
+        <translation>Lưu mẫu động từ mà từ điển nêu tên, chẳng hạn pa'al hoặc hif'il. Để trống = bỏ qua.</translation>
     </message>
     <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
@@ -530,8 +638,8 @@
         <translation>Trường Cách đọc Biểu thức</translation>
     </message>
     <message>
-        <source>Stores the expression as plain kana.</source>
-        <translation>Lưu biểu thức dưới dạng kana thuần túy.</translation>
+        <source>Stores the expression's plain reading.</source>
+        <translation>Lưu cách đọc thuần túy của biểu thức.</translation>
     </message>
     <message>
         <source>Sentence Furigana Field</source>
@@ -542,8 +650,8 @@
         <translation>Trường Cách đọc Câu</translation>
     </message>
     <message>
-        <source>Stores the sentence as plain kana.</source>
-        <translation>Lưu câu dưới dạng kana thuần túy.</translation>
+        <source>Stores the sentence's plain reading.</source>
+        <translation>Lưu cách đọc thuần túy của câu.</translation>
     </message>
     <message>
         <source>Auxiliary Data Fields</source>
@@ -630,8 +738,8 @@
         <translation>Loại thẻ</translation>
     </message>
     <message>
-        <source>For JP Mining Note-style note types: an “x” in a marker field selects how each mined card renders.</source>
-        <translation>Đối với loại ghi chú kiểu JP Mining Note: “x” trong trường đánh dấu chọn cách hiển thị mỗi thẻ được khai thác.</translation>
+        <source>Note types with marker fields render each mined card by which field holds an “x”.</source>
+        <translation>Loại ghi chú có trường đánh dấu sẽ hiển thị mỗi thẻ đã khai thác theo trường nào chứa “x”.</translation>
     </message>
     <message>
         <source>None (disabled)</source>
@@ -1142,6 +1250,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Google Translate (synthetic TTS)</source>
         <translation>Google Translate (TTS tổng hợp)</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge (synthetic TTS)</source>
+        <translation>Microsoft Edge (TTS tổng hợp)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2158,12 +2270,12 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Bỏ qua câu dài hơn thời lượng hoặc số ký tự đã chọn.</translation>
     </message>
     <message>
-        <source>Avoid duplicate cards</source>
-        <translation>Tránh thẻ trùng lặp</translation>
+        <source>One word per sentence</source>
+        <translation>Mỗi câu một từ</translation>
     </message>
     <message>
-        <source>Skip making a second card for a word you've already mined this run.</source>
-        <translation>Bỏ qua việc tạo thẻ thứ hai cho một từ bạn đã khai thác trong lần chạy này.</translation>
+        <source>Mine at most one word from each example sentence, skipping the rest.</source>
+        <translation>Khai thác nhiều nhất một từ trong mỗi câu ví dụ, bỏ qua những từ còn lại.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2196,6 +2308,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Treat the kana spelling of a word you know in kanji as known too (on by default).</source>
         <translation>Coi cách viết kana của một từ bạn đã biết dưới dạng kanji cũng là đã biết (bật theo mặc định).</translation>
+    </message>
+    <message>
+        <source>Simplified or traditional characters</source>
+        <translation>Chữ giản thể hoặc phồn thể</translation>
+    </message>
+    <message>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>Bộ ký tự chọn cách viết mà mặt trước thẻ và việc tra cứu từ điển dùng: Giản thể, Phồn thể, hoặc Như nguyên văn để giữ cách viết gốc của từng từ. Trường Phồn thể, trong Cài đặt -&gt; Anki, chứa cách viết còn lại khi nó khác với mặt trước.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -2380,6 +2500,22 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Include the reading (furigana) for the word on your cards.</source>
         <translation>Bao gồm cách đọc (furigana) cho từ trên thẻ của bạn.</translation>
+    </message>
+    <message>
+        <source>Pinyin readings &amp; tone colours</source>
+        <translation>Cách đọc pinyin và màu thanh điệu</translation>
+    </message>
+    <message>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
+        <translation>Đưa pinyin của từ lên thẻ của bạn, mỗi âm tiết mang màu của thanh điệu -- tùy chọn tô màu là Tô màu cách đọc theo thanh điệu, trong Cài đặt -&gt; Lọc.</translation>
+    </message>
+    <message>
+        <source>Measure word field</source>
+        <translation>Trường lượng từ</translation>
+    </message>
+    <message>
+        <source>Map the Measure Word Field to put the classifier from the dictionary entry on your cards.</source>
+        <translation>Ánh xạ Trường Lượng từ để đưa lượng từ trong mục từ điển lên thẻ của bạn.</translation>
     </message>
     <message>
         <source>Auto-tag mined notes</source>
@@ -5216,8 +5352,8 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation>Loại trùng lặp theo câu</translation>
     </message>
     <message>
-        <source>Skips duplicate example sentences.</source>
-        <translation>Bỏ qua các câu ví dụ trùng lặp.</translation>
+        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
+        <translation>Khai thác nhiều nhất một từ cho mỗi câu ví dụ — từ đầu tiên tìm thấy trong câu đó. Mọi từ khác dùng chung câu đó đều bị bỏ qua.</translation>
     </message>
     <message>
         <source>Script Type</source>
@@ -5252,6 +5388,10 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation>Biến thể chữ viết</translation>
     </message>
     <message>
+        <source>As written</source>
+        <translation>Như nguyên văn</translation>
+    </message>
+    <message>
         <source>Simplified (简体)</source>
         <translation>Giản thể (简体)</translation>
     </message>
@@ -5264,8 +5404,8 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation>Bộ ký tự</translation>
     </message>
     <message>
-        <source>Which spelling the card front and the dictionary lookup prefer.</source>
-        <translation>Cách viết mà mặt trước của thẻ và tra cứu từ điển ưu tiên.</translation>
+        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
+        <translation>Cách viết mà mặt trước thẻ và việc tra cứu từ điển ưu tiên; Như nguyên văn giữ cách viết riêng của nguồn.</translation>
     </message>
     <message>
         <source>Regional Variety</source>
@@ -5380,16 +5520,16 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation>In đậm từ mục tiêu trong câu</translation>
     </message>
     <message>
-        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
-        <translation>Bọc từ đã khai thác trong &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; bên trong các trường Sentence và SentenceFurigana. Phần khớp là đúng khoảng MeCab của hình vị đã khai thác, nên các dạng bề mặt trùng lặp trong một câu chỉ in đậm lần xuất hiện thực sự được khai thác.</translation>
+        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
+        <translation>Bọc từ đã khai thác trong &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; bên trong các trường câu. Phần khớp là đúng đoạn đã được khai thác, nên nếu một câu có nhiều dạng trùng nhau thì chỉ lần xuất hiện thực sự được khai thác mới in đậm.</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>Tô màu cách đọc theo thanh điệu</translation>
     </message>
     <message>
-        <source>Wraps each pinyin syllable in a tone class so the card styling can colour it.</source>
-        <translation>Bọc mỗi âm tiết pinyin trong một lớp thanh điệu để kiểu dáng thẻ có thể tô màu cho nó.</translation>
+        <source>Colours each syllable of the reading by its tone.</source>
+        <translation>Tô màu từng âm tiết của cách đọc theo thanh điệu của nó.</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -6564,6 +6704,20 @@ Tiếp tục?</translation>
     <message>
         <source>Show main window</source>
         <translation>Hiện cửa sổ chính</translation>
+    </message>
+</context><context>
+    <name>MiningLanguagePage</name>
+    <message>
+        <source>Choose a Mining Language</source>
+        <translation>Chọn một ngôn ngữ khai thác</translation>
+    </message>
+    <message>
+        <source>The language you are learning. The interface language is separate.</source>
+        <translation>Ngôn ngữ bạn đang học. Ngôn ngữ giao diện là một phần riêng biệt.</translation>
+    </message>
+    <message>
+        <source>The deck, note type and resources in the next steps follow this choice. A language missing from the list needs its engine pack: Settings → Mining Language.</source>
+        <translation>Bộ thẻ, loại ghi chú và tài nguyên ở các bước tiếp theo sẽ theo lựa chọn này. Ngôn ngữ không có trong danh sách cần gói công cụ riêng: Cài đặt → Ngôn ngữ khai thác.</translation>
     </message>
 </context><context>
     <name>MiningLanguageSettingsPanel</name>
@@ -8288,24 +8442,36 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Tài nguyên được đề xuất</translation>
     </message>
     <message>
-        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
-        <translation>Tần suất và trọng âm cao độ là tùy chọn. Cần có từ điển.</translation>
-    </message>
-    <message>
         <source>What are these resources?</source>
         <translation>Các tài nguyên này là gì?</translation>
-    </message>
-    <message>
-        <source>%1 — %2</source>
-        <translation>%1 — %2</translation>
     </message>
     <message>
         <source>Download recommended resources</source>
         <translation>Tải các tài nguyên được đề xuất</translation>
     </message>
     <message>
+        <source>%1 — %2</source>
+        <translation>%1 — %2</translation>
+    </message>
+    <message>
         <source>No recommended resources for this language. Import a dictionary in Settings → Dictionaries.</source>
         <translation>Không có tài nguyên được đề xuất cho ngôn ngữ này. Hãy nhập một từ điển trong Cài đặt → Từ điển.</translation>
+    </message>
+    <message>
+        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
+        <translation>Tần suất và trọng âm cao độ là tùy chọn. Cần có từ điển.</translation>
+    </message>
+    <message>
+        <source>Frequency is optional. A dictionary is required.</source>
+        <translation>Tần suất là tùy chọn. Cần có từ điển.</translation>
+    </message>
+    <message>
+        <source>Pitch accent is optional. A dictionary is required.</source>
+        <translation>Trọng âm cao độ là tùy chọn. Cần có từ điển.</translation>
+    </message>
+    <message>
+        <source>A dictionary is required.</source>
+        <translation>Cần có từ điển.</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -10480,6 +10646,10 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>Âm thanh</translation>
     </message>
     <message>
+        <source>Position</source>
+        <translation>Vị trí</translation>
+    </message>
+    <message>
         <source>How many times this word appears in the text being mined.
 
 The “Sentences” picker usually lists fewer: one option per line, and only lines whose form matches the card’s Word.</source>
@@ -10510,6 +10680,14 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên đầu — những dòng
         <translation>Liệu các nguồn âm thanh của bạn có âm thanh phát âm cho từ này hay không.
 
 ✓ đã tìm thấy, ✗ không tìm thấy, - chưa kiểm tra. Các từ được kiểm tra trong khi cửa sổ này đang mở, vì vậy một từ bạn giữ lại đã sẵn sàng âm thanh. Việc kiểm tra không bao giờ thay đổi những từ bạn có thể khai thác.</translation>
+    </message>
+    <message>
+        <source>Where this word appears in what you are mining: a timestamp for video, a page or chapter for reading.
+
+Sort by it to work through a long recording in order — then highlight the rows up to where you stopped and include those.</source>
+        <translation>Nơi từ này xuất hiện trong nội dung bạn đang khai thác: dấu thời gian với video, trang hoặc chương với tài liệu đọc.
+
+Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ tự — sau đó tô sáng các hàng đến chỗ bạn dừng lại rồi bao gồm chúng.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -11012,6 +11190,10 @@ Sắp xếp tăng dần để đưa các dòng i+1 lên đầu — những dòng
     <message>
         <source>Source type:</source>
         <translation>Loại nguồn:</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge read-aloud (synthetic TTS)</source>
+        <translation>Microsoft Edge đọc to (TTS tổng hợp)</translation>
     </message>
     <message>
         <source>URL template (use {term} and {reading}):</source>

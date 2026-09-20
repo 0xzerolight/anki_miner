@@ -334,6 +334,14 @@
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Hán Việt Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the Chinese characters a Sino-Vietnamese word comes from, read from the dictionary entry. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Part of Speech Field</source>
         <translation type="unfinished" />
     </message>
@@ -371,6 +379,106 @@
     </message>
     <message>
         <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Root Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the word's root, from the dictionary entry. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Affixes Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the prefixes and suffixes around the root, from the dictionary entry. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Formal Form Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the standard spelling of a colloquial word. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Grammar Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the dictionary's grammar line: gender and plurals, or a verb's form and verbal noun. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Segmentation Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores how the word you saw splits into prefixes, stem and suffixes. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reading Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the Paiboon reading parsed from the dictionary entry. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Classifier Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the noun classifier stated by the dictionary entry. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Romanization Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the word's Latin spelling, from the dictionary entry. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Colloquial Form Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the everyday spelling the line used, when the front is the standard one. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Present Stem Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the stem a verb's present-tense forms are built on. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Jyutping Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the jyutping reading, tone-coloured when that setting is on. Blank = skip.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transliteration Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Binyan Field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Stores the verb pattern the dictionary names, such as pa'al or hif'il. Blank = skip.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -530,7 +638,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Stores the expression as plain kana.</source>
+        <source>Stores the expression's plain reading.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -542,7 +650,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Stores the sentence as plain kana.</source>
+        <source>Stores the sentence's plain reading.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -630,7 +738,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>For JP Mining Note-style note types: an “x” in a marker field selects how each mined card renders.</source>
+        <source>Note types with marker fields render each mined card by which field holds an “x”.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1136,6 +1244,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Microsoft Edge (synthetic TTS)</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2149,11 +2261,11 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Avoid duplicate cards</source>
+        <source>One word per sentence</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Skip making a second card for a word you've already mined this run.</source>
+        <source>Mine at most one word from each example sentence, skipping the rest.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2186,6 +2298,14 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Treat the kana spelling of a word you know in kanji as known too (on by default).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Simplified or traditional characters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Anki, carries the other spelling when it differs from the front.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2370,6 +2490,22 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Include the reading (furigana) for the word on your cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pinyin readings &amp; tone colours</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Measure word field</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Map the Measure Word Field to put the classifier from the dictionary entry on your cards.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5197,7 +5333,7 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Skips duplicate example sentences.</source>
+        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5233,6 +5369,10 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>As written</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Simplified (简体)</source>
         <translation type="unfinished" />
     </message>
@@ -5245,7 +5385,7 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Which spelling the card front and the dictionary lookup prefer.</source>
+        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5361,7 +5501,7 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
+        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5369,7 +5509,7 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Wraps each pinyin syllable in a tone class so the card styling can colour it.</source>
+        <source>Colours each syllable of the reading by its tone.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6531,6 +6671,20 @@ Continue?</source>
     </message>
     <message>
         <source>Show main window</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>MiningLanguagePage</name>
+    <message>
+        <source>Choose a Mining Language</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The language you are learning. The interface language is separate.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The deck, note type and resources in the next steps follow this choice. A language missing from the list needs its engine pack: Settings → Mining Language.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -8251,15 +8405,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>What are these resources?</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 — %2</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8267,7 +8413,27 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>%1 — %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>No recommended resources for this language. Import a dictionary in Settings → Dictionaries.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency is optional. A dictionary is required.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent is optional. A dictionary is required.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>A dictionary is required.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10433,6 +10599,10 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Position</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>How many times this word appears in the text being mined.
 
 The “Sentences” picker usually lists fewer: one option per line, and only lines whose form matches the card’s Word.</source>
@@ -10456,6 +10626,12 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <source>Whether your audio sources have pronunciation audio for this word.
 
 ✓ found, ✗ not found, - not checked yet. Words are checked while this window is open, so a word you keep already has its audio ready. The check never changes which words you can mine.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Where this word appears in what you are mining: a timestamp for video, a page or chapter for reading.
+
+Sort by it to work through a long recording in order — then highlight the rows up to where you stopped and include those.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10956,6 +11132,10 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     </message>
     <message>
         <source>Source type:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Microsoft Edge read-aloud (synthetic TTS)</source>
         <translation type="unfinished" />
     </message>
     <message>

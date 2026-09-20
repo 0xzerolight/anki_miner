@@ -335,6 +335,14 @@
         <translation>Almacena los caracteres hanja contenidos en la palabra. En blanco = omitir.</translation>
     </message>
     <message>
+        <source>Hán Việt Field</source>
+        <translation>Campo de Hán Việt</translation>
+    </message>
+    <message>
+        <source>Stores the Chinese characters a Sino-Vietnamese word comes from, read from the dictionary entry. Blank = skip.</source>
+        <translation>Almacena los caracteres chinos de los que procede una palabra sinovietnamita, tomados de la entrada del diccionario. En blanco = omitir.</translation>
+    </message>
+    <message>
         <source>Part of Speech Field</source>
         <translation>Campo de categoría gramatical</translation>
     </message>
@@ -373,6 +381,106 @@
     <message>
         <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
         <translation>Almacena el aspecto de un verbo, junto con el verbo del aspecto contrario cuando el diccionario lo indica. En blanco = omitir.</translation>
+    </message>
+    <message>
+        <source>Root Field</source>
+        <translation>Campo de raíz</translation>
+    </message>
+    <message>
+        <source>Stores the word's root, from the dictionary entry. Blank = skip.</source>
+        <translation>Almacena la raíz de la palabra, según la entrada del diccionario. En blanco = omitir.</translation>
+    </message>
+    <message>
+        <source>Affixes Field</source>
+        <translation>Campo de afijos</translation>
+    </message>
+    <message>
+        <source>Stores the prefixes and suffixes around the root, from the dictionary entry. Blank = skip.</source>
+        <translation>Almacena los prefijos y sufijos que rodean la raíz, según la entrada del diccionario. En blanco = omitir.</translation>
+    </message>
+    <message>
+        <source>Formal Form Field</source>
+        <translation>Campo de forma formal</translation>
+    </message>
+    <message>
+        <source>Stores the standard spelling of a colloquial word. Blank = skip.</source>
+        <translation>Almacena la grafía estándar de una palabra coloquial. En blanco = omitir.</translation>
+    </message>
+    <message>
+        <source>Grammar Field</source>
+        <translation>Campo de gramática</translation>
+    </message>
+    <message>
+        <source>Stores the dictionary's grammar line: gender and plurals, or a verb's form and verbal noun. Blank = skip.</source>
+        <translation>Almacena la línea gramatical del diccionario: género y plurales, o la forma de un verbo y su nombre verbal. En blanco = omitir.</translation>
+    </message>
+    <message>
+        <source>Segmentation Field</source>
+        <translation>Campo de segmentación</translation>
+    </message>
+    <message>
+        <source>Stores how the word you saw splits into prefixes, stem and suffixes. Blank = skip.</source>
+        <translation>Almacena cómo se divide en prefijos, tema y sufijos la palabra que vio. En blanco = omitir.</translation>
+    </message>
+    <message>
+        <source>Reading Field</source>
+        <translation>Campo de lectura</translation>
+    </message>
+    <message>
+        <source>Stores the Paiboon reading parsed from the dictionary entry. Blank = skip.</source>
+        <translation>Almacena la lectura en Paiboon extraída de la entrada del diccionario. En blanco = omitir.</translation>
+    </message>
+    <message>
+        <source>Classifier Field</source>
+        <translation>Campo de clasificador nominal</translation>
+    </message>
+    <message>
+        <source>Stores the noun classifier stated by the dictionary entry. Blank = skip.</source>
+        <translation>Almacena el clasificador nominal que indica la entrada del diccionario. En blanco = omitir.</translation>
+    </message>
+    <message>
+        <source>Romanization Field</source>
+        <translation>Campo de romanización</translation>
+    </message>
+    <message>
+        <source>Stores the word's Latin spelling, from the dictionary entry. Blank = skip.</source>
+        <translation>Almacena la grafía latina de la palabra, según la entrada del diccionario. En blanco = omitir.</translation>
+    </message>
+    <message>
+        <source>Colloquial Form Field</source>
+        <translation>Campo de forma coloquial</translation>
+    </message>
+    <message>
+        <source>Stores the everyday spelling the line used, when the front is the standard one. Blank = skip.</source>
+        <translation>Almacena la grafía cotidiana que aparecía en la línea, cuando el anverso lleva la estándar. En blanco = omitir.</translation>
+    </message>
+    <message>
+        <source>Present Stem Field</source>
+        <translation>Campo de tema de presente</translation>
+    </message>
+    <message>
+        <source>Stores the stem a verb's present-tense forms are built on. Blank = skip.</source>
+        <translation>Almacena el tema sobre el que se construyen las formas de presente de un verbo. En blanco = omitir.</translation>
+    </message>
+    <message>
+        <source>Jyutping Field</source>
+        <translation>Campo de jyutping</translation>
+    </message>
+    <message>
+        <source>Stores the jyutping reading, tone-coloured when that setting is on. Blank = skip.</source>
+        <translation>Almacena la lectura en jyutping, coloreada por tono si ese ajuste está activado. En blanco = omitir.</translation>
+    </message>
+    <message>
+        <source>Transliteration Field</source>
+        <translation>Campo de transliteración</translation>
+    </message>
+    <message>
+        <source>Binyan Field</source>
+        <translation>Campo de binyan</translation>
+    </message>
+    <message>
+        <source>Stores the verb pattern the dictionary names, such as pa'al or hif'il. Blank = skip.</source>
+        <translation>Almacena el patrón verbal que indica el diccionario, como pa'al o hif'il. En blanco = omitir.</translation>
     </message>
     <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
@@ -531,8 +639,8 @@
         <translation>Campo de lectura de expresión</translation>
     </message>
     <message>
-        <source>Stores the expression as plain kana.</source>
-        <translation>Almacena la expresión como kana simple.</translation>
+        <source>Stores the expression's plain reading.</source>
+        <translation>Almacena la lectura simple de la expresión.</translation>
     </message>
     <message>
         <source>Sentence Furigana Field</source>
@@ -543,8 +651,8 @@
         <translation>Campo de lectura de oración</translation>
     </message>
     <message>
-        <source>Stores the sentence as plain kana.</source>
-        <translation>Almacena la oración como kana simple.</translation>
+        <source>Stores the sentence's plain reading.</source>
+        <translation>Almacena la lectura simple de la oración.</translation>
     </message>
     <message>
         <source>Auxiliary Data Fields</source>
@@ -631,8 +739,8 @@
         <translation>Tipo de tarjeta</translation>
     </message>
     <message>
-        <source>For JP Mining Note-style note types: an “x” in a marker field selects how each mined card renders.</source>
-        <translation>Para tipos de nota estilo JP Mining Note: una “x” en un campo marcador selecciona cómo se renderiza cada tarjeta minada.</translation>
+        <source>Note types with marker fields render each mined card by which field holds an “x”.</source>
+        <translation>Los tipos de nota con campos marcadores muestran cada tarjeta minada según el campo que contenga una «x».</translation>
     </message>
     <message>
         <source>None (disabled)</source>
@@ -1143,6 +1251,10 @@ Formatos admitidos: AJT (index.json + media/), NHK16 (entries.json + audio/), Fo
     <message>
         <source>Google Translate (synthetic TTS)</source>
         <translation>Google Translate (TTS sintético)</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge (synthetic TTS)</source>
+        <translation>Microsoft Edge (TTS sintético)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2160,12 +2272,12 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Omita oraciones más largas que una duración o cantidad de caracteres elegida.</translation>
     </message>
     <message>
-        <source>Avoid duplicate cards</source>
-        <translation>Evitar tarjetas duplicadas</translation>
+        <source>One word per sentence</source>
+        <translation>Una palabra por oración</translation>
     </message>
     <message>
-        <source>Skip making a second card for a word you've already mined this run.</source>
-        <translation>Omite crear una segunda tarjeta para una palabra que ya ha minado en esta ejecución.</translation>
+        <source>Mine at most one word from each example sentence, skipping the rest.</source>
+        <translation>Mine como máximo una palabra de cada oración de ejemplo y omita las demás.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2198,6 +2310,14 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Treat the kana spelling of a word you know in kanji as known too (on by default).</source>
         <translation>Trate la grafía en kana de una palabra que conoce en kanji también como conocida (activado por defecto).</translation>
+    </message>
+    <message>
+        <source>Simplified or traditional characters</source>
+        <translation>Caracteres simplificados o tradicionales</translation>
+    </message>
+    <message>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>El Conjunto de caracteres elige la grafía que usan el anverso de la tarjeta y la búsqueda en el diccionario: Simplificado, Tradicional o Tal como aparece para conservar la grafía de origen de cada palabra. El Campo de caracteres tradicionales, en Ajustes -&gt; Anki, contiene la otra grafía cuando difiere de la del anverso.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -2382,6 +2502,22 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Include the reading (furigana) for the word on your cards.</source>
         <translation>Incluye la lectura (furigana) de la palabra en sus tarjetas.</translation>
+    </message>
+    <message>
+        <source>Pinyin readings &amp; tone colours</source>
+        <translation>Lecturas en pinyin y colores de tono</translation>
+    </message>
+    <message>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
+        <translation>Ponga el pinyin de la palabra en sus tarjetas, cada sílaba con el color de su tono — el coloreado es Colorear la lectura por tono, en Ajustes -&gt; Filtrado.</translation>
+    </message>
+    <message>
+        <source>Measure word field</source>
+        <translation>Campo de clasificador</translation>
+    </message>
+    <message>
+        <source>Map the Measure Word Field to put the classifier from the dictionary entry on your cards.</source>
+        <translation>Asigne el Campo de clasificador para poner en sus tarjetas el clasificador de la entrada del diccionario.</translation>
     </message>
     <message>
         <source>Auto-tag mined notes</source>
@@ -5229,8 +5365,8 @@ No se elimina ningún archivo del disco.</translation>
         <translation>Eliminar duplicados por oración</translation>
     </message>
     <message>
-        <source>Skips duplicate example sentences.</source>
-        <translation>Omite las oraciones de ejemplo duplicadas.</translation>
+        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
+        <translation>Mina como máximo una palabra por oración de ejemplo — la primera que se encuentra en esa oración. Se omiten las demás palabras que comparten esa oración.</translation>
     </message>
     <message>
         <source>Script Type</source>
@@ -5265,6 +5401,10 @@ No se elimina ningún archivo del disco.</translation>
         <translation>Variantes de escritura</translation>
     </message>
     <message>
+        <source>As written</source>
+        <translation>Tal como aparece</translation>
+    </message>
+    <message>
         <source>Simplified (简体)</source>
         <translation>Simplificado (简体)</translation>
     </message>
@@ -5277,8 +5417,8 @@ No se elimina ningún archivo del disco.</translation>
         <translation>Conjunto de caracteres</translation>
     </message>
     <message>
-        <source>Which spelling the card front and the dictionary lookup prefer.</source>
-        <translation>Qué grafía prefieren el anverso de la tarjeta y la búsqueda en el diccionario.</translation>
+        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
+        <translation>Qué grafía prefieren el anverso de la tarjeta y la búsqueda en el diccionario; Tal como aparece conserva la grafía propia del origen.</translation>
     </message>
     <message>
         <source>Regional Variety</source>
@@ -5393,16 +5533,16 @@ No se elimina ningún archivo del disco.</translation>
         <translation>Poner en negrita la palabra objetivo en la oración</translation>
     </message>
     <message>
-        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
-        <translation>Envuelve la palabra minada en &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; dentro de los campos Sentence y SentenceFurigana. La coincidencia es el tramo exacto de MeCab del morfema minado, así que las superficies duplicadas en una oración solo ponen en negrita la aparición realmente minada.</translation>
+        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
+        <translation>Envuelve la palabra minada en &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; dentro de los campos de oración. La coincidencia es el fragmento exacto que se minó, de modo que, si la misma forma se repite en una oración, solo se pone en negrita la aparición que realmente se minó.</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>Colorear la lectura por tono</translation>
     </message>
     <message>
-        <source>Wraps each pinyin syllable in a tone class so the card styling can colour it.</source>
-        <translation>Envuelve cada sílaba del pinyin en una clase de tono para que el estilo de la tarjeta pueda colorearla.</translation>
+        <source>Colours each syllable of the reading by its tone.</source>
+        <translation>Colorea cada sílaba de la lectura según su tono.</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -6578,6 +6718,20 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
     <message>
         <source>Show main window</source>
         <translation>Mostrar ventana principal</translation>
+    </message>
+</context><context>
+    <name>MiningLanguagePage</name>
+    <message>
+        <source>Choose a Mining Language</source>
+        <translation>Elija un idioma de minería</translation>
+    </message>
+    <message>
+        <source>The language you are learning. The interface language is separate.</source>
+        <translation>El idioma que está aprendiendo. El idioma de la interfaz es independiente.</translation>
+    </message>
+    <message>
+        <source>The deck, note type and resources in the next steps follow this choice. A language missing from the list needs its engine pack: Settings → Mining Language.</source>
+        <translation>El mazo, el tipo de nota y los recursos de los siguientes pasos dependen de esta elección. Un idioma que no aparezca en la lista necesita su paquete de motor: Ajustes → Idioma de minería.</translation>
     </message>
 </context><context>
     <name>MiningLanguageSettingsPanel</name>
@@ -8303,24 +8457,36 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Recursos recomendados</translation>
     </message>
     <message>
-        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
-        <translation>La frecuencia y el acento tonal son opcionales. Se requiere un diccionario.</translation>
-    </message>
-    <message>
         <source>What are these resources?</source>
         <translation>¿Qué son estos recursos?</translation>
-    </message>
-    <message>
-        <source>%1 — %2</source>
-        <translation>%1 — %2</translation>
     </message>
     <message>
         <source>Download recommended resources</source>
         <translation>Descargar recursos recomendados</translation>
     </message>
     <message>
+        <source>%1 — %2</source>
+        <translation>%1 — %2</translation>
+    </message>
+    <message>
         <source>No recommended resources for this language. Import a dictionary in Settings → Dictionaries.</source>
         <translation>No hay recursos recomendados para este idioma. Importe un diccionario en Ajustes → Diccionarios.</translation>
+    </message>
+    <message>
+        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
+        <translation>La frecuencia y el acento tonal son opcionales. Se requiere un diccionario.</translation>
+    </message>
+    <message>
+        <source>Frequency is optional. A dictionary is required.</source>
+        <translation>La frecuencia es opcional. Se requiere un diccionario.</translation>
+    </message>
+    <message>
+        <source>Pitch accent is optional. A dictionary is required.</source>
+        <translation>El acento tonal es opcional. Se requiere un diccionario.</translation>
+    </message>
+    <message>
+        <source>A dictionary is required.</source>
+        <translation>Se requiere un diccionario.</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -10497,6 +10663,10 @@ Sus recursos instalados y su tema se conservan.</translation>
         <translation>Audio</translation>
     </message>
     <message>
+        <source>Position</source>
+        <translation>Posición</translation>
+    </message>
+    <message>
         <source>How many times this word appears in the text being mined.
 
 The “Sentences” picker usually lists fewer: one option per line, and only lines whose form matches the card’s Word.</source>
@@ -10527,6 +10697,14 @@ Ordene de forma ascendente para poner primero las líneas i+1 — aquellas cuya 
         <translation>Si sus fuentes de audio tienen audio de pronunciación para esta palabra.
 
 ✓ encontrado, ✗ no encontrado, - aún no comprobado. Las palabras se comprueban mientras esta ventana está abierta, de modo que una palabra que conserve ya tiene su audio listo. La comprobación nunca cambia qué palabras puede minar.</translation>
+    </message>
+    <message>
+        <source>Where this word appears in what you are mining: a timestamp for video, a page or chapter for reading.
+
+Sort by it to work through a long recording in order — then highlight the rows up to where you stopped and include those.</source>
+        <translation>Dónde aparece esta palabra en lo que está minando: una marca de tiempo para video, una página o un capítulo para lectura.
+
+Ordene por esta columna para recorrer en orden una grabación larga — luego resalte las filas hasta donde se detuvo e inclúyalas.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -11029,6 +11207,10 @@ Ordene de forma ascendente para poner primero las líneas i+1 — aquellas cuya 
     <message>
         <source>Source type:</source>
         <translation>Tipo de fuente:</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge read-aloud (synthetic TTS)</source>
+        <translation>Lectura en voz alta de Microsoft Edge (TTS sintético)</translation>
     </message>
     <message>
         <source>URL template (use {term} and {reading}):</source>
