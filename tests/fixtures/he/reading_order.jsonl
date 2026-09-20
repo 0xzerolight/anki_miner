@@ -1,0 +1,4 @@
+{"line": "הילד קרא ספר מעניין אתמול.", "front": "ספר", "acceptable_readings": ["סֵפֶר", "סַפָּר", "סְפָר", "סָפַר"], "note": "an unvocalised line gets its reading from the dictionary"}
+{"line": "הַיֶּלֶד הָלַךְ לַגַּן.", "front": "הלך", "acceptable_readings": ["הֵלֶךְ", "הַלָּךְ", "הָלַךְ"], "note": "the line stores verbatim; the front and its reading come from the entry"}
+{"line": "כתבתי מכתב.", "front": "כתב", "acceptable_readings": ["כָּתַב", "כְּתָב", "כַּתָּב"], "note": "the reading follows the RESOLVED lemma, never the inflected surface"}
+{"line": "הכלב רץ.", "front": "כלב", "acceptable_readings": ["כֶּלֶב", "כָּלֵב"], "note": "the post-pass stashes the vocalisation before word_reading is called"}
