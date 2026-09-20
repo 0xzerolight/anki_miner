@@ -1376,6 +1376,54 @@ def test_resources_page_activator_reads_the_live_working_config(qtbot, wiz_confi
     assert wiz.working_config().anki_deck_name == "Applied"
 
 
+def test_resources_page_activator_stands_down_once_the_wizard_walks_away(qtbot, wiz_config):
+    """A download landing after Escape must not fold zh's slots into ja's chains.
+
+    ``done`` reverts the language before it cancels the workers, so the config
+    the summary would be applied to is the one the user never left.
+    """
+    from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+
+    wiz = SetupWizard(wiz_config, offer_mining_language=True)
+    qtbot.addWidget(wiz)
+    assert wiz.language_page is not None
+    wiz.language_page.language_combo.setCurrentIndex(wiz.language_page.language_combo.findData("zh"))
+    wiz.done(QDialog.DialogCode.Rejected.value)
+    reverted = wiz.working_config()
+    summary = ResourceDownloadSummary(
+        results=[ResourceDownloadResult("dict", "dict", "Dictionary", "u", True, "10 entries", dict_id="dict")]
+    )
+
+    assert wiz.resources_page._activate_resources(summary) is None
+    assert wiz.working_config() == reverted
+
+
+def test_resources_page_activator_still_applies_on_an_accepted_close(qtbot, wiz_config):
+    """Finish keeps what it confirmed, so a late arrival still belongs to it."""
+    from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    wiz.done(QDialog.DialogCode.Accepted.value)
+    summary = ResourceDownloadSummary(
+        results=[ResourceDownloadResult("dict", "dict", "Dictionary", "u", True, "10 entries", dict_id="dict")]
+    )
+
+    assert wiz.resources_page._activate_resources(summary) is not None
+
+
 def test_resources_page_activator_ignores_a_summary_with_no_successes(qtbot, wiz_config):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
     from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary  # noqa: PLC0415

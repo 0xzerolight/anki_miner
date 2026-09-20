@@ -218,6 +218,15 @@ class SetupWizard(QWizard):
         """Single mutation point for the working config (use ``dataclasses.replace``)."""
         self._working_config = new_config
 
+    def is_walking_away(self) -> bool:
+        """True once the wizard is closing on anything but an accepted Finish.
+
+        ``done`` reverts the mining language before it cancels the workers, so
+        work still landing after that would be folded into a config for the
+        language the user never left.
+        """
+        return self._closing and self._pending_done_result != QDialog.DialogCode.Accepted.value
+
     # --- shared AnkiService ---------------------------------------------
 
     def anki_service(self) -> AnkiService:

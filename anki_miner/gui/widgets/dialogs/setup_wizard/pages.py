@@ -1300,10 +1300,16 @@ class ResourcesPage(_LiveCheckPage):
         Read from ``working_config()`` at activation time, never from a config
         captured when the download started: the user can have changed the deck
         or note type on an earlier page while the transfer ran.
+
+        A walk-away is the one case where that config is the wrong one: the
+        slots were picked for a language the close path has already reverted,
+        and the chains would silently drop them for not matching.
         """
         from anki_miner.gui.utils.resource_setup import apply_download_summary
         from anki_miner.gui.workers.resource_download_worker import ResourceDownloadSummary
 
+        if self._wizard.is_walking_away():
+            return None
         if not isinstance(summary, ResourceDownloadSummary) or not summary.succeeded:
             return None
         new_config = apply_download_summary(self._wizard.working_config(), summary)
