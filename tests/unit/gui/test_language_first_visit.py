@@ -12,6 +12,7 @@ class _Window:
     def __init__(self, config):
         self.config = config
         self.wizards = 0
+        self.wizard_config = None
 
     def get_config(self):
         return self.config
@@ -21,6 +22,7 @@ class _Window:
 
     def _run_setup_wizard_tool(self) -> None:
         self.wizards += 1
+        self.wizard_config = self.config
 
 
 def test_other_language_decks_covers_live_and_stashed(test_config):
@@ -65,6 +67,23 @@ def test_the_wizard_button_runs_the_wizard(monkeypatch, test_config):
     language_switch.offer_first_visit_setup(window, previous)
 
     assert window.wizards == 1
+
+
+def test_the_wizard_button_keeps_the_ticks(monkeypatch, test_config):
+    """The ticks are the answer to the deck question, whichever button closed the dialog."""
+    monkeypatch.setattr(
+        language_switch,
+        "_first_visit_choice",
+        lambda *a, **k: (language_switch.FIRST_VISIT_SETUP, ("Japanese Mining",)),
+    )
+    previous = replace(test_config, anki_deck_name="Japanese Mining")
+    window = _Window(replace(previous, language="zh", excluded_decks=(), anki_deck_name="Chinese Mining"))
+
+    language_switch.offer_first_visit_setup(window, previous)
+
+    assert window.config.excluded_decks == ("Japanese Mining",)
+    assert window.wizards == 1
+    assert window.wizard_config.excluded_decks == ("Japanese Mining",)
 
 
 def test_nothing_is_asked_when_the_decks_are_already_excluded(monkeypatch, test_config):
