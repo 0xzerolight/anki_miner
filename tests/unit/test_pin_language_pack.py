@@ -345,6 +345,66 @@ def test_a_distribution_without_a_package_directory_is_refused(tmp_path):
         )
 
 
+def test_a_model_pack_carries_companion_wheels_and_a_dist_info_root():
+    """ru: the model plus pymorphy3's pure wheels; the dictionaries keep their .dist-info (entry points)."""
+    index = {
+        "pymorphy3": ("pymorphy3-2.0.6-py3-none-any.whl", 53_900, "pymorphy3"),
+        "pymorphy3-dicts-ru": (
+            "pymorphy3_dicts_ru-2.4.417150.4580142-py2.py3-none-any.whl",
+            8_442_043,
+            "pymorphy3_dicts_ru",
+        ),
+    }
+
+    def fetch_json(url):
+        name = url.split("/pypi/")[1].split("/")[0]
+        filename, size, _package = index[name]
+        return {
+            "urls": [
+                {
+                    "filename": filename,
+                    "packagetype": "bdist_wheel",
+                    "url": f"https://files.pythonhosted.org/packages/xx/{filename}",
+                    "digests": {"sha256": "b" * 64},
+                    "size": size,
+                }
+            ]
+        }
+
+    def read_top_level(entry):
+        return [next(package for filename, _size, package in index.values() if filename == entry["filename"])]
+
+    model = pin.resolve_model(
+        "xx",
+        "xx_model",
+        "1.0",
+        ("_spacy",),
+        fetch_json=lambda url: _release(size=15_259_622),
+        hash_download=lambda url: ("a" * 64, 15_259_622),
+    )
+    resolved = pin.with_companion_wheels(
+        model,
+        ["pymorphy3==2.0.6", "pymorphy3-dicts-ru==2.4.417150.4580142"],
+        ["pymorphy3_dicts_ru"],
+        fetch_json,
+        read_top_level,
+    )
+
+    pack = _exec_manifest(pin.render_manifest(resolved))
+
+    assert pack.approx_download_mb == 24  # ceil((15,259,622 + 53,900 + 8,442,043) / 1e6)
+    assert [comp.import_name for comp in pack.components] == ["xx_model", "pymorphy3", "pymorphy3_dicts_ru"]
+    by_name = {comp.import_name: comp for comp in pack.components}
+    assert by_name["pymorphy3"].universal.root_members == ()
+    assert by_name["pymorphy3_dicts_ru"].universal.root_members == ("pymorphy3_dicts_ru-2.4.417150.4580142.dist-info/",)
+    assert by_name["pymorphy3_dicts_ru"].universal.member_prefix == "pymorphy3_dicts_ru/"
+    assert by_name["pymorphy3_dicts_ru"].sentinels == ("__init__.py",)
+    with pytest.raises(SystemExit):
+        pin.with_companion_wheels(model, ["pymorphy3==2.0.6"], ["dawg2-python"], fetch_json, read_top_level)
+    with pytest.raises(SystemExit):
+        pin.with_companion_wheels(model, ["pymorphy3"], [], fetch_json, read_top_level)
+
+
 @pytest.mark.parametrize(
     "fixture", sorted((_ROOT / "tests" / "fixtures" / "language_packs").glob("*.resolved.json")), ids=lambda p: p.stem
 )

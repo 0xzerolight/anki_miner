@@ -6,7 +6,10 @@ hand. Two modes:
 
 * ``model``   -- one universal wheel from a GitHub release (the spaCy models are
   not on PyPI); the wheel is downloaded and hashed, because the release assets
-  carry no digest.
+  carry no digest. ``--with-wheel NAME==VERSION`` adds a pure PyPI wheel the
+  model imports at runtime (ru: pymorphy3 and its dictionaries), and
+  ``--dist-info-root NAME`` keeps that wheel's ``.dist-info/`` as a pack-root
+  member, for a distribution discovered through entry points.
 * ``runtime`` -- a requirement set resolved PER PLATFORM by ``uv pip compile``
   under ``--constraint requirements.lock`` (a bundle-resident package the
   resolver would have to move makes the compile fail, never silently omits it),
@@ -25,6 +28,9 @@ is a shim that refuses ``pip compile``.
 Usage:
     python scripts/pin_language_pack.py model --code de --package de_core_news_sm --version 3.8.0 --requires _spacy
     python scripts/pin_language_pack.py runtime --code _spacy --requirement "spacy>=3.8,<3.8.15" --abi 3.12
+    python scripts/pin_language_pack.py model --code ru --package ru_core_news_sm --version 3.8.0 --requires _spacy \\
+        --with-wheel pymorphy3==2.0.6 --with-wheel dawg2-python==0.9.0 \\
+        --with-wheel pymorphy3-dicts-ru==2.4.417150.4580142 --dist-info-root pymorphy3-dicts-ru
 """
 
 from __future__ import annotations
@@ -175,6 +181,64 @@ def resolve_model(
             }
         ],
     }
+
+
+def resolve_companion_wheel(
+    requirement: str,
+    fetch_json: FetchJson,
+    read_top_level: ReadTopLevel,
+    *,
+    dist_info_root: bool = False,
+) -> dict[str, Any]:
+    """One pure-Python PyPI wheel a model needs at runtime, as a universal component.
+
+    ``requirement`` is ``NAME==VERSION``. ``dist_info_root`` keeps the wheel's ``*.dist-info/``
+    directory as a pack-root member: a distribution found through ``importlib.metadata`` entry points
+    (pymorphy3's dictionaries) is invisible from its package directory alone.
+    """
+    name, sep, version = requirement.partition("==")
+    if not (name and sep and version):
+        raise SystemExit(f"{requirement}: expected NAME==VERSION")
+    entry = _wheel_for(fetch_json(PYPI_JSON.format(name=name, version=version))["urls"], None, "")
+    if entry is None:
+        raise SystemExit(f"{requirement}: no pure-Python wheel on PyPI")
+    packages = read_top_level(entry)
+    if len(packages) != 1:
+        raise SystemExit(f"{requirement}: expected one top-level package directory, found {packages or 'none'}")
+    artifact = _artifact(
+        entry["filename"], entry["url"], entry["digests"]["sha256"], int(entry["size"]), f"{packages[0]}/"
+    )
+    if dist_info_root:
+        distribution, wheel_version = str(entry["filename"]).split("-")[:2]
+        artifact["root_members"] = [f"{distribution}-{wheel_version}.dist-info/"]
+    return {
+        "import_name": packages[0],
+        "required": True,
+        "sentinels": ["__init__.py"],
+        "abi": None,
+        "universal": artifact,
+        "per_platform": None,
+    }
+
+
+def with_companion_wheels(
+    resolved: Mapping[str, Any],
+    requirements: Sequence[str],
+    dist_info_roots: Sequence[str],
+    fetch_json: FetchJson,
+    read_top_level: ReadTopLevel,
+) -> dict[str, Any]:
+    """A resolved model pack plus one component per companion wheel, its download size re-rounded."""
+    named = {_canonical(requirement.partition("==")[0]) for requirement in requirements}
+    roots = {_canonical(name) for name in dist_info_roots}
+    if not roots <= named:
+        raise SystemExit(f"--dist-info-root names no --with-wheel: {sorted(roots - named)}")
+    components = [*resolved["components"]]
+    for requirement in requirements:
+        keep = _canonical(requirement.partition("==")[0]) in roots
+        components.append(resolve_companion_wheel(requirement, fetch_json, read_top_level, dist_info_root=keep))
+    total = sum(int(comp["universal"]["size"]) for comp in components)
+    return {**resolved, "components": components, "approx_download_mb": max(1, math.ceil(total / 1_000_000))}
 
 
 def _lock_names(lock_path: Path) -> set[str]:
@@ -452,6 +516,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     model.add_argument("--package", required=True)
     model.add_argument("--version", required=True)
     model.add_argument("--requires", action="append", default=[])
+    model.add_argument("--with-wheel", action="append", default=[], metavar="NAME==VERSION")
+    model.add_argument("--dist-info-root", action="append", default=[], metavar="NAME")
     runtime = sub.add_parser("runtime", help="a requirement set resolved per platform against requirements.lock")
     runtime.add_argument("--code", required=True)
     runtime.add_argument("--requirement", action="append", required=True)
@@ -459,7 +525,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     runtime.add_argument("--lock", type=Path, default=REPO_ROOT / "requirements.lock")
     args = parser.parse_args(argv)
     if args.mode == "model":
-        _write(resolve_model(args.code, args.package, args.version, args.requires, fetch_json))
+        resolved = resolve_model(args.code, args.package, args.version, args.requires, fetch_json)
+        if args.with_wheel:
+            resolved = with_companion_wheels(resolved, args.with_wheel, args.dist_info_root, fetch_json, read_top_level)
+        _write(resolved)
     else:
         _write(
             resolve_runtime(args.code, args.requirement, args.abi, args.lock, run_compile, fetch_json, read_top_level)
