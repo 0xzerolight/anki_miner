@@ -18,7 +18,6 @@ ASSET_BYTES = 400970
 
 
 @pytest.mark.network
-@pytest.mark.skip(reason="remove this line once the asset is uploaded under resources-2026-09-21")
 def test_the_published_asset_still_hashes_to_the_pinned_value():
     with urllib.request.urlopen(OPENSUBTITLES_ZH_WORD_URL, timeout=60) as response:  # noqa: S310 - pinned https
         payload = response.read()
