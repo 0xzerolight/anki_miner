@@ -58,7 +58,7 @@ def test_deck_filter_bundle_opens_the_active_language(test_config, monkeypatch):
     seen: list[dict] = []
     monkeypatch.setattr(deck_filter_worker, "KnownWordDB", lambda path, **kwargs: seen.append(kwargs))
     monkeypatch.setattr(deck_filter_worker, "get_profile", lambda code: get_profile("ja"))
-    monkeypatch.setattr("anki_miner.services.tagger.get_shared_tagger", lambda: None)
+    monkeypatch.setattr("anki_miner.languages.tagger_provider.get_tagger", lambda code: None)
 
     deck_filter_worker._build_filter_bundle(dataclasses.replace(test_config, language="zh"), None)
 
