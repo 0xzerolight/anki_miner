@@ -66,11 +66,11 @@ def test_the_profile_codes_pick_the_french_track(tmp_path):
         ({"automatic_captions": {"fr": [{}], "en-orig": [{}]}}, False),  # machine-translated from English
         ({"automatic_captions": {"fr": [{}]}, "language": "fr-CA"}, True),
         ({"automatic_captions": {"fr": [{}]}, "language": "en"}, False),
-        ({"automatic_captions": {"fr-CA": [{}], "fr-orig": [{}]}}, False),  # the fetcher requires the primary key
+        ({"automatic_captions": {"fr-CA": [{}], "fr-orig": [{}]}}, True),  # any code the profile lists answers
     ],
 )
 def test_caption_codes_detect_native_french(data, native):
-    """Pins youtube_fetcher.py:385-449 as it is: no fetcher change in this stage."""
+    """Pins the fetcher's rule: every listed code is probed, -orig decides."""
     assert YouTubeFetcherService._has_native_auto_ja(data, captions=get_profile("fr").captions) is native
 
 

@@ -70,7 +70,7 @@ def test_regional_track_tags_match_through_the_primary_subtag(tag, matches):
         ({"pt": [{}], "en-orig": [{}]}, None, False),  # a translation into pt, original English
         ({"pt": [{}]}, "pt-BR", True),  # no -orig key: the language field decides, regional variants included
         ({"pt": [{}]}, "es", False),
-        ({"pt-BR": [{}], "pt-orig": [{}]}, None, False),  # the probe key is the bare primary code
+        ({"pt-BR": [{}], "pt-orig": [{}]}, None, True),  # pt-BR is a listed code
     ],
 )
 def test_caption_codes_detect_native_portuguese(automatic, language, native):

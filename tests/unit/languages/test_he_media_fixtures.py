@@ -195,15 +195,15 @@ def test_caption_codes_detect_native_hebrew(data, native):
     assert YouTubeFetcherService._has_native_auto_ja(data, captions=get_profile("he").captions) is native
 
 
-def test_the_detector_keys_on_the_primary_code_only():
-    """Recorded, not fixed: ``he`` is forward compatibility in ``codes``, not a second primary.
+def test_the_detector_reads_the_forward_compatible_code_too():
+    """``he`` is forward compatibility in ``codes``, and the detector reads every code.
 
     Five captioned Israeli videos probed with yt-dlp all exposed ``iw`` and none exposed ``he``,
-    so ``primary`` is ``iw`` and a hypothetical ``he``-only response would not be detected. If
-    YouTube ever switches, this test is the one that says where to look.
+    so ``primary`` stays ``iw`` — but if YouTube ever switches, a ``he``-only response is
+    detected rather than reported as "no Hebrew subtitles".
     """
     he_only = {"automatic_captions": {"he": [{}], "he-orig": [{}]}}
-    assert YouTubeFetcherService._has_native_auto_ja(he_only, captions=get_profile("he").captions) is False
+    assert YouTubeFetcherService._has_native_auto_ja(he_only, captions=get_profile("he").captions) is True
 
 
 def test_the_downloader_asks_for_the_legacy_code():

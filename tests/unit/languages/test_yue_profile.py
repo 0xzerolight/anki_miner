@@ -63,6 +63,7 @@ def test_the_audio_track_codes_leave_the_mandarin_codes_to_zh(profile):
 def test_the_caption_codes(profile):
     assert profile.captions.primary == "yue"
     assert profile.captions.codes == ("yue", "zh-HK", "zh-Hant-HK", "zh-Hant")
+    assert profile.captions.own_codes == ("yue",)
     assert profile.captions.orig_codes == ("yue-orig",)
     assert profile.captions.audio_pattern == "^(yue|zh-HK)(-|$)"
     assert profile.captions.bare_fallback is True
