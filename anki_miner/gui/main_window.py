@@ -1426,9 +1426,21 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             first_run_setup_done=setup_done,
         )
         self.update_config(merged)
+        # A language the wizard changed is as durable as one the Settings
+        # selector changed and owes the same: evict the outgoing tagger,
+        # prewarm the incoming one, re-point the surfaces. Not the guarded
+        # request_language_change - its busy checks and queue prompt are things
+        # a wizard cannot answer mid-flow. Nothing to flush either: the offer
+        # runs before anything can be queued. The first-visit deck checklist is
+        # how the other languages' decks stay out of the new language's
+        # known-words scan, and it belongs here, after the wizard has closed.
+        if merged.language != live_config.language:
+            from anki_miner.gui.controllers import language_switch
+
+            language_switch.commit_language_change(self, live_config, flush=False, first_visit=True)
         # Strictly after the commit: the screen the user lands on rebuilds from
         # the config, and taking them there first would show them the setup they
-        # just replaced.
+        # just replaced - or the language they just left.
         if outcome.open_video_mining:
             self.reveal_capability(CapabilityTarget("video", "single"))
 
@@ -1551,7 +1563,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
                 # deferral. The re-runnable Tools entry still cancels, because
                 # there a migration really can be in flight.
                 try:
-                    outcome = run_setup_wizard(self, self.config)
+                    outcome = run_setup_wizard(self, self.config, offer_mining_language=True)
                 except Exception:
                     logger.exception("Setup wizard failed")
                     return

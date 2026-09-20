@@ -161,12 +161,13 @@ class TestThemePage:
         first_id = wiz.pageIds()[0]
         assert wiz.page(first_id) is wiz.theme_page
 
-    def test_wizard_now_has_six_pages(self, qtbot):
+    @pytest.mark.parametrize(("offer_language", "expected"), [(False, 6), (True, 7)])
+    def test_wizard_page_count_follows_the_language_offer(self, qtbot, offer_language, expected):
         from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
-        wiz = SetupWizard(AnkiMinerConfig())
+        wiz = SetupWizard(AnkiMinerConfig(), offer_mining_language=offer_language)
         qtbot.addWidget(wiz)
-        assert len(wiz.pageIds()) == 6
+        assert len(wiz.pageIds()) == expected
 
     def test_theme_page_never_blocks_next(self, qtbot):
         from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
@@ -270,12 +271,13 @@ def test_wizard_has_skip_setup_button_wired_to_reject(qtbot, wiz_config):
     assert btn.text() == "Skip Setup"
 
 
-def test_wizard_adds_six_pages(qtbot, wiz_config):
+@pytest.mark.parametrize(("offer_language", "expected"), [(False, 6), (True, 7)])
+def test_wizard_adds_the_pages_its_caller_asked_for(qtbot, wiz_config, offer_language, expected):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
-    wiz = SetupWizard(wiz_config)
+    wiz = SetupWizard(wiz_config, offer_mining_language=offer_language)
     qtbot.addWidget(wiz)
-    assert len(wiz.pageIds()) == 6
+    assert len(wiz.pageIds()) == expected
 
 
 def test_wizard_done_defers_close_without_blocking_for_stubborn_worker(qtbot, wiz_config):
@@ -1869,16 +1871,23 @@ def test_return_in_a_text_field_does_not_advance_the_wizard(qtbot, wiz_config, m
     wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
     wiz.show()
     qtbot.waitExposed(wiz)
-    # The theme page is first and never blocks Next; move to the page whose
-    # field is under test so it is actually the visible/focusable one.
-    wiz.next()
+    # Advance to the page whose field is under test, however many steps come
+    # before it, so the field is actually the visible/focusable one: a Return
+    # landing on an off-page field proves nothing.
+    while wiz.currentPage() is not wiz.ankiconnect_page:
+        before = wiz.currentId()
+        wiz.next()
+        assert wiz.currentId() != before, "the wizard stopped short of the AnkiConnect page"
     page_id = wiz.currentId()
     field = wiz.ankiconnect_page.url_input
+    assert field.isVisible() is True
     field.setFocus()
 
     qtbot.keyClick(field, Qt.Key.Key_Return)
 
     assert wiz.currentId() == page_id
+    # That page owns an off-thread probe; let it land before teardown.
+    qtbot.waitUntil(lambda: not wiz.ankiconnect_page.result_label.text().startswith("Checking"), timeout=5000)
 
 
 def test_ctrl_return_resolves_to_the_live_navigation_button(qtbot, wiz_config, monkeypatch):
