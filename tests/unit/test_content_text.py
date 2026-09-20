@@ -37,6 +37,15 @@ def test_wrap_is_the_style_callable():
     assert content_phrase_wrap("abc", FAKE) == "abc!"
 
 
+def test_the_thai_card_payload_never_carries_the_display_wrap():
+    # content_phrase_wrap is the DISPLAY path; the model's own string is pristine.
+    line = "วันนี้อากาศดีมากครับ"
+    wrapped = content_phrase_wrap(line, get_profile("th").content_style)
+    assert "\N{ZERO WIDTH SPACE}" in wrapped
+    assert wrapped.replace("\N{ZERO WIDTH SPACE}", "") == line
+    assert line == "วันนี้อากาศดีมากครับ"
+
+
 def test_apply_marks_the_content_property(qtbot):
     from PyQt6.QtWidgets import QLabel
 
