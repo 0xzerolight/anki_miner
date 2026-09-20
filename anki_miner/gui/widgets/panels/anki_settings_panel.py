@@ -184,6 +184,22 @@ _HOOK_FIELD_ROW_TEXTS: dict[str, tuple[str, str]] = {
             "Stores the jyutping reading, tone-coloured when that setting is on. Blank = skip.",
         ),
     ),
+    # Hebrew (spec F.2): the dictionary's own romanisation and a verb's binyan. Its root, gender,
+    # plural and part of speech reuse the rows above.
+    "transliteration": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Transliteration Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the word's Latin spelling, from the dictionary entry. Blank = skip.",
+        ),
+    ),
+    "binyan": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Binyan Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the verb pattern the dictionary names, such as pa'al or hif'il. Blank = skip.",
+        ),
+    ),
 }
 
 # Keywords used by populate_from_field_list to auto-map Anki field names.

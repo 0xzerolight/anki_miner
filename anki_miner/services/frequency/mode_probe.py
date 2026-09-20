@@ -126,6 +126,9 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     # scripts/build_yue_frequency.py, ranks 1-16. Cantonese is not on
     # hermitdave and wordfreq has no yue, so that asset is the catalogue source.
     "yue": ["我", "你", "佢", "係", "唔", "嘅", "喺", "咗", "都", "好"],
+    # he: he_50k.txt ranks 1-11 (lo, et, ani, ze, ata, ma, hu, al, shel, ken). Right-to-left
+    # data in a left-to-right list: the ranks are the check, and each has a dictionary row.
+    "he": ["לא", "את", "אני", "זה", "אתה", "מה", "הוא", "על", "של", "כן"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -397,6 +400,21 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
     # ABSENT from the built list (a term with no row never votes) and 彩虹,
     # 火山 and 蜘蛛 sit inside the top 4,500, which is not "less common".
     "yue": ["顯微鏡", "螞蟻", "窗簾", "燈塔", "松鼠", "企鵝", "青蛙", "雨傘", "長頸鹿", "蝸牛"],
+    # he: rare-but-real nouns at he_50k ranks 7,996-33,706 (patish ... mikroskop), each with
+    # at least one n lemma row in wty-he-en. gaash was dropped from the candidates: rank
+    # 15,783 but ZERO dictionary rows, because it occurs only bound, in har gaash.
+    "he": [
+        "פטיש",
+        "קשת",
+        "עכביש",
+        "פרפר",
+        "סולם",
+        "סנאי",
+        "מברשת",
+        "עפיפון",
+        "מגדלור",
+        "מיקרוסקופ",
+    ],
 }
 
 
