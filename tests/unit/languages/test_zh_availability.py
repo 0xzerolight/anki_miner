@@ -80,8 +80,8 @@ class TestUnavailableReason:
         assert "Settings -> Mining Language" in reason
 
     def test_the_optional_tier_never_names_the_pack(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """opencc pins one ABI, so a pack download cannot satisfy it - pointing
-        a user at the button for a missing opencc is advice that never works."""
+        """The full-stack list is a report with no product caller; the button
+        belongs on the required-tier message, the one the gate puts on screen."""
         monkeypatch.delattr(sys, "frozen", raising=False)
         monkeypatch.setattr(availability, "_installed", lambda name: name != "opencc")
 
