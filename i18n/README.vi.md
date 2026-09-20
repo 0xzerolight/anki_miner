@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:bcf6a2c4beaa6567 -->
+<!-- i18n-source: README.md sha256:7f211d1a7cf8c731 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Biến nội dung bản ngữ tiếng Nhật, tiếng Trung, tiếng Hàn và mười tám ngôn ngữ châu Âu thành thẻ từ vựng Anki.
+Biến nội dung bản ngữ tiếng Nhật, tiếng Trung, tiếng Hàn và hai mươi chín ngôn ngữ khác thành thẻ từ vựng Anki.
 </p>
 
 <p align="center">
@@ -125,7 +125,7 @@ anki_miner_gui
 
 ## Tính năng khác
 
-- Ngôn ngữ khai thác - tiếng Nhật, tiếng Trung, tiếng Hàn, tiếng Anh, tiếng Catalan, tiếng Đức, tiếng Bồ Đào Nha, tiếng Pháp, tiếng Tây Ban Nha, tiếng Ý, tiếng Hà Lan, tiếng Na Uy (Bokmål), tiếng Rumani, tiếng Hy Lạp, tiếng Phần Lan, tiếng Hungary, tiếng Croatia, tiếng Thụy Điển, tiếng Ba Lan, tiếng Litva và tiếng Đan Mạch, chuyển đổi trong Cài đặt. Mọi ngôn ngữ trừ tiếng Nhật đều tải engine ngay trong ứng dụng.
+- Ngôn ngữ khai thác - tiếng Nhật, tiếng Trung, tiếng Hàn, tiếng Anh, tiếng Catalan, tiếng Đức, tiếng Bồ Đào Nha, tiếng Pháp, tiếng Tây Ban Nha, tiếng Ý, tiếng Hà Lan, tiếng Na Uy (Bokmål), tiếng Rumani, tiếng Hy Lạp, tiếng Phần Lan, tiếng Hungary, tiếng Croatia, tiếng Thụy Điển, tiếng Ba Lan, tiếng Litva, tiếng Đan Mạch, tiếng Thổ Nhĩ Kỳ, tiếng Indonesia, tiếng Nga, tiếng Ả Rập, tiếng Thái, tiếng Ba Tư, tiếng Slovenia, tiếng Ukraina, tiếng Việt, tiếng Quảng Đông và tiếng Do Thái, chuyển đổi trong Cài đặt. Mọi ngôn ngữ trừ tiếng Nhật đều tải engine ngay trong ứng dụng; tiếng Indonesia và tiếng Do Thái không cần.
 - Word Curator - xem lại từng từ ứng viên trước khi thẻ được tạo, cùng với cảnh phim, trang manga và mục từ điển của nó đặt cạnh nhau.
 - Hoàn tác một lần chạy - xóa các ghi chú mà một lần chạy vừa tạo, ngay trong hộp thoại kết quả.
 - Bộ lọc phong phú: i+1, khoảng hạng tần suất, danh sách đen, regex, tập từ, và hơn thế nữa.

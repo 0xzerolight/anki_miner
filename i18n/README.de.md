@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:bcf6a2c4beaa6567 -->
+<!-- i18n-source: README.md sha256:7f211d1a7cf8c731 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Wandelt originalsprachige Inhalte auf Japanisch, Chinesisch, Koreanisch und in achtzehn europäischen Sprachen in Anki-Vokabelkarten um.
+Wandelt originalsprachige Inhalte auf Japanisch, Chinesisch, Koreanisch und in neunundzwanzig weiteren Sprachen in Anki-Vokabelkarten um.
 </p>
 
 <p align="center">
@@ -125,7 +125,7 @@ Die vollständige Entwicklungseinrichtung findest du in [CONTRIBUTING.md](../CON
 
 ## Weitere Funktionen
 
-- Mining-Sprachen - Japanisch, Chinesisch, Koreanisch, Englisch, Katalanisch, Deutsch, Portugiesisch, Französisch, Spanisch, Italienisch, Niederländisch, Norwegisch (Bokmål), Rumänisch, Griechisch, Finnisch, Ungarisch, Kroatisch, Schwedisch, Polnisch, Litauisch und Dänisch, umschaltbar in den Einstellungen. Alle Sprachen außer Japanisch laden ihre Engine in der App herunter.
+- Mining-Sprachen - Japanisch, Chinesisch, Koreanisch, Englisch, Katalanisch, Deutsch, Portugiesisch, Französisch, Spanisch, Italienisch, Niederländisch, Norwegisch (Bokmål), Rumänisch, Griechisch, Finnisch, Ungarisch, Kroatisch, Schwedisch, Polnisch, Litauisch, Dänisch, Türkisch, Indonesisch, Russisch, Arabisch, Thai, Persisch, Slowenisch, Ukrainisch, Vietnamesisch, Kantonesisch und Hebräisch, umschaltbar in den Einstellungen. Alle Sprachen außer Japanisch laden ihre Engine in der App herunter; Indonesisch und Hebräisch brauchen keine.
 - Word Curator - jedes Kandidatenwort vor der Kartenerstellung prüfen, mit Szene, Manga-Seite und Wörterbucheintrag nebeneinander.
 - Lauf rückgängig machen - die Notizen, die ein Lauf gerade erstellt hat, direkt aus seinem Ergebnisdialog löschen.
 - Umfangreiche Filterung: i+1, Häufigkeitsrang-Bereich, Sperrliste, Regex, Wortgruppen und mehr.

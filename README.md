@@ -29,7 +29,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Turn native content in Japanese, Chinese, Korean, and eighteen European languages into Anki vocabulary cards.
+Turn native content in Japanese, Chinese, Korean, and twenty-nine more languages into Anki vocabulary cards.
 </p>
 
 <p align="center">
@@ -123,7 +123,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Other Features
 
-- Mining languages - Japanese, Chinese, Korean, English, Catalan, German, Portuguese, French, Spanish, Italian, Dutch, Norwegian Bokmål, Romanian, Greek, Finnish, Hungarian, Croatian, Swedish, Polish, Lithuanian, and Danish, switched in Settings. Languages other than Japanese download their engine in-app.
+- Mining languages - Japanese, Chinese, Korean, English, Catalan, German, Portuguese, French, Spanish, Italian, Dutch, Norwegian Bokmål, Romanian, Greek, Finnish, Hungarian, Croatian, Swedish, Polish, Lithuanian, Danish, Turkish, Indonesian, Russian, Arabic, Thai, Persian, Slovenian, Ukrainian, Vietnamese, Cantonese, and Hebrew, switched in Settings. Languages other than Japanese download their engine in-app; Indonesian and Hebrew need none.
 - Word Curator - review every candidate word before cards are made, with its scene, manga page, and dictionary entry side by side.
 - Undo a run - delete the notes a run just created, straight from its results dialog.
 - Extensive filtering: i+1, frequency rank range, blacklist, regex, wordsets, and more.

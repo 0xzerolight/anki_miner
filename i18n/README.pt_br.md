@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:bcf6a2c4beaa6567 -->
+<!-- i18n-source: README.md sha256:7f211d1a7cf8c731 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Transforme conteúdo nativo em Japonês, Chinês, Coreano e dezoito idiomas europeus em cartões de vocabulário do Anki.
+Transforme conteúdo nativo em Japonês, Chinês, Coreano e outros vinte e nove idiomas em cartões de vocabulário do Anki.
 </p>
 
 <p align="center">
@@ -125,7 +125,7 @@ Para a configuração completa de desenvolvimento, veja [CONTRIBUTING.md](../CON
 
 ## Outros Recursos
 
-- Idiomas de mineração - Japonês, Chinês, Coreano, Inglês, Catalão, Alemão, Português, Francês, Espanhol, Italiano, Holandês, Norueguês (Bokmål), Romeno, Grego, Finlandês, Húngaro, Croata, Sueco, Polonês, Lituano e Dinamarquês, podem ser alternados em Configurações. Todos os idiomas, exceto o Japonês, baixam o engine dentro do próprio aplicativo.
+- Idiomas de mineração - Japonês, Chinês, Coreano, Inglês, Catalão, Alemão, Português, Francês, Espanhol, Italiano, Holandês, Norueguês (Bokmål), Romeno, Grego, Finlandês, Húngaro, Croata, Sueco, Polonês, Lituano, Dinamarquês, Turco, Indonésio, Russo, Árabe, Tailandês, Persa, Esloveno, Ucraniano, Vietnamita, Cantonês e Hebraico, podem ser alternados em Configurações. Todos os idiomas, exceto o Japonês, baixam o engine dentro do próprio aplicativo; o Indonésio e o Hebraico não precisam de nenhum.
 - Seletor de Palavras - revise cada palavra antes de os cartões serem criados, com a cena, a página do mangá e a entrada do dicionário lado a lado.
 - Desfazer uma execução - exclua as notas que uma execução acabou de criar, direto da caixa de diálogo de resultados.
 - Filtragem extensa: i+1, palavras com ranking de frequência, blacklist, regex, lista de palavras predefinidas e muito mais.

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:bcf6a2c4beaa6567 -->
+<!-- i18n-source: README.md sha256:7f211d1a7cf8c731 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -31,7 +31,7 @@
 <!-- i18n-nav:end -->
 
 <p align="center">
-Ubah konten asli berbahasa Jepang, Mandarin, Korea, dan delapan belas bahasa Eropa menjadi kartu kosakata Anki.
+Ubah konten asli berbahasa Jepang, Mandarin, Korea, dan dua puluh sembilan bahasa lainnya menjadi kartu kosakata Anki.
 </p>
 
 <p align="center">
@@ -125,7 +125,7 @@ Untuk pengaturan pengembangan lengkap, lihat [CONTRIBUTING.md](../CONTRIBUTING.m
 
 ## Fitur Lainnya
 
-- Bahasa mining - Jepang, Mandarin, Korea, Inggris, Katalan, Jerman, Portugis, Prancis, Spanyol, Italia, Belanda, Norwegia Bokmål, Rumania, Yunani, Finlandia, Hungaria, Kroasia, Swedia, Polandia, Lituania, dan Denmark, diganti di Pengaturan. Semua bahasa selain Jepang mengunduh mesinnya di dalam aplikasi.
+- Bahasa mining - Jepang, Mandarin, Korea, Inggris, Katalan, Jerman, Portugis, Prancis, Spanyol, Italia, Belanda, Norwegia Bokmål, Rumania, Yunani, Finlandia, Hungaria, Kroasia, Swedia, Polandia, Lituania, Denmark, Turki, Indonesia, Rusia, Arab, Thai, Persia, Slovenia, Ukraina, Vietnam, Kanton, dan Ibrani, diganti di Pengaturan. Semua bahasa selain Jepang mengunduh mesinnya di dalam aplikasi; bahasa Indonesia dan Ibrani tidak memerlukannya.
 - Word Curator - tinjau setiap kata kandidat sebelum kartu dibuat, lengkap dengan adegan, halaman manga, dan entri kamus berdampingan.
 - Batalkan sebuah proses - hapus catatan yang baru saja dibuat oleh sebuah proses, langsung dari dialog hasilnya.
 - Filter yang luas: i+1, rentang peringkat frekuensi, daftar hitam, regex, kumpulan kata, dan lainnya.
