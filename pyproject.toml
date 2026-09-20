@@ -21,6 +21,8 @@ license-files = [
     "licenses/local-audio-yomichan/LICENSE",
     "licenses/yomitan/COPYING.GPLv3",
     "licenses/yomitan/README.md",
+    "licenses/zeyrek/LICENSE",
+    "licenses/zeyrek/README.md",
 ]
 authors = [
     {name = "Anki Miner Contributors"}
@@ -384,6 +386,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["spacy.*", "thinc.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["zeyrek.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

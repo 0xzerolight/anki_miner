@@ -54,6 +54,7 @@ REQUIRED_WHEEL_LICENSES = [
     "licenses/local-audio-yomichan/LICENSE",
     "licenses/yomitan/COPYING.GPLv3",
     "licenses/yomitan/README.md",
+    "licenses/zeyrek/LICENSE",
 ]
 
 EXCLUDE_DIRS = {"__pycache__"}
