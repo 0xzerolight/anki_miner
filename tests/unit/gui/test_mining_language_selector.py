@@ -19,6 +19,7 @@ from anki_miner.languages._spaced import availability as spaced_availability
 from anki_miner.languages.ko import availability as ko_availability
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.th import availability as th_availability
+from anki_miner.languages.yue import availability as yue_availability
 from anki_miner.languages.zh import availability
 
 
@@ -40,6 +41,8 @@ def ko_stack_absent(monkeypatch):
     # always offered, so it is in every exact list below.
     # Same for th: pythainlp is an optional extra, present on a dev box.
     monkeypatch.setattr(th_availability, "find_spec", lambda _name: None)
+    # Same for yue: pycantonese is an optional extra, present on a dev box.
+    monkeypatch.setattr(yue_availability, "find_spec", lambda _name: None)
 
 
 def _panel(qtbot, config: AnkiMinerConfig) -> MiningLanguageSettingsPanel:

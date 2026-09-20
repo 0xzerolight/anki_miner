@@ -62,6 +62,9 @@ PROBE = {
     "sl": "knjige",
     "uk": "читала",
     "vi": "kỹ thuật",
+    # No HK variant and no radical glyph, so the ladder answers []: the
+    # "word not in candidates" case. Segmentation lives in tokens.jsonl.
+    "yue": "睇咗",
 }
 
 #: Every capability name any profile is allowed to declare. A typo'd flag is a
@@ -111,6 +114,9 @@ CAPABILITY_VOCABULARY = frozenset(
         "persian_stems",
         # Vietnamese Sino-Vietnamese characters (C.4).
         "hanviet",
+        # Cantonese (F.1): jyutping readings. tone_color and measure_word are
+        # zh's, reused unchanged.
+        "jyutping",
     }
 )
 
@@ -144,6 +150,8 @@ EXTRA_HOOK_FIELDS = {
     "present_stem",
     # Vietnamese Sino-Vietnamese characters (C.4).
     "hanviet",
+    # Cantonese (F.1). measure_word is zh's key, already above.
+    "expression_jyutping",
 }
 
 
