@@ -1,0 +1,61 @@
+{"surface": "وسيكتبونها", "pos1": "verb", "pos2": "clitic", "lemma": "كتب", "orth_base": "يكتبون", "reading": "كَتَب", "morph": "Root=ك.ت.ب|Segmentation=وَ+ سَ+ يَكْتُبُونَ +ها", "mined_form": "كتب", "note": "clitic chain wa+sa+verb+ha: the verb lemma, the d3tok base as orth_base"}
+{"surface": "للطلاب", "pos1": "noun", "pos2": "clitic", "lemma": "طالب", "orth_base": "طلاب", "reading": "طالِب", "morph": "Root=ط.ل.ب|Segmentation=لِ+ ال+ طُلّاب", "mined_form": "طالب", "note": "li+al+broken plural: lemma talib, orth_base tullab (spec fixture)"}
+{"surface": "بالقلم", "pos1": "noun", "pos2": "clitic", "lemma": "قلم", "orth_base": "قلم", "reading": "قَلَم", "morph": "Root=ق.ل.م|Segmentation=بِ+ ال+ قَلَم", "mined_form": "قلم", "note": ""}
+{"surface": "وكتابه", "pos1": "noun", "pos2": "clitic", "lemma": "كتاب", "orth_base": "كتاب", "reading": "كِتاب", "morph": "Root=ك.ت.ب|Segmentation=وَ+ كِتابُ +هُ", "mined_form": "كتاب", "note": ""}
+{"surface": "فقال", "pos1": "verb", "pos2": "clitic", "lemma": "قال", "orth_base": "قال", "reading": "قال", "morph": "Root=ق.#.ل|Segmentation=فَ+ قالَ", "mined_form": "قال", "note": ""}
+{"surface": "سنذهب", "pos1": "verb", "pos2": "clitic", "lemma": "ذهب", "orth_base": "نذهب", "reading": "ذَهَب", "morph": "Root=ذ.ه.ب|Segmentation=سَ+ نَذْهَب", "mined_form": "ذهب", "note": ""}
+{"surface": "كتبتها", "pos1": "verb", "pos2": "clitic", "lemma": "كتب", "orth_base": "كتبت", "reading": "كَتَب", "morph": "Root=ك.ت.ب|Segmentation=كَتَبْتُ +ها", "mined_form": "كتب", "note": ""}
+{"surface": "كتب", "pos1": "noun", "pos2": "", "lemma": "كتاب", "orth_base": "كتب", "reading": "كِتاب", "morph": "Root=ك.ت.ب", "mined_form": "كتاب", "note": "context-free analyzer: the broken plural reading (books) out-scores the verb"}
+{"surface": "طلاب", "pos1": "noun", "pos2": "", "lemma": "طالب", "orth_base": "طلاب", "reading": "طالِب", "morph": "Root=ط.ل.ب", "mined_form": "طالب", "note": ""}
+{"surface": "مدارس", "pos1": "noun", "pos2": "", "lemma": "مدرسة", "orth_base": "مدارس", "reading": "مَدْرَسَة", "morph": "Root=د.ر.س", "mined_form": "مدرسة", "note": ""}
+{"surface": "أولاد", "pos1": "noun", "pos2": "", "lemma": "ولد", "orth_base": "أولاد", "reading": "وَلَد", "morph": "Root=#.ل.د", "mined_form": "ولد", "note": ""}
+{"surface": "رجال", "pos1": "noun", "pos2": "", "lemma": "رجل", "orth_base": "رجال", "reading": "رَجُل", "morph": "Root=ر.ج.ل", "mined_form": "رجل", "note": ""}
+{"surface": "ذهب", "pos1": "verb", "pos2": "", "lemma": "ذهب", "orth_base": "ذهب", "reading": "ذَهَب", "morph": "Root=ذ.ه.ب", "mined_form": "ذهب", "note": ""}
+{"surface": "يكتبون", "pos1": "verb", "pos2": "", "lemma": "كتب", "orth_base": "يكتبون", "reading": "كَتَب", "morph": "Root=ك.ت.ب", "mined_form": "كتب", "note": ""}
+{"surface": "قالت", "pos1": "verb", "pos2": "", "lemma": "قال", "orth_base": "قالت", "reading": "قال", "morph": "Root=ق.#.ل", "mined_form": "قال", "note": ""}
+{"surface": "استخدم", "pos1": "verb", "pos2": "", "lemma": "استخدم", "orth_base": "استخدم", "reading": "اِسْتَخْدَم", "morph": "Root=خ.د.م", "mined_form": "استخدم", "note": ""}
+{"surface": "تذهبين", "pos1": "verb", "pos2": "", "lemma": "ذهب", "orth_base": "تذهبين", "reading": "ذَهَب", "morph": "Root=ذ.ه.ب", "mined_form": "ذهب", "note": ""}
+{"surface": "كتبت", "pos1": "verb", "pos2": "", "lemma": "كتب", "orth_base": "كتبت", "reading": "كَتَب", "morph": "Root=ك.ت.ب", "mined_form": "كتب", "note": ""}
+{"surface": "الطالب", "pos1": "noun", "pos2": "clitic", "lemma": "طالب", "orth_base": "طالب", "reading": "طالِب", "morph": "Root=ط.ل.ب|Segmentation=ال+ طالِب", "mined_form": "طالب", "note": ""}
+{"surface": "المدرسة", "pos1": "noun", "pos2": "clitic", "lemma": "مدرسة", "orth_base": "مدرسة", "reading": "مَدْرَسَة", "morph": "Root=د.ر.س|Segmentation=ال+ مَدْرَسَة", "mined_form": "مدرسة", "note": ""}
+{"surface": "كبير", "pos1": "adj", "pos2": "", "lemma": "كبير", "orth_base": "كبير", "reading": "كَبِير", "morph": "Root=ك.ب.ر", "mined_form": "كبير", "note": ""}
+{"surface": "السيارة", "pos1": "noun", "pos2": "clitic", "lemma": "سيارة", "orth_base": "سيارة", "reading": "سَيّارَة", "morph": "Root=س.#.ر|Segmentation=ال+ سَيّارَة", "mined_form": "سيارة", "note": ""}
+{"surface": "شكراً", "pos1": "adv", "pos2": "", "lemma": "شكرا", "orth_base": "شكرا", "reading": "شُكْراً", "morph": "Root=ش.ك.ر", "mined_form": "شكرا", "note": "tanween rule: the lexicalised adverb wins over the verb reading"}
+{"surface": "شكرا", "pos1": "adv", "pos2": "", "lemma": "شكرا", "orth_base": "شكرا", "reading": "شُكْراً", "morph": "Root=ش.ك.ر", "mined_form": "شكرا", "note": "tanween rule without the mark: the adverb still wins over a content reading"}
+{"surface": "جداً", "pos1": "adv", "pos2": "", "lemma": "جدا", "orth_base": "جدا", "reading": "جِدّاً", "morph": "Root=جدّ", "mined_form": "جدا", "note": ""}
+{"surface": "أيضاً", "pos1": "adv", "pos2": "", "lemma": "أيضا", "orth_base": "أيضا", "reading": "أَيْضاً", "morph": "Root=ض", "mined_form": "أيضا", "note": ""}
+{"surface": "أبداً", "pos1": "adv", "pos2": "", "lemma": "أبدا", "orth_base": "أبدا", "reading": "أَبَداً", "morph": "Root=#.ب.د", "mined_form": "أبدا", "note": ""}
+{"surface": "دائماً", "pos1": "adv", "pos2": "", "lemma": "دائما", "orth_base": "دائما", "reading": "دائِماً", "morph": "Root=د.#.م", "mined_form": "دائما", "note": ""}
+{"surface": "تماماً", "pos1": "adv", "pos2": "", "lemma": "تماما", "orth_base": "تماما", "reading": "تَماماً", "morph": "Root=ت.م.م", "mined_form": "تماما", "note": ""}
+{"surface": "غداً", "pos1": "adv", "pos2": "", "lemma": "غدا", "orth_base": "غدا", "reading": "غَداً", "morph": "Root=غد", "mined_form": "غدا", "note": ""}
+{"surface": "مرحباً", "pos1": "adv", "pos2": "", "lemma": "مرحبا", "orth_base": "مرحبا", "reading": "مَرْحَباً", "morph": "Root=ر.ح.ب", "mined_form": "مرحبا", "note": ""}
+{"surface": "قليلاً", "pos1": "adv", "pos2": "", "lemma": "قليلا", "orth_base": "قليلا", "reading": "قَلِيلاً", "morph": "Root=ق.ل.ل", "mined_form": "قليلا", "note": ""}
+{"surface": "إذا", "pos1": "conj", "pos2": "", "lemma": "إذا", "orth_base": "إذا", "reading": "إِذا", "morph": "Root=#.ذ.#", "mined_form": "إذا", "note": "tanween rule skipped: the best reading is a conjunction, not a content word"}
+{"surface": "كتاباً", "pos1": "noun", "pos2": "", "lemma": "كتاب", "orth_base": "كتابا", "reading": "كِتاب", "morph": "Root=ك.ت.ب", "mined_form": "كتاب", "note": "no tanween lexeme exists: the accusative noun mines as its lemma"}
+{"surface": "الى", "pos1": "prep", "pos2": "", "lemma": "إلى", "orth_base": "إلى", "reading": "إِلَى", "morph": "Root=#.ل.#", "mined_form": "إلى", "note": "hamza-less spelling resolved by the analyzer (spvar) to the preposition"}
+{"surface": "انا", "pos1": "conj_sub", "pos2": "clitic", "lemma": "أن", "orth_base": "أن", "reading": "أَنَّ", "morph": "Root=#.ن.ن|Segmentation=أَنَّ +نا", "mined_form": "أن", "note": "KNOWN MISS: hamza-less ana argmaxes to anna+na (conj_sub); a pronoun is never mined either way"}
+{"surface": "إلى", "pos1": "prep", "pos2": "", "lemma": "إلى", "orth_base": "إلى", "reading": "إِلَى", "morph": "Root=#.ل.#", "mined_form": "إلى", "note": ""}
+{"surface": "مش", "pos1": "unknown", "pos2": "", "lemma": "مش", "orth_base": "", "reading": "", "morph": "", "mined_form": "مش", "note": "dialect function word the MSA analyzer misreads (mashsh): forced unknown"}
+{"surface": "بدي", "pos1": "unknown", "pos2": "", "lemma": "بدي", "orth_base": "", "reading": "", "morph": "", "mined_form": "بدي", "note": ""}
+{"surface": "اللي", "pos1": "unknown", "pos2": "", "lemma": "اللي", "orth_base": "", "reading": "", "morph": "", "mined_form": "اللي", "note": ""}
+{"surface": "كده", "pos1": "unknown", "pos2": "", "lemma": "كده", "orth_base": "", "reading": "", "morph": "", "mined_form": "كده", "note": ""}
+{"surface": "هيك", "pos1": "unknown", "pos2": "", "lemma": "هيك", "orth_base": "", "reading": "", "morph": "", "mined_form": "هيك", "note": ""}
+{"surface": "انتظري", "pos1": "unknown", "pos2": "", "lemma": "انتظري", "orth_base": "", "reading": "", "morph": "", "mined_form": "انتظري", "note": "KNOWN MISS: calima-msa-r13 has no imperative analyses; unknown"}
+{"surface": "وهيروح", "pos1": "unknown", "pos2": "", "lemma": "وهيروح", "orth_base": "", "reading": "", "morph": "", "mined_form": "هيروح", "note": "unanalysable dialect form: unknown, proclitic wa stripped from the mined form"}
+{"surface": "إزاي", "pos1": "unknown", "pos2": "", "lemma": "إزاي", "orth_base": "", "reading": "", "morph": "", "mined_form": "إزاي", "note": ""}
+{"surface": "Netflix", "pos1": "foreign", "pos2": "", "lemma": "Netflix", "orth_base": "", "reading": "", "morph": "", "mined_form": "Netflix", "note": ""}
+{"surface": "OK", "pos1": "foreign", "pos2": "", "lemma": "OK", "orth_base": "", "reading": "", "morph": "", "mined_form": "OK", "note": ""}
+{"surface": "2024", "pos1": "digit", "pos2": "", "lemma": "2024", "orth_base": "", "reading": "", "morph": "", "mined_form": "2024", "note": ""}
+{"surface": "٣٤", "pos1": "digit", "pos2": "", "lemma": "٣٤", "orth_base": "", "reading": "", "morph": "", "mined_form": "٣٤", "note": ""}
+{"surface": "۱۲", "pos1": "digit", "pos2": "", "lemma": "۱۲", "orth_base": "", "reading": "", "morph": "", "mined_form": "۱۲", "note": ""}
+{"surface": "؟", "pos1": "punc", "pos2": "", "lemma": "؟", "orth_base": "", "reading": "", "morph": "", "mined_form": "؟", "note": ""}
+{"surface": "،", "pos1": "punc", "pos2": "", "lemma": "،", "orth_base": "", "reading": "", "morph": "", "mined_form": "،", "note": ""}
+{"surface": "کتاب", "pos1": "unknown", "pos2": "", "lemma": "کتاب", "orth_base": "", "reading": "", "morph": "", "mined_form": "کتاب", "note": "Persian kaf is outside the analyzer charset: unknown"}
+{"surface": "كتـــاب", "pos1": "noun", "pos2": "", "lemma": "كتاب", "orth_base": "كتاب", "reading": "كِتاب", "morph": "Root=ك.ت.ب", "mined_form": "كتاب", "note": "tatweel stays in the verbatim surface and is folded out of the analysis key"}
+{"surface": "كِتَابٌ", "pos1": "noun", "pos2": "", "lemma": "كتاب", "orth_base": "كتاب", "reading": "كِتاب", "morph": "Root=ك.ت.ب", "mined_form": "كتاب", "note": "vocalised input: dammatan on the surface, no lexicalised tanween reading, so the noun stands"}
+{"surface": "أقف", "pos1": "verb", "pos2": "", "lemma": "وقف", "orth_base": "أقف", "reading": "وَقَف", "morph": "Root=#.ق.ف", "mined_form": "وقف", "note": "the tanween lexeme qafan does not spell this surface: the verb waqafa stands (judge r1 finding 1)"}
+{"surface": "أبدأ", "pos1": "verb", "pos2": "", "lemma": "بدأ", "orth_base": "أبدأ", "reading": "بَدَأ", "morph": "Root=ب.د.#", "mined_form": "بدأ", "note": "abada'u is the verb bada'a, not the adverb abadan: the gate rejects a lexeme the surface does not spell"}
+{"surface": "ايضا", "pos1": "adv", "pos2": "", "lemma": "أيضا", "orth_base": "أيضا", "reading": "أَيْضاً", "morph": "Root=ض", "mined_form": "أيضا", "note": "hamza-less spelling of aydan: the spvar tanween adverb still wins (lex hamza seats flattened)"}
+{"surface": "واللي", "pos1": "unknown", "pos2": "", "lemma": "اللي", "orth_base": "", "reading": "", "morph": "", "mined_form": "اللي", "note": "dialect word behind a conjunction: unknown, and the front is the stop-list word illi"}
+{"surface": "وكمان", "pos1": "unknown", "pos2": "", "lemma": "كمان", "orth_base": "", "reading": "", "morph": "", "mined_form": "كمان", "note": "dialect word behind a conjunction: kamaan is never cut to maan"}
+{"surface": "كتاب\u200cها", "pos1": "noun", "pos2": "clitic", "lemma": "كتاب", "orth_base": "كتاب", "reading": "كِتاب", "morph": "Root=ك.ت.ب|Segmentation=كِتابُ +ها", "mined_form": "كتاب", "note": "a zero-width non-joiner stays inside the surface and is folded out of the key (one token)"}

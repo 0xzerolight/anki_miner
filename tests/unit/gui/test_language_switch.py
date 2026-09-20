@@ -169,6 +169,31 @@ def test_a_confirmed_switch_commits_then_flushes(test_config, saved_snapshot, mo
     assert window.syncs == 1
 
 
+def test_a_committed_switch_evicts_the_outgoing_tagger_before_the_prewarm(test_config, monkeypatch):
+    """S23: the outgoing engine (Arabic's analyzer holds ~400 MB) goes before the prewarm builds the new one."""
+    from anki_miner.languages import tagger_provider
+
+    monkeypatch.setitem(tagger_provider._TAGGERS, "ja", object())
+    window = _FakeWindow(test_config)
+    cached_at_prewarm: list[bool] = []
+    window.restart_prewarm = lambda: cached_at_prewarm.append("ja" in tagger_provider._TAGGERS)
+
+    assert language_switch.request_language_change(window, "zh") is True
+    assert cached_at_prewarm == [False]
+
+
+def test_a_refused_switch_keeps_the_live_tagger(test_config, monkeypatch):
+    from anki_miner.languages import tagger_provider
+
+    engine = object()
+    monkeypatch.setitem(tagger_provider._TAGGERS, "ja", engine)
+    window = _FakeWindow(test_config)
+    window.resources_ready = False
+
+    assert language_switch.request_language_change(window, "zh") is False
+    assert tagger_provider._TAGGERS["ja"] is engine
+
+
 def test_an_empty_queue_never_asks(test_config, monkeypatch):
     monkeypatch.setattr(
         QMessageBox, "question", staticmethod(lambda *a, **k: pytest.fail("asked about an empty queue"))

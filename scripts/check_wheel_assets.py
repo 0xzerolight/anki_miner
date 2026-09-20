@@ -44,6 +44,8 @@ REQUIREMENTS_LOCK_FILE = REPO_ROOT / "requirements.lock"
 REQUIRED_ASSETS = [
     "anki_miner/gui/resources/fonts/NotoSansJP-Regular.otf",
     "anki_miner/gui/resources/fonts/OFL.txt",
+    "anki_miner/gui/resources/fonts/NotoNaskhArabic-Regular.ttf",
+    "anki_miner/gui/resources/fonts/OFL-NotoNaskhArabic.txt",
     "anki_miner/gui/resources/fonts/PROVENANCE.md",
 ]
 # Notices that a pyproject ``license-files`` entry promises and nothing else
@@ -59,6 +61,8 @@ REQUIRED_WHEEL_LICENSES = [
     "licenses/yomitan/COPYING.GPLv3",
     "licenses/yomitan/README.md",
     "licenses/zeyrek/LICENSE",
+    "licenses/camel-tools/LICENSE",
+    "licenses/camel-tools/README.md",
 ]
 
 EXCLUDE_DIRS = {"__pycache__"}

@@ -28,6 +28,8 @@ Anki Miner requires Python 3.11 or newer; CI runs the suite on 3.11, 3.12 and 3.
 
 The `languages` extra adds the Chinese and Korean engines and every spaCy language's engine and model. The zh/ko suites skip themselves through `pytest.importorskip` rather than failing - so a contributor without the extra gets a passing run that never exercised those languages - but each spaCy language's own suite hard-requires its model and errors without it, so install the extra before running the suite.
 
+The Arabic tests read a seeded morphology database, which no package carries: `python scripts/fetch_language_pack_seeds.py ~/.cache/anki-miner-pack-seeds ar` (40 MB, once).
+
 External runtime dependencies:
 
 - `ffmpeg` on PATH (`brew install ffmpeg`, `sudo apt install ffmpeg`, or the official Windows build).

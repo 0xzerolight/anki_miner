@@ -1,0 +1,12 @@
+calima-msa-r13 - CAMeL Tools Modern Standard Arabic morphology database (GPL-2.0)
+Release: https://github.com/CAMeL-Lab/camel-tools-data/releases/tag/2022.03.21
+Asset: morphology_db_calima-msa-r13-0.4.0.zip (40,488,532 bytes)
+Analyzer code the database is read with: https://github.com/CAMeL-Lab/camel_tools
+
+Derived from Aramorph 1.2.1, distributed under the GNU General Public License version 2
+by the Linguistic Data Consortium: http://sourceforge.net/projects/aramorph/
+
+The binary this application downloads is the unmodified zip above. Its URL, its SHA-256
+digest and the SHA-256 digest of the morphology.db inside it are pinned in
+anki_miner/languages/ar/pack.py; the database is a plain-text file, so the downloaded
+artifact is its own corresponding source.

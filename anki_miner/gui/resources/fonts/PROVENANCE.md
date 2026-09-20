@@ -39,6 +39,26 @@ The OFL permits bundling and redistribution provided the font is not sold on its
 own, the licence travels with it, and — if it were modified — the Reserved Font
 Name were changed. Nothing here is modified, so the name stays.
 
+## NotoNaskhArabic-Regular.ttf
+
+| | |
+|---|---|
+| Family | Noto Naskh Arabic |
+| Project | [Noto Arabic](https://github.com/notofonts/arabic) |
+| Release | [NotoNaskhArabic-v2.021](https://github.com/notofonts/arabic/releases/tag/NotoNaskhArabic-v2.021) |
+| Commit | `59f5a3fd985bf24858915c3dddfc51a537640965` |
+| Artifact | `NotoNaskhArabic/hinted/ttf/NotoNaskhArabic-Regular.ttf`, shipped in the release asset `NotoNaskhArabic-v2.021.zip` |
+| SHA-256 | `6f0a92031367b2f5a2078fe9d24f3433122b61a0bad57c423aad8f3c39aa2e6e` |
+| Modified | **No.** Byte-for-byte the upstream artifact. |
+| Licence | SIL Open Font License 1.1 — `OFL-NotoNaskhArabic.txt` beside this file |
+
+The hinted TTF is the build Google Fonts ships, the one that renders legibly at
+small sizes on Windows. `OFL-NotoNaskhArabic.txt` is the release asset's own
+`OFL.txt` (SHA-256
+`a7a5a25eb188bf1cd96982030d53e23c33485c69b1044a562254226857ee13af`). The face is
+registered only while Arabic is the active mining language, and only when no
+installed family among the profile's list supports the Arabic writing system.
+
 ## Verifying
 
 ```sh

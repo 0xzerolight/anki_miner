@@ -564,6 +564,14 @@ class EpisodeProcessor:
             if callable(close):
                 with suppressed(logger, "expression audio fetcher close"):
                     close()
+        # S23: the parser holds the language's engine (Arabic's analyzer is ~400 MB), and this
+        # processor is retained by the finished run's worker, so a language switch frees nothing
+        # unless the reference goes here. Above the worker-owned return: the engine is per-parser,
+        # never a shared lookup handle. getattr: most of the suite builds this processor with a
+        # duck-typed parser.
+        release_tagger = getattr(self.subtitle_parser, "release_tagger", None)
+        if callable(release_tagger):
+            release_tagger()
         if not self.owns_lookup_services:
             return
         self.definition_service.close()

@@ -10,11 +10,13 @@ from anki_miner.languages.pack_spec import ArtifactSpec, LanguagePack
 
 _RELEASE_PLATFORMS = (("linux", "x86_64"), ("win32", "AMD64"), ("darwin", "arm64"), ("darwin", "x86_64"))
 #: Every host a pinned artifact may come from: PyPI, the spaCy model releases,
-#: and HuSpaCy's tag-pinned HuggingFace model (R31).
+#: HuSpaCy's tag-pinned HuggingFace model (R31), and the CAMeL Lab's data
+#: releases (ar's morphology database, a plain zip).
 _URL_PREFIXES = (
     "https://files.pythonhosted.org/",
     "https://github.com/explosion/spacy-models/releases/download/",
     "https://huggingface.co/huspacy/hu_core_news_md/resolve/v3.8.0/",
+    "https://github.com/CAMeL-Lab/camel-tools-data/releases/download/",
 )
 
 
@@ -48,7 +50,9 @@ def test_every_pack_is_well_formed():
                 assert isinstance(spec, ArtifactSpec)
                 assert spec.url.startswith(_URL_PREFIXES)
                 assert len(spec.sha256) == 64
-                assert spec.member_prefix.endswith("/")
+                # A data zip is flat: its members land in the component dir unchanged.
+                assert spec.member_prefix.endswith("/") or (spec.kind == "zip" and spec.member_prefix == "")
+                assert spec.inner_sha256 == () or spec.kind == "zip"
 
 
 def test_per_platform_tables_cover_the_release_matrix():

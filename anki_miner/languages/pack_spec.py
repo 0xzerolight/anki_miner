@@ -35,11 +35,13 @@ def macos_floor_from_url(url: str) -> tuple[int, int] | None:
 
 @dataclass(frozen=True)
 class ArtifactSpec:
-    """One pinned PyPI artifact and how to unpack it."""
+    """One pinned artifact (a PyPI wheel or sdist, or a plain data zip) and how to unpack it."""
 
     url: str
     sha256: str
-    kind: Literal["wheel", "sdist"]
+    # "zip": a plain archive with no packaging metadata, extracted like a wheel;
+    # member_prefix "" = a flat archive whose members land in the component dir.
+    kind: Literal["wheel", "sdist", "zip"]
     member_prefix: str  # archive prefix stripped on extraction, e.g. "jieba-0.42.1/jieba/"
     #: Package-relative paths never extracted. An entry ending in ``/`` is a
     #: directory prefix and drops the whole subtree; every other entry matches
@@ -56,6 +58,11 @@ class ArtifactSpec:
     #: root — the auditwheel/delvewheel ``<pkg>.libs/`` tree an extension
     #: resolves by an ``$ORIGIN``-relative rpath (ctranslate2, av).
     root_members: tuple[str, ...] = ()
+    #: ``kind="zip"`` data archives only: ``(package-relative path, sha256)`` pairs verified after
+    #: extraction and before promotion. A publisher whose catalogue digest differs from the bytes
+    #: its host serves (the CAMeL morphology zip, by 214 B) is pinned twice: ``sha256`` is the
+    #: served archive, these are the payload files themselves.
+    inner_sha256: tuple[tuple[str, str], ...] = ()
 
     @property
     def min_macos(self) -> tuple[int, int] | None:

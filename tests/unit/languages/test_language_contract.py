@@ -54,6 +54,8 @@ PROBE = {
     "tr": "kitapları",
     "id": "membeli",
     "ru": "читала",
+    # li + al + broken plural: the ladder answers ["\u0644\u0637\u0644\u0627\u0628", "\u0637\u0644\u0627\u0628"].
+    "ar": "\u0644\u0644\u0637\u0644\u0627\u0628",
 }
 
 #: Every capability name any profile is allowed to declare. A typo'd flag is a
@@ -88,6 +90,11 @@ CAPABILITY_VOCABULARY = frozenset(
         "indonesian_register",
         # Stressed headword (S24): ru, uk.
         "stress_marks",
+        # Arabic (spec C.1).
+        "arabic_grammar",
+        "arabic_clitics",
+        # Right-to-left mining languages (fa ar he): gates nothing in Settings, states direction.
+        "rtl",
     }
 )
 
@@ -109,6 +116,9 @@ EXTRA_HOOK_FIELDS = {
     "root",
     "affixes",
     "formal_form",
+    # Arabic (spec C.1).
+    "expression_grammar",
+    "clitic_segmentation",
 }
 
 

@@ -74,6 +74,9 @@ HOOK_ROWS = [
     ("ru", "pos", "pos_field_input", "pos_tag"),
     ("ru", "noun_gender", "noun_gender_field_input", "noun_gender"),
     ("ru", "aspect_pair", "aspect_pair_field_input", "aspect_pairs"),
+    ("ar", "root", "root_field_input", "word_root"),
+    ("ar", "expression_grammar", "expression_grammar_field_input", "arabic_grammar"),
+    ("ar", "clitic_segmentation", "clitic_segmentation_field_input", "arabic_clitics"),
 ]
 
 
