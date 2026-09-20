@@ -13,6 +13,7 @@ from anki_miner.languages.zh.reading import (
     _ER_IS_A_SYLLABLE,
     ZhReadingSupport,
     pinyin_syllables,
+    reconcile_reading,
     syllable_tone,
     word_pinyin,
 )
@@ -156,7 +157,77 @@ class TestToneColourOnCorrectedReadings:
         assert self._render("一个").startswith('<span style="color:#e75353">yī</span>')
 
 
+class TestReconcileReading:
+    """The dictionary's own reading, re-spaced onto the word's characters."""
+
+    @pytest.mark.parametrize(
+        ("word", "attested", "expected"),
+        [
+            ("看得见", "kàndejiàn", "kàn de jiàn"),  # 得 neutral, pypinyin says dé
+            ("先生", "xiānsheng", "xiān sheng"),  # neutral tone the dictionary records
+            ("学生", "xuésheng", "xué sheng"),
+            ("流血", "liúxuè", "liú xuè"),  # heteronym pypinyin picks the other way
+            ("这儿", "zhèr5", "zhèr"),  # erhua merge + the trailing neutral marker
+            ("隻", "zhī", "zhī"),  # one character whose simplified fold reads 只 zhǐ
+            ("中国", "zhōngguó", "zhōng guó"),
+        ],
+    )
+    def test_a_single_attested_reading_is_re_spaced_onto_the_word(
+        self, word: str, attested: str, expected: str
+    ) -> None:
+        assert reconcile_reading(word, word_pinyin(word), [attested]) == expected
+
+    @pytest.mark.parametrize(
+        ("word", "attested"),
+        [
+            ("嘸啥", ["m2shá"]),  # numbered pinyin: unusable outright
+            ("樂亭", ["làotíng"]),  # a place-name reading pypinyin has no candidate for
+            ("起来", ["qǐlái", "qilai"]),  # two attested readings: no way to choose
+            ("银行", []),  # nothing attested
+            ("银行", [""]),
+        ],
+    )
+    def test_a_reading_the_walk_cannot_place_keeps_pypinyins_answer(self, word: str, attested: list[str]) -> None:
+        assert reconcile_reading(word, word_pinyin(word), attested) == word_pinyin(word)
+
+    def test_an_ambiguous_split_is_refused_rather_than_guessed(self, monkeypatch) -> None:
+        """Two splits of one attested string is a parse the walk must not pick from.
+
+        Forced with overlapping candidate sets: xi|an and xia|n both consume
+        ``xian``. A first-match walk would silently emit one of them.
+        """
+        stub = {"西": ("xi", "xia"), "安": ("an", "n")}
+        monkeypatch.setattr(
+            "anki_miner.languages.zh.reading._char_candidates",
+            lambda char: stub.get(char, ()),
+        )
+        assert reconcile_reading("西安", "xī ān", ["xian"]) == "xī ān"
+
+    @pytest.mark.parametrize(
+        ("word", "attested", "expected"),
+        [
+            ("賠不是", "péibúshi", "péi bù shi"),  # sandhi 不 restored to its citation tone
+            ("看不见", "kànbujiàn", "kàn bu jiàn"),  # lexical neutral 不 left alone
+        ],
+    )
+    def test_the_citation_tone_policy_still_applies(self, word: str, attested: str, expected: str) -> None:
+        assert reconcile_reading(word, word_pinyin(word), [attested]) == expected
+
+    def test_the_emitted_syllables_rejoin_to_the_attested_string(self) -> None:
+        """The kill-rule invariant: a reading that matched the dictionary still does."""
+        for word, attested in (("看得见", "kàndejiàn"), ("学生", "xuésheng"), ("中国", "zhōngguó")):
+            assert reconcile_reading(word, word_pinyin(word), [attested]).replace(" ", "") == attested
+
+    def test_a_latin_run_keeps_its_source_spelling(self) -> None:
+        # The walk consumes a casefolded target but emits the source slice.
+        assert reconcile_reading("T恤", "T xù", ["T xù"]) == "T xù"
+
+
 class TestZhReadingSupport:
     def test_word_reading_reads_the_token_surface(self) -> None:
         token = LanguageToken(surface="电影", pos1="n", lemma="电影")
         assert ZhReadingSupport().word_reading(token) == "diàn yǐng"
+
+    def test_reconcile_is_offered_beside_word_reading(self) -> None:
+        # The parser seam is a getattr probe, so the method's presence IS the gate.
+        assert ZhReadingSupport().reconcile("先生", "xiān shēng", ["xiānsheng"]) == "xiān sheng"

@@ -17,6 +17,7 @@ from anki_miner.gui.widgets.youtube_playlist_flow import _classify_probe_result
 from anki_miner.languages import registry
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
+from anki_miner.languages.zh.reading import word_pinyin
 from anki_miner.models import TokenizedWord
 from anki_miner.models.card_payload import CardPayload
 from anki_miner.models.media import MediaData
@@ -271,6 +272,26 @@ def test_a_traditional_srt_splits_and_reads_like_its_simplified_twin(test_config
     assert {"銀行", "電影"} <= set(words)
     assert "後" not in words
     assert words["銀行"].expression_reading == "yín háng"
+
+
+def test_a_single_attested_reading_reaches_the_card_reading_field(test_config, tmp_path):
+    """The reconcile seam, through the real parser: 先生 reads xiān sheng, not xiān shēng."""
+    parser = _create_subtitle_parser(switch_language(test_config, "zh"))
+    parser._reading_lookup = lambda terms: {"先生": ["xiānsheng"], "流血": ["liúxuè"]}
+    path = _srt_file(tmp_path, "zh.srt", "那位先生说他流血了")
+    words = {w.mined_form: w for w in parser.parse_subtitle_file(path)}
+    assert words["先生"].expression_reading == "xiān sheng"
+    assert words["流血"].expression_reading == "liú xuè"
+    assert words["先生"].reading == words["先生"].expression_reading
+
+
+def test_two_attested_readings_leave_the_engine_reading_alone(test_config, tmp_path):
+    """Choosing between attested readings without context is the guess ZH-017 refused."""
+    parser = _create_subtitle_parser(switch_language(test_config, "zh"))
+    parser._reading_lookup = lambda terms: {"先生": ["xiānsheng", "xiānshēng"]}
+    path = _srt_file(tmp_path, "zh.srt", "那位先生说话")
+    words = {w.mined_form: w for w in parser.parse_subtitle_file(path)}
+    assert words["先生"].expression_reading == word_pinyin("先生")
 
 
 def test_character_set_simplified_converts_traditional_fronts_only(test_config, tmp_path):

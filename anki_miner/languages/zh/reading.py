@@ -9,10 +9,15 @@ surveyed deck and dictionary.
 
 from __future__ import annotations
 
+import re
 import unicodedata
+from collections.abc import Sequence
+from functools import cache
+from itertools import groupby
 from typing import Any
 
 from anki_miner.languages.zh.variants import to_simplified
+from anki_miner.utils.ja_normalize import is_cjk_ideograph
 
 # Combining diacritics a TONE-styled syllable carries, in NFD form. Neutral
 # (5th) tone carries none, which is why the default is 5 rather than 0.
@@ -136,8 +141,168 @@ def pinyin_syllables(word: str) -> list[tuple[str, int]]:
     return [(syllable, syllable_tone(syllable)) for syllable in _syllables(word)]
 
 
+# The two spellings of the rhotacising suffix, whose syllable a dictionary may
+# write as a bare ``r`` glued to the syllable before it (这儿 zhèr).
+_ER_CHARS = frozenset("儿兒")
+# CC-CEDICT ports that keep numbered pinyin (m2shá) or the ``u:`` umlaut
+# spelling cannot be walked against tone-marked candidates at all.
+_UNWALKABLE = re.compile(r"[1-4:]")
+# A neutral syllable may carry an explicit 5 in the stored reading (zhèr5).
+_NEUTRAL_MARKER = "5"
+# More than one distinct split is a refusal, so the enumeration only has to
+# outlive the first duplicate; the cap keeps a pathological word bounded.
+_MAX_SOLUTIONS = 8
+
+
+def _strip_tone(syllable: str) -> str:
+    """``syllable`` without its tone diacritic (guó -> guo)."""
+    decomposed = unicodedata.normalize("NFD", syllable)
+    return unicodedata.normalize("NFC", "".join(c for c in decomposed if c not in _TONE_BY_MARK))
+
+
+@cache
+def _char_candidates(char: str) -> tuple[str, ...]:
+    """Every pinyin string ``char`` may contribute to an attested reading.
+
+    Heteronyms of the character AND of its simplified fold, casefolded: a
+    traditional headword is stored under its own spelling but read through the
+    simplified table (隻 vs 只), and taking both raises the walk's parse rate.
+    Each candidate's toneless form joins it because a dictionary writes a
+    neutral syllable without a mark (xuésheng), and 儿/兒 gains a bare ``r``
+    for the rhotacised spelling.
+    """
+    from pypinyin import Style, pinyin
+
+    sources = [char]
+    simplified = to_simplified(char)
+    if simplified and simplified != char:
+        sources.append(simplified)
+    out: list[str] = []
+    for source in sources:
+        for row in pinyin(source, style=Style.TONE, heteronym=True, errors="ignore"):
+            for syllable in row:
+                folded = unicodedata.normalize("NFC", syllable).casefold()
+                out.append(folded)
+                bare = _strip_tone(folded)
+                if bare != folded:
+                    out.append(bare)
+    if char in _ER_CHARS:
+        out.append("r")
+    return tuple(dict.fromkeys(out))
+
+
+def _reading_units(word: str) -> list[str]:
+    """``word`` cut into the pieces one emitted syllable covers.
+
+    One unit per ideograph, and one unit per run of anything else — a Latin run
+    is a single syllable of the reading (AA制 aa zhì), so splitting it per
+    character would space it out on the card.
+    """
+    units: list[str] = []
+    for ideograph, chars in groupby(word, is_cjk_ideograph):
+        if ideograph:
+            units.extend(chars)
+        else:
+            units.append("".join(chars))
+    return units
+
+
+def _unit_candidates(unit: str) -> tuple[str, ...]:
+    """Pinyin strings ``unit`` may cover; a non-hanzi run stands for itself."""
+    if len(unit) == 1 and is_cjk_ideograph(unit):
+        return _char_candidates(unit)
+    return (unit.casefold(),)
+
+
+def _normalize_attested(reading: str) -> str | None:
+    """The attested string the walk consumes, or None when it cannot be walked."""
+    folded = unicodedata.normalize("NFC", reading).casefold()
+    folded = "".join(folded.replace("·", "").replace(",", "").split())
+    if not folded or _UNWALKABLE.search(folded):
+        return None
+    return folded
+
+
+def _merge_erhua(syllables: list[str]) -> list[str]:
+    """A trailing bare ``r`` rhotacises the syllable before it, as in ``_syllables``."""
+    if len(syllables) > 1 and syllables[-1] == "r":
+        return [*syllables[:-2], syllables[-2] + "r"]
+    return syllables
+
+
+def reconcile_reading(word: str, reading: str, attested: Sequence[str]) -> str:
+    """``reading`` re-derived from the ONE reading the dictionary attests.
+
+    pypinyin reads a word out of context, so it picks the wrong heteronym
+    (流血 liú xiě) and the full tone where the dictionary records a neutral one
+    (先生 xiān shēng). When exactly one reading is attested for the card front,
+    that string is authoritative — but it is stored unspaced, and the card's
+    reading field, its tone colours and its audio filename all need syllables.
+    So walk it: consume it left to right, taking one of each unit's candidate
+    pinyin strings, and emit what was consumed.
+
+    Every split is enumerated, and two or more distinct ones REFUSE: an
+    overlapping candidate set (xi|an vs xia|n) has no right answer without
+    context, and picking the first would be the homograph guess bulk mining
+    must not make. Every other failure — nothing attested, several readings, a
+    reading no candidate covers — refuses the same way and returns ``reading``
+    untouched.
+
+    The emitted syllables re-join to the attested string, so a reading that
+    matched the dictionary before still matches it after. The one step past
+    that point is the module's own 一/不 citation retone, which undoes the
+    sandhi tone a dictionary records exactly as ``_syllables`` undoes
+    pypinyin's.
+    """
+    distinct = list(dict.fromkeys(unicodedata.normalize("NFC", r) for r in attested if r))
+    if len(distinct) != 1:
+        return reading
+    target = _normalize_attested(distinct[0])
+    if target is None:
+        return reading
+    units = _reading_units(word)
+    solutions: list[tuple[str, ...]] = []
+
+    def consume(index: int, pos: int, emitted: list[str]) -> None:
+        if len(solutions) >= _MAX_SOLUTIONS:
+            return
+        if index == len(units):
+            if pos == len(target):
+                solutions.append(tuple(emitted))
+            return
+        unit = units[index]
+        literal = len(unit) != 1 or not is_cjk_ideograph(unit)
+        for candidate in _unit_candidates(unit):
+            for consumed in (candidate, candidate + _NEUTRAL_MARKER):
+                if not target.startswith(consumed, pos):
+                    continue
+                emitted.append(unit if literal else candidate)
+                consume(index + 1, pos + len(consumed), emitted)
+                emitted.pop()
+
+    consume(0, 0, [])
+    walked = list(dict.fromkeys(solutions))
+    if len(walked) != 1:
+        return reading
+    syllables: list[str] = []
+    for unit, syllable in zip(units, walked[0], strict=True):
+        citation = _CITATION_TONES.get(unit, {}).get(syllable_tone(syllable))
+        syllables.append(syllable if citation is None else _retone(syllable, citation))
+    return " ".join(_merge_erhua(syllables))
+
+
 class ZhReadingSupport:
     """``ReadingSupport`` for zh: the token's surface, read as one word."""
 
     def word_reading(self, token: Any) -> str:
         return word_pinyin(token.surface)
+
+    def reconcile(self, form: str, reading: str, attested: Sequence[str]) -> str:
+        """Optional ``ReadingSupport`` seam: the dictionary's own reading, re-spaced.
+
+        Probed with ``getattr`` at the emit site rather than declared on the
+        Protocol — seven classes implement ``word_reading`` and only this one
+        has a dictionary whose readings are the same romanisation its engine
+        produces.
+        """
+        return reconcile_reading(form, reading, attested)

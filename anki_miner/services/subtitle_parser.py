@@ -1327,6 +1327,14 @@ class SubtitleParserService:
             # and none of it applies to a duck token whose feature.kana is ""
             # by the LanguageToken contract.
             reading = expression_reading = self._reading_support.word_reading(word_token)
+            reconcile = getattr(self._reading_support, "reconcile", None)
+            if reconcile is not None:
+                # Optional support seam (zh): the dictionary and the engine write
+                # the same romanisation, so a single attested reading for this
+                # exact card front outranks the engine's context-free guess.
+                # ``mined``, not the token — the front may be the other script
+                # (銀行 -> 银行) and that is what was probed for.
+                reading = expression_reading = reconcile(mined, expression_reading, self._attested_readings(mined))
             if not expression_reading and self._attested_reading_fallback and self._reading_lookup is not None:
                 # S24: the profile owns the reading fields but has no reading of its own
                 # (ru stress); a single attested dictionary reading is the card's
