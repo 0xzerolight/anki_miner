@@ -4946,6 +4946,34 @@ class TestProfileExtraFieldKeys:
 
         assert fields["word"] == '<div dir="rtl" lang="ja">食べる</div>'
 
+    @pytest.mark.parametrize(
+        ("code", "script_variant", "tag"),
+        [
+            ("zh", "", "zh-Hans"),
+            ("zh", "traditional", "zh-Hant"),
+            ("yue", "", "zh-Hant"),
+        ],
+    )
+    def test_a_han_profile_tags_the_sentence_of_every_built_note(
+        self, test_config, make_tokenized_word, code, script_variant, tag
+    ):
+        """The same seam, from the real profile's resolver and the live config.
+
+        The builder's own tests hand it a stand-in resolver, so this is what
+        proves the profile's one reaches it and that the tag follows the
+        configured Character Set.
+        """
+        from dataclasses import replace
+
+        service = AnkiService(replace(test_config, language=code, script_variant=script_variant))
+        word = make_tokenized_word(surface="学习", lemma="学习", reading="", sentence="我在学习中文。")
+        item = CardPayload(word=word, media=MediaData(), definition="def")
+
+        fields = service._build_note(item, set()).note["fields"]
+
+        assert fields["sentence"] == f'<span lang="{tag}">我在学习中文。</span>'
+        assert fields["word"] == "学习"
+
 
 class TestRejectedNoteNamesTheWord:
     """A rejection names the word on the card, not its index in a probe batch.
