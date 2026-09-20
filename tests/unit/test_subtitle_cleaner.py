@@ -90,6 +90,34 @@ class TestNonSpeechText:
     def test_arabic_and_hebrew_words_stay_speech(self, text):
         assert not _is_non_speech_text(text)
 
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "\N{THAI CHARACTER MAIYAMOK}",
+            "\N{THAI CHARACTER PAIYANNOI}",
+            "\N{THAI CHARACTER MAIYAMOK} \N{THAI CHARACTER PAIYANNOI}",
+            "\N{EIGHTH NOTE} \N{THAI CHARACTER MAIYAMOK} \N{EIGHTH NOTE}",
+        ],
+    )
+    def test_thai_repetition_and_abbreviation_marks_are_residue(self, text):
+        assert _is_non_speech_text(text)
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            # dii-mak + maiyamok ("very good, very")
+            "\N{THAI CHARACTER DO DEK}\N{THAI CHARACTER SARA II}"
+            "\N{THAI CHARACTER MO MA}\N{THAI CHARACTER SARA AA}\N{THAI CHARACTER KO KAI}"
+            "\N{THAI CHARACTER MAIYAMOK}",
+            # krung-thep + paiyannoi (Bangkok, abbreviated)
+            "\N{THAI CHARACTER KO KAI}\N{THAI CHARACTER RO RUA}\N{THAI CHARACTER SARA U}"
+            "\N{THAI CHARACTER NGO NGU}\N{THAI CHARACTER SARA E}\N{THAI CHARACTER THO THAHAN}"
+            "\N{THAI CHARACTER PHO PHAN}\N{THAI CHARACTER PAIYANNOI}",
+        ],
+    )
+    def test_thai_words_carrying_those_marks_stay_speech(self, text):
+        assert not _is_non_speech_text(text)
+
 
 class TestCleanReference:
     def test_drops_music_and_annotation_only_cues(self, tmp_path):
