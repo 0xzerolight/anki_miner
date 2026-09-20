@@ -67,9 +67,12 @@ def _build_filter_bundle(config: AnkiMinerConfig, frequency_service) -> SimpleNa
 
     tagger = None
     try:
-        from anki_miner.services.tagger import get_shared_tagger
+        from anki_miner.languages.tagger_provider import get_tagger
 
-        tagger = get_shared_tagger()
+        # No ``== "ja"`` branch: the provider's ja entry already returns the
+        # shared tagger. Asking it unconditionally is what keeps a Chinese deck
+        # off the fugashi tagger, which read 苹果 as りんご.
+        tagger = get_tagger(config_language(config))
     except Exception as e:
         logger.warning("Tagger unavailable for deck filter scan (%s); readings/lemmas degrade.", e)
 
