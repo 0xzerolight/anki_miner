@@ -89,9 +89,14 @@ def test_the_parser_carries_the_name_pass_and_the_token_gate():
     assert parser._inclusion_rule.script_gate is is_vietnamese_word
 
 
-def test_the_catalogue_ships_wiktionary():
+def test_the_catalogue_ships_wiktionary_and_the_self_hosted_frequency_list():
     by_id = {spec.id: spec for spec in VI_CATALOG}
-    assert set(by_id) == {"wty-vi-en"}
+    assert set(by_id) == {"wty-vi-en", "opensubtitles-vi-word"}
+    frequency = by_id["opensubtitles-vi-word"]
+    assert frequency.kind == "freq" and frequency.lemmatise is False  # keys are already folded words
+    assert frequency.url == vi_catalog.OPENSUBTITLES_VI_WORD_URL
+    assert frequency.url.startswith("https://github.com/0xzerolight/anki_miner/releases/download/resources-2026-09-")
+    assert "ODC-BY 1.0" in frequency.license_note
     dictionary = by_id["wty-vi-en"]
     assert dictionary.kind == "dict" and dictionary.url == (
         "https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/vi/en/wty-vi-en.zip"

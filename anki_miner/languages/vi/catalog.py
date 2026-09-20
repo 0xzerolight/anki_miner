@@ -12,6 +12,12 @@ form row ("Traditional tone placement spelling of ..."); ``VI_KEYS`` folds both 
 one key. 12,520 rows carry "Sino-Vietnamese word from <hanzi>", which the Han Viet
 card field reads.
 
+**Frequency - opensubtitles-vi-word.** No free word-level subtitle list exists
+(hermitdave and wordfreq rank syllables), so ``scripts/build_vi_frequency.py``
+re-segments OPUS OpenSubtitles v2024 with this package's tokenizer; the asset is
+pinned by a versioned filename and by the digest a network test re-checks. Keys
+are folded fronts, so no lemmatising import.
+
 **Documented manual imports** (Settings -> Dictionaries or the frequency
 import; the app recommends none of them by name): the VNEDICT v4 Yomitan build
 (thu-tram/viet-yomitan, 54,345 headwords, data CC BY 3.0 - credit the VNEDICT
@@ -27,6 +33,14 @@ from __future__ import annotations
 
 from anki_miner.languages.profile import ResourceSpec
 
+#: The published asset, verbatim: a versioned filename on a pre-release that is never re-uploaded,
+#: so this URL always returns the same bytes. The release TAG is the upload date and the FILENAME
+#: the corpus build date; they differ on purpose. Pinned by digest in test_vi_frequency_asset.py.
+OPENSUBTITLES_VI_WORD_URL = (
+    "https://github.com/0xzerolight/anki_miner/releases/download/"
+    "resources-2026-09-20/opensubtitles-vi-word-2026.09.19.zip"
+)
+
 VI_CATALOG: tuple[ResourceSpec, ...] = (
     ResourceSpec(
         id="wty-vi-en",
@@ -36,6 +50,16 @@ VI_CATALOG: tuple[ResourceSpec, ...] = (
         license_note=(
             "Wiktionary via kaikki.org, CC BY-SA 4.0; Yomitan build by wiktionary-to-yomitan, "
             "downloaded from upstream source."
+        ),
+    ),
+    ResourceSpec(
+        id="opensubtitles-vi-word",
+        kind="freq",
+        display_name="OpenSubtitles 2024 word frequency (Vietnamese)",
+        url=OPENSUBTITLES_VI_WORD_URL,
+        license_note=(
+            "OPUS OpenSubtitles v2024, ODC-BY 1.0 (P. Lison and J. Tiedemann, 2016; opensubtitles.org); "
+            "segmented into words with underthesea by Anki Miner and hosted on its releases."
         ),
     ),
 )
