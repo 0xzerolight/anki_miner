@@ -1,5 +1,37 @@
-{"id":"zh01","sentence":"我昨天看了一部非常漂亮的电影。","must_mine":["我","昨天","非常","漂亮","电影"],"must_not_mine":["的","了","。"],"note":"particle/punct dropped; pronoun, time word, adverb, adjective and noun kept"}
-{"id":"zh02","sentence":"他在图书馆学习。","must_mine":["他","图书馆","学习"],"must_not_mine":["在","。"],"note":"preposition p is outside allowed_pos; the pronoun is mined"}
+{"id":"zh01","sentence":"我昨天看了一部非常漂亮的电影。","must_mine":["我","昨天","非常","漂亮","电影"],"must_not_mine":["的","了","一部","。"],"note":"particle, numeral and punctuation dropped; pronoun, time word, adverb, adjective and noun kept"}
+{"id":"zh02","sentence":"他在图书馆学习。","must_mine":["他","在","图书馆","学习"],"must_not_mine":["。"],"note":"在 is HSK1 vocabulary, not the Japanese-particle analogue: p is mined"}
 {"id":"zh03","sentence":"这个电影非常有意思。","must_mine":["这个","电影","非常","有意思"],"must_not_mine":["。"],"note":"demonstrative r and set phrase l are both core vocabulary"}
-{"id":"zh04","sentence":"今天我在家里学习中文。","must_mine":["今天","家里","学习","中文"],"must_not_mine":["在","。"],"note":"time word t, place word s and the nz catch-all all mine"}
-{"id":"zh05","sentence":"他把书放在桌子的里面。","must_mine":["里面","书","桌子","放在"],"must_not_mine":["把","的","。"],"note":"locative noun f is mined; preposition and particle are not"}
+{"id":"zh04","sentence":"今天我在家里学习中文。","must_mine":["今天","在","家里","学习","中文"],"must_not_mine":["。"],"note":"time word t, place word s, preposition p and the nz catch-all all mine"}
+{"id":"zh05","sentence":"他把书放在桌子的里面。","must_mine":["把","书","桌子","里面","放在"],"must_not_mine":["的","。"],"note":"locative noun f and the 把 marker mine; the 的 particle does not"}
+{"id":"zh06","sentence":"今天太阳很大，这个城市的东西我不明白。","must_mine":["太阳","城市","东西","明白"],"must_not_mine":["的","，","。"],"note":"jieba's dictionary tags all four ns or nr, and all four are ordinary vocabulary"}
+{"id":"zh07","sentence":"这些东西都是新鲜的。","must_mine":["东西","新鲜","都","是"],"must_not_mine":["的","。"],"note":"新鲜 is another dictionary ns"}
+{"id":"zh08","sentence":"受台风影响，明天不上课。","must_mine":["台风","影响","明天","上课"],"must_not_mine":["，","。"],"note":"台风 is ns in jieba's dictionary — a weather word, not a place"}
+{"id":"zh09","sentence":"然后我们一起去喝咖啡吧。","must_mine":["然后","喝咖啡","我们","去"],"must_not_mine":["一起","吧","。"],"note":"jieba cuts 喝咖啡 as one nr token, so neither 喝 nor 咖啡 exists to mine separately; 一起 stays out as m"}
+{"id":"zh10","sentence":"这是最主要的原因。","must_mine":["主要","原因","最"],"must_not_mine":["的","。"],"note":"区别词 b — jieba files 主要 in a class of its own"}
+{"id":"zh11","sentence":"所有的学生都来了。","must_mine":["所有","学生","都","来"],"must_not_mine":["的","了","。"],"note":"another b word a beginner meets in the first week"}
+{"id":"zh12","sentence":"整个房间一片黑暗。","must_mine":["整个","黑暗","房间"],"must_not_mine":["一片","。"],"note":"b and z in one line; 一片 stays out as m"}
+{"id":"zh13","sentence":"他高兴地跳了起来。","must_mine":["高兴","跳","起来"],"must_not_mine":["地","了","。"],"note":"高兴 is HSK1 and jieba tags it b; the 地 adverbial particle stays out"}
+{"id":"zh14","sentence":"她穿着雪白的裙子。","must_mine":["雪白","裙子","穿着"],"must_not_mine":["的","。"],"note":"状态词 z — prose adjectives jieba keeps out of a"}
+{"id":"zh15","sentence":"他悄悄地走了进来。","must_mine":["悄悄地","走","进来"],"must_not_mine":["了","。"],"note":"jieba tags the whole 悄悄地 z; whether a 地 form earns a card is the definition stage's call"}
+{"id":"zh16","sentence":"因为下雨，所以我没去。","must_mine":["因为","所以","下雨","去"],"must_not_mine":["，","。"],"note":"conjunctions are HSK1-3 vocabulary in Chinese"}
+{"id":"zh17","sentence":"虽然很累，但是我很开心。","must_mine":["虽然","但是","累","开心"],"must_not_mine":["，","。"],"note":"the 虽然…但是 pair is a grammar point a learner drills"}
+{"id":"zh18","sentence":"如果明天不下雨，我们就去公园。","must_mine":["如果","明天","公园","就"],"must_not_mine":["，","。"],"note":"如果 is c; the rest of the line is ordinary t/n/d vocabulary"}
+{"id":"zh19","sentence":"我跟朋友从学校走回来。","must_mine":["跟","从","朋友","学校"],"must_not_mine":["。"],"note":"介词 p — 跟 and 从 carry meaning a learner has to know"}
+{"id":"zh20","sentence":"为了考试，除了睡觉他都在看书。","must_mine":["为了","除了","在","考试","看书"],"must_not_mine":["，","。"],"note":"multi-character prepositions mine like the single-character ones"}
+{"id":"zh21","sentence":"关于这个问题，我对你的看法比他好。","must_mine":["关于","对","比","问题","看法"],"must_not_mine":["的","，","。"],"note":"three more p words in one line"}
+{"id":"zh22","sentence":"我买了三本书和两个杯子。","must_mine":["和","买","杯子"],"must_not_mine":["三","两个","了","。"],"note":"conjunction 和 mines; bare numerals m stay out"}
+{"id":"zh23","sentence":"这间房子大概有八十平方米。","must_mine":["房子","大概","有","间"],"must_not_mine":["八十","平方米","。"],"note":"numeral m and classifier q both stay out"}
+{"id":"zh24","sentence":"他一口气喝了两瓶啤酒。","must_mine":["一口气","啤酒"],"must_not_mine":["喝","两瓶","了","。"],"note":"成语 i mines; 喝 is a bound vg fragment here and stays excluded"}
+{"id":"zh25","sentence":"你别生气了，我给你道个歉。","must_mine":["给","别生气"],"must_not_mine":["道","个","歉","了"],"note":"preposition 给 mines; the q classifiers and the ng fragment beside it do not"}
+{"id":"zh26","sentence":"这部手机支持5G网络和无线充电。","must_mine":["和","网络","充电","支持"],"must_not_mine":["5","G","。"],"note":"Latin runs are eng and digits m; the conjunction between them mines"}
+{"id":"zh27","sentence":"她说：“真的吗？”","must_mine":["说","真的","她"],"must_not_mine":["：","“","”","？","吗"],"note":"full-width colon and curly quotes are x"}
+{"id":"zh28","sentence":"「你先别激动，」他说。","must_mine":["激动","先别","说"],"must_not_mine":["「","」","，","。"],"note":"corner brackets are x as well"}
+{"id":"zh29","sentence":"爱因斯坦是一位科学家。","must_mine":["科学家","是"],"must_not_mine":["爱因斯坦","一位","。"],"note":"nrt stays excluded: a transliterated personal name is a name in every context"}
+{"id":"zh30","sentence":"王小明明天要去上海出差。","must_mine":["王小明","上海","明天","出差"],"must_not_mine":["。"],"note":"nr and ns clear the POS gate; a name no dictionary lists is dropped a stage later, not here"}
+{"id":"zh31","sentence":"国家统计局今天发布了第三季度经济数据。","must_mine":["今天","发布","经济","数据"],"must_not_mine":["国家统计局","第三季度","了","。"],"note":"nt organisations stay excluded"}
+{"id":"zh32","sentence":"他做事一向小心翼翼。","must_mine":["小心翼翼","做事","一向"],"must_not_mine":["。"],"note":"a four-character chengyu arrives as one i token"}
+{"id":"zh33","sentence":"这事儿我明天再跟你说。","must_mine":["事儿","跟","明天","说"],"must_not_mine":["。"],"note":"the erhua surface is mined as written; 跟 beside it is p"}
+{"id":"zh34","sentence":"台灣的夜市很有名。","must_mine":["台灣","夜市","很","有名"],"must_not_mine":["的","。"],"note":"traditional text: jieba cuts a simplified copy and the original slices come back out"}
+{"id":"zh35","sentence":"他在台北車站附近租了套房。","must_mine":["台北","車站","套房","在","附近"],"must_not_mine":["了","。"],"note":"Taiwan vocabulary in traditional script"}
+{"id":"zh36","sentence":"妳今天怎麼看起來這麼累？","must_mine":["妳","累","看起來"],"must_not_mine":["？"],"note":"妳 is the Taiwan feminine 'you'; jieba tags it zg"}
+{"id":"zh37","sentence":"我們週末要不要去陽明山走走？","must_mine":["陽明山","週末","走走"],"must_not_mine":["？"],"note":"a traditional place name jieba reads as nr"}
