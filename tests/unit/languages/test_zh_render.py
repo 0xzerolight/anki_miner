@@ -54,6 +54,11 @@ def test_hook_field_names_are_logical_keys():
     ]
 
 
+#: A simplified front is the one case OpenCC has to place: every other front
+#: falls to the traditional half, which is where a missing OpenCC lands anyway.
+_NEEDS_OPENCC = frozenset({"个人"})
+
+
 @pytest.mark.parametrize(
     ("gloss", "variant", "front", "expected"),
     [
@@ -62,6 +67,8 @@ def test_hook_field_names_are_logical_keys():
         ("car; CL:輛|辆[liang4]", "traditional", "汽車", "輛"),
         ("<li>CL:個|个[ge4]</li>", "", "个人", "个"),
         ("<li>CL:個|个[ge4]</li>", "", "個人", "個"),
+        ("dog; CL:隻|只[zhi1],條|条[tiao2]", "", "狗", "隻"),
+        ("friend; CL:個|个[ge4]", "", "朋友", "個"),
         ("only one; CL:隻|只[zhi1]", "simplified", "鸟", "只"),
         ("to watch; CL:套[tou3]", "", "戲", "套"),
         ("no classifier here", "simplified", "银行", None),
@@ -69,11 +76,19 @@ def test_hook_field_names_are_logical_keys():
 )
 def test_measure_word_parses_cc_cedict_cl_gloss(gloss, variant, front, expected):
     """CC-CEDICT writes a classifier ``trad|simp``; the card shows its own script."""
-    if not variant:
-        pytest.importorskip("opencc")  # only the "" rule asks whether the front is simplified
+    if not variant and front in _NEEDS_OPENCC:
+        pytest.importorskip("opencc")
     config = dataclasses.replace(AnkiMinerConfig(), script_variant=variant)
     out = ZhMeasureWordHook().render(_word(front, gloss), config=config)
     assert out == ({"measure_word": expected} if expected else {})
+
+
+def test_a_front_opencc_cannot_place_takes_the_traditional_half(monkeypatch):
+    """No OpenCC is the yue install, and an unplaceable front leaves only yue's script."""
+    monkeypatch.setattr("anki_miner.languages.zh.render.to_traditional", lambda text: text)
+    config = dataclasses.replace(AnkiMinerConfig(), script_variant="")
+    out = ZhMeasureWordHook().render(_word("汽车", "car; CL:輛|辆[liang4]"), config=config)
+    assert out == {"measure_word": "輛"}
 
 
 def test_traditional_hook_emits_only_a_real_variant(monkeypatch):

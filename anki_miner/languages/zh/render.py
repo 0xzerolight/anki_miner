@@ -13,7 +13,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from anki_miner.languages.zh.reading import pinyin_syllables
-from anki_miner.languages.zh.variants import to_simplified, to_traditional
+from anki_miner.languages.zh.variants import to_traditional
 
 if TYPE_CHECKING:  # annotation-only: keeps profile.py's resource_catalog import out of the runtime path
     from anki_miner.config.config import AnkiMinerConfig
@@ -63,16 +63,18 @@ def _wants_simplified(word: Any, config: AnkiMinerConfig) -> bool:
     """Whether the card's script is simplified, from the setting or the front.
 
     zh always carries a variant (its scoped default is "simplified"), so the
-    front branch is for a config that has none — yue's, where the front is the
-    only evidence there is and a spelling OpenCC leaves alone is simplified. A
-    front that is spelt the same in both scripts (狗, 朋友) therefore reads as
-    simplified, as does every front when OpenCC is absent.
+    front branch is for a config that has none — yue's, whose cards are
+    traditional. Only positive evidence flips it: a front with a traditional
+    spelling of its own (汽车 -> 汽車) is simplified text. A script-invariant
+    front (狗, 朋友, 睇) proves nothing and stays traditional, and so does every
+    front where ``to_traditional`` returns its input because OpenCC is absent —
+    the yue extra installs none.
     """
     variant = getattr(config, "script_variant", "")
     if variant:
         return variant == "simplified"
     front = getattr(word, "mined_form", "") or ""
-    return to_simplified(front) == front
+    return to_traditional(front) != front
 
 
 class ZhTraditionalHook:

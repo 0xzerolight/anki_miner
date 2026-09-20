@@ -73,10 +73,20 @@ def test_the_measure_word_hook_is_the_zh_one_unchanged():
 
 def test_a_two_script_classifier_takes_the_traditional_half_on_a_yue_card():
     """yue never sets script_variant, so the classifier follows the card front."""
-    pytest.importorskip("opencc")
     config = replace(AnkiMinerConfig(), script_variant="")
     word = SimpleNamespace(definition_html="pair; CL:對|对[dui4]", mined_form="對")
     assert YUE_RENDER_HOOKS[0].render(word, config=config) == {"measure_word": "對"}
+
+
+def test_a_script_invariant_front_takes_the_traditional_half_too():
+    """狗 is spelt the same in both scripts; yue's own script is the only evidence left.
+
+    The yue extra ships no OpenCC, so this is also the shape of every yue card
+    on a default install.
+    """
+    config = replace(AnkiMinerConfig(), script_variant="")
+    word = SimpleNamespace(definition_html="dog; CL:隻|只[zek3],條|条[tiu4]", mined_form="狗")
+    assert YUE_RENDER_HOOKS[0].render(word, config=config) == {"measure_word": "隻"}
 
 
 def test_every_hook_field_name_is_declared_once():
