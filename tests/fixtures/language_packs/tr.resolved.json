@@ -1,0 +1,185 @@
+{
+  "approx_download_mb": 4,
+  "code": "tr",
+  "components": [
+    {
+      "abi": null,
+      "import_name": "cloudpickle",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "cloudpickle-3.1.2-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "cloudpickle/",
+        "root_members": [],
+        "sha256": "9acb47f6afd73f60dc1df93bb801b472f05ff42fa6c84167d25cb206be1fbf4a",
+        "size": 22228,
+        "url": "https://files.pythonhosted.org/packages/88/39/799be3f2f0f38cc727ee3b4f1445fe6d5e4133064ec2e4115069418a5bb6/cloudpickle-3.1.2-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "colorama",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "colorama-0.4.6-py2.py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "colorama/",
+        "root_members": [],
+        "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
+        "size": 25335,
+        "url": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "defusedxml",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "defusedxml-0.7.1-py2.py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "defusedxml/",
+        "root_members": [],
+        "sha256": "a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61",
+        "size": 25604,
+        "url": "https://files.pythonhosted.org/packages/07/6c/aa3f2f849e01cb6a001cd8554a88d4c77c5c1a31c95bdf1cf9301e6d9ef4/defusedxml-0.7.1-py2.py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "joblib",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "joblib-1.6.0-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "joblib/",
+        "root_members": [],
+        "sha256": "3dbbf9f6e4b592a2357b854608e980fe6390d131d7a82f011a377ef2ebef7aba",
+        "size": 306115,
+        "url": "https://files.pythonhosted.org/packages/18/53/84099323c2ec4be98d935f63c033ac4151ee83836ca1050ede3b3aadf155/joblib-1.6.0-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": null,
+      "import_name": "nltk",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "nltk-3.10.3-py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "nltk/",
+        "root_members": [],
+        "sha256": "ff9598a8e20518ee0d557745890cc4435b9578489e2dcbc69c4f81fa060caf7c",
+        "size": 1798643,
+        "url": "https://files.pythonhosted.org/packages/b6/6d/ebd2af4640b12168fdf0cb74b6118df2f32a2f62ec7e0c06fbfd80706639/nltk-3.10.3-py3-none-any.whl"
+      }
+    },
+    {
+      "abi": [
+        3,
+        12
+      ],
+      "import_name": "regex",
+      "per_platform": {
+        "darwin/arm64": {
+          "exclude": [],
+          "filename": "regex-2026.9.10-cp312-cp312-macosx_10_13_universal2.whl",
+          "kind": "wheel",
+          "member_prefix": "regex/",
+          "root_members": [],
+          "sha256": "880ac684c27176464c00c3fdc456116364f5ebc70da07aad0c2d4a7ba45e98db",
+          "size": 496609,
+          "url": "https://files.pythonhosted.org/packages/32/c8/bfbe893e90ee0148bd2860dd086f09b5d2080ca2b125f740c2e118c16982/regex-2026.9.10-cp312-cp312-macosx_10_13_universal2.whl"
+        },
+        "darwin/x86_64": {
+          "exclude": [],
+          "filename": "regex-2026.9.10-cp312-cp312-macosx_10_13_universal2.whl",
+          "kind": "wheel",
+          "member_prefix": "regex/",
+          "root_members": [],
+          "sha256": "880ac684c27176464c00c3fdc456116364f5ebc70da07aad0c2d4a7ba45e98db",
+          "size": 496609,
+          "url": "https://files.pythonhosted.org/packages/32/c8/bfbe893e90ee0148bd2860dd086f09b5d2080ca2b125f740c2e118c16982/regex-2026.9.10-cp312-cp312-macosx_10_13_universal2.whl"
+        },
+        "linux/aarch64": {
+          "exclude": [],
+          "filename": "regex-2026.9.10-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl",
+          "kind": "wheel",
+          "member_prefix": "regex/",
+          "root_members": [],
+          "sha256": "4c66d54042a14a503907d81861b8a5235e6d1f03d4fbc1d8767f652eaf957ac1",
+          "size": 800055,
+          "url": "https://files.pythonhosted.org/packages/89/51/3fb5fe0d32f4cf0bc982286722c729a8d6f522d2fa2d5d14a702d9fc87f8/regex-2026.9.10-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl"
+        },
+        "linux/x86_64": {
+          "exclude": [],
+          "filename": "regex-2026.9.10-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+          "kind": "wheel",
+          "member_prefix": "regex/",
+          "root_members": [],
+          "sha256": "2e67f8843f0e4b931f1fa860bf3bbe4134b714c0155cc5c7c0d7ea450230aae0",
+          "size": 804587,
+          "url": "https://files.pythonhosted.org/packages/cb/f5/dcdf5e0d898024005cfcce631e3e934d111dfbe177ca0b7f253ae8a735a2/regex-2026.9.10-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl"
+        },
+        "win32/AMD64": {
+          "exclude": [],
+          "filename": "regex-2026.9.10-cp312-cp312-win_amd64.whl",
+          "kind": "wheel",
+          "member_prefix": "regex/",
+          "root_members": [],
+          "sha256": "4db7d00c4afbfbb55b8e17b1e371da11418ea9389b030acec63c1fa4c7ad4b86",
+          "size": 277933,
+          "url": "https://files.pythonhosted.org/packages/ad/d4/4dcd0a05d3e97ca829165df1c39717f899d1d484dac8a6032439f2cb8d6d/regex-2026.9.10-cp312-cp312-win_amd64.whl"
+        }
+      },
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": null
+    },
+    {
+      "abi": null,
+      "import_name": "zeyrek",
+      "per_platform": null,
+      "required": true,
+      "sentinels": [
+        "__init__.py"
+      ],
+      "universal": {
+        "exclude": [],
+        "filename": "zeyrek-0.1.3-py2.py3-none-any.whl",
+        "kind": "wheel",
+        "member_prefix": "zeyrek/",
+        "root_members": [],
+        "sha256": "23649bb49322a52d1e94959029b047fa4037bc540762819feb1096aa976b25b5",
+        "size": 930996,
+        "url": "https://files.pythonhosted.org/packages/7f/5b/76970fab035d2e2649ba06af037c394b9690d0e07a8faf53817ccccb3951/zeyrek-0.1.3-py2.py3-none-any.whl"
+      }
+    }
+  ],
+  "requires": []
+}

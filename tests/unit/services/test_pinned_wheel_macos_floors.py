@@ -35,7 +35,7 @@ from anki_miner.services.pack_installer import artifact_for
 #: wheel above this is a feature the app offers and cannot deliver.
 _APP_MACOS_FLOOR = (11, 0)
 
-_PACKS = {"asr": ASR_PACK, "zh": ZH_PACK, "ko": KO_PACK, "_spacy": load_pack("_spacy")}
+_PACKS = {"asr": ASR_PACK, "zh": ZH_PACK, "ko": KO_PACK, "_spacy": load_pack("_spacy"), "tr": load_pack("tr")}
 
 
 def _mac_specs(pack) -> list[tuple[str, str, ArtifactSpec]]:

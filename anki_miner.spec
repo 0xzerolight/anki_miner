@@ -717,6 +717,13 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "pt_core_news_sm",
         "ro_core_news_sm",
         "sv_core_news_sm",
+        # The Turkish engine (languages/tr/pack.py, generated) is a language pack, never
+        # bundle content: zeyrek and the nltk/regex/defusedxml it imports. NOT colorama
+        # (the spaCy block's reason) and not numpy, click or tqdm (bundle pins).
+        "defusedxml",
+        "nltk",
+        "regex",
+        "zeyrek",
         # yt-dlp is a SUBPROCESS, never an import: every call site spawns the
         # executable, so the Python package was collected wholesale for no runtime
         # benefit (~16 MB, 13 MB of it extractors) and is dropped here. The frozen
