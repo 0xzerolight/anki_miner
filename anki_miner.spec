@@ -435,6 +435,15 @@ if os.path.isdir(sl_core_news_sm_license_dir):
     sl_core_news_sm_license_datas.append(
         (sl_core_news_sm_license_dir, os.path.join("licenses", "sl_core_news_sm"))
     )
+# viet_text_tools (MIT) notice for the tone-placement fold ported into
+# anki_miner/languages/vi/tones.py: shipped whenever the license dir exists. Lands at
+# sys._MEIPASS/licenses/viet_text_tools/. The ported code is bundled, so the notice must be.
+viet_text_tools_license_dir = os.path.join(project_root, "licenses", "viet_text_tools")
+viet_text_tools_license_datas = []
+if os.path.isdir(viet_text_tools_license_dir):
+    viet_text_tools_license_datas.append(
+        (viet_text_tools_license_dir, os.path.join("licenses", "viet_text_tools"))
+    )
 
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
@@ -627,7 +636,8 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + pymorphy3_dicts_uk_license_datas
     + camel_tools_license_datas
     + calima_msa_r13_license_datas
-    + sl_core_news_sm_license_datas,
+    + sl_core_news_sm_license_datas
+    + viet_text_tools_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",

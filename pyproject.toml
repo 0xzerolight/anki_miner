@@ -48,6 +48,9 @@ license-files = [
     "licenses/zeyrek/README.md",
     "licenses/camel-tools/LICENSE",
     "licenses/camel-tools/README.md",
+    # viet_text_tools (MIT) travels with the tone fold ported into languages/vi/tones.py.
+    "licenses/viet_text_tools/LICENSE",
+    "licenses/viet_text_tools/README.md",
 ]
 authors = [
     {name = "Anki Miner Contributors"}

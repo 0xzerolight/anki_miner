@@ -79,6 +79,8 @@ REQUIRED_WHEEL_LICENSES = [
     "licenses/zeyrek/LICENSE",
     "licenses/camel-tools/LICENSE",
     "licenses/camel-tools/README.md",
+    "licenses/viet_text_tools/LICENSE",
+    "licenses/viet_text_tools/README.md",
 ]
 
 EXCLUDE_DIRS = {"__pycache__"}
