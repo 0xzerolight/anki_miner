@@ -158,6 +158,34 @@ class TestToScript:
     def test_traditional_keeps_a_traditional_word_as_written(self) -> None:
         assert variants.to_script("頭髮", "traditional") == "頭髮"
 
+    @pytest.mark.parametrize(
+        ("simplified", "traditional"),
+        [
+            ("显著", "顯著"),
+            ("著称", "著稱"),
+            ("专著", "專著"),
+            ("执著", "執著"),
+            ("论著", "論著"),
+            ("土著", "土著"),
+            ("原著", "原著"),
+        ],
+    )
+    def test_traditional_converts_a_word_holding_a_taiwan_variant_character(
+        self, simplified: str, traditional: str
+    ) -> None:
+        """著 and 麼 survive tw2s, so the "already traditional?" question needs t2s."""
+        assert variants.to_script(simplified, "traditional") == traditional
+
+    @pytest.mark.parametrize("word", ["麵條", "這裡", "乾淨", "看著", "頭髮"])
+    def test_traditional_still_keeps_these_traditional_words(self, word: str) -> None:
+        assert variants.to_script(word, "traditional") == word
+
+    def test_traditional_converts_the_yao_sense_of_me_too(self) -> None:
+        # Accepted cost of the t2s gate: 么 is 麼 in its common sense and 幺 in
+        # the rare yāo one, and nothing in a spelling-level rule tells them
+        # apart. 什么/怎么/那么/为什么 are unaffected either way.
+        assert variants.to_script("老么", "traditional") == "老麼"
+
     def test_traditional_front_shares_the_source_key(self) -> None:
         for word in ("头发", "银行", "面条", "干部"):
             assert variants.script_key(variants.to_script(word, "traditional")) == variants.script_key(word)

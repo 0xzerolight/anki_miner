@@ -158,10 +158,16 @@ def to_script(text: str, script_variant: str) -> str:
     than becoming a different word's front. ``"traditional"`` keeps text that is
     already traditional and converts the rest to Taiwan spelling. Any other
     value leaves the text as written.
+
+    "Already traditional?" is asked with t2s, not :func:`to_simplified`: tw2s
+    also folds the Taiwan variants 著 -> 着 and 麼 -> 么, so every simplified
+    word spelled with one of those (显著, 著称, 专著, 执著) looked traditional
+    and was left unconverted. The cost is 么 in its rare yāo sense (老么),
+    which becomes 麼; no spelling-level rule separates the two senses.
     """
     normalized = normalize_zh(text)
     if script_variant == "simplified":
         return script_key(normalized)
-    if script_variant == "traditional" and to_simplified(normalized) == normalized:
+    if script_variant == "traditional" and _convert_with("t2s", normalized) == normalized:
         return to_traditional(normalized)
     return normalized
