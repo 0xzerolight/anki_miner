@@ -62,18 +62,9 @@ from anki_miner.gui.workers.resource_download_worker import (
     ResourceProgress,
     ResourcePromotionRequest,
 )
+from anki_miner.languages.registry import config_language
 from anki_miner.services._sqlite_index import language_kwarg
-from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET
 from anki_miner.utils.i18n import tr_format
-
-#: Language every spec this session can download is actually indexed for.
-#: ``RECOMMENDED_DEFAULT_SET`` is the Japanese catalog and is the only catalog
-#: there is, so the stamp is the catalog's language, never the session's:
-#: stamping a non-ja session's code onto JMdict would both mislabel it and hide
-#: it from the ja chain filter. Per-profile catalog routing
-#: (``profile.catalog``) lands with the setup-wizard task (2B.8) — that is the
-#: change that makes this a variable.
-_CATALOG_LANGUAGE = "ja"
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -392,6 +383,11 @@ class ResourceDownloadSession(QObject):
     hidden, and — from the setup wizard — destroyed, while the run continues.
     Worker lifetime is handed to whoever can join it at shutdown via
     ``adopt_worker``; this object only observes and renders.
+
+    ``specs`` has no default. Every index a run writes is stamped with the
+    session's own mining language, so the set has to come from that language's
+    profile catalog — a default would hand a Chinese session the Japanese
+    catalog and stamp CC-CEDICT with a language its chain filter then drops.
     """
 
     #: Emits the ResourceDownloadOutcome, or None when the worker produced no
@@ -416,7 +412,7 @@ class ResourceDownloadSession(QObject):
         blocked: BlockedReporter | None = None,
         task_registry: TaskRegistry | None = None,
         adopt_worker: Callable[[ResourceDownloadWorker], None] | None = None,
-        specs: Sequence[ResourceSpec] = RECOMMENDED_DEFAULT_SET,
+        specs: Sequence[ResourceSpec],
         clock: Callable[[], float] = monotonic,
     ) -> None:
         super().__init__()
@@ -464,6 +460,9 @@ class ResourceDownloadSession(QObject):
 
     def start(self) -> bool:
         """Begin the run and return immediately. False means it never started."""
+        if not self._specs:
+            return False
+
         if self._registry is not None:
             snapshot = self._registry.snapshot(TASK_ID)
             if snapshot is not None and snapshot.is_running:
@@ -513,7 +512,7 @@ class ResourceDownloadSession(QObject):
                 freqs_root=self._config.freqs_root,
                 pitch_root=self._config.pitch_root,
                 download_dir=self._download_dir,
-                **language_kwarg(_CATALOG_LANGUAGE),
+                **language_kwarg(config_language(self._config)),
             )
             self._worker = worker
             worker.item_progress.connect(self._on_item_progress)
@@ -820,7 +819,7 @@ def start_resource_download(
     blocked: BlockedReporter | None = None,
     task_registry: TaskRegistry | None = None,
     adopt_worker: Callable[[ResourceDownloadWorker], None] | None = None,
-    specs: Sequence[ResourceSpec] = RECOMMENDED_DEFAULT_SET,
+    specs: Sequence[ResourceSpec],
 ) -> ResourceDownloadSession | None:
     """Start a background recommended-resource run; None means it never started.
 
@@ -836,9 +835,9 @@ def start_resource_download(
     The returned session must be retained by the caller: it is not Qt-parented,
     because the widget that started it may be gone long before the run ends.
 
-    ``specs`` narrows the run to a subset of the catalog. It defaults to the
-    whole set, so a caller that offers no choice — the Tools menu — is
-    unchanged.
+    ``specs`` is exactly what this run downloads: the mining language's own
+    catalog for a caller that offers no choice (the Tools menu), or the subset
+    a page's picker returned. An empty set is never a run.
     """
     session = ResourceDownloadSession(
         parent,

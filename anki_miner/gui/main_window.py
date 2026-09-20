@@ -1295,6 +1295,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         dictionary mutation token stays held through native worker finish so the
         root cannot move under the captured import paths. The same-slot startup
         migration is stopped first.
+
+        The specs come from the mining language's own profile catalog, which is
+        the language the run stamps every index it writes with.
         """
         from anki_miner.gui.widgets.dialogs.resource_download_dialog import start_resource_download
 
@@ -1310,6 +1313,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             blocked=self._show_resource_download_blocked,
             task_registry=self.task_registry,
             adopt_worker=self.background_tasks.adopt_resource_download_worker,
+            specs=get_profile(config_language(self.config)).catalog,
         )
         if session is not None:
             # Retained here, not Qt-parented: the session outlives its window.
