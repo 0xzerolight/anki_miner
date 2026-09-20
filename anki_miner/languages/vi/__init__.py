@@ -14,12 +14,13 @@ from anki_miner.languages.vi.keys import VI_KEYS, vi_fold_term
 from anki_miner.languages.vi.morphology import VietnameseLookup
 from anki_miner.languages.vi.parser import create_parser
 from anki_miner.languages.vi.pos import VI_ALLOWED_POS, VI_EXCLUDED_SUBTYPES, VI_POS_LABELS
+from anki_miner.languages.vi.render import HANVIET_FIELD, VI_RENDER_HOOKS
 from anki_miner.languages.vi.script import VI_SENTENCE_RULES, VI_SUBTITLE_REGEX, VietnameseScript, vi_normalize
 
 __all__ = ["build_profile"]
 
 VI_SMOKE_SENTENCE = "Hôm nay trời đẹp quá."
-VI_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = ()
+VI_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (HANVIET_FIELD,)
 VI_CARD_FIELDS = spaced_card_fields(VI_EXTRA_CARD_FIELDS)
 
 VI_AUDIO = AudioDefaults(
@@ -74,9 +75,9 @@ def build_profile() -> LanguageProfile:
             allowed_pos=VI_ALLOWED_POS, excluded_subtypes=VI_EXCLUDED_SUBTYPES, labels=VI_POS_LABELS
         ),
         catalog=VI_CATALOG,
-        capabilities=frozenset(),
+        capabilities=frozenset({"hanviet"}),
         card_field_defaults=VI_CARD_FIELDS,
-        render_hooks=(),
+        render_hooks=VI_RENDER_HOOKS,
         content_style=SPACED_CONTENT_STYLE,
         unavailable_reason=vi_missing_reason,
         extra_card_fields=VI_EXTRA_CARD_FIELDS,

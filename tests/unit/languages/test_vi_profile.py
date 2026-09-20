@@ -48,6 +48,7 @@ def test_the_profile_wiring():
     assert profile.unavailable_reason is not None and profile.unavailable_reason() is None
     assert profile.smoke_sentence == "Hôm nay trời đẹp quá."
     assert "wiktionary_audio" not in profile.capabilities and "vi_ipa" not in profile.capabilities
+    assert profile.capabilities == frozenset({"hanviet"})
 
 
 def test_one_key_for_both_tone_styles_and_every_case():
