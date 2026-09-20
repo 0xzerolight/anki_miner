@@ -44,6 +44,21 @@ def test_zh_profile_identity_and_capabilities():
     assert "。" in profile.sentence_rules.terminators
 
 
+def test_curly_quotes_close_with_their_sentence():
+    from anki_miner.services.cue_merge import ends_sentence
+    from anki_miner.services.reading.sentence_splitter import split_sentences
+
+    rules = get_profile("zh").sentence_rules
+    assert split_sentences("“我不去。”他说。“你去吧。”", rules=rules) == ["“我不去。”他说。", "“你去吧。”"]
+    # The mainland pair splits exactly where the corner brackets always have.
+    to_corner = str.maketrans("“”‘’", "「」『』")
+    to_curly = str.maketrans("「」『』", "“”‘’")
+    for text in ("李明说：“我明天要去北京。”然后他就走了。", "她说‘好。’他点头。"):
+        as_corner = split_sentences(text.translate(to_corner), rules=rules)
+        assert split_sentences(text, rules=rules) == [s.translate(to_curly) for s in as_corner]
+    assert ends_sentence("他说：“我不去。”", rules)
+
+
 def test_zh_audio_defaults_are_real_audio_source_entries():
     audio = get_profile("zh").audio
     assert isinstance(audio, AudioDefaults)

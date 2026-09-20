@@ -108,8 +108,10 @@ def build_profile() -> LanguageProfile:
         sentence_rules=SentenceRules(
             terminators=frozenset("。｡！？!?‼⁉⁇⁈"),
             ellipses=frozenset("…‥"),
-            openers=frozenset("「｢『（〔［｛〈《【([{｟〝"),
-            closers=frozenset("」｣』）〕］｝〉》】)]}｠〟"),
+            # Curly quotes are the mainland quotation pair; corner brackets the
+            # Taiwan/Hong Kong one. Both have to close with their sentence.
+            openers=frozenset("「｢『（〔［｛〈《【([{｟〝“‘"),
+            closers=frozenset("」｣』）〕］｝〉》】)]}｠〟”’"),
             space_aware=False,
         ),
         normalize=normalize_zh,
