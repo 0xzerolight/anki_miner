@@ -130,7 +130,7 @@ def test_next_is_what_commits_the_pick(qtbot, wizard_factory, test_config):
     assert wiz.currentPage() is wiz.ankiconnect_page
     assert config_language(wiz.working_config()) == "zh"
     # The page entered by that Next owns a worker thread; let it land.
-    qtbot.waitUntil(lambda: bool(wiz.ankiconnect_page.result_label.text()), timeout=5000)
+    qtbot.waitUntil(lambda: wiz.ankiconnect_page.result_label.text() == "AnkiConnect is not reachable", timeout=5000)
 
 
 def test_the_resources_page_offers_the_chosen_language_catalogue(qtbot, wizard_factory, test_config):
@@ -233,6 +233,80 @@ def test_an_unconfirmed_pick_is_not_staged_on_close(wizard_factory, test_config)
     wiz._stage_current_edits()
 
     assert wiz.working_config() == test_config
+
+
+@pytest.mark.parametrize("walk_away", ["skip", "reject"])
+def test_a_committed_pick_does_not_survive_a_walk_away(wizard_factory, test_config, walk_away):
+    """Next commits the switch for the steps after it; only Finish keeps it."""
+    from PyQt6.QtWidgets import QWizard  # noqa: PLC0415
+
+    wiz = wizard_factory(test_config)
+    page = wiz.language_page
+    page.initializePage()
+    _pick(page, "zh")
+    page.validatePage()
+    assert config_language(wiz.working_config()) == "zh"
+
+    if walk_away == "skip":
+        wiz.customButtonClicked.emit(QWizard.WizardButton.CustomButton1.value)
+    else:
+        wiz.reject()
+
+    assert wiz.working_config() == test_config
+
+
+def test_finishing_is_what_keeps_the_pick(wizard_factory, test_config):
+    wiz = wizard_factory(test_config)
+    page = wiz.language_page
+    page.initializePage()
+    _pick(page, "zh")
+    page.validatePage()
+
+    wiz.accept()
+
+    assert config_language(wiz.working_config()) == "zh"
+
+
+def test_a_walk_away_reverts_the_languages_own_fields_and_nothing_else(wizard_factory, test_config):
+    """The deck belongs to the language being taken back; the URL belongs to none."""
+    wiz = wizard_factory(test_config)
+    page = wiz.language_page
+    page.initializePage()
+    _pick(page, "zh")
+    page.validatePage()
+    wiz.ankiconnect_page.url_input.setText("http://127.0.0.1:9999")
+    wiz.deck_page.deck_combo.setCurrentText("Chinese::Mining")
+
+    wiz.reject()
+
+    config = wiz.working_config()
+    assert config.ankiconnect_url == "http://127.0.0.1:9999"
+    assert config_language(config) == "ja"
+    assert config.anki_deck_name == test_config.anki_deck_name
+
+
+def test_a_cancelled_run_returns_the_language_it_was_given(qtbot, monkeypatch, test_config):
+    """What the caller persists is the returned config, on every close path."""
+    from PyQt6.QtWidgets import QDialog, QWizard  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import run_setup_wizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import setup_wizard as sw_mod  # noqa: PLC0415
+
+    monkeypatch.setattr(sw_mod.SetupWizard, "validation_service", lambda self: _FakeValidation())
+
+    def fake_exec(self):
+        qtbot.addWidget(self)
+        self.language_page.initializePage()
+        _pick(self.language_page, "zh")
+        self.language_page.validatePage()
+        self.customButtonClicked.emit(QWizard.WizardButton.CustomButton1.value)
+        return QDialog.DialogCode.Rejected.value
+
+    monkeypatch.setattr(sw_mod.SetupWizard, "exec", fake_exec)
+
+    outcome = run_setup_wizard(None, test_config)
+
+    assert outcome.config == test_config
 
 
 def test_a_language_this_build_cannot_mine_is_not_offered(monkeypatch, wizard_factory, test_config):

@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import replace
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, QUrl
 from PyQt6.QtGui import QDesktopServices
@@ -43,7 +43,7 @@ from anki_miner.gui.workers.fetch_workers import (
     FetchNotetypesWorker,
 )
 from anki_miner.languages.registry import config_language
-from anki_miner.languages.switching import switch_language
+from anki_miner.languages.switching import LANGUAGE_SCOPED_FIELDS, switch_language
 from anki_miner.services.anki_note_builder import configured_target_field_names
 from anki_miner.services.note_presets import NotePreset, preset_for_field_names
 from anki_miner.utils.i18n import tr_format
@@ -231,6 +231,10 @@ class MiningLanguagePage(QWizardPage):
     engine this build cannot supply. Installing one stays in Settings -> Mining
     Language: a download that size does not belong mid-setup, and a second
     downloader here would be a second thing to keep in step with the first.
+
+    A pick reaches the working config on Next, because the deck, note type and
+    resource steps read it from there; it survives only an accepted Finish.
+    See :meth:`revert_language_change`.
     """
 
     def __init__(self, wizard: SetupWizard) -> None:
@@ -247,6 +251,14 @@ class MiningLanguagePage(QWizardPage):
         # outgoing snapshot under it, so that is the key a single switch from
         # here would leave behind. See _single_switch.
         self._kept_stash_codes = frozenset(config.language_stash) | {config.language}
+        # Exactly the fields switch_language moves, as the wizard was opened
+        # on: what revert_language_change puts back. Taken at construction,
+        # which is before any page can have touched them.
+        self._opening_language_state: dict[str, Any] = {
+            "language": config.language,
+            "language_stash": config.language_stash,
+            **{name: getattr(config, name) for name in LANGUAGE_SCOPED_FIELDS},
+        }
 
         self.setTitle(self.tr("Choose a Mining Language"))
         self.setSubTitle(self.tr("The language you are learning. The interface language is separate."))
@@ -327,6 +339,25 @@ class MiningLanguagePage(QWizardPage):
     def validatePage(self) -> bool:
         self._write_language_to_config()
         return True
+
+    def revert_language_change(self) -> None:
+        """Put the language back as the wizard was opened on it.
+
+        The working config is what the caller persists, on every close path
+        and not only on Finish, so a pick committed by one Next would outlive
+        a Skip Setup or an Escape -- and a walk-away must not leave the user
+        mining a language they never confirmed. Called from the wizard's close
+        funnel for every result but an accepted Finish.
+
+        Only the language's own fields go back. The AnkiConnect URL and the
+        theme belong to no language and have always survived a walk-away; the
+        deck and note type do belong to one, so a deck named for the language
+        being reverted goes with it.
+        """
+        config = self._wizard.working_config()
+        if config.language == self._opening_language_state["language"]:
+            return
+        self._wizard.update_working_config(replace(config, **self._opening_language_state))
 
 
 class AnkiConnectPage(QWizardPage):

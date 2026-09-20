@@ -51,6 +51,10 @@ class SetupWizardOutcome:
     accepted Finish sets it: Skip, Escape and the window close all leave setup
     in whatever state the user walked away from, and taking them to a mining
     screen would be answering a question they did not ask.
+
+    ``config`` carries the edits of every page the user reached, whatever the
+    close path was. The one exception is the mining language, which only an
+    accepted Finish keeps (:meth:`MiningLanguagePage.revert_language_change`).
     """
 
     config: AnkiMinerConfig
@@ -315,11 +319,9 @@ class SetupWizard(QWizard):
     def _stage_current_edits(self) -> None:
         """Keep the editor state of every page a walk-away should not lose.
 
-        The mining language is deliberately absent. These run from ``done()``,
-        so they also run on Skip Setup and on Escape, and a language switch
-        rewrites every language-scoped field and parks the outgoing ones — far
-        more than remembering a deck name. It is committed only by leaving the
-        language page forward.
+        The mining language is deliberately absent: it is not editor state but
+        a committed switch, made by leaving the language page forward and taken
+        back again by ``done()`` on every path but an accepted Finish.
         """
         self.theme_page.stage_current_edits()
         self.ankiconnect_page.stage_current_edits()
@@ -346,6 +348,12 @@ class SetupWizard(QWizard):
         if self._closing:
             return
         self._stage_current_edits()
+        # After staging, which writes language-scoped fields (the deck, the
+        # note type) the revert has to overwrite. Everything the wizard is
+        # walked away from is kept; only a mining language nobody confirmed
+        # with Finish is not.
+        if result != QDialog.DialogCode.Accepted.value:
+            self.language_page.revert_language_change()
         self.notetype_page.prepare_for_close()
         self._closing = True
         self._pending_done_result = result

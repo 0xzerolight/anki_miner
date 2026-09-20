@@ -1869,16 +1869,23 @@ def test_return_in_a_text_field_does_not_advance_the_wizard(qtbot, wiz_config, m
     wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
     wiz.show()
     qtbot.waitExposed(wiz)
-    # The theme page is first and never blocks Next; move to the page whose
-    # field is under test so it is actually the visible/focusable one.
-    wiz.next()
+    # Advance to the page whose field is under test, however many steps come
+    # before it, so the field is actually the visible/focusable one: a Return
+    # landing on an off-page field proves nothing.
+    while wiz.currentPage() is not wiz.ankiconnect_page:
+        before = wiz.currentId()
+        wiz.next()
+        assert wiz.currentId() != before, "the wizard stopped short of the AnkiConnect page"
     page_id = wiz.currentId()
     field = wiz.ankiconnect_page.url_input
+    assert field.isVisible() is True
     field.setFocus()
 
     qtbot.keyClick(field, Qt.Key.Key_Return)
 
     assert wiz.currentId() == page_id
+    # That page owns an off-thread probe; let it land before teardown.
+    qtbot.waitUntil(lambda: not wiz.ankiconnect_page.result_label.text().startswith("Checking"), timeout=5000)
 
 
 def test_ctrl_return_resolves_to_the_live_navigation_button(qtbot, wiz_config, monkeypatch):
