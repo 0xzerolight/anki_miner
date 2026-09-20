@@ -11,7 +11,9 @@ MAINTENANCE CONVENTION: when you add a user-facing feature or setting, add a
 A test (``tests/unit/test_capabilities.py``) checks that every ``target`` resolves
 to a real tab/sub-tab, but nothing forces coverage of new settings -- that is on
 you. Menu/dialog-only features omit ``target`` (no Open button); their
-description must say where they live.
+description must say where they live. An entry for a setting a language gate
+hides carries that same capability in ``requires``, so the guide never sends a
+user to a row their mining language does not show.
 
 User-visible strings (``title``, ``description``, ``category``) are wrapped in
 ``QT_TRANSLATE_NOOP`` so ``pylupdate`` extracts them under the ``Capabilities``
@@ -98,6 +100,12 @@ class Capability:
     # offers no "Open" button, so its description must say where it lives.
     target: CapabilityTarget | None = None
     keywords: tuple[str, ...] = field(default_factory=tuple)
+    # A profile capability name (languages/profile.py) the active mining
+    # language must declare for this entry to be listed -- the same flag that
+    # gates the setting the entry describes, never a new one. "" lists the
+    # entry for every language, which is what an entry describing a
+    # language-independent feature wants.
+    requires: str = ""
 
 
 CAPABILITIES: tuple[Capability, ...] = (
@@ -593,6 +601,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
         keywords=("kana", "hiragana", "katakana", "kanji only", "script filter", "loanwords"),
+        requires="kana_filters",
     ),
     Capability(
         id="word-lists",
@@ -645,6 +654,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
         keywords=("names", "surname", "given name", "place names", "proper nouns", "jmnedict", "wordsets"),
+        requires="name_wordsets",
     ),
     Capability(
         id="reading-min-occurrence",
@@ -667,6 +677,29 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
         keywords=("kana variant", "kana spelling", "alternate spelling", "hiragana form", "same word"),
+        requires="kana_filters",
+    ),
+    Capability(
+        id="script-variant",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Simplified or traditional characters"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Character Set picks the spelling the card front and the dictionary lookup use: Simplified, "
+            "Traditional, or As written to keep each word's source spelling.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=(
+            "character set",
+            "simplified",
+            "traditional",
+            "script variant",
+            "hanzi",
+            "as written",
+            "简体",
+            "繁體",
+        ),
+        requires="script_variants",
     ),
     # --- Dictionaries, frequency & pitch -----------------------------------
     Capability(
@@ -718,6 +751,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_SOURCES,
         target=CapabilityTarget("settings", "pitch"),
         keywords=("pitch", "accent", "intonation", "heiban", "nakadaka", "downstep"),
+        requires="pitch",
     ),
     Capability(
         id="card-backfill",
@@ -916,6 +950,33 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),
         keywords=("furigana", "reading", "kana reading", "ruby"),
+        requires="furigana",
+    ),
+    Capability(
+        id="pinyin",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Pinyin readings & tone colours"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Put the word's pinyin on your cards, each syllable in its tone's colour -- "
+            "the colouring is Colour the reading by tone, under Settings -> Filtering.",
+        ),
+        category=_CAT_CARDS,
+        target=CapabilityTarget("settings", "anki"),
+        keywords=("pinyin", "tone", "tone colour", "tone color", "reading", "romanisation", "romanization"),
+        requires="pinyin",
+    ),
+    Capability(
+        id="measure-word-traditional",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Measure word & traditional spelling fields"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Map the Measure Word Field for the word's classifier and the Traditional Field for its "
+            "traditional spelling, when that differs from the front.",
+        ),
+        category=_CAT_CARDS,
+        target=CapabilityTarget("settings", "anki"),
+        keywords=("measure word", "classifier", "traditional", "card fields", "量词", "量詞"),
+        requires="measure_word",
     ),
     Capability(
         id="tags",
@@ -1197,18 +1258,24 @@ CAPABILITIES: tuple[Capability, ...] = (
 )
 
 
-def search(query: str) -> list[Capability]:
+def search(query: str, capabilities: frozenset[str] | None = None) -> list[Capability]:
     """Return capabilities matching ``query`` (case-insensitive substring).
 
     Matches against title, description, and every keyword. An empty/blank query
     returns the full catalogue in registry order. Results preserve registry
     order so the category grouping in the dialog stays stable.
+
+    ``capabilities`` is the active mining language's profile capability set:
+    entries whose ``requires`` it lacks are left out, so a Chinese session is
+    not offered furigana and a Japanese one is not offered pinyin. ``None``
+    gates nothing -- a caller with no language in scope gets every entry.
     """
+    pool = [cap for cap in CAPABILITIES if capabilities is None or not cap.requires or cap.requires in capabilities]
     q = query.strip().lower()
     if not q:
-        return list(CAPABILITIES)
+        return pool
     out: list[Capability] = []
-    for cap in CAPABILITIES:
+    for cap in pool:
         haystack = (
             cap.title,
             cap.description,

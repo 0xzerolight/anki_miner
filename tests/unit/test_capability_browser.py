@@ -13,6 +13,7 @@ from anki_miner.gui.widgets.dialogs.capability_browser import (
     CapabilityBrowser,
     run_capability_browser,
 )
+from anki_miner.languages.registry import get_profile
 
 
 @pytest.fixture
@@ -109,6 +110,40 @@ def test_clicking_open_button_selects_that_row(dialog, qtbot):
     with qtbot.waitSignal(dialog.accepted, timeout=1000):
         button.click()
     assert dialog.selected_target == visible[0].target
+
+
+def test_capability_set_gates_the_listed_rows(qtbot):
+    dlg = CapabilityBrowser(capabilities=get_profile("zh").capabilities)
+    qtbot.addWidget(dlg)
+    shown = {cap.id for cap in dlg._current}
+
+    assert "pinyin" in shown
+    assert "furigana" not in shown
+
+
+def test_capability_set_survives_a_search(qtbot):
+    dlg = CapabilityBrowser(capabilities=get_profile("zh").capabilities)
+    qtbot.addWidget(dlg)
+
+    dlg.search_box.setText("reading")
+
+    assert dlg._current
+    assert all(cap.id != "furigana" for cap in dlg._current)
+
+
+def test_runner_passes_the_capability_set_to_the_dialog(qtbot, monkeypatch):
+    main_window = Mock()
+    seen: list[frozenset[str] | None] = []
+
+    def fake_exec(self):
+        seen.append(self._capabilities)
+        self.selected_target = None
+        return 0
+
+    monkeypatch.setattr(CapabilityBrowser, "exec", fake_exec)
+    run_capability_browser(None, main_window, get_profile("zh").capabilities)
+
+    assert seen == [get_profile("zh").capabilities]
 
 
 def test_runner_navigates_on_selection(qtbot, monkeypatch):

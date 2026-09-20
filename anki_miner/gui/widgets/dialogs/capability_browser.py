@@ -52,12 +52,16 @@ def _tr(text: str) -> str:
 class CapabilityBrowser(QDialog):
     """Search box over a scrollable, category-grouped feature list."""
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget | None = None, capabilities: frozenset[str] | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle(_tr("Anki Miner Usage Guide"))
         self.setObjectName("capability-browser")
         self.resize(560, 600)
 
+        # The active mining language's profile capabilities, passed to every
+        # search so a gated entry never reaches a language that cannot use it.
+        # None (no language in scope) lists the whole catalogue.
+        self._capabilities = capabilities
         # Set when the user clicks an "Open" button; read by run_capability_browser.
         self.selected_target: CapabilityTarget | None = None
         # Currently displayed (filtered) capabilities, in registry order.
@@ -92,7 +96,7 @@ class CapabilityBrowser(QDialog):
 
     # ------------------------------------------------------------------ filter
     def _apply_filter(self, text: str) -> None:
-        self._current = search(text)
+        self._current = search(text, self._capabilities)
         self._rebuild_rows()
 
     def _clear_rows(self) -> None:
@@ -157,14 +161,19 @@ class CapabilityBrowser(QDialog):
         self.accept()
 
 
-def run_capability_browser(parent: QWidget | None, main_window: _RevealTarget) -> None:
+def run_capability_browser(
+    parent: QWidget | None,
+    main_window: _RevealTarget,
+    capabilities: frozenset[str] | None = None,
+) -> None:
     """Show the browser modally, then navigate to the chosen feature (if any).
 
     ``parent`` is the Qt parent for centering; ``main_window`` receives the
     navigation via :meth:`reveal_capability`. Navigation happens only after the
-    dialog closes so the tab switch is visible.
+    dialog closes so the tab switch is visible. ``capabilities`` is the active
+    mining language's profile capability set, which gates the listed entries.
     """
-    dialog = CapabilityBrowser(parent)
+    dialog = CapabilityBrowser(parent, capabilities)
     dialog.exec()
     target = dialog.selected_target
     if target is not None:

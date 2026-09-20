@@ -1390,7 +1390,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         """
         from anki_miner.gui.widgets.dialogs.capability_browser import run_capability_browser
 
-        run_capability_browser(self, self)
+        run_capability_browser(self, self, get_profile(config_language(self.config)).capabilities)
 
     def _run_setup_wizard_tool(self) -> None:
         """Tools-menu handler: re-run the guided setup wizard (re-runnable).

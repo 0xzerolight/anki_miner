@@ -153,13 +153,23 @@ def test_tools_menu_no_longer_lists_find_a_feature(main_window):
 
 
 def test_usage_guide_action_opens_browser(main_window, monkeypatch):
-    """Triggering the action runs the capability browser, parented to the window."""
+    """Triggering the action runs the capability browser, parented to the window.
+
+    The active mining language's capabilities ride along, so the guide lists
+    only the features that language can use.
+    """
     from anki_miner.gui.widgets.dialogs import capability_browser
+    from anki_miner.languages.registry import config_language, get_profile
 
     calls: list[tuple] = []
-    monkeypatch.setattr(capability_browser, "run_capability_browser", lambda parent, mw: calls.append((parent, mw)))
+    monkeypatch.setattr(
+        capability_browser,
+        "run_capability_browser",
+        lambda parent, mw, capabilities: calls.append((parent, mw, capabilities)),
+    )
     main_window.usage_guide_action.trigger()
-    assert calls == [(main_window, main_window)]
+    expected = get_profile(config_language(main_window.config)).capabilities
+    assert calls == [(main_window, main_window, expected)]
 
 
 def test_native_menu_bar_gets_one_action_menu(qtbot, patch_heavy_init, test_config, monkeypatch):
