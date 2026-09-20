@@ -26,6 +26,9 @@ head line's opposite-aspect clause (``perfective pročìtati``), qualifiers
 dropped, kept verbatim unless the language passes ``partner_fold``: the D2 mark
 strip would turn ``čitati`` into ``citati``. A head line is never split on a
 newline — the renderer turns one into ``<br>`` and the tag strip glues the lines.
+A Cyrillic dictionary's head line carries a romanisation between the headword and
+its grammar words, exactly where the rules expect the headword part to end;
+``head_fold=drop_romanisation`` removes it before any rule reads the line.
 """
 
 from __future__ import annotations
@@ -99,6 +102,20 @@ def _head_line(block: str) -> str:
 def _without_combining_marks(text: str) -> str:
     stripped = "".join(ch for ch in unicodedata.normalize("NFD", text) if not 0x0300 <= ord(ch) <= 0x036F)
     return unicodedata.normalize("NFC", stripped)
+
+
+#: wty's romanisation of a non-Latin headword, between the headword and its grammar words.
+_ROMANISATION_RE = re.compile(r"\s*•\s*\([^()]*\)")
+
+
+def drop_romanisation(head: str) -> str:
+    """Remove the first bullet-and-brackets romanisation clause from a head line.
+
+    A ``GrammarTagHook(head_fold=...)`` for a Cyrillic wty dictionary, whose head line prints the
+    romanisation exactly where the head-line rules expect the headword part to end. One whose own
+    text holds brackets does not match, and the line stays as it was.
+    """
+    return _ROMANISATION_RE.sub("", head, count=1)
 
 
 def _gender_from_morph(morph: str) -> str | None:
@@ -241,7 +258,9 @@ class GrammarTagHook:
     noun fields. ``partner_fold`` folds the partner a language prints on the
     card (hr strips tone marks); by default it is kept verbatim.
     ``animacy_labels`` (keyed ``pers anim inan``) names a masculine noun's
-    sub-gender; empty keeps the plain gender label.
+    sub-gender; empty keeps the plain gender label. ``head_fold`` rewrites the
+    first head line before any rule reads it (ru: ``drop_romanisation``);
+    ``None`` reads it as written.
     """
 
     def __init__(
@@ -257,6 +276,7 @@ class GrammarTagHook:
         verb_pos: frozenset[str] = frozenset({"VERB"}),
         partner_fold: Callable[[str], str] | None = None,
         animacy_labels: Mapping[str, str] = _EMPTY,
+        head_fold: Callable[[str], str] | None = None,
     ) -> None:
         unknown = [name for name in fields if name not in GRAMMAR_FIELDS]
         if unknown:
@@ -277,9 +297,15 @@ class GrammarTagHook:
         self._verb_pos = verb_pos
         self._partner_fold = partner_fold
         self._animacy_labels = animacy_labels
+        self._head_fold = head_fold
 
     def field_names(self) -> tuple[str, ...]:
         return self._fields
+
+    def _head(self, block: str) -> str:
+        """The first head line, through ``head_fold`` when the language passes one."""
+        head = _head_line(block)
+        return self._head_fold(head) if self._head_fold is not None else head
 
     def _gender(self, word: Any, block: str, head: str) -> str | None:
         chip_genders = {_CHIP_GENDER[name] for name in _CHIP_RE.findall(block)}
@@ -347,7 +373,7 @@ class GrammarTagHook:
 
     def _render_aspect(self, word: Any) -> dict[str, str]:
         block = _first_block(str(getattr(word, "definition_html", "") or ""))
-        head = _head_line(block)
+        head = self._head(block)
         aspect = self._aspect(word, block, head)
         if aspect is None:
             return {}
@@ -365,7 +391,7 @@ class GrammarTagHook:
         if pos not in self._noun_pos:
             return {}
         block = _first_block(str(getattr(word, "definition_html", "") or ""))
-        head = _head_line(block)
+        head = self._head(block)
         out: dict[str, str] = {}
         if "noun_gender" in self._fields or "noun_article" in self._fields:
             gender = self._gender(word, block, head)

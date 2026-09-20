@@ -86,6 +86,7 @@ jobs:
           "pl_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/pl_core_news_sm-3.8.0/pl_core_news_sm-3.8.0-py3-none-any.whl#sha256=9b536db854b0cdb9132a74f68b392b8112ab6030f971bb03282462362a940dbb"
           "pt_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/pt_core_news_sm-3.8.0/pt_core_news_sm-3.8.0-py3-none-any.whl#sha256=c304fa04db3af73cd08a250feacf560506e15a2ec2469bd1b09f06847f6b455c"
           "ro_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/ro_core_news_sm-3.8.0/ro_core_news_sm-3.8.0-py3-none-any.whl#sha256=3cebfba2437131efe95345adcc7ea2131e4463915652df9099c577e618460cd9"
+          "ru_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/ru_core_news_sm-3.8.0/ru_core_news_sm-3.8.0-py3-none-any.whl#sha256=69978d47b43e2c4f329bebdb155e8e9d3861bba1a58ba25551419dae7d7e07fc"
           "sv_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/sv_core_news_sm-3.8.0/sv_core_news_sm-3.8.0-py3-none-any.whl#sha256=be4929fb30523dca0b6672f999cdbf4d64f165419f1eed0014ca3a36599b8b4d"
       # hu_core_news_md is a HuggingFace asset named hu_core_news_md-any-py3-none-any.whl;
       # `any` is no version, so pip refuses it as a URL requirement. Download it, check the

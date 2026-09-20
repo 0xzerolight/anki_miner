@@ -34,6 +34,7 @@ _LANGUAGE_CODES: tuple[str, ...] = (
     "da",
     "tr",
     "id",
+    "ru",
 )
 
 # Deliberate duplicate of anki_miner.languages.SCRIPT_VARIANT_IDS, for the same

@@ -46,7 +46,8 @@ def test_every_model_pack_matches_its_ci_pin():
         pack = load_pack(code)
         if pack is None or pack.requires != ("_spacy",):
             continue
-        (component,) = pack.components
+        # A model pack may carry the model's own runtime companions (ru: pymorphy3); the pin is the model's.
+        (component,) = [comp for comp in pack.components if comp.import_name in SPACY_MODEL_PACKAGES]
         assert component.universal is not None
         assert pins[component.import_name] == (component.universal.url, component.universal.sha256)
         checked += 1

@@ -1,0 +1,8481 @@
+{
+ "_comment": "Real wty-ru-en rows: every row whose folded term is one of the fixture words. A Russian card's provenance carries this dictionary's CC BY-SA 4.0 and the MIT of the ru_core_news_sm model that chose the word.",
+ "source": "wty-ru-en revision 2026.09.19 (huggingface.co/datasets/daxida/wty-release)",
+ "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0. Attribution: https://en.wiktionary.org/wiki/вчера#Russian, https://en.wiktionary.org/wiki/дом#Russian, https://en.wiktionary.org/wiki/замок#Russian, https://en.wiktionary.org/wiki/интересный#Russian, https://en.wiktionary.org/wiki/книга#Russian, https://en.wiktionary.org/wiki/небо#Russian, https://en.wiktionary.org/wiki/нёбо#Russian, https://en.wiktionary.org/wiki/прочитать#Russian, https://en.wiktionary.org/wiki/студент#Russian, https://en.wiktionary.org/wiki/уже#Russian, https://en.wiktionary.org/wiki/читать#Russian, https://en.wiktionary.org/wiki/чёрный#Russian, https://en.wiktionary.org/wiki/ёлка#Russian",
+ "index": {
+  "title": "wty-ru-en",
+  "format": 3,
+  "revision": "2026.09.19",
+  "sequenced": true,
+  "author": "wty contributors",
+  "url": "https://github.com/yomidevs/wiktionary-to-yomitan",
+  "description": "Dictionaries for various language pairs generated from Wiktionary data, via Kaikki and wty.",
+  "attribution": "https://kaikki.org/",
+  "sourceLanguage": "ru",
+  "targetLanguage": "en"
+ },
+ "tag_bank": [
+  [
+   "animate",
+   "animacy",
+   0,
+   "animate",
+   0
+  ],
+  [
+   "inanim",
+   "animacy",
+   0,
+   "inanimate",
+   0
+  ],
+  [
+   "arch",
+   "archaism",
+   4,
+   "archaic",
+   -4
+  ],
+  [
+   "dated",
+   "archaism",
+   4,
+   "dated",
+   -4
+  ],
+  [
+   "obs",
+   "archaism",
+   4,
+   "obsolete",
+   -4
+  ],
+  [
+   "out",
+   "archaism",
+   4,
+   "outdated",
+   -4
+  ],
+  [
+   "rare",
+   "archaism",
+   4,
+   "rare",
+   -4
+  ],
+  [
+   "impf",
+   "aspect",
+   0,
+   "imperfective",
+   0
+  ],
+  [
+   "impf-only",
+   "aspect",
+   0,
+   "imperfective only",
+   0
+  ],
+  [
+   "pf",
+   "aspect",
+   0,
+   "perfective",
+   0
+  ],
+  [
+   "pf-only",
+   "aspect",
+   0,
+   "perfective only",
+   0
+  ],
+  [
+   "acc",
+   "case",
+   0,
+   "with-accusative",
+   0
+  ],
+  [
+   "dat",
+   "case",
+   0,
+   "with-dative",
+   0
+  ],
+  [
+   "decl-1",
+   "declension",
+   0,
+   "declension-1",
+   0
+  ],
+  [
+   "decl-2",
+   "declension",
+   0,
+   "declension-2",
+   0
+  ],
+  [
+   "decl-3",
+   "declension",
+   0,
+   "declension-3",
+   0
+  ],
+  [
+   "decl-4",
+   "declension",
+   0,
+   "declension-4",
+   0
+  ],
+  [
+   "decl-5",
+   "declension",
+   0,
+   "declension-5",
+   0
+  ],
+  [
+   "def",
+   "definiteness",
+   0,
+   "definite",
+   0
+  ],
+  [
+   "indef",
+   "definiteness",
+   0,
+   "indefinite",
+   0
+  ],
+  [
+   "fem",
+   "gender-feminine",
+   -1,
+   "feminine",
+   1
+  ],
+  [
+   "masc",
+   "gender-masculine",
+   -1,
+   "masculine",
+   1
+  ],
+  [
+   "neut",
+   "gender-neuter",
+   -1,
+   "neuter",
+   1
+  ],
+  [
+   "count",
+   "grammar",
+   0,
+   "countable",
+   0
+  ],
+  [
+   "interr",
+   "grammar",
+   0,
+   "interrogative",
+   0
+  ],
+  [
+   "not-comp",
+   "grammar",
+   0,
+   "not comparable",
+   0
+  ],
+  [
+   "reltnl",
+   "grammar",
+   0,
+   "relational",
+   0
+  ],
+  [
+   "reltv",
+   "grammar",
+   0,
+   "relative",
+   0
+  ],
+  [
+   "uncount",
+   "grammar",
+   0,
+   "uncountable",
+   0
+  ],
+  [
+   "XS",
+   "ipa",
+   0,
+   "X-SAMPA",
+   0
+  ],
+  [
+   "abbv",
+   "morphology",
+   0,
+   "abbreviation",
+   0
+  ],
+  [
+   "aug",
+   "morphology",
+   0,
+   "augmentative",
+   0
+  ],
+  [
+   "circumfix",
+   "morphology",
+   0,
+   "circumfix",
+   0
+  ],
+  [
+   "circumpos",
+   "morphology",
+   0,
+   "circumpos",
+   0
+  ],
+  [
+   "contr",
+   "morphology",
+   0,
+   "contraction",
+   0
+  ],
+  [
+   "dim",
+   "morphology",
+   0,
+   "diminutive",
+   0
+  ],
+  [
+   "hypo",
+   "morphology",
+   0,
+   "hypocoristic",
+   0
+  ],
+  [
+   "indecl",
+   "morphology",
+   0,
+   "indeclinable",
+   0
+  ],
+  [
+   "infix",
+   "morphology",
+   0,
+   "infix",
+   0
+  ],
+  [
+   "init",
+   "morphology",
+   0,
+   "initialism",
+   0
+  ],
+  [
+   "interfix",
+   "morphology",
+   0,
+   "interfix",
+   0
+  ],
+  [
+   "irreg",
+   "morphology",
+   0,
+   "irregular",
+   0
+  ],
+  [
+   "neol",
+   "morphology",
+   0,
+   "neologism",
+   0
+  ],
+  [
+   "poss",
+   "morphology",
+   0,
+   "possessive",
+   0
+  ],
+  [
+   "in-pl",
+   "number",
+   0,
+   "in the plural",
+   0
+  ],
+  [
+   "in-sg",
+   "number",
+   0,
+   "in the singular",
+   0
+  ],
+  [
+   "no-pl",
+   "number",
+   0,
+   "no-plural",
+   0
+  ],
+  [
+   "pl",
+   "number",
+   0,
+   "plural",
+   0
+  ],
+  [
+   "pl-only",
+   "number",
+   0,
+   "plural only",
+   0
+  ],
+  [
+   "sg",
+   "number",
+   0,
+   "singular",
+   0
+  ],
+  [
+   "sg-only",
+   "number",
+   0,
+   "singular only",
+   0
+  ],
+  [
+   "card-num",
+   "number-type",
+   0,
+   "cardinal number",
+   0
+  ],
+  [
+   "frac-num",
+   "number-type",
+   0,
+   "fractional number",
+   0
+  ],
+  [
+   "ord-num",
+   "number-type",
+   0,
+   "ordinal number",
+   0
+  ],
+  [
+   "adj",
+   "partOfSpeech",
+   -2,
+   "adjective",
+   2
+  ],
+  [
+   "adj_noun",
+   "partOfSpeech",
+   -2,
+   "adj_noun",
+   2
+  ],
+  [
+   "adn",
+   "partOfSpeech",
+   -2,
+   "adnominal",
+   2
+  ],
+  [
+   "adv",
+   "partOfSpeech",
+   -2,
+   "adverb",
+   2
+  ],
+  [
+   "artic",
+   "partOfSpeech",
+   -2,
+   "article",
+   2
+  ],
+  [
+   "char",
+   "partOfSpeech",
+   -2,
+   "character",
+   2
+  ],
+  [
+   "conj",
+   "partOfSpeech",
+   -2,
+   "conjunction",
+   2
+  ],
+  [
+   "counter",
+   "partOfSpeech",
+   -2,
+   "counter",
+   2
+  ],
+  [
+   "det",
+   "partOfSpeech",
+   -2,
+   "determiner",
+   2
+  ],
+  [
+   "intj",
+   "partOfSpeech",
+   -2,
+   "interjection",
+   2
+  ],
+  [
+   "n",
+   "partOfSpeech",
+   -2,
+   "noun",
+   2
+  ],
+  [
+   "num",
+   "partOfSpeech",
+   -2,
+   "numeral",
+   2
+  ],
+  [
+   "phrase",
+   "partOfSpeech",
+   -2,
+   "phrase",
+   2
+  ],
+  [
+   "pos-r",
+   "partOfSpeech",
+   -2,
+   "pos-root",
+   2
+  ],
+  [
+   "postp",
+   "partOfSpeech",
+   -2,
+   "postposition",
+   2
+  ],
+  [
+   "pref",
+   "partOfSpeech",
+   -2,
+   "prefix",
+   2
+  ],
+  [
+   "prep",
+   "partOfSpeech",
+   -2,
+   "preposition",
+   2
+  ],
+  [
+   "prep-phrase",
+   "partOfSpeech",
+   -2,
+   "prepositional phrase",
+   2
+  ],
+  [
+   "pron",
+   "partOfSpeech",
+   -2,
+   "pronoun",
+   2
+  ],
+  [
+   "prop-n",
+   "partOfSpeech",
+   -2,
+   "proper noun",
+   2
+  ],
+  [
+   "prov",
+   "partOfSpeech",
+   -2,
+   "proverb",
+   2
+  ],
+  [
+   "ptcl",
+   "partOfSpeech",
+   -2,
+   "particle",
+   2
+  ],
+  [
+   "ptcpl",
+   "partOfSpeech",
+   -2,
+   "participle",
+   2
+  ],
+  [
+   "r",
+   "partOfSpeech",
+   -2,
+   "root",
+   2
+  ],
+  [
+   "suf",
+   "partOfSpeech",
+   -2,
+   "suffix",
+   2
+  ],
+  [
+   "v",
+   "partOfSpeech",
+   -2,
+   "verb",
+   2
+  ],
+  [
+   "vdt",
+   "partOfSpeech",
+   -2,
+   "ditransitive verb",
+   2
+  ],
+  [
+   "vi",
+   "partOfSpeech",
+   -2,
+   "intransitive verb",
+   2
+  ],
+  [
+   "vr",
+   "partOfSpeech",
+   -2,
+   "reflexive verb",
+   2
+  ],
+  [
+   "vt",
+   "partOfSpeech",
+   -2,
+   "transitive verb",
+   2
+  ],
+  [
+   "name",
+   "partOfSpeech",
+   -1,
+   "name",
+   1
+  ],
+  [
+   "surn",
+   "partOfSpeech",
+   -1,
+   "surname",
+   1
+  ],
+  [
+   "child",
+   "register",
+   0,
+   "childish",
+   0
+  ],
+  [
+   "col",
+   "register",
+   0,
+   "colloquial",
+   0
+  ],
+  [
+   "crim-sl",
+   "register",
+   0,
+   "criminal slang",
+   0
+  ],
+  [
+   "defer",
+   "register",
+   0,
+   "deferential",
+   0
+  ],
+  [
+   "derog",
+   "register",
+   0,
+   "derogatory",
+   0
+  ],
+  [
+   "ethn-slr",
+   "register",
+   0,
+   "ethnic slur",
+   0
+  ],
+  [
+   "fam",
+   "register",
+   0,
+   "familiar",
+   0
+  ],
+  [
+   "fan-sl",
+   "register",
+   0,
+   "fandom slang",
+   0
+  ],
+  [
+   "formal",
+   "register",
+   0,
+   "formal",
+   0
+  ],
+  [
+   "high-reg",
+   "register",
+   0,
+   "higher register",
+   0
+  ],
+  [
+   "humor",
+   "register",
+   0,
+   "humorous",
+   0
+  ],
+  [
+   "imp",
+   "register",
+   0,
+   "impolite",
+   0
+  ],
+  [
+   "inf",
+   "register",
+   0,
+   "informal",
+   0
+  ],
+  [
+   "jar",
+   "register",
+   0,
+   "jargon",
+   0
+  ],
+  [
+   "lit",
+   "register",
+   0,
+   "literary",
+   0
+  ],
+  [
+   "mil-sl",
+   "register",
+   0,
+   "military slang",
+   0
+  ],
+  [
+   "net-sl",
+   "register",
+   0,
+   "Internet slang",
+   0
+  ],
+  [
+   "offens",
+   "register",
+   0,
+   "offensive",
+   0
+  ],
+  [
+   "pej",
+   "register",
+   0,
+   "pejorative",
+   0
+  ],
+  [
+   "poet",
+   "register",
+   0,
+   "poetic",
+   0
+  ],
+  [
+   "polite",
+   "register",
+   0,
+   "polite",
+   0
+  ],
+  [
+   "rlg-slr",
+   "register",
+   0,
+   "religious slur",
+   0
+  ],
+  [
+   "sl",
+   "register",
+   0,
+   "slang",
+   0
+  ],
+  [
+   "techncl",
+   "register",
+   0,
+   "technical",
+   0
+  ],
+  [
+   "txt-msg",
+   "register",
+   0,
+   "text messaging",
+   0
+  ],
+  [
+   "vern",
+   "register",
+   0,
+   "vernacular",
+   0
+  ],
+  [
+   "vulg",
+   "register",
+   0,
+   "vulgar",
+   0
+  ],
+  [
+   "youth-sl",
+   "register",
+   0,
+   "youth slang",
+   0
+  ],
+  [
+   "BDSM",
+   "topic",
+   0,
+   "BDSM",
+   0
+  ],
+  [
+   "LGBT",
+   "topic",
+   0,
+   "LGBT",
+   0
+  ],
+  [
+   "OOP",
+   "topic",
+   0,
+   "object-oriented programming",
+   0
+  ],
+  [
+   "agr",
+   "topic",
+   0,
+   "agriculture",
+   0
+  ],
+  [
+   "anat",
+   "topic",
+   0,
+   "anatomy",
+   0
+  ],
+  [
+   "anthro",
+   "topic",
+   0,
+   "anthropology",
+   0
+  ],
+  [
+   "archae",
+   "topic",
+   0,
+   "archaeology",
+   0
+  ],
+  [
+   "archit",
+   "topic",
+   0,
+   "architecture",
+   0
+  ],
+  [
+   "arithm",
+   "topic",
+   0,
+   "arithmetic",
+   0
+  ],
+  [
+   "art",
+   "topic",
+   0,
+   "art",
+   0
+  ],
+  [
+   "astrol",
+   "topic",
+   0,
+   "astrology",
+   0
+  ],
+  [
+   "astrophys",
+   "topic",
+   0,
+   "astrophysics",
+   0
+  ],
+  [
+   "auto",
+   "topic",
+   0,
+   "automotive",
+   0
+  ],
+  [
+   "avio",
+   "topic",
+   0,
+   "aviation",
+   0
+  ],
+  [
+   "bank",
+   "topic",
+   0,
+   "banking",
+   0
+  ],
+  [
+   "bible",
+   "topic",
+   0,
+   "biblical",
+   0
+  ],
+  [
+   "biochem",
+   "topic",
+   0,
+   "biochemistry",
+   0
+  ],
+  [
+   "biol",
+   "topic",
+   0,
+   "biology",
+   0
+  ],
+  [
+   "cards",
+   "topic",
+   0,
+   "card games",
+   0
+  ],
+  [
+   "chem",
+   "topic",
+   0,
+   "chemistry",
+   0
+  ],
+  [
+   "chess",
+   "topic",
+   0,
+   "chess",
+   0
+  ],
+  [
+   "comp",
+   "topic",
+   0,
+   "computing",
+   0
+  ],
+  [
+   "comp-sci",
+   "topic",
+   0,
+   "computer science",
+   0
+  ],
+  [
+   "cook",
+   "topic",
+   0,
+   "cooking",
+   0
+  ],
+  [
+   "cyto",
+   "topic",
+   0,
+   "cytology",
+   0
+  ],
+  [
+   "ecc",
+   "topic",
+   0,
+   "ecclesiastical",
+   0
+  ],
+  [
+   "eco",
+   "topic",
+   0,
+   "ecology",
+   0
+  ],
+  [
+   "econ",
+   "topic",
+   0,
+   "economics",
+   0
+  ],
+  [
+   "edu",
+   "topic",
+   0,
+   "education",
+   0
+  ],
+  [
+   "electr",
+   "topic",
+   0,
+   "electronics",
+   0
+  ],
+  [
+   "eng",
+   "topic",
+   0,
+   "engineering",
+   0
+  ],
+  [
+   "entom",
+   "topic",
+   0,
+   "entomology",
+   0
+  ],
+  [
+   "film",
+   "topic",
+   0,
+   "film",
+   0
+  ],
+  [
+   "fin",
+   "topic",
+   0,
+   "finance",
+   0
+  ],
+  [
+   "firearm",
+   "topic",
+   0,
+   "firearms",
+   0
+  ],
+  [
+   "game",
+   "topic",
+   0,
+   "video games",
+   0
+  ],
+  [
+   "geo",
+   "topic",
+   0,
+   "geography",
+   0
+  ],
+  [
+   "geol",
+   "topic",
+   0,
+   "geology",
+   0
+  ],
+  [
+   "geom",
+   "topic",
+   0,
+   "geometry",
+   0
+  ],
+  [
+   "golf",
+   "topic",
+   0,
+   "golf",
+   0
+  ],
+  [
+   "gramm",
+   "topic",
+   0,
+   "grammar",
+   0
+  ],
+  [
+   "greek-myth",
+   "topic",
+   0,
+   "Greek mythology",
+   0
+  ],
+  [
+   "gymn",
+   "topic",
+   0,
+   "gymnastics",
+   0
+  ],
+  [
+   "herald",
+   "topic",
+   0,
+   "heraldry",
+   0
+  ],
+  [
+   "hist",
+   "topic",
+   0,
+   "historical",
+   0
+  ],
+  [
+   "history",
+   "topic",
+   0,
+   "history",
+   0
+  ],
+  [
+   "hunt",
+   "topic",
+   0,
+   "hunting",
+   0
+  ],
+  [
+   "immun",
+   "topic",
+   0,
+   "immunology",
+   0
+  ],
+  [
+   "inorg-chem",
+   "topic",
+   0,
+   "inorganic chemistry",
+   0
+  ],
+  [
+   "law",
+   "topic",
+   0,
+   "law",
+   0
+  ],
+  [
+   "legal",
+   "topic",
+   0,
+   "legal",
+   0
+  ],
+  [
+   "ling",
+   "topic",
+   0,
+   "linguistics",
+   0
+  ],
+  [
+   "log",
+   "topic",
+   0,
+   "logic",
+   0
+  ],
+  [
+   "math",
+   "topic",
+   0,
+   "mathematics",
+   0
+  ],
+  [
+   "mech",
+   "topic",
+   0,
+   "mechanics",
+   0
+  ],
+  [
+   "med",
+   "topic",
+   0,
+   "medicine",
+   0
+  ],
+  [
+   "metal",
+   "topic",
+   0,
+   "metallurgy",
+   0
+  ],
+  [
+   "meteo",
+   "topic",
+   0,
+   "meteorology",
+   0
+  ],
+  [
+   "mil",
+   "topic",
+   0,
+   "military",
+   0
+  ],
+  [
+   "myco",
+   "topic",
+   0,
+   "mycology",
+   0
+  ],
+  [
+   "myth",
+   "topic",
+   0,
+   "mythology",
+   0
+  ],
+  [
+   "net",
+   "topic",
+   0,
+   "Internet",
+   0
+  ],
+  [
+   "org-chem",
+   "topic",
+   0,
+   "organic chemistry",
+   0
+  ],
+  [
+   "ornit",
+   "topic",
+   0,
+   "ornithology",
+   0
+  ],
+  [
+   "paleo",
+   "topic",
+   0,
+   "paleontology",
+   0
+  ],
+  [
+   "path",
+   "topic",
+   0,
+   "pathology",
+   0
+  ],
+  [
+   "pharma",
+   "topic",
+   0,
+   "pharmacology",
+   0
+  ],
+  [
+   "philos",
+   "topic",
+   0,
+   "philosophy",
+   0
+  ],
+  [
+   "phonet",
+   "topic",
+   0,
+   "phonetics",
+   0
+  ],
+  [
+   "phonol",
+   "topic",
+   0,
+   "phonology",
+   0
+  ],
+  [
+   "photo",
+   "topic",
+   0,
+   "photography",
+   0
+  ],
+  [
+   "physics",
+   "topic",
+   0,
+   "physics",
+   0
+  ],
+  [
+   "physio",
+   "topic",
+   0,
+   "physiology",
+   0
+  ],
+  [
+   "poetry",
+   "topic",
+   0,
+   "poetry",
+   0
+  ],
+  [
+   "poker",
+   "topic",
+   0,
+   "poker",
+   0
+  ],
+  [
+   "polit",
+   "topic",
+   0,
+   "politics",
+   0
+  ],
+  [
+   "program",
+   "topic",
+   0,
+   "programming",
+   0
+  ],
+  [
+   "psych",
+   "topic",
+   0,
+   "psychology",
+   0
+  ],
+  [
+   "rail",
+   "topic",
+   0,
+   "rail transport",
+   0
+  ],
+  [
+   "rhet",
+   "topic",
+   0,
+   "rhetoric",
+   0
+  ],
+  [
+   "rome-myth",
+   "topic",
+   0,
+   "Roman mythology",
+   0
+  ],
+  [
+   "school",
+   "topic",
+   0,
+   "school",
+   0
+  ],
+  [
+   "sci-fi",
+   "topic",
+   0,
+   "science fiction",
+   0
+  ],
+  [
+   "socio",
+   "topic",
+   0,
+   "sociology",
+   0
+  ],
+  [
+   "soft",
+   "topic",
+   0,
+   "software",
+   0
+  ],
+  [
+   "soft-eng",
+   "topic",
+   0,
+   "software engineering",
+   0
+  ],
+  [
+   "sports",
+   "topic",
+   0,
+   "sports",
+   0
+  ],
+  [
+   "stat",
+   "topic",
+   0,
+   "statistics",
+   0
+  ],
+  [
+   "sumo",
+   "topic",
+   0,
+   "sumo",
+   0
+  ],
+  [
+   "surg",
+   "topic",
+   0,
+   "surgery",
+   0
+  ],
+  [
+   "tech",
+   "topic",
+   0,
+   "technology",
+   0
+  ],
+  [
+   "theater",
+   "topic",
+   0,
+   "theater",
+   0
+  ],
+  [
+   "theo",
+   "topic",
+   0,
+   "theology",
+   0
+  ],
+  [
+   "tv",
+   "topic",
+   0,
+   "television",
+   0
+  ],
+  [
+   "txnmy",
+   "topic",
+   0,
+   "taxonomy",
+   0
+  ],
+  [
+   "vehic",
+   "topic",
+   0,
+   "vehicles",
+   0
+  ],
+  [
+   "zoo",
+   "topic",
+   0,
+   "zoology",
+   0
+  ],
+  [
+   "ૐ",
+   "topic",
+   0,
+   "Buddhism",
+   0
+  ],
+  [
+   "☪️",
+   "topic",
+   0,
+   "Islam",
+   0
+  ],
+  [
+   "⚽",
+   "topic",
+   0,
+   "soccer",
+   0
+  ],
+  [
+   "⚾",
+   "topic",
+   0,
+   "baseball",
+   0
+  ],
+  [
+   "⛏️",
+   "topic",
+   0,
+   "mining",
+   0
+  ],
+  [
+   "⛪",
+   "topic",
+   0,
+   "modern Italianate Ecclesiastical",
+   0
+  ],
+  [
+   "✒️",
+   "topic",
+   0,
+   "calligraphy",
+   0
+  ],
+  [
+   "✝️",
+   "topic",
+   0,
+   "Christianity",
+   0
+  ],
+  [
+   "✝️Cath",
+   "topic",
+   0,
+   "Catholicism",
+   0
+  ],
+  [
+   "✝️Prot",
+   "topic",
+   0,
+   "Protestantism",
+   0
+  ],
+  [
+   "✡️",
+   "topic",
+   0,
+   "Judaism",
+   0
+  ],
+  [
+   "🌦️",
+   "topic",
+   0,
+   "weather",
+   0
+  ],
+  [
+   "🌿",
+   "topic",
+   0,
+   "botany",
+   0
+  ],
+  [
+   "🍺",
+   "topic",
+   0,
+   "beer",
+   0
+  ],
+  [
+   "🍽️",
+   "topic",
+   0,
+   "cuisine",
+   0
+  ],
+  [
+   "🎨",
+   "topic",
+   0,
+   "color",
+   0
+  ],
+  [
+   "🎵",
+   "topic",
+   0,
+   "music",
+   0
+  ],
+  [
+   "🎾",
+   "topic",
+   0,
+   "tennis",
+   0
+  ],
+  [
+   "👗",
+   "topic",
+   0,
+   "clothing",
+   0
+  ],
+  [
+   "👷",
+   "topic",
+   0,
+   "construction",
+   0
+  ],
+  [
+   "💼",
+   "topic",
+   0,
+   "business",
+   0
+  ],
+  [
+   "📏",
+   "topic",
+   0,
+   "units-of-measure",
+   0
+  ],
+  [
+   "📐",
+   "topic",
+   0,
+   "trigonometry",
+   0
+  ],
+  [
+   "📚",
+   "topic",
+   0,
+   "literature",
+   0
+  ],
+  [
+   "📰",
+   "topic",
+   0,
+   "journalism",
+   0
+  ],
+  [
+   "🔭",
+   "topic",
+   0,
+   "astronomy",
+   0
+  ],
+  [
+   "🕐",
+   "topic",
+   0,
+   "time",
+   0
+  ],
+  [
+   "🚗",
+   "topic",
+   0,
+   "automobile",
+   0
+  ],
+  [
+   "🚢",
+   "topic",
+   0,
+   "nautical",
+   0
+  ],
+  [
+   "🛐",
+   "topic",
+   0,
+   "religion",
+   0
+  ],
+  [
+   "🛕",
+   "topic",
+   0,
+   "Hinduism",
+   0
+  ],
+  [
+   "🧬",
+   "topic",
+   0,
+   "genetics",
+   0
+  ],
+  [
+   "🧵",
+   "topic",
+   0,
+   "textiles",
+   0
+  ],
+  [
+   "🪙",
+   "topic",
+   0,
+   "numismatics",
+   0
+  ],
+  [
+   "🪨",
+   "topic",
+   0,
+   "mineralogy",
+   0
+  ],
+  [
+   "🫀",
+   "topic",
+   0,
+   "cardiology",
+   0
+  ],
+  [
+   "aux",
+   "transitivity",
+   0,
+   "auxiliary",
+   0
+  ],
+  [
+   "aux-v",
+   "transitivity",
+   0,
+   "auxiliary verb",
+   0
+  ],
+  [
+   "cop",
+   "transitivity",
+   0,
+   "copulative",
+   0
+  ],
+  [
+   "impers",
+   "transitivity",
+   0,
+   "impersonal",
+   0
+  ],
+  [
+   "pers",
+   "transitivity",
+   0,
+   "personal",
+   0
+  ],
+  [
+   "ref-pron",
+   "transitivity",
+   0,
+   "takes a reflexive pronoun",
+   0
+  ],
+  [
+   "cmn",
+   "usage",
+   0,
+   "common",
+   0
+  ],
+  [
+   "dialect",
+   "usage",
+   0,
+   "dialectal",
+   0
+  ],
+  [
+   "euph",
+   "usage",
+   0,
+   "euphemistic",
+   0
+  ],
+  [
+   "fig",
+   "usage",
+   0,
+   "figurative",
+   0
+  ],
+  [
+   "idio",
+   "usage",
+   0,
+   "idiomatic",
+   0
+  ],
+  [
+   "idiom",
+   "usage",
+   0,
+   "idiom",
+   0
+  ],
+  [
+   "literal",
+   "usage",
+   0,
+   "literal",
+   0
+  ],
+  [
+   "non-std",
+   "usage",
+   0,
+   "nonstandard",
+   0
+  ],
+  [
+   "regio",
+   "usage",
+   0,
+   "regional",
+   0
+  ],
+  [
+   "uncmmn",
+   "usage",
+   0,
+   "uncommon",
+   0
+  ],
+  [
+   "Alemannic",
+   "variety",
+   0,
+   "Alemannic",
+   0
+  ],
+  [
+   "Bavarian",
+   "variety",
+   0,
+   "Bavarian",
+   0
+  ],
+  [
+   "Gheg",
+   "variety",
+   0,
+   "Gheg",
+   0
+  ],
+  [
+   "HCM",
+   "variety",
+   0,
+   "Hồ-Chí-Minh-City",
+   0
+  ],
+  [
+   "Hanoi",
+   "variety",
+   0,
+   "Hà-Nội",
+   0
+  ],
+  [
+   "Hue",
+   "variety",
+   0,
+   "Huế",
+   0
+  ],
+  [
+   "Swabian",
+   "variety",
+   0,
+   "Swabian",
+   0
+  ],
+  [
+   "Tosk",
+   "variety",
+   0,
+   "Tosk",
+   0
+  ],
+  [
+   "ccm",
+   "variety",
+   0,
+   "cot-caught-merger",
+   0
+  ],
+  [
+   "classic",
+   "variety",
+   0,
+   "Classical-Persian",
+   0
+  ],
+  [
+   "e",
+   "variety",
+   0,
+   "Ekavian",
+   0
+  ],
+  [
+   "i",
+   "variety",
+   0,
+   "Ikavian",
+   0
+  ],
+  [
+   "ije",
+   "variety",
+   0,
+   "Ijekavian",
+   0
+  ],
+  [
+   "kaj",
+   "variety",
+   0,
+   "Kajkavian",
+   0
+  ],
+  [
+   "std",
+   "variety",
+   0,
+   "standard",
+   0
+  ],
+  [
+   "ča",
+   "variety",
+   0,
+   "Chakavian",
+   0
+  ],
+  [
+   "🇦🇪",
+   "variety",
+   0,
+   "United Arab Emirates",
+   0
+  ],
+  [
+   "🇦🇫",
+   "variety",
+   0,
+   "Dari",
+   0
+  ],
+  [
+   "🇦🇫KA",
+   "variety",
+   0,
+   "Kabuli",
+   0
+  ],
+  [
+   "🇦🇷",
+   "variety",
+   0,
+   "Argentina",
+   0
+  ],
+  [
+   "🇦🇷🇺🇾",
+   "variety",
+   0,
+   "Río de la Plata",
+   0
+  ],
+  [
+   "🇦🇹",
+   "variety",
+   0,
+   "Austria",
+   0
+  ],
+  [
+   "🇦🇹VI",
+   "variety",
+   0,
+   "Vienna",
+   0
+  ],
+  [
+   "🇦🇺",
+   "variety",
+   0,
+   "Australia",
+   0
+  ],
+  [
+   "🇧🇦",
+   "variety",
+   0,
+   "Bosnia",
+   0
+  ],
+  [
+   "🇧🇭",
+   "variety",
+   0,
+   "Bahrain",
+   0
+  ],
+  [
+   "🇧🇴",
+   "variety",
+   0,
+   "Bolivia",
+   0
+  ],
+  [
+   "🇧🇷",
+   "variety",
+   0,
+   "Brazil",
+   0
+  ],
+  [
+   "🇧🇷C",
+   "variety",
+   0,
+   "Caipira",
+   0
+  ],
+  [
+   "🇧🇷F",
+   "variety",
+   0,
+   "Fluminense",
+   0
+  ],
+  [
+   "🇧🇷G",
+   "variety",
+   0,
+   "Gaúcho",
+   0
+  ],
+  [
+   "🇧🇷M",
+   "variety",
+   0,
+   "Mineiro",
+   0
+  ],
+  [
+   "🇧🇷M-G",
+   "variety",
+   0,
+   "Minas-Gerais",
+   0
+  ],
+  [
+   "🇧🇷RdJ",
+   "variety",
+   0,
+   "Rio-de-Janeiro",
+   0
+  ],
+  [
+   "🇧🇷SP",
+   "variety",
+   0,
+   "São-Paulo",
+   0
+  ],
+  [
+   "🇧🇷↗️",
+   "variety",
+   0,
+   "Northeast-Brazil",
+   0
+  ],
+  [
+   "🇧🇷⬆️",
+   "variety",
+   0,
+   "North-Brazil",
+   0
+  ],
+  [
+   "🇧🇷⬇️",
+   "variety",
+   0,
+   "South Brazil",
+   0
+  ],
+  [
+   "🇧🇷🎯",
+   "variety",
+   0,
+   "Central",
+   0
+  ],
+  [
+   "🇧🇿",
+   "variety",
+   0,
+   "Belize",
+   0
+  ],
+  [
+   "🇨🇦",
+   "variety",
+   0,
+   "Canada",
+   0
+  ],
+  [
+   "🇨🇭",
+   "variety",
+   0,
+   "Switzerland",
+   0
+  ],
+  [
+   "🇨🇱",
+   "variety",
+   0,
+   "Chile",
+   0
+  ],
+  [
+   "🇨🇴",
+   "variety",
+   0,
+   "Colombia",
+   0
+  ],
+  [
+   "🇨🇷",
+   "variety",
+   0,
+   "Costa Rica",
+   0
+  ],
+  [
+   "🇨🇺",
+   "variety",
+   0,
+   "Cuba",
+   0
+  ],
+  [
+   "🇨🇾",
+   "variety",
+   0,
+   "Cypriot",
+   0
+  ],
+  [
+   "🇩🇪",
+   "variety",
+   0,
+   "Germany",
+   0
+  ],
+  [
+   "🇩🇪BY",
+   "variety",
+   0,
+   "Bavaria",
+   0
+  ],
+  [
+   "🇩🇪➡️",
+   "variety",
+   0,
+   "East Germany",
+   0
+  ],
+  [
+   "🇩🇪⬅️",
+   "variety",
+   0,
+   "western Germany",
+   0
+  ],
+  [
+   "🇩🇪⬆️",
+   "variety",
+   0,
+   "North German",
+   0
+  ],
+  [
+   "🇩🇪⬇️",
+   "variety",
+   0,
+   "South German",
+   0
+  ],
+  [
+   "🇩🇪🎯⬆️",
+   "variety",
+   0,
+   "northern and central Germany",
+   0
+  ],
+  [
+   "🇩🇴",
+   "variety",
+   0,
+   "Dominican Republic",
+   0
+  ],
+  [
+   "🇩🇿",
+   "variety",
+   0,
+   "Algeria",
+   0
+  ],
+  [
+   "🇪🇨",
+   "variety",
+   0,
+   "Ecuador",
+   0
+  ],
+  [
+   "🇪🇬",
+   "variety",
+   0,
+   "Egypt",
+   0
+  ],
+  [
+   "🇪🇸",
+   "variety",
+   0,
+   "Spain",
+   0
+  ],
+  [
+   "🇪🇺",
+   "variety",
+   0,
+   "Europe",
+   0
+  ],
+  [
+   "🇫🇷",
+   "variety",
+   0,
+   "France",
+   0
+  ],
+  [
+   "🇬🇧",
+   "variety",
+   0,
+   "UK",
+   0
+  ],
+  [
+   "🇬🇷",
+   "variety",
+   0,
+   "Greek",
+   0
+  ],
+  [
+   "🇬🇹",
+   "variety",
+   0,
+   "Guatemala",
+   0
+  ],
+  [
+   "🇭🇳",
+   "variety",
+   0,
+   "Honduras",
+   0
+  ],
+  [
+   "🇭🇷",
+   "variety",
+   0,
+   "Croatia",
+   0
+  ],
+  [
+   "🇮🇪",
+   "variety",
+   0,
+   "Ireland",
+   0
+  ],
+  [
+   "🇮🇶",
+   "variety",
+   0,
+   "Iraq",
+   0
+  ],
+  [
+   "🇮🇷",
+   "variety",
+   0,
+   "Iran",
+   0
+  ],
+  [
+   "🇮🇷TE",
+   "variety",
+   0,
+   "Tehrani",
+   0
+  ],
+  [
+   "🇯🇴",
+   "variety",
+   0,
+   "Jordan",
+   0
+  ],
+  [
+   "🇰🇷",
+   "variety",
+   0,
+   "South Korea",
+   0
+  ],
+  [
+   "🇰🇼",
+   "variety",
+   0,
+   "Kuwait",
+   0
+  ],
+  [
+   "🇱🇧",
+   "variety",
+   0,
+   "Lebanon",
+   0
+  ],
+  [
+   "🇱🇮",
+   "variety",
+   0,
+   "Liechtenstein",
+   0
+  ],
+  [
+   "🇱🇾",
+   "variety",
+   0,
+   "Libya",
+   0
+  ],
+  [
+   "🇲🇦",
+   "variety",
+   0,
+   "Morocco",
+   0
+  ],
+  [
+   "🇲🇪",
+   "variety",
+   0,
+   "Montenegro",
+   0
+  ],
+  [
+   "🇲🇽",
+   "variety",
+   0,
+   "Mexico",
+   0
+  ],
+  [
+   "🇲🇿",
+   "variety",
+   0,
+   "Mozambique",
+   0
+  ],
+  [
+   "🇳🇮",
+   "variety",
+   0,
+   "Nicaragua",
+   0
+  ],
+  [
+   "🇳🇿",
+   "variety",
+   0,
+   "New-Zealand",
+   0
+  ],
+  [
+   "🇴🇲",
+   "variety",
+   0,
+   "Oman",
+   0
+  ],
+  [
+   "🇵🇦",
+   "variety",
+   0,
+   "Panama",
+   0
+  ],
+  [
+   "🇵🇪",
+   "variety",
+   0,
+   "Peru",
+   0
+  ],
+  [
+   "🇵🇭",
+   "variety",
+   0,
+   "Philippines",
+   0
+  ],
+  [
+   "🇵🇷",
+   "variety",
+   0,
+   "Puerto Rico",
+   0
+  ],
+  [
+   "🇵🇹",
+   "variety",
+   0,
+   "Portugal",
+   0
+  ],
+  [
+   "🇵🇾",
+   "variety",
+   0,
+   "Paraguay",
+   0
+  ],
+  [
+   "🇶🇦",
+   "variety",
+   0,
+   "Qatar",
+   0
+  ],
+  [
+   "🇷🇸",
+   "variety",
+   0,
+   "Serbia",
+   0
+  ],
+  [
+   "🇷🇺",
+   "variety",
+   0,
+   "Russia",
+   0
+  ],
+  [
+   "🇸🇦",
+   "variety",
+   0,
+   "Saudi Arabia",
+   0
+  ],
+  [
+   "🇸🇻",
+   "variety",
+   0,
+   "El Salvador",
+   0
+  ],
+  [
+   "🇸🇾",
+   "variety",
+   0,
+   "Syria",
+   0
+  ],
+  [
+   "🇹🇯",
+   "variety",
+   0,
+   "Tajik",
+   0
+  ],
+  [
+   "🇹🇳",
+   "variety",
+   0,
+   "Tunisia",
+   0
+  ],
+  [
+   "🇺🇸",
+   "variety",
+   0,
+   "US",
+   0
+  ],
+  [
+   "🇺🇾",
+   "variety",
+   0,
+   "Uruguay",
+   0
+  ],
+  [
+   "🇻🇪",
+   "variety",
+   0,
+   "Venezuela",
+   0
+  ],
+  [
+   "🇾🇪",
+   "variety",
+   0,
+   "Yemen",
+   0
+  ],
+  [
+   "🌍AF",
+   "variety",
+   0,
+   "Africa",
+   0
+  ],
+  [
+   "🌎",
+   "variety",
+   0,
+   "Latin America",
+   0
+  ],
+  [
+   "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+   "variety",
+   0,
+   "Received-Pronunciation",
+   0
+  ],
+  [
+   "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+   "variety",
+   0,
+   "Scotland",
+   0
+  ],
+  [
+   "🐐",
+   "variety",
+   0,
+   "Poznań",
+   0
+  ],
+  [
+   "🦁",
+   "variety",
+   0,
+   "Lviv",
+   0
+  ],
+  [
+   "🧜‍♀️",
+   "variety",
+   0,
+   "Warsaw",
+   0
+  ],
+  [
+   "godan",
+   "",
+   0,
+   "godan",
+   0
+  ],
+  [
+   "ichidan",
+   "",
+   0,
+   "ichidan",
+   0
+  ],
+  [
+   "kamiichidan",
+   "",
+   0,
+   "kamiichidan",
+   0
+  ],
+  [
+   "mix",
+   "",
+   0,
+   "mixed",
+   0
+  ],
+  [
+   "nidan",
+   "",
+   0,
+   "nidan",
+   0
+  ],
+  [
+   "onoma",
+   "",
+   0,
+   "onomatopoeic",
+   0
+  ],
+  [
+   "punct",
+   "",
+   0,
+   "punct",
+   0
+  ],
+  [
+   "shimoichidan",
+   "",
+   0,
+   "shimoichidan",
+   0
+  ],
+  [
+   "shimonidan",
+   "",
+   0,
+   "shimonidan",
+   0
+  ],
+  [
+   "strong",
+   "",
+   0,
+   "strong",
+   0
+  ],
+  [
+   "symb",
+   "",
+   0,
+   "symbol",
+   0
+  ],
+  [
+   "weak",
+   "",
+   0,
+   "weak",
+   0
+  ],
+  [
+   "yodan",
+   "",
+   0,
+   "yodan",
+   0
+  ],
+  [
+   "🌍",
+   "",
+   0,
+   "place",
+   0
+  ],
+  [
+   "non-lemma",
+   "",
+   10,
+   "non-lemma",
+   -10
+  ]
+ ],
+ "term_rows": [
+  [
+   "дом",
+   "",
+   "n inanim masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "дом • (dom) m inan (genitive до́ма, nominative plural дома́ or до́мы^*, genitive plural домо́в, relational adjective дома́шний or домово́й or домо́вый, diminutive до́мик or домо́к or дому́шка, augmentative доми́ще or доми́на, pejorative доми́шко)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Old East Slavic домъ (domŭ, “house; home”), from Proto-Slavic *dȍmъ (“house; home”), from Proto-Balto-Slavic *damús, from Proto-Indo-European *dṓm (“home; house”)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "house, building (a residential building)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "обы́скивать ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "дом"
+                   },
+                   " за ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "до́мом"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "to search ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "house"
+                   },
+                   " by ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "house"
+                   }
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "кварти́рный ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "дом"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "apartment ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "building"
+                   },
+                   "; ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "block"
+                   },
+                   " of flats"
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Дом"
+                   },
+                   " име́л тот немно́го неве́рный вид, како́й быва́ет, когда́ там, внутри́, спят лю́ди."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "The ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "house"
+                   },
+                   " had that slightly uncertain look that can happen when there are people sleeping inside."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "house, home (as part of a name of an establishment)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "изда́тельский ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "дом"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "publishing ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "house"
+                   }
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "сумасше́дший ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "дом"
+                   },
+                   " / дур",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "до́м"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "insane ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "asylum"
+                   },
+                   "; mad",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "house"
+                   }
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "дом"
+                   },
+                   " о́тдыха"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "holiday ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "resort"
+                   }
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "plot (in some street addresses: a group of buildings sharing the same street number)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Моско́вское шоссе́, ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "дом"
+                   },
+                   " 123, ко́рпус 2, кварти́ра 10"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "123 Moskovskoye highway, building 2, apartment 10"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "home",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "родно́й ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "дом"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "native ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "home"
+                   }
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Дом"
+                   },
+                   " англича́нина — его́ кре́пость."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "An Englishman's ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "home"
+                   },
+                   " is his castle."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "dynasty, noble house",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "дом"
+                   },
+                   " Рома́новых"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "the Romanov ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "dynasty"
+                   }
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "чума́ на о́ба ва́ши ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "до́ма"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "a plague on both your ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "houses"
+                   }
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/дом#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/д/до/дом.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "за́мок",
+   "n inanim masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "за́мок • (zámok) m inan (genitive за́мка, nominative plural за́мки, genitive plural за́мков, relational adjective за́мковый)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Etymology tree\n▲\nMiddle High German sloȥsl.\nCzech zámekbor.\nPolish zamekbor.\nRussian замок\nBorrowed from Polish zamek, which is a calque via Czech zámek of Middle High German sloȥ (“lock, keep”), which, in turn, is a calque of Latin clūsa (“lock, fort, fortification”). Attested from the 17th century. Related to замыкать (zamykatʹ) (замкну́ть (zamknútʹ)). But note also Old Novgorodian ꙁамъке (zamŭke, “lock”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "castle"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/замок#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/з/за/замок.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "замо́к",
+   "n inanim masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "замо́к • (zamók) m inan (genitive замка́, nominative plural замки́, genitive plural замко́в, relational adjective замо́чный or замко́вый, diminutive замо́чек)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *zamъkъ, deverbal from *zamъknǫti (whence Russian замкну́ть (zamknútʹ)). Doublet of за́мок (zámok), a borrowing from Polish."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "lock (fastener that opens with a key, or part of a firearm)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "америка́нский ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "замо́к"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "springlock"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "англи́йский ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "замо́к"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "patent lock"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "фити́льный ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "замо́к"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "matchlock"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "architecture",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "archit"
+              }
+             ]
+            },
+            "keystone"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "clasp, fastener"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/замок#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/з/за/замок.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "нёбо",
+   "",
+   "n inanim neut",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "нёбо • (njóbo) n inan (genitive нёба, nominative plural нёба, genitive plural нёб, relational adjective нёбный)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Old East Slavic небо (nebo), from Proto-Slavic *nebo, from Proto-Balto-Slavic *nébas, from Proto-Indo-European *nébʰos. Doublet of не́бо (nébo), a borrowing from Old Church Slavonic."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "palate",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "мя́гкое ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "нёбо"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "soft palate"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "твёрдое ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "нёбо"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "hard palate"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/нёбо#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/н/нё/нёбо.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "книга",
+   "кни́га",
+   "n fem inanim",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "кни́га • (kníga) f inan (genitive кни́ги, nominative plural кни́ги, genitive plural книг, relational adjective кни́жный, diminutive кни́жка or кни́жечка or кни́жица, augmentative кни́жища, hypocorism книжу́ля, pejorative книжо́нка, expressive term книже́нция)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *kъňiga."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "book",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Он преподнёс ей ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "кни́гу"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "He presented ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "a book"
+                   },
+                   " to her. / He presented her with ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "a book"
+                   },
+                   "."
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": "Holonym: библиоте́ка (bibliotéka)"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/книга#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/к/кн/книга.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "чёрный",
+   "",
+   "adj",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "чёрный • (čórnyj) (comparative (по)черне́е or (по)черне́й, superlative (наи)черне́йший, adverb черно́ or черны́м-черно́ or чёрно or по-чёрному or вчерне́ or до́черна or на́черно or чёрным по бе́лому, abstract noun (occasinal) чёрность or чернота́, diminutive чёрненький, augmentative черню́щий or черну́щий, intensive пречёрный or чё́рный-пречё́рный or чернёхонький or чернёшенький or (abstract-state intensive) черну́шный, attenuative чернова́тый)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *čьrnъ.\nCognates include Lithuanian kir̃snas and Sanskrit कृष्ण (kṛṣṇa, “black, dark”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "black",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "на ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чёрный"
+                   },
+                   " день"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "for a rainy day"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чёрным"
+                   },
+                   " по бе́лому"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "in black and white"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чёрное"
+                   },
+                   " де́рево"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "ebony"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "rough, coarse"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "back (stairs, entrance, etc.)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "unskilled, manual"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "engineering",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "eng"
+              },
+              {
+               "tag": "span",
+               "title": "metallurgy",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "metal"
+              }
+             ]
+            },
+            "ferrous; iron and steel",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чёрная"
+                   },
+                   " металлурги́я"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "iron and steel"
+                   },
+                   " industry"
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "colloquial",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "col"
+              }
+             ]
+            },
+            "dark, swarthy; dark-haired, black-haired"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "historical",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "hist"
+              }
+             ]
+            },
+            "lacking a chimney to exhaust the smoke (of buildings or rooms heated by a fire)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чёрная"
+                   },
+                   " ба́ня"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "a ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "smoke-filled"
+                   },
+                   " steam bath"
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/чёрный#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/ч/чё/чёрный.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "чёрный",
+   "",
+   "n animate masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "чёрный • (čórnyj) m anim (genitive чёрного, nominative plural чёрные, genitive plural чёрных, female equivalent чёрная, relational adjective черново́й)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *čьrnъ.\nCognates include Lithuanian kir̃snas and Sanskrit कृष्ण (kṛṣṇa, “black, dark”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "black (man)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "offensive",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "offens"
+              }
+             ]
+            },
+            "a darker-skinned immigrant"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "synonyms"
+       },
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "synonyms-label"
+         },
+         "content": "Synonyms"
+        },
+        {
+         "tag": "ul",
+         "data": {
+          "content": "synonyms-list"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "негр"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/чёрный#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/ч/чё/чёрный.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "ёлка",
+   "",
+   "n fem inanim",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "ёлка • (jólka) f inan (genitive ёлки, nominative plural ёлки, genitive plural ёлок, relational adjective ёлочный, diminutive ёлочка)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *edlъka. By surface analysis, ель (jelʹ) + -ка (-ka)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "diminutive",
+               "data": {
+                "content": "tag",
+                "category": "morphology"
+               },
+               "content": "dim"
+              }
+             ]
+            },
+            "diminutive of ель (jelʹ): spruce, spruce tree"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "Christmas tree; New Year's tree (in Russia)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "New Year's party for children"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/ёлка#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/ё/ёл/ёлка.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "уже",
+   "уже́",
+   "adv",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "уже́ • (užé)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *(j)uže."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "already; carries the sense of the perfect continuous tenses in English.",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Он ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "уже́"
+                   },
+                   " ушёл."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "He (has) ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "already"
+                   },
+                   " left."
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Я ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "уже́"
+                   },
+                   " э́то сде́лал."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "I've ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "already"
+                   },
+                   " done it."
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Я игра́л ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "уже́"
+                   },
+                   " неде́лю."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "I had (",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "already"
+                   },
+                   ") been playing for a week."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "by now, (as of) now",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Уже́"
+                   },
+                   " по́здно."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "It's late."
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Э́та э́ра сейча́с ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "уже́"
+                   },
+                   " в про́шлом."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "This era is ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "now"
+                   },
+                   " a thing of the past."
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Он наблюда́ет меня́ ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "уже́"
+                   },
+                   " не́сколько лет."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "He's looked after me for a couple of years ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "now"
+                   },
+                   "."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "by then, by that point",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Магази́ны закрыва́ются в 6 часо́в, и тебе́ ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "уже́"
+                   },
+                   " сло́жно купи́ть что́-то."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "The shops close at 6, and ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "by then"
+                   },
+                   " it's hard for you to buy something."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "anymore, any longer",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Я ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "уже́"
+                   },
+                   " не могу́ бежа́ть."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "I can't run ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "anymore"
+                   },
+                   "."
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Соба́ки происхо́дят от во́лка, но э́то ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "уже́"
+                   },
+                   " не волк."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "Dogs are descended from wolves, but they're no ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "longer"
+                   },
+                   " wolves."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/уже#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/у/уж/уже.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "уже",
+   "уже́",
+   "ptcl",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "уже́ • (užé)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *(j)uže."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "Used to emphasise an amount or quantity of something; now, already, as early as, as late as, as recently as",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Он не спал ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "уже́"
+                   },
+                   " втору́ю ночь."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "It's ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "now"
+                   },
+                   " the second night he hasn't slept. / He hasn't slept for 2 nights ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "now"
+                   },
+                   "."
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Они́ сказа́ли, что должны́ бу́дут сде́лать э́то ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "уже́"
+                   },
+                   " за́втра."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "They said they should be able to do it ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "as early as"
+                   },
+                   " tomorrow."
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Суда́ вели́ торго́влю на реке́ ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "уже́"
+                   },
+                   " в 1976 году́."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "Ships were trading the river ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "as late as"
+                   },
+                   " 1976."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "Used to emphasise a certain word or collocation.",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "Уже́"
+                   },
+                   " по зву́ку дви́гателя мо́жно определи́ть, что он неиспра́вен."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "By the sound of the engine ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "alone"
+                   },
+                   " one can determine that it's faulty."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/уже#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/у/уж/уже.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "студент",
+   "студе́нт",
+   "n animate masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "студе́нт • (studént) m anim (genitive студе́нта, nominative plural студе́нты, genitive plural студе́нтов, female equivalent студе́нтка, relational adjective студе́нческий, collective студе́нчество, diminutive студе́нтик, pejorative collective студено́та)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Probably from Polish student or German Student, from Latin studēns."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "student (in a university or college), undergraduate"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/студент#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/с/ст/студент.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "читать",
+   "чита́ть",
+   "v impf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "чита́ть • (čitátʹ) impf (perfective прочита́ть or почита́ть or проче́сть, verbal noun чте́ние)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *čitati."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to read",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чита́ть"
+                   },
+                   " про себя́"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "to read silently, to read to oneself"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чита́ть"
+                   },
+                   " ме́жду стро́к"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "to read between the lines"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чита́ть"
+                   },
+                   " без запи́нки"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "to read off, to run off"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to recite",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чита́ть"
+                   },
+                   " наизу́сть"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "to recite by heart"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "intransitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vi"
+              }
+             ]
+            },
+            "to lecture, to give a lecture, to deliver a lecture",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чита́ть"
+                   },
+                   " ле́кции"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "to lecture"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to teach",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чита́ть"
+                   },
+                   " курс"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "to give a course"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              },
+              {
+               "tag": "span",
+               "title": "figurative",
+               "data": {
+                "content": "tag",
+                "category": "usage"
+               },
+               "content": "fig"
+              }
+             ]
+            },
+            "to tell, to say (for the purpose of a lesson)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чита́ть"
+                   },
+                   " нота́ции"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "to jaw"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чита́ть"
+                   },
+                   " мора́ль"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "to moralize"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to pronounce, to deliver",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чита́ть"
+                   },
+                   " моли́твы"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "to say one’s prayers"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чита́ть"
+                   },
+                   " про́поведь"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "to preach"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чита́ть"
+                   },
+                   " рэп"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "to flow"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "figurative",
+               "data": {
+                "content": "tag",
+                "category": "usage"
+               },
+               "content": "fig"
+              }
+             ]
+            },
+            "to understand, to interpret, to decipher",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чита́ть"
+                   },
+                   " чертежи́"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "to interpret drawings"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "чита́ть"
+                   },
+                   " ка́рту"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "to read a map"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/читать#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/ч/чи/читать.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "прочитать",
+   "прочита́ть",
+   "v pf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "прочита́ть • (pročitátʹ) pf (imperfective чита́ть)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "про- (pro-) + чита́ть (čitátʹ)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to read, to read through"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to recite"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "synonyms"
+       },
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "synonyms-label"
+         },
+         "content": "Synonyms"
+        },
+        {
+         "tag": "ul",
+         "data": {
+          "content": "synonyms-list"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "проче́сть"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/прочитать#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/п/пр/прочитать.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "интересный",
+   "интере́сный",
+   "adj",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "интере́сный • (interésnyj) (comparative (по)интере́снее or (по)интере́сней, superlative са́мый интере́сный or (наи)интере́снейший)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "интере́с (interés) + -ный (-nyj)"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "interesting"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "handsome, attractive"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/интересный#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/и/ин/интересный.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "вчера",
+   "вчера́",
+   "adv",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "вчера́ • (včerá)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *vьčera, related to Russian ве́чер (véčer, “evening”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "yesterday"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/вчера#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/в/вч/вчера.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "вчера",
+   "вчера́",
+   "n indecl inanim neut",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "вчера́ • (včerá) n inan (indeclinable)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *vьčera, related to Russian ве́чер (véčer, “evening”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "yesterday"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/вчера#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/в/вч/вчера.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "небо",
+   "не́бо",
+   "n inanim neut",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "не́бо • (nébo) n inan (genitive не́ба, nominative plural небеса́, genitive plural небе́с, relational adjective небе́сный)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Borrowed from Old Church Slavonic небо (nebo), from Proto-Slavic *nebo. Doublet of нёбо (njóbo), the inherited East Slavic form."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "sky",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "на ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "не́бе"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "in the sky"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "копти́ть ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "не́бо"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "to waste one's life (lit. to soot the sky)"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "небо"
+                   },
+                   " в кле́точку"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "the ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "sky"
+                   },
+                   " seen through a checkered grid of bars (in a prison)"
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "heaven, firmament",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "О́тче наш, су́щий на ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "небеса́х"
+                   },
+                   "!"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "Our Father, who art in ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "heaven"
+                   },
+                   "!"
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "ме́жду ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "не́бом"
+                   },
+                   " и землёй"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "between heaven and earth; in an uncertain situation"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "как ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "не́бо"
+                   },
+                   " и земля́ / отлича́ться как ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "не́бо"
+                   },
+                   " от земли́"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "worlds apart; like night and day"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "air",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "под откры́тым ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "не́бом"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "in the open (air); under the open sky"
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "с ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "не́ба"
+                   },
+                   " свали́ться"
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "to appear out of the blue"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/небо#Russian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Russian/meaning/н/не/небо.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "чёрный",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "чорный",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "чорный",
+     [
+      "dated"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "читать",
+   "чита́ть",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "почитать",
+     [
+      "imperfective"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "дом",
+   "до́м",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "дом",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "за́мок",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "замок",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "замо́к",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "замок",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "замо́к",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "замо́кнуть",
+     [
+      "singular masculine past perfective indicative short"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "чёрный",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "черный",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "черный",
+     [
+      "alternative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "ёлка",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "елка",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "елка",
+     [
+      "alternative"
+     ]
+    ],
+    [
+     "елка",
+     [
+      "feminine"
+     ]
+    ],
+    [
+     "елка",
+     [
+      "inanimate"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "уже",
+   "у́же",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "у́зкий",
+     [
+      "comparative degree"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "уже",
+   "у́же",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "у́зко",
+     [
+      "comparative degree"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "уже",
+   "уже́",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "уж",
+     [
+      "prepositional singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "ёлка",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "ель",
+     [
+      "diminutive"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "прочитать",
+   "прочита́ть",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "читать",
+     [
+      "perfective"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "читать",
+   "чита́ть",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "читать",
+     [
+      "imperfective infinitive"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "читать",
+   "чита́ть",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "прочитать",
+     [
+      "imperfective"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "прочитать",
+   "прочита́ть",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "прочитать",
+     [
+      "perfective infinitive"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "чёрный",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "чёрная",
+     [
+      "masculine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "прочитать",
+   "прочита́ть",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "прочитывать",
+     [
+      "perfective"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "читать",
+   "чита́ть",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "прочесть",
+     [
+      "imperfective"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "прочитать",
+   "прочита́ть",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "прочесть",
+     [
+      "alternative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "интересный",
+   "интере́сный",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "интересный",
+     [
+      "accusative masculine inanimate"
+     ]
+    ],
+    [
+     "интересный",
+     [
+      "nominative masculine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "дом",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "домъ",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "домъ",
+     [
+      "dated"
+     ]
+    ],
+    [
+     "домъ",
+     [
+      "inanimate"
+     ]
+    ],
+    [
+     "домъ",
+     [
+      "masculine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "небо",
+   "не́бо",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "небо",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "замок",
+   "замо́к",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "замокнуть",
+     [
+      "singular masculine past"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "студент",
+   "студе́нт",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "студентка",
+     [
+      "masculine"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ]
+ ]
+}

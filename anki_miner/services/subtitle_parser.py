@@ -370,6 +370,7 @@ class SubtitleParserService:
         token_post_pass: TokenPostPass | None = None,
         normalize: Callable[[str], str] | None = None,
         sentence_annotation: bool = True,
+        attested_reading_fallback: bool = False,
     ):
         """Initialize the subtitle parser.
 
@@ -465,6 +466,13 @@ class SubtitleParserService:
                 ``LanguageProfile.sentence_annotator`` they print the sentence
                 with its spaces deleted, so such a factory passes ``False`` and
                 the fields stay empty.
+            attested_reading_fallback: Spec S24. With an injected
+                ``reading_support`` whose ``word_reading`` answers ``""``, take
+                the card front's reading from the dictionary when exactly one
+                attested reading exists (``resolve_attested_reading``): ru/uk's
+                stressed headword (читать). Furigana and ``resolved_reading``
+                stay ``""``. ``False`` — every ja/ko/zh path — leaves the
+                injected branch as it was.
         """
         self.config = config
         # Perf-audit counters (Task 28): cumulative wall-clock spent in offline-
@@ -494,6 +502,8 @@ class SubtitleParserService:
         # Sentence furigana/reading generation (spec 6.1 #2); False ⇒ the three
         # annotation fields stay "".
         self._sentence_annotation = sentence_annotation
+        # Spec S24: a blank injected reading may take a unique attested dictionary reading.
+        self._attested_reading_fallback = attested_reading_fallback
         self._reading_lookup = reading_lookup
         # Shared process-wide tagger (see services/tagger.py for the single-flight
         # invariant). __init__ may block ~2-3s on the lazy build if a user triggers
@@ -1257,6 +1267,11 @@ class SubtitleParserService:
             # and none of it applies to a duck token whose feature.kana is ""
             # by the LanguageToken contract.
             reading = expression_reading = self._reading_support.word_reading(word_token)
+            if not expression_reading and self._attested_reading_fallback and self._reading_lookup is not None:
+                # S24: the profile owns the reading fields but has no reading of its own
+                # (ru stress); a single attested dictionary reading is the card's
+                # stressed headword, several (zamok noun vs zamok verb) leave it blank.
+                expression_reading = resolve_attested_reading("", self._attested_readings(mined)).reading or ""
             expression_furigana = ""
             lemma_reading = expression_reading
             resolved_reading = ""

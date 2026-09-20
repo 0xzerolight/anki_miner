@@ -57,7 +57,9 @@ def test_gtts_rewrites_pt_pt_unless_the_check_is_skipped():
     assert gtts.gTTS(text="olá", lang="pt-PT", lang_check=False).lang == "pt-PT"
 
 
-@pytest.mark.parametrize("code", ["ja", "ko", "zh-CN", "zh-TW", "en", "de", "fr", "es", "it", "nl", "ca", "pt", "pl"])
+@pytest.mark.parametrize(
+    "code", ["ja", "ko", "zh-CN", "zh-TW", "en", "de", "fr", "es", "it", "nl", "ca", "pt", "pl", "ru"]
+)
 def test_every_other_profile_code_is_unchanged_by_the_check(code):
     """Checked or not, these codes reach the API as written (zh-CN/zh-TW warn but map to themselves)."""
     with warnings.catch_warnings():

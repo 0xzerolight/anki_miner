@@ -463,6 +463,8 @@ CAPABILITIES: tuple[Capability, ...] = (
             "türkçe",
             "indonesian",
             "bahasa indonesia",
+            "russian",
+            "русский",
             "hangul",
             "switch language",
             "ja",
@@ -488,6 +490,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "da",
             "tr",
             "id",
+            "ru",
         ),
     ),
     # --- Filtering ---------------------------------------------------------

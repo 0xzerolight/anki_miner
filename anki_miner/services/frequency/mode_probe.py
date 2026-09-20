@@ -90,6 +90,8 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     "tr": ["bir", "bu", "ne", "ve", "için", "mi", "de", "o", "ben", "çok"],
     # id: hermitdave's OpenSubtitles 2018 id_50k.txt ranks 1-10 (lowercase surfaces).
     "id": ["aku", "kau", "yang", "tidak", "ini", "itu", "dan", "dia", "di", "akan"],
+    # ru: hermitdave ru_50k.txt ranks 1-10.
+    "ru": ["я", "не", "что", "в", "и", "ты", "это", "на", "с", "он"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -282,6 +284,8 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
         "perpustakaan",
         "belalang",
     ],
+    # ru: rare-but-real nouns at ru_50k ranks 14,055-28,695 (фонарь ... бочка).
+    "ru": ["компас", "вагон", "телескоп", "фонарь", "белка", "фонарик", "кружка", "улей", "бочка", "якорь"],
 }
 
 
