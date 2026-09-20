@@ -25,12 +25,12 @@ def create_parser(config: Any, **kwargs: Any) -> Any:
     # cue becomes the card's Sentence: without this the English translation is
     # printed alongside every Chinese front.
     kwargs.setdefault("has_target_script", profile.script.contains_target_script)
-    # NFC plus the OCR radical fold, and none of the rest of the Japanese chain
-    # the default runs: what a Chinese subtitle wrote is what the card shows, so
-    # the private-use area, U+FFFD and caption glyphs (➡ 📱) stay as mojibake
-    # cues and ㎡ stays ㎡ instead of being rewritten to "m2". See
-    # ``zh/variants.py::normalize_zh_text`` for why the radicals are the
-    # exception.
+    # NFC, the OCR radical fold and the renderer-garbage strip, but none of the
+    # rest of the Japanese chain the default runs: what a Chinese subtitle wrote
+    # is what the card shows, so caption glyphs (➡ 📱) stay and ㎡ stays ㎡
+    # instead of being rewritten to "m2". See
+    # ``zh/variants.py::normalize_zh_text`` for why those three are the
+    # exceptions.
     kwargs.setdefault("normalize", profile.normalize)
     # The matcher stamps its synthetics with a UniDic POS, which no jieba tag can
     # equal, so the inclusion gate rejects every merge it proposes: dead code

@@ -20,7 +20,7 @@ import unicodedata
 from functools import lru_cache
 from typing import Any
 
-from anki_miner.utils.ja_normalize import normalize_radicals
+from anki_miner.utils.ja_normalize import normalize_radicals, strip_renderer_garbage
 
 logger = logging.getLogger(__name__)
 
@@ -47,23 +47,29 @@ def normalize_zh(text: str) -> str:
 
 
 def normalize_zh_text(text: str) -> str:
-    """The profile's ``normalize``: the key rule, then the radical fold.
+    """The profile's ``normalize``: garbage out, then the key rule and radicals.
 
     Two different folds, as in ``languages/yue/normalize.py``. Keys keep
     :func:`normalize_zh` alone because they are folded symmetrically at import
     and at query and no CC-CEDICT headword carries a radical glyph. Mined TEXT
-    needs more: OCR and legacy sources substitute Kangxi radicals for the
-    ideographs they look exactly like (U+2F24 for 大), and jieba segments the
-    substitution as junk -- a 大家好 spelt that way mines 好 alone, with nothing
-    on screen to say 大家 went missing. NFC runs first so the fold sees composed
-    input, and its NFKD output for these blocks is a unified ideograph already.
+    needs more:
 
-    Deliberately not folded, unlike the Japanese chain this replaces: caption
-    decoration glyphs (➡ 📱), U+FFFD and the private-use area are what the
-    subtitle wrote and the learner should see them, and the squared units in
-    U+3300-33FF are ㎡ and ㎞ on a card, not "m2" and "km".
+    * OCR and legacy sources substitute Kangxi radicals for the ideographs they
+      look exactly like (U+2F24 for 大), and jieba segments the substitution as
+      junk -- a 大家好 spelt that way mines 好 alone, with nothing on screen to
+      say 大家 went missing. NFC runs before the fold so it sees composed input;
+      its NFKD output for these blocks is a unified ideograph already.
+    * A decoding accident leaves U+FFFD or a private-use codepoint in the line,
+      and the card would print the diamond or the tofu box inside an otherwise
+      clean sentence. :func:`strip_renderer_garbage` deletes those outright --
+      no separator, because Chinese writes none and one would split the word
+      the codepoint landed inside.
+
+    Deliberately kept, unlike the Japanese chain this replaces: caption
+    decoration glyphs (➡ 📱) are what the subtitle wrote, and the squared units
+    in U+3300-33FF are ㎡ and ㎞ on a card, not "m2" and "km".
     """
-    return normalize_radicals(normalize_zh(text))
+    return normalize_radicals(normalize_zh(strip_renderer_garbage(text)))
 
 
 @lru_cache(maxsize=len(_ALL_CONFIGS))

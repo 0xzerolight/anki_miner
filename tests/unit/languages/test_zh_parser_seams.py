@@ -26,12 +26,16 @@ YUE_STUTTER = "錢…錢唔見咗…全部冇晒。"
 #: 大家好。 with 大 written as the Kangxi radical U+2F24, the substitution OCR
 #: and legacy sources make. Escaped rather than pasted because the radical
 #: renders identically to the ideograph -- in an editor as much as on a card.
-ZH_RADICAL_LINE = "\u2f24家好。"
+ZH_RADICAL_LINE = "⼤家好。"
 
-#: Everything the Japanese caption strip deletes and Chinese keeps: a
-#: continuation arrow (➡), a device marker (📱), a private-use codepoint,
-#: U+FFFD, and a squared unit the compatibility fold would rewrite to "m2".
-ZH_DECORATED_LINE = "➡ 这个房子有120㎡📱\ue000\ufffd。"
+#: What the Japanese caption strip deletes and Chinese keeps: a continuation
+#: arrow, a device marker, and a squared unit the compatibility fold would
+#: rewrite to "m2".
+ZH_DECORATED_LINE = "➡ 这个房子有120㎡\U0001f4f1。"
+
+#: Renderer garbage inside an otherwise clean sentence: a private-use codepoint
+#: (a tofu box on the card) and U+FFFD (a replacement diamond).
+ZH_MOJIBAKE_LINE = "他说这个�电影很好看。"
 
 
 def _attest_nothing(surfaces: list[str]) -> set[str]:
@@ -112,5 +116,11 @@ class TestTheNormaliseSeam:
         assert _sentences(_parser("zh"), ZH_RADICAL_LINE) == {"大家好。"}
 
     def test_caption_decoration_and_squared_units_survive(self) -> None:
-        """What the subtitle wrote is what the card shows; only radicals fold."""
+        """What the subtitle wrote is what the card shows; these are its text."""
         assert _sentences(_parser("zh"), ZH_DECORATED_LINE) == {ZH_DECORATED_LINE}
+
+    def test_renderer_garbage_never_reaches_the_card(self) -> None:
+        assert _sentences(_parser("zh"), ZH_MOJIBAKE_LINE) == {"他说这个电影很好看。"}
+
+    def test_garbage_between_two_hanzi_does_not_split_their_word(self) -> None:
+        assert "电影" in _mine(_parser("zh"), "我喜欢这部电�影。")

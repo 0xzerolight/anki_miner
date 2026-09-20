@@ -271,22 +271,39 @@ def standardize_kanji_variants(text: str) -> str:
 # audited broadcast subs, plus the double-arrow/curved variants seen in other
 # stations' captions). Emoji: device/speaker markers (📱 phone-call lines),
 # including U+FE0E/U+FE0F presentation selectors attached to stripped glyphs.
-# U+FFFD replacement char and the whole BMP private-use area are renderer
-# garbage by definition in caption text. Deliberately NOT stripped: ♪♫ music
-# marks (the opt-in subtitle regex-filter presets own that choice) and
-# 《》〈〉 narration brackets (linguistic content).
-_DECORATION_GLYPHS = (
+# Deliberately NOT stripped: ♪♫ music marks (the opt-in subtitle regex-filter
+# presets own that choice) and 《》〈〉 narration brackets (linguistic content).
+_CAPTION_GLYPHS = (
     "\u27a1"  # ➡
     "\u2b05-\u2b07"  # ⬅⬆⬇
     "\u21d0\u21d2"  # ⇐⇒
     "\u2934\u2935"  # ⤴⤵
     "\U0001f4f1\U0001f4de\U0001f50a\U0001f4ac"  # 📱📞🔊💬
+)
+# Renderer garbage by definition, in any language's captions. This is the half
+# of the strip that is separable, and the reason :func:`strip_renderer_garbage`
+# exists for callers that keep the decoration.
+_RENDERER_GARBAGE = (
     "\ufffd"  # replacement character
     "\ue000-\uf8ff"  # BMP private-use area
 )
+_DECORATION_GLYPHS = _CAPTION_GLYPHS + _RENDERER_GARBAGE
 _DECORATION_RUN_RE = re.compile(
     f"[ \t]*(?:[{_DECORATION_GLYPHS}][\ufe0e\ufe0f]?)+(?:[ \t]+(?:[{_DECORATION_GLYPHS}][\ufe0e\ufe0f]?)+)*[ \t]*"
 )
+_RENDERER_GARBAGE_RE = re.compile(f"[{_RENDERER_GARBAGE}]")
+
+
+def strip_renderer_garbage(text: str) -> str:
+    """Delete U+FFFD and BMP private-use codepoints, putting nothing in place.
+
+    The half of :func:`strip_decoration_glyphs` that is not about captions: a
+    replacement diamond or a tofu box is a decoding accident, never something
+    the source wrote. No separator is left behind, unlike the caption strip —
+    a language that writes no spaces has to reject one here, and a space would
+    split the word the stray codepoint landed inside.
+    """
+    return _RENDERER_GARBAGE_RE.sub("", text)
 
 
 def strip_decoration_glyphs(text: str) -> str:
