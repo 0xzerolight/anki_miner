@@ -107,6 +107,10 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
         "\u0647\u0644",
         "\u0648",
     ],
+    # th: Thai National Corpus ranks 1-10, verified against pythainlp.corpus.tnc
+    # .word_freqs(). Thai is not on hermitdave, so the TNC list converted by
+    # scripts/convert_tnc_thai_frequency.py is the catalogue source.
+    "th": ["ที่", "การ", "เป็น", "ใน", "ของ", "มี", "จะ", "และ", "ไม่", "ได้"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -316,6 +320,8 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
         "\u0645\u0638\u0644\u0629",
         "\u062e\u0641\u0627\u0634",
     ],
+    # th: concrete nouns present in that same TNC list at ranks 1,597-10,937.
+    "th": ["กังหัน", "ผีเสื้อ", "ตะเกียง", "จักรยาน", "นกพิราบ", "ตั๊กแตน", "บันได", "ค้อน", "ภูเขาไฟ", "กระรอก"],
 }
 
 

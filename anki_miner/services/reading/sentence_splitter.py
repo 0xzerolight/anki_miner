@@ -130,6 +130,9 @@ def split_sentences(
     constants and the pre-multilanguage behaviour, verbatim.
     """
     terminators, openers, closers, punct, space_aware, abbreviations = _policy(rules)
+    # S9, read from `rules` rather than through _policy: services/cue_merge.py:71
+    # unpacks the same six values, so the tuple's shape is shared API.
+    split_on_whitespace = rules is not None and rules.split_on_whitespace
     matched_openers = _matched_openers(text, openers, closers)
     segments: list[str] = []
     buf: list[str] = []
@@ -163,6 +166,15 @@ def split_sentences(
             # The period model (abbreviations) keeps "Dr." and "..." in the sentence.
             terminates = _run_is_terminating(run, terminators) and (not space_aware or j >= n or text[j].isspace())
             if terminates and not (abbreviations and _period_continues(run, buf, abbreviations, openers)):
+                segments.append("".join(buf))
+                buf = []
+        elif split_on_whitespace and depth == 0 and c.isspace():
+            # A whitespace RUN is one boundary, and it belongs to neither side:
+            # the trailing .strip() would drop it anyway, and absorbing it here
+            # keeps a multi-space gap from yielding an empty middle segment.
+            while i < n and text[i].isspace():
+                i += 1
+            if buf:
                 segments.append("".join(buf))
                 buf = []
         else:

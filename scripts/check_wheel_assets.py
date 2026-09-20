@@ -46,6 +46,8 @@ REQUIRED_ASSETS = [
     "anki_miner/gui/resources/fonts/OFL.txt",
     "anki_miner/gui/resources/fonts/NotoNaskhArabic-Regular.ttf",
     "anki_miner/gui/resources/fonts/OFL-NotoNaskhArabic.txt",
+    "anki_miner/gui/resources/fonts/NotoSansThai-Regular.ttf",
+    "anki_miner/gui/resources/fonts/OFL-NotoSansThai.txt",
     "anki_miner/gui/resources/fonts/PROVENANCE.md",
 ]
 # Notices that a pyproject ``license-files`` entry promises and nothing else

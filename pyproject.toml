@@ -23,6 +23,7 @@ license-files = [
     "LICENSE",
     "anki_miner/gui/resources/fonts/OFL.txt",
     "anki_miner/gui/resources/fonts/OFL-NotoNaskhArabic.txt",
+    "anki_miner/gui/resources/fonts/OFL-NotoSansThai.txt",
     "licenses/indocollex/LICENSE",
     "licenses/indocollex/README.md",
     "licenses/local-audio-yomichan/LICENSE",
@@ -256,7 +257,15 @@ ru = [
 ]
 # Bundle-all aggregate: the release matrix installs this, pip's default stays
 # JA-lean (same shape as the asr extras).
-languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]", "anki-miner[nb]", "anki-miner[ro]", "anki-miner[el]", "anki-miner[fi]", "anki-miner[hu]", "anki-miner[hr]", "anki-miner[sv]", "anki-miner[pl]", "anki-miner[lt]", "anki-miner[da]", "anki-miner[tr]", "anki-miner[ru]"]
+# Thai mining engine: PyThaiNLP (Apache-2.0, pure Python) carries the newmm
+# dictionary tokenizer, the perceptron tagger and the TNC/TTC frequency lists.
+# Capped below 6 because the tokenizer and tagger APIs this code calls are 5.x.
+th = [
+    "pythainlp>=5.3.7,<6",
+]
+# Bundle-all aggregate: the release matrix installs this, pip's default stays
+# JA-lean (same shape as the asr extras).
+languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]", "anki-miner[nb]", "anki-miner[ro]", "anki-miner[el]", "anki-miner[fi]", "anki-miner[hu]", "anki-miner[hr]", "anki-miner[sv]", "anki-miner[pl]", "anki-miner[lt]", "anki-miner[da]", "anki-miner[tr]", "anki-miner[ru]", "anki-miner[th]"]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.0.0",
@@ -414,6 +423,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["zeyrek.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["pythainlp.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

@@ -1,0 +1,10 @@
+{"id": "th01", "sentence": "วันนี้อากาศดีมากครับ", "must_mine": ["ดีมาก", "วันนี้", "อากาศ"], "must_not_mine": ["ครับ"], "note": "the bundle smoke line plus the polite particle"}
+{"id": "th02", "sentence": "ผมชอบกินข้าวครับ", "must_mine": ["กินข้าว", "ชอบ"], "must_not_mine": ["ครับ", "ผม"], "note": "pronoun and particle out, the compound in"}
+{"id": "th03", "sentence": "ไม่รู้ค่ะ นะคะ", "must_mine": ["รู้"], "must_not_mine": ["ค่ะ", "นะคะ", "ไม่"], "note": "two spoken particles the tagger calls content words"}
+{"id": "th04", "sentence": "คุณจรัญไปโรงเรียน", "must_mine": ["โรงเรียน", "ไป"], "must_not_mine": ["คุณ", "จรัญ"], "note": "a title, a personal name and an ordinary noun"}
+{"id": "th05", "sentence": "เขาซื้อหนังสือสองเล่ม", "must_mine": ["ซื้อ", "หนังสือ", "เล่ม"], "must_not_mine": ["สอง", "เขา"], "note": "a classifier phrase"}
+{"id": "th06", "sentence": "เขาดื่มน้ำทุกวัน", "must_mine": ["ดื่ม", "น้ำ"], "must_not_mine": ["ทุกวัน", "เขา"], "note": "D2 regression: น้ำ is mineable despite being in the name corpora"}
+{"id": "th07", "sentence": "ดู Netflix กันไหม", "must_mine": ["ดู"], "must_not_mine": ["Netflix", "กัน", "ไหม"], "note": "a Latin brand name is never mined"}
+{"id": "th08", "sentence": "เมื่อวานฝนตกหนักมาก", "must_mine": ["ตกหนัก", "ฝน", "มาก", "เมื่อวาน"], "must_not_mine": [], "note": "a weather line with an adverb"}
+{"id": "th09", "sentence": "อาหารไทยอร่อยที่สุดในโลก", "must_mine": ["ที่สุด", "อร่อย", "อาหาร", "โลก"], "must_not_mine": ["ใน", "ไทย"], "note": "a superlative"}
+{"id": "th10", "sentence": "เธอทำงานหนักทุกวัน", "must_mine": ["ทำงานหนัก", "ทุกวัน"], "must_not_mine": ["เธอ"], "note": "pronoun out, verb and adverb in"}
