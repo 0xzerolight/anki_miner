@@ -101,6 +101,22 @@ _HOOK_FIELD_ROW_TEXTS: dict[str, tuple[str, str]] = {
             "Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.",
         ),
     ),
+    # Shared by the root-and-pattern languages (ruling R-ROOT), so the label names no language.
+    "root": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Root Field"),
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Stores the word's root, from the dictionary entry. Blank = skip."),
+    ),
+    "affixes": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Affixes Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the prefixes and suffixes around the root, from the dictionary entry. Blank = skip.",
+        ),
+    ),
+    "formal_form": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Formal Form Field"),
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Stores the standard spelling of a colloquial word. Blank = skip."),
+    ),
 }
 
 # Keywords used by populate_from_field_list to auto-map Anki field names.

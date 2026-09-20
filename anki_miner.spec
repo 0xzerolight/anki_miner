@@ -344,6 +344,17 @@ zeyrek_license_dir = os.path.join(project_root, "licenses", "zeyrek")
 zeyrek_license_datas = []
 if os.path.isdir(zeyrek_license_dir):
     zeyrek_license_datas.append((zeyrek_license_dir, os.path.join("licenses", "zeyrek")))
+# IndoCollex and stopwords-iso MIT notices: their data is reduced into anki_miner/languages/id/
+# (colloquial.py, stopwords.py), which the bundle carries, so the notices travel with it. Land
+# at sys._MEIPASS/licenses/indocollex/ and licenses/stopwords-iso/.
+indocollex_license_dir = os.path.join(project_root, "licenses", "indocollex")
+indocollex_license_datas = []
+if os.path.isdir(indocollex_license_dir):
+    indocollex_license_datas.append((indocollex_license_dir, os.path.join("licenses", "indocollex")))
+stopwords_iso_license_dir = os.path.join(project_root, "licenses", "stopwords-iso")
+stopwords_iso_license_datas = []
+if os.path.isdir(stopwords_iso_license_dir):
+    stopwords_iso_license_datas.append((stopwords_iso_license_dir, os.path.join("licenses", "stopwords-iso")))
 
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
@@ -517,7 +528,9 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + sv_core_news_sm_license_datas
     + lt_core_news_sm_license_datas
     + da_core_news_sm_license_datas
-    + zeyrek_license_datas,
+    + zeyrek_license_datas
+    + indocollex_license_datas
+    + stopwords_iso_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",

@@ -15,10 +15,16 @@ license = "GPL-3.0-or-later"
 # Yomitan ships both its files, unlike the other entries: GPLv3's text names no
 # copyright holder, so the attribution and the per-file provenance table live in
 # README.md, and README.md links COPYING.GPLv3 relatively.
+# IndoCollex and stopwords-iso ship both files like Yomitan: the MIT text plus
+# the provenance README of the data reduced into anki_miner/languages/id/.
 license-files = [
     "LICENSE",
     "anki_miner/gui/resources/fonts/OFL.txt",
+    "licenses/indocollex/LICENSE",
+    "licenses/indocollex/README.md",
     "licenses/local-audio-yomichan/LICENSE",
+    "licenses/stopwords-iso/LICENSE",
+    "licenses/stopwords-iso/README.md",
     "licenses/yomitan/COPYING.GPLv3",
     "licenses/yomitan/README.md",
     "licenses/zeyrek/LICENSE",

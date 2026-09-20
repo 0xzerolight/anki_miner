@@ -35,6 +35,8 @@ def ko_stack_absent(monkeypatch):
     monkeypatch.setattr(ko_availability, "find_spec", lambda _name: None)
     # Same for every spaCy language: the shared probe reads spaCy and its model.
     monkeypatch.setattr(spaced_availability, "find_spec", lambda _name: None)
+    # id has no engine at all: like ja it leaves ``unavailable_reason`` None and is
+    # always offered, so it is in every exact list below.
 
 
 def _panel(qtbot, config: AnkiMinerConfig) -> MiningLanguageSettingsPanel:
@@ -66,7 +68,7 @@ def test_a_language_whose_stack_is_missing_is_not_offered(monkeypatch):
 
     monkeypatch.setattr(language_choices, "get_profile", fake_get_profile)
 
-    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja"]
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "id"]
 
 
 def test_a_missing_optional_package_keeps_the_language_offered(monkeypatch):
@@ -77,13 +79,13 @@ def test_a_missing_optional_package_keeps_the_language_offered(monkeypatch):
     """
     monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "opencc" else object())
 
-    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "zh"]
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "zh", "id"]
 
 
 def test_a_missing_required_package_drops_the_language(monkeypatch):
     monkeypatch.setattr(availability, "find_spec", lambda name: None if name == "jieba" else object())
 
-    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja"]
+    assert [code for code, _name in language_choices.available_mining_languages()] == ["ja", "id"]
 
 
 def test_offered_languages_carry_their_native_names():
@@ -94,7 +96,7 @@ def test_offered_languages_carry_their_native_names():
 
 def test_the_panel_builds_and_lists_only_buildable_languages(qtbot, test_config):
     combo = _panel(qtbot, test_config).mining_language_combo
-    assert [combo.itemData(i) for i in range(combo.count())] == ["ja", "zh"]
+    assert [combo.itemData(i) for i in range(combo.count())] == ["ja", "zh", "id"]
     assert combo.currentData() == "ja"
 
 

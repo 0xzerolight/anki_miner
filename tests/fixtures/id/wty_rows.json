@@ -1,0 +1,3177 @@
+{
+ "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/); rows copied verbatim from wty-id-en revision 2026.09.19 (yomidevs/wiktionary-to-yomitan).",
+ "index": {
+  "title": "wty-id-en",
+  "format": 3,
+  "revision": "2026.09.19",
+  "sequenced": true,
+  "author": "wty contributors",
+  "url": "https://github.com/yomidevs/wiktionary-to-yomitan",
+  "description": "Dictionaries for various language pairs generated from Wiktionary data, via Kaikki and wty.",
+  "attribution": "https://kaikki.org/",
+  "sourceLanguage": "id",
+  "targetLanguage": "en",
+  "isUpdatable": true,
+  "indexUrl": "https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/index/wty-id-en-index.json?download=true",
+  "downloadUrl": "https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/id/en/wty-id-en.zip?download=true"
+ },
+ "tag_bank": [
+  [
+   "dated",
+   "archaism",
+   4,
+   "dated",
+   -4
+  ],
+  [
+   "rare",
+   "archaism",
+   4,
+   "rare",
+   -4
+  ],
+  [
+   "adj",
+   "partOfSpeech",
+   -2,
+   "adjective",
+   2
+  ],
+  [
+   "adv",
+   "partOfSpeech",
+   -2,
+   "adverb",
+   2
+  ],
+  [
+   "n",
+   "partOfSpeech",
+   -2,
+   "noun",
+   2
+  ],
+  [
+   "v",
+   "partOfSpeech",
+   -2,
+   "verb",
+   2
+  ],
+  [
+   "vdt",
+   "partOfSpeech",
+   -2,
+   "ditransitive verb",
+   2
+  ],
+  [
+   "vi",
+   "partOfSpeech",
+   -2,
+   "intransitive verb",
+   2
+  ],
+  [
+   "vt",
+   "partOfSpeech",
+   -2,
+   "transitive verb",
+   2
+  ],
+  [
+   "inf",
+   "register",
+   0,
+   "informal",
+   0
+  ],
+  [
+   "non-lemma",
+   "",
+   10,
+   "non-lemma",
+   -10
+  ]
+ ],
+ "term_rows": [
+  [
+   "buku",
+   "",
+   "n",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "buku (plural buku-buku)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Malay buku, from Dutch boek, from Middle Dutch boec, from Old Dutch buoc, from Proto-Germanic *bōks. The addition of the last syllable -u may be influenced by existing native word in Etymology 2 below."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "book (collection of sheets of paper bound together containing printed or written material)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "business",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "💼"
+              },
+              {
+               "tag": "span",
+               "title": "finance",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "fin"
+              }
+             ]
+            },
+            "account (a registry of pecuniary transactions)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "synonyms"
+       },
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "synonyms-label"
+         },
+         "content": "Synonyms"
+        },
+        {
+         "tag": "ul",
+         "data": {
+          "content": "synonyms-list"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "kitab"
+          },
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "pustaka"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/buku#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/b/bu/buku.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "buku",
+   "",
+   "n",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "buku (plural buku-buku)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Malay buku, from Proto-Malayic *buku, from Proto-Malayo-Polynesian *bukuh. Semantic loan from Bilba [Term?]. Doublet of wuku."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "a lumpy joint (of fingers or similar structures)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "a small block or segment of something (of bamboos or similar structures)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "biology",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "biol"
+              },
+              {
+               "tag": "span",
+               "title": "botany",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "🌿"
+              }
+             ]
+            },
+            "articulation: a joint between two separable parts, as a leaf and a stem"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "node:"
+           ]
+          },
+          {
+           "tag": "ul",
+           "content": [
+            {
+             "tag": "li",
+             "content": [
+              "knot, knob, protuberance or swelling"
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "anatomy",
+                 "data": {
+                  "content": "tag",
+                  "category": "topic"
+                 },
+                 "content": "anat"
+                },
+                {
+                 "tag": "span",
+                 "title": "medicine",
+                 "data": {
+                  "content": "tag",
+                  "category": "topic"
+                 },
+                 "content": "med"
+                }
+               ]
+              },
+              "a small mass of tissue that can be a knot, knob, or swelling"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "anatomy",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "anat"
+              },
+              {
+               "tag": "span",
+               "title": "medicine",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "med"
+              }
+             ]
+            },
+            "knuckle"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "bone protrusion, bone spur"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "synonyms"
+       },
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "synonyms-label"
+         },
+         "content": "Synonyms"
+        },
+        {
+         "tag": "ul",
+         "data": {
+          "content": "synonyms-list"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "kitab"
+          },
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "pustaka"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/buku#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/b/bu/buku.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "rumah",
+   "",
+   "n",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "rumah (plural rumah-rumah)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Malay rumah, from Classical Malay رومه (“house”), from Proto-Malayic *rumah, from Proto-Malayo-Polynesian *ʀumaq, from Proto-Austronesian *ʀumaq. Doublet of uma."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "house:"
+           ]
+          },
+          {
+           "tag": "ul",
+           "content": [
+            {
+             "tag": "li",
+             "content": [
+              "abode"
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              {
+               "tag": "div",
+               "data": {
+                "content": "tags"
+               },
+               "content": [
+                {
+                 "tag": "span",
+                 "title": "business",
+                 "data": {
+                  "content": "tag",
+                  "category": "topic"
+                 },
+                 "content": "💼"
+                }
+               ]
+              },
+              "a building intended to contain a single household, as opposed to an apartment or condominium or building containing these"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "home (house or structure in which someone lives)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Kemarin aku pergi ke ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "rumah"
+                   },
+                   " teman."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "I went to a friend’s ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "home"
+                   },
+                   " yesterday."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/rumah#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/r/ru/rumah.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "beli",
+   "",
+   "v",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "beli (active membeli, reflexive passive terbeli, ordinary passive dibeli, imperative beli, emphatic-jussive belilah)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Malay beli, from Proto-Malayic *bəli, from Proto-Malayo-Chamic *bəli, from Proto-Malayo-Sumbawan *bəli, from Proto-Malayo-Polynesian *bəli, from Proto-Austronesian *bəli."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to buy (to obtain for money)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/beli#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/b/be/beli.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "beli",
+   "",
+   "n",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "beli (plural beli-beli)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Borrowed from Balinese ᬩ᭄ᬮᬶ (bli, “(older) brother”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "older brother"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/beli#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/b/be/beli.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "berjalan",
+   "",
+   "v vi",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "bêrjalan (active berjalan, imperative jalan, emphatic-jussive jalanlah)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From ber- + jalan."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to walk"
+           ]
+          },
+          {
+           "tag": "ul",
+           "content": [
+            {
+             "tag": "li",
+             "content": [
+              "to move on the feet by alternately setting each foot (or pair or group of feet, in the case of animals with four or more feet) forward, with at least one foot on the ground at all times"
+             ]
+            },
+            {
+             "tag": "li",
+             "content": [
+              "to travel (a distance) by walking"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to take place (to happen or to occur)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/berjalan#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/b/be/berjalan.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "berjalan",
+   "",
+   "adj",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "berjalan (comparative lebih berjalan, superlative paling berjalan)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From ber- + jalan."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "in effect (operate or functioning; in force; in play)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "running (of a company, organization, association, etc.)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/berjalan#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/b/be/berjalan.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "erti",
+   "",
+   "n dated rare",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Malay erti, from Old Javanese arthi, from Sanskrit अर्थ (artha, “meaning, wealth”). Doublet of arta, arti, and harta."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "synonym of arti (“meaning”)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/erti#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/e/er/erti.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "erti",
+   "",
+   "v",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "êrti (active mengerti, passive dimengerti)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Malay erti, from Old Javanese arthi, from Sanskrit अर्थ (artha, “meaning, wealth”). Doublet of arta, arti, and harta."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to understand"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/erti#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/e/er/erti.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "membelikan",
+   "",
+   "v",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "active of belikan"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/membelikan#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/m/me/membelikan.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "membeli",
+   "",
+   "v",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "membeli (passive dibeli)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Malay membeli, from Classical Malay membeli. Equivalent to\nFrom meng- + beli."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to buy, to obtain (something) in exchange for money or goods",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Dia ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "membeli"
+                   },
+                   " sekilo beras."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "She ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "bought"
+                   },
+                   " a kilo of rice."
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Aku pergi untuk ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "membeli"
+                   },
+                   " makanan."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "I'm going to go ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "buy"
+                   },
+                   " some food."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to buy, to obtain by some sacrifice"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/membeli#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/m/me/membeli.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "sayur",
+   "",
+   "n",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "sayur (plural sayur-sayur)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Malay sayur."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "vegetable"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "vegetable dish"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "soupy dish"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/sayur#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/s/sa/sayur.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "enggak",
+   "",
+   "adv inf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Betawi engga' (“no”), from Javanese ꦔ꧀ꦒꦏ꧀ (nggak), ꦒꦏ꧀ (gak, “no, not”).\nProbably related to Malay tak."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "synonym of tidak"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/enggak#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/e/en/enggak.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "mengerti",
+   "",
+   "v",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Affixation of meng- + erti."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "active of erti",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Saya tidak ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "mengerti"
+                   },
+                   " kata itu."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "I can't ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "understand"
+                   },
+                   " that word."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/mengerti#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/m/me/mengerti.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "keadaban",
+   "",
+   "n",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "keadaban (plural keadaban-keadaban)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From ke- + adab + -an."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "civilisation"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/keadaban#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/k/ke/keadaban.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "beroda",
+   "",
+   "v",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Affixation of roda (“wheel”) + ber-."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to have wheel(s)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/beroda#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/b/be/beroda.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "beroda",
+   "",
+   "adj",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "beroda (comparative lebih beroda, superlative paling beroda)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Affixation of roda (“wheel”) + ber-."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "wheeled"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/beroda#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/b/be/beroda.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "belikan",
+   "",
+   "v vdt vt",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "bêlikan (active membelikan, passive dibelikan)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From beli + -kan."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to buy (to obtain (something) in exchange for money or goods)",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Aku ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "membelikan"
+                   },
+                   " ayah mobil baru sebagai hadiah ulang tahun."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "I ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "bought"
+                   },
+                   " dad a new car as a birthday present."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/belikan#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/b/be/belikan.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "merugikan",
+   "",
+   "v vt",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "(transitive)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "meng- + rugi + -kan"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to harm"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "to cause loss"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/merugikan#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/m/me/merugikan.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "sayur-mayur",
+   "",
+   "n",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "sayur-mayur (plural sayur-mayur)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Malay sayur-mayur. Rhythmic reduplication of sayur."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "all kinds of vegetable"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/sayur-mayur#Indonesian",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Indonesian/meaning/s/sa/sayur-mayur.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "buku-buku",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "buku",
+     [
+      "plural"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "membeli",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "beli",
+     [
+      "active"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "rumah",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "rokum",
+     [
+      "Prokem"
+     ]
+    ],
+    [
+     "rokum",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "rokum",
+     [
+      "slang"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "berjalan",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "jalan",
+     [
+      "active"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "mengerti",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "erti",
+     [
+      "active"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "dibeli",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "membeli",
+     [
+      "passive"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "enggak",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "gak",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "gak",
+     [
+      "alternative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "nggak",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "enggak",
+     [
+      "alternative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "rumah",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "roemah",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "roemah",
+     [
+      "archaic"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "membelikan",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "belikan",
+     [
+      "active"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "enggak",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "engga",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "engga",
+     [
+      "alternative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "sayur",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "sajur",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "sajur",
+     [
+      "archaic"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "sayur",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "sajoer",
+     [
+      "alt-of"
+     ]
+    ],
+    [
+     "sajoer",
+     [
+      "archaic"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "membeli",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "dibeli",
+     [
+      "active"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "beli",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "dibeli",
+     [
+      "imperative"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "sayur-mayur",
+   "",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "sayur",
+     [
+      "plural"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ]
+ ]
+}

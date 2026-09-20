@@ -38,6 +38,7 @@ AVAILABLE_LANGUAGES: tuple[str, ...] = (
     "lt",
     "da",
     "tr",
+    "id",
 )
 
 #: Engine packs shared by several mining languages. Not languages: never in
