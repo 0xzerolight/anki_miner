@@ -5,14 +5,15 @@ coarse class — and ``excluded_subtypes`` on ``feature.pos2``, the full flag.
 That is the same two-level shape unidic gives the ja defaults, so
 ``TokenInclusionRule`` is reused unchanged.
 
-Exclusions mirror the ja intent rather than jieba's taxonomy: 固有名詞 becomes
-the proper-noun flags (nr/ns/nt and jieba's nr variants), and unidic's 非自立
-becomes the bound-morpheme flags (ng/vg/ag/dg), which mark fragments that are
-never independent words. Numerals (m), classifiers (q), pronouns (r),
-prepositions (p), particles (u*), conjunctions (c) and punctuation (x) need no
-exclusion at all — their pos1 is outside ``ZH_ALLOWED_POS``.
+What stays out is jieba's function-word and fragment vocabulary: numerals (m),
+classifiers (q), particles (u*), punctuation (x) and Latin runs (eng) never
+reach ``ZH_ALLOWED_POS`` at all, and the bound-morpheme flags (ng/vg/ag/dg),
+which mark pieces that are never independent words, are excluded subtypes. The
+name flags are narrower than the ja 固有名詞 mapping they came from: only the
+transliterated and name-like variants (nrt, nrfg) and the organisation flag
+(nt) are excluded.
 
-Two rulings shape the defaults beyond that mapping:
+Four rulings shape the defaults beyond that mapping:
 
 * **ja parity.** unidic mines time nouns (名詞-普通名詞-副詞可能), place nouns
   and pronouns into Japanese cards today, so jieba's t (时间词), s (处所词),
@@ -21,21 +22,33 @@ Two rulings shape the defaults beyond that mapping:
 * **Over-include beats silent drop.** jieba's ``nz`` is a catch-all, not a
   proper-noun class: it fires on ordinary vocabulary (中文 is tagged nz), and an
   excluded subtype removes a word with no trace anywhere the user can see.
-  Volume is what the frequency, known-words and i+1 filters downstream are for;
-  a word the tagger never emitted cannot be recovered by any of them.
+  ``ns`` and ``nr`` are the same story at a far higher price — jieba's own
+  dictionary spends them on 太阳, 东西, 城市, 明白, 小姐, 新鲜 and 台风, and cuts
+  喝咖啡 as one ``nr`` token so neither 喝 nor 咖啡 survives either; on a
+  186-sentence corpus 16.1% of sentences lost a dictionary-attested word that
+  way. Admitting the real names the two flags also carry is cheap: a word no
+  offline dictionary lists never reaches a card (小明 and 王小明 are dropped a
+  stage later), and known-words filtering retires an admitted 北京 after its
+  first. Volume is what the frequency, known-words and i+1 filters downstream
+  are for; a word the tagger never emitted cannot be recovered by any of them.
+* **A Chinese preposition is a content word.** c (连词: 因为 所以 虽然 但是 如果)
+  and p (介词: 在 给 跟 从 比 对 为了 除了 关于) are HSK1-3 vocabulary, not the
+  Japanese-particle analogue the ja mapping assumed — and several of them were
+  already mined whenever jieba happened to tag them as verbs instead.
+* **b and z carry no grammar.** jieba files 区别词 (主要 所有 整个 唯一, and 高兴
+  in its dictionary) and 状态词 (黑暗 悄悄 雪白) outside n/v/a/d on distributional
+  grounds; to a learner they are adjectives and adverbs like any other.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 
-ZH_ALLOWED_POS: tuple[str, ...] = ("n", "v", "a", "d", "i", "t", "s", "f", "l", "r")
+ZH_ALLOWED_POS: tuple[str, ...] = ("n", "v", "a", "d", "i", "t", "s", "f", "l", "r", "b", "z", "c", "p")
 
 ZH_EXCLUDED_SUBTYPES: tuple[str, ...] = (
-    "nr",  # person name
     "nrt",  # transliterated person name
     "nrfg",  # name-like fragment
-    "ns",  # place name
     "nt",  # organisation
     "ng",  # bound noun morpheme
     "vg",  # bound verb morpheme
@@ -43,8 +56,9 @@ ZH_EXCLUDED_SUBTYPES: tuple[str, ...] = (
     "dg",  # bound adverb morpheme
 )
 
-# Shown beside each class in Settings -> Filtering. Chinese label first (the
-# names the tagger's own documentation uses), English gloss after.
+# Chinese label first (the names the tagger's own documentation uses), English
+# gloss after. ``PosDefaults.labels`` has no consumer yet — the settings POS
+# editor still shows raw tags.
 ZH_POS_LABELS: Mapping[str, str] = {
     "n": "名词 (noun)",
     "v": "动词 (verb)",
@@ -56,4 +70,8 @@ ZH_POS_LABELS: Mapping[str, str] = {
     "f": "方位词 (locative noun)",
     "l": "习用语 (set phrase)",
     "r": "代词 (pronoun)",
+    "b": "区别词 (distinguishing word)",
+    "z": "状态词 (state word)",
+    "c": "连词 (conjunction)",
+    "p": "介词 (preposition)",
 }

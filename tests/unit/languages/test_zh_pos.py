@@ -29,13 +29,27 @@ CASES = [
     ("有意思", "l", True),
     ("我", "r", True),
     ("他", "r", True),
+    ("主要", "b", True),
+    ("黑暗", "z", True),
+    ("因为", "c", True),
+    ("在", "p", True),
     # jieba's nz is a catch-all that fires on ordinary vocabulary, not just
     # proper nouns — dropping it silently lost core words like this one.
     ("中文", "nz", True),
-    ("北京", "ns", False),
-    ("小明", "nr", False),
+    # ns and nr are the same shape: jieba's own dictionary spends them on
+    # everyday words. The names they also carry (北京, 小明) reach the gate and
+    # are dropped later, by the definition stage, not silently here.
+    ("太阳", "ns", True),
+    ("明白", "nr", True),
+    ("北京", "ns", True),
+    ("小明", "nr", True),
+    ("爱因斯坦", "nrt", False),
+    ("乔致庸", "nrfg", False),
     ("联合国", "nt", False),
     ("子", "ng", False),
+    ("喝", "vg", False),
+    ("俭", "ag", False),
+    ("俱", "dg", False),
     ("的", "uj", False),
     ("三", "m", False),
     ("本", "q", False),
