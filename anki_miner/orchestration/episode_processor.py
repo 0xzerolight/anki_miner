@@ -152,6 +152,22 @@ def _format_timestamp(seconds: float) -> str:
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 
+def _position_label(seconds: float, unit_labels: Mapping[int, str] | None) -> str:
+    """Where a word starting at *seconds* sits in the source, as one string.
+
+    A reading run stamps the unit index as a dummy ``start_time`` and carries
+    its own human labels, so a label wins there; a video run has none and falls
+    back to the HH:MM:SS timestamp. A miss or an empty label falls back the same
+    way, never a ``KeyError``.
+
+    ONE formula, deliberately: the card's Source field and the curator's
+    Position column both call it, so what the user sorted on is what the card
+    gets (Issue #129).
+    """
+    label = unit_labels.get(int(seconds)) if unit_labels else None
+    return label or _format_timestamp(seconds)
+
+
 # Strips a contiguous trailing run of ``[...]`` groups plus an optional
 # ``-ReleaseGroup`` suffix (Issue #83). ``[^\]]*`` (no nested brackets) keeps this
 # linear-time and confines the match to a *trailing* block, so mid-title brackets
@@ -1907,11 +1923,8 @@ class EpisodeProcessor:
             # runs carry a per-unit page/chapter label ("… @ p.42"); a miss
             # (synthetic/rounded start_time) falls back to the timestamp format,
             # never a KeyError. ctx.unit_labels is None on the video path.
-            unit_label = ctx.unit_labels.get(int(word.start_time)) if ctx.unit_labels else None
-            if unit_label:
-                extra_fields["source"] = f"{ctx.source_label} @ {unit_label}"
-            else:
-                extra_fields["source"] = f"{ctx.source_label} @ {_format_timestamp(word.start_time)}"
+            # Same formula the curator's Position column shows, by construction.
+            extra_fields["source"] = f"{ctx.source_label} @ {_position_label(word.start_time, ctx.unit_labels)}"
 
             # Per-field self-containment: the definition field carries its OWN
             # trailing block whenever it's mapped — regardless of the glossary
