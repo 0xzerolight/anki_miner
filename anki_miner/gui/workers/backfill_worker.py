@@ -21,6 +21,7 @@ from anki_miner.services.card_backfiller import (
     BackfillPlan,
     BackfillResult,
     apply_backfill,
+    definition_lookup_keys,
     scan_backfill,
 )
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
@@ -30,8 +31,10 @@ logger = logging.getLogger(__name__)
 
 #: Which indexed resource family produces which backfill field keys. Drives the
 #: scoped staleness gate: only a family whose output this run would actually
-#: write can abort it. Derived from ``FIELD_GROUPS`` rather than restated, so a
-#: new field key cannot land in a group the gate does not know about.
+#: read can abort it. Derived from ``FIELD_GROUPS`` rather than restated, so a
+#: new field key cannot land in a group the gate does not know about; a
+#: profile's own card fields reach it through the definition they ride on
+#: (``definition_lookup_keys``), never by being listed here.
 _BACKFILL_FIELD_FAMILIES: dict[str, frozenset[str]] = {
     "dictionary": frozenset(FIELD_GROUPS["definition"] + FIELD_GROUPS["glossary"]),
     "frequency": frozenset(FIELD_GROUPS["frequency"]),
@@ -63,8 +66,14 @@ class BackfillScanWorker(CancellableWorker):
         backfill has no business failing over a stale pitch index it will never
         read, and vice versa. Each family maps to the field keys whose values it
         produces.
+
+        Read through ``definition_lookup_keys``, the same widening the scan
+        applies: a language's own card field is rendered from the fetched
+        gloss, so selecting one reads the dictionary chain and must be gated on
+        it even though no dictionary key was ticked.
         """
-        families = {family for family, keys in _BACKFILL_FIELD_FAMILIES.items() if self.options.field_keys & keys}
+        requested = definition_lookup_keys(self.config, self.options.field_keys)
+        families = {family for family, keys in _BACKFILL_FIELD_FAMILIES.items() if requested & keys}
         if not families:
             return
         message = stale_resource_reimport_error(
