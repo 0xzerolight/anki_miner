@@ -53,6 +53,7 @@ PROBE = {
     "da": "gik",
     "tr": "kitapları",
     "id": "membeli",
+    "ru": "читала",
 }
 
 #: Every capability name any profile is allowed to declare. A typo'd flag is a
@@ -85,6 +86,8 @@ CAPABILITY_VOCABULARY = frozenset(
         # Indonesian affixes and register (C.5).
         "indonesian_affixes",
         "indonesian_register",
+        # Stressed headword (S24): ru, uk.
+        "stress_marks",
     }
 )
 

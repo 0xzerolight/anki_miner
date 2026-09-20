@@ -43,13 +43,20 @@ def _pack_component_present(code: str, import_name: str) -> bool:
     return component_path(code, import_name) is not None
 
 
-def spaced_missing_reason(code: str, english_name: str, model_package: str) -> Callable[[], str | None]:
-    """Build the probe; the returned callable runs at call time, never at profile build."""
+def spaced_missing_reason(
+    code: str, english_name: str, model_package: str, extra_packages: tuple[str, ...] = ()
+) -> Callable[[], str | None]:
+    """Build the probe; the returned callable runs at call time, never at profile build.
+
+    ``extra_packages``: modules the model's own pipeline imports (ru: pymorphy3 and its
+    dictionaries), satisfied the same two ways and shipped in the language's pack.
+    """
 
     def reason() -> str | None:
         runtime = _importable(SPACY_IMPORT_NAME) or _pack_component_present(SPACY_RUNTIME_PACK, SPACY_IMPORT_NAME)
         model = _importable(model_package) or _pack_component_present(code, model_package)
-        if runtime and model:
+        missing = [name for name in extra_packages if not (_importable(name) or _pack_component_present(code, name))]
+        if runtime and model and not missing:
             return None
         if getattr(sys, "frozen", False):
             return (
@@ -61,6 +68,7 @@ def spaced_missing_reason(code: str, english_name: str, model_package: str) -> C
                 f'{english_name} mining needs spaCy. Install with: pip install "anki-miner[{code}]" - '
                 f"or download the {english_name} pack in Settings -> Mining Language."
             )
-        return f"{english_name} mining needs {model_package}. Download the {english_name} pack in Settings -> Mining Language."
+        needed = model_package if not model else ", ".join(missing)
+        return f"{english_name} mining needs {needed}. Download the {english_name} pack in Settings -> Mining Language."
 
     return reason

@@ -78,11 +78,16 @@ def test_the_kiwipiepy_wheels_declare_their_root_level_extension_module():
         assert spec.root_members == ("_kiwipiepy.",)
 
 
+#: Components whose payload has a declared piece outside the package dir: kiwipiepy's extension module,
+#: and pymorphy3-dicts-ru's .dist-info (pymorphy3 finds dictionaries only through its entry point).
+_ROOT_MEMBER_COMPONENTS = frozenset({"kiwipiepy", "pymorphy3_dicts_ru"})
+
+
 def test_only_declared_root_members_are_promoted_to_a_pack_root():
     """Every other component keeps its whole payload inside its package dir."""
     for pack in _packs().values():
         for comp in pack.components:
-            if comp.import_name == "kiwipiepy":
+            if comp.import_name in _ROOT_MEMBER_COMPONENTS:
                 continue
             for spec in [comp.universal] if comp.universal else list(comp.per_platform.values()):
                 assert spec.root_members == ()

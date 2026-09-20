@@ -729,7 +729,12 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "pl_core_news_sm",
         "pt_core_news_sm",
         "ro_core_news_sm",
+        "ru_core_news_sm",
         "sv_core_news_sm",
+        # pymorphy3 and its Russian dictionaries: ru pack content (spaCy's ru lemmatizer imports them).
+        "dawg_python",
+        "pymorphy3",
+        "pymorphy3_dicts_ru",
         # The Turkish engine (languages/tr/pack.py, generated) is a language pack, never
         # bundle content: zeyrek and the nltk/regex/defusedxml it imports. NOT colorama
         # (the spaCy block's reason) and not numpy, click or tqdm (bundle pins).
