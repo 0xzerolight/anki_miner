@@ -368,7 +368,12 @@ def _run_language_bundled_smoke(code: str) -> int:
         )
         if not words:
             raise RuntimeError(f"{code}: tokenizer produced no words for the smoke line")
-        if profile.reading is not None and not any(w.expression_reading for w in words):
+        # stress_marks readings are dictionary-attested (S24); a fresh smoke home has no dictionary.
+        if (
+            profile.reading is not None
+            and "stress_marks" not in profile.capabilities
+            and not any(w.expression_reading for w in words)
+        ):
             raise RuntimeError(f"{code}: reading support produced no reading")
         # Exercises the lookup strategy's data too (OpenCC's dictionaries for zh).
         profile.lookup.candidates(words[0].mined_form, words[0].orth_base, None)
