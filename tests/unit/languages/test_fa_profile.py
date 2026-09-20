@@ -78,8 +78,9 @@ def test_media_and_text_entry_points_are_persian():
     # 639-2/B "per" is what Matroska and ffmpeg write; "fas" is 639-2/T, "pes"
     # and "prs" are the Iranian and Dari variants a dual-audio rip may carry.
     assert {"per", "fas", "fa", "pes", "prs"} <= profile.audio_track_codes
-    # Legacy Persian subtitles are cp1256; it has no Farsi yeh or keheh, so every
-    # such file arrives with the Arabic spellings fa_normalize unifies.
+    # Legacy Persian subtitles are cp1256. Measured: it carries the keheh (0x98),
+    # the ZWNJ (0x9d) and pe/che/zhe/gaf, but NOT the Farsi yeh, so every such
+    # file spells that with the Arabic yeh fa_normalize unifies.
     assert profile.import_encodings == ("utf-8-sig", "cp1256")
     assert profile.captions.primary == "fa"
     assert profile.captions.codes == ("fa",)

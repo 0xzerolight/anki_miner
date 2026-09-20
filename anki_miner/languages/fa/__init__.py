@@ -123,9 +123,9 @@ def build_profile() -> LanguageProfile:
         # "pes" and "prs" are the Iranian and Dari variants a dual-audio rip
         # may carry.
         audio_track_codes=frozenset({"per", "fas", "fa", "pes", "prs", "persian", "farsi"}),
-        # Legacy Persian subtitles are cp1256, which has neither the Farsi yeh
-        # nor the keheh: every such file arrives with the Arabic spellings that
-        # fa_normalize unifies.
+        # Legacy Persian subtitles are cp1256. It carries the keheh, the ZWNJ
+        # and pe/che/zhe/gaf, but NOT the Farsi yeh - so every such file spells
+        # it with the Arabic yeh, which fa_normalize unifies.
         import_encodings=("utf-8-sig", "cp1256"),
         scoped_defaults=_scoped_defaults(),
         sentence_rules=FA_SENTENCE_RULES,
