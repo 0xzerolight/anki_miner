@@ -384,6 +384,22 @@ def profile_card_field_specs() -> tuple[CardFieldSpec, ...]:
     return tuple(specs.values())
 
 
+def hook_field_row_text(key: str) -> tuple[str, str]:
+    """The translated (label, helper) naming one extra card field.
+
+    Public because Card Backfill offers the same fields and must call them what
+    this panel calls them — one wording per field, one catalogue entry. A key
+    with no entry falls back to its title-cased self, readable English that
+    pylupdate never sees (``test_every_declared_card_field_has_row_texts``
+    fails on one) and an empty helper.
+    """
+    label, helper = _HOOK_FIELD_ROW_TEXTS.get(key, ("", ""))
+    return (
+        QCoreApplication.translate(_TR_CONTEXT, label) if label else key.replace("_", " ").title(),
+        QCoreApplication.translate(_TR_CONTEXT, helper) if helper else "",
+    )
+
+
 class AnkiSettingsPanel(FormPanel):
     """Panel for Anki connection and configuration settings.
 
@@ -661,16 +677,16 @@ class AnkiSettingsPanel(FormPanel):
         self._hook_field_inputs: dict[str, QLineEdit] = {}
         self._hook_field_specs = profile_card_field_specs()
         for spec in self._hook_field_specs:
-            label, helper = _HOOK_FIELD_ROW_TEXTS.get(spec.key, ("", ""))
+            label, helper = hook_field_row_text(spec.key)
             field_input = QLineEdit()
             field_input.setPlaceholderText(spec.placeholder)
             # setattr, not a local: the anchor id and the attribute the tests
             # and any deep link address the row by are both ``<key>_field_input``.
             setattr(self, f"{spec.key}_field_input", field_input)
             self.add_field(
-                QCoreApplication.translate(_TR_CONTEXT, label) if label else spec.key.replace("_", " ").title(),
+                label,
                 field_input,
-                helper=QCoreApplication.translate(_TR_CONTEXT, helper) if helper else "",
+                helper=helper,
                 # Loop-built, so pass the id the attribute would have derived.
                 anchor=f"{spec.key}_field_input",
             )
