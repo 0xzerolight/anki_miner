@@ -47,6 +47,41 @@ def test_chinese_keys_fold_both_scripts_onto_one_row(tmp_path):
     assert db.remove_words({"頭髮"}) == 1
 
 
+def test_a_row_stored_unfolded_is_removed_by_the_spelling_the_dialog_shows(tmp_path):
+    """The row a Manage Known Words list shows is the row Remove deletes.
+
+    A row written while OpenCC was missing keeps its own spelling, and the
+    per-database migration has already run, so it never re-keys.
+    """
+    pytest.importorskip("opencc")
+    path = tmp_path / "known_words.zh.db"
+    db = KnownWordDB(path, language="zh")
+    db.initialize()
+    with sqlite3.connect(path) as conn:
+        conn.execute("INSERT INTO known_words (lemma, source) VALUES ('頭髮', 'user')")
+
+    assert db.get_words_by_source("user") == {"头发"}
+    assert db.remove_words({"头发"}) == 1
+    assert KnownWordDB(path, language="zh").get_words_by_source("user") == set()
+
+
+def test_removal_still_scopes_on_source(tmp_path):
+    """A fold-equal row under another source survives a scoped removal."""
+    pytest.importorskip("opencc")
+    path = tmp_path / "known_words.zh.db"
+    db = KnownWordDB(path, language="zh")
+    db.initialize()
+    with sqlite3.connect(path) as conn:
+        conn.executemany(
+            "INSERT INTO known_words (lemma, source) VALUES (?, ?)",
+            [("頭髮", "user"), ("學生", "mined")],
+        )
+
+    assert db.remove_words({"头发", "学生"}, source="mined") == 1
+    assert db.get_words_by_source("user") == {"头发"}
+    assert db.get_words_by_source("mined") == set()
+
+
 def test_an_existing_chinese_database_rekeys_once(tmp_path):
     """A file already stamped by the NFC-only migration still adopts the script key."""
     pytest.importorskip("opencc")
