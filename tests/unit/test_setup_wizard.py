@@ -161,12 +161,12 @@ class TestThemePage:
         first_id = wiz.pageIds()[0]
         assert wiz.page(first_id) is wiz.theme_page
 
-    def test_wizard_now_has_six_pages(self, qtbot):
+    def test_wizard_now_has_seven_pages(self, qtbot):
         from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
         wiz = SetupWizard(AnkiMinerConfig())
         qtbot.addWidget(wiz)
-        assert len(wiz.pageIds()) == 6
+        assert len(wiz.pageIds()) == 7
 
     def test_theme_page_never_blocks_next(self, qtbot):
         from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
@@ -270,12 +270,12 @@ def test_wizard_has_skip_setup_button_wired_to_reject(qtbot, wiz_config):
     assert btn.text() == "Skip Setup"
 
 
-def test_wizard_adds_six_pages(qtbot, wiz_config):
+def test_wizard_adds_seven_pages(qtbot, wiz_config):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
     wiz = SetupWizard(wiz_config)
     qtbot.addWidget(wiz)
-    assert len(wiz.pageIds()) == 6
+    assert len(wiz.pageIds()) == 7
 
 
 def test_wizard_done_defers_close_without_blocking_for_stubborn_worker(qtbot, wiz_config):

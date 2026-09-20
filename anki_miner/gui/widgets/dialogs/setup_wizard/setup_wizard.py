@@ -34,6 +34,7 @@ from .pages import (
     AnkiConnectPage,
     DeckPage,
     DonePage,
+    MiningLanguagePage,
     NoteTypePage,
     ResourcesPage,
     ThemePage,
@@ -114,8 +115,11 @@ class SetupWizard(QWizard):
 
         # Pages in order. Theme goes first: it is the only step with nothing to
         # detect and nothing that can fail, so it costs the user nothing and
-        # every page after it wears their own pick.
+        # every page after it wears their own pick. The mining language comes
+        # second, ahead of everything it decides: deck, note type and the
+        # recommended catalog are all that language's own.
         self.theme_page = ThemePage(self)
+        self.language_page = MiningLanguagePage(self)
         self.ankiconnect_page = AnkiConnectPage(self)
         self.deck_page = DeckPage(self)
         self.notetype_page = NoteTypePage(self)
@@ -123,6 +127,7 @@ class SetupWizard(QWizard):
         self.done_page = DonePage(self)
         for page in (
             self.theme_page,
+            self.language_page,
             self.ankiconnect_page,
             self.deck_page,
             self.notetype_page,
@@ -308,6 +313,14 @@ class SetupWizard(QWizard):
         super().done(self._pending_done_result)
 
     def _stage_current_edits(self) -> None:
+        """Keep the editor state of every page a walk-away should not lose.
+
+        The mining language is deliberately absent. These run from ``done()``,
+        so they also run on Skip Setup and on Escape, and a language switch
+        rewrites every language-scoped field and parks the outgoing ones — far
+        more than remembering a deck name. It is committed only by leaving the
+        language page forward.
+        """
         self.theme_page.stage_current_edits()
         self.ankiconnect_page.stage_current_edits()
         self.deck_page.stage_current_edits()

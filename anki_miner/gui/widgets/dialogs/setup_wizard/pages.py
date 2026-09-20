@@ -1,6 +1,6 @@
 """Wizard pages for the guided first-run Setup Wizard (Task 3).
 
-Six ``QWizardPage`` subclasses. Each takes the parent :class:`SetupWizard` so
+Seven ``QWizardPage`` subclasses. Each takes the parent :class:`SetupWizard` so
 it can read/write the working config and use the wizard's shared
 :class:`AnkiService` / :class:`ValidationService` and worker registry.
 
@@ -31,6 +31,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.utils.language_choices import available_mining_languages
 from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.base import StatusBadge
 from anki_miner.gui.widgets.enhanced import ModernButton, ThemeGalleryWidget
@@ -41,6 +42,8 @@ from anki_miner.gui.workers.fetch_workers import (
     FetchFieldsWorker,
     FetchNotetypesWorker,
 )
+from anki_miner.languages.registry import config_language
+from anki_miner.languages.switching import switch_language
 from anki_miner.services.anki_note_builder import configured_target_field_names
 from anki_miner.services.note_presets import NotePreset, preset_for_field_names
 from anki_miner.utils.i18n import tr_format
@@ -216,8 +219,118 @@ class ThemePage(QWizardPage):
         return True
 
 
+class MiningLanguagePage(QWizardPage):
+    """Step 2: name the language being mined.
+
+    Second, and not a selector found in Settings afterwards: every step from
+    here on -- deck, note type, recommended resources -- is derived from the
+    mining language, so a Mandarin learner who answers here is set up for
+    Mandarin instead of being walked through a Japanese setup first.
+
+    The list is the one Settings offers, which already drops a language whose
+    engine this build cannot supply. Installing one stays in Settings -> Mining
+    Language: a download that size does not belong mid-setup, and a second
+    downloader here would be a second thing to keep in step with the first.
+    """
+
+    def __init__(self, wizard: SetupWizard) -> None:
+        super().__init__(wizard)
+        self._wizard = wizard
+        # Like ThemePage: where the combo opens is a display default, not a
+        # user decision. Only an actual pick may rewrite the config, so a
+        # config naming a language this build cannot offer -- its engine pack
+        # is gone -- is left alone rather than quietly switched to whatever
+        # happens to show first.
+        self._touched = False
+        config = wizard.working_config()
+        # The raw field, not config_language: switch_language parks the
+        # outgoing snapshot under it, so that is the key a single switch from
+        # here would leave behind. See _single_switch.
+        self._kept_stash_codes = frozenset(config.language_stash) | {config.language}
+
+        self.setTitle(self.tr("Choose a Mining Language"))
+        self.setSubTitle(self.tr("The language you are learning. The interface language is separate."))
+
+        layout = QVBoxLayout(self)
+
+        self.language_combo = QComboBox()
+        for code, display_name in available_mining_languages():
+            self.language_combo.addItem(display_name, code)
+        self.language_combo.currentIndexChanged.connect(self._on_language_changed)
+        layout.addWidget(self.language_combo)
+
+        helper = QLabel(
+            self.tr(
+                "The deck, note type and resources in the next steps follow this choice. A language "
+                "missing from the list needs its engine pack: Settings → Mining Language."
+            )
+        )
+        helper.setObjectName("helper-text")
+        helper.setWordWrap(True)
+        layout.addWidget(helper)
+        layout.addStretch(1)
+
+        self._point_at_working_config()
+
+    def initializePage(self) -> None:
+        self._point_at_working_config()
+
+    def isComplete(self) -> bool:
+        # Always true. Every language in the combo can be mined here, and the
+        # config already holds one, so this step must never hold the wizard up.
+        return True
+
+    def _point_at_working_config(self) -> None:
+        """Show the language actually in force, without proposing a change.
+
+        Signals blocked: ``currentIndexChanged`` is what marks a user's pick,
+        and re-pointing the combo on page entry is not one.
+        """
+        index = self.language_combo.findData(config_language(self._wizard.working_config()))
+        if index < 0:
+            return
+        self.language_combo.blockSignals(True)
+        try:
+            self.language_combo.setCurrentIndex(index)
+        finally:
+            self.language_combo.blockSignals(False)
+
+    def _on_language_changed(self, _index: int) -> None:
+        self._touched = True
+
+    def _single_switch(self, config: AnkiMinerConfig, code: str) -> AnkiMinerConfig:
+        """Switch to ``code``, leaving the stash one switch would have left.
+
+        Back-and-pick-again chains switches, and each one parks the language it
+        leaves. ``language_stash`` membership is what later marks a first visit
+        to a language, so a detour through Chinese would silently spend
+        Chinese's first visit -- no deck checklist, no setup offer, the next
+        time the user really goes there. Snapshots only this page's own detours
+        created are dropped again; the ones the wizard opened with, and the
+        language it opened on, are what a single switch would leave.
+        """
+        switched = switch_language(config, code)
+        detour = set(switched.language_stash) - self._kept_stash_codes
+        if not detour:
+            return switched
+        kept = {parked: values for parked, values in switched.language_stash.items() if parked not in detour}
+        return replace(switched, language_stash=kept)
+
+    def _write_language_to_config(self) -> None:
+        if not self._touched:
+            return
+        code = self.language_combo.currentData()
+        if not isinstance(code, str) or not code:
+            return
+        self._wizard.update_working_config(self._single_switch(self._wizard.working_config(), code))
+
+    def validatePage(self) -> bool:
+        self._write_language_to_config()
+        return True
+
+
 class AnkiConnectPage(QWizardPage):
-    """Step 1: verify AnkiConnect is reachable; guide install if not."""
+    """Step 3: verify AnkiConnect is reachable; guide install if not."""
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
@@ -345,7 +458,7 @@ class AnkiConnectPage(QWizardPage):
 
 
 class DeckPage(QWizardPage):
-    """Step 2: choose the target deck (must already exist in Anki)."""
+    """Step 4: choose the target deck (must already exist in Anki)."""
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
@@ -449,7 +562,7 @@ class DeckPage(QWizardPage):
 
 
 class NoteTypePage(_LiveCheckPage):
-    """Step 3 (richest): choose a note type, auto-map its fields, warn on gaps."""
+    """Step 5 (richest): choose a note type, auto-map its fields, warn on gaps."""
 
     def __init__(self, wizard: SetupWizard) -> None:
         super().__init__(wizard)
@@ -843,7 +956,7 @@ class NoteTypePage(_LiveCheckPage):
 
 
 class ResourcesPage(_LiveCheckPage):
-    """Step 4: install the recommended resources. A dictionary is required.
+    """Step 6: install the recommended resources. A dictionary is required.
 
     The dictionary used to be labelled optional, so setup could be completed in
     a state guaranteed to fail the first mine: without one, every mined card
@@ -868,39 +981,16 @@ class ResourcesPage(_LiveCheckPage):
         link.linkActivated.connect(lambda: _open_url(RESOURCES_HELP_URL))
         layout.addWidget(link)
 
-        # Built from the active language's catalog, never hand-listed: a spec
-        # added to a profile's catalog has to appear here without touching this
-        # page. ja's catalog IS RECOMMENDED_DEFAULT_SET, so the ja wizard is
-        # byte-identical to the pre-multilanguage one.
-        from anki_miner.languages.registry import config_language, get_profile  # noqa: PLC0415
-
-        # _sync_download_button reads _download_running, and the toggled
-        # connection below deliberately comes AFTER setChecked: a fresh
-        # unchecked box emits toggled the first time it is checked, and that
-        # slot touches download_button, which this loop runs before.
+        # _sync_download_button reads _download_running, so it is set before any
+        # checkbox exists to toggle.
         self._download_running = False
-        # config_language, never the raw field: a stored code whose profile this
-        # build cannot supply — a language whitelisted in config but with its
-        # engine extra absent — is legal on disk, and raising here would make the
-        # whole wizard unconstructible on first run.
-        self._specs = list(get_profile(config_language(wizard.working_config())).catalog)
-        # A regional-variety resource (pt's two frequency lists) starts ticked
-        # only for the variety the config holds; the other row stays offered.
-        variant = wizard.working_config().script_variant
-        self.resource_checks: dict[str, QCheckBox] = {}
-        for spec in self._specs:
-            noun = _RESOURCE_KIND_NOUNS.get(spec.kind)
-            label = (
-                tr_format(self.tr("%1 — %2"), QCoreApplication.translate("SetupWizard", noun), spec.display_name)
-                if noun
-                else spec.display_name
-            )
-            box = QCheckBox(label)
-            box.setToolTip(spec.license_note)
-            box.setChecked(not spec.variant or spec.variant == variant)
-            box.toggled.connect(self._sync_download_button)
-            layout.addWidget(box)
-            self.resource_checks[spec.id] = box
+
+        # The catalog rows live in a container of their own so a language
+        # change can replace them without disturbing what surrounds them.
+        self._catalog_rows = QWidget()
+        self._catalog_rows_layout = QVBoxLayout(self._catalog_rows)
+        self._catalog_rows_layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self._catalog_rows)
 
         self.download_button = ModernButton(self.tr("Download recommended resources"), variant="primary")
         self.download_button.clicked.connect(self._on_download_clicked)
@@ -911,19 +1001,10 @@ class ResourcesPage(_LiveCheckPage):
         self.status_label.setWordWrap(True)
         layout.addWidget(self.status_label)
 
-        # Derived, never assumed: the button was born enabled, and the only
-        # thing that ever re-derived it was a checkbox toggling. A language
-        # whose catalog is empty has no checkbox to toggle, so it kept an
-        # enabled button over a handler that returns silently at :1070.
-        self._sync_download_button()
-        if not self._specs:
-            # ko's catalog is empty on purpose (languages/ko/catalog.py): no
-            # Korean resource is both redistributable by link and shaped like
-            # an importer here. Saying so beats a dead button, and the sentence
-            # has to name where the resources DO come from.
-            self.status_label.setText(
-                self.tr("No recommended resources for this language. Import a dictionary in Settings → Dictionaries.")
-            )
+        self._specs_language: str | None = None
+        self._specs: list[ResourceSpec] = []
+        self.resource_checks: dict[str, QCheckBox] = {}
+        self._rebuild_catalog_rows()
 
         # Kept apart from status_label: one reports how the *download* ended,
         # the other what the app can *do now*. A single label would let a
@@ -962,6 +1043,72 @@ class ResourcesPage(_LiveCheckPage):
         """Catalog order, filtered to what is ticked."""
         return [spec for spec in self._specs if self.resource_checks[spec.id].isChecked()]
 
+    def _rebuild_catalog_rows(self) -> None:
+        """Offer the active language's catalog, never a hand-listed one.
+
+        Re-derived on every page entry rather than read once when the page was
+        built: the wizard's own language step comes before this one, so the
+        catalog it has to offer is not known at construction time. A spec added
+        to a profile's catalog appears here without touching this page, and ja's
+        catalog IS RECOMMENDED_DEFAULT_SET, so the ja wizard is byte-identical
+        to the pre-multilanguage one.
+        """
+        from anki_miner.languages.registry import get_profile  # noqa: PLC0415
+
+        config = self._wizard.working_config()
+        # config_language, never the raw field: a stored code whose profile this
+        # build cannot supply — a language whitelisted in config but with its
+        # engine extra absent — is legal on disk, and raising here would make the
+        # whole wizard unconstructible on first run.
+        language = config_language(config)
+        if language == self._specs_language:
+            return
+        self._specs_language = language
+        self._specs = list(get_profile(language).catalog)
+
+        while (item := self._catalog_rows_layout.takeAt(0)) is not None:
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+                widget.deleteLater()
+
+        # A regional-variety resource (pt's two frequency lists) starts ticked
+        # only for the variety the config holds; the other row stays offered.
+        variant = config.script_variant
+        self.resource_checks = {}
+        for spec in self._specs:
+            noun = _RESOURCE_KIND_NOUNS.get(spec.kind)
+            label = (
+                tr_format(self.tr("%1 — %2"), QCoreApplication.translate("SetupWizard", noun), spec.display_name)
+                if noun
+                else spec.display_name
+            )
+            box = QCheckBox(label)
+            box.setToolTip(spec.license_note)
+            # The toggled connection comes AFTER setChecked: a fresh unchecked
+            # box emits toggled the first time it is checked.
+            box.setChecked(not spec.variant or spec.variant == variant)
+            box.toggled.connect(self._sync_download_button)
+            self._catalog_rows_layout.addWidget(box)
+            self.resource_checks[spec.id] = box
+
+        # Derived, never assumed: the button was born enabled, and the only
+        # thing that ever re-derived it was a checkbox toggling. A language
+        # whose catalog is empty has no checkbox to toggle, so it kept an
+        # enabled button over a handler that returns silently.
+        self._sync_download_button()
+        # ko's catalog is empty on purpose (languages/ko/catalog.py): no Korean
+        # resource is both redistributable by link and shaped like an importer
+        # here. Saying so beats a dead button, and the sentence has to name
+        # where the resources DO come from. Cleared again for a language that
+        # has a catalog — a status line from the outgoing language's download
+        # describes a run that is no longer on screen.
+        self.status_label.setText(
+            ""
+            if self._specs
+            else self.tr("No recommended resources for this language. Import a dictionary in Settings → Dictionaries.")
+        )
+
     def _sync_download_button(self) -> None:
         """Nothing ticked is not a run: an empty spec list reports success for no work."""
         self.download_button.setEnabled(bool(self.selected_specs()) and not self._download_running)
@@ -981,6 +1128,7 @@ class ResourcesPage(_LiveCheckPage):
 
     def initializePage(self) -> None:
         """Ask the disk, every time the page is entered."""
+        self._rebuild_catalog_rows()
         self._apply_language_gate()
         self._recheck_resources()
 
@@ -1180,7 +1328,7 @@ def _final_sweep(validation: ValidationService) -> dict[str, bool]:
 
 
 class DonePage(_LiveCheckPage):
-    """Step 5: re-verify the whole setup, then offer the first real action.
+    """Step 7: re-verify the whole setup, then offer the first real action.
 
     The old summary read the AnkiConnect page's cached ``_reachable`` flag and
     counted the mapped fields in config — both of which were true several
