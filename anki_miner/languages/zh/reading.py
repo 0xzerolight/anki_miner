@@ -92,40 +92,54 @@ def _retone(syllable: str, tone: int) -> str:
     return unicodedata.normalize("NFC", "".join(mark if char in _TONE_BY_MARK else char for char in decomposed))
 
 
-def _placeholder_rows(chars: str) -> list[str]:
-    """``errors`` handler: one empty row per character pypinyin cannot read.
-
-    A ``str`` return — what the bundled stub declares and what ``errors="ignore"``
-    is shorthand for — collapses the whole run into a single row or into none,
-    either of which slides the rest of the word out of alignment with its source
-    characters. ``handle_nopinyin`` unpacks a list into one row each.
-    """
-    return [""] * len(chars)
-
-
 def _syllables(word: str) -> list[str]:
-    """Per-syllable pinyin for ``word``, tone marks included, non-hanzi dropped.
+    """Per-syllable pinyin for ``word``, tone marks included, non-hanzi kept.
 
     The whole word is handed to pypinyin in one call so its phrase dictionary
     can disambiguate polyphones; feeding characters one at a time would silently
     return the most common reading for every one of them. That dictionary is
     simplified-only, so the word goes in as its simplified spelling (銀行 would
-    otherwise read yín xíng); both scripts share one pronunciation. It also
-    carries the 一/不 sandhi, which is undone against the source character each
-    row came from — hence the placeholder rows, which keep a Latin letter or a
-    digit from shifting the alignment.
+    otherwise read yín xíng); both scripts share one pronunciation.
+
+    ``errors="default"`` hands back the source text for whatever pypinyin
+    cannot read, as ONE row per run — so a Latin run (T恤, WIFI密码) survives as
+    the syllable it is spoken as, but the rows no longer line up with the
+    characters they came from and the 一/不 citation retone below needs that
+    alignment. Hence the cursor: a row that is literally there at the cursor
+    consumes its own length; anything else consumes one character. An
+    unreadable HANZI comes back the same way and must not reach the card, so an
+    ideograph row is dropped rather than emitted (OpenCC maps a few rare
+    traditional characters onto simplified ones pypinyin has no entry for).
+
+    The length check keeps the walk on the characters the rows were generated
+    from, the way ``JiebaTagger._segments`` keeps its spans on theirs.
     """
     from pypinyin import Style, pinyin
 
+    if not any(is_cjk_ideograph(char) for char in word):
+        return []
     simplified = to_simplified(word)
-    rows = pinyin(simplified, style=Style.TONE, heteronym=False, errors=_placeholder_rows)  # type: ignore[arg-type]
+    if len(simplified) != len(word):
+        simplified = word
+    rows = pinyin(simplified, style=Style.TONE, heteronym=False, errors="default")
     syllables: list[str] = []
-    for char, row in zip(simplified, rows, strict=True):
-        syllable = row[0] if row else ""
-        if not syllable:
+    cursor = 0
+    for row in rows:
+        text = row[0] if row else ""
+        if not text:
+            cursor += 1
             continue
-        citation = _CITATION_TONES.get(char, {}).get(syllable_tone(syllable))
-        syllables.append(syllable if citation is None else _retone(syllable, citation))
+        if any(is_cjk_ideograph(char) for char in text):
+            cursor += 1
+            continue
+        if simplified.startswith(text, cursor):
+            syllables.append(text)
+            cursor += len(text)
+            continue
+        char = simplified[cursor]
+        cursor += 1
+        citation = _CITATION_TONES.get(char, {}).get(syllable_tone(text))
+        syllables.append(text if citation is None else _retone(text, citation))
     if len(syllables) > 1 and simplified.endswith("儿") and simplified not in _ER_IS_A_SYLLABLE:
         syllables[-2:] = [syllables[-2] + "r"]
     return syllables

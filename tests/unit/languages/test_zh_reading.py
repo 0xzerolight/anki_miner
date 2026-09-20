@@ -78,13 +78,43 @@ class TestErhua:
         assert word_pinyin(word) == expected
 
     def test_a_mixed_token_merges_on_the_last_hanzi(self) -> None:
-        # The Latin letter yields no syllable, so the merge has to align on the
-        # hanzi, not on the character before 儿.
-        assert word_pinyin("T恤儿") == "xùr"
+        # The Latin run is a syllable of its own, so the merge has to align on
+        # the hanzi, not on the character before 儿.
+        assert word_pinyin("T恤儿") == "T xùr"
 
     def test_a_traditional_word_erhuas_like_its_simplified_twin(self) -> None:
         pytest.importorskip("opencc")
         assert word_pinyin("這兒") == "zhèr"
+
+
+class TestNonHanziRuns:
+    """A word holding a Latin or digit run keeps it, and never leaks a hanzi."""
+
+    @pytest.mark.parametrize(
+        ("word", "expected"),
+        [
+            ("T恤", "T xù"),
+            ("AA制", "AA zhì"),
+            ("卡拉OK", "kǎ lā OK"),
+            ("X光", "X guāng"),
+            ("U盘", "U pán"),
+            ("WIFI密码", "WIFI mì mǎ"),
+        ],
+    )
+    def test_a_non_hanzi_run_is_carried_through_verbatim(self, word: str, expected: str) -> None:
+        # pypinyin returns one row per non-hanzi RUN, so the rows no longer line
+        # up one-to-one with the characters they came from.
+        assert word_pinyin(word) == expected
+
+    @pytest.mark.parametrize("word", ["3D", "ok!", "PM2.5", ""])
+    def test_a_word_with_no_hanzi_still_reads_as_nothing(self, word: str) -> None:
+        assert word_pinyin(word) == ""
+
+    def test_a_character_pypinyin_cannot_read_emits_nothing_not_itself(self) -> None:
+        # errors="default" hands back the ORIGINAL CHARACTER for an unreadable
+        # hanzi; emitting that verbatim would put a raw glyph in the reading.
+        pytest.importorskip("opencc")
+        assert word_pinyin("㘓哰") == "láo"
 
 
 class TestCitationTones:
