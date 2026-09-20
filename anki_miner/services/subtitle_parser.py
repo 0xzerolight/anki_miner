@@ -1224,7 +1224,16 @@ class SubtitleParserService:
         propagation is limited to real tokens whose card front equals the exact
         token surface. Expression fields still apply the unique rule to every
         real-token mined form.
+
+        Skipped outright when a ``ReadingSupport`` owns the reading fields: the
+        comparison reading below comes from ``feature.kana``, which is ``""`` by
+        the LanguageToken contract, so every attested headword compared unequal
+        and a multi-reading one was recorded for review the user cannot act on.
+        Nothing is lost — those languages set ``sentence_annotator=None``, so
+        the corrected stream this returns reaches no field.
         """
+        if self._reading_support is not None:
+            return display_tokens
         corrections: dict[tuple[int, int], str] = {}
         for token, (tok_start, tok_end, _), mined in zip(
             included_tokens,

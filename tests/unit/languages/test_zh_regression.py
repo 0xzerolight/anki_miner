@@ -296,6 +296,22 @@ def test_two_attested_readings_leave_the_engine_reading_alone(test_config, tmp_p
     assert words["先生"].expression_reading == word_pinyin("先生")
 
 
+def test_several_attested_readings_are_not_a_review_receipt_for_zh(test_config, tmp_path):
+    """A profile that owns the reading fields owes no kana-attestation review.
+
+    The pass this gates derives its comparison reading from ``feature.kana``,
+    which a zh token does not carry, so every multi-reading headword looked
+    unresolved and the run ended on a warning naming words nothing was wrong
+    with.
+    """
+    parser = _create_subtitle_parser(switch_language(test_config, "zh"))
+    parser._reading_lookup = lambda terms: {"先生": ["xiānsheng", "xiānshēng"]}
+    path = _srt_file(tmp_path, "zh.srt", "那位先生说话")
+    words = parser.parse_subtitle_file(path)
+    assert {"先生"} <= {w.mined_form for w in words}
+    assert parser.ambiguous_reading_count == 0
+
+
 def test_character_set_simplified_converts_traditional_fronts_only(test_config, tmp_path):
     """The front follows Character Set; the sentence keeps the subtitle's own characters."""
     pytest.importorskip("opencc")
