@@ -1,4 +1,4 @@
-"""Process-wide {language: tagger} cache. Never evicted.
+"""Process-wide {language: tagger} cache; a language switch evicts the outgoing entry (S23).
 
 ``"ja"`` delegates to services.tagger.get_shared_tagger() unchanged — the
 single-flight LockedTagger contract stays exactly where it is. Later stages add
@@ -70,3 +70,16 @@ def get_tagger(language: str = "ja") -> Any:
             cached = _build(language)
             _TAGGERS[language] = cached
         return cached
+
+
+def evict(language: str) -> bool:
+    """Drop ``language``'s cached tagger so its engine can be collected; True when one was cached.
+
+    Called by the language-switch controller for the OUTGOING language (S23): Arabic's analyzer
+    holds ~+400 MB, which would otherwise stay resident for the rest of the session. The next
+    ``get_tagger`` rebuilds it (the prewarm worker already builds the incoming one). A parser still
+    holding the tagger keeps it alive until that parser releases it. For ``"ja"`` only this cache
+    entry goes: ``services.tagger`` keeps its own shared instance.
+    """
+    with _LOCK:
+        return _TAGGERS.pop(language, None) is not None

@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import QMessageBox, QWidget
 
 from anki_miner.gui.utils import queue_state_store
 from anki_miner.gui.utils.run_off_thread import run_off_thread
+from anki_miner.languages import tagger_provider
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.languages.switching import switch_language
 from anki_miner.services.anki_service import AnkiService
@@ -185,6 +186,9 @@ def commit_language_change(window: Any, previous_config: Any, *, flush: bool, fi
     """Everything a DURABLE language change owes, on both triggers."""
     if flush:
         flush_queues(window)
+    # S23: release the outgoing engine before the prewarm builds the incoming one.
+    if previous_config.language != window.get_config().language:
+        tagger_provider.evict(previous_config.language)
     for name in ("restart_prewarm", "sync_mining_language_surfaces"):
         hook = getattr(window, name, None)
         if callable(hook):
