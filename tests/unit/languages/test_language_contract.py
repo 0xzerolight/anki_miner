@@ -124,6 +124,8 @@ CAPABILITY_VOCABULARY = frozenset(
         # binyan. Its root, gender, plural and POS reuse the shared names above.
         "hebrew_transliteration",
         "hebrew_binyan",
+        # Like "stress_marks": states that the reading comes from an installed dictionary.
+        "vocalised_reading",
     }
 )
 

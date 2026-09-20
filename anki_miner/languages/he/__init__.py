@@ -93,8 +93,11 @@ def build_profile() -> LanguageProfile:
             allowed_pos=HE_ALLOWED_POS, excluded_subtypes=HE_EXCLUDED_SUBTYPES, labels=HE_POS_LABELS
         ),
         catalog=HE_CATALOG,
-        # "rtl" is shared by fa/ar/he and "word_root" by ar/he/id; the rest gate this language's
-        # own card-field rows. No "lemmatised_frequency": there is no tagger to lemmatise with.
+        # "rtl" is shared by fa/ar/he and "word_root" by ar/he/id; the four after them gate this
+        # language's own card-field rows. "vocalised_reading" gates nothing either: like ru/uk's
+        # "stress_marks" it STATES that the reading is read out of an installed dictionary, which
+        # is what tells the bundled smoke an empty reading is correct in a dictionary-less home.
+        # No "lemmatised_frequency": there is no tagger to lemmatise the frequency list with.
         capabilities=frozenset(
             {
                 "hebrew_transliteration",
@@ -104,6 +107,7 @@ def build_profile() -> LanguageProfile:
                 "noun_plural",
                 "pos_tag",
                 "rtl",
+                "vocalised_reading",
             }
         ),
         card_field_defaults=HE_CARD_FIELDS,

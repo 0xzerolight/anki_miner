@@ -339,6 +339,13 @@ _LANGUAGE_SMOKE_LINES: dict[str, str] = {
     "ko": "학생이 밥을 먹었어요.",
 }
 
+#: Capabilities whose reading is read out of an installed DICTIONARY rather than derived by the
+#: engine: ru/uk's stressed headword (S24) and Hebrew's vocalised headword (F.2). The bundled smoke
+#: seeds engine packs and never a dictionary, so for these an empty reading is correct and the
+#: reading check below would fail every release. Not a language-code branch: a profile declares
+#: which kind of reading it has.
+_DICTIONARY_ATTESTED_READING = frozenset({"stress_marks", "vocalised_reading"})
+
 
 def _run_language_bundled_smoke(code: str) -> int:
     """Env-var-gated smoke path for a mining language's frozen tokenizer stack.
@@ -368,10 +375,13 @@ def _run_language_bundled_smoke(code: str) -> int:
         )
         if not words:
             raise RuntimeError(f"{code}: tokenizer produced no words for the smoke line")
-        # stress_marks readings are dictionary-attested (S24); a fresh smoke home has no dictionary.
+        # A DICTIONARY-attested reading legitimately comes back empty here: the smoke home installs
+        # the language's engine pack but never a dictionary. Every other reading is engine-derived,
+        # so an empty one there means the reading seam is wired but dead — which is what this check
+        # is for.
         if (
             profile.reading is not None
-            and "stress_marks" not in profile.capabilities
+            and not (profile.capabilities & _DICTIONARY_ATTESTED_READING)
             and not any(w.expression_reading for w in words)
         ):
             raise RuntimeError(f"{code}: reading support produced no reading")

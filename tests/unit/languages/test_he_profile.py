@@ -107,10 +107,18 @@ def test_the_capabilities_are_the_declared_ones(profile):
             "noun_plural",
             "pos_tag",
             "rtl",
+            "vocalised_reading",
         }
     )
     assert "lemmatised_frequency" not in profile.capabilities, "no tagger, so nothing to lemmatise with"
     assert "wiktionary_audio" not in profile.capabilities
+
+
+def test_the_reading_is_declared_dictionary_attested_so_the_bundle_smoke_accepts_an_empty_one():
+    """The smoke home seeds engine packs and never a dictionary (the ru/uk stress_marks case)."""
+    from anki_miner.gui.app import _DICTIONARY_ATTESTED_READING
+
+    assert get_profile("he").capabilities & _DICTIONARY_ATTESTED_READING
 
 
 # --------------------------------------------------------------------------

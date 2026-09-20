@@ -122,8 +122,17 @@ def _smoke_profile(capabilities: frozenset[str]) -> SimpleNamespace:
     )
 
 
-@pytest.mark.parametrize(("capabilities", "code"), [(frozenset({"stress_marks"}), 0), (frozenset(), 1)])
-def test_the_bundled_smoke_skips_the_reading_check_only_for_stress_marks(monkeypatch, capabilities, code):
+@pytest.mark.parametrize(
+    ("capabilities", "code"),
+    [
+        (frozenset({"stress_marks"}), 0),
+        # he's vocalised headword is read out of the dictionary too, and the smoke home has none.
+        (frozenset({"vocalised_reading"}), 0),
+        (frozenset({"rtl", "pos_tag"}), 1),
+        (frozenset(), 1),
+    ],
+)
+def test_the_bundled_smoke_skips_the_reading_check_only_for_a_dictionary_reading(monkeypatch, capabilities, code):
     import anki_miner.languages.registry as registry
     import anki_miner.languages.switching as switching
     import anki_miner.languages.tagger_provider as tagger_provider
