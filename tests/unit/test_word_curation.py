@@ -103,6 +103,32 @@ class TestCurationCallback:
         assert received_words[0].lemma == "食べる"
         assert received_words[1].lemma == "走る"
 
+    def test_curation_callback_words_carry_their_position(self, processor, mock_services, tmp_path):
+        """The Position column's data reaches the dialog (Issue #129).
+
+        Proves the call site, not the formula: a stamp fed the wrong labels —
+        or none — leaves every unit test of the helper itself green.
+        """
+        words = [_make_word("食べる", start_time=1867.0), _make_word("走る", start_time=4364.9)]
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = words
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = words
+        mock_services["media_extractor"].extract_media_batch.return_value = []
+
+        received_words = []
+
+        def capture_callback(word_list):
+            received_words.extend(word_list)
+            return word_list
+
+        processor.process_episode(
+            tmp_path / "v.mkv",
+            tmp_path / "s.ass",
+            curation_callback=capture_callback,
+        )
+
+        assert [w.position_label for w in received_words] == ["00:31:07", "01:12:44"]
+
     def test_curation_callback_filters_words(self, processor, mock_services, tmp_path):
         """When callback returns a subset, only those words proceed to Phase 3."""
         word1 = _make_word("食べる")

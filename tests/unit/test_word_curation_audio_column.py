@@ -30,7 +30,7 @@ def test_column_is_hidden_without_expression_audio(qtbot):
     dlg = WordCurationDialog([_word()])
     qtbot.addWidget(dlg)
 
-    assert dlg.table.columnCount() == 11
+    assert dlg.table.columnCount() == 12
     assert dlg.table.isColumnHidden(AUDIO_COLUMN)
     assert AUDIO_COLUMN not in dlg._column_menu_actions()
 
