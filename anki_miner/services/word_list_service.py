@@ -6,7 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
-from anki_miner.services.reading._util import _decode
+from anki_miner.services.reading._util import decode_with_ladder
 
 logger = logging.getLogger(__name__)
 
@@ -137,10 +137,9 @@ class WordListService:
         try:
             with path.open("rb") as f:
                 raw = f.read()
-            # The reading loaders' ladder decoder, not the known-words one: only
-            # this copy steps over gb18030 for a Big5 file, which gb18030
-            # otherwise decodes into PUA mojibake without raising.
-            text = _decode(raw, encodings=self._encodings, script_check=self._script_check)
+            # Bytes, not text: a hand-made list is whatever the user's editor
+            # wrote, and only the shared ladder decoder knows which leg that is.
+            text, _ = decode_with_ladder(raw, encodings=self._encodings, script_check=self._script_check)
             words: set[str] = set()
             for line in text.splitlines():
                 stripped = unicodedata.normalize("NFC", line.strip())
