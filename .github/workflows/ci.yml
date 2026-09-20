@@ -96,15 +96,16 @@ jobs:
           curl -fsSL -o "$RUNNER_TEMP/hu_core_news_md-3.8.0-py3-none-any.whl" https://huggingface.co/huspacy/hu_core_news_md/resolve/v3.8.0/hu_core_news_md-any-py3-none-any.whl
           echo "0fd89c6ccf0efe1d7591910065c3bec4eadb1e25313d6ceea551150832b0f861  $RUNNER_TEMP/hu_core_news_md-3.8.0-py3-none-any.whl" | sha256sum -c -
           pip install "$RUNNER_TEMP/hu_core_news_md-3.8.0-py3-none-any.whl"
-      # The Arabic morphology database is a data-only language pack with no pip package (spec C.6).
-      # The app's own installer fetches it and verifies both pinned digests (languages/ar/pack.py) into
-      # the tree the real-data ar tests read (tests/_pack_seeds.py). Cached on the pinned zip digest:
-      # the download is 40 MB on every matrix leg otherwise.
+      # The Arabic morphology database and the Persian hazm tables are data-only language
+      # packs with no pip package (spec C.6, C.2). The app's own installer fetches each and
+      # verifies its pinned digests (languages/<code>/pack.py) into the tree the real-data
+      # tests read (tests/_pack_seeds.py). Cached on both pinned digests: the ar download is
+      # 40 MB on every matrix leg otherwise.
       - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ runner.temp }}/lang_pack_seeds
-          key: lang-pack-seeds-ar-fe6531250c5529307627cc63ed56447cbb9968020d6ea3ab867e6ad9af94c738
-      - run: python scripts/fetch_language_pack_seeds.py "$RUNNER_TEMP/lang_pack_seeds" ar
+          key: lang-pack-seeds-ar-fe6531250c5529307627cc63ed56447cbb9968020d6ea3ab867e6ad9af94c738-fa-91507896f5b77dcfe26c710b457801e1204ab0d86dcb756a7ab5912719108db0
+      - run: python scripts/fetch_language_pack_seeds.py "$RUNNER_TEMP/lang_pack_seeds" ar fa
       # `golden` = the Android-port engine parity contract; it's a separate
       # project's concern, and every case clones the pinned revision and runs a
       # real export. It has no hosted derivation workflow at all — the anki-miner

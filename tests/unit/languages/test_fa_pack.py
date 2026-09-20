@@ -8,6 +8,8 @@ the registry row does turns it red.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from anki_miner.languages.fa import availability
 from anki_miner.languages.fa.pack import PACK
 
@@ -72,3 +74,39 @@ def test_the_pack_is_the_pinned_hazm_wheel_data_directory():
         "iwords.dat",
         "stopwords.dat",
     }
+
+
+ROOT = Path(__file__).resolve().parents[3]
+SEED_ANCHOR = 'fetch_language_pack_seeds.py "$RUNNER_TEMP/lang_pack_seeds"'
+
+
+def test_the_release_workflow_seeds_and_smokes_persian():
+    """Two lines, both needed: a pack the smoke is not handed cannot run its leg."""
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    seed_lines = [line for line in workflow.splitlines() if SEED_ANCHOR in line]
+    assert seed_lines
+    for line in seed_lines:
+        codes = line.split('"$RUNNER_TEMP/lang_pack_seeds"', 1)[1].split()
+        # "A new language's code goes before asr" - the workflow's own comment.
+        assert "fa" in codes and codes.index("fa") < codes.index("asr")
+    requested = [line.split(":", 1)[1].split() for line in workflow.splitlines() if "BUNDLE_SMOKE_LANGS:" in line]
+    assert requested and all("fa" in group for group in requested)
+
+
+def test_ci_seeds_the_tables_before_the_tests_that_read_them():
+    """``test_fa_real_data.py`` hard-requires the seed, so the step is not fail-open."""
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    test_job = workflow.split("\n  test:\n", 1)[1].split("\n  wheel-assets:\n", 1)[0]
+    seed_line = next(line for line in test_job.splitlines() if SEED_ANCHOR in line)
+    assert "fa" in seed_line.split('"$RUNNER_TEMP/lang_pack_seeds"', 1)[1].split()
+    assert test_job.index(SEED_ANCHOR) < test_job.index("pytest -m")
+    assert "continue-on-error" not in seed_line
+    assert "ANKI_MINER_TEST_PACK_SEEDS: ${{ runner.temp }}/lang_pack_seeds" in test_job
+
+
+def test_the_ci_seed_cache_key_covers_the_persian_pin():
+    """A key that named only ar would never store the Persian tables."""
+    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    key = next(line for line in workflow.splitlines() if "lang-pack-seeds-" in line)
+    (component,) = PACK.components
+    assert component.universal.sha256 in key
