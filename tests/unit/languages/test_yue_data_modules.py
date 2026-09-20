@@ -60,11 +60,11 @@ def test_the_writing_system_is_a_real_qt_member():
     assert hasattr(QFontDatabase.WritingSystem, YUE_CONTENT_STYLE.writing_system)
 
 
-def test_every_card_is_tagged_traditional_whatever_the_word():
+def test_every_card_is_tagged_traditional_whatever_the_text():
     """``yue`` names no script, so the tag a font fallback can act on is zh-Hant."""
     config = AnkiMinerConfig(language="yue")
-    assert yue_card_lang("香港", config) == "zh-Hant"
-    assert yue_card_lang("食饭", config) == "zh-Hant"
+    assert yue_card_lang("我今日去咗香港。", config) == "zh-Hant"
+    assert yue_card_lang("我今天去了香港。", config) == "zh-Hant"
     assert YUE_CONTENT_STYLE.card_lang is yue_card_lang
 
 

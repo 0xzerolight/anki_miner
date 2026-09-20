@@ -51,13 +51,13 @@ def yue_cjk_wrap(text: str) -> str:
     return text
 
 
-def yue_card_lang(word: str, config: AnkiMinerConfig) -> str:
+def yue_card_lang(text: str, config: AnkiMinerConfig) -> str:
     """BCP-47 tag for the Cantonese text on a card: always traditional Chinese.
 
     Cantonese is written in traditional Han, and the profile code ``yue`` is no
     use to a reviewer's font fallback -- no CJK face declares it, so the tag
     that actually routes 骨 and 直 to Chinese shapes rather than Japanese ones
-    is the script subtag. ``word`` and ``config`` are the one cross-language
+    is the script subtag. ``text`` and ``config`` are the one cross-language
     resolver signature and are unused here.
     """
     return "zh-Hant"

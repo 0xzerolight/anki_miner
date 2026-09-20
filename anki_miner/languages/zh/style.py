@@ -56,22 +56,20 @@ def zh_cjk_wrap(text: str) -> str:
     return text
 
 
-def zh_card_lang(word: str, config: AnkiMinerConfig) -> str:
-    """BCP-47 tag for the Chinese text on a card, from the configured Character Set.
+def zh_card_lang(text: str, config: AnkiMinerConfig) -> str:
+    """BCP-47 tag for ``text``, read from the spelling ``text`` is actually in.
 
     Han unification: 骨, 直 and 令 are one code point with a Chinese and a
     Japanese shape, so a reviewer with no ``lang`` to go on draws them from the
     first CJK face installed. The script subtag is what sends it to a Chinese
-    one. With no Character Set chosen the card keeps the source's own spelling,
-    so the word decides: a form OpenCC already reads as simplified is Hans,
-    anything else Hant. Without OpenCC every word reads as simplified, which is
-    the shipped default's answer anyway.
+    one. ``script_variant`` is not consulted: it governs the card front and the
+    lookup ladder, while a mined sentence keeps the source file's own spelling,
+    so a traditional source under Character Set = Simplified still needs Hant.
+    A form OpenCC already reads as simplified is Hans, anything else Hant;
+    without OpenCC everything reads as simplified, which is the shipped
+    default's answer anyway. ``config`` is the shared resolver signature.
     """
-    if config.script_variant == "simplified":
-        return "zh-Hans"
-    if config.script_variant == "traditional":
-        return "zh-Hant"
-    return "zh-Hans" if to_simplified(word) == word else "zh-Hant"
+    return "zh-Hant" if to_simplified(text) != text else "zh-Hans"
 
 
 #: ``writing_system`` turns on the installed-face probe and its one "may render
