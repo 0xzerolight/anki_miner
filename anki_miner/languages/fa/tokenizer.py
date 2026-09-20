@@ -101,15 +101,24 @@ def _classify(surface: str, lexicon: PersianLexicon) -> LanguageToken:
             surface_formal=formal_word,
         )
 
-    if lexicon.is_attested(surface):
-        # Attested without a POS: real, but never silently admitted to the
-        # default allowed_pos, which would put 158,034 strings into every run.
-        return _token(surface, "unknown", surface)
-
+    # A TAGGED stem beats an UNTAGGED whole-word row, the same rule as tier 1
+    # (judge r1 B1): 158,034 of the 193,350 words.dat rows carry no POS, and
+    # letting one of those answer first buries the word inside it. Measured on
+    # the real tables over the 5,000 commonest fa_50k tokens: 363 of them are
+    # untagged rows whose stem IS tagged - ketab-ha, chizi, vaqti, esmash,
+    # pesaram, anha - so the other order left every one of them "unknown" and
+    # therefore outside the default allowed_pos, i.e. unmineable. The committed
+    # 300-row subset holds none of those rows, which is why only the real-data
+    # corpus parity test could see it.
     stemmed = stemmer.stem(surface)
     stem_tags = lexicon.tags(stemmed) if stemmed != surface else ()
     if stem_tags:
         return _token(surface, stem_tags[0], stemmed)
+
+    if lexicon.is_attested(surface):
+        # Attested without a POS and without a tagged stem: real, but never
+        # silently admitted to the default allowed_pos.
+        return _token(surface, "unknown", surface)
 
     if surface.isdigit():
         return _token(surface, "NUM", surface)
