@@ -120,6 +120,8 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     # uk: hermitdave uk_50k.txt ranks 1-10. The list carries Russian rows from mixed subtitle
     # files (что, ты), which is what it actually contains and therefore what the probe votes with.
     "uk": ["я", "не", "в", "що", "на", "це", "ти", "что", "так", "у"],
+    # vi: ranks 1-22 of opensubtitles-vi-word-2026.09.19 (the folded, word-segmented asset).
+    "vi": ["tôi", "không", "là", "có", "được", "anh", "này", "của", "cho", "một"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -372,6 +374,19 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
         "ліхтар",
         "кухоль",
         "білка",
+    ],
+    # vi: concrete nouns at opensubtitles-vi-word ranks 7,093-38,370.
+    "vi": [
+        "hải đăng",
+        "tinh vân",
+        "địa chất",
+        "kính hiển vi",
+        "cầu vồng",
+        "châu chấu",
+        "bậc thang",
+        "núi lửa",
+        "tổ ong",
+        "cối xay",
     ],
 }
 
