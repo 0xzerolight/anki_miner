@@ -132,6 +132,20 @@ _HOOK_FIELD_ROW_TEXTS: dict[str, tuple[str, str]] = {
             "Stores how the word you saw splits into prefixes, stem and suffixes. Blank = skip.",
         ),
     ),
+    "reading_paiboon": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Reading Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the Paiboon reading parsed from the dictionary entry. Blank = skip.",
+        ),
+    ),
+    "classifier": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Classifier Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the noun classifier stated by the dictionary entry. Blank = skip.",
+        ),
+    ),
 }
 
 # Keywords used by populate_from_field_list to auto-map Anki field names.

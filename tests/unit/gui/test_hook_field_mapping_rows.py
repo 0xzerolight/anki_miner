@@ -77,6 +77,8 @@ HOOK_ROWS = [
     ("ar", "root", "root_field_input", "word_root"),
     ("ar", "expression_grammar", "expression_grammar_field_input", "arabic_grammar"),
     ("ar", "clitic_segmentation", "clitic_segmentation_field_input", "arabic_clitics"),
+    ("th", "reading_paiboon", "reading_paiboon_field_input", "thai_reading"),
+    ("th", "classifier", "classifier_field_input", "thai_classifier"),
 ]
 
 

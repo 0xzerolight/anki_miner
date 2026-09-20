@@ -40,11 +40,13 @@ __all__ = ["build_profile"]
 #: and the line has to mine with the sentence rules the profile actually ships.
 TH_SMOKE_SENTENCE = "วันนี้อากาศดีมาก"
 
-#: Filled in Task 10, beside the two render hooks that emit these keys.
-#: ``test_language_contract.test_extra_card_fields_match_the_render_hooks_exactly``
-#: asserts spec keys == hook keys, so the spec and its hook land together or the
-#: shared test is red (judge-r1 M3).
-TH_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = ()
+#: One spec per render-hook field key: ``test_language_contract
+#: .test_extra_card_fields_match_the_render_hooks_exactly`` asserts spec keys ==
+#: hook keys, so these land in the same commit as ``render.TH_RENDER_HOOKS``.
+TH_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (
+    CardFieldSpec(key="reading_paiboon", capability="thai_reading", placeholder="Reading"),
+    CardFieldSpec(key="classifier", capability="thai_classifier", placeholder="Classifier"),
+)
 
 
 def _scoped_defaults() -> Mapping[str, object]:
