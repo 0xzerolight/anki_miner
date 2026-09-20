@@ -17,6 +17,8 @@ license = "GPL-3.0-or-later"
 # README.md, and README.md links COPYING.GPLv3 relatively.
 # IndoCollex and stopwords-iso ship both files like Yomitan: the MIT text plus
 # the provenance README of the data reduced into anki_miner/languages/id/.
+# camel-tools ships its MIT notice and its port provenance (README.md): the Arabic
+# analyzer is ported in-tree.
 license-files = [
     "LICENSE",
     "anki_miner/gui/resources/fonts/OFL.txt",
@@ -29,6 +31,8 @@ license-files = [
     "licenses/yomitan/README.md",
     "licenses/zeyrek/LICENSE",
     "licenses/zeyrek/README.md",
+    "licenses/camel-tools/LICENSE",
+    "licenses/camel-tools/README.md",
 ]
 authors = [
     {name = "Anki Miner Contributors"}

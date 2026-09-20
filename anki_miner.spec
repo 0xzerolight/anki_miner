@@ -369,6 +369,21 @@ stopwords_iso_license_dir = os.path.join(project_root, "licenses", "stopwords-is
 stopwords_iso_license_datas = []
 if os.path.isdir(stopwords_iso_license_dir):
     stopwords_iso_license_datas.append((stopwords_iso_license_dir, os.path.join("licenses", "stopwords-iso")))
+# camel-tools (MIT): the Arabic analyzer is ported in-tree (anki_miner/languages/ar/_calima/), so its
+# notice ships with every copy of that code; the wheel carries it through project.license-files. Lands
+# at sys._MEIPASS/licenses/camel-tools/.
+camel_tools_license_dir = os.path.join(project_root, "licenses", "camel-tools")
+camel_tools_license_datas = []
+if os.path.isdir(camel_tools_license_dir):
+    camel_tools_license_datas.append((camel_tools_license_dir, os.path.join("licenses", "camel-tools")))
+# calima-msa-r13 (GPL-2.0 morphology database): a language pack, never bundled; the notice travels
+# because the app delivers it. Lands at sys._MEIPASS/licenses/calima-msa-r13/.
+calima_msa_r13_license_dir = os.path.join(project_root, "licenses", "calima-msa-r13")
+calima_msa_r13_license_datas = []
+if os.path.isdir(calima_msa_r13_license_dir):
+    calima_msa_r13_license_datas.append(
+        (calima_msa_r13_license_dir, os.path.join("licenses", "calima-msa-r13"))
+    )
 
 # Embed a Windows PE VERSIONINFO resource (company/product/version/copyright). An
 # unsigned, metadata-less PyInstaller exe is a textbook Defender false-positive: the
@@ -546,7 +561,9 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + indocollex_license_datas
     + stopwords_iso_license_datas
     + ru_core_news_sm_license_datas
-    + pymorphy3_dicts_ru_license_datas,
+    + pymorphy3_dicts_ru_license_datas
+    + camel_tools_license_datas
+    + calima_msa_r13_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",

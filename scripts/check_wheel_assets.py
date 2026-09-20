@@ -59,6 +59,8 @@ REQUIRED_WHEEL_LICENSES = [
     "licenses/yomitan/COPYING.GPLv3",
     "licenses/yomitan/README.md",
     "licenses/zeyrek/LICENSE",
+    "licenses/camel-tools/LICENSE",
+    "licenses/camel-tools/README.md",
 ]
 
 EXCLUDE_DIRS = {"__pycache__"}

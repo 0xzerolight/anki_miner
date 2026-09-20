@@ -96,6 +96,15 @@ jobs:
           curl -fsSL -o "$RUNNER_TEMP/hu_core_news_md-3.8.0-py3-none-any.whl" https://huggingface.co/huspacy/hu_core_news_md/resolve/v3.8.0/hu_core_news_md-any-py3-none-any.whl
           echo "0fd89c6ccf0efe1d7591910065c3bec4eadb1e25313d6ceea551150832b0f861  $RUNNER_TEMP/hu_core_news_md-3.8.0-py3-none-any.whl" | sha256sum -c -
           pip install "$RUNNER_TEMP/hu_core_news_md-3.8.0-py3-none-any.whl"
+      # The Arabic morphology database is a data-only language pack with no pip package (spec C.6).
+      # The app's own installer fetches it and verifies both pinned digests (languages/ar/pack.py) into
+      # the tree the real-data ar tests read (tests/_pack_seeds.py). Cached on the pinned zip digest:
+      # the download is 40 MB on every matrix leg otherwise.
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/lang_pack_seeds
+          key: lang-pack-seeds-ar-fe6531250c5529307627cc63ed56447cbb9968020d6ea3ab867e6ad9af94c738
+      - run: python scripts/fetch_language_pack_seeds.py "$RUNNER_TEMP/lang_pack_seeds" ar
       # `golden` = the Android-port engine parity contract; it's a separate
       # project's concern, and every case clones the pinned revision and runs a
       # real export. It has no hosted derivation workflow at all — the anki-miner
@@ -105,6 +114,7 @@ jobs:
       - run: pytest -m "not youtube and not e2e and not asr and not golden"
         env:
           QT_QPA_PLATFORM: offscreen
+          ANKI_MINER_TEST_PACK_SEEDS: ${{ runner.temp }}/lang_pack_seeds
           # Declared, not inherited. Qt derives QLocale() from LANG, and its C
           # locale sets OmitGroupSeparator -- so a number the app renders as
           # "184,200" on a developer's en_US box comes out "184200" here. Pin it
