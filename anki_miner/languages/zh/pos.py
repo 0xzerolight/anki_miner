@@ -37,7 +37,9 @@ Four rulings shape the defaults beyond that mapping:
   already mined whenever jieba happened to tag them as verbs instead.
 * **b and z carry no grammar.** jieba files 区别词 (主要 所有 整个 唯一, and 高兴
   in its dictionary) and 状态词 (黑暗 悄悄 雪白) outside n/v/a/d on distributional
-  grounds; to a learner they are adjectives and adverbs like any other.
+  grounds; to a learner they are adjectives and adverbs like any other. Matching
+  on the first letter, z admits jieba's zg class too (很 您 车 穿 掉) — kept, since
+  those are ordinary words a beginner meets before any of the 状态词.
 """
 
 from __future__ import annotations
