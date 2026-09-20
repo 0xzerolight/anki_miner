@@ -1754,11 +1754,13 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 self._make_readonly_item(text, role=CellRole.STATE, sort_value=sort_value, tooltip=tooltip),
             )
 
-            for column, text, sort_value, tooltip in self._position_cell_values(word, shown):
+            # Its own tooltip name: the loops above bind ``tooltip`` as a plain
+            # str, and only a season row carries one here.
+            for column, text, sort_value, episode in self._position_cell_values(word, shown):
                 self.table.setItem(
                     row,
                     column,
-                    self._make_readonly_item(text, role=CellRole.NUMBER, sort_value=sort_value, tooltip=tooltip),
+                    self._make_readonly_item(text, role=CellRole.NUMBER, sort_value=sort_value, tooltip=episode),
                 )
 
         self.table.blockSignals(False)
@@ -2555,10 +2557,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
                 item = self.table.item(row, column)
                 if item is not None:
                     update_table_item(item, text, sort_value=sort_value)
-            for column, text, sort_value, tooltip in self._position_cell_values(word, chosen):
+            for column, text, sort_value, episode in self._position_cell_values(word, chosen):
                 item = self.table.item(row, column)
                 if item is not None:
-                    update_table_item(item, text, sort_value=sort_value, tooltip=tooltip)
+                    update_table_item(item, text, sort_value=sort_value, tooltip=episode)
         finally:
             if sorting:
                 self.table.setSortingEnabled(True)
