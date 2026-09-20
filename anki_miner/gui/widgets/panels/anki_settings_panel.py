@@ -248,6 +248,11 @@ _CARD_TYPE_MARKER_DEFAULTS: dict[str, str] = {
 }
 
 
+def _normalized_field_name(name: str) -> str:
+    """The spelling both matchers compare on: lowercase, no spaces or underscores."""
+    return name.lower().replace(" ", "").replace("_", "")
+
+
 def auto_map_fields(field_names: list[str]) -> dict[str, str]:
     """Map Anki field names to card data keys via :data:`_FIELD_KEYWORDS`.
 
@@ -268,7 +273,7 @@ def auto_map_fields(field_names: list[str]) -> dict[str, str]:
         normalized = [kw.lower() for kw in keywords]
         matched = ""
         for field_name in field_names:
-            if field_name.lower().replace(" ", "").replace("_", "") in normalized:
+            if _normalized_field_name(field_name) in normalized:
                 matched = field_name
                 break
         mapping[key] = matched
@@ -602,7 +607,8 @@ class AnkiSettingsPanel(FormPanel):
         # on its spec's capability, so a language that cannot fill the key never
         # sees the row and never writes the key.
         self._hook_field_inputs: dict[str, QLineEdit] = {}
-        for spec in profile_card_field_specs():
+        self._hook_field_specs = profile_card_field_specs()
+        for spec in self._hook_field_specs:
             label, helper = _HOOK_FIELD_ROW_TEXTS.get(spec.key, ("", ""))
             field_input = QLineEdit()
             field_input.setPlaceholderText(spec.placeholder)
@@ -1034,7 +1040,8 @@ class AnkiSettingsPanel(FormPanel):
         """Auto-map fetched field names to the card field inputs.
 
         Tries to match fetched field names to known data types using
-        common naming patterns.
+        common naming patterns, then gives the rows the active mining language
+        declares (Pinyin, Hanja, …) the same pass against their own spelling.
 
         Args:
             field_names: List of field names from AnkiConnect
@@ -1069,6 +1076,27 @@ class AnkiSettingsPanel(FormPanel):
         for key, widget in widget_map.items():
             if mapped.get(key):
                 widget.setText(mapped[key])
+
+        # The profile-declared rows match on their own spec's placeholder instead
+        # of through _FIELD_KEYWORDS: a keyword entry there is stamped into every
+        # language's anki_fields by the wizard's sanitizer, which would seed an
+        # empty Pinyin key into a Japanese mapping. Only a row the active
+        # language shows is filled — a hidden one contributes no key anyway —
+        # and only with a name no other key took, since th spells its hook field
+        # "Reading" and so does expression_reading.
+        claimed = {name for name in mapped.values() if name}
+        for spec in self._hook_field_specs:
+            widget = self._hook_field_inputs[spec.key]
+            if not widget.isVisibleTo(self):
+                continue
+            placeholder = _normalized_field_name(spec.placeholder)
+            match = next(
+                (n for n in field_names if n not in claimed and _normalized_field_name(n) == placeholder),
+                "",
+            )
+            if match:
+                widget.setText(match)
+                claimed.add(match)
 
     # Getters for card field values
     def get_card_fields(self) -> dict:

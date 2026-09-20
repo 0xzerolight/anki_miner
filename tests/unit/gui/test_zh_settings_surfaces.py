@@ -106,6 +106,51 @@ def test_the_headings_swap_back_on_a_return_to_ja(qtbot, test_config):
     assert panel.contribute(test_config).script_variant == ""
 
 
+#: A plain Chinese note type: three of its fields are profile-declared keys.
+CHINESE_NOTE_TYPE = ["Hanzi", "Pinyin", "MeasureWord", "Traditional", "Meaning", "Sentence"]
+
+
+def test_auto_map_fills_the_zh_card_fields(qtbot, test_config):
+    panel = _anki(qtbot, _zh(test_config))
+    panel.populate_from_field_list(list(CHINESE_NOTE_TYPE))
+
+    fields = panel.get_card_fields()
+    assert fields["expression_pinyin"] == "Pinyin"
+    assert fields["measure_word"] == "MeasureWord"
+    assert fields["expression_traditional"] == "Traditional"
+
+
+def test_a_ja_auto_map_never_writes_the_zh_keys(qtbot, test_config):
+    panel = _anki(qtbot, test_config)
+    panel.populate_from_field_list(list(CHINESE_NOTE_TYPE))
+
+    fields = panel.get_card_fields()
+    assert "expression_pinyin" not in fields
+    assert "measure_word" not in fields
+    assert "expression_traditional" not in fields
+    assert panel.expression_pinyin_field_input.text() == ""
+
+
+def test_a_note_type_without_them_leaves_the_zh_rows_empty(qtbot, test_config):
+    panel = _anki(qtbot, _zh(test_config))
+    panel.populate_from_field_list(["Expression", "Sentence", "MainDefinition"])
+
+    fields = panel.get_card_fields()
+    assert fields["expression_pinyin"] == ""
+    assert fields["measure_word"] == ""
+    assert fields["expression_traditional"] == ""
+
+
+def test_the_zh_rows_match_whatever_the_note_type_spells_them(qtbot, test_config):
+    """Same spelling rule as the keyword pass: case, spaces and underscores."""
+    panel = _anki(qtbot, _zh(test_config))
+    panel.populate_from_field_list(["Hanzi", "pin yin", "measure_word"])
+
+    fields = panel.get_card_fields()
+    assert fields["expression_pinyin"] == "pin yin"
+    assert fields["measure_word"] == "measure_word"
+
+
 def test_measure_word_is_a_ja_no_op(qtbot, test_config):
     panel = _anki(qtbot, test_config)
     assert not panel.measure_word_field_input.isVisibleTo(panel)
