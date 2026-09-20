@@ -1097,15 +1097,22 @@ class AnkiSettingsPanel(FormPanel):
         if index >= 0:
             self.preset_combo.setCurrentIndex(index)
 
-    def populate_from_field_list(self, field_names: list[str]) -> None:
+    def populate_from_field_list(self, field_names: list[str]) -> int:
         """Auto-map fetched field names to the card field inputs.
 
         Tries to match fetched field names to known data types using
         common naming patterns, then gives the rows the active mining language
         declares (Pinyin, Hanja, …) the same pass against their own spelling.
+        Whatever is left pointing at a field this note type does not have is
+        blanked: matching alone left the old language's names (Expression,
+        MainDefinition, …) sitting in the rows, red and unfixable from here.
 
         Args:
             field_names: List of field names from AnkiConnect
+
+        Returns:
+            How many mappings were cleared because the note type has no such
+            field. The caller reports it — a silent blank reads as data loss.
         """
         # Map each data key to its input widget; the matching algorithm lives in
         # the module-level pure helper so the setup wizard reuses it verbatim.
@@ -1143,6 +1150,35 @@ class AnkiSettingsPanel(FormPanel):
         visible = [spec for spec in self._hook_field_specs if self._hook_field_inputs[spec.key].isVisibleTo(self)]
         for key, match in auto_map_profile_fields(field_names, visible, mapped.values()).items():
             self._hook_field_inputs[key].setText(match)
+
+        return self._clear_missing_mappings(field_names, (*widget_map.values(), *self._hook_field_inputs.values()))
+
+    def _clear_missing_mappings(self, field_names: Iterable[str], widgets: Iterable[QLineEdit]) -> int:
+        """Blank every shown mapping naming a field this note type lacks.
+
+        Deliberately narrower than the wizard's sanitiser, which walks all of
+        ``config.anki_fields``. Three things are left alone because none of them
+        is something the fetched list can speak for: the ``_loaded_fields``
+        passthrough (keys a user set by hand in ``gui_config.json``, which
+        :meth:`get_card_fields` promises survive a Save), rows the language gate
+        has hidden (a ja user's stored zh mappings), and the marker fields of
+        the card types that are not the active one.
+        """
+        known = set(field_names)
+        stale = [
+            widget
+            for widget in widgets
+            if widget.isVisibleTo(self) and widget.text().strip() and widget.text().strip() not in known
+        ]
+        marker = self._card_type_inputs.get(self.get_card_type())
+        # Not visibility-tested: the marker inputs live in a collapsed group, and
+        # the active card type stamps its field on every card whether or not the
+        # user has expanded it.
+        if marker is not None and marker.text().strip() and marker.text().strip() not in known:
+            stale.append(marker)
+        for widget in stale:
+            widget.setText("")
+        return len(stale)
 
     # Getters for card field values
     def get_card_fields(self) -> dict:
