@@ -134,6 +134,72 @@ class TestNavigatorSelectionDrivesThePages:
         assert {name: getattr(tab, name) for name in _KEY_TO_PANEL.values()} == before
 
 
+class TestTheRailFollowsTheMiningLanguage:
+    """Pitch accent is a Japanese resource family, and so is its destination.
+
+    The panel-level gate hides the pitch ROWS next door; leaving the rail's own
+    Pitch Accent row up sends a Chinese learner to a page whose whole subject
+    their language does not have. Two-way, like every other gate.
+    """
+
+    @staticmethod
+    def _pitch_row(tab: SettingsTab) -> QListWidgetItem:
+        return tab.nav_list.item(_row_for(tab, "pitch"))
+
+    def _switch(self, tab: SettingsTab, code: str) -> None:
+        """What MainWindow does on a switch: adopt the config, then re-point."""
+        from anki_miner.languages.switching import switch_language
+
+        tab.update_config(switch_language(tab.config, code))
+        tab.set_mining_language(code)
+
+    def test_ja_keeps_the_destination(self, tab) -> None:
+        assert not self._pitch_row(tab).isHidden()
+
+    def test_zh_hides_it(self, tab) -> None:
+        self._switch(tab, "zh")
+        assert self._pitch_row(tab).isHidden()
+
+    def test_a_round_trip_brings_it_back(self, tab) -> None:
+        self._switch(tab, "zh")
+        self._switch(tab, "ja")
+        assert not self._pitch_row(tab).isHidden()
+
+    def test_the_page_stays_addressable_for_a_deep_link(self, tab) -> None:
+        # The panel and its index entry survive; only the rail row goes.
+        self._switch(tab, "zh")
+        assert "pitch" in tab._subtab_index
+        assert any(entry.page_key == "pitch" for entry in tab.setting_search_entries())
+
+    def test_search_stops_offering_the_hidden_destination(self, tab) -> None:
+        self._switch(tab, "zh")
+        hidden = [entry for entry in tab.setting_search_entries() if entry.page_key == "pitch"]
+        assert hidden
+        assert not any(entry.visible for entry in hidden)
+
+    def test_search_offers_it_again_for_ja(self, tab) -> None:
+        self._switch(tab, "zh")
+        self._switch(tab, "ja")
+        offered = [entry for entry in tab.setting_search_entries() if entry.page_key == "pitch"]
+        assert offered
+        assert any(entry.visible for entry in offered)
+
+    def test_a_switch_moves_the_selection_off_the_row_it_hides(self, tab) -> None:
+        tab.open_subtab("pitch")
+        self._switch(tab, "zh")
+
+        current = tab.nav_list.currentItem()
+        assert current is not None
+        assert not current.isHidden()
+        assert _key_of(current) != "pitch"
+        assert tab.pages.currentIndex() == tab._subtab_index[_key_of(current)]
+
+    def test_a_switch_leaves_an_unaffected_selection_alone(self, tab) -> None:
+        tab.open_subtab("filtering")
+        self._switch(tab, "zh")
+        assert _key_of(tab.nav_list.currentItem()) == "filtering"
+
+
 class TestDeepLinkContract:
     @pytest.mark.parametrize("key,panel_attr", list(_KEY_TO_PANEL.items()))
     def test_open_subtab_lands_on_the_right_panel(self, tab, key: str, panel_attr: str) -> None:
