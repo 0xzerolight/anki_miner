@@ -648,18 +648,18 @@ class FilteringSettingsPanel(FormPanel):
         # the literal "<b>...</b>" markup is visible. Issue #20.
         self.bold_target_in_sentence_checkbox.setToolTip(
             self.tr(
-                "Wrap the mined word in &lt;b&gt;...&lt;/b&gt; inside the Sentence and "
-                "SentenceFurigana fields. Match is the exact MeCab span of the "
-                "mined morpheme, so duplicated surfaces in a sentence only bold "
-                "the actually-mined occurrence."
+                "Wrap the mined word in &lt;b&gt;...&lt;/b&gt; inside the sentence "
+                "fields. Match is the exact span that was mined, so duplicated "
+                "surfaces in a sentence only bold the actually-mined occurrence."
             )
         )
         self.add_field("", self.bold_target_in_sentence_checkbox)
 
         self.reading_tone_color_checkbox = QCheckBox(self.tr("Colour the reading by tone"))
-        self.reading_tone_color_checkbox.setToolTip(
-            self.tr("Wraps each pinyin syllable in a tone class so the card styling can colour it.")
-        )
+        # The hook writes an inline style, never a class (languages/zh/render.py),
+        # so a tooltip promising a class sends the user off to write CSS that can
+        # neither match nor win.
+        self.reading_tone_color_checkbox.setToolTip(self.tr("Colours each syllable of the reading by its tone."))
         self.add_field("", self.reading_tone_color_checkbox)
 
         # Language-gated rows. Each row contributes its label too, so a hidden
