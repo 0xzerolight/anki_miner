@@ -57,6 +57,8 @@ PROBE = {
     # li + al + broken plural: the ladder answers ["\u0644\u0637\u0644\u0627\u0628", "\u0637\u0644\u0627\u0628"].
     "ar": "\u0644\u0644\u0637\u0644\u0627\u0628",
     "th": "ดีมาก",
+    # The ZWNJ is the named escape: this file carries no invisible character.
+    "fa": "می\N{ZERO WIDTH NON-JOINER}روم",
 }
 
 #: Every capability name any profile is allowed to declare. A typo'd flag is a
@@ -99,6 +101,11 @@ CAPABILITY_VOCABULARY = frozenset(
         # Thai (C.3).
         "thai_reading",
         "thai_classifier",
+        # Persian card fields (C.2): the dictionary romanisation, the
+        # colloquial spelling of a standard headword, and a verb present stem.
+        "persian_romanization",
+        "persian_register",
+        "persian_stems",
     }
 )
 
@@ -126,6 +133,10 @@ EXTRA_HOOK_FIELDS = {
     # Thai (C.3).
     "reading_paiboon",
     "classifier",
+    # Persian hook keys (C.2).
+    "reading_romanized",
+    "colloquial_form",
+    "present_stem",
 }
 
 
