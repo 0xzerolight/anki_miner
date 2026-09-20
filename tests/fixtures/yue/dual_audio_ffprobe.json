@@ -19,11 +19,20 @@
       "codec_type": "audio",
       "codec_name": "aac",
       "tags": {
-        "language": "jpn"
+        "language": "yue-HK",
+        "title": "Cantonese HK"
       }
     },
     {
       "index": 3,
+      "codec_type": "audio",
+      "codec_name": "aac",
+      "tags": {
+        "language": "jpn"
+      }
+    },
+    {
+      "index": 4,
       "codec_type": "audio",
       "codec_name": "aac",
       "tags": {
