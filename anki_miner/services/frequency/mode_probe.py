@@ -111,6 +111,9 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     # .word_freqs(). Thai is not on hermitdave, so the TNC list converted by
     # scripts/convert_tnc_thai_frequency.py is the catalogue source.
     "th": ["ที่", "การ", "เป็น", "ใน", "ของ", "มี", "จะ", "และ", "ไม่", "ได้"],
+    # fa: fa_50k ranks 2-115 (va, dar, be, az, ke, in, ra, ba, ast, baraye).
+    # Right-to-left data in a left-to-right list: the ranks are the check.
+    "fa": ["و", "در", "به", "از", "که", "این", "را", "با", "است", "برای"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -322,6 +325,22 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
     ],
     # th: concrete nouns present in that same TNC list at ranks 1,597-10,937.
     "th": ["กังหัน", "ผีเสื้อ", "ตะเกียง", "จักรยาน", "นกพิราบ", "ตั๊กแตน", "บันได", "ค้อน", "ภูเขาไฟ", "กระรอก"],
+    # fa: fa_50k ranks 3,079-14,102 (fanus, senjab, qayeq, atashfeshan,
+    # docharxe, kabutar, malax, nardeban, chakosh, parvane). The spec's
+    # docharxe-savari is absent from fa_50k and carries a ZWNJ the fa fold
+    # strips, so the bare noun stands in for it.
+    "fa": [
+        "فانوس",
+        "سنجاب",
+        "قایق",
+        "آتشفشان",
+        "دوچرخه",
+        "کبوتر",
+        "ملخ",
+        "نردبان",
+        "چکش",
+        "پروانه",
+    ],
 }
 
 

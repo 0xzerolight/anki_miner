@@ -181,6 +181,33 @@ kiwipiepy_license_datas = []
 if os.path.isdir(kiwipiepy_license_dir):
     kiwipiepy_license_datas.append((kiwipiepy_license_dir, os.path.join("licenses", "kiwipiepy")))
 
+# hazm (Persian analyser) MIT notice: shipped whenever the license dir exists.
+# Lands at sys._MEIPASS/licenses/hazm/ in the bundle. Unlike the engine notices
+# above and the model notices below, the ported CODE itself is inside
+# anki_miner/languages/fa/_hazm/ and DOES ship in every build, so the notice has
+# to travel with the bundle, not only with the wheel. The same holds for shekar
+# (the colloquial.tsv rows) and for Wiktionary (compound_verbs.tsv, and the wty
+# dictionaries the app downloads).
+hazm_license_dir = os.path.join(project_root, "licenses", "hazm")
+hazm_license_datas = []
+if os.path.isdir(hazm_license_dir):
+    hazm_license_datas.append((hazm_license_dir, os.path.join("licenses", "hazm")))
+
+# shekar (Persian text toolkit) MIT notice: 108 rows of the Persian colloquial
+# table are its informal_words.csv. Lands at sys._MEIPASS/licenses/shekar/.
+shekar_license_dir = os.path.join(project_root, "licenses", "shekar")
+shekar_license_datas = []
+if os.path.isdir(shekar_license_dir):
+    shekar_license_datas.append((shekar_license_dir, os.path.join("licenses", "shekar")))
+
+# Wiktionary CC BY-SA 4.0 notice: the Persian compound-verb table is derived
+# from an English Wiktionary build, and the wty dictionaries the app downloads
+# carry the same licence. Lands at sys._MEIPASS/licenses/wiktionary/.
+wiktionary_license_dir = os.path.join(project_root, "licenses", "wiktionary")
+wiktionary_license_datas = []
+if os.path.isdir(wiktionary_license_dir):
+    wiktionary_license_datas.append((wiktionary_license_dir, os.path.join("licenses", "wiktionary")))
+
 # ca_core_news_sm (Catalan spaCy model) GPL-3.0 notice: shipped whenever the
 # license dir exists. Lands at sys._MEIPASS/licenses/ca_core_news_sm/. The model
 # itself is excluded below and arrives as a language pack the app downloads;
@@ -525,6 +552,13 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
             os.path.join(project_root, "anki_miner", "resources"),
             os.path.join("anki_miner", "resources"),
         ),
+        # Persian light-verb and colloquial tables — read at tokenizer build
+        # time via importlib.resources, so they must land at the same package
+        # path. pyproject's package-data covers the wheel only.
+        (
+            os.path.join(project_root, "anki_miner", "languages", "fa", "data"),
+            os.path.join("anki_miner", "languages", "fa", "data"),
+        ),
         # unidic-lite dictionary data (required by fugashi/MeCab)
         (unidic_data, "unidic_lite"),
         # BudouX phrase-segmentation data (curator sentence wrapping)
@@ -539,6 +573,9 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + yomitan_license_datas
     + vulkan_loader_license_datas
     + kiwipiepy_license_datas
+    + hazm_license_datas
+    + shekar_license_datas
+    + wiktionary_license_datas
     + ca_model_license_datas
     + pt_core_news_sm_license_datas
     + fr_model_license_datas

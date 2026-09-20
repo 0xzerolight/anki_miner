@@ -21,14 +21,27 @@ license = "GPL-3.0-or-later"
 # analyzer is ported in-tree.
 license-files = [
     "LICENSE",
+    "anki_miner/gui/resources/fonts/OFL-Vazirmatn.txt",
     "anki_miner/gui/resources/fonts/OFL.txt",
     "anki_miner/gui/resources/fonts/OFL-NotoNaskhArabic.txt",
     "anki_miner/gui/resources/fonts/OFL-NotoSansThai.txt",
+    # hazm, shekar and Wiktionary ship both files each, for the yomitan reason:
+    # the attribution — what was ported, what was derived, from which build — is
+    # in README.md, which links its licence text relatively. These three are the
+    # only notices whose material is INSIDE the wheel (ported code in
+    # anki_miner/languages/fa/_hazm/, derived tables in languages/fa/data/); the
+    # engine notices under licenses/ cover downloads and ship in the bundle only.
+    "licenses/hazm/LICENSE",
+    "licenses/hazm/README.md",
     "licenses/indocollex/LICENSE",
     "licenses/indocollex/README.md",
     "licenses/local-audio-yomichan/LICENSE",
+    "licenses/shekar/LICENSE",
+    "licenses/shekar/README.md",
     "licenses/stopwords-iso/LICENSE",
     "licenses/stopwords-iso/README.md",
+    "licenses/wiktionary/LICENSE.CC-BY-SA-4.0",
+    "licenses/wiktionary/README.md",
     "licenses/yomitan/COPYING.GPLv3",
     "licenses/yomitan/README.md",
     "licenses/zeyrek/LICENSE",
@@ -314,6 +327,11 @@ include-package-data = true
 "anki_miner.services.dictionary.resources" = ["*.css"]
 "anki_miner.resources.wordsets" = ["*.txt"]
 "anki_miner.gui.resources.translations" = ["*.ts", "*.qm"]
+# Persian light-verb and colloquial tables: first-party derived data the fa
+# tokenizer reads at build time (not part of the language pack, which holds only
+# hazm's own .dat files). anki_miner.spec collects the same directory for the
+# frozen bundle — this entry is wheel-only.
+"anki_miner.languages.fa.data" = ["*.tsv"]
 # Last-resort fallback faces (Japanese, and each mining language's own), their
 # licences and the provenance record. Declared explicitly rather than left to
 # MANIFEST.in: a wheel that dropped a font would render tofu on a bare Linux

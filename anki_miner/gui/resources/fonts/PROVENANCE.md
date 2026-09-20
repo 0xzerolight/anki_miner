@@ -82,6 +82,30 @@ system. The hinted build is the one shipped: it is half the size of the full
 build, and hinting is what matters on the Windows machines that have no Thai
 face at all.
 
+## Vazirmatn-Regular.ttf
+
+| | |
+|---|---|
+| Family | Vazirmatn |
+| Project | [Vazirmatn](https://github.com/rastikerdar/vazirmatn) |
+| Release | [v33.003](https://github.com/rastikerdar/vazirmatn/releases/tag/v33.003) |
+| Artifact | `fonts/ttf/Vazirmatn-Regular.ttf`, shipped in the release asset `vazirmatn-v33.003.zip` |
+| SHA-256 | `b69fd4c680b8f3f225feabcc655a2c585d97627b8f5f5c0f9985e894069f3a56` |
+| Modified | **No.** Byte-for-byte the upstream artifact. |
+| Licence | SIL Open Font License 1.1 — `OFL-Vazirmatn.txt` beside this file |
+
+Named by the Persian profile's `ContentTextStyle.bundled_fallback`, so it is
+registered only while Persian is the active mining language and only when the
+machine lists no family installed for the Arabic script. The full face is taken
+rather than the `Non-Latin` variant: a Persian card mixes Persian with its
+English glossary, and the family list is what a machine with its own Arabic face
+resolves from first.
+
+`OFL-Vazirmatn.txt` is the unmodified `OFL.txt` from the root of the same
+release asset (SHA-256
+`17e355067c8284f47743a1ee3b1ef7ff684ff0601eda357f9353b10b3016ab31`), opening
+`Copyright 2015 The Vazirmatn Project Authors`.
+
 ## Verifying
 
 ```sh

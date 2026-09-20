@@ -1,0 +1,10 @@
+{"raw": "من هر روز به مدرسه می روم.", "normalized": "من هر روز به مدرسه می‌روم.", "note": "the affix rule re-emits the captured leading space"}
+{"raw": "من هر روز به مدرسه میروم.", "normalized": "من هر روز به مدرسه می‌روم.", "note": "seperate_mi: the ZWNJ form is a known verb"}
+{"raw": "کتاب ها را خواندم", "normalized": "کتاب‌ها را خواندم", "note": "plural suffix glued back with a ZWNJ"}
+{"raw": "رفته ام", "normalized": "رفته‌ام", "note": "perfect auxiliary glued back with a ZWNJ"}
+{"raw": "اين كتاب", "normalized": "این کتاب", "note": "Arabic yeh and kaf unified to their Farsi forms"}
+{"raw": "سلام ، خوبی ؟", "normalized": "سلام، خوبی؟", "note": "punctuation spacing"}
+{"raw": "خیلییییی خوبه", "normalized": "خیلی خوبه", "note": "repeated letters collapsed"}
+{"raw": "میز را دیدم", "normalized": "میز را دیدم", "note": "untouched: miz is not a verb"}
+{"raw": "‏کتاب‏", "normalized": "کتاب", "note": "bidi controls are dropped"}
+{"raw": "اﻱن", "normalized": "این", "note": "presentation forms are NFKC-folded, then the Arabic yeh is unified"}

@@ -79,6 +79,9 @@ HOOK_ROWS = [
     ("ar", "clitic_segmentation", "clitic_segmentation_field_input", "arabic_clitics"),
     ("th", "reading_paiboon", "reading_paiboon_field_input", "thai_reading"),
     ("th", "classifier", "classifier_field_input", "thai_classifier"),
+    ("fa", "reading_romanized", "reading_romanized_field_input", "persian_romanization"),
+    ("fa", "colloquial_form", "colloquial_form_field_input", "persian_register"),
+    ("fa", "present_stem", "present_stem_field_input", "persian_stems"),
 ]
 
 

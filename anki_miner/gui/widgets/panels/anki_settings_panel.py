@@ -146,6 +146,28 @@ _HOOK_FIELD_ROW_TEXTS: dict[str, tuple[str, str]] = {
             "Stores the noun classifier stated by the dictionary entry. Blank = skip.",
         ),
     ),
+    # Persian (spec C.2): the dictionary romanisation, the colloquial spelling and a verb's present stem.
+    "reading_romanized": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Romanization Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the word's Latin spelling, from the dictionary entry. Blank = skip.",
+        ),
+    ),
+    "colloquial_form": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Colloquial Form Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the everyday spelling the line used, when the front is the standard one. Blank = skip.",
+        ),
+    ),
+    "present_stem": (
+        QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Present Stem Field"),
+        QT_TRANSLATE_NOOP(
+            "AnkiSettingsPanel",
+            "Stores the stem a verb's present-tense forms are built on. Blank = skip.",
+        ),
+    ),
 }
 
 # Keywords used by populate_from_field_list to auto-map Anki field names.
