@@ -1559,6 +1559,29 @@ class TestOccurrenceCountsFoldToWordIdentity:
         assert counts["頭髮"] == 3
         assert counts["头发"] == 1
 
+    @staticmethod
+    def _both_spellings(words):
+        hair = {word.mined_form: word for word in words if word.mined_form in ("头发", "頭髮")}
+        assert sorted(hair) == ["头发", "頭髮"], [word.mined_form for word in words]
+        return hair
+
+    def test_as_written_counts_each_card_on_its_own_spelling(self, test_config):
+        """Character Set = As written cards both spellings, so neither owns the pair's total."""
+        config, words, counts = self._parse(test_config, "")
+
+        self._service(config).attach_occurrence_counts(words, counts)
+
+        hair = self._both_spellings(words)
+        assert (hair["頭髮"].occurrence_count, hair["头发"].occurrence_count) == (3, 1)
+
+    def test_as_written_does_not_lift_both_cards_over_the_floor(self, test_config):
+        """Crediting each card with 4 would mine a duplicate the floor used to reject."""
+        config, words, counts = self._parse(test_config, "")
+
+        kept = self._service(config).filter_by_episode_count(words, dict(counts), min_appearances=2)
+
+        assert [word.mined_form for word in kept if word.mined_form in ("头发", "頭髮")] == ["頭髮"]
+
 
 class TestAttachLineUnknownCounts:
     """Tests for WordFilterService.attach_line_unknown_counts."""
