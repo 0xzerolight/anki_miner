@@ -100,7 +100,7 @@ jobs:
       # The app's own installer fetches it and verifies both pinned digests (languages/ar/pack.py) into
       # the tree the real-data ar tests read (tests/_pack_seeds.py). Cached on the pinned zip digest:
       # the download is 40 MB on every matrix leg otherwise.
-      - uses: actions/cache@v4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ runner.temp }}/lang_pack_seeds
           key: lang-pack-seeds-ar-fe6531250c5529307627cc63ed56447cbb9968020d6ea3ab867e6ad9af94c738
