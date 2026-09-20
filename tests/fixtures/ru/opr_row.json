@@ -646,6 +646,110 @@
    ""
   ],
   [
+   "небо",
+   "не́бо",
+   "n neut",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "sky"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "heaven, firmament"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "air"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.openrussian.org/ru/%D0%BD%D0%B5%D0%B1%D0%BE",
+         "content": "OpenRussian"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "небо",
+   "не́бо",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "небо",
+     [
+      "nominative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "небо",
+   "не́бо",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "небо",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
    "вчера",
    "вчера́",
    "adv",
@@ -1275,6 +1379,141 @@
    [
     [
      "замок",
+     [
+      "accusative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "нёбо",
+   "нёбо",
+   "n neut",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "palate",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Вино́ оста́вило те́рпкое послевку́сие на ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "example-highlight"
+                    },
+                    "content": "нёбе"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "The wine left a tart aftertaste on the palate."
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.openrussian.org/ru/%D0%BD%D1%91%D0%B1%D0%BE",
+         "content": "OpenRussian"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "небо",
+   "нёбо",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "нёбо",
+     [
+      "nominative singular"
+     ]
+    ]
+   ],
+   0,
+   ""
+  ],
+  [
+   "небо",
+   "нёбо",
+   "non-lemma",
+   "",
+   0,
+   [
+    [
+     "нёбо",
      [
       "accusative singular"
      ]
