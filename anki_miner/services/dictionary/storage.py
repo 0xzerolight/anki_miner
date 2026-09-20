@@ -931,6 +931,45 @@ def terms_exist(conn: sqlite3.Connection, terms: list[str], *, keys: DictKeyFold
     return found
 
 
+def term_rows(
+    conn: sqlite3.Connection, terms: list[str], *, keys: DictKeyFolding | None = None
+) -> dict[str, list[tuple[str, str]]]:
+    """``(content, tags)`` rows for each exact ``entries.term`` match, best entry first.
+
+    Companion to :func:`terms_exist` for the R36 form lookup (spec Appendix F.2): "what does the
+    dictionary say under this exact headword". Reading-column matches deliberately do NOT count,
+    the same rule and for the same reason as :func:`terms_exist`. No homograph scope and no display
+    cap: this is a read for a language's morphology pass, not for a card, and a form row the scope
+    would drop is exactly the row the pass needs.
+
+    A term with NO rows is ABSENT from the result, exactly as :func:`terms_readings` leaves an
+    unattested term out. That absence is load-bearing: ``DefinitionService``'s chain walk subtracts
+    the answered terms from its remaining list, so an empty-list entry would mark the term answered
+    and every provider after the first would be skipped.
+
+    ``keys`` folds the term key; ``None`` is the Japanese pair (see :func:`_folders`).
+    """
+    fold_t, _fold_r = _folders(keys)
+    unique = list(dict.fromkeys(terms))
+    requested_by_term: dict[str, list[str]] = {}
+    for requested in unique:
+        requested_by_term.setdefault(fold_t(requested), []).append(requested)
+    canonical_terms = list(requested_by_term)
+    found: dict[str, list[tuple[str, str]]] = {}
+    for start in range(0, len(canonical_terms), _EXIST_CHUNK):
+        chunk = canonical_terms[start : start + _EXIST_CHUNK]
+        placeholders = ", ".join("?" for _ in chunk)
+        rows = conn.execute(
+            f"SELECT term, content, tags FROM entries WHERE term IN ({placeholders}) "
+            "ORDER BY score DESC, sequence, id",
+            chunk,
+        ).fetchall()
+        for term, content, tags in rows:
+            for requested in requested_by_term.get(term, ()):
+                found.setdefault(requested, []).append((content, tags or ""))
+    return found
+
+
 def terms_readings(conn: sqlite3.Connection, terms: list[str]) -> dict[str, list[str]]:
     """Attested readings per exact headword, best-first (entry ``score`` DESC).
 

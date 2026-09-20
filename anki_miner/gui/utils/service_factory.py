@@ -845,6 +845,11 @@ def create_services(
         # returns None when no chain member is commonness-aware (degrade).
         term_common_lookup = definition_service.offline_term_commonness if has_indexed_dict else None
         term_rules_lookup = definition_service.offline_deinflection_terms_exist if has_indexed_dict else None
+        # R36: the row read a language's token post-pass resolves its card fronts
+        # with (he). Gated on the same indexed-dict probe as its five siblings and
+        # built the same way — but reachable ONLY through a profile's
+        # token_post_pass, so a language without one is unaffected by its presence.
+        form_lookup = definition_service.offline_term_rows if has_indexed_dict else None
         name_lookup = wordset_service.excluded_terms if wordset_service is not None else None
         subtitle_parser = _create_subtitle_parser(
             config,
@@ -854,6 +859,7 @@ def create_services(
             kana_attest_lookup=kana_attest_lookup,
             term_common_lookup=term_common_lookup,
             term_rules_lookup=term_rules_lookup,
+            form_lookup=form_lookup,
         )
     # Share the parser's tagger with the word filter so i+1 swap can
     # rebuild bolded sentence fields without spinning up a second tagger

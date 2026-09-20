@@ -47,6 +47,7 @@ AVAILABLE_LANGUAGES: tuple[str, ...] = (
     "uk",
     "vi",
     "yue",
+    "he",
 )
 
 #: Engine packs shared by several mining languages. Not languages: never in

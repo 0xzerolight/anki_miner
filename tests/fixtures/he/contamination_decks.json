@@ -1,0 +1,35 @@
+{
+  "note": "Deck fronts for tests/e2e/test_he_known_words_contamination.py. The Hebrew fronts are vocalised so the S3 fold at the Anki boundary is what makes them meet their bare spellings; the Yiddish fronts pass the Hebrew script gate, which is what the S15 first-switch deck checklist exists for.",
+  "hebrew_deck": "Hebrew",
+  "hebrew_fronts": [
+    "כֶּלֶב",
+    "סֵפֶר",
+    "הָלַךְ"
+  ],
+  "hebrew_expected_keys": [
+    "כלב",
+    "ספר",
+    "הלך"
+  ],
+  "yiddish_deck": "Yiddish",
+  "yiddish_fronts": [
+    "אַ",
+    "שיינע",
+    "מיידל",
+    "פֿרילינג"
+  ],
+  "yiddish_expected_keys": [
+    "א",
+    "שיינע",
+    "מיידל",
+    "פרילינג"
+  ],
+  "english_deck": "English",
+  "english_fronts": [
+    "the dog"
+  ],
+  "japanese_deck": "Japanese",
+  "japanese_fronts": [
+    "日本語"
+  ]
+}

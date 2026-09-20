@@ -106,6 +106,28 @@ release asset (SHA-256
 `17e355067c8284f47743a1ee3b1ef7ff684ff0601eda357f9353b10b3016ab31`), opening
 `Copyright 2015 The Vazirmatn Project Authors`.
 
+## NotoSansHebrew-Regular.ttf
+
+| | |
+|---|---|
+| Family | Noto Sans Hebrew |
+| Project | [Noto Hebrew](https://github.com/notofonts/hebrew) |
+| Release | [NotoSansHebrew-v3.001](https://github.com/notofonts/hebrew/releases/tag/NotoSansHebrew-v3.001) |
+| Artifact | `NotoSansHebrew/hinted/ttf/NotoSansHebrew-Regular.ttf`, shipped in the release asset `NotoSansHebrew-v3.001.zip` |
+| SHA-256 | `cdefaf8efd47045f6820928eba84db5bed7557539328952b5f828315485e02ee` |
+| Modified | **No.** Byte-for-byte the upstream artifact. |
+| Licence | SIL Open Font License 1.1 — `OFL-NotoSansHebrew.txt` beside this file |
+
+`OFL-NotoSansHebrew.txt` is the unmodified `OFL.txt` from the root of the same release asset
+(SHA-256 `9b9fe028b5ba74d231659a1bbaf0ed09b11e759d1ca6a070999e16d151616b47`), opening
+`Copyright 2022 The Noto Project Authors (https://github.com/notofonts/hebrew)`.
+
+Named by the Hebrew profile's `ContentTextStyle.bundled_fallback`, so it is registered only while
+Hebrew is the active mining language and only when the machine lists no family installed for the
+Hebrew writing system. The hinted build is the one shipped: it is the build that renders legibly at
+small sizes on Windows, which matters more for Hebrew than for most — a stored sentence keeps its
+niqqud, and pointed text needs roughly 18 px before the points separate.
+
 ## Verifying
 
 ```sh

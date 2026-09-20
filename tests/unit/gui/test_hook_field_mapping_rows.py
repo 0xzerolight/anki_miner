@@ -91,6 +91,12 @@ HOOK_ROWS = [
     ("vi", "hanviet", "hanviet_field_input", "hanviet"),
     ("yue", "expression_jyutping", "expression_jyutping_field_input", "jyutping"),
     ("yue", "measure_word", "measure_word_field_input", "measure_word"),
+    ("he", "transliteration", "transliteration_field_input", "hebrew_transliteration"),
+    ("he", "binyan", "binyan_field_input", "hebrew_binyan"),
+    ("he", "root", "root_field_input", "word_root"),
+    ("he", "noun_gender", "noun_gender_field_input", "noun_gender"),
+    ("he", "noun_plural", "noun_plural_field_input", "noun_plural"),
+    ("he", "pos", "pos_field_input", "pos_tag"),
 ]
 
 

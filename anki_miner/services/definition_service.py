@@ -758,6 +758,43 @@ class DefinitionService:
 
         return found
 
+    def offline_term_rows(self, terms: list[str]) -> dict[str, list[tuple[str, str]]]:
+        """Exact-headword ``(content, tags)`` rows across available OFFLINE providers (spec R36).
+
+        The form-lookup probe a language's token post-pass reads: "what does the dictionary say
+        under this exact headword". Walks the chain exactly like :meth:`offline_term_readings` --
+        offline-only, ``ensure_loaded`` first, per-provider try/except so a provider failure can
+        never raise (or reach the network) from inside subtitle parsing -- with first-provider-wins
+        semantics per term.
+
+        A provider that answers a term with an EMPTY row list is treated as not having answered, so
+        that term stays in ``remaining`` and the next provider is asked. Without that, a chain whose
+        first member is a dictionary for another language would answer every term and silently
+        starve the rest of the chain.
+        """
+        self.ensure_loaded()
+
+        remaining = list(dict.fromkeys(terms))
+        found: dict[str, list[tuple[str, str]]] = {}
+
+        for provider in self._providers:
+            if not remaining:
+                break
+            if provider.is_online or not provider.is_available():
+                continue
+            term_rows_fn = getattr(provider, "term_rows", None)
+            if not callable(term_rows_fn):
+                continue
+            try:
+                hits = {term: rows for term, rows in term_rows_fn(remaining).items() if rows}
+            except Exception as e:
+                _log_provider_failure(provider, "term_rows", e)
+                continue
+            found.update(hits)
+            remaining = [t for t in remaining if t not in hits]
+
+        return found
+
     def offline_term_identities(
         self,
         pairs: list[tuple[str, str]],

@@ -19,8 +19,15 @@ def profile():
     return get_profile("yue")
 
 
-def test_yue_is_registered_last():
-    assert AVAILABLE_LANGUAGES[-1] == "yue"
+def test_yue_is_appended_after_zh_and_never_inserted_before_it():
+    """R32: yue joins the tuple at the end, so zh's position -- and its behaviour -- is untouched.
+
+    This was ``AVAILABLE_LANGUAGES[-1] == "yue"`` while yue was the newest language. The tuple is
+    append-only, so "last" stops being true the moment another language lands (he did); what the
+    R32 contract actually needs is that yue sits AFTER zh, which is what is pinned now.
+    """
+    assert "yue" in AVAILABLE_LANGUAGES
+    assert AVAILABLE_LANGUAGES.index("yue") > AVAILABLE_LANGUAGES.index("zh")
 
 
 def test_the_identity_fields(profile):

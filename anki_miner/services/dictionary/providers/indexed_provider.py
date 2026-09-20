@@ -37,6 +37,9 @@ from anki_miner.services.dictionary.storage import (
     lookup_with_rules as storage_lookup_with_rules,
 )
 from anki_miner.services.dictionary.storage import (
+    term_rows as storage_term_rows,
+)
+from anki_miner.services.dictionary.storage import (
     terms_exist as storage_terms_exist,
 )
 from anki_miner.services.dictionary.storage import (
@@ -312,6 +315,27 @@ class IndexedDictProvider:
                 e,
             )
             return set()
+
+    def term_rows(self, terms: list[str]) -> dict[str, list[tuple[str, str]]]:
+        """Batch exact-headword row probe (R36 form lookup).
+
+        Maps each of ``terms`` that exists as a headword to its ``(content, tags)`` rows, best
+        entry first. A term with no rows is ABSENT from the map, not mapped to ``[]``: the chain
+        walk in ``DefinitionService`` reads that absence as "ask the next provider". Mirrors
+        :meth:`has_terms`: never raises; unavailable or corrupt index degrades to an empty map.
+        """
+        if self._conn is None:
+            return {}
+        try:
+            return storage_term_rows(self._conn, terms, keys=self._keys)
+        except sqlite3.DatabaseError as e:
+            logger.warning(
+                "Dictionary '%s' (%s) raised DatabaseError during term_rows; treating as all-miss: %s",
+                self.dict_id,
+                self._db_path,
+                e,
+            )
+            return {}
 
     def terms_readings(self, terms: list[str]) -> dict[str, list[str]]:
         """Batch attested-readings probe (merged-compound reading attestation).

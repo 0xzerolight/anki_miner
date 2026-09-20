@@ -54,6 +54,9 @@ REQUIRED_ASSETS = [
     # for its script, so nothing in the suite notices if it goes missing.
     "anki_miner/gui/resources/fonts/Vazirmatn-Regular.ttf",
     "anki_miner/gui/resources/fonts/OFL-Vazirmatn.txt",
+    # The Hebrew face and its own OFL, same reason again.
+    "anki_miner/gui/resources/fonts/NotoSansHebrew-Regular.ttf",
+    "anki_miner/gui/resources/fonts/OFL-NotoSansHebrew.txt",
     # The Persian tokenizer's derived tables: RESOURCE_DIRS does not cover
     # languages/<code>/data, so nothing else notices if a table vanishes from
     # disk and wheel together. The symptom is silent — every Persian compound

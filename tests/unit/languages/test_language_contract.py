@@ -65,6 +65,9 @@ PROBE = {
     # No HK variant and no radical glyph, so the ladder answers []: the
     # "word not in candidates" case. Segmentation lives in tokens.jsonl.
     "yue": "睇咗",
+    # katavti: two form rows, one target. Unvocalised letters only, so this line
+    # carries no combining mark (LEAD-BRIEF section 3).
+    "he": "כתבתי",
 }
 
 #: Every capability name any profile is allowed to declare. A typo'd flag is a
@@ -117,6 +120,12 @@ CAPABILITY_VOCABULARY = frozenset(
         # Cantonese (F.1): jyutping readings. tone_color and measure_word are
         # zh's, reused unchanged.
         "jyutping",
+        # Hebrew card fields (F.2): the dictionary's own romanisation and a verb's
+        # binyan. Its root, gender, plural and POS reuse the shared names above.
+        "hebrew_transliteration",
+        "hebrew_binyan",
+        # Like "stress_marks": states that the reading comes from an installed dictionary.
+        "vocalised_reading",
     }
 )
 
@@ -152,6 +161,9 @@ EXTRA_HOOK_FIELDS = {
     "hanviet",
     # Cantonese (F.1). measure_word is zh's key, already above.
     "expression_jyutping",
+    # Hebrew hook keys (F.2).
+    "transliteration",
+    "binyan",
 }
 
 
