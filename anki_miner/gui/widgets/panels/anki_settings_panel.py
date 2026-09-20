@@ -208,7 +208,11 @@ _HOOK_FIELD_ROW_TEXTS: dict[str, tuple[str, str]] = {
 # Exported at module level so setup wizards and future callers can reuse the
 # same sets without duplication.
 _FIELD_KEYWORDS: dict[str, list[str]] = {
-    "word": ["expression", "word", "vocab"],
+    # The Chinese spellings are the ones services/expression_field.py already
+    # reads as a word field, minus "traditional": zh carries a dedicated
+    # expression_traditional key, and on a note type that lists Traditional
+    # above Simplified it would silently become the card front.
+    "word": ["expression", "word", "vocab", "hanzi", "simplified", "汉字", "漢字", "中文", "单词", "词语"],
     "sentence": ["sentence", "context", "example"],
     "definition": ["definition", "meaning", "maindefinition"],
     "glossary": ["glossary", "definitions", "dictionary"],
