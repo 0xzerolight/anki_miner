@@ -79,6 +79,8 @@ CAPABILITY_VOCABULARY = frozenset(
         "kana_filters",
         "name_wordsets",
         "deinflection",
+        # The Lapis / Kiku / Senren note-type presets, which are all Japanese.
+        "note_presets",
         "hangul_filters",
         "hanja",
         "pinyin",

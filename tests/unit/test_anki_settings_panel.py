@@ -813,3 +813,115 @@ def test_sentence_translation_field_round_trips_and_auto_maps(qtbot):
     panel.populate_from_field_list(["Expression", "Sentence", "Translation"])
     assert panel.get_card_fields()["sentence_translation"] == "Translation"
     assert panel.get_card_fields()["sentence"] == "Sentence"
+
+
+#: A mapping with nothing the auto-map defaults would quietly re-seed, so each
+#: test below states every name it expects to survive or be cleared.
+def _mapping(**overrides: str) -> dict[str, str]:
+    base = dict.fromkeys(
+        (
+            "word",
+            "sentence",
+            "definition",
+            "glossary",
+            "picture",
+            "audio",
+            "expression_audio",
+            "expression_furigana",
+            "expression_reading",
+            "sentence_furigana",
+            "sentence_reading",
+        ),
+        "",
+    )
+    base.update(overrides)
+    return base
+
+
+def test_auto_map_clears_a_mapping_the_note_type_has_no_field_for(qtbot):
+    """Switching language leaves names like MainDefinition behind, showing red."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_card_fields(
+        _mapping(word="Expression", sentence="Sentence", definition="MainDefinition", picture="Picture")
+    )
+
+    cleared = panel.populate_from_field_list(["Expression", "Sentence"])
+
+    fields = panel.get_card_fields()
+    assert fields["definition"] == ""
+    assert fields["picture"] == ""
+    assert fields["word"] == "Expression"
+    assert cleared == 2
+
+
+def test_auto_map_changes_nothing_when_every_mapping_exists(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    names = ["Expression", "Sentence", "MainDefinition", "Picture", "SentenceAudio"]
+    panel.set_card_fields(
+        _mapping(
+            word="Expression",
+            sentence="Sentence",
+            definition="MainDefinition",
+            picture="Picture",
+            audio="SentenceAudio",
+        )
+    )
+    before = panel.get_card_fields()
+
+    cleared = panel.populate_from_field_list(names)
+
+    assert cleared == 0
+    assert panel.get_card_fields() == before
+
+
+def test_auto_map_keeps_a_key_the_panel_does_not_own(qtbot):
+    """get_card_fields promises hand-typed gui_config.json keys survive a Save."""
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_card_fields(_mapping(word="Expression", future_key="HandTyped"))
+
+    panel.populate_from_field_list(["Expression"])
+
+    assert panel.get_card_fields()["future_key"] == "HandTyped"
+
+
+def test_auto_map_leaves_a_row_the_language_gate_hid(qtbot, test_config):
+    """A ja user's stored zh mapping is off screen, so the clear never sees it."""
+    from dataclasses import replace
+
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(
+        replace(test_config, anki_fields={**_mapping(word="Expression"), "measure_word": "MeasureWord"})
+    )
+
+    panel.populate_from_field_list(["Expression"])
+
+    assert not panel.measure_word_field_input.isVisibleTo(panel)
+    assert panel.get_card_fields()["measure_word"] == "MeasureWord"
+
+
+def test_auto_map_clears_only_the_active_card_types_marker(qtbot):
+    panel = AnkiSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.set_card_fields(_mapping(word="Expression"))
+    panel.set_card_type("click")
+    panel.set_card_type_marker_fields(
+        {
+            "word_and_sentence": "IsWordAndSentenceCard",
+            "click": "IsClickCard",
+            "sentence": "IsSentenceCard",
+            "audio": "IsAudioCard",
+        }
+    )
+
+    cleared = panel.populate_from_field_list(["Expression"])
+
+    markers = panel.get_card_type_marker_fields()
+    assert markers["click"] == ""
+    assert markers["word_and_sentence"] == "IsWordAndSentenceCard"
+    assert markers["sentence"] == "IsSentenceCard"
+    assert markers["audio"] == "IsAudioCard"
+    assert cleared == 1

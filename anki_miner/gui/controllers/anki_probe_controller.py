@@ -236,8 +236,13 @@ class AnkiProbeController:
                 False, "Could not fetch fields. Is Anki running and the note type spelled right?"
             )
             return
-        self._anki_panel.populate_from_field_list(field_names)
-        self._anki_panel.set_notetype_status(True, f"Fetched {len(field_names)} fields and auto-mapped them")
+        cleared = self._anki_panel.populate_from_field_list(field_names)
+        status = f"Fetched {len(field_names)} fields and auto-mapped them"
+        if cleared:
+            # Name the blanking: the rows it empties are ones the user can see,
+            # and a silent clear reads as the panel losing their work.
+            status += f"; cleared {cleared} stale {'mapping' if cleared == 1 else 'mappings'}"
+        self._anki_panel.set_notetype_status(True, status)
 
     def _on_fetch_fields_error(
         self,

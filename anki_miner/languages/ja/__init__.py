@@ -108,7 +108,9 @@ def build_profile() -> LanguageProfile:
             excluded_subtypes=tuple(base.excluded_subtypes),
         ),
         catalog=RECOMMENDED_DEFAULT_SET,
-        capabilities=frozenset({"pitch", "furigana", "kana_filters", "name_wordsets", "deinflection"}),
+        # "note_presets": Lapis, Kiku and Senren are Japanese note types, so the
+        # preset row belongs to this language alone.
+        capabilities=frozenset({"pitch", "furigana", "kana_filters", "name_wordsets", "deinflection", "note_presets"}),
         card_field_defaults=dict(base.anki_fields),
         render_hooks=(),
         content_style=ContentTextStyle(font_role="japanese", families=(), wrap=ja_phrase_wrap),

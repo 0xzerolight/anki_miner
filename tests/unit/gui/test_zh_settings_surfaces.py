@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from dataclasses import replace
 
+from PyQt6.QtWidgets import QLabel
+
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.panels.anki_settings_panel import AnkiSettingsPanel
 from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
@@ -174,3 +176,61 @@ def test_measure_word_is_a_zh_card_field(qtbot, test_config):
     panel = _anki(qtbot, zh)
     assert panel.measure_word_field_input.isVisibleTo(panel)
     assert panel.get_card_fields()["measure_word"] == "MW"
+
+
+def test_zh_hides_the_note_type_preset_row(qtbot, test_config):
+    """All three presets are Japanese note types, so one click maps four dead fields."""
+    panel = _anki(qtbot, _zh(test_config))
+    assert not panel.preset_combo.isVisibleTo(panel)
+    assert not panel.preset_apply_button.isVisibleTo(panel)
+    assert not panel.preset_status.isVisibleTo(panel)
+
+
+def test_ja_keeps_the_note_type_preset_row(qtbot, test_config):
+    panel = _anki(qtbot, test_config)
+    assert panel.preset_combo.isVisibleTo(panel)
+    assert panel.preset_apply_button.isVisibleTo(panel)
+    assert panel.preset_status.isVisibleTo(panel)
+
+
+def test_the_preset_row_comes_back_on_a_return_to_ja(qtbot, test_config):
+    panel = _anki(qtbot, _zh(test_config))
+    panel.load_from_config(test_config)
+    assert panel.preset_combo.isVisibleTo(panel)
+    assert panel.preset_status.isVisibleTo(panel)
+
+
+def test_zh_hides_the_pitch_source_helper(qtbot, test_config):
+    """The helper sat above pitch rows the gate had already taken away."""
+    panel = _anki(qtbot, _zh(test_config))
+    assert not panel._auxiliary_helper.isVisibleTo(panel)
+    assert not panel.pitch_position_field_input.isVisibleTo(panel)
+    # Frequency and Source live under the same heading and stay.
+    assert panel.frequency_field_input.isVisibleTo(panel)
+    assert panel.source_field_input.isVisibleTo(panel)
+
+
+def test_ja_keeps_the_pitch_source_helper(qtbot, test_config):
+    panel = _anki(qtbot, test_config)
+    assert panel._auxiliary_helper.isVisibleTo(panel)
+
+
+def test_zh_keeps_the_card_type_section(qtbot, test_config):
+    """The marker-field mechanism is language-agnostic; gating it would remove it."""
+    panel = _anki(qtbot, _zh(test_config))
+    assert panel.card_type_combo.isVisibleTo(panel)
+    assert panel.card_type_names_group.isVisibleTo(panel)
+
+
+def test_the_reading_helpers_name_no_script(qtbot, test_config):
+    """For zh these fields hold pinyin, so "plain kana" is wrong copy."""
+    panel = _anki(qtbot, _zh(test_config))
+    assert panel.expression_reading_field_input.toolTip() == "Stores the expression's plain reading."
+    assert panel.sentence_reading_field_input.toolTip() == "Stores the sentence's plain reading."
+
+
+def test_no_japanese_only_copy_is_left_on_screen_for_zh(qtbot, test_config):
+    panel = _anki(qtbot, _zh(test_config))
+    on_screen = " ".join(label.text() for label in panel.findChildren(QLabel) if label.isVisibleTo(panel))
+    assert "JP Mining Note" not in on_screen
+    assert "Pitch Accent" not in on_screen
