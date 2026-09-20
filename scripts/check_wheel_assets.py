@@ -49,17 +49,26 @@ REQUIRED_ASSETS = [
     "anki_miner/gui/resources/fonts/NotoSansThai-Regular.ttf",
     "anki_miner/gui/resources/fonts/OFL-NotoSansThai.txt",
     "anki_miner/gui/resources/fonts/PROVENANCE.md",
+    # The Persian tokenizer's derived tables: RESOURCE_DIRS does not cover
+    # languages/<code>/data, so nothing else notices if a table vanishes from
+    # disk and wheel together. The symptom is silent — every Persian compound
+    # verb mines as two separate words.
+    "anki_miner/languages/fa/data/compound_verbs.tsv",
+    "anki_miner/languages/fa/data/colloquial.tsv",
 ]
 # Notices that a pyproject ``license-files`` entry promises and nothing else
 # verifies. A pruned or reordered glob drops one silently and the wheel still
 # builds; README.md is the only place the Yomitan attribution exists, since
 # GPLv3's text names no copyright holder.
 REQUIRED_WHEEL_LICENSES = [
+    "licenses/hazm/LICENSE",
     "licenses/indocollex/LICENSE",
     "licenses/indocollex/README.md",
     "licenses/local-audio-yomichan/LICENSE",
+    "licenses/shekar/LICENSE",
     "licenses/stopwords-iso/LICENSE",
     "licenses/stopwords-iso/README.md",
+    "licenses/wiktionary/LICENSE.CC-BY-SA-4.0",
     "licenses/yomitan/COPYING.GPLv3",
     "licenses/yomitan/README.md",
     "licenses/zeyrek/LICENSE",
@@ -112,6 +121,7 @@ def check_spec_references_resources() -> None:
         '"anki_miner", "gui", "resources"',
         '"anki_miner", "services", "dictionary", "resources"',
         '"anki_miner", "resources"',
+        '"anki_miner", "languages", "fa", "data"',
         '"licenses", "local-audio-yomichan"',
         '"licenses", "vulkan-loader"',
     ]
