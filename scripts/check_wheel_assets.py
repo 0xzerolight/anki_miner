@@ -51,7 +51,11 @@ REQUIRED_ASSETS = [
 # builds; README.md is the only place the Yomitan attribution exists, since
 # GPLv3's text names no copyright holder.
 REQUIRED_WHEEL_LICENSES = [
+    "licenses/indocollex/LICENSE",
+    "licenses/indocollex/README.md",
     "licenses/local-audio-yomichan/LICENSE",
+    "licenses/stopwords-iso/LICENSE",
+    "licenses/stopwords-iso/README.md",
     "licenses/yomitan/COPYING.GPLv3",
     "licenses/yomitan/README.md",
     "licenses/zeyrek/LICENSE",

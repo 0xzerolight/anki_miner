@@ -994,6 +994,18 @@ jobs:
         shell: bash
         run: python scripts/fetch_language_pack_seeds.py "$RUNNER_TEMP/lang_pack_seeds" zh ko en ca de pt fr es it nl nb ro el fi hu hr sv pl lt da tr asr
 
+      # Pack-less mining languages (ruling R-PACKLESS-SMOKE): nothing to fetch, but
+      # bundle_smoke.sh runs a language leg only when BUNDLE_SMOKE_PACK_SEEDS/<code> exists.
+      # An empty seed dir is inert (load_pack returns None for a language with no pack).
+      # The path is built from the SAME expression BUNDLE_SMOKE_PACK_SEEDS uses and
+      # normalised the way bundle_smoke.sh normalises it (RUNNER_TEMP is a backslash
+      # path on Windows), or the Windows leg would look elsewhere and skip silently.
+      - name: Create the seed dirs of the pack-less languages
+        shell: bash
+        run: |
+          SEED_ROOT="${{ runner.temp }}/lang_pack_seeds"
+          mkdir -p "${SEED_ROOT//\\//}/id"
+
       # Seed the app-managed yt-dlp the youtube smoke needs. The bundle ships no
       # yt-dlp (it is an in-app download), so the leg has to be handed one. Drives
       # the app's OWN updater against a pinned release: same download, digest check
@@ -1053,7 +1065,7 @@ jobs:
           BUNDLE_SMOKE_PACK_SEEDS: ${{ runner.temp }}/lang_pack_seeds
           # Mining-language tokenizer legs (opt-in in bundle_smoke.sh so the
           # local invocation-count test stays valid).
-          BUNDLE_SMOKE_LANGS: zh ko en ca de pt fr es it nl nb ro el fi hu hr sv pl lt da tr
+          BUNDLE_SMOKE_LANGS: zh ko en ca de pt fr es it nl nb ro el fi hu hr sv pl lt da tr id
           # yt-dlp seed from the step above: bundle_smoke.sh copies it into the
           # isolated smoke home so the resolver's app-managed tier has something
           # to find. No seed -> the youtube leg skips instead of failing.
