@@ -1,0 +1,5150 @@
+{
+ "source": "wty-sl-en revision 2026.09.19 (huggingface.co/datasets/daxida/wty-release, wty-sl-en.zip 828,222 B, 56,797 rows over 54,245 terms); every row of: knjiga, pes, miza, hiša, morje, otrok, žival, cvet, vrata, šola, brati, leto, mesto",
+ "license": "Wiktionary content via kaikki.org, CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). Attribution: https://en.wiktionary.org/ Slovene entries for the listed terms.",
+ "index": {
+  "title": "wty-sl-en",
+  "format": 3,
+  "revision": "2026.09.19",
+  "sequenced": true,
+  "author": "wty contributors",
+  "url": "https://github.com/yomidevs/wiktionary-to-yomitan",
+  "description": "Dictionaries for various language pairs generated from Wiktionary data, via Kaikki and wty.",
+  "attribution": "https://kaikki.org/",
+  "sourceLanguage": "sl",
+  "targetLanguage": "en",
+  "isUpdatable": true,
+  "indexUrl": "https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/index/wty-sl-en-index.json?download=true",
+  "downloadUrl": "https://huggingface.co/datasets/daxida/wty-release/resolve/main/latest/dict/sl/en/wty-sl-en.zip?download=true"
+ },
+ "tag_bank": [
+  [
+   "animate",
+   "animacy",
+   0,
+   "animate",
+   0
+  ],
+  [
+   "inanim",
+   "animacy",
+   0,
+   "inanimate",
+   0
+  ],
+  [
+   "arch",
+   "archaism",
+   4,
+   "archaic",
+   -4
+  ],
+  [
+   "dated",
+   "archaism",
+   4,
+   "dated",
+   -4
+  ],
+  [
+   "obs",
+   "archaism",
+   4,
+   "obsolete",
+   -4
+  ],
+  [
+   "out",
+   "archaism",
+   4,
+   "outdated",
+   -4
+  ],
+  [
+   "rare",
+   "archaism",
+   4,
+   "rare",
+   -4
+  ],
+  [
+   "impf",
+   "aspect",
+   0,
+   "imperfective",
+   0
+  ],
+  [
+   "impf-only",
+   "aspect",
+   0,
+   "imperfective only",
+   0
+  ],
+  [
+   "pf",
+   "aspect",
+   0,
+   "perfective",
+   0
+  ],
+  [
+   "pf-only",
+   "aspect",
+   0,
+   "perfective only",
+   0
+  ],
+  [
+   "acc",
+   "case",
+   0,
+   "with-accusative",
+   0
+  ],
+  [
+   "dat",
+   "case",
+   0,
+   "with-dative",
+   0
+  ],
+  [
+   "decl-1",
+   "declension",
+   0,
+   "declension-1",
+   0
+  ],
+  [
+   "decl-2",
+   "declension",
+   0,
+   "declension-2",
+   0
+  ],
+  [
+   "decl-3",
+   "declension",
+   0,
+   "declension-3",
+   0
+  ],
+  [
+   "decl-4",
+   "declension",
+   0,
+   "declension-4",
+   0
+  ],
+  [
+   "decl-5",
+   "declension",
+   0,
+   "declension-5",
+   0
+  ],
+  [
+   "def",
+   "definiteness",
+   0,
+   "definite",
+   0
+  ],
+  [
+   "indef",
+   "definiteness",
+   0,
+   "indefinite",
+   0
+  ],
+  [
+   "fem",
+   "gender-feminine",
+   -1,
+   "feminine",
+   1
+  ],
+  [
+   "masc",
+   "gender-masculine",
+   -1,
+   "masculine",
+   1
+  ],
+  [
+   "neut",
+   "gender-neuter",
+   -1,
+   "neuter",
+   1
+  ],
+  [
+   "count",
+   "grammar",
+   0,
+   "countable",
+   0
+  ],
+  [
+   "interr",
+   "grammar",
+   0,
+   "interrogative",
+   0
+  ],
+  [
+   "not-comp",
+   "grammar",
+   0,
+   "not comparable",
+   0
+  ],
+  [
+   "reltnl",
+   "grammar",
+   0,
+   "relational",
+   0
+  ],
+  [
+   "reltv",
+   "grammar",
+   0,
+   "relative",
+   0
+  ],
+  [
+   "uncount",
+   "grammar",
+   0,
+   "uncountable",
+   0
+  ],
+  [
+   "XS",
+   "ipa",
+   0,
+   "X-SAMPA",
+   0
+  ],
+  [
+   "abbv",
+   "morphology",
+   0,
+   "abbreviation",
+   0
+  ],
+  [
+   "aug",
+   "morphology",
+   0,
+   "augmentative",
+   0
+  ],
+  [
+   "circumfix",
+   "morphology",
+   0,
+   "circumfix",
+   0
+  ],
+  [
+   "circumpos",
+   "morphology",
+   0,
+   "circumpos",
+   0
+  ],
+  [
+   "contr",
+   "morphology",
+   0,
+   "contraction",
+   0
+  ],
+  [
+   "dim",
+   "morphology",
+   0,
+   "diminutive",
+   0
+  ],
+  [
+   "hypo",
+   "morphology",
+   0,
+   "hypocoristic",
+   0
+  ],
+  [
+   "indecl",
+   "morphology",
+   0,
+   "indeclinable",
+   0
+  ],
+  [
+   "infix",
+   "morphology",
+   0,
+   "infix",
+   0
+  ],
+  [
+   "init",
+   "morphology",
+   0,
+   "initialism",
+   0
+  ],
+  [
+   "interfix",
+   "morphology",
+   0,
+   "interfix",
+   0
+  ],
+  [
+   "irreg",
+   "morphology",
+   0,
+   "irregular",
+   0
+  ],
+  [
+   "neol",
+   "morphology",
+   0,
+   "neologism",
+   0
+  ],
+  [
+   "poss",
+   "morphology",
+   0,
+   "possessive",
+   0
+  ],
+  [
+   "in-pl",
+   "number",
+   0,
+   "in the plural",
+   0
+  ],
+  [
+   "in-sg",
+   "number",
+   0,
+   "in the singular",
+   0
+  ],
+  [
+   "no-pl",
+   "number",
+   0,
+   "no-plural",
+   0
+  ],
+  [
+   "pl",
+   "number",
+   0,
+   "plural",
+   0
+  ],
+  [
+   "pl-only",
+   "number",
+   0,
+   "plural only",
+   0
+  ],
+  [
+   "sg",
+   "number",
+   0,
+   "singular",
+   0
+  ],
+  [
+   "sg-only",
+   "number",
+   0,
+   "singular only",
+   0
+  ],
+  [
+   "card-num",
+   "number-type",
+   0,
+   "cardinal number",
+   0
+  ],
+  [
+   "frac-num",
+   "number-type",
+   0,
+   "fractional number",
+   0
+  ],
+  [
+   "ord-num",
+   "number-type",
+   0,
+   "ordinal number",
+   0
+  ],
+  [
+   "adj",
+   "partOfSpeech",
+   -2,
+   "adjective",
+   2
+  ],
+  [
+   "adj_noun",
+   "partOfSpeech",
+   -2,
+   "adj_noun",
+   2
+  ],
+  [
+   "adn",
+   "partOfSpeech",
+   -2,
+   "adnominal",
+   2
+  ],
+  [
+   "adv",
+   "partOfSpeech",
+   -2,
+   "adverb",
+   2
+  ],
+  [
+   "artic",
+   "partOfSpeech",
+   -2,
+   "article",
+   2
+  ],
+  [
+   "char",
+   "partOfSpeech",
+   -2,
+   "character",
+   2
+  ],
+  [
+   "conj",
+   "partOfSpeech",
+   -2,
+   "conjunction",
+   2
+  ],
+  [
+   "counter",
+   "partOfSpeech",
+   -2,
+   "counter",
+   2
+  ],
+  [
+   "det",
+   "partOfSpeech",
+   -2,
+   "determiner",
+   2
+  ],
+  [
+   "intj",
+   "partOfSpeech",
+   -2,
+   "interjection",
+   2
+  ],
+  [
+   "n",
+   "partOfSpeech",
+   -2,
+   "noun",
+   2
+  ],
+  [
+   "num",
+   "partOfSpeech",
+   -2,
+   "numeral",
+   2
+  ],
+  [
+   "phrase",
+   "partOfSpeech",
+   -2,
+   "phrase",
+   2
+  ],
+  [
+   "pos-r",
+   "partOfSpeech",
+   -2,
+   "pos-root",
+   2
+  ],
+  [
+   "postp",
+   "partOfSpeech",
+   -2,
+   "postposition",
+   2
+  ],
+  [
+   "pref",
+   "partOfSpeech",
+   -2,
+   "prefix",
+   2
+  ],
+  [
+   "prep",
+   "partOfSpeech",
+   -2,
+   "preposition",
+   2
+  ],
+  [
+   "prep-phrase",
+   "partOfSpeech",
+   -2,
+   "prepositional phrase",
+   2
+  ],
+  [
+   "pron",
+   "partOfSpeech",
+   -2,
+   "pronoun",
+   2
+  ],
+  [
+   "prop-n",
+   "partOfSpeech",
+   -2,
+   "proper noun",
+   2
+  ],
+  [
+   "prov",
+   "partOfSpeech",
+   -2,
+   "proverb",
+   2
+  ],
+  [
+   "ptcl",
+   "partOfSpeech",
+   -2,
+   "particle",
+   2
+  ],
+  [
+   "ptcpl",
+   "partOfSpeech",
+   -2,
+   "participle",
+   2
+  ],
+  [
+   "r",
+   "partOfSpeech",
+   -2,
+   "root",
+   2
+  ],
+  [
+   "suf",
+   "partOfSpeech",
+   -2,
+   "suffix",
+   2
+  ],
+  [
+   "v",
+   "partOfSpeech",
+   -2,
+   "verb",
+   2
+  ],
+  [
+   "vdt",
+   "partOfSpeech",
+   -2,
+   "ditransitive verb",
+   2
+  ],
+  [
+   "vi",
+   "partOfSpeech",
+   -2,
+   "intransitive verb",
+   2
+  ],
+  [
+   "vr",
+   "partOfSpeech",
+   -2,
+   "reflexive verb",
+   2
+  ],
+  [
+   "vt",
+   "partOfSpeech",
+   -2,
+   "transitive verb",
+   2
+  ],
+  [
+   "name",
+   "partOfSpeech",
+   -1,
+   "name",
+   1
+  ],
+  [
+   "surn",
+   "partOfSpeech",
+   -1,
+   "surname",
+   1
+  ],
+  [
+   "child",
+   "register",
+   0,
+   "childish",
+   0
+  ],
+  [
+   "col",
+   "register",
+   0,
+   "colloquial",
+   0
+  ],
+  [
+   "crim-sl",
+   "register",
+   0,
+   "criminal slang",
+   0
+  ],
+  [
+   "defer",
+   "register",
+   0,
+   "deferential",
+   0
+  ],
+  [
+   "derog",
+   "register",
+   0,
+   "derogatory",
+   0
+  ],
+  [
+   "ethn-slr",
+   "register",
+   0,
+   "ethnic slur",
+   0
+  ],
+  [
+   "fam",
+   "register",
+   0,
+   "familiar",
+   0
+  ],
+  [
+   "fan-sl",
+   "register",
+   0,
+   "fandom slang",
+   0
+  ],
+  [
+   "formal",
+   "register",
+   0,
+   "formal",
+   0
+  ],
+  [
+   "high-reg",
+   "register",
+   0,
+   "higher register",
+   0
+  ],
+  [
+   "humor",
+   "register",
+   0,
+   "humorous",
+   0
+  ],
+  [
+   "imp",
+   "register",
+   0,
+   "impolite",
+   0
+  ],
+  [
+   "inf",
+   "register",
+   0,
+   "informal",
+   0
+  ],
+  [
+   "jar",
+   "register",
+   0,
+   "jargon",
+   0
+  ],
+  [
+   "lit",
+   "register",
+   0,
+   "literary",
+   0
+  ],
+  [
+   "mil-sl",
+   "register",
+   0,
+   "military slang",
+   0
+  ],
+  [
+   "net-sl",
+   "register",
+   0,
+   "Internet slang",
+   0
+  ],
+  [
+   "offens",
+   "register",
+   0,
+   "offensive",
+   0
+  ],
+  [
+   "pej",
+   "register",
+   0,
+   "pejorative",
+   0
+  ],
+  [
+   "poet",
+   "register",
+   0,
+   "poetic",
+   0
+  ],
+  [
+   "polite",
+   "register",
+   0,
+   "polite",
+   0
+  ],
+  [
+   "rlg-slr",
+   "register",
+   0,
+   "religious slur",
+   0
+  ],
+  [
+   "sl",
+   "register",
+   0,
+   "slang",
+   0
+  ],
+  [
+   "techncl",
+   "register",
+   0,
+   "technical",
+   0
+  ],
+  [
+   "txt-msg",
+   "register",
+   0,
+   "text messaging",
+   0
+  ],
+  [
+   "vern",
+   "register",
+   0,
+   "vernacular",
+   0
+  ],
+  [
+   "vulg",
+   "register",
+   0,
+   "vulgar",
+   0
+  ],
+  [
+   "youth-sl",
+   "register",
+   0,
+   "youth slang",
+   0
+  ],
+  [
+   "BDSM",
+   "topic",
+   0,
+   "BDSM",
+   0
+  ],
+  [
+   "LGBT",
+   "topic",
+   0,
+   "LGBT",
+   0
+  ],
+  [
+   "OOP",
+   "topic",
+   0,
+   "object-oriented programming",
+   0
+  ],
+  [
+   "agr",
+   "topic",
+   0,
+   "agriculture",
+   0
+  ],
+  [
+   "anat",
+   "topic",
+   0,
+   "anatomy",
+   0
+  ],
+  [
+   "anthro",
+   "topic",
+   0,
+   "anthropology",
+   0
+  ],
+  [
+   "archae",
+   "topic",
+   0,
+   "archaeology",
+   0
+  ],
+  [
+   "archit",
+   "topic",
+   0,
+   "architecture",
+   0
+  ],
+  [
+   "arithm",
+   "topic",
+   0,
+   "arithmetic",
+   0
+  ],
+  [
+   "art",
+   "topic",
+   0,
+   "art",
+   0
+  ],
+  [
+   "astrol",
+   "topic",
+   0,
+   "astrology",
+   0
+  ],
+  [
+   "astrophys",
+   "topic",
+   0,
+   "astrophysics",
+   0
+  ],
+  [
+   "auto",
+   "topic",
+   0,
+   "automotive",
+   0
+  ],
+  [
+   "avio",
+   "topic",
+   0,
+   "aviation",
+   0
+  ],
+  [
+   "bank",
+   "topic",
+   0,
+   "banking",
+   0
+  ],
+  [
+   "bible",
+   "topic",
+   0,
+   "biblical",
+   0
+  ],
+  [
+   "biochem",
+   "topic",
+   0,
+   "biochemistry",
+   0
+  ],
+  [
+   "biol",
+   "topic",
+   0,
+   "biology",
+   0
+  ],
+  [
+   "cards",
+   "topic",
+   0,
+   "card games",
+   0
+  ],
+  [
+   "chem",
+   "topic",
+   0,
+   "chemistry",
+   0
+  ],
+  [
+   "chess",
+   "topic",
+   0,
+   "chess",
+   0
+  ],
+  [
+   "comp",
+   "topic",
+   0,
+   "computing",
+   0
+  ],
+  [
+   "comp-sci",
+   "topic",
+   0,
+   "computer science",
+   0
+  ],
+  [
+   "cook",
+   "topic",
+   0,
+   "cooking",
+   0
+  ],
+  [
+   "cyto",
+   "topic",
+   0,
+   "cytology",
+   0
+  ],
+  [
+   "ecc",
+   "topic",
+   0,
+   "ecclesiastical",
+   0
+  ],
+  [
+   "eco",
+   "topic",
+   0,
+   "ecology",
+   0
+  ],
+  [
+   "econ",
+   "topic",
+   0,
+   "economics",
+   0
+  ],
+  [
+   "edu",
+   "topic",
+   0,
+   "education",
+   0
+  ],
+  [
+   "electr",
+   "topic",
+   0,
+   "electronics",
+   0
+  ],
+  [
+   "eng",
+   "topic",
+   0,
+   "engineering",
+   0
+  ],
+  [
+   "entom",
+   "topic",
+   0,
+   "entomology",
+   0
+  ],
+  [
+   "film",
+   "topic",
+   0,
+   "film",
+   0
+  ],
+  [
+   "fin",
+   "topic",
+   0,
+   "finance",
+   0
+  ],
+  [
+   "firearm",
+   "topic",
+   0,
+   "firearms",
+   0
+  ],
+  [
+   "game",
+   "topic",
+   0,
+   "video games",
+   0
+  ],
+  [
+   "geo",
+   "topic",
+   0,
+   "geography",
+   0
+  ],
+  [
+   "geol",
+   "topic",
+   0,
+   "geology",
+   0
+  ],
+  [
+   "geom",
+   "topic",
+   0,
+   "geometry",
+   0
+  ],
+  [
+   "golf",
+   "topic",
+   0,
+   "golf",
+   0
+  ],
+  [
+   "gramm",
+   "topic",
+   0,
+   "grammar",
+   0
+  ],
+  [
+   "greek-myth",
+   "topic",
+   0,
+   "Greek mythology",
+   0
+  ],
+  [
+   "gymn",
+   "topic",
+   0,
+   "gymnastics",
+   0
+  ],
+  [
+   "herald",
+   "topic",
+   0,
+   "heraldry",
+   0
+  ],
+  [
+   "hist",
+   "topic",
+   0,
+   "historical",
+   0
+  ],
+  [
+   "history",
+   "topic",
+   0,
+   "history",
+   0
+  ],
+  [
+   "hunt",
+   "topic",
+   0,
+   "hunting",
+   0
+  ],
+  [
+   "immun",
+   "topic",
+   0,
+   "immunology",
+   0
+  ],
+  [
+   "inorg-chem",
+   "topic",
+   0,
+   "inorganic chemistry",
+   0
+  ],
+  [
+   "law",
+   "topic",
+   0,
+   "law",
+   0
+  ],
+  [
+   "legal",
+   "topic",
+   0,
+   "legal",
+   0
+  ],
+  [
+   "ling",
+   "topic",
+   0,
+   "linguistics",
+   0
+  ],
+  [
+   "log",
+   "topic",
+   0,
+   "logic",
+   0
+  ],
+  [
+   "math",
+   "topic",
+   0,
+   "mathematics",
+   0
+  ],
+  [
+   "mech",
+   "topic",
+   0,
+   "mechanics",
+   0
+  ],
+  [
+   "med",
+   "topic",
+   0,
+   "medicine",
+   0
+  ],
+  [
+   "metal",
+   "topic",
+   0,
+   "metallurgy",
+   0
+  ],
+  [
+   "meteo",
+   "topic",
+   0,
+   "meteorology",
+   0
+  ],
+  [
+   "mil",
+   "topic",
+   0,
+   "military",
+   0
+  ],
+  [
+   "myco",
+   "topic",
+   0,
+   "mycology",
+   0
+  ],
+  [
+   "myth",
+   "topic",
+   0,
+   "mythology",
+   0
+  ],
+  [
+   "net",
+   "topic",
+   0,
+   "Internet",
+   0
+  ],
+  [
+   "org-chem",
+   "topic",
+   0,
+   "organic chemistry",
+   0
+  ],
+  [
+   "ornit",
+   "topic",
+   0,
+   "ornithology",
+   0
+  ],
+  [
+   "paleo",
+   "topic",
+   0,
+   "paleontology",
+   0
+  ],
+  [
+   "path",
+   "topic",
+   0,
+   "pathology",
+   0
+  ],
+  [
+   "pharma",
+   "topic",
+   0,
+   "pharmacology",
+   0
+  ],
+  [
+   "philos",
+   "topic",
+   0,
+   "philosophy",
+   0
+  ],
+  [
+   "phonet",
+   "topic",
+   0,
+   "phonetics",
+   0
+  ],
+  [
+   "phonol",
+   "topic",
+   0,
+   "phonology",
+   0
+  ],
+  [
+   "photo",
+   "topic",
+   0,
+   "photography",
+   0
+  ],
+  [
+   "physics",
+   "topic",
+   0,
+   "physics",
+   0
+  ],
+  [
+   "physio",
+   "topic",
+   0,
+   "physiology",
+   0
+  ],
+  [
+   "poetry",
+   "topic",
+   0,
+   "poetry",
+   0
+  ],
+  [
+   "poker",
+   "topic",
+   0,
+   "poker",
+   0
+  ],
+  [
+   "polit",
+   "topic",
+   0,
+   "politics",
+   0
+  ],
+  [
+   "program",
+   "topic",
+   0,
+   "programming",
+   0
+  ],
+  [
+   "psych",
+   "topic",
+   0,
+   "psychology",
+   0
+  ],
+  [
+   "rail",
+   "topic",
+   0,
+   "rail transport",
+   0
+  ],
+  [
+   "rhet",
+   "topic",
+   0,
+   "rhetoric",
+   0
+  ],
+  [
+   "rome-myth",
+   "topic",
+   0,
+   "Roman mythology",
+   0
+  ],
+  [
+   "school",
+   "topic",
+   0,
+   "school",
+   0
+  ],
+  [
+   "sci-fi",
+   "topic",
+   0,
+   "science fiction",
+   0
+  ],
+  [
+   "socio",
+   "topic",
+   0,
+   "sociology",
+   0
+  ],
+  [
+   "soft",
+   "topic",
+   0,
+   "software",
+   0
+  ],
+  [
+   "soft-eng",
+   "topic",
+   0,
+   "software engineering",
+   0
+  ],
+  [
+   "sports",
+   "topic",
+   0,
+   "sports",
+   0
+  ],
+  [
+   "stat",
+   "topic",
+   0,
+   "statistics",
+   0
+  ],
+  [
+   "sumo",
+   "topic",
+   0,
+   "sumo",
+   0
+  ],
+  [
+   "surg",
+   "topic",
+   0,
+   "surgery",
+   0
+  ],
+  [
+   "tech",
+   "topic",
+   0,
+   "technology",
+   0
+  ],
+  [
+   "theater",
+   "topic",
+   0,
+   "theater",
+   0
+  ],
+  [
+   "theo",
+   "topic",
+   0,
+   "theology",
+   0
+  ],
+  [
+   "tv",
+   "topic",
+   0,
+   "television",
+   0
+  ],
+  [
+   "txnmy",
+   "topic",
+   0,
+   "taxonomy",
+   0
+  ],
+  [
+   "vehic",
+   "topic",
+   0,
+   "vehicles",
+   0
+  ],
+  [
+   "zoo",
+   "topic",
+   0,
+   "zoology",
+   0
+  ],
+  [
+   "ૐ",
+   "topic",
+   0,
+   "Buddhism",
+   0
+  ],
+  [
+   "☪️",
+   "topic",
+   0,
+   "Islam",
+   0
+  ],
+  [
+   "⚽",
+   "topic",
+   0,
+   "soccer",
+   0
+  ],
+  [
+   "⚾",
+   "topic",
+   0,
+   "baseball",
+   0
+  ],
+  [
+   "⛏️",
+   "topic",
+   0,
+   "mining",
+   0
+  ],
+  [
+   "⛪",
+   "topic",
+   0,
+   "modern Italianate Ecclesiastical",
+   0
+  ],
+  [
+   "✒️",
+   "topic",
+   0,
+   "calligraphy",
+   0
+  ],
+  [
+   "✝️",
+   "topic",
+   0,
+   "Christianity",
+   0
+  ],
+  [
+   "✝️Cath",
+   "topic",
+   0,
+   "Catholicism",
+   0
+  ],
+  [
+   "✝️Prot",
+   "topic",
+   0,
+   "Protestantism",
+   0
+  ],
+  [
+   "✡️",
+   "topic",
+   0,
+   "Judaism",
+   0
+  ],
+  [
+   "🌦️",
+   "topic",
+   0,
+   "weather",
+   0
+  ],
+  [
+   "🌿",
+   "topic",
+   0,
+   "botany",
+   0
+  ],
+  [
+   "🍺",
+   "topic",
+   0,
+   "beer",
+   0
+  ],
+  [
+   "🍽️",
+   "topic",
+   0,
+   "cuisine",
+   0
+  ],
+  [
+   "🎨",
+   "topic",
+   0,
+   "color",
+   0
+  ],
+  [
+   "🎵",
+   "topic",
+   0,
+   "music",
+   0
+  ],
+  [
+   "🎾",
+   "topic",
+   0,
+   "tennis",
+   0
+  ],
+  [
+   "👗",
+   "topic",
+   0,
+   "clothing",
+   0
+  ],
+  [
+   "👷",
+   "topic",
+   0,
+   "construction",
+   0
+  ],
+  [
+   "💼",
+   "topic",
+   0,
+   "business",
+   0
+  ],
+  [
+   "📏",
+   "topic",
+   0,
+   "units-of-measure",
+   0
+  ],
+  [
+   "📐",
+   "topic",
+   0,
+   "trigonometry",
+   0
+  ],
+  [
+   "📚",
+   "topic",
+   0,
+   "literature",
+   0
+  ],
+  [
+   "📰",
+   "topic",
+   0,
+   "journalism",
+   0
+  ],
+  [
+   "🔭",
+   "topic",
+   0,
+   "astronomy",
+   0
+  ],
+  [
+   "🕐",
+   "topic",
+   0,
+   "time",
+   0
+  ],
+  [
+   "🚗",
+   "topic",
+   0,
+   "automobile",
+   0
+  ],
+  [
+   "🚢",
+   "topic",
+   0,
+   "nautical",
+   0
+  ],
+  [
+   "🛐",
+   "topic",
+   0,
+   "religion",
+   0
+  ],
+  [
+   "🛕",
+   "topic",
+   0,
+   "Hinduism",
+   0
+  ],
+  [
+   "🧬",
+   "topic",
+   0,
+   "genetics",
+   0
+  ],
+  [
+   "🧵",
+   "topic",
+   0,
+   "textiles",
+   0
+  ],
+  [
+   "🪙",
+   "topic",
+   0,
+   "numismatics",
+   0
+  ],
+  [
+   "🪨",
+   "topic",
+   0,
+   "mineralogy",
+   0
+  ],
+  [
+   "🫀",
+   "topic",
+   0,
+   "cardiology",
+   0
+  ],
+  [
+   "aux",
+   "transitivity",
+   0,
+   "auxiliary",
+   0
+  ],
+  [
+   "aux-v",
+   "transitivity",
+   0,
+   "auxiliary verb",
+   0
+  ],
+  [
+   "cop",
+   "transitivity",
+   0,
+   "copulative",
+   0
+  ],
+  [
+   "impers",
+   "transitivity",
+   0,
+   "impersonal",
+   0
+  ],
+  [
+   "pers",
+   "transitivity",
+   0,
+   "personal",
+   0
+  ],
+  [
+   "ref-pron",
+   "transitivity",
+   0,
+   "takes a reflexive pronoun",
+   0
+  ],
+  [
+   "cmn",
+   "usage",
+   0,
+   "common",
+   0
+  ],
+  [
+   "dialect",
+   "usage",
+   0,
+   "dialectal",
+   0
+  ],
+  [
+   "euph",
+   "usage",
+   0,
+   "euphemistic",
+   0
+  ],
+  [
+   "fig",
+   "usage",
+   0,
+   "figurative",
+   0
+  ],
+  [
+   "idio",
+   "usage",
+   0,
+   "idiomatic",
+   0
+  ],
+  [
+   "idiom",
+   "usage",
+   0,
+   "idiom",
+   0
+  ],
+  [
+   "literal",
+   "usage",
+   0,
+   "literal",
+   0
+  ],
+  [
+   "non-std",
+   "usage",
+   0,
+   "nonstandard",
+   0
+  ],
+  [
+   "regio",
+   "usage",
+   0,
+   "regional",
+   0
+  ],
+  [
+   "uncmmn",
+   "usage",
+   0,
+   "uncommon",
+   0
+  ],
+  [
+   "Alemannic",
+   "variety",
+   0,
+   "Alemannic",
+   0
+  ],
+  [
+   "Bavarian",
+   "variety",
+   0,
+   "Bavarian",
+   0
+  ],
+  [
+   "Gheg",
+   "variety",
+   0,
+   "Gheg",
+   0
+  ],
+  [
+   "HCM",
+   "variety",
+   0,
+   "Hồ-Chí-Minh-City",
+   0
+  ],
+  [
+   "Hanoi",
+   "variety",
+   0,
+   "Hà-Nội",
+   0
+  ],
+  [
+   "Hue",
+   "variety",
+   0,
+   "Huế",
+   0
+  ],
+  [
+   "Swabian",
+   "variety",
+   0,
+   "Swabian",
+   0
+  ],
+  [
+   "Tosk",
+   "variety",
+   0,
+   "Tosk",
+   0
+  ],
+  [
+   "ccm",
+   "variety",
+   0,
+   "cot-caught-merger",
+   0
+  ],
+  [
+   "classic",
+   "variety",
+   0,
+   "Classical-Persian",
+   0
+  ],
+  [
+   "e",
+   "variety",
+   0,
+   "Ekavian",
+   0
+  ],
+  [
+   "i",
+   "variety",
+   0,
+   "Ikavian",
+   0
+  ],
+  [
+   "ije",
+   "variety",
+   0,
+   "Ijekavian",
+   0
+  ],
+  [
+   "kaj",
+   "variety",
+   0,
+   "Kajkavian",
+   0
+  ],
+  [
+   "std",
+   "variety",
+   0,
+   "standard",
+   0
+  ],
+  [
+   "ča",
+   "variety",
+   0,
+   "Chakavian",
+   0
+  ],
+  [
+   "🇦🇪",
+   "variety",
+   0,
+   "United Arab Emirates",
+   0
+  ],
+  [
+   "🇦🇫",
+   "variety",
+   0,
+   "Dari",
+   0
+  ],
+  [
+   "🇦🇫KA",
+   "variety",
+   0,
+   "Kabuli",
+   0
+  ],
+  [
+   "🇦🇷",
+   "variety",
+   0,
+   "Argentina",
+   0
+  ],
+  [
+   "🇦🇷🇺🇾",
+   "variety",
+   0,
+   "Río de la Plata",
+   0
+  ],
+  [
+   "🇦🇹",
+   "variety",
+   0,
+   "Austria",
+   0
+  ],
+  [
+   "🇦🇹VI",
+   "variety",
+   0,
+   "Vienna",
+   0
+  ],
+  [
+   "🇦🇺",
+   "variety",
+   0,
+   "Australia",
+   0
+  ],
+  [
+   "🇧🇦",
+   "variety",
+   0,
+   "Bosnia",
+   0
+  ],
+  [
+   "🇧🇭",
+   "variety",
+   0,
+   "Bahrain",
+   0
+  ],
+  [
+   "🇧🇴",
+   "variety",
+   0,
+   "Bolivia",
+   0
+  ],
+  [
+   "🇧🇷",
+   "variety",
+   0,
+   "Brazil",
+   0
+  ],
+  [
+   "🇧🇷C",
+   "variety",
+   0,
+   "Caipira",
+   0
+  ],
+  [
+   "🇧🇷F",
+   "variety",
+   0,
+   "Fluminense",
+   0
+  ],
+  [
+   "🇧🇷G",
+   "variety",
+   0,
+   "Gaúcho",
+   0
+  ],
+  [
+   "🇧🇷M",
+   "variety",
+   0,
+   "Mineiro",
+   0
+  ],
+  [
+   "🇧🇷M-G",
+   "variety",
+   0,
+   "Minas-Gerais",
+   0
+  ],
+  [
+   "🇧🇷RdJ",
+   "variety",
+   0,
+   "Rio-de-Janeiro",
+   0
+  ],
+  [
+   "🇧🇷SP",
+   "variety",
+   0,
+   "São-Paulo",
+   0
+  ],
+  [
+   "🇧🇷↗️",
+   "variety",
+   0,
+   "Northeast-Brazil",
+   0
+  ],
+  [
+   "🇧🇷⬆️",
+   "variety",
+   0,
+   "North-Brazil",
+   0
+  ],
+  [
+   "🇧🇷⬇️",
+   "variety",
+   0,
+   "South Brazil",
+   0
+  ],
+  [
+   "🇧🇷🎯",
+   "variety",
+   0,
+   "Central",
+   0
+  ],
+  [
+   "🇧🇿",
+   "variety",
+   0,
+   "Belize",
+   0
+  ],
+  [
+   "🇨🇦",
+   "variety",
+   0,
+   "Canada",
+   0
+  ],
+  [
+   "🇨🇭",
+   "variety",
+   0,
+   "Switzerland",
+   0
+  ],
+  [
+   "🇨🇱",
+   "variety",
+   0,
+   "Chile",
+   0
+  ],
+  [
+   "🇨🇴",
+   "variety",
+   0,
+   "Colombia",
+   0
+  ],
+  [
+   "🇨🇷",
+   "variety",
+   0,
+   "Costa Rica",
+   0
+  ],
+  [
+   "🇨🇺",
+   "variety",
+   0,
+   "Cuba",
+   0
+  ],
+  [
+   "🇨🇾",
+   "variety",
+   0,
+   "Cypriot",
+   0
+  ],
+  [
+   "🇩🇪",
+   "variety",
+   0,
+   "Germany",
+   0
+  ],
+  [
+   "🇩🇪BY",
+   "variety",
+   0,
+   "Bavaria",
+   0
+  ],
+  [
+   "🇩🇪➡️",
+   "variety",
+   0,
+   "East Germany",
+   0
+  ],
+  [
+   "🇩🇪⬅️",
+   "variety",
+   0,
+   "western Germany",
+   0
+  ],
+  [
+   "🇩🇪⬆️",
+   "variety",
+   0,
+   "North German",
+   0
+  ],
+  [
+   "🇩🇪⬇️",
+   "variety",
+   0,
+   "South German",
+   0
+  ],
+  [
+   "🇩🇪🎯⬆️",
+   "variety",
+   0,
+   "northern and central Germany",
+   0
+  ],
+  [
+   "🇩🇴",
+   "variety",
+   0,
+   "Dominican Republic",
+   0
+  ],
+  [
+   "🇩🇿",
+   "variety",
+   0,
+   "Algeria",
+   0
+  ],
+  [
+   "🇪🇨",
+   "variety",
+   0,
+   "Ecuador",
+   0
+  ],
+  [
+   "🇪🇬",
+   "variety",
+   0,
+   "Egypt",
+   0
+  ],
+  [
+   "🇪🇸",
+   "variety",
+   0,
+   "Spain",
+   0
+  ],
+  [
+   "🇪🇺",
+   "variety",
+   0,
+   "Europe",
+   0
+  ],
+  [
+   "🇫🇷",
+   "variety",
+   0,
+   "France",
+   0
+  ],
+  [
+   "🇬🇧",
+   "variety",
+   0,
+   "UK",
+   0
+  ],
+  [
+   "🇬🇷",
+   "variety",
+   0,
+   "Greek",
+   0
+  ],
+  [
+   "🇬🇹",
+   "variety",
+   0,
+   "Guatemala",
+   0
+  ],
+  [
+   "🇭🇳",
+   "variety",
+   0,
+   "Honduras",
+   0
+  ],
+  [
+   "🇭🇷",
+   "variety",
+   0,
+   "Croatia",
+   0
+  ],
+  [
+   "🇮🇪",
+   "variety",
+   0,
+   "Ireland",
+   0
+  ],
+  [
+   "🇮🇶",
+   "variety",
+   0,
+   "Iraq",
+   0
+  ],
+  [
+   "🇮🇷",
+   "variety",
+   0,
+   "Iran",
+   0
+  ],
+  [
+   "🇮🇷TE",
+   "variety",
+   0,
+   "Tehrani",
+   0
+  ],
+  [
+   "🇯🇴",
+   "variety",
+   0,
+   "Jordan",
+   0
+  ],
+  [
+   "🇰🇷",
+   "variety",
+   0,
+   "South Korea",
+   0
+  ],
+  [
+   "🇰🇼",
+   "variety",
+   0,
+   "Kuwait",
+   0
+  ],
+  [
+   "🇱🇧",
+   "variety",
+   0,
+   "Lebanon",
+   0
+  ],
+  [
+   "🇱🇮",
+   "variety",
+   0,
+   "Liechtenstein",
+   0
+  ],
+  [
+   "🇱🇾",
+   "variety",
+   0,
+   "Libya",
+   0
+  ],
+  [
+   "🇲🇦",
+   "variety",
+   0,
+   "Morocco",
+   0
+  ],
+  [
+   "🇲🇪",
+   "variety",
+   0,
+   "Montenegro",
+   0
+  ],
+  [
+   "🇲🇽",
+   "variety",
+   0,
+   "Mexico",
+   0
+  ],
+  [
+   "🇲🇿",
+   "variety",
+   0,
+   "Mozambique",
+   0
+  ],
+  [
+   "🇳🇮",
+   "variety",
+   0,
+   "Nicaragua",
+   0
+  ],
+  [
+   "🇳🇿",
+   "variety",
+   0,
+   "New-Zealand",
+   0
+  ],
+  [
+   "🇴🇲",
+   "variety",
+   0,
+   "Oman",
+   0
+  ],
+  [
+   "🇵🇦",
+   "variety",
+   0,
+   "Panama",
+   0
+  ],
+  [
+   "🇵🇪",
+   "variety",
+   0,
+   "Peru",
+   0
+  ],
+  [
+   "🇵🇭",
+   "variety",
+   0,
+   "Philippines",
+   0
+  ],
+  [
+   "🇵🇷",
+   "variety",
+   0,
+   "Puerto Rico",
+   0
+  ],
+  [
+   "🇵🇹",
+   "variety",
+   0,
+   "Portugal",
+   0
+  ],
+  [
+   "🇵🇾",
+   "variety",
+   0,
+   "Paraguay",
+   0
+  ],
+  [
+   "🇶🇦",
+   "variety",
+   0,
+   "Qatar",
+   0
+  ],
+  [
+   "🇷🇸",
+   "variety",
+   0,
+   "Serbia",
+   0
+  ],
+  [
+   "🇷🇺",
+   "variety",
+   0,
+   "Russia",
+   0
+  ],
+  [
+   "🇸🇦",
+   "variety",
+   0,
+   "Saudi Arabia",
+   0
+  ],
+  [
+   "🇸🇻",
+   "variety",
+   0,
+   "El Salvador",
+   0
+  ],
+  [
+   "🇸🇾",
+   "variety",
+   0,
+   "Syria",
+   0
+  ],
+  [
+   "🇹🇯",
+   "variety",
+   0,
+   "Tajik",
+   0
+  ],
+  [
+   "🇹🇳",
+   "variety",
+   0,
+   "Tunisia",
+   0
+  ],
+  [
+   "🇺🇸",
+   "variety",
+   0,
+   "US",
+   0
+  ],
+  [
+   "🇺🇾",
+   "variety",
+   0,
+   "Uruguay",
+   0
+  ],
+  [
+   "🇻🇪",
+   "variety",
+   0,
+   "Venezuela",
+   0
+  ],
+  [
+   "🇾🇪",
+   "variety",
+   0,
+   "Yemen",
+   0
+  ],
+  [
+   "🌍AF",
+   "variety",
+   0,
+   "Africa",
+   0
+  ],
+  [
+   "🌎",
+   "variety",
+   0,
+   "Latin America",
+   0
+  ],
+  [
+   "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+   "variety",
+   0,
+   "Received-Pronunciation",
+   0
+  ],
+  [
+   "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+   "variety",
+   0,
+   "Scotland",
+   0
+  ],
+  [
+   "🐐",
+   "variety",
+   0,
+   "Poznań",
+   0
+  ],
+  [
+   "🦁",
+   "variety",
+   0,
+   "Lviv",
+   0
+  ],
+  [
+   "🧜‍♀️",
+   "variety",
+   0,
+   "Warsaw",
+   0
+  ],
+  [
+   "godan",
+   "",
+   0,
+   "godan",
+   0
+  ],
+  [
+   "ichidan",
+   "",
+   0,
+   "ichidan",
+   0
+  ],
+  [
+   "kamiichidan",
+   "",
+   0,
+   "kamiichidan",
+   0
+  ],
+  [
+   "mix",
+   "",
+   0,
+   "mixed",
+   0
+  ],
+  [
+   "nidan",
+   "",
+   0,
+   "nidan",
+   0
+  ],
+  [
+   "onoma",
+   "",
+   0,
+   "onomatopoeic",
+   0
+  ],
+  [
+   "punct",
+   "",
+   0,
+   "punct",
+   0
+  ],
+  [
+   "shimoichidan",
+   "",
+   0,
+   "shimoichidan",
+   0
+  ],
+  [
+   "shimonidan",
+   "",
+   0,
+   "shimonidan",
+   0
+  ],
+  [
+   "strong",
+   "",
+   0,
+   "strong",
+   0
+  ],
+  [
+   "symb",
+   "",
+   0,
+   "symbol",
+   0
+  ],
+  [
+   "weak",
+   "",
+   0,
+   "weak",
+   0
+  ],
+  [
+   "yodan",
+   "",
+   0,
+   "yodan",
+   0
+  ],
+  [
+   "🌍",
+   "",
+   0,
+   "place",
+   0
+  ],
+  [
+   "non-lemma",
+   "",
+   10,
+   "non-lemma",
+   -10
+  ]
+ ],
+ "term_rows": [
+  [
+   "mesto",
+   "",
+   "n neut",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Proto-Slavic *město."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "place, location"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "town (settlement)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/mesto#Slovene",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Slovene/meaning/m/me/mesto.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "pes",
+   "",
+   "n animate masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "pə̏s m anim (female equivalent psíca)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *pьsъ."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "dog",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "2 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Imamo tri ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "pse"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "We have three dogs."
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Na sprehod grem s svojim ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "psom"
+                   },
+                   "."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "I'm going on a walk with my dog."
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "biology",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "biol"
+              },
+              {
+               "tag": "span",
+               "title": "zoology",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "zoo"
+              }
+             ]
+            },
+            "any of the species in family Canidae"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "biology",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "biol"
+              },
+              {
+               "tag": "span",
+               "title": "zoology",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "zoo"
+              }
+             ]
+            },
+            "family Canidae"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "uncountable",
+               "data": {
+                "content": "tag",
+                "category": "grammar"
+               },
+               "content": "uncount"
+              },
+              {
+               "tag": "span",
+               "title": "biology",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "biol"
+              },
+              {
+               "tag": "span",
+               "title": "zoology",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "zoo"
+              }
+             ]
+            },
+            "genus Canis"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "derogatory",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "derog"
+              },
+              {
+               "tag": "span",
+               "title": "figurative",
+               "data": {
+                "content": "tag",
+                "category": "usage"
+               },
+               "content": "fig"
+              }
+             ]
+            },
+            "a malicious person^([→SSKJ])"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "theater",
+               "data": {
+                "content": "tag",
+                "category": "topic"
+               },
+               "content": "theater"
+              }
+             ]
+            },
+            "unimportant role"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/pes#Slovene",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Slovene/meaning/p/pe/pes.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "leto",
+   "",
+   "n neut",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Proto-Slavic *lěto (“summer; year”), from Proto-Indo-European *leh₁tom."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "year"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "rare",
+               "data": {
+                "content": "tag",
+                "category": "archaism"
+               },
+               "content": "rare"
+              }
+             ]
+            },
+            "annual harvest"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "archaic",
+               "data": {
+                "content": "tag",
+                "category": "archaism"
+               },
+               "content": "arch"
+              }
+             ]
+            },
+            "summer"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/leto#Slovene",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Slovene/meaning/l/le/leto.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "vrata",
+   "",
+   "n neut pl",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *vorta. First attested in the 16th century."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "door"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/vrata#Slovene",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Slovene/meaning/v/vr/vrata.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "knjiga",
+   "",
+   "n fem",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *kъňiga. First attested in the 16th century."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "book"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/knjiga#Slovene",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Slovene/meaning/k/kn/knjiga.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "cvet",
+   "",
+   "n inanim masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Inherited from Proto-Slavic *květъ. First attested in the 16th century."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "flower"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "blossom"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "bloom"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/cvet#Slovene",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Slovene/meaning/c/cv/cvet.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "brati",
+   "",
+   "v impf",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Grammar"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Grammar"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Grammar-content"
+             },
+             "content": "bráti impf (perfective prebráti or prebīrati)"
+            }
+           ]
+          },
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Proto-Slavic *bьrati (“to pick up, to take”), from Proto-Indo-European *bʰéreti. For the meaning development compare with Latin lego (“to choose, to select, to collect, to gather, to read”), also compare with Russian разобра́ть (razobrátʹ, “to dismantle, to disassemble, to take apart, to deconstruct, to analyse, to parse, but also to recognize, to discern, make out, to read”), Russian разбо́рчивый по́черк (razbórčivyj póčerk, “legible handwriting”), Russian разбо́рчивая речь (razbórčivaja rečʹ, “intelligible speech”). First attested in the 16th century."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              }
+             ]
+            },
+            "to read (look at and interpret letters or other information)"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              }
+             ]
+            },
+            "to recognize feelings from a face^([→SSKJ])"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              },
+              {
+               "tag": "span",
+               "title": "rare",
+               "data": {
+                "content": "tag",
+                "category": "archaism"
+               },
+               "content": "rare"
+              }
+             ]
+            },
+            "to guess, to tell (fortune)^([→SSKJ])",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Tedaj so ji zmerom morale dati kaj, ko jim je metala karte in ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "brala"
+                   },
+                   " srečo iz roke."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "At that time, they always had to give her something when she was putting down cards and ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "telling"
+                   },
+                   " their luck from their hands."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-c"
+                  },
+                  "content": "1973, Milko Matičetov, Zverinice iz rezije, page 34"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              },
+              {
+               "tag": "span",
+               "title": "dialectal",
+               "data": {
+                "content": "tag",
+                "category": "usage"
+               },
+               "content": "dialect"
+              },
+              {
+               "tag": "span",
+               "title": "archaic",
+               "data": {
+                "content": "tag",
+                "category": "archaism"
+               },
+               "content": "arch"
+              }
+             ]
+            },
+            "to gather, to pick",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Prigodilo pa se je, da je nekoč na Šmarni gori ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "brala"
+                   },
+                   " jagode nedolžna deklica, po imenu Matjaževa Micka iz Zavrha."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "Once it happened that an innocent girl named Micka from Zavrh was ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "picking"
+                   },
+                   " strawberries on Šmarna gora."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-c"
+                  },
+                  "content": "1983, Rado Radešček, Slovenske legende, page 62"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "transitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vt"
+              }
+             ]
+            },
+            "to understand as^([→SSKJ, SP])",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Evropska (",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "beri"
+                   },
+                   ": zahodna) kultura."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "European (",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "i.e."
+                   },
+                   " western) culture."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "intransitive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vi"
+              },
+              {
+               "tag": "span",
+               "title": "reflexive verb",
+               "data": {
+                "content": "tag",
+                "category": "partOfSpeech"
+               },
+               "content": "vr"
+              },
+              {
+               "tag": "span",
+               "title": "slang",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "sl"
+              }
+             ]
+            },
+            "to keep in touch, usually by messages ^([→Sprotni])"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "obsolete",
+               "data": {
+                "content": "tag",
+                "category": "archaism"
+               },
+               "content": "obs"
+              }
+             ]
+            },
+            "to cost, to consume, to need ^([→Pleteršnik])"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/brati#Slovene",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Slovene/meaning/b/br/brati.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "otrok",
+   "",
+   "n animate masc",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Proto-Slavic *otrokъ."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "child (one’s son or daughter)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/otrok#Slovene",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Slovene/meaning/o/ot/otrok.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "hiša",
+   "",
+   "n fem",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Proto-Slavic *xyža, from Proto-Germanic *hūsą. Compare Bulgarian хижа (hiža, “chalet, hut”), Serbo-Croatian hiža (“house”), Slovak chyža, Upper Sorbian chěža."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "house"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/hiša#Slovene",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Slovene/meaning/h/hi/hiša.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "žival",
+   "",
+   "n fem",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From živ."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "animal",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": "domača žival"
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": "domestic animal / pet"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "synonyms"
+       },
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "synonyms-label"
+         },
+         "content": "Synonyms"
+        },
+        {
+         "tag": "ul",
+         "data": {
+          "content": "synonyms-list"
+         },
+         "content": [
+          {
+           "tag": "li",
+           "data": {
+            "content": "synonym-item"
+           },
+           "content": "hišni ljubljenček"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/žival#Slovene",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Slovene/meaning/ž/ži/žival.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "šola",
+   "",
+   "n fem",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Ultimately from the German-influenced pronunciation of Latin schola (sch- pronounced as š- rather than sk-)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "school (an institution dedicated to teaching and learning)"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/šola#Slovene",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Slovene/meaning/š/šo/šola.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "miza",
+   "",
+   "n fem",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "Borrowed from Latin mēnsa (“table”)."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "table",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "3 examples"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "pisalna ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "miza"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "writing ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "desk"
+                   }
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "operacijska ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "miza"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "surgery ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "table"
+                   }
+                  ]
+                 }
+                ]
+               }
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "okrogla ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "miza"
+                   }
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "round ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "table"
+                   }
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/miza#Slovene",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Slovene/meaning/m/mi/miza.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "morje",
+   "",
+   "n",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Proto-Slavic *moře, from Proto-Balto-Slavic *mári, from Proto-Indo-European *móri."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "sea"
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "seaside",
+            {
+             "tag": "details",
+             "data": {
+              "content": "details-entry-examples"
+             },
+             "content": [
+              {
+               "tag": "summary",
+               "data": {
+                "content": "summary-entry"
+               },
+               "content": "1 example"
+              },
+              {
+               "tag": "div",
+               "data": {
+                "content": "extra-info"
+               },
+               "content": {
+                "tag": "div",
+                "data": {
+                 "content": "example-sentence"
+                },
+                "content": [
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-a"
+                  },
+                  "content": [
+                   "Mi gremo na ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "morje"
+                   },
+                   " junija."
+                  ]
+                 },
+                 {
+                  "tag": "div",
+                  "data": {
+                   "content": "example-sentence-b"
+                  },
+                  "content": [
+                   "We are going to the ",
+                   {
+                    "tag": "span",
+                    "data": {
+                     "content": "bold-text"
+                    },
+                    "content": "seaside"
+                   },
+                   " in June."
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            {
+             "tag": "div",
+             "data": {
+              "content": "tags"
+             },
+             "content": [
+              {
+               "tag": "span",
+               "title": "colloquial",
+               "data": {
+                "content": "tag",
+                "category": "register"
+               },
+               "content": "col"
+              },
+              {
+               "tag": "span",
+               "title": "rare",
+               "data": {
+                "content": "tag",
+                "category": "archaism"
+               },
+               "content": "rare"
+              }
+             ]
+            },
+            "seawater^([→SSKJ])"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/morje#Slovene",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Slovene/meaning/m/mo/morje.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ],
+  [
+   "morje",
+   "",
+   "adv lit",
+   "",
+   0,
+   [
+    {
+     "type": "structured-content",
+     "content": [
+      {
+       "tag": "div",
+       "content": [
+        {
+         "tag": "div",
+         "data": {
+          "content": "preamble"
+         },
+         "content": [
+          {
+           "tag": "details",
+           "data": {
+            "content": "details-entry-Etymology"
+           },
+           "content": [
+            {
+             "tag": "summary",
+             "data": {
+              "content": "summary-entry"
+             },
+             "content": "Etymology"
+            },
+            {
+             "tag": "div",
+             "data": {
+              "content": "Etymology-content"
+             },
+             "content": "From Proto-Slavic *moře, from Proto-Balto-Slavic *mári, from Proto-Indo-European *móri."
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "ol",
+       "data": {
+        "content": "glosses"
+       },
+       "content": [
+        {
+         "tag": "li",
+         "content": [
+          {
+           "tag": "div",
+           "content": [
+            "plethora"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "tag": "div",
+       "data": {
+        "content": "backlink"
+       },
+       "content": [
+        {
+         "tag": "a",
+         "href": "https://en.wiktionary.org/wiki/morje#Slovene",
+         "content": "Wiktionary"
+        },
+        " | ",
+        {
+         "tag": "a",
+         "href": "https://kaikki.org/dictionary/Slovene/meaning/m/mo/morje.html",
+         "content": "Kaikki"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   0,
+   ""
+  ]
+ ]
+}
