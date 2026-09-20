@@ -59,6 +59,29 @@ small sizes on Windows. `OFL-NotoNaskhArabic.txt` is the release asset's own
 registered only while Arabic is the active mining language, and only when no
 installed family among the profile's list supports the Arabic writing system.
 
+## NotoSansThai-Regular.ttf
+
+| | |
+|---|---|
+| Family | Noto Sans Thai |
+| Project | [Noto Thai](https://github.com/notofonts/thai) |
+| Release | [NotoSansThai-v2.002](https://github.com/notofonts/thai/releases/tag/NotoSansThai-v2.002) |
+| Artifact | `NotoSansThai/hinted/ttf/NotoSansThai-Regular.ttf`, shipped in the release asset `NotoSansThai-v2.002.zip` |
+| SHA-256 | `61cf814eec46b294d6ea4401ac295d0cecd5207bd2331dcc5a15e7301d30ee44` |
+| Modified | **No.** Byte-for-byte the upstream artifact. |
+| Licence | SIL Open Font License 1.1 — `OFL-NotoSansThai.txt` beside this file |
+
+`OFL-NotoSansThai.txt` is the unmodified `OFL.txt` from the same release asset
+(SHA-256 `2e98fd23a52d253db8612cd5942c8f2ff4111b21d2367050fdca91d8ccc374a0`),
+whose copyright line is `Copyright 2022 The Noto Project Authors
+(https://github.com/notofonts/thai)`.
+
+Registered only while Thai is the active mining language and only when none of
+the families `languages/th/style.py` lists is installed for the Thai writing
+system. The hinted build is the one shipped: it is half the size of the full
+build, and hinting is what matters on the Windows machines that have no Thai
+face at all.
+
 ## Verifying
 
 ```sh

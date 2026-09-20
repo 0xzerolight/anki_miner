@@ -23,6 +23,7 @@ license-files = [
     "LICENSE",
     "anki_miner/gui/resources/fonts/OFL.txt",
     "anki_miner/gui/resources/fonts/OFL-NotoNaskhArabic.txt",
+    "anki_miner/gui/resources/fonts/OFL-NotoSansThai.txt",
     "licenses/indocollex/LICENSE",
     "licenses/indocollex/README.md",
     "licenses/local-audio-yomichan/LICENSE",
