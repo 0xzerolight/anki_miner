@@ -88,6 +88,8 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     # tr: the top 10 of hermitdave/FrequencyWords OpenSubtitles 2018 tr_50k.txt,
     # the default catalogue source, which is imported before lemmatisation.
     "tr": ["bir", "bu", "ne", "ve", "için", "mi", "de", "o", "ben", "çok"],
+    # id: hermitdave's OpenSubtitles 2018 id_50k.txt ranks 1-10 (lowercase surfaces).
+    "id": ["aku", "kau", "yang", "tidak", "ini", "itu", "dan", "dia", "di", "akan"],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -267,6 +269,19 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
     # tr: rare-but-real nouns present in that same list at ranks 11,552-42,003
     # (agglutination spreads a lemma over many rows, the hu case).
     "tr": ["sincap", "baykuş", "kova", "şömine", "kirpi", "pusula", "süpürge", "çapa", "beşik", "sepet"],
+    # id: id_50k ranks 3,164-27,336 (the spec C.5 list, verified present).
+    "id": [
+        "cendekiawan",
+        "mercusuar",
+        "landak",
+        "kunang-kunang",
+        "teropong",
+        "gerhana",
+        "kerajinan",
+        "sekutu",
+        "perpustakaan",
+        "belalang",
+    ],
 }
 
 
