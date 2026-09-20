@@ -92,6 +92,21 @@ MORE_COMMON_TERMS: dict[str, list[str]] = {
     "id": ["aku", "kau", "yang", "tidak", "ini", "itu", "dan", "dia", "di", "akan"],
     # ru: hermitdave ru_50k.txt ranks 1-10.
     "ru": ["я", "не", "что", "в", "и", "ты", "это", "на", "с", "он"],
+    # ar: hermitdave ar_50k.txt ranks 2-11 (rank 1 is the Arabic comma), raw surfaces before
+    # lemmatisation. Escaped: a raw RTL run reorders on screen inside a source line.
+    # laa, min, fii, an, haadhaa, 'alaa, maa, anaa, hal, wa
+    "ar": [
+        "\u0644\u0627",
+        "\u0645\u0646",
+        "\u0641\u064a",
+        "\u0623\u0646",
+        "\u0647\u0630\u0627",
+        "\u0639\u0644\u0649",
+        "\u0645\u0627",
+        "\u0623\u0646\u0627",
+        "\u0647\u0644",
+        "\u0648",
+    ],
 }
 LESS_COMMON_TERMS: dict[str, list[str]] = {
     "ja": ["行なう", "論じる", "過す", "行方", "人口", "猫", "犬", "滝", "理", "暁"],
@@ -286,6 +301,21 @@ LESS_COMMON_TERMS: dict[str, list[str]] = {
     ],
     # ru: rare-but-real nouns at ru_50k ranks 14,055-28,695 (фонарь ... бочка).
     "ru": ["компас", "вагон", "телескоп", "фонарь", "белка", "фонарик", "кружка", "улей", "бочка", "якорь"],
+    # ar: present in ar_50k.txt at ranks 16,328-44,701 - fan, swing, hammer, hose, shell, spider,
+    # candle, tortoise, umbrella, bat; the spec's microscope/hedgehog/sickle/lantern are absent
+    # from that list. Escaped for the same reason as the common table.
+    "ar": [
+        "\u0645\u0631\u0648\u062d\u0629",
+        "\u0623\u0631\u062c\u0648\u062d\u0629",
+        "\u0645\u0637\u0631\u0642\u0629",
+        "\u062e\u0631\u0637\u0648\u0645",
+        "\u0635\u062f\u0641",
+        "\u0639\u0646\u0643\u0628\u0648\u062a",
+        "\u0634\u0645\u0639\u0629",
+        "\u0633\u0644\u062d\u0641\u0627\u0629",
+        "\u0645\u0638\u0644\u0629",
+        "\u062e\u0641\u0627\u0634",
+    ],
 }
 
 

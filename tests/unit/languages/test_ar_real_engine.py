@@ -113,3 +113,26 @@ def test_a_cp1256_file_mines_through_the_parser(ar_parser, tmp_path):
     } <= {word.mined_form for word in words}
     assert all("\N{REPLACEMENT CHARACTER}" not in word.sentence for word in words)
     assert not any(word.sentence.startswith("-") for word in words)  # the SDH dialogue-dash default
+
+
+def test_the_in_app_lemmatiser_folds_surfaces_to_mined_fronts(tagger, monkeypatch):
+    from anki_miner.services.frequency.lemmatize import build_frequency_lemmatizer, manual_import_lemmatizer
+
+    monkeypatch.setitem(tagger_provider._TAGGERS, "ar", LockedTagger(tagger))
+    lemmatize = build_frequency_lemmatizer("ar")
+    assert lemmatize(
+        [
+            "\u0644\u0644\u0637\u0644\u0627\u0628",
+            "\u0634\u0643\u0631\u0627\u064b",
+            "\u0645\u062f\u0627\u0631\u0633",
+            "\u0645\u0634",
+            "\u060c",
+        ]
+    ) == [
+        "\u0637\u0627\u0644\u0628",
+        "\u0634\u0643\u0631\u0627",
+        "\u0645\u062f\u0631\u0633\u0629",
+        "\u0645\u0634",
+        "\u060c",
+    ]
+    assert manual_import_lemmatizer("ar") is not None  # the lemmatised_frequency capability
