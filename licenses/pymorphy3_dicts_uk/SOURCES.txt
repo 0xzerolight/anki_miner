@@ -1,0 +1,12 @@
+pymorphy3-dicts-uk 2.4.1.1.1663094765 - Ukrainian dictionaries for pymorphy3
+Package: https://pypi.org/project/pymorphy3-dicts-uk/2.4.1.1.1663094765/
+Source: https://github.com/no-plagiarism/pymorphy3-dicts
+Declared licence: GPLv3 (the package's METADATA License field; its classifier list
+  still carries an MIT classifier inherited from the Russian sibling package)
+Data: the dict_uk Ukrainian word list (https://github.com/brown-uk/dict_uk), GPL-3.0
+  https://www.gnu.org/licenses/gpl-3.0.html
+
+The wheel this application downloads is
+pymorphy3_dicts_uk-2.4.1.1.1663094765-py2.py3-none-any.whl, unmodified. Its URL and SHA-256 digest
+are pinned in anki_miner/languages/uk/pack.py; corresponding source for that exact version is
+available from the package and repository URLs above.
