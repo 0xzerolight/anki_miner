@@ -35,7 +35,11 @@ from anki_miner.gui.utils.language_choices import available_mining_languages
 from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.base import StatusBadge
 from anki_miner.gui.widgets.enhanced import ModernButton, ThemeGalleryWidget
-from anki_miner.gui.widgets.panels.anki_settings_panel import _FIELD_KEYWORDS, auto_map_fields
+from anki_miner.gui.widgets.panels.anki_settings_panel import (
+    _FIELD_KEYWORDS,
+    auto_map_fields,
+    auto_map_profile_fields,
+)
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.fetch_workers import (
     FetchDecksWorker,
@@ -931,8 +935,21 @@ class NoteTypePage(_LiveCheckPage):
         if preset is not None:
             self._apply_preset(preset)
             return
+        from anki_miner.languages.registry import get_profile  # noqa: PLC0415
+
         mapped = auto_map_fields(self._field_names)
         config = self._wizard.working_config()
+        # The chosen language's own card fields (Pinyin, Hanja, …) get the same
+        # pass against their spec's placeholder, against THIS config's profile:
+        # a learner who finishes setup in the wizard never opens the Settings
+        # panel that would otherwise be the only place they are filled.
+        mapped.update(
+            auto_map_profile_fields(
+                self._field_names,
+                get_profile(config_language(config)).extra_card_fields,
+                mapped.values(),
+            )
+        )
         merged = dict(config.anki_fields)
         for key, value in mapped.items():
             if value and not merged.get(key):

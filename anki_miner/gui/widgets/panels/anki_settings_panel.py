@@ -1,7 +1,7 @@
 """Anki configuration settings panel."""
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import replace
 from typing import Literal, cast
 
@@ -277,6 +277,47 @@ def auto_map_fields(field_names: list[str]) -> dict[str, str]:
                 matched = field_name
                 break
         mapping[key] = matched
+    return mapping
+
+
+def auto_map_profile_fields(
+    field_names: Sequence[str],
+    specs: Sequence[CardFieldSpec],
+    claimed: Iterable[str],
+) -> dict[str, str]:
+    """Map Anki field names to the card-field keys ``specs`` declares.
+
+    The profile-declared rows match on their own spec's placeholder instead of
+    through :data:`_FIELD_KEYWORDS`: a keyword entry there is stamped into
+    every language's ``anki_fields`` by the wizard's sanitizer, which would
+    seed an empty Pinyin key into a Japanese mapping. So the caller passes only
+    the specs the active language actually shows — a hidden row contributes no
+    key anyway.
+
+    ``claimed`` is the field names :func:`auto_map_fields` already took: th
+    spells its hook field "Reading" and so does ``expression_reading``, and one
+    Anki field cannot carry two logical keys.
+
+    Args:
+        field_names: Field names fetched from AnkiConnect.
+        specs: The card-field specs to match, in priority order.
+        claimed: Field names another key already holds.
+
+    Returns:
+        ``{spec_key: matched_field_name}`` for the specs that matched; a spec
+        with no match is absent, never present as ``""``.
+    """
+    taken = {name for name in claimed if name}
+    mapping: dict[str, str] = {}
+    for spec in specs:
+        placeholder = _normalized_field_name(spec.placeholder)
+        match = next(
+            (n for n in field_names if n not in taken and _normalized_field_name(n) == placeholder),
+            "",
+        )
+        if match:
+            mapping[spec.key] = match
+            taken.add(match)
     return mapping
 
 
@@ -1077,26 +1118,11 @@ class AnkiSettingsPanel(FormPanel):
             if mapped.get(key):
                 widget.setText(mapped[key])
 
-        # The profile-declared rows match on their own spec's placeholder instead
-        # of through _FIELD_KEYWORDS: a keyword entry there is stamped into every
-        # language's anki_fields by the wizard's sanitizer, which would seed an
-        # empty Pinyin key into a Japanese mapping. Only a row the active
-        # language shows is filled — a hidden one contributes no key anyway —
-        # and only with a name no other key took, since th spells its hook field
-        # "Reading" and so does expression_reading.
-        claimed = {name for name in mapped.values() if name}
-        for spec in self._hook_field_specs:
-            widget = self._hook_field_inputs[spec.key]
-            if not widget.isVisibleTo(self):
-                continue
-            placeholder = _normalized_field_name(spec.placeholder)
-            match = next(
-                (n for n in field_names if n not in claimed and _normalized_field_name(n) == placeholder),
-                "",
-            )
-            if match:
-                widget.setText(match)
-                claimed.add(match)
+        # Visibility is how the panel names the active language's rows; the
+        # wizard passes its working config's profile specs to the same helper.
+        visible = [spec for spec in self._hook_field_specs if self._hook_field_inputs[spec.key].isVisibleTo(self)]
+        for key, match in auto_map_profile_fields(field_names, visible, mapped.values()).items():
+            self._hook_field_inputs[key].setText(match)
 
     # Getters for card field values
     def get_card_fields(self) -> dict:

@@ -1182,6 +1182,52 @@ def test_auto_map_uses_sanitized_base_and_preserves_valid_manual_fields(qtbot, w
     assert result.card_type_marker_fields["sentence"] == "InactiveMarker"
 
 
+def _auto_map(qtbot, config, field_names):
+    """Run Auto-Map on a note type with ``field_names`` and return (config, page)."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(config, anki_note_type="Mining"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
+        return_value=MagicMock(check_field_names=lambda: (True, ""))
+    )
+    page.notetype_combo.setCurrentText("Mining")
+    page._on_fields_fetched("Mining", field_names)
+    page._on_auto_map_clicked()
+    qtbot.waitUntil(lambda: page.warning_label.text() == "", timeout=3000)
+    assert page._warn_worker.wait(3000)
+    return wiz.working_config(), page
+
+
+_ZH_NOTE_TYPE = ["Hanzi", "Pinyin", "MeasureWord", "Traditional", "Meaning", "Sentence"]
+
+
+def test_auto_map_fills_the_chosen_languages_own_card_fields(qtbot, wiz_config):
+    """A learner who never opens Settings still leaves with the zh rows mapped."""
+    from anki_miner.languages.switching import switch_language  # noqa: PLC0415
+
+    config, page = _auto_map(qtbot, switch_language(wiz_config, "zh"), _ZH_NOTE_TYPE)
+
+    fields = config.anki_fields
+    assert fields["word"] == "Hanzi"
+    assert fields["expression_pinyin"] == "Pinyin"
+    assert fields["measure_word"] == "MeasureWord"
+    assert fields["expression_traditional"] == "Traditional"
+    assert "Mapped 6 fields" in page.mapping_summary.text()
+
+
+def test_auto_map_never_seeds_another_languages_keys(qtbot, wiz_config):
+    """The same note type under Japanese: the zh keys stay off the mapping."""
+    config, page = _auto_map(qtbot, wiz_config, _ZH_NOTE_TYPE)
+
+    fields = config.anki_fields
+    assert fields["word"] == "Hanzi"
+    for key in ("expression_pinyin", "measure_word", "expression_traditional"):
+        assert not fields.get(key, "")
+    assert "Mapped 3 fields" in page.mapping_summary.text()
+
+
 def test_notetype_page_unsuitable_fieldlist_shows_guidance(qtbot, wiz_config):
     """A field list missing a word+sentence shape triggers the import-note-type guidance."""
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
