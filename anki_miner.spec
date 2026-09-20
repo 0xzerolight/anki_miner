@@ -379,6 +379,21 @@ if os.path.isdir(pymorphy3_dicts_ru_license_dir):
     pymorphy3_dicts_ru_license_datas.append(
         (pymorphy3_dicts_ru_license_dir, os.path.join("licenses", "pymorphy3_dicts_ru"))
     )
+# uk_core_news_sm (Ukrainian spaCy model) MIT notice: shipped whenever the license dir exists. Lands at
+# sys._MEIPASS/licenses/uk_core_news_sm/. The model is a language pack (languages/uk/pack.py).
+uk_core_news_sm_license_dir = os.path.join(project_root, "licenses", "uk_core_news_sm")
+uk_core_news_sm_license_datas = []
+if os.path.isdir(uk_core_news_sm_license_dir):
+    uk_core_news_sm_license_datas.append((uk_core_news_sm_license_dir, os.path.join("licenses", "uk_core_news_sm")))
+# pymorphy3-dicts-uk (Ukrainian dictionaries for spaCy's uk lemmatizer): GPL-3.0 data from
+# LanguageTool's dict_uk. Lands at sys._MEIPASS/licenses/pymorphy3_dicts_uk/; the wheel arrives in
+# the uk language pack.
+pymorphy3_dicts_uk_license_dir = os.path.join(project_root, "licenses", "pymorphy3_dicts_uk")
+pymorphy3_dicts_uk_license_datas = []
+if os.path.isdir(pymorphy3_dicts_uk_license_dir):
+    pymorphy3_dicts_uk_license_datas.append(
+        (pymorphy3_dicts_uk_license_dir, os.path.join("licenses", "pymorphy3_dicts_uk"))
+    )
 # zeyrek (Turkish morphological analyzer) MIT notice: languages/tr/analyzer.py ports two of its methods.
 # Lands at sys._MEIPASS/licenses/zeyrek/. zeyrek itself is a language pack, never bundled.
 zeyrek_license_dir = os.path.join(project_root, "licenses", "zeyrek")
@@ -608,6 +623,8 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + stopwords_iso_license_datas
     + ru_core_news_sm_license_datas
     + pymorphy3_dicts_ru_license_datas
+    + uk_core_news_sm_license_datas
+    + pymorphy3_dicts_uk_license_datas
     + camel_tools_license_datas
     + calima_msa_r13_license_datas
     + sl_core_news_sm_license_datas,
@@ -812,10 +829,13 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
         "ru_core_news_sm",
         "sl_core_news_sm",
         "sv_core_news_sm",
-        # pymorphy3 and its Russian dictionaries: ru pack content (spaCy's ru lemmatizer imports them).
+        "uk_core_news_sm",
+        # pymorphy3 and its Russian and Ukrainian dictionaries: ru and uk pack content
+        # (each model's lemmatizer imports them). dawg_python is pymorphy3's own DAWG reader.
         "dawg_python",
         "pymorphy3",
         "pymorphy3_dicts_ru",
+        "pymorphy3_dicts_uk",
         # The Turkish engine (languages/tr/pack.py, generated) is a language pack, never
         # bundle content: zeyrek and the nltk/regex/defusedxml it imports. NOT colorama
         # (the spaCy block's reason) and not numpy, click or tqdm (bundle pins).
