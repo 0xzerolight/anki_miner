@@ -1,0 +1,10 @@
+{
+  "note": "Hebrew subtitle and encoding data for tests/unit/languages/test_he_media_fixtures.py. Lives here, not in the .py, so no Hebrew point or bidi control reaches a source file.",
+  "cp1255_line": "הילד קרא ספר מעניין אתמול.",
+  "cp1255_pointed_line": "שָׁלוֹם עולם.",
+  "pointed_word": "שָׁלוֹם",
+  "iso8859_8_encodable": "שלום עולם",
+  "bidi_control_line": "‫הילד‏ קרא ספר.‬",
+  "nbsp_line": "הילד קרא ספר.",
+  "expected_after_normalize": "הילד קרא ספר."
+}
