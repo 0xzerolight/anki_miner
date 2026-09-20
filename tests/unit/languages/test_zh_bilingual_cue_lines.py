@@ -122,10 +122,13 @@ class TestTheFactorySeam:
     def test_an_explicit_argument_still_wins(self) -> None:
         assert create_parser(_zh_config(), has_target_script=str.isascii).has_target_script is str.isascii
 
-    def test_the_zh_factory_forwards_nothing_else(self, test_config) -> None:
-        # The bilingual gate is zh's only new injection: normalize in particular
-        # stays the Japanese pair, as it was before this seam existed.
-        assert create_parser(switch_language(test_config, "zh")).normalize is None
+    def test_the_bilingual_gate_is_independent_of_the_normaliser(self, test_config) -> None:
+        # Two separate injections into the same cleaner: the gate drops the
+        # English line, the zh normaliser (test_zh_parser_seams) replaces the
+        # Japanese pair over what is left.
+        parser = create_parser(switch_language(test_config, "zh"))
+        assert parser.normalize is get_profile("zh").normalize
+        assert clean_subtitle_text(f"{_ZH}\\N{_EN}", normalize=parser.normalize, has_target_script=HAN) == _ZH
 
 
 class TestTheReadingPath:

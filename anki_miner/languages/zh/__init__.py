@@ -32,7 +32,7 @@ from anki_miner.languages.zh.support import (
     ZhMinedFormPolicy,
     ZhScriptSupport,
 )
-from anki_miner.languages.zh.variants import normalize_zh, script_key
+from anki_miner.languages.zh.variants import normalize_zh_text, script_key
 
 __all__ = ["build_profile"]
 
@@ -118,7 +118,7 @@ def build_profile() -> LanguageProfile:
             closers=frozenset("」｣』）〕］｝〉》】)]}｠〟”’"),
             space_aware=False,
         ),
-        normalize=normalize_zh,
+        normalize=normalize_zh_text,
         dict_keys=ZhDictKeyFolding(),
         audio=ZH_AUDIO,
         asr_language="zh",

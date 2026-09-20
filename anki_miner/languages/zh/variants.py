@@ -2,8 +2,10 @@
 
 OpenCC performs no Unicode normalisation of its own, so every string crossing
 into it goes through :func:`normalize_zh` first — the one shared rule the spec
-pins, reused by the profile's ``normalize`` field and by the dictionary key
-folding, so import-time and query-time keys can never disagree.
+pins, reused by the dictionary key folding, so import-time and query-time keys
+can never disagree. The profile's ``normalize`` field is
+:func:`normalize_zh_text`, which adds the radical fold that only mined text
+needs.
 
 OpenCC is optional. Without it there are no variants and lookups behave exactly
 as they would for a single-script corpus, so it stays out of the availability
@@ -17,6 +19,8 @@ import logging
 import unicodedata
 from functools import lru_cache
 from typing import Any
+
+from anki_miner.utils.ja_normalize import normalize_radicals
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +62,26 @@ _GLYPH_VARIANTS = str.maketrans({"麽": "麼"})
 def normalize_zh(text: str) -> str:
     """NFC-normalise ``text``. Single normalisation rule for the zh engine."""
     return unicodedata.normalize("NFC", text)
+
+
+def normalize_zh_text(text: str) -> str:
+    """The profile's ``normalize``: the key rule, then the radical fold.
+
+    Two different folds, as in ``languages/yue/normalize.py``. Keys keep
+    :func:`normalize_zh` alone because they are folded symmetrically at import
+    and at query and no CC-CEDICT headword carries a radical glyph. Mined TEXT
+    needs more: OCR and legacy sources substitute Kangxi radicals for the
+    ideographs they look exactly like (U+2F24 for 大), and jieba segments the
+    substitution as junk -- a 大家好 spelt that way mines 好 alone, with nothing
+    on screen to say 大家 went missing. NFC runs first so the fold sees composed
+    input, and its NFKD output for these blocks is a unified ideograph already.
+
+    Deliberately not folded, unlike the Japanese chain this replaces: caption
+    decoration glyphs (➡ 📱), U+FFFD and the private-use area are what the
+    subtitle wrote and the learner should see them, and the squared units in
+    U+3300-33FF are ㎡ and ㎞ on a card, not "m2" and "km".
+    """
+    return normalize_radicals(normalize_zh(text))
 
 
 @lru_cache(maxsize=len(_ALL_CONFIGS))

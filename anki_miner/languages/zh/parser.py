@@ -25,6 +25,20 @@ def create_parser(config: Any, **kwargs: Any) -> Any:
     # cue becomes the card's Sentence: without this the English translation is
     # printed alongside every Chinese front.
     kwargs.setdefault("has_target_script", profile.script.contains_target_script)
+    # NFC plus the OCR radical fold, and none of the rest of the Japanese chain
+    # the default runs: what a Chinese subtitle wrote is what the card shows, so
+    # the private-use area, U+FFFD and caption glyphs (➡ 📱) stay as mojibake
+    # cues and ㎡ stays ㎡ instead of being rewritten to "m2". See
+    # ``zh/variants.py::normalize_zh_text`` for why the radicals are the
+    # exception.
+    kwargs.setdefault("normalize", profile.normalize)
+    # The matcher stamps its synthetics with a UniDic POS, which no jieba tag can
+    # equal, so the inclusion gate rejects every merge it proposes: dead code
+    # that still costs a dictionary probe per line.
+    kwargs.setdefault("compound_matching", False)
+    # A single hanzi is a whole word, and drama subtitles stutter (钱…钱不见了…),
+    # so the truncation guard would delete the word the line is about.
+    kwargs.setdefault("ellipsis_fragment_guard", False)
     # No sentence annotator: the furigana/reading generators would print the
     # sentence with its spaces deleted (spec 6.1 #2).
     kwargs.setdefault("sentence_annotation", profile.sentence_annotator is not None)
