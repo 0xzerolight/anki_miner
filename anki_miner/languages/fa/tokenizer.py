@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 from anki_miner.languages.fa import availability
 from anki_miner.languages.fa._hazm import data, stemmer, tokenize
 from anki_miner.languages.fa._hazm import lexicon as fa_lexicon
+from anki_miner.languages.fa.morphology import fa_morph
 from anki_miner.languages.token import LanguageToken
 from anki_miner.services.tagger import LockedTagger
 
@@ -50,7 +51,17 @@ def _token(
     surface_formal: str = "",
     present_stem: str = "",
 ) -> LanguageToken:
-    token = LanguageToken(surface, pos1, pos2, lemma, "")
+    token = LanguageToken(
+        surface,
+        pos1,
+        pos2,
+        lemma,
+        "",
+        # The card only ever sees pos1 and this string: TokenizedWord carries no
+        # pos2 and no feature namespace, so the register and the present stem
+        # travel here or not at all (languages/fa/render.py).
+        fa_morph(informal=pos2 == "informal", present_stem=present_stem),
+    )
     token.feature.surface_formal = surface_formal
     token.feature.present_stem = present_stem
     return token

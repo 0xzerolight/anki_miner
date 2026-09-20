@@ -59,6 +59,35 @@ FA_POS_LABELS: Mapping[str, str] = MappingProxyType(
 )
 
 
+#: ``morph`` is fa's ONLY channel from the tokenizer to the card hooks: a
+#: ``TokenizedWord`` carries ``pos`` (pos1) and ``morph``, never ``pos2`` and
+#: never the duck token's ``feature`` namespace (``models/word.py``, the emit
+#: site at ``services/subtitle_parser.py``'s ``_token_morph``). The string is the
+#: same ``Key=Value|Key=Value`` shape spaCy's own ``str(tok.morph)`` has, so the
+#: field it travels in stays one thing.
+FA_MORPH_INFORMAL = "Register=Informal"
+FA_MORPH_PRESENT_STEM = "PresentStem"
+
+
+def fa_morph(*, informal: bool, present_stem: str) -> str:
+    """The feature string for one duck token; ``""`` when it has no features."""
+    features = []
+    if informal:
+        features.append(FA_MORPH_INFORMAL)
+    if present_stem:
+        features.append(f"{FA_MORPH_PRESENT_STEM}={present_stem}")
+    return "|".join(features)
+
+
+def fa_morph_value(morph: str, key: str) -> str:
+    """One feature's value out of a ``morph`` string, or ``""``."""
+    for feature in morph.split("|"):
+        name, _, value = feature.partition("=")
+        if name == key:
+            return value
+    return ""
+
+
 class PersianMinedForm:
     """MinedFormPolicy for Persian: the lemma the lookup ladder already chose.
 

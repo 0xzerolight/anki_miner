@@ -170,6 +170,14 @@ class TestLadder:
         assert token.feature.pos1 == "V"
         assert token.feature.present_stem == _REH + _WAW
 
+    def test_the_morph_string_carries_what_pos2_cannot(self, armed):
+        """``morph`` is the only feature channel a TokenizedWord has (see render.py)."""
+        miravam = MI + ZWNJ + _REH + _WAW + _MEEM
+        assert fa_tokenizer.to_duck_tokens(miravam, armed)[0].morph == "PresentStem=" + _REH + _WAW
+        xune = _KHAH + _WAW + _NOON + _HEH
+        assert fa_tokenizer.to_duck_tokens(xune, armed)[0].morph == "Register=Informal"
+        assert fa_tokenizer.to_duck_tokens(KETAB, armed)[0].morph == ""
+
     def test_punctuation_and_digits_get_their_own_tiers(self, armed):
         tokens = fa_tokenizer.to_duck_tokens(KETAB + "\N{ARABIC COMMA} 12", armed)
         kinds = {token.surface: token.feature.pos1 for token in tokens}
