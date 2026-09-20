@@ -338,6 +338,20 @@ da_core_news_sm_license_dir = os.path.join(project_root, "licenses", "da_core_ne
 da_core_news_sm_license_datas = []
 if os.path.isdir(da_core_news_sm_license_dir):
     da_core_news_sm_license_datas.append((da_core_news_sm_license_dir, os.path.join("licenses", "da_core_news_sm")))
+# ru_core_news_sm (Russian spaCy model) MIT notice: shipped whenever the license dir exists. Lands at
+# sys._MEIPASS/licenses/ru_core_news_sm/. The model is a language pack (languages/ru/pack.py).
+ru_core_news_sm_license_dir = os.path.join(project_root, "licenses", "ru_core_news_sm")
+ru_core_news_sm_license_datas = []
+if os.path.isdir(ru_core_news_sm_license_dir):
+    ru_core_news_sm_license_datas.append((ru_core_news_sm_license_dir, os.path.join("licenses", "ru_core_news_sm")))
+# pymorphy3-dicts-ru (Russian dictionaries for spaCy's ru lemmatizer): MIT code, CC BY-SA 3.0 OpenCorpora
+# data. Lands at sys._MEIPASS/licenses/pymorphy3_dicts_ru/; the wheel arrives in the ru language pack.
+pymorphy3_dicts_ru_license_dir = os.path.join(project_root, "licenses", "pymorphy3_dicts_ru")
+pymorphy3_dicts_ru_license_datas = []
+if os.path.isdir(pymorphy3_dicts_ru_license_dir):
+    pymorphy3_dicts_ru_license_datas.append(
+        (pymorphy3_dicts_ru_license_dir, os.path.join("licenses", "pymorphy3_dicts_ru"))
+    )
 # zeyrek (Turkish morphological analyzer) MIT notice: languages/tr/analyzer.py ports two of its methods.
 # Lands at sys._MEIPASS/licenses/zeyrek/. zeyrek itself is a language pack, never bundled.
 zeyrek_license_dir = os.path.join(project_root, "licenses", "zeyrek")
@@ -530,7 +544,9 @@ a = Analysis(  # noqa: F821 - injected into the spec namespace by PyInstaller
     + da_core_news_sm_license_datas
     + zeyrek_license_datas
     + indocollex_license_datas
-    + stopwords_iso_license_datas,
+    + stopwords_iso_license_datas
+    + ru_core_news_sm_license_datas
+    + pymorphy3_dicts_ru_license_datas,
     hiddenimports=[
         "unidic_lite",
         "fugashi",
