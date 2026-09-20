@@ -37,15 +37,24 @@ def test_hook_field_names_are_logical_keys():
 
 
 @pytest.mark.parametrize(
-    ("gloss", "expected"),
+    ("gloss", "variant", "front", "expected"),
     [
-        ("bank; CL:家[jia1],個|个[ge4]", "家"),
-        ("<li>CL:個|个[ge4]</li>", "個/个"),
-        ("no classifier here", None),
+        ("bank; CL:家[jia1],個|个[ge4]", "simplified", "银行", "家"),
+        ("car; CL:輛|辆[liang4]", "simplified", "汽车", "辆"),
+        ("car; CL:輛|辆[liang4]", "traditional", "汽車", "輛"),
+        ("<li>CL:個|个[ge4]</li>", "", "个人", "个"),
+        ("<li>CL:個|个[ge4]</li>", "", "個人", "個"),
+        ("only one; CL:隻|只[zhi1]", "simplified", "鸟", "只"),
+        ("to watch; CL:套[tou3]", "", "戲", "套"),
+        ("no classifier here", "simplified", "银行", None),
     ],
 )
-def test_measure_word_parses_cc_cedict_cl_gloss(gloss, expected):
-    out = ZhMeasureWordHook().render(_word(definition_html=gloss), config=TONE_ON)
+def test_measure_word_parses_cc_cedict_cl_gloss(gloss, variant, front, expected):
+    """CC-CEDICT writes a classifier ``trad|simp``; the card shows its own script."""
+    if not variant:
+        pytest.importorskip("opencc")  # only the "" rule asks whether the front is simplified
+    config = dataclasses.replace(AnkiMinerConfig(), script_variant=variant)
+    out = ZhMeasureWordHook().render(_word(front, gloss), config=config)
     assert out == ({"measure_word": expected} if expected else {})
 
 

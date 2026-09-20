@@ -63,6 +63,14 @@ def test_the_measure_word_hook_is_the_zh_one_unchanged():
     assert YUE_RENDER_HOOKS[0].render(word, config=AnkiMinerConfig()) == {"measure_word": "套"}
 
 
+def test_a_two_script_classifier_takes_the_traditional_half_on_a_yue_card():
+    """yue never sets script_variant, so the classifier follows the card front."""
+    pytest.importorskip("opencc")
+    config = replace(AnkiMinerConfig(), script_variant="")
+    word = SimpleNamespace(definition_html="pair; CL:對|对[dui4]", mined_form="對")
+    assert YUE_RENDER_HOOKS[0].render(word, config=config) == {"measure_word": "對"}
+
+
 def test_every_hook_field_name_is_declared_once():
     names = [name for hook in YUE_RENDER_HOOKS for name in hook.field_names()]
     assert names == ["measure_word", "expression_jyutping"]
