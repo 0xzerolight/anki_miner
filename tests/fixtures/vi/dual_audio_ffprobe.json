@@ -1,0 +1,43 @@
+{
+  "streams": [
+    {
+      "index": 1,
+      "codec_type": "audio",
+      "codec_name": "aac",
+      "channels": 2,
+      "disposition": {
+        "default": 1
+      },
+      "tags": {
+        "language": "jpn",
+        "title": "Japanese"
+      }
+    },
+    {
+      "index": 2,
+      "codec_type": "audio",
+      "codec_name": "aac",
+      "channels": 2,
+      "disposition": {
+        "default": 0
+      },
+      "tags": {
+        "language": "eng",
+        "title": "English"
+      }
+    },
+    {
+      "index": 3,
+      "codec_type": "audio",
+      "codec_name": "ac3",
+      "channels": 6,
+      "disposition": {
+        "default": 0
+      },
+      "tags": {
+        "language": "vie",
+        "title": "Tiếng Việt (lồng tiếng)"
+      }
+    }
+  ]
+}
