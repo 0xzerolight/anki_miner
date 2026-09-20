@@ -57,7 +57,9 @@ def test_the_profile_wires_the_arabic_policies():
     assert profile.import_encodings == ("utf-8-sig", "cp1256")
     assert {"ara", "ar", "arb", "arabic", "arz", "apc"} <= profile.audio_track_codes
     assert profile.asr_language == "ar" and profile.captions.orig_codes == ("ar-orig",)
-    assert profile.capabilities == frozenset({"word_root", "arabic_grammar", "arabic_clitics", "lemmatised_frequency"})
+    assert profile.capabilities == frozenset(
+        {"word_root", "arabic_grammar", "arabic_clitics", "lemmatised_frequency", "rtl"}
+    )
     assert profile.extra_card_fields == AR_EXTRA_CARD_FIELDS
     assert [type(hook) for hook in profile.render_hooks] == [ArabicCardHook]
     assert profile.pos_defaults.allowed_pos == AR_ALLOWED_POS

@@ -93,6 +93,8 @@ CAPABILITY_VOCABULARY = frozenset(
         # Arabic (spec C.1).
         "arabic_grammar",
         "arabic_clitics",
+        # Right-to-left mining languages (fa ar he): gates nothing in Settings, states direction.
+        "rtl",
     }
 )
 
