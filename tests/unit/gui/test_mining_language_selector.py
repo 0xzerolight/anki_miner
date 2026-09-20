@@ -18,6 +18,7 @@ from anki_miner.gui.widgets.panels.mining_language_settings_panel import MiningL
 from anki_miner.languages._spaced import availability as spaced_availability
 from anki_miner.languages.ko import availability as ko_availability
 from anki_miner.languages.registry import get_profile
+from anki_miner.languages.th import availability as th_availability
 from anki_miner.languages.zh import availability
 
 
@@ -37,6 +38,8 @@ def ko_stack_absent(monkeypatch):
     monkeypatch.setattr(spaced_availability, "find_spec", lambda _name: None)
     # id has no engine at all: like ja it leaves ``unavailable_reason`` None and is
     # always offered, so it is in every exact list below.
+    # Same for th: pythainlp is an optional extra, present on a dev box.
+    monkeypatch.setattr(th_availability, "find_spec", lambda _name: None)
 
 
 def _panel(qtbot, config: AnkiMinerConfig) -> MiningLanguageSettingsPanel:
