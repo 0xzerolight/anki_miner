@@ -30,6 +30,70 @@ def _make_dialogue(count: int, start: int = 0, step: int = 2000) -> list[pysubs2
     return [_dialogue(start + i * step, start + i * step + 1000) for i in range(count)]
 
 
+#: The zh profile's ``import_encodings``, spelled out so the test pins the
+#: ladder the retime path threads down rather than whatever the profile holds.
+_ZH_LADDER = ("utf-8-sig", "gb18030", "big5")
+
+_SIMPLIFIED = [
+    "这是一个测试字幕",
+    "我们明天再见面吧",
+    "他说的话很有道理",
+    "请把门关上好吗",
+    "今天的天气真不错",
+    "你吃过午饭了没有",
+    "这本书我看了三遍",
+    "她走得非常快",
+    "小心路上的车辆",
+    "谢谢你的帮助",
+    "我不太明白你的意思",
+    "明天早上八点出发",
+]
+
+_TRADITIONAL = [
+    "這是一個測試字幕",
+    "我們明天再見面吧",
+    "他說的話很有道理",
+    "請把門關上好嗎",
+    "今天的天氣真不錯",
+    "你吃過午飯了沒有",
+    "這本書我看了三遍",
+    "她走得非常快",
+    "小心路上的車輛",
+    "謝謝你的幫助",
+    "我不太明白你的意思",
+    "明天早上八點出發",
+]
+
+_JAPANESE = [
+    "これはテストの字幕です",
+    "明日また会いましょう",
+    "彼の言うことは筋が通っている",
+    "ドアを閉めてくれますか",
+    "今日はいい天気ですね",
+    "お昼ご飯はもう食べましたか",
+    "この本は三回読みました",
+    "彼女はとても速く歩く",
+    "道の車に気をつけて",
+    "助けてくれてありがとう",
+    "意味がよく分かりません",
+    "明日の朝八時に出発します",
+]
+
+
+def _save_encoded(path: Path, lines: list[str], encoding: str) -> Path:
+    """An SRT of *lines* written in *encoding*, spaced like a real episode."""
+    subs = pysubs2.SSAFile()
+    for i, text in enumerate(lines):
+        start = 2000 + i * 3000
+        subs.events.append(pysubs2.SSAEvent(start=start, end=start + 1000, text=text))
+    subs.save(str(path), encoding=encoding)
+    return path
+
+
+def _texts(path: Path) -> list[str]:
+    return [event.text for event in pysubs2.load(str(path)).events]
+
+
 class TestNonSpeechText:
     @pytest.mark.parametrize(
         "text",
@@ -329,3 +393,50 @@ class TestTranscodeForAlignment:
         mapped = pysubs2.load(str(out))
         assert mapped.format == "vtt"
         assert [event.start for event in mapped] == [4000, 6000, 8000, 10000]
+
+
+class TestEncodingLadder:
+    """The user's own subtitle is decoded with the mining language's ladder.
+
+    The file that comes out of :func:`map_deltas_back` is the one the user
+    keeps, so a leg that decodes without raising and produces the wrong
+    characters is mojibake on disk, not a passing internal detail.
+    """
+
+    def _round_trip(self, tmp_path: Path, src: Path, ladder: tuple[str, ...] | None) -> Path:
+        """Clean, shift the cleaned copy like an aligner, and map back."""
+        kwargs = {} if ladder is None else {"encodings": ladder}
+        cleaned = clean_for_alignment(src, tmp_path / "align.srt", **kwargs)
+        assert cleaned is not None
+        synced = pysubs2.load(str(cleaned.path))
+        for event in synced:
+            event.start += 1500
+            event.end += 1500
+        synced.save(str(tmp_path / "synced.srt"), encoding="utf-8")
+        out = tmp_path / "out.srt"
+        assert map_deltas_back(src, tmp_path / "synced.srt", cleaned.kept_indices, out, **kwargs)
+        return out
+
+    def test_gb18030_survives_the_retime_round_trip(self, tmp_path):
+        src = _save_encoded(tmp_path / "zh.srt", _SIMPLIFIED, "gb18030")
+        out = self._round_trip(tmp_path, src, _ZH_LADDER)
+        assert _texts(out) == _SIMPLIFIED
+
+    def test_big5_survives_the_retime_round_trip(self, tmp_path):
+        src = _save_encoded(tmp_path / "zh.srt", _TRADITIONAL, "big5")
+        out = self._round_trip(tmp_path, src, _ZH_LADDER)
+        assert _texts(out) == _TRADITIONAL
+
+    def test_transcode_uses_the_given_ladder(self, tmp_path):
+        src = _save_encoded(tmp_path / "short.srt", _SIMPLIFIED[:3], "gb18030")
+        dest = tmp_path / "trans.srt"
+
+        result = transcode_for_alignment(src, dest, encodings=_ZH_LADDER)
+
+        assert result is not None
+        assert _texts(dest) == _SIMPLIFIED[:3]
+
+    def test_no_ladder_keeps_the_japanese_default(self, tmp_path):
+        src = _save_encoded(tmp_path / "ja.srt", _JAPANESE, "cp932")
+        out = self._round_trip(tmp_path, src, None)
+        assert _texts(out) == _JAPANESE
