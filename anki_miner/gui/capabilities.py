@@ -685,7 +685,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Character Set picks the spelling the card front and the dictionary lookup use: Simplified, "
-            "Traditional, or As written to keep each word's source spelling.",
+            "Traditional, or As written to keep each word's source spelling. The Traditional Field, under "
+            "Settings -> Anki, carries the other spelling when it differs from the front.",
         ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
@@ -966,16 +967,15 @@ CAPABILITIES: tuple[Capability, ...] = (
         requires="pinyin",
     ),
     Capability(
-        id="measure-word-traditional",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Measure word & traditional spelling fields"),
+        id="measure-word",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Measure word field"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Map the Measure Word Field for the word's classifier and the Traditional Field for its "
-            "traditional spelling, when that differs from the front.",
+            "Map the Measure Word Field to put the classifier from the dictionary entry on your cards.",
         ),
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),
-        keywords=("measure word", "classifier", "traditional", "card fields", "量词", "量詞"),
+        keywords=("measure word", "classifier", "card fields", "量词", "量詞"),
         requires="measure_word",
     ),
     Capability(

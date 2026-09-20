@@ -15,9 +15,10 @@ from anki_miner.gui.capabilities import (
 from anki_miner.languages.registry import get_profile
 from tests.unit.languages.test_language_contract import CAPABILITY_VOCABULARY
 
-#: The entries only a Chinese session sees. Everything else is what a Japanese
+#: The entries a Japanese session never lists (all three are Chinese gates;
+#: ``measure-word`` reaches Cantonese too). Everything else is what a Japanese
 #: session listed before the catalogue was gated, which the ja pin below fixes.
-_ZH_ONLY_IDS = ("script-variant", "pinyin", "measure-word-traditional")
+_NON_JAPANESE_IDS = ("script-variant", "pinyin", "measure-word")
 
 
 def test_ids_are_unique() -> None:
@@ -187,7 +188,7 @@ def test_no_capability_set_lists_the_whole_catalogue() -> None:
 
 def test_japanese_lists_exactly_the_entries_it_always_did() -> None:
     japanese = get_profile("ja").capabilities
-    expected = [cap.id for cap in CAPABILITIES if cap.id not in _ZH_ONLY_IDS]
+    expected = [cap.id for cap in CAPABILITIES if cap.id not in _NON_JAPANESE_IDS]
 
     assert [cap.id for cap in search("", japanese)] == expected
 
@@ -209,7 +210,7 @@ def test_chinese_lists_its_own_entries() -> None:
     chinese = get_profile("zh").capabilities
     shown = {cap.id for cap in search("", chinese)}
 
-    assert set(_ZH_ONLY_IDS) <= shown
+    assert set(_NON_JAPANESE_IDS) <= shown
 
 
 def test_chinese_entries_are_findable_by_search() -> None:
@@ -217,7 +218,25 @@ def test_chinese_entries_are_findable_by_search() -> None:
 
     assert any(cap.id == "pinyin" for cap in search("pinyin", chinese))
     assert any(cap.id == "script-variant" for cap in search("traditional", chinese))
-    assert any(cap.id == "measure-word-traditional" for cap in search("classifier", chinese))
+    assert any(cap.id == "measure-word" for cap in search("classifier", chinese))
+
+
+def test_the_traditional_field_is_named_only_under_its_own_gate() -> None:
+    # The Traditional Field row is gated on script_variants, so only an entry
+    # carrying that same gate may tell a user to map it.
+    naming = [cap for cap in CAPABILITIES if "Traditional Field" in cap.description]
+
+    assert [cap.requires for cap in naming] == ["script_variants"]
+
+
+def test_cantonese_is_not_sent_to_a_row_it_cannot_see() -> None:
+    # yue declares measure_word but not script_variants: it shows the Measure
+    # Word row and no Traditional one.
+    cantonese = get_profile("yue").capabilities
+    shown = search("", cantonese)
+
+    assert any(cap.id == "measure-word" for cap in shown)
+    assert not any("Traditional Field" in cap.description for cap in shown)
 
 
 def test_search_within_a_capability_set_drops_gated_hits() -> None:
