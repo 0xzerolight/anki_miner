@@ -1,0 +1,1 @@
+"""Persian language profile."""
