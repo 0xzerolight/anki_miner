@@ -4947,32 +4947,37 @@ class TestProfileExtraFieldKeys:
         assert fields["word"] == '<div dir="rtl" lang="ja">食べる</div>'
 
     @pytest.mark.parametrize(
-        ("code", "script_variant", "tag"),
+        ("code", "script_variant", "mined_form", "sentence", "tag"),
         [
-            ("zh", "", "zh-Hans"),
-            ("zh", "traditional", "zh-Hant"),
-            ("yue", "", "zh-Hant"),
+            ("zh", "", "学习", "我在学习中文。", "zh-Hans"),
+            ("zh", "traditional", "学习", "我在学习中文。", "zh-Hans"),
+            ("zh", "simplified", "學習", "我在學習中文。", "zh-Hant"),
+            ("yue", "", "学习", "我在学习中文。", "zh-Hant"),
         ],
     )
     def test_a_han_profile_tags_the_sentence_of_every_built_note(
-        self, test_config, make_tokenized_word, code, script_variant, tag
+        self, test_config, make_tokenized_word, code, script_variant, mined_form, sentence, tag
     ):
         """The same seam, from the real profile's resolver and the live config.
 
         The builder's own tests hand it a stand-in resolver, so this is what
-        proves the profile's one reaches it and that the tag follows the
-        configured Character Set.
+        proves the profile's one reaches it. A mined sentence keeps the source's
+        own spelling, so the tag follows that spelling and not the configured
+        Character Set -- the two zh rows that disagree with the setting are the
+        point of the case list.
         """
         from dataclasses import replace
 
+        if tag == "zh-Hant" and code == "zh":
+            pytest.importorskip("opencc")
         service = AnkiService(replace(test_config, language=code, script_variant=script_variant))
-        word = make_tokenized_word(surface="学习", lemma="学习", reading="", sentence="我在学习中文。")
+        word = make_tokenized_word(surface=mined_form, lemma=mined_form, reading="", sentence=sentence)
         item = CardPayload(word=word, media=MediaData(), definition="def")
 
         fields = service._build_note(item, set()).note["fields"]
 
-        assert fields["sentence"] == f'<span lang="{tag}">我在学习中文。</span>'
-        assert fields["word"] == "学习"
+        assert fields["sentence"] == f'<span lang="{tag}">{sentence}</span>'
+        assert fields["word"] == mined_form
 
 
 class TestRejectedNoteNamesTheWord:

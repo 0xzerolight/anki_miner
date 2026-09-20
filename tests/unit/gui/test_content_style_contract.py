@@ -101,13 +101,24 @@ def test_languages_shipped_before_the_seam_keep_the_defaults(code):
     assert (style.direction, style.writing_system, style.bundled_fallback) == ("ltr", "", "")
 
 
-@pytest.mark.parametrize("code", [code for code in CODES if code not in ("zh", "yue")])
+#: The languages whose cards declare a BCP-47 tag, pinned rather than derived so
+#: that a later profile picking one up is a deliberate edit here: every other
+#: language's note must stay byte-identical to the pre-seam one.
+TAG_THEIR_CARDS = ("yue", "zh")
+
+
+def test_the_pinned_list_is_the_registry_answer():
+    declaring = tuple(code for code in CODES if get_profile(code).content_style.card_lang is not None)
+    assert declaring == TAG_THEIR_CARDS
+
+
+@pytest.mark.parametrize("code", [code for code in CODES if code not in TAG_THEIR_CARDS])
 def test_only_the_han_languages_tag_their_cards(code):
     """Han unification is the whole reason the tag exists; everyone else's note is untouched."""
     assert get_profile(code).content_style.card_lang is None
 
 
-@pytest.mark.parametrize("code", ["zh", "yue"])
+@pytest.mark.parametrize("code", TAG_THEIR_CARDS)
 def test_a_han_language_resolves_a_script_subtag(code):
     style = get_profile(code).content_style
     assert style.card_lang is not None

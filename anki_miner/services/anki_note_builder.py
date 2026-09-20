@@ -265,11 +265,11 @@ def build_note(
             ``<div dir="rtl" lang=…>``; anything else leaves every field as
             before, so the three-argument call is unchanged.
         content_lang: The profile code written as that wrapper's ``lang``.
-        card_lang: The active profile's ``content_style.card_lang`` — (card
-            front, config) -> BCP-47 tag. A non-empty tag wraps the sentence in
-            ``<span lang=…>``; ``None`` (every non-Han profile) leaves the note
-            exactly as before. Ignored for an rtl language, whose wrapper
-            already carries a ``lang``.
+        card_lang: The active profile's ``content_style.card_lang`` — (the text
+            being tagged, config) -> BCP-47 tag. A non-empty tag wraps the
+            sentence in ``<span lang=…>``; ``None`` (every non-Han profile)
+            leaves the note exactly as before. Ignored for an rtl language,
+            whose wrapper already carries a ``lang``.
 
     Returns:
         The note dict plus flags recording whether the bolded-sentence path
@@ -351,7 +351,11 @@ def build_note(
         # and Anki's own duplicate check read back, so it stays plain text; the
         # sentence is where the Han run long enough to show the wrong glyph
         # shapes actually lives.
-        sentence_field = _lang_wrap(sentence_field, card_lang(word.mined_form, config))
+        # The resolver is asked about the text it will wrap, in its source
+        # spelling: a mined sentence keeps the file's own script whatever the
+        # language's own script setting says, and the escaped/bolded form would
+        # carry markup no script rule can read.
+        sentence_field = _lang_wrap(sentence_field, card_lang(word.sentence, config))
 
     # Build fields, skipping any with empty config mapping
     field_data = {

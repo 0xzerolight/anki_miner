@@ -292,10 +292,11 @@ class ContentTextStyle:
     (gui/utils/fonts.py::resolve_content_families).
 
     ``card_lang`` answers the BCP-47 tag the card's sentence declares, given the
-    card front and the config; ``""`` means "write no tag", and ``None`` means
-    the language never writes one, which is the pre-existing note. It is a
-    resolver rather than a string because the tag can depend on the setting
-    (zh's Character Set) and, when that is unset, on the word itself.
+    text being tagged and the config; ``""`` means "write no tag", and ``None``
+    means the language never writes one, which is the pre-existing note. It is a
+    resolver rather than a string because the tag describes that text: zh reads
+    the sentence's own script, which a mined sentence keeps whatever the
+    Character Set setting is.
     """
 
     font_role: str
