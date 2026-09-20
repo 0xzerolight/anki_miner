@@ -29,11 +29,9 @@ def test_non_ja_stub_factory_forwards_the_keyword(make_eu_parser):
     assert parser._compound_matcher is None
 
 
-def test_zh_closes_it_and_ko_leaves_the_default_alone():
-    """zh: every merge it could propose dies on the synthetic's UniDic POS stamp.
+def test_ko_leaves_the_default_alone():
+    """ko's own ``token_merger`` runs beside the matcher, not instead of it.
 
-    ko keeps it: its own ``token_merger`` runs beside the matcher, not instead
-    of it. The zh half is proved on output in ``test_zh_parser_seams``.
+    zh closes the seam; that is proved on output in ``test_zh_parser_seams``.
     """
-    assert "compound_matching" in inspect.getsource(get_profile("zh").create_parser)
     assert "compound_matching" not in inspect.getsource(get_profile("ko").create_parser)

@@ -8,6 +8,10 @@ carry UniDic POS names no zh token can match), the ellipsis truncation guard
 The yue twin lives here too: Cantonese is as single-character-dense as
 Mandarin, so ``languages/yue/parser.py`` closes the ellipsis guard for the same
 reason and the two must not drift apart.
+
+The codepoints under test are spelled ``chr(0x...)`` rather than pasted: a
+Kangxi radical renders identically to its ideograph and a private-use glyph
+renders as nothing at all, in an editor as much as on a card.
 """
 
 from __future__ import annotations
@@ -24,18 +28,20 @@ ZH_STUTTER = "钱…钱不见了…全都没了。"
 YUE_STUTTER = "錢…錢唔見咗…全部冇晒。"
 
 #: 大家好。 with 大 written as the Kangxi radical U+2F24, the substitution OCR
-#: and legacy sources make. Escaped rather than pasted because the radical
-#: renders identically to the ideograph -- in an editor as much as on a card.
-ZH_RADICAL_LINE = "⼤家好。"
+#: and legacy sources make.
+ZH_RADICAL_LINE = chr(0x2F24) + "家好。"
 
 #: What the Japanese caption strip deletes and Chinese keeps: a continuation
 #: arrow, a device marker, and a squared unit the compatibility fold would
 #: rewrite to "m2".
-ZH_DECORATED_LINE = "➡ 这个房子有120㎡\U0001f4f1。"
+ZH_DECORATED_LINE = "➡ 这个房子有120㎡📱。"
 
 #: Renderer garbage inside an otherwise clean sentence: a private-use codepoint
 #: (a tofu box on the card) and U+FFFD (a replacement diamond).
-ZH_MOJIBAKE_LINE = "他说这个�电影很好看。"
+ZH_MOJIBAKE_LINE = "他说" + chr(0xE000) + "这个" + chr(0xFFFD) + "电影很好看。"
+
+#: The same garbage, this time between the two hanzi of one word.
+ZH_SPLIT_WORD_LINE = "我喜欢这部电" + chr(0xFFFD) + "影。"
 
 
 def _attest_nothing(surfaces: list[str]) -> set[str]:
@@ -88,7 +94,8 @@ class TestTheEllipsisGuardSeam:
         assert _factory_kwargs(monkeypatch, "yue")["ellipsis_fragment_guard"] is False
 
     def test_an_explicit_argument_still_wins(self) -> None:
-        assert _parser("zh", ellipsis_fragment_guard=True)._ellipsis_fragment_guard is True
+        """A default, not a per-language constant: asked for, the guard runs."""
+        assert _mine(_parser("zh", ellipsis_fragment_guard=True), ZH_STUTTER) == {"不见", "全都", "没"}
 
 
 class TestTheCompoundMatcherSeam:
@@ -123,4 +130,4 @@ class TestTheNormaliseSeam:
         assert _sentences(_parser("zh"), ZH_MOJIBAKE_LINE) == {"他说这个电影很好看。"}
 
     def test_garbage_between_two_hanzi_does_not_split_their_word(self) -> None:
-        assert "电影" in _mine(_parser("zh"), "我喜欢这部电�影。")
+        assert "电影" in _mine(_parser("zh"), ZH_SPLIT_WORD_LINE)
