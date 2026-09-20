@@ -11,14 +11,22 @@ from pathlib import Path
 
 import pytest
 
+from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui import app as app_module
+from anki_miner.languages import tagger_provider
 from anki_miner.languages.ar._calima.analyzer import Analyzer
 from anki_miner.languages.ar._calima.database import MorphologyDB
 from anki_miner.languages.ar.morphology import ArabicMinedForm
 from anki_miner.languages.ar.tokenizer import ArabicTagger
+from anki_miner.languages.registry import get_profile
+from anki_miner.languages.switching import switch_language
+from anki_miner.models.reading import ReadingUnit
+from anki_miner.services.tagger import LockedTagger
 from tests._pack_seeds import seeded_component
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "ar"
 TOKENS = [json.loads(line) for line in (FIXTURES / "tokens.jsonl").read_text(encoding="utf-8").splitlines()]
+CORPUS = [json.loads(line) for line in (FIXTURES / "pos_corpus.jsonl").read_text(encoding="utf-8").splitlines()]
 
 
 @pytest.fixture(scope="module")
@@ -57,3 +65,36 @@ def test_a_repeated_key_is_served_from_the_cache(tagger, monkeypatch):
     tagger("\u0645\u062f\u0631\u0633\u0629")  # madrasa
     monkeypatch.setattr(tagger, "_analyzer", None)  # a second analysis would raise AttributeError
     assert tagger("\u0645\u062f\u0631\u0633\u0629")[0].feature.lemma == "\u0645\u062f\u0631\u0633\u0629"
+
+
+@pytest.fixture
+def ar_parser(tagger, monkeypatch):
+    """The real profile parser over this module's one analyzer (conftest clears the provider cache)."""
+    monkeypatch.setitem(tagger_provider._TAGGERS, "ar", LockedTagger(tagger))
+    return get_profile("ar").create_parser(switch_language(AnkiMinerConfig(), "ar"))
+
+
+def _mine(parser, text: str) -> list:
+    words, _index, _counts = parser.parse_text_units([ReadingUnit(text=text, index=0, location_label="t")], False)
+    return words
+
+
+@pytest.mark.parametrize("case", CORPUS, ids=[case["id"] for case in CORPUS])
+def test_the_pos_corpus_mines_its_pinned_fronts(ar_parser, case):
+    mined = {word.mined_form for word in _mine(ar_parser, case["sentence"])}
+    assert set(case["must_mine"]) <= mined, case["note"]
+    assert not set(case["must_not_mine"]) & mined, case["note"]
+
+
+def test_a_vocalised_line_mines_bare_fronts_with_vocalised_readings_and_keeps_its_sentence(ar_parser):
+    line = "\u0630\u064e\u0647\u064e\u0628\u064e \u0627\u0644\u0648\u064e\u0644\u064e\u062f\u064f \u0625\u0650\u0644\u064e\u0649 \u0627\u0644\u0628\u064e\u064a\u0652\u062a\u0650."  # dhahaba al-waladu ilaa al-bayti
+    words = {word.mined_form: word for word in _mine(ar_parser, line)}
+    assert words["\u0630\u0647\u0628"].expression_reading == "\u0630\u064e\u0647\u064e\u0628"
+    assert words["\u0630\u0647\u0628"].sentence == line
+    assert "Segmentation=" in words["\u0648\u0644\u062f"].morph  # al+ is a clitic
+
+
+def test_the_smoke_leg_passes_in_process(tagger, monkeypatch, capsys):
+    monkeypatch.setitem(tagger_provider._TAGGERS, "ar", LockedTagger(tagger))
+    assert app_module._run_language_bundled_smoke("ar") == 0
+    assert "BUNDLED_SMOKE_PASS: language ar" in capsys.readouterr().out
