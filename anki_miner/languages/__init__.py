@@ -43,6 +43,7 @@ AVAILABLE_LANGUAGES: tuple[str, ...] = (
     "ar",
     "th",
     "fa",
+    "sl",
 )
 
 #: Engine packs shared by several mining languages. Not languages: never in

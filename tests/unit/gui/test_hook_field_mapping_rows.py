@@ -82,6 +82,9 @@ HOOK_ROWS = [
     ("fa", "reading_romanized", "reading_romanized_field_input", "persian_romanization"),
     ("fa", "colloquial_form", "colloquial_form_field_input", "persian_register"),
     ("fa", "present_stem", "present_stem_field_input", "persian_stems"),
+    ("sl", "pos", "pos_field_input", "pos_tag"),
+    ("sl", "noun_gender", "noun_gender_field_input", "noun_gender"),
+    ("sl", "aspect_pair", "aspect_pair_field_input", "aspect_pairs"),
 ]
 
 
