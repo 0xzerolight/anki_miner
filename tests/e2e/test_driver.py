@@ -159,7 +159,8 @@ def test_build_app_config_basic_field_mapping(tmp_path: Path) -> None:
     assert cfg.dicts_root == tmp_path / "dicts"
     assert cfg.known_words_db_path == tmp_path / "known_words.db"
     # DEFAULT = faithful real mining: exercises known-words subtraction (needs
-    # Anki); dedup/dup left at the real AnkiMinerConfig defaults.
+    # Anki); dedup pinned on for the canaries' calibrated word sets, dup left at
+    # the real AnkiMinerConfig default.
     assert cfg.use_known_words_db is True
     assert cfg.include_known_words is False
     assert cfg.deduplicate_sentences is True

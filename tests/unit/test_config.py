@@ -53,6 +53,19 @@ class TestIPlusOneFilter:
         assert config.use_i_plus_one_filter is False
 
 
+class TestSentenceDeduplication:
+    """Tests for the sentence deduplication flag."""
+
+    def test_deduplicate_sentences_defaults_false(self):
+        """Dedup keeps the first mineable word of a line and drops its sentence-mates.
+
+        Off by default so a default run mines every word it found rather than
+        one per subtitle line.
+        """
+        config = AnkiMinerConfig()
+        assert config.deduplicate_sentences is False
+
+
 class TestYouTubeConfig:
     """Tests for the YouTube-related config fields."""
 

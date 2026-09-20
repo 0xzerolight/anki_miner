@@ -500,8 +500,12 @@ class AnkiMinerConfig:
     # clicked column sort, and the season-mode merged pool order.
     strict_card_order: bool = False
 
-    # Deduplication settings
-    deduplicate_sentences: bool = True
+    # Deduplication settings. Keeps one card per example sentence: the FIRST
+    # mineable word of a line wins and its sentence-mates are dropped. Off by
+    # default because that keeper is positional, not pedagogical — a language
+    # with an obligatory overt subject opens nearly every line on a pronoun, so
+    # the line's real vocabulary is what gets traded away.
+    deduplicate_sentences: bool = False
 
     # i+1 sentence filtering. When True, only mine words that have at least
     # one example sentence containing exactly one unknown lemma.

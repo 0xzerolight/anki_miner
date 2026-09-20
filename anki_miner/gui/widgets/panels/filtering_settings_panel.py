@@ -450,7 +450,10 @@ class FilteringSettingsPanel(FormPanel):
         self.add_field(
             "",
             self.deduplicate_sentences_checkbox,
-            helper=self.tr("Skips duplicate example sentences."),
+            helper=self.tr(
+                "Mines at most one word per example sentence — the first one found on the line. "
+                "Every other word sharing that sentence is skipped."
+            ),
         )
 
         # Script Type section (Issue #57)
