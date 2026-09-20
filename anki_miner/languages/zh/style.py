@@ -1,4 +1,4 @@
-"""zh content typography DATA (spec 9.1) — face candidates and the wrap.
+"""zh content typography DATA (spec 9.1) — face candidates, the wrap, the card tag.
 
 Data only. The Qt-level plumbing that consumes ``ZH_CONTENT_STYLE``
 (``gui/utils/content_text.py``, the QSS selectors, the font-database probe)
@@ -12,9 +12,15 @@ edge into ``gui`` (pinned by
 
 from __future__ import annotations
 
-from anki_miner.languages.profile import ContentTextStyle
+from typing import TYPE_CHECKING
 
-__all__ = ["ZH_CONTENT_STYLE", "ZH_FONT_FAMILIES", "zh_cjk_wrap"]
+from anki_miner.languages.profile import ContentTextStyle
+from anki_miner.languages.zh.variants import to_simplified
+
+if TYPE_CHECKING:
+    from anki_miner.config.config import AnkiMinerConfig
+
+__all__ = ["ZH_CONTENT_STYLE", "ZH_FONT_FAMILIES", "zh_card_lang", "zh_cjk_wrap"]
 
 #: Installed Han faces in preference order, Simplified leading: an SC face
 #: renders a traditional string acceptably while the reverse drops or
@@ -50,4 +56,33 @@ def zh_cjk_wrap(text: str) -> str:
     return text
 
 
-ZH_CONTENT_STYLE = ContentTextStyle(font_role="zh", families=ZH_FONT_FAMILIES, wrap=zh_cjk_wrap)
+def zh_card_lang(word: str, config: AnkiMinerConfig) -> str:
+    """BCP-47 tag for the Chinese text on a card, from the configured Character Set.
+
+    Han unification: 骨, 直 and 令 are one code point with a Chinese and a
+    Japanese shape, so a reviewer with no ``lang`` to go on draws them from the
+    first CJK face installed. The script subtag is what sends it to a Chinese
+    one. With no Character Set chosen the card keeps the source's own spelling,
+    so the word decides: a form OpenCC already reads as simplified is Hans,
+    anything else Hant. Without OpenCC every word reads as simplified, which is
+    the shipped default's answer anyway.
+    """
+    if config.script_variant == "simplified":
+        return "zh-Hans"
+    if config.script_variant == "traditional":
+        return "zh-Hant"
+    return "zh-Hans" if to_simplified(word) == word else "zh-Hant"
+
+
+#: ``writing_system`` turns on the installed-face probe and its one "may render
+#: as boxes" warning; ``bundled_fallback`` stays empty because a Han face is far
+#: too large to ship, the same call yue makes. Declaring Simplified costs a
+#: spurious warning on a machine carrying traditional faces only, which pan-CJK
+#: Noto rules out and a second probe would not be worth.
+ZH_CONTENT_STYLE = ContentTextStyle(
+    font_role="zh",
+    families=ZH_FONT_FAMILIES,
+    wrap=zh_cjk_wrap,
+    writing_system="SimplifiedChinese",
+    card_lang=zh_card_lang,
+)

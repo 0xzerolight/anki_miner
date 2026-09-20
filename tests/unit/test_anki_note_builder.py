@@ -344,3 +344,89 @@ class TestRtlContentWrapper:
         assert build_note(item, test_config, set(), content_direction="ltr", content_lang=lang) == build_note(
             item, test_config, set()
         )
+
+
+class TestCardLangWrapper:
+    """A Han language's sentence declares its language so the WebView picks its glyph forms.
+
+    The resolver is a stand-in here; the zh and yue ones are pinned by their own
+    suites. The content stays Japanese so these assertions read as wrapper
+    mechanics rather than as Chinese examples.
+    """
+
+    @staticmethod
+    def _fields(config, word, **kwargs) -> dict:
+        item = CardPayload(word=word, media=MediaData(), definition="def")
+        return build_note(item, config, stored_files=set(), **kwargs).note["fields"]
+
+    def test_the_sentence_is_wrapped_and_the_word_is_not(self, test_config, make_tokenized_word):
+        fields = self._fields(test_config, make_tokenized_word(), card_lang=lambda word, config: "zh-Hans")
+        assert fields["sentence"] == '<span lang="zh-Hans">日本語を食べる。</span>'
+        assert fields["word"] == "食べる"
+
+    def test_the_resolver_sees_the_card_front_and_the_config(self, test_config, make_tokenized_word):
+        seen: list[tuple[str, object]] = []
+
+        def resolver(word: str, config) -> str:
+            seen.append((word, config))
+            return "zh-Hant"
+
+        fields = self._fields(test_config, make_tokenized_word(), card_lang=resolver)
+        assert seen == [("食べる", test_config)]
+        assert fields["sentence"] == '<span lang="zh-Hant">日本語を食べる。</span>'
+
+    def test_the_bold_highlight_survives_inside_the_span(self, test_config, make_tokenized_word):
+        word = make_tokenized_word()
+        word.sentence_bolded = "日本語を<b>食べる</b>。"
+        config = replace(test_config, bold_target_in_sentence=True)
+        fields = self._fields(config, word, card_lang=lambda w, c: "zh-Hans")
+        assert fields["sentence"] == '<span lang="zh-Hans">日本語を<b>食べる</b>。</span>'
+
+    def test_an_empty_tag_leaves_the_sentence_alone(self, test_config, make_tokenized_word):
+        fields = self._fields(test_config, make_tokenized_word(), card_lang=lambda w, c: "")
+        assert fields["sentence"] == "日本語を食べる。"
+
+    def test_an_empty_sentence_stays_empty(self, test_config, make_tokenized_word):
+        fields = self._fields(test_config, make_tokenized_word(sentence=""), card_lang=lambda w, c: "zh-Hans")
+        assert fields["sentence"] == ""
+
+    def test_the_tag_is_escaped(self, test_config, make_tokenized_word):
+        fields = self._fields(test_config, make_tokenized_word(), card_lang=lambda w, c: 'x"y')
+        assert fields["sentence"] == '<span lang="x&quot;y">日本語を食べる。</span>'
+
+    def test_the_dedup_keys_survive_the_wrapper(self, test_config, make_tokenized_word):
+        fields = self._fields(test_config, make_tokenized_word(), card_lang=lambda w, c: "zh-Hans")
+        assert _strip_for_dedup(fields["word"]) == "食べる"
+        assert _strip_for_dedup(fields["sentence"]) == "日本語を食べる。"
+
+    def test_every_other_field_is_untouched(self, test_config, make_tokenized_word):
+        config = replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "expression_reading": "Reading", "sentence_translation": "Tr"},
+        )
+        word = make_tokenized_word(expression_reading="たべる")
+        word.sentence_translation = "I eat."
+        legacy = self._fields(config, word)
+        tagged = self._fields(config, word, card_lang=lambda w, c: "zh-Hans")
+        assert set(tagged) == set(legacy)
+        assert {k: v for k, v in tagged.items() if k != "sentence"} == {
+            k: v for k, v in legacy.items() if k != "sentence"
+        }
+
+    def test_an_rtl_language_is_never_double_wrapped(self, test_config, make_tokenized_word):
+        word = make_tokenized_word()
+        rtl = self._fields(test_config, word, content_direction="rtl", content_lang="he")
+        both = self._fields(
+            test_config, word, content_direction="rtl", content_lang="he", card_lang=lambda w, c: "zh-Hans"
+        )
+        assert both == rtl
+
+    @pytest.mark.parametrize("code", ["ja", "ko"])
+    def test_a_profile_declaring_no_resolver_writes_no_lang(self, test_config, make_tokenized_word, code):
+        from anki_miner.languages.registry import get_profile
+
+        assert get_profile(code).content_style.card_lang is None
+        item = CardPayload(word=make_tokenized_word(), media=MediaData(), definition="def")
+        built = build_note(item, test_config, set(), card_lang=get_profile(code).content_style.card_lang)
+        assert "lang=" not in "".join(built.note["fields"].values())
+        assert built == build_note(item, test_config, set())

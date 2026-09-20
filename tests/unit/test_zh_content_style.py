@@ -9,9 +9,13 @@ that identity cannot be mistaken for an unfinished implementation later.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
+import pytest
+
 from anki_miner.languages.profile import ContentTextStyle
 from anki_miner.languages.registry import get_profile
-from anki_miner.languages.zh.style import ZH_CONTENT_STYLE, ZH_FONT_FAMILIES, zh_cjk_wrap
+from anki_miner.languages.zh.style import ZH_CONTENT_STYLE, ZH_FONT_FAMILIES, zh_card_lang, zh_cjk_wrap
 
 #: Faces whose default glyph forms are Simplified.
 _SIMPLIFIED_LEADING = frozenset(
@@ -57,6 +61,53 @@ class TestTheFaceList:
 
     def test_the_list_has_no_duplicates(self):
         assert len(set(ZH_FONT_FAMILIES)) == len(ZH_FONT_FAMILIES)
+
+
+class TestTheProbedWritingSystem:
+    def test_simplified_chinese_is_declared_with_no_bundled_face(self):
+        assert ZH_CONTENT_STYLE.writing_system == "SimplifiedChinese"
+        assert ZH_CONTENT_STYLE.bundled_fallback == ""
+
+    def test_the_writing_system_is_a_real_qt_member(self):
+        from PyQt6.QtGui import QFontDatabase
+
+        assert hasattr(QFontDatabase.WritingSystem, ZH_CONTENT_STYLE.writing_system)
+
+
+class TestTheCardLanguageTag:
+    """The BCP-47 tag a zh card's sentence carries, so Han unification resolves Chinese."""
+
+    @staticmethod
+    def _config(test_config, script_variant: str):
+        return replace(test_config, language="zh", script_variant=script_variant)
+
+    def test_a_simplified_setting_always_says_hans(self, test_config):
+        config = self._config(test_config, "simplified")
+        assert zh_card_lang("学习", config) == "zh-Hans"
+        assert zh_card_lang("學習", config) == "zh-Hans"
+
+    def test_a_traditional_setting_always_says_hant(self, test_config):
+        config = self._config(test_config, "traditional")
+        assert zh_card_lang("学习", config) == "zh-Hant"
+        assert zh_card_lang("學習", config) == "zh-Hant"
+
+    @pytest.mark.parametrize("word", ["学习", "苹果", "这儿", "头发"])
+    def test_no_setting_reads_a_simplified_word_as_hans(self, test_config, word):
+        pytest.importorskip("opencc")
+        assert zh_card_lang(word, self._config(test_config, "")) == "zh-Hans"
+
+    @pytest.mark.parametrize("word", ["學習", "蘋果", "這兒", "頭髮"])
+    def test_no_setting_reads_a_traditional_word_as_hant(self, test_config, word):
+        pytest.importorskip("opencc")
+        assert zh_card_lang(word, self._config(test_config, "")) == "zh-Hant"
+
+    def test_a_word_spelled_the_same_in_both_scripts_says_hans(self, test_config):
+        """中文 is its own simplification, so the sentence gets the mainland faces."""
+        pytest.importorskip("opencc")
+        assert zh_card_lang("中文", self._config(test_config, "")) == "zh-Hans"
+
+    def test_the_style_carries_the_resolver(self):
+        assert ZH_CONTENT_STYLE.card_lang is zh_card_lang
 
 
 class TestTheProfileUsesIt:
