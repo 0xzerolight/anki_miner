@@ -18,7 +18,7 @@ def test_ko_is_registered_with_a_native_display_name():
 def test_capabilities_are_the_korean_set_only():
     caps = get_profile("ko").capabilities
     assert caps == frozenset({"hangul_filters", "hanja"})
-    assert not {"pitch", "furigana", "kana_filters", "name_wordsets", "deinflection"} & caps
+    assert not {"pitch", "furigana", "kana_filters", "name_wordsets", "deinflection", "note_presets"} & caps
 
 
 def test_media_and_caption_parameters():
