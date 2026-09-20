@@ -13,7 +13,13 @@ import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import CardPayload, MediaData, TokenizedWord
-from anki_miner.services.anki_note_builder import _strip_for_dedup, build_note, configured_target_field_names
+from anki_miner.services.anki_note_builder import (
+    _strip_for_dedup,
+    build_note,
+    configured_target_field_names,
+    missing_note_type_message,
+    no_note_type_message,
+)
 
 
 def _word(**overrides) -> TokenizedWord:
@@ -64,6 +70,28 @@ def test_configured_target_field_names_uses_nonempty_mappings_and_active_marker(
     config = AnkiMinerConfig(anki_fields=fields, card_type="click")
 
     assert configured_target_field_names(config) == {"Expression", "MiningSource", "IsClickCard"}
+
+
+class TestMissingNoteTypeMessage:
+    """A configured name that Anki does not have, and a name nobody set.
+
+    zh ships ``anki_note_type=""`` on purpose, so the first run reported a note
+    type called '' as absent from the collection -- a typo the user never made
+    instead of the step they have not done yet.
+    """
+
+    def test_a_configured_name_reads_exactly_as_it_did(self):
+        assert (
+            missing_note_type_message("Lapis", ["Basic"])
+            == "Note type 'Lapis' is not in Anki — pick one in Settings → Cards & Anki."
+        )
+
+    def test_an_unset_name_says_so_and_points_at_the_same_place(self):
+        message = missing_note_type_message("", ["Basic"])
+
+        assert message == no_note_type_message()
+        assert "''" not in message
+        assert "Settings → Cards & Anki" in message
 
 
 class TestPitchGraphTextFields:
