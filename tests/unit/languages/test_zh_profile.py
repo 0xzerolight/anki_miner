@@ -75,7 +75,7 @@ def test_zh_audio_defaults_are_real_audio_source_entries():
 def test_scoped_defaults_cover_every_scoped_field():
     scoped = get_profile("zh").scoped_defaults
     assert set(scoped) == set(LANGUAGE_SCOPED_FIELDS)
-    assert scoped["script_variant"] == "simplified"
+    assert scoped["script_variant"] == ""
     assert scoped["reading_tone_color"] is True
     assert scoped["downloader_subtitle_langs"] == "zh-Hans"
     assert scoped["excluded_wordsets"] == ()
@@ -88,7 +88,7 @@ def test_switch_language_to_zh_applies_every_scoped_field():
     assert config.language == "zh"
     for name in LANGUAGE_SCOPED_FIELDS:
         assert getattr(config, name) == get_profile("zh").scoped_defaults[name], name
-    assert dataclasses.replace(config).script_variant == "simplified"
+    assert dataclasses.replace(config).script_variant == ""
 
 
 def test_zh_targets_neither_the_ja_note_type_nor_a_nameless_deck():

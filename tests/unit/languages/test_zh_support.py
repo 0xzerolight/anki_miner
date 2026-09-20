@@ -121,3 +121,28 @@ def test_candidates_are_variants_with_a_zero_condition_mask(fake_variants):
 def test_the_query_word_is_never_re_emitted(fake_variants):
     fake_variants({"中文": ["中文"]})
     assert ZhLookupStrategy().candidates("中文", "中文", "vs") == []
+
+
+class TestTaiwanSpellingIsACandidate:
+    """The spelling ``to_script`` writes on the card must be queryable (spec 10.1).
+
+    Generic s2t is the only traditional candidate the ladder used to emit, so a
+    traditional-keyed resource indexed under the Taiwan spelling the app itself
+    produces (為什麼, 觀眾, 接著) was missed on every lookup.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _opencc(self) -> None:
+        pytest.importorskip("opencc")
+
+    @pytest.mark.parametrize(("term", "taiwan"), [("为什么", "為什麼"), ("观众", "觀眾"), ("接着", "接著")])
+    def test_term_variants_offer_the_taiwan_spelling(self, term, taiwan):
+        assert taiwan in ZhDictKeyFolding().term_variants(term)
+
+    @pytest.mark.parametrize(("term", "taiwan"), [("为什么", "為什麼"), ("观众", "觀眾"), ("接着", "接著")])
+    def test_lookup_candidates_offer_the_taiwan_spelling(self, term, taiwan):
+        assert (taiwan, 0) in ZhLookupStrategy().candidates(term, "", None)
+
+    def test_candidates_hold_each_spelling_once(self):
+        candidates = ZhLookupStrategy().candidates("银行", "", None)
+        assert [c for c, _ in candidates] == list(dict.fromkeys(c for c, _ in candidates))

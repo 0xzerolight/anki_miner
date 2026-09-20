@@ -29,12 +29,30 @@ _CONFIGS = ("s2t", "t2s")
 # s2hk are extra round-trip targets for script_key.
 _TO_SIMPLIFIED = "tw2s"
 _TO_TRADITIONAL = "s2tw"
+# Simplifications script_key may propose, each still subject to the round-trip
+# proof below. hk2s is second because it is the only one carrying the HK-only
+# glyphs (衞 -> 卫, 敍 -> 叙) the Taiwan standard leaves alone.
+_SIMPLIFY_STEPS = (_TO_SIMPLIFIED, "hk2s")
 _ROUND_TRIPS = ("s2t", "s2tw", "s2hk")
-_ALL_CONFIGS = frozenset((*_CONFIGS, _TO_SIMPLIFIED, *_ROUND_TRIPS))
+_ALL_CONFIGS = frozenset((*_CONFIGS, *_SIMPLIFY_STEPS, *_ROUND_TRIPS))
 
 # One key step can land on a spelling that folds once more (麼 -> 么 -> 幺); over
 # jieba's 30k most frequent words no key needed more than two steps.
 _MAX_KEY_STEPS = 4
+
+# Glyphs no OpenCC standard emits, mapped to the one it does, for the
+# round-trip proof only — never for the spelling a card or a key carries.
+# 麽 (U+9EBD) is a variant of 麼 (U+9EBC), never of 幺, and OpenCC's own
+# STCharacters maps it that way. Machine-converted and fan-subbed traditional
+# subtitles spell 怎麽/那麽/這麽/什麽 with it, and without this the proof
+# declines them and each earns a card beside its 怎么 twin.
+#
+# Hand-pinned rather than derived: both obvious derivations merge words that
+# are not one word. Canonicalising with s2t brings its phrase rules along
+# (咨詢/諮詢, 神雕/神鵰, 獨佔/獨占) and leaves 21 more pairs unfolded; doing it
+# character by character breaks 43 (裡/里, 遊/游, 鹹/咸). Anything added here
+# must leave 係/系, 週/周 and 麵/面 apart.
+_GLYPH_VARIANTS = str.maketrans({"麽": "麼"})
 
 
 def normalize_zh(text: str) -> str:
@@ -119,11 +137,13 @@ def to_simplified(text: str) -> str:
 
 
 def _key_step(word: str) -> str:
-    simplified = _convert_with(_TO_SIMPLIFIED, word)
-    if simplified == word:
-        return word
-    if word in (_convert_with(name, simplified) for name in _ROUND_TRIPS):
-        return simplified
+    canonical = word.translate(_GLYPH_VARIANTS)
+    for name in _SIMPLIFY_STEPS:
+        simplified = _convert_with(name, word)
+        if simplified == word:
+            continue
+        if canonical in (_convert_with(target, simplified) for target in _ROUND_TRIPS):
+            return simplified
     return word
 
 
@@ -133,9 +153,12 @@ def script_key(word: str) -> str:
     A word folds to its simplified spelling only when that spelling converts
     back to exactly this word under some traditional standard (s2t, s2tw,
     s2hk). 頭髮 and 头发 share a key; 麵 stays 麵, because 面 converts back to
-    面 and folding would merge noodles into face. The step repeats to a fixed
-    point, which makes the key idempotent — stored keys are folded again on
-    every read.
+    面 and folding would merge noodles into face. Both tw2s and hk2s may
+    propose the simplified spelling, so a Hong Kong glyph the Taiwan standard
+    does not carry (衞生) folds on the same evidence, and the proof reads the
+    word through ``_GLYPH_VARIANTS`` so a spelling no standard emits (怎麽)
+    still meets it. The step repeats to a fixed point, which makes the key
+    idempotent — stored keys are folded again on every read.
 
     Known limits: a few rare single-character words still merge (干/幹, 后/後,
     于/於, 云/雲, 余/餘) and a few pairs never match (讚/赞). Without OpenCC the
@@ -158,10 +181,16 @@ def to_script(text: str, script_variant: str) -> str:
     than becoming a different word's front. ``"traditional"`` keeps text that is
     already traditional and converts the rest to Taiwan spelling. Any other
     value leaves the text as written.
+
+    "Already traditional?" is asked with t2s, not :func:`to_simplified`: tw2s
+    also folds the Taiwan variants 著 -> 着 and 麼 -> 么, so every simplified
+    word spelled with one of those (显著, 著称, 专著, 执著) looked traditional
+    and was left unconverted. The cost is 么 in its rare yāo sense (老么),
+    which becomes 麼; no spelling-level rule separates the two senses.
     """
     normalized = normalize_zh(text)
     if script_variant == "simplified":
         return script_key(normalized)
-    if script_variant == "traditional" and to_simplified(normalized) == normalized:
+    if script_variant == "traditional" and _convert_with("t2s", normalized) == normalized:
         return to_traditional(normalized)
     return normalized

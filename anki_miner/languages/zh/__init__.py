@@ -76,7 +76,11 @@ def _scoped_defaults() -> Mapping[str, object]:
             # fields a zh run cannot fill — so zh ships empty and the user picks.
             "anki_deck_name": "Anki Miner",
             "anki_note_type": "",
-            "script_variant": "simplified",
+            # Keep the source spelling: a front rewritten to the other script
+            # is absent from its own example sentence, and the bold marker
+            # lands on a word the front does not show. Cross-script dedup is
+            # unaffected — ``dedup_fold`` below is independent of this field.
+            "script_variant": "",
             "reading_tone_color": True,
         }
     )

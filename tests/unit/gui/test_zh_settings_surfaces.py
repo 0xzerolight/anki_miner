@@ -59,6 +59,18 @@ def test_a_ja_save_never_writes_a_zh_value(qtbot, test_config):
     assert result.reading_tone_color is False
 
 
+def test_the_as_written_default_survives_a_save(qtbot, test_config):
+    """A value the combo has no item for silently reverts on the next Save.
+
+    zh ships "" (keep the source spelling), so the combo needs an item for it
+    or ``contribute`` writes "simplified" back the first time settings are saved.
+    """
+    config = _zh(test_config, script_variant="", reading_tone_color=True)
+    panel = _filtering(qtbot, config)
+    assert panel.script_variant_combo.currentData() == ""
+    assert panel.contribute(config).script_variant == ""
+
+
 def test_a_zh_save_round_trips_both(qtbot, test_config):
     config = _zh(test_config, script_variant="simplified", reading_tone_color=True)
     panel = _filtering(qtbot, config)

@@ -60,7 +60,7 @@ class TestCreateParser:
         config = _zh_config()
         parser = create_parser(config)
         assert isinstance(parser._mined_form_policy, type(zh_profile.mined_form))
-        assert parser._mined_form_policy._script_variant == config.script_variant == "simplified"
+        assert parser._mined_form_policy._script_variant == config.script_variant == ""
         assert parser._reading_support is zh_profile.reading
 
     def test_an_explicit_argument_still_wins(self, zh_profile: LanguageProfile) -> None:

@@ -140,6 +140,59 @@ class TestScriptKey:
             assert variants.script_key(key) == key, word
 
 
+#: Hong Kong glyphs the Taiwan standard has no simplification rule for.
+_HONG_KONG = [("衞生", "卫生"), ("衞星", "卫星"), ("保衞", "保卫"), ("侍衞", "侍卫"), ("敍述", "叙述")]
+
+
+class TestHongKongVariants:
+    """hk2s is the only simplification OpenCC offers for 衞 and 敍.
+
+    The round-trip proof covers them unchanged: s2hk turns 卫生 straight back
+    into 衞生, which is exactly the evidence the fold asks for.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _opencc(self) -> None:
+        pytest.importorskip("opencc")
+
+    @pytest.mark.parametrize(("hong_kong", "simplified"), _HONG_KONG)
+    def test_the_key_is_the_simplified_spelling(self, hong_kong: str, simplified: str) -> None:
+        assert variants.script_key(hong_kong) == simplified
+
+    @pytest.mark.parametrize(("hong_kong", "simplified"), _HONG_KONG)
+    def test_the_simplified_front_is_the_simplified_spelling(self, hong_kong: str, simplified: str) -> None:
+        assert variants.to_script(hong_kong, "simplified") == simplified
+
+
+#: Mainland-traditional spellings no OpenCC standard emits, and their simplified word.
+_GLYPH_VARIANT_WORDS = [("怎麽", "怎么"), ("那麽", "那么"), ("這麽", "这么"), ("什麽", "什么"), ("為什麽", "为什么")]
+
+
+class TestMainlandTraditionalGlyphVariants:
+    """麽 is the Mainland-traditional form of 麼; no OpenCC standard emits it.
+
+    The round-trip proof therefore never recognised 怎麽 as a spelling of 怎么,
+    and fan-subbed or machine-converted subtitles carrying it earned a second
+    card for the most basic vocabulary there is.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _opencc(self) -> None:
+        pytest.importorskip("opencc")
+
+    @pytest.mark.parametrize(("variant", "simplified"), _GLYPH_VARIANT_WORDS)
+    def test_the_key_is_the_simplified_spelling(self, variant: str, simplified: str) -> None:
+        assert variants.script_key(variant) == simplified
+
+    @pytest.mark.parametrize(("variant", "simplified"), _GLYPH_VARIANT_WORDS)
+    def test_the_simplified_front_is_the_simplified_spelling(self, variant: str, simplified: str) -> None:
+        assert variants.to_script(variant, "simplified") == simplified
+
+    @pytest.mark.parametrize(("variant", "taiwan"), [("怎麽", "怎麼"), ("什麽", "什麼")])
+    def test_the_taiwan_spelling_of_one_word_shares_its_key(self, variant: str, taiwan: str) -> None:
+        assert variants.script_key(variant) == variants.script_key(taiwan)
+
+
 class TestToScript:
     @pytest.fixture(autouse=True)
     def _opencc(self) -> None:
@@ -157,6 +210,34 @@ class TestToScript:
 
     def test_traditional_keeps_a_traditional_word_as_written(self) -> None:
         assert variants.to_script("頭髮", "traditional") == "頭髮"
+
+    @pytest.mark.parametrize(
+        ("simplified", "traditional"),
+        [
+            ("显著", "顯著"),
+            ("著称", "著稱"),
+            ("专著", "專著"),
+            ("执著", "執著"),
+            ("论著", "論著"),
+            ("土著", "土著"),
+            ("原著", "原著"),
+        ],
+    )
+    def test_traditional_converts_a_word_holding_a_taiwan_variant_character(
+        self, simplified: str, traditional: str
+    ) -> None:
+        """著 and 麼 survive tw2s, so the "already traditional?" question needs t2s."""
+        assert variants.to_script(simplified, "traditional") == traditional
+
+    @pytest.mark.parametrize("word", ["麵條", "這裡", "乾淨", "看著", "頭髮"])
+    def test_traditional_still_keeps_these_traditional_words(self, word: str) -> None:
+        assert variants.to_script(word, "traditional") == word
+
+    def test_traditional_converts_the_yao_sense_of_me_too(self) -> None:
+        # Accepted cost of the t2s gate: 么 is 麼 in its common sense and 幺 in
+        # the rare yāo one, and nothing in a spelling-level rule tells them
+        # apart. 什么/怎么/那么/为什么 are unaffected either way.
+        assert variants.to_script("老么", "traditional") == "老麼"
 
     def test_traditional_front_shares_the_source_key(self) -> None:
         for word in ("头发", "银行", "面条", "干部"):
