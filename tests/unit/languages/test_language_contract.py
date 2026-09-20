@@ -61,6 +61,7 @@ PROBE = {
     "fa": "می\N{ZERO WIDTH NON-JOINER}روم",
     "sl": "knjige",
     "uk": "читала",
+    "vi": "kỹ thuật",
 }
 
 #: Every capability name any profile is allowed to declare. A typo'd flag is a
