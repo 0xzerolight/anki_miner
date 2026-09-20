@@ -29,9 +29,9 @@ manually in Episode Mining. The single knob ``bypass_known_words`` selects betwe
 two modes:
 
 **Default (``bypass_known_words=False``) — faithful real mining.** Sets
-``use_known_words_db=True``, ``include_known_words=False``, and leaves
-``deduplicate_sentences`` / ``allow_duplicate_cards`` at their real defaults
-(``True`` / ``False``). This is the path the soak/live runner uses precisely so it
+``use_known_words_db=True``, ``include_known_words=False``,
+``deduplicate_sentences=True``, and leaves ``allow_duplicate_cards`` at its real
+default (``False``). This is the path the soak/live runner uses precisely so it
 exercises known-words subtraction — the prime suspect for the "bug that only
 appears after several mining sessions in a row" (``known_words.db`` accumulation).
 In the real Phase-2 filter (``EpisodeProcessor._phase2_filter``) BOTH the
@@ -48,10 +48,13 @@ re-runs don't collide with prior E2E cards.
 
 ``deduplicate_sentences``
 -------------------------
-Left on (the default), sentence dedup collapses the 12 fixture lemmas to one
-representative per subtitle line (4). The ``bypass_known_words=True`` mode turns it
-off so a single run yields all 12 ``EXPECTED_LEMMAS``, giving the harness a strong,
-exact word-set cross-check; the faithful default leaves it at the real default.
+Pinned ``True`` in the faithful mode rather than inherited from
+``AnkiMinerConfig``: sentence dedup collapses the 12 fixture lemmas to one
+representative per subtitle line (4), and the word sets the drift canaries
+assert are calibrated against that collapse — they are there to catch parser
+drift, not a moved app default. The ``bypass_known_words=True`` mode turns it off
+so a single run yields all 12 ``EXPECTED_LEMMAS``, giving the harness a strong,
+exact word-set cross-check.
 """
 
 from __future__ import annotations
@@ -97,8 +100,8 @@ def build_app_config(e2e: E2EConfig, test_home: Path, *, bypass_known_words: boo
             ``tmp_path`` rather than the autouse home-isolation fixture).
         bypass_known_words: Selects the config mode (see module docstring).
             ``False`` (default) is FAITHFUL real Episode-Mining
-            (``use_known_words_db=True``, ``include_known_words=False``, real
-            dedup/dup defaults) — the soak/live runner uses this so it exercises
+            (``use_known_words_db=True``, ``include_known_words=False``, dedup on,
+            real dup default) — the soak/live runner uses this so it exercises
             known-words subtraction, and it REQUIRES a reachable Anki. ``True`` is
             the card-everything / no-Anki / deterministic mode
             (``include_known_words=True``, ``deduplicate_sentences=False``,
@@ -115,12 +118,13 @@ def build_app_config(e2e: E2EConfig, test_home: Path, *, bypass_known_words: boo
     dicts_root = test_home / "dicts"
 
     # Known-words mode (see module docstring). The faithful default exercises
-    # known-words subtraction (needs Anki) and leaves dedup/dup at their real
-    # AnkiMinerConfig defaults; only the no-Anki / deterministic mode diverges
-    # from real mining behavior (include-everything + dedup/dup off).
+    # known-words subtraction (needs Anki) and mines one word per subtitle line,
+    # which is what the canaries' expected word sets are calibrated against; only
+    # the no-Anki / deterministic mode diverges from real mining behavior
+    # (include-everything + dedup off / dup on).
     base = AnkiMinerConfig()
     include_known_words = bypass_known_words
-    deduplicate_sentences = base.deduplicate_sentences and not bypass_known_words
+    deduplicate_sentences = not bypass_known_words
     allow_duplicate_cards = base.allow_duplicate_cards or bypass_known_words
 
     return dataclasses.replace(

@@ -108,8 +108,10 @@ def build_profile() -> LanguageProfile:
         sentence_rules=SentenceRules(
             terminators=frozenset("。｡！？!?‼⁉⁇⁈"),
             ellipses=frozenset("…‥"),
-            openers=frozenset("「｢『（〔［｛〈《【([{｟〝"),
-            closers=frozenset("」｣』）〕］｝〉》】)]}｠〟"),
+            # Curly quotes are the mainland quotation pair; corner brackets the
+            # Taiwan/Hong Kong one. Both have to close with their sentence.
+            openers=frozenset("「｢『（〔［｛〈《【([{｟〝“‘"),
+            closers=frozenset("」｣』）〕］｝〉》】)]}｠〟”’"),
             space_aware=False,
         ),
         normalize=normalize_zh,
@@ -118,7 +120,10 @@ def build_profile() -> LanguageProfile:
         asr_language="zh",
         captions=CaptionLangs(
             primary="zh-Hans",
-            codes=("zh-Hans", "zh-Hant", "zh"),
+            # Script tags first, then the regional tags uploaders use for the
+            # same script, then the bare code. zh-HK is deliberately absent: it
+            # is as often Cantonese as it is Mandarin, and belongs to yue.
+            codes=("zh-Hans", "zh-CN", "zh-Hant", "zh-TW", "zh"),
             orig_codes=("zh-Hans-orig", "zh-Hant-orig"),
             audio_pattern="^zh(-|$)",
             bare_fallback=True,

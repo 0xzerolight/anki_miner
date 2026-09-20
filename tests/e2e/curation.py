@@ -102,12 +102,12 @@ def _make_fake_results_dialog() -> type:
     return _FakeResultsDialog
 
 
-def _fake_run_setup_wizard(parent: Any, config: Any) -> Any:
+def _fake_run_setup_wizard(parent: Any, config: Any, **kwargs: Any) -> Any:
     """No-op stand-in for ``run_setup_wizard`` that auto-skips the first-run flow.
 
     ``MainWindow._maybe_offer_first_run_setup`` calls ``run_setup_wizard(self,
-    config)`` and folds its outcome into the config. This returns an explicit
-    zero-touch Skip (no Qt modal, no AnkiConnect, no network).
+    config, ...)`` and folds its outcome into the config. This returns an
+    explicit zero-touch Skip (no Qt modal, no AnkiConnect, no network).
     """
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
 

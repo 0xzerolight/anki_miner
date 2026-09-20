@@ -6920,7 +6920,7 @@ class TestCurationLineExpansion:
             (3.5, 5.5, "行きました。"),
         ]
         mock_services["word_filter"].expand_word_lines.side_effect = lambda w, e: w
-        config = replace(test_config, merge_incomplete_cues=True)
+        config = replace(test_config, merge_incomplete_cues=True, deduplicate_sentences=True)
         proc = build_processor(config=config, presenter=NullPresenter(), **mock_services)
 
         proc.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")

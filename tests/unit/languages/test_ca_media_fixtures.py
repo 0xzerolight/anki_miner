@@ -68,7 +68,7 @@ def test_the_profile_codes_pick_the_catalan_track(tmp_path):
         ({"automatic_captions": {"ca": [{}], "es-orig": [{}]}}, False),  # machine-translated from Spanish
         ({"automatic_captions": {"ca": [{}]}, "language": "ca"}, True),  # no -orig key: the language decides
         ({"automatic_captions": {"ca": [{}]}, "language": "es"}, False),
-        ({"automatic_captions": {"ca-ES": [{}], "ca-orig": [{}]}}, False),  # ca-ES is never probed as primary
+        ({"automatic_captions": {"ca-ES": [{}], "ca-orig": [{}]}}, True),  # ca-ES is a listed code
         ({"automatic_captions": {"ja": [{}], "ja-orig": [{}]}}, False),
     ],
 )

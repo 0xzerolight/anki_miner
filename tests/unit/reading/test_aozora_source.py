@@ -9,8 +9,9 @@ from unittest.mock import MagicMock
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.languages.registry import get_profile
 from anki_miner.models.reading import ReadingSourceRef
-from anki_miner.services.reading import aozora_source
+from anki_miner.services.reading import aozora_source, detector
 from anki_miner.services.reading.aozora_source import (
     _decode,
     _extract_header,
@@ -378,3 +379,48 @@ def test_explicit_latin_base_ruby_detected_as_aozora(tmp_path):
     doc = load(_ref(p, title="latin-ruby"))
     assert doc.title == "題名"
     assert [u.text for u in doc.units] == ["JavaScriptを学ぶ。"]
+
+
+# --- a Chinese 《书名》 is a work title, never attached ruby -----------------
+
+_ZH_LINES = (
+    "他昨天读了《红楼梦》，觉得很有意思。",
+    "我也想看《西游记》。",
+    "下周去买《水浒传》。",
+)
+
+
+def _zh_doc(tmp_path, text, name):
+    """Load *text* the way Reading → Novels loads a Chinese novel."""
+    p = _write(tmp_path, text, "utf-8", name=name)
+    profile = get_profile("zh")
+    (ref,) = detector.detect(p)
+    return detector.load(
+        ref,
+        encodings=profile.import_encodings,
+        rules=profile.sentence_rules,
+    )
+
+
+def test_chinese_titles_not_aozora_one_paragraph_per_line(tmp_path):
+    # 了《红楼梦》 is a CJK character before 《 but the span holds a work title,
+    # not a kana reading. Taking it for ruby made this layout — no blank line
+    # anywhere — one long "header", and the file mined nothing at all.
+    doc = _zh_doc(tmp_path, "\n".join(_ZH_LINES), "zh-novel.txt")
+    assert doc.title == "zh-novel"  # provisional ref title, no header extraction
+    assert [u.text for u in doc.units] == list(_ZH_LINES)
+
+
+def test_chinese_titles_not_aozora_blank_separated(tmp_path):
+    doc = _zh_doc(tmp_path, "\n\n".join(_ZH_LINES), "zh-spaced.txt")
+    assert doc.title == "zh-spaced"
+    assert [u.text for u in doc.units] == list(_ZH_LINES)
+
+
+def test_chinese_fullwidth_bar_before_a_title_is_not_aozora(tmp_path):
+    # ｜ separates a chapter label here; the 《…》 after it is still a work
+    # title, so the ｜-base-marker branch needs the same kana reading.
+    lines = ("第一章｜他读了《红楼梦》。", "然后就睡了。")
+    doc = _zh_doc(tmp_path, "\n".join(lines), "zh-bar.txt")
+    assert doc.title == "zh-bar"
+    assert [u.text for u in doc.units] == list(lines)

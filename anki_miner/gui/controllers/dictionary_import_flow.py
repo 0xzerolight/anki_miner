@@ -32,7 +32,7 @@ from anki_miner.gui.utils.dialog_paths import resolve_start_dir
 from anki_miner.gui.widgets.panels import DictionarySettingsPanel
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import MutationToken
 from anki_miner.gui.workers.import_worker import ImportWorker
-from anki_miner.languages.registry import config_language
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services._sqlite_index import (
     language_kwarg,
     prove_owned_slot,
@@ -46,14 +46,10 @@ from anki_miner.services.dictionary.importers.yomitan_importer import (
 from anki_miner.services.dictionary.registry import DictionaryRegistry, DictMeta
 from anki_miner.services.dictionary.storage import read_meta
 from anki_miner.services.dictionary.superseded import strip_date_bracket
-from anki_miner.services.resource_catalog import CATALOG_DICT_SLOT_IDS, LEGACY_DICT_SLOT_IDS
+from anki_miner.services.resource_catalog import LEGACY_DICT_SLOT_IDS
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
-
-# Slots whose on-disk id is pinned (stable, not title-derived): current catalog
-# dicts plus former catalog dicts existing users still have installed.
-_PINNED_DICT_SLOT_IDS = CATALOG_DICT_SLOT_IDS | LEGACY_DICT_SLOT_IDS
 
 
 class DictionaryImportFlow(ModalImportFlowMixin):
@@ -342,6 +338,17 @@ class DictionaryImportFlow(ModalImportFlowMixin):
         cur_base, cur_had = strip_date_bracket(existing_name)
         return zip_had and cur_had and zip_base == cur_base
 
+    def _pinned_dict_slot_ids(self) -> frozenset[str]:
+        """Slots whose on-disk id is pinned (stable, not title-derived).
+
+        The dictionary chain is language-scoped, so the slots a re-import can
+        pin are the active profile's catalog dicts — a Chinese session has to
+        reach ``cc-cedict`` exactly as a Japanese one reaches ``jmdict-english``
+        — plus the former catalog dicts existing users still have installed.
+        """
+        catalog = get_profile(config_language(self._get_config())).catalog
+        return frozenset(spec.id for spec in catalog if spec.kind == "dict") | LEGACY_DICT_SLOT_IDS
+
     def _saved_yomitan_source_matches(self, slot_id: str, zip_path: Path) -> bool:
         """Return whether a saved Yomitan zip is safe to pin to ``slot_id``."""
         try:
@@ -354,7 +361,7 @@ class DictionaryImportFlow(ModalImportFlowMixin):
             )
             return False
         return derived_id == slot_id or (
-            slot_id in _PINNED_DICT_SLOT_IDS and self._catalog_slot_base_matches(slot_id, zip_path)
+            slot_id in self._pinned_dict_slot_ids() and self._catalog_slot_base_matches(slot_id, zip_path)
         )
 
     def reimport_dict(

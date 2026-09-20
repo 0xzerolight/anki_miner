@@ -171,6 +171,7 @@ def load(
     rules: SentenceRules | None = None,
     script_check: Callable[[str], bool] | None = None,
     normalize: Callable[[str], str] | None = None,
+    has_target_script: Callable[[str], bool] | None = None,
 ) -> ReadingDocument:
     """Dispatch a ref to its source loader and return the loaded document.
 
@@ -190,8 +191,9 @@ def load(
     other way round: it splits nothing, so it takes the ladder but not the
     rules.
 
-    ``normalize`` reaches the subtitle loader only — the other kinds are
-    normalised per unit by the parser.
+    ``normalize`` and ``has_target_script`` reach the subtitle loader only —
+    the other kinds are normalised per unit by the parser, and a cue is the one
+    unit that can carry two languages on two physical lines.
 
     Each optional argument is built as its own fragment and omitted when
     ``None``, so a call that supplies none is the pre-transition
@@ -222,6 +224,8 @@ def load(
         from . import subtitle_source
 
         cleaning: dict[str, Any] = {} if normalize is None else {"normalize": normalize}
+        if has_target_script is not None:
+            cleaning["has_target_script"] = has_target_script
         return subtitle_source.load(ref, **common, **sniffing, **cleaning)
     if ref.kind == "text":
         from . import text_source

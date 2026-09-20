@@ -133,6 +133,10 @@ def build_profile() -> LanguageProfile:
             # zh-Hant-HK was observed on none of the four probed videos and is
             # kept as a documented-inert code.
             codes=("yue", "zh-HK", "zh-Hant-HK", "zh-Hant"),
+            # Only "yue" identifies Cantonese. The rest are fetch fallbacks, so
+            # they stay out of the probe's gates: a Mandarin video subtitled in
+            # zh-Hant is written Chinese, not a Cantonese video.
+            own_codes=("yue",),
             orig_codes=("yue-orig",),
             audio_pattern="^(yue|zh-HK)(-|$)",
             bare_fallback=True,

@@ -63,8 +63,8 @@ def test_the_profile_codes_pick_the_english_track(tmp_path):
         ({"en": [{}]}, "de", False),
         # Another language's -orig names a non-English original: the bare en track is a translation.
         ({"en": [{}], "de-orig": [{}]}, "", False),
-        # The bare primary track is required; a regional track alone is not mined.
-        ({"en-GB": [{}], "en-orig": [{}]}, "", False),
+        # A regional track alone is mined: every code the profile lists is probed.
+        ({"en-GB": [{}], "en-orig": [{}]}, "", True),
         ({"ja": [{}], "ja-orig": [{}]}, "", False),
     ],
 )

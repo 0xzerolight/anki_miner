@@ -492,3 +492,43 @@ class TestEngineSkipLogging:
         assert "engine=alass" in line
         assert "reason=not_found" in line
         assert "alass binary not found" in line
+
+
+class TestMiningLanguageEncoding:
+    """The retimed file the user keeps is decoded with the mining language's ladder."""
+
+    _SIMPLIFIED = [
+        "这是一个测试字幕",
+        "我们明天再见面吧",
+        "他说的话很有道理",
+        "请把门关上好吗",
+        "今天的天气真不错",
+        "你吃过午饭了没有",
+        "这本书我看了三遍",
+        "她走得非常快",
+        "小心路上的车辆",
+        "谢谢你的帮助",
+        "我不太明白你的意思",
+        "明天早上八点出发",
+    ]
+
+    def _write(self, path: Path, lines: list[str], encoding: str) -> Path:
+        subs = pysubs2.SSAFile()
+        for i, text in enumerate(lines):
+            start = 2000 + i * 3000
+            subs.events.append(pysubs2.SSAEvent(start=start, end=start + 1000, text=text))
+        subs.save(str(path), encoding=encoding)
+        return path
+
+    def test_gb18030_input_is_committed_as_chinese(self, video, tmp_path):
+        cfg = MagicMock()
+        cfg.language = "zh"
+        in_sub = self._write(tmp_path / "zh01.srt", self._SIMPLIFIED, "gb18030")
+        out_sub = tmp_path / "zh01_retimed.srt"
+
+        with patch(_FFS, side_effect=_fake_engine(1500, engine="ffsubsync")), patch(_ALASS):
+            assert retime_subtitle(cfg, video, in_sub, out_sub)
+
+        committed = pysubs2.load(str(out_sub))
+        assert [event.text for event in committed] == self._SIMPLIFIED
+        assert _cue_starts(out_sub) == [2000 + i * 3000 + 1500 for i in range(len(self._SIMPLIFIED))]

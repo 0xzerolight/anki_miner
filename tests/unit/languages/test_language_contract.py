@@ -263,6 +263,7 @@ def test_profile_shape_is_complete(code):
     assert profile.audio_track_codes and profile.import_encodings
     assert profile.asr_language and profile.captions.primary
     assert profile.captions.primary in profile.captions.codes
+    assert set(profile.captions.own_codes) <= set(profile.captions.codes)
     assert {spec.kind for spec in profile.catalog} <= RESOURCE_KINDS
     assert len({spec.id for spec in profile.catalog}) == len(profile.catalog)
 

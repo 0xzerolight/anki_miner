@@ -161,12 +161,13 @@ class TestThemePage:
         first_id = wiz.pageIds()[0]
         assert wiz.page(first_id) is wiz.theme_page
 
-    def test_wizard_now_has_six_pages(self, qtbot):
+    @pytest.mark.parametrize(("offer_language", "expected"), [(False, 6), (True, 7)])
+    def test_wizard_page_count_follows_the_language_offer(self, qtbot, offer_language, expected):
         from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
-        wiz = SetupWizard(AnkiMinerConfig())
+        wiz = SetupWizard(AnkiMinerConfig(), offer_mining_language=offer_language)
         qtbot.addWidget(wiz)
-        assert len(wiz.pageIds()) == 6
+        assert len(wiz.pageIds()) == expected
 
     def test_theme_page_never_blocks_next(self, qtbot):
         from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
@@ -270,12 +271,13 @@ def test_wizard_has_skip_setup_button_wired_to_reject(qtbot, wiz_config):
     assert btn.text() == "Skip Setup"
 
 
-def test_wizard_adds_six_pages(qtbot, wiz_config):
+@pytest.mark.parametrize(("offer_language", "expected"), [(False, 6), (True, 7)])
+def test_wizard_adds_the_pages_its_caller_asked_for(qtbot, wiz_config, offer_language, expected):
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
 
-    wiz = SetupWizard(wiz_config)
+    wiz = SetupWizard(wiz_config, offer_mining_language=offer_language)
     qtbot.addWidget(wiz)
-    assert len(wiz.pageIds()) == 6
+    assert len(wiz.pageIds()) == expected
 
 
 def test_wizard_done_defers_close_without_blocking_for_stubborn_worker(qtbot, wiz_config):
@@ -1180,6 +1182,52 @@ def test_auto_map_uses_sanitized_base_and_preserves_valid_manual_fields(qtbot, w
     assert result.card_type_marker_fields["sentence"] == "InactiveMarker"
 
 
+def _auto_map(qtbot, config, field_names):
+    """Run Auto-Map on a note type with ``field_names`` and return (config, page)."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+
+    wiz = SetupWizard(replace(config, anki_note_type="Mining"))
+    qtbot.addWidget(wiz)
+    page = wiz.notetype_page
+    wiz.validation_service = MagicMock(  # type: ignore[method-assign]
+        return_value=MagicMock(check_field_names=lambda: (True, ""))
+    )
+    page.notetype_combo.setCurrentText("Mining")
+    page._on_fields_fetched("Mining", field_names)
+    page._on_auto_map_clicked()
+    qtbot.waitUntil(lambda: page.warning_label.text() == "", timeout=3000)
+    assert page._warn_worker.wait(3000)
+    return wiz.working_config(), page
+
+
+_ZH_NOTE_TYPE = ["Hanzi", "Pinyin", "MeasureWord", "Traditional", "Meaning", "Sentence"]
+
+
+def test_auto_map_fills_the_chosen_languages_own_card_fields(qtbot, wiz_config):
+    """A learner who never opens Settings still leaves with the zh rows mapped."""
+    from anki_miner.languages.switching import switch_language  # noqa: PLC0415
+
+    config, page = _auto_map(qtbot, switch_language(wiz_config, "zh"), _ZH_NOTE_TYPE)
+
+    fields = config.anki_fields
+    assert fields["word"] == "Hanzi"
+    assert fields["expression_pinyin"] == "Pinyin"
+    assert fields["measure_word"] == "MeasureWord"
+    assert fields["expression_traditional"] == "Traditional"
+    assert "Mapped 6 fields" in page.mapping_summary.text()
+
+
+def test_auto_map_never_seeds_another_languages_keys(qtbot, wiz_config):
+    """The same note type under Japanese: the zh keys stay off the mapping."""
+    config, page = _auto_map(qtbot, wiz_config, _ZH_NOTE_TYPE)
+
+    fields = config.anki_fields
+    assert fields["word"] == "Hanzi"
+    for key in ("expression_pinyin", "measure_word", "expression_traditional"):
+        assert not fields.get(key, "")
+    assert "Mapped 3 fields" in page.mapping_summary.text()
+
+
 def test_notetype_page_unsuitable_fieldlist_shows_guidance(qtbot, wiz_config):
     """A field list missing a word+sentence shape triggers the import-note-type guidance."""
     from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
@@ -1326,6 +1374,54 @@ def test_resources_page_activator_reads_the_live_working_config(qtbot, wiz_confi
     assert seen[0].anki_note_type == "Edited mid-download"
     assert returned is not None
     assert wiz.working_config().anki_deck_name == "Applied"
+
+
+def test_resources_page_activator_stands_down_once_the_wizard_walks_away(qtbot, wiz_config):
+    """A download landing after Escape must not fold zh's slots into ja's chains.
+
+    ``done`` reverts the language before it cancels the workers, so the config
+    the summary would be applied to is the one the user never left.
+    """
+    from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+
+    wiz = SetupWizard(wiz_config, offer_mining_language=True)
+    qtbot.addWidget(wiz)
+    assert wiz.language_page is not None
+    wiz.language_page.language_combo.setCurrentIndex(wiz.language_page.language_combo.findData("zh"))
+    wiz.done(QDialog.DialogCode.Rejected.value)
+    reverted = wiz.working_config()
+    summary = ResourceDownloadSummary(
+        results=[ResourceDownloadResult("dict", "dict", "Dictionary", "u", True, "10 entries", dict_id="dict")]
+    )
+
+    assert wiz.resources_page._activate_resources(summary) is None
+    assert wiz.working_config() == reverted
+
+
+def test_resources_page_activator_still_applies_on_an_accepted_close(qtbot, wiz_config):
+    """Finish keeps what it confirmed, so a late arrival still belongs to it."""
+    from PyQt6.QtWidgets import QDialog  # noqa: PLC0415
+
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.workers.resource_download_worker import (  # noqa: PLC0415
+        ResourceDownloadResult,
+        ResourceDownloadSummary,
+    )
+
+    wiz = SetupWizard(wiz_config)
+    qtbot.addWidget(wiz)
+    wiz.done(QDialog.DialogCode.Accepted.value)
+    summary = ResourceDownloadSummary(
+        results=[ResourceDownloadResult("dict", "dict", "Dictionary", "u", True, "10 entries", dict_id="dict")]
+    )
+
+    assert wiz.resources_page._activate_resources(summary) is not None
 
 
 def test_resources_page_activator_ignores_a_summary_with_no_successes(qtbot, wiz_config):
@@ -1869,16 +1965,23 @@ def test_return_in_a_text_field_does_not_advance_the_wizard(qtbot, wiz_config, m
     wiz = _wizard_with_validation(qtbot, monkeypatch, wiz_config, _FakeValidation())
     wiz.show()
     qtbot.waitExposed(wiz)
-    # The theme page is first and never blocks Next; move to the page whose
-    # field is under test so it is actually the visible/focusable one.
-    wiz.next()
+    # Advance to the page whose field is under test, however many steps come
+    # before it, so the field is actually the visible/focusable one: a Return
+    # landing on an off-page field proves nothing.
+    while wiz.currentPage() is not wiz.ankiconnect_page:
+        before = wiz.currentId()
+        wiz.next()
+        assert wiz.currentId() != before, "the wizard stopped short of the AnkiConnect page"
     page_id = wiz.currentId()
     field = wiz.ankiconnect_page.url_input
+    assert field.isVisible() is True
     field.setFocus()
 
     qtbot.keyClick(field, Qt.Key.Key_Return)
 
     assert wiz.currentId() == page_id
+    # That page owns an off-thread probe; let it land before teardown.
+    qtbot.waitUntil(lambda: not wiz.ankiconnect_page.result_label.text().startswith("Checking"), timeout=5000)
 
 
 def test_ctrl_return_resolves_to_the_live_navigation_button(qtbot, wiz_config, monkeypatch):

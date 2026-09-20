@@ -199,14 +199,18 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
         """
         ladder = reading_decode_ladder(self._config)
         profile = get_profile(self._config.language)
-        # The loader cleans cues with the SAME normaliser the run's parser applies
-        # to every unit, so the two can never disagree (None = the Japanese pair).
+        # The loader cleans cues with the SAME normaliser and bilingual-cue gate
+        # the run's parser applies to every unit, so the two can never disagree
+        # (None = the Japanese pair / every line kept).
         parser = getattr(self._processor, "subtitle_parser", None)
         normalize = getattr(parser, "normalize", None)
+        has_target_script = getattr(parser, "has_target_script", None)
         # One bundle: omitted keywords keep detector.load's pre-seam call shape.
         loader_kwargs: dict[str, Any] = {**script_check_kwarg(ladder, profile.script)}
         if normalize is not None:
             loader_kwargs["normalize"] = normalize
+        if has_target_script is not None:
+            loader_kwargs["has_target_script"] = has_target_script
         document = detector.load(
             item.source,
             cancel_check=self.check_cancelled,

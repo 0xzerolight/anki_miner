@@ -86,6 +86,7 @@ class TestThePrewarmRestartGuard:
         window, _titles, _tabs = wired_window
         from anki_miner.gui.workers import prewarm_worker as prewarm_module
 
+        window._prewarm_started = True
         busy = _BusyWorker(None)
         window.background_tasks.prewarm_worker = busy
         monkeypatch.setattr(prewarm_module, "PrewarmWorker", _IdleWorker)
@@ -99,6 +100,7 @@ class TestThePrewarmRestartGuard:
         window, _titles, _tabs = wired_window
         from anki_miner.gui.workers import prewarm_worker as prewarm_module
 
+        window._prewarm_started = True
         window.background_tasks.prewarm_worker = None
         monkeypatch.setattr(prewarm_module, "PrewarmWorker", _IdleWorker)
 
@@ -114,6 +116,7 @@ class TestThePrewarmRestartGuard:
         window, _titles, _tabs = wired_window
         from anki_miner.gui.workers import prewarm_worker as prewarm_module
 
+        window._prewarm_started = True
         stale = _IdleWorker(None)
         window.background_tasks.prewarm_worker = stale
         monkeypatch.setattr(prewarm_module, "PrewarmWorker", _IdleWorker)
@@ -121,6 +124,22 @@ class TestThePrewarmRestartGuard:
         window.restart_prewarm()
 
         assert window.background_tasks.prewarm_worker is not stale
+
+    def test_a_switch_before_boot_warmed_anything_starts_nothing(self, wired_window, monkeypatch):
+        """Boot has not warmed the outgoing language yet, and its own prewarm
+        reads the config the switch already wrote - so restarting here would
+        only add a second worker beside the one boot is about to start."""
+        window, _titles, _tabs = wired_window
+        from anki_miner.gui.workers import prewarm_worker as prewarm_module
+
+        window._prewarm_started = False
+        window.background_tasks.prewarm_worker = None
+        monkeypatch.setattr(prewarm_module, "PrewarmWorker", _IdleWorker)
+
+        window.restart_prewarm()
+
+        assert window.background_tasks.prewarm_worker is None
+        assert window._prewarm_started is False
 
 
 class TestSyncRepointsTheRealSurfaces:

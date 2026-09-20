@@ -101,7 +101,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         subtitle_regex_filter=r"\([^)]*\)",
         subtitle_regex_replacement="",
         use_subtitle_regex_filter=True,
-        deduplicate_sentences=False,
+        deduplicate_sentences=True,  # default is False
         strict_card_order=True,
         exclude_hiragana_only_words=True,
         exclude_katakana_only_words=True,

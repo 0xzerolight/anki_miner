@@ -154,6 +154,32 @@ def test_switching_back_to_ja_drops_the_key_again(qtbot, test_config, code, key,
     assert key not in panel.get_card_fields()
 
 
+@pytest.mark.parametrize(
+    "code,key,field_name",
+    [("ko", "hanja", "Hanja"), ("yue", "expression_jyutping", "Jyutping"), ("vi", "hanviet", "HanViet")],
+)
+def test_auto_map_fills_a_visible_row_from_its_own_placeholder(qtbot, test_config, code, key, field_name):
+    """The rows are keyed off their spec, so every language gets the same pass."""
+    panel = _anki(qtbot, _lang(config=test_config, code=code))
+    panel.populate_from_field_list(["Expression", "Sentence", field_name])
+
+    assert panel.get_card_fields()[key] == field_name
+
+
+def test_auto_map_leaves_a_field_name_another_key_already_took(qtbot, test_config):
+    """th spells its hook field "Reading", which is expression_reading's name too.
+
+    One Anki field cannot carry two logical keys — the second write would
+    silently decide which of them reaches the card.
+    """
+    panel = _anki(qtbot, _lang(config=test_config, code="th"))
+    panel.populate_from_field_list(["Expression", "Sentence", "Reading"])
+
+    fields = panel.get_card_fields()
+    assert fields["expression_reading"] == "Reading"
+    assert fields["reading_paiboon"] == ""
+
+
 def test_every_hook_field_key_has_a_row(qtbot, test_config):
     """The regression that made this file: a hook key with no row is inert.
 

@@ -210,11 +210,17 @@ class AudioDefaults:
 class CaptionLangs:
     """yt-dlp caption + audio-track parameters (services/youtube_fetcher.py).
 
-    ``primary`` is the single code probed in ``subs``/``automatic_captions``
-    (:169, :393) and used as the --sub-lang value; ``orig_codes`` are the ASR-
-    native marker keys (:396); ``codes`` is the full ordered request list;
-    ``audio_pattern`` is the format-selector regex body (:577, :410);
-    ``bare_fallback`` allows accepting the bare code when no -orig exists.
+    ``codes`` is the full ordered request list: the joined --sub-lang value and
+    the preference order a fetch's output files are resolved by. ``own_codes``
+    is the subset naming the language's *own* track — what the probe's manual
+    and native-auto gates read — and empty means every entry in ``codes`` does.
+    Only a profile that lists another language's codes as a fetch fallback (yue
+    falls back to written Chinese) has to narrow it, or a video subtitled in
+    that other language would be taken for one in this one. ``primary`` is one
+    of ``codes`` and the one the auto-dub relaxation keys on; ``orig_codes``
+    are the ASR-native marker keys; ``audio_pattern`` is the format-selector
+    regex body; ``bare_fallback`` allows accepting the bare code when no -orig
+    exists.
     """
 
     primary: str
@@ -222,6 +228,12 @@ class CaptionLangs:
     orig_codes: tuple[str, ...]
     audio_pattern: str
     bare_fallback: bool = False
+    own_codes: tuple[str, ...] = ()
+
+    @property
+    def accepted_codes(self) -> tuple[str, ...]:
+        """The codes whose presence proves the video carries this language."""
+        return self.own_codes or self.codes
 
 
 @dataclass(frozen=True)

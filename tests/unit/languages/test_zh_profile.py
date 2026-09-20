@@ -36,11 +36,27 @@ def test_zh_profile_identity_and_capabilities():
     assert profile.audio_track_codes == frozenset({"chi", "zho", "zh", "chinese", "cmn"})
     assert profile.import_encodings == ("utf-8-sig", "gb18030", "big5")
     assert profile.captions.primary == "zh-Hans"
+    assert profile.captions.codes == ("zh-Hans", "zh-CN", "zh-Hant", "zh-TW", "zh")
     assert profile.captions.orig_codes == ("zh-Hans-orig", "zh-Hant-orig")
     assert profile.captions.audio_pattern == "^zh(-|$)"
     assert profile.captions.bare_fallback is True
     assert profile.sentence_rules.space_aware is False
     assert "。" in profile.sentence_rules.terminators
+
+
+def test_curly_quotes_close_with_their_sentence():
+    from anki_miner.services.cue_merge import ends_sentence
+    from anki_miner.services.reading.sentence_splitter import split_sentences
+
+    rules = get_profile("zh").sentence_rules
+    assert split_sentences("“我不去。”他说。“你去吧。”", rules=rules) == ["“我不去。”他说。", "“你去吧。”"]
+    # The mainland pair splits exactly where the corner brackets always have.
+    to_corner = str.maketrans("“”‘’", "「」『』")
+    to_curly = str.maketrans("「」『』", "“”‘’")
+    for text in ("李明说：“我明天要去北京。”然后他就走了。", "她说‘好。’他点头。"):
+        as_corner = split_sentences(text.translate(to_corner), rules=rules)
+        assert split_sentences(text, rules=rules) == [s.translate(to_curly) for s in as_corner]
+    assert ends_sentence("他说：“我不去。”", rules)
 
 
 def test_zh_audio_defaults_are_real_audio_source_entries():

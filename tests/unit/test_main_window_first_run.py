@@ -86,8 +86,9 @@ def test_tools_setup_wizard_handler_calls_run_setup_wizard(main_window, monkeypa
 
     captured = {}
 
-    def fake_run(parent, config):
+    def fake_run(parent, config, **kwargs):
         captured["config"] = config
+        captured["kwargs"] = kwargs
         return _wizard_outcome(
             replace(config, anki_deck_name="Wizard Deck", first_run_setup_done=False),
             consumes=True,
@@ -110,6 +111,34 @@ def test_tools_setup_wizard_handler_calls_run_setup_wizard(main_window, monkeypa
     assert applied["cfg"].anki_deck_name == "Wizard Deck"
     # The Tools re-run must NOT touch the first_run flag.
     assert applied["cfg"].first_run_setup_done == captured["config"].first_run_setup_done
+
+
+@pytest.mark.parametrize(
+    ("handler", "offers_language"),
+    [
+        pytest.param("_maybe_offer_first_run_setup", True, id="first-run"),
+        pytest.param("_run_setup_wizard_tool", False, id="tools"),
+    ],
+)
+def test_only_the_first_run_offer_asks_which_language_is_being_mined(
+    main_window, monkeypatch, handler, offers_language
+):
+    """By the time Tools can be reached, the Settings selector is a click away."""
+    captured = {}
+
+    def fake_run(parent, config, **kwargs):
+        captured.update(kwargs)
+        return _wizard_outcome(config, consumes=False)
+
+    monkeypatch.setattr("anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard", fake_run)
+    monkeypatch.setattr(type(main_window), "update_config", lambda self, cfg, **kw: None)
+    monkeypatch.setattr(main_window.background_tasks, "cancel_jmdict_migration", lambda: None)
+    main_window.config = replace(main_window.config, first_run_setup_done=False)
+    main_window._first_run_setup_handled = False
+
+    getattr(main_window, handler)()
+
+    assert captured.get("offer_mining_language", False) is offers_language
 
 
 @pytest.mark.parametrize(
@@ -175,6 +204,22 @@ def test_tools_resource_download_starts_in_the_background_without_a_modal(main_w
     assert captured["task_registry"] is main_window.task_registry
     assert captured["adopt_worker"] == main_window.background_tasks.adopt_resource_download_worker
     assert main_window._resource_download_session is not None
+
+
+@pytest.mark.parametrize("language", ["zh", "ja"])
+def test_tools_resource_download_offers_the_session_languages_catalog(main_window, monkeypatch, language):
+    """The Tools entry downloads what the mining language actually needs."""
+    from anki_miner.gui.widgets.dialogs import resource_download_dialog as dialog_mod
+    from anki_miner.languages.registry import get_profile
+
+    captured = {}
+    monkeypatch.setattr(dialog_mod, "start_resource_download", lambda *a, **kw: captured.update(kw) or MagicMock())
+    monkeypatch.setattr(main_window.background_tasks, "cancel_jmdict_migration", lambda: None)
+    main_window.config = replace(main_window.config, language=language)
+
+    main_window._download_recommended_resources()
+
+    assert list(captured["specs"]) == list(get_profile(language).catalog)
 
 
 def test_starting_the_download_takes_no_mutation_lease(main_window, monkeypatch, qtbot):
@@ -438,7 +483,7 @@ def test_first_run_outcome_persists_partial_config_and_consumption_flag(
 
     calls = {"run": 0}
 
-    def fake_run(parent, config):
+    def fake_run(parent, config, **kwargs):
         calls["run"] += 1
         return _wizard_outcome(replace(config, anki_note_type=f"Lapis-{action}"), consumes=consumes)
 
@@ -461,7 +506,7 @@ def test_first_run_outcome_persists_partial_config_and_consumption_flag(
 def test_first_run_exception_is_logged_without_consuming_offer(main_window, monkeypatch, caplog):
     from anki_miner.gui.utils.config_manager import GUIConfigManager
 
-    def boom(parent, config):
+    def boom(parent, config, **kwargs):
         raise RuntimeError("wizard exploded")
 
     monkeypatch.setattr(
@@ -490,7 +535,7 @@ def test_first_run_commit_merges_shortcut_flag_set_during_wizard(main_window, mo
     )
     GUIConfigManager.save_config(main_window.config)
 
-    def fake_run(parent, wizard_snapshot):
+    def fake_run(parent, wizard_snapshot, **kwargs):
         # Simulate the shortcut worker finishing inside QWizard.exec()'s nested
         # event loop. The outcome still carries the launch-time stale False.
         parent.update_config(replace(parent.config, first_run_shortcut_done=True))
@@ -516,7 +561,7 @@ def test_first_run_commit_merges_shortcut_flag_set_during_wizard(main_window, mo
 def test_first_run_reentrancy_guard_blocks_second_call(main_window, monkeypatch):
     calls = {"run": 0}
 
-    def fake_run(parent, config):
+    def fake_run(parent, config, **kwargs):
         calls["run"] += 1
         return _wizard_outcome(config, consumes=False)
 
@@ -550,7 +595,7 @@ def test_first_run_offer_triggers_regardless_of_resource_files(main_window, monk
     calls = {"run": 0}
     monkeypatch.setattr(
         "anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard",
-        lambda parent, config: (
+        lambda parent, config, **kwargs: (
             calls.__setitem__("run", calls["run"] + 1),
             _wizard_outcome(config, consumes=False),
         )[1],
@@ -601,6 +646,119 @@ def test_accepted_finish_is_the_only_outcome_that_navigates(main_window, monkeyp
     assert len(committed) == 1
 
 
+# ---------------------------------------------------------------------------
+# A language the wizard changed owes what every durable change owes
+# ---------------------------------------------------------------------------
+
+
+def _record_language_ceremony(main_window, monkeypatch, order):
+    """Stub the durable-switch ceremony and the two steps it sits between."""
+    from anki_miner.gui.controllers import language_switch
+
+    calls: list[tuple] = []
+
+    def fake_commit(window, previous_config, *, flush, first_visit):
+        order.append("ceremony")
+        calls.append((window, previous_config, flush, first_visit))
+
+    monkeypatch.setattr(language_switch, "commit_language_change", fake_commit)
+    monkeypatch.setattr(type(main_window), "update_config", lambda self, cfg, **kw: order.append("commit"))
+    monkeypatch.setattr(type(main_window), "reveal_capability", lambda self, target: order.append("reveal"))
+    return calls
+
+
+def test_an_accepted_language_change_gets_the_durable_switch_ceremony(main_window, monkeypatch):
+    """Evict, prewarm and re-point the surfaces, then offer the deck checklist."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
+    from anki_miner.languages.switching import switch_language
+
+    order: list[str] = []
+    calls = _record_language_ceremony(main_window, monkeypatch, order)
+    before = main_window.config
+
+    main_window._commit_setup_wizard_outcome(
+        SetupWizardOutcome(
+            config=switch_language(before, "zh"),
+            consumes_first_run_offer=True,
+            open_video_mining=True,
+        ),
+        first_run_offer=True,
+    )
+
+    # The revealed screen must already be on the new language's surfaces.
+    assert order == ["commit", "ceremony", "reveal"]
+    assert calls == [(main_window, before, False, True)]
+
+
+def test_a_wizard_that_changed_no_language_runs_no_ceremony(main_window, monkeypatch):
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
+
+    order: list[str] = []
+    calls = _record_language_ceremony(main_window, monkeypatch, order)
+
+    main_window._commit_setup_wizard_outcome(
+        SetupWizardOutcome(
+            config=replace(main_window.config, anki_note_type="Lapis"),
+            consumes_first_run_offer=True,
+            open_video_mining=True,
+        ),
+        first_run_offer=True,
+    )
+
+    assert order == ["commit", "reveal"]
+    assert calls == []
+
+
+def test_the_first_run_ceremony_leaves_exactly_one_prewarm_worker(main_window, monkeypatch):
+    """The real ceremony, then the boot continuation that owns the one-shot.
+
+    Both warm the same already-committed config, so a worker from each would
+    leave the second replacing the first on the controller while it runs - and
+    a prewarm alive before the stale-resource prompt is exactly what
+    ``release_dictionary_resources`` refuses.
+    """
+    from anki_miner.gui.controllers import language_switch
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
+    from anki_miner.gui.workers import prewarm_worker as prewarm_module
+    from anki_miner.languages.switching import switch_language
+
+    monkeypatch.setattr(language_switch, "offer_first_visit_setup", lambda *a, **kw: None)
+    monkeypatch.setattr(type(main_window), "reveal_capability", lambda self, target: None)
+    adopted: list[object] = []
+    monkeypatch.setattr(prewarm_module, "PrewarmWorker", lambda config: MagicMock())
+    monkeypatch.setattr(main_window.background_tasks, "set_prewarm", adopted.append)
+    main_window._prewarm_started = False
+
+    main_window._commit_setup_wizard_outcome(
+        SetupWizardOutcome(
+            config=switch_language(main_window.config, "zh"),
+            consumes_first_run_offer=True,
+        ),
+        first_run_offer=True,
+    )
+    # What the stale-resource scan's continuation does once the offer is over.
+    main_window._start_prewarm()
+
+    assert len(adopted) == 1
+    assert main_window.get_config().language == "zh"
+
+
+def test_a_cancelled_wizard_runs_no_ceremony(main_window, monkeypatch):
+    """A walk-away hands back the language it was given, so nothing is owed."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizardOutcome
+
+    order: list[str] = []
+    calls = _record_language_ceremony(main_window, monkeypatch, order)
+
+    main_window._commit_setup_wizard_outcome(
+        SetupWizardOutcome(config=main_window.config, consumes_first_run_offer=False),
+        first_run_offer=True,
+    )
+
+    assert order == ["commit"]
+    assert calls == []
+
+
 def _record_optional_boot_jobs(main_window, monkeypatch):
     started: list[str] = []
     for name in ("_run_validation", "_check_for_updates", "_maybe_migrate_jmdict", "_maybe_start_ytdlp_update"):
@@ -624,7 +782,7 @@ def test_every_wizard_exit_releases_the_deferred_boot_work(main_window, monkeypa
     started = _record_optional_boot_jobs(main_window, monkeypatch)
     monkeypatch.setattr(
         "anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard",
-        lambda parent, config: _wizard_outcome(config, consumes=consumes),
+        lambda parent, config, **kwargs: _wizard_outcome(config, consumes=consumes),
     )
     monkeypatch.setattr(type(main_window), "update_config", lambda self, cfg, **kw: None)
     main_window.config = replace(main_window.config, first_run_setup_done=False)
@@ -639,7 +797,7 @@ def test_every_wizard_exit_releases_the_deferred_boot_work(main_window, monkeypa
 def test_a_wizard_that_raises_still_releases_the_deferred_boot_work(main_window, monkeypatch):
     started = _record_optional_boot_jobs(main_window, monkeypatch)
 
-    def boom(parent, config):
+    def boom(parent, config, **kwargs):
         raise RuntimeError("wizard exploded")
 
     monkeypatch.setattr("anki_miner.gui.widgets.dialogs.setup_wizard.run_setup_wizard", boom)
