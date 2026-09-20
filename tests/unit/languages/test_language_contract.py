@@ -60,6 +60,7 @@ PROBE = {
     # The ZWNJ is the named escape: this file carries no invisible character.
     "fa": "می\N{ZERO WIDTH NON-JOINER}روم",
     "sl": "knjige",
+    "uk": "читала",
 }
 
 #: Every capability name any profile is allowed to declare. A typo'd flag is a
