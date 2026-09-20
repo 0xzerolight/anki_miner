@@ -95,3 +95,25 @@ def spaced_dedup_fold(keys: CasefoldDictKeys, leading_words: frozenset[str] = fr
         return " ".join(tokens)
 
     return fold
+
+
+#: An attested-readings probe (``DefinitionService.offline_term_readings``): terms -> readings per term.
+ReadingProbe = Callable[[list[str]], dict[str, list[str]]]
+
+
+def folded_reading_lookup(lookup: ReadingProbe, fold: Fold) -> ReadingProbe:
+    """Ask *lookup* with folded keys and answer under the caller's own spellings (spec S24, ru plan D2).
+
+    ``IndexedDictProvider.terms_readings`` NFC-matches a query against terms the importer stored through
+    the profile's ``fold_term``; a card front the fold changes (a Russian yo spelling is stored with е)
+    would miss its reading. Each distinct key is asked once; spellings sharing a key share its answer.
+    """
+
+    def probe(terms: list[str]) -> dict[str, list[str]]:
+        spellings: dict[str, list[str]] = {}
+        for term in dict.fromkeys(terms):
+            spellings.setdefault(fold(term), []).append(term)
+        found = lookup(list(spellings))
+        return {term: found[key] for key, group in spellings.items() if key in found for term in group}
+
+    return probe
