@@ -1,10 +1,62 @@
-"""Persian card-front spelling (the profile's ``mined_form``).
+"""Persian POS tiers, their labels and the card-front spelling.
 
-The POS tiers and their labels land beside this in Task 9; the policy itself
-lives here because the tokenizer's tests pin it.
+The tag set is ``words.dat``'s own (probe P-2), not a universal one: the tokenizer
+hands a row's first tag straight to ``pos1``, so the gate and the labels speak the
+vocabulary the data file speaks. ``0`` -- the marker on 158,034 of its 193,350
+rows -- is not a part of speech; the loader turns it into an empty tuple and the
+ladder's attested rung answers ``unknown`` instead.
 """
 
 from __future__ import annotations
+
+from collections.abc import Mapping
+from types import MappingProxyType
+
+#: Content classes a learner mines, sorted (the settings POS editor shows them in
+#: order). Everything else ``words.dat`` carries is grammar scaffolding, a name
+#: class or a residue marker and is out BY CLASS: NUM, PRO, P, POSTP, CONJ, DET,
+#: INT, CL (classifiers), RES (residual/foreign), PL (a bare plural marker), AJC
+#: (comparative -- its positive is the card) and ZVR (verbal noun, which the verb
+#: table already answers as an infinitive).
+#:
+#: ``unknown`` is absent for a stronger reason than taste: it is the tier for the
+#: 158,034 untagged rows plus everything no table answered, and admitting it would
+#: put every attested string in Persian into a run.
+FA_ALLOWED_POS: tuple[str, ...] = ("ADV", "AJ", "N", "V")
+
+#: Subtypes dropped inside an allowed class -- the ``pos2`` gate. Stopword
+#: membership is asked of the surface AND the lemma, so dige is dropped exactly as
+#: digar is. ``informal`` is deliberately NOT here: a colloquial spelling is a real
+#: word a learner meets, and its register is a card field, not a reason to skip it.
+FA_EXCLUDED_SUBTYPES: tuple[str, ...] = ("stopword",)
+
+#: Human labels for the settings POS editor. Covers every ``words.dat`` tag, the
+#: three tiers the tokenizer synthesises and both subtypes, so the editor can name
+#: what it is dropping as well as what it keeps.
+FA_POS_LABELS: Mapping[str, str] = MappingProxyType(
+    {
+        "ADV": "Adverb",
+        "AJ": "Adjective",
+        "AJC": "Comparative adjective",
+        "CL": "Classifier",
+        "CONJ": "Conjunction",
+        "DET": "Determiner",
+        "INT": "Interjection",
+        "N": "Noun",
+        "NUM": "Number",
+        "P": "Preposition",
+        "PL": "Plural marker",
+        "POSTP": "Postposition",
+        "PRO": "Pronoun",
+        "PUNCT": "Punctuation",
+        "RES": "Residual",
+        "V": "Verb",
+        "ZVR": "Verbal noun",
+        "informal": "Colloquial form",
+        "stopword": "Stopword",
+        "unknown": "Unknown",
+    }
+)
 
 
 class PersianMinedForm:
