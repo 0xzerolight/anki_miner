@@ -19,21 +19,21 @@ from anki_miner.services.dictionary.storage import (
 )
 
 
-def _seed_dict(root: Path, dict_id: str, source_name: str):
+def _seed_dict(root: Path, dict_id: str, source_name: str, *, language: str | None = None):
     folder = root / dict_id
     folder.mkdir(parents=True, exist_ok=True)
     db = folder / "index.sqlite"
     create_index(db)
     bulk_insert(db, [DictRow(term="x", reading=None, content="<div>x</div>", sequence=1)])
-    write_meta(
-        db,
-        {
-            "schema_version": str(SCHEMA_VERSION),
-            "source_name": source_name,
-            "format": "yomitan",
-            "entry_count": "1",
-        },
-    )
+    meta = {
+        "schema_version": str(SCHEMA_VERSION),
+        "source_name": source_name,
+        "format": "yomitan",
+        "entry_count": "1",
+    }
+    if language is not None:
+        meta["language"] = language
+    write_meta(db, meta)
 
 
 class TestDictionaryRegistry:
@@ -458,6 +458,62 @@ class TestStaleEnabled:
         registry = DictionaryRegistry(tmp_path)
         registry.load()
         assert registry.stale_enabled(config) == []
+
+
+class TestUsableEnabledLanguage:
+    """``usable_enabled`` answers the question ``build_provider_chain`` answers.
+
+    A slot stamped for another mining language is dropped from the chain, so
+    counting it as usable reports a ready dictionary over an empty chain — the
+    wizard and System Health both read this method.
+    """
+
+    def test_ja_slot_is_not_usable_for_a_zh_config(self, tmp_path: Path):
+        _seed_dict(tmp_path, "ja-dict", "JA Dict", language="ja")
+        config = replace(
+            AnkiMinerConfig(),
+            language="zh",
+            dicts_root=tmp_path,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="ja-dict", enabled=True),),
+        )
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+        assert registry.usable_enabled(config) == []
+        assert registry.build_provider_chain(config) == []
+
+    def test_zh_slot_is_usable_for_a_zh_config(self, tmp_path: Path):
+        _seed_dict(tmp_path, "zh-dict", "ZH Dict", language="zh")
+        config = replace(
+            AnkiMinerConfig(),
+            language="zh",
+            dicts_root=tmp_path,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="zh-dict", enabled=True),),
+        )
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+        assert [m.dict_id for m in registry.usable_enabled(config)] == ["zh-dict"]
+
+    def test_zh_slot_is_not_usable_for_a_ja_config(self, tmp_path: Path):
+        _seed_dict(tmp_path, "zh-dict", "ZH Dict", language="zh")
+        config = replace(
+            AnkiMinerConfig(),
+            dicts_root=tmp_path,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="zh-dict", enabled=True),),
+        )
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+        assert registry.usable_enabled(config) == []
+
+    def test_unstamped_legacy_slot_stays_usable_for_ja(self, tmp_path: Path):
+        _seed_dict(tmp_path, "legacy", "Legacy")
+        config = replace(
+            AnkiMinerConfig(),
+            dicts_root=tmp_path,
+            dictionary_chain=(ChainEntry(kind="indexed", dict_id="legacy", enabled=True),),
+        )
+        registry = DictionaryRegistry(tmp_path)
+        registry.load()
+        assert [m.dict_id for m in registry.usable_enabled(config)] == ["legacy"]
 
 
 class TestStaleHelpers:
