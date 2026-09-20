@@ -6,7 +6,10 @@ import unicodedata
 
 import pytest
 
+from anki_miner.languages.registry import get_profile
+from anki_miner.languages.switching import switch_language
 from anki_miner.models import LineLemmas
+from anki_miner.models.reading import ReadingUnit
 from anki_miner.models.word import TokenizedWord
 from anki_miner.services.word_filter import (
     CUE_JOINER,
@@ -1492,6 +1495,92 @@ class TestAttachOccurrenceCounts:
         service.attach_occurrence_counts([word], collections.Counter(["食べる", "食べる"]))
 
         assert word.occurrence_count == 2
+
+    def test_a_language_without_a_fold_keys_on_the_raw_lemma(self, test_config):
+        """No ``dedup_fold`` (ja/ko): two spellings stay two keys, as before."""
+        service = WordFilterService(test_config)
+        word = create_word("頭髮")
+
+        service.attach_occurrence_counts([word], {"頭髮": 3, "头发": 1})
+
+        assert word.occurrence_count == 3
+
+
+class TestOccurrenceCountsFoldToWordIdentity:
+    """zh: counts key on the word's comparison fold, not on its raw lemma (S4).
+
+    The parser counts each spelling under the lemma it saw, while the script
+    fold makes 頭髮 and 头发 one word — so mixed-script material split that
+    word's occurrences across two keys and only one of them was ever read.
+    """
+
+    UNITS = ("她的頭髮很長。", "他的头发很短。", "頭髮還是頭髮。")
+
+    @classmethod
+    def _parse(cls, test_config, script_variant):
+        pytest.importorskip("jieba")
+        pytest.importorskip("opencc")
+        config = dataclasses.replace(switch_language(test_config, "zh"), script_variant=script_variant)
+        parser = get_profile("zh").create_parser(config)
+        units = [ReadingUnit(text=text, index=i, location_label=f"u{i}") for i, text in enumerate(cls.UNITS)]
+        words, _line_index, counts = parser.parse_text_units(units, False)
+        return config, words, counts
+
+    @staticmethod
+    def _service(config):
+        return WordFilterService(config, dedup_fold=get_profile("zh").dedup_fold)
+
+    @staticmethod
+    def _hair(words):
+        hair = [word for word in words if word.mined_form in ("头发", "頭髮")]
+        assert len(hair) == 1, [word.mined_form for word in words]
+        return hair[0]
+
+    @pytest.mark.parametrize("script_variant", ["simplified", "traditional"])
+    def test_a_mixed_script_word_counts_every_spelling(self, test_config, script_variant):
+        config, words, counts = self._parse(test_config, script_variant)
+
+        self._service(config).attach_occurrence_counts(words, counts)
+
+        assert self._hair(words).occurrence_count == 4
+
+    @pytest.mark.parametrize("script_variant", ["simplified", "traditional"])
+    def test_the_occurrence_floor_reads_the_same_key(self, test_config, script_variant):
+        config, words, counts = self._parse(test_config, script_variant)
+
+        kept = self._service(config).filter_by_episode_count(words, dict(counts), min_appearances=4)
+
+        assert any(word is self._hair(words) for word in kept)
+
+    def test_the_corpus_counter_itself_stays_unfolded(self, test_config):
+        """Deck Builder's candidate set and coverage % read these keys straight."""
+        _config, _words, counts = self._parse(test_config, "simplified")
+
+        assert counts["頭髮"] == 3
+        assert counts["头发"] == 1
+
+    @staticmethod
+    def _both_spellings(words):
+        hair = {word.mined_form: word for word in words if word.mined_form in ("头发", "頭髮")}
+        assert sorted(hair) == ["头发", "頭髮"], [word.mined_form for word in words]
+        return hair
+
+    def test_as_written_counts_each_card_on_its_own_spelling(self, test_config):
+        """Character Set = As written cards both spellings, so neither owns the pair's total."""
+        config, words, counts = self._parse(test_config, "")
+
+        self._service(config).attach_occurrence_counts(words, counts)
+
+        hair = self._both_spellings(words)
+        assert (hair["頭髮"].occurrence_count, hair["头发"].occurrence_count) == (3, 1)
+
+    def test_as_written_does_not_lift_both_cards_over_the_floor(self, test_config):
+        """Crediting each card with 4 would mine a duplicate the floor used to reject."""
+        config, words, counts = self._parse(test_config, "")
+
+        kept = self._service(config).filter_by_episode_count(words, dict(counts), min_appearances=2)
+
+        assert [word.mined_form for word in kept if word.mined_form in ("头发", "頭髮")] == ["頭髮"]
 
 
 class TestAttachLineUnknownCounts:

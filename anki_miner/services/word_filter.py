@@ -901,13 +901,52 @@ class WordFilterService:
                 lines = lines[:max_candidates]
             word.sentence_candidates = [self._swap_word_to_line(word, line) for line in lines]
 
+    def _counts_for_words(self, words: list[TokenizedWord], counts: Mapping[str, int]) -> Mapping[str, int]:
+        """Lemma→count mapping restated over the lemmas ``words`` were mined under.
+
+        The parser counts every occurrence under the lemma it saw, but a
+        spelling the fold merges away never becomes a word of its own: under the
+        zh script fold 頭髮 and 头发 are one word, so mixed-script material split
+        that word's occurrences across two keys and a lookup read only one of
+        them — the curator under-reported and the reading occurrence floor
+        dropped words that had cleared it.
+
+        A mined lemma therefore keeps its OWN count and collects only the counts
+        of spellings that fold onto it and that no other mined lemma claims.
+        Summing the fold outright would double the corpus wherever the run kept
+        both spellings as separate cards (Character Set = As written): each card
+        would report the pair's total, and two cards that occur three times and
+        once would both claim four.
+
+        Folding happens HERE and never at the count site
+        (``count_lemmas``/``parse_text_units``): ``corpus_aggregator.select``
+        derives the Deck Builder candidate set and its coverage % straight from
+        those Counter keys. A language with no fold (ja/ko) gets its own
+        mapping back untouched.
+        """
+        fold = self._dedup_fold
+        if fold is None:
+            return counts
+        mined = {word.lemma for word in words}
+        unclaimed: dict[str, int] = {}
+        for lemma, count in counts.items():
+            if lemma not in mined:
+                key = fold(lemma)
+                unclaimed[key] = unclaimed.get(key, 0) + count
+        if not unclaimed:
+            return counts
+        return {lemma: counts.get(lemma, 0) + unclaimed.get(fold(lemma), 0) for lemma in mined}
+
     def attach_occurrence_counts(self, words: list[TokenizedWord], counts: Mapping[str, int]) -> None:
         """Set ``word.occurrence_count`` from in-episode lemma counts (Issue #88).
 
         ``counts`` is a lemma→occurrences mapping (e.g. the Counter from
-        ``SubtitleParserService.count_lemmas``). Lemmas absent from the mapping
-        get 0. Mutates ``words`` in place; display/sort-only data for the curator.
+        ``SubtitleParserService.count_lemmas``), restated over the mined lemmas
+        first, so a word that merged two spellings gets the sum of both (see
+        :meth:`_counts_for_words`). Lemmas absent from the mapping get 0.
+        Mutates ``words`` in place; display/sort-only data for the curator.
         """
+        counts = self._counts_for_words(words, counts)
         for word in words:
             word.occurrence_count = counts.get(word.lemma, 0)
 
@@ -956,6 +995,10 @@ class WordFilterService:
         """Filter words by cross-episode appearance count.
 
         Only keeps words that appear in at least `min_appearances` episodes.
+        Counts are restated over the mined lemmas the same way
+        :meth:`attach_occurrence_counts` restates them for the curator's
+        Occurrences column — the floor must not drop a word the column says
+        cleared it.
 
         Args:
             words: List of words to filter.
@@ -968,4 +1011,5 @@ class WordFilterService:
         if min_appearances <= 1:
             return words
 
-        return [word for word in words if cross_episode_counts.get(word.lemma, 0) >= min_appearances]
+        counts = self._counts_for_words(words, cross_episode_counts)
+        return [word for word in words if counts.get(word.lemma, 0) >= min_appearances]
