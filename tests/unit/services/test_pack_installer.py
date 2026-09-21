@@ -208,6 +208,8 @@ class TestInstallComponents:
     def test_an_abi_sibling_that_resolved_is_not_reported_as_a_gap(self, tmp_path, downloader, caplog) -> None:
         """zh pins one opencc wheel per CPython; the three that miss are the design, not news."""
         here = sys.version_info[:2]
+        # Three ABIs other than the host's: a fixed (3, 11)-(3, 13) list repeats the host on those CPythons.
+        misses = [(3, minor) for minor in range(11, 15) if (3, minor) != here][:3]
         siblings = tuple(
             PackComponent(
                 import_name="xxopencc",
@@ -216,7 +218,7 @@ class TestInstallComponents:
                 universal=_PURE_SPEC,
                 abi=abi,
             )
-            for abi in ((3, 11), (3, 12), (3, 13), here)
+            for abi in (*misses, here)
         )
 
         with caplog.at_level(logging.INFO, logger="anki_miner.services.pack_installer"):
