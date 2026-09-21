@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pycantonese
 import pytest
 
 from anki_miner.languages.pack_spec import LanguagePack
@@ -17,7 +16,14 @@ PLATFORMS = (
     ("darwin", "arm64"),
     ("darwin", "x86_64"),
 )
-INSTALLED = Path(pycantonese.__file__).parent
+
+
+@pytest.fixture(scope="module")
+def installed() -> Path:
+    # Imported here, not at the top: CI's test-asr job collects this file without the yue extra.
+    import pycantonese
+
+    return Path(pycantonese.__file__).parent
 
 
 def test_the_pack_is_two_abi3_components_over_five_platforms():
@@ -65,7 +71,7 @@ def _linux_spec(index: int):
     return per_platform[("linux", "x86_64")]
 
 
-def test_the_excluded_subtrees_exist_and_are_what_they_claim():
+def test_the_excluded_subtrees_exist_and_are_what_they_claim(installed):
     excluded = _linux_spec(0).exclude
     assert excluded == (
         "data/ctcpc/",
@@ -75,16 +81,16 @@ def test_the_excluded_subtrees_exist_and_are_what_they_claim():
         "pos_tagging/train_tagger.py",
     )
     for member in excluded:
-        assert (INSTALLED / member.rstrip("/")).exists(), member
+        assert (installed / member.rstrip("/")).exists(), member
 
 
-def test_the_cc_by_licences_travel_inside_the_pack():
+def test_the_cc_by_licences_travel_inside_the_pack(installed):
     # GPL-3 CantoMap is excluded, so no licenses/ notice is owed; HKCanCor and
     # rime-cantonese are CC BY 4.0 and their notices stay in the pack dir.
     excluded = _linux_spec(0).exclude
     assert "data/cantomap/" in excluded  # GPL-3, never lands
     for member in ("data/hkcancor/LICENSE.txt", "data/rime_cantonese/LICENSE.txt"):
-        assert (INSTALLED / member).exists()
+        assert (installed / member).exists()
         assert not any(member.startswith(entry.rstrip("/")) for entry in excluded)
 
 

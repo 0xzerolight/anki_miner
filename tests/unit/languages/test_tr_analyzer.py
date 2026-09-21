@@ -14,7 +14,6 @@ from pathlib import Path
 
 import pytest
 
-from anki_miner.languages.tr.analyzer import TurkishAnalyzer
 from anki_miner.languages.tr.morphology import TrAnalysis
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -23,6 +22,9 @@ ZEYREK_LICENSE_SHA256 = "ee3498eecc1e397dcc1cb85a3958d64120d56a05cf33ef9604c79c9
 
 @pytest.fixture(scope="module")
 def analyzer():
+    # Imported here, not at the top: CI's test-asr job collects this file without the tr extra.
+    from anki_miner.languages.tr.analyzer import TurkishAnalyzer
+
     return TurkishAnalyzer()
 
 
