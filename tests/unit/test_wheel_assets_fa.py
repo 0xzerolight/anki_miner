@@ -17,7 +17,9 @@ compound-verb table and every Persian compound silently mines as two tokens.
 from __future__ import annotations
 
 import ast
+import importlib.util
 import tomllib
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -96,6 +98,39 @@ def test_the_persian_data_tables_are_named_in_the_wheel_gate(table):
     # not cover languages/fa/data.
     required = _literal("REQUIRED_ASSETS", ROOT / "scripts" / "check_wheel_assets.py")
     assert f"anki_miner/languages/fa/data/{table}" in required
+
+
+def _gate():
+    spec = importlib.util.spec_from_file_location("check_wheel_assets", ROOT / "scripts" / "check_wheel_assets.py")
+    assert spec is not None and spec.loader is not None
+    gate = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gate)
+    return gate
+
+
+def _run_gate(monkeypatch, tmp_path: Path, leave_out: str = "") -> int:
+    """Run the real gate over a wheel that ships every asset it asks for, minus ``leave_out``."""
+    gate = _gate()
+    names = gate.fs_assets() | set(gate.REQUIRED_ASSETS)
+    names |= {f"anki_miner-0.dist-info/licenses/{notice}" for notice in gate.REQUIRED_WHEEL_LICENSES}
+    with zipfile.ZipFile(tmp_path / "anki_miner-0-py3-none-any.whl", "w") as wheel:
+        for name in sorted(names - {leave_out}):
+            wheel.writestr(name, "")
+    monkeypatch.setattr(gate, "DIST_DIR", tmp_path)
+    return gate.main()
+
+
+def test_the_wheel_gate_passes_a_wheel_that_ships_the_tables(monkeypatch, tmp_path):
+    # The tables sit outside RESOURCE_DIRS, so the gate has to find them in the
+    # repository and the wheel itself, not in the resource-tree listings.
+    assert _run_gate(monkeypatch, tmp_path) == 0
+
+
+@pytest.mark.parametrize("table", ["compound_verbs.tsv", "colloquial.tsv"])
+def test_the_wheel_gate_fails_a_wheel_without_a_table(table, monkeypatch, tmp_path, capsys):
+    asset = f"anki_miner/languages/fa/data/{table}"
+    assert _run_gate(monkeypatch, tmp_path, leave_out=asset) == 1
+    assert f"required asset missing from anki_miner-0-py3-none-any.whl: {asset}" in capsys.readouterr().out
 
 
 def test_the_wheel_gate_pins_the_spec_entry_for_the_tables():
