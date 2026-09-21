@@ -334,6 +334,14 @@
         <translation>単語に含まれる韓国漢字を格納します。空欄 = スキップ。</translation>
     </message>
     <message>
+        <source>Hán Việt Field</source>
+        <translation>Hán Việt フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the Chinese characters a Sino-Vietnamese word comes from, read from the dictionary entry. Blank = skip.</source>
+        <translation>漢越語の由来となる漢字を辞書項目から読み取って格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
         <source>Part of Speech Field</source>
         <translation>品詞フィールド</translation>
     </message>
@@ -372,6 +380,106 @@
     <message>
         <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
         <translation>動詞のアスペクトを格納します。辞書に対になる動詞が示されている場合は、それも併記します。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Root Field</source>
+        <translation>語根フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the word's root, from the dictionary entry. Blank = skip.</source>
+        <translation>辞書項目から得られる単語の語根を格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Affixes Field</source>
+        <translation>接辞フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the prefixes and suffixes around the root, from the dictionary entry. Blank = skip.</source>
+        <translation>語根の前後に付く接頭辞と接尾辞を辞書項目から格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Formal Form Field</source>
+        <translation>正式形フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the standard spelling of a colloquial word. Blank = skip.</source>
+        <translation>口語的な単語の標準表記を格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Grammar Field</source>
+        <translation>文法フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the dictionary's grammar line: gender and plurals, or a verb's form and verbal noun. Blank = skip.</source>
+        <translation>辞書の文法欄（名詞の性と複数形、または動詞の活用型と動名詞）を格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Segmentation Field</source>
+        <translation>形態素分割フィールド</translation>
+    </message>
+    <message>
+        <source>Stores how the word you saw splits into prefixes, stem and suffixes. Blank = skip.</source>
+        <translation>テキストに現れた語が接頭辞・語幹・接尾辞にどう分かれるかを格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Reading Field</source>
+        <translation>読みフィールド</translation>
+    </message>
+    <message>
+        <source>Stores the Paiboon reading parsed from the dictionary entry. Blank = skip.</source>
+        <translation>辞書項目から解析した Paiboon 式の読みを格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Classifier Field</source>
+        <translation>類別詞フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the noun classifier stated by the dictionary entry. Blank = skip.</source>
+        <translation>辞書項目に示された名詞の類別詞を格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Romanization Field</source>
+        <translation>ローマ字表記フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the word's Latin spelling, from the dictionary entry. Blank = skip.</source>
+        <translation>辞書項目から得られる単語のラテン文字表記を格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Colloquial Form Field</source>
+        <translation>口語形フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the everyday spelling the line used, when the front is the standard one. Blank = skip.</source>
+        <translation>カードの表面が標準表記の場合に、その行で使われていた日常的な表記を格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Present Stem Field</source>
+        <translation>現在形語幹フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the stem a verb's present-tense forms are built on. Blank = skip.</source>
+        <translation>動詞の現在形の基になる語幹を格納します。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Jyutping Field</source>
+        <translation>Jyutping フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the jyutping reading, tone-coloured when that setting is on. Blank = skip.</source>
+        <translation>Jyutping の読みを格納します。声調による色分けが有効な場合は色付きになります。空欄 = スキップ。</translation>
+    </message>
+    <message>
+        <source>Transliteration Field</source>
+        <translation>翻字フィールド</translation>
+    </message>
+    <message>
+        <source>Binyan Field</source>
+        <translation>Binyan フィールド</translation>
+    </message>
+    <message>
+        <source>Stores the verb pattern the dictionary names, such as pa'al or hif'il. Blank = skip.</source>
+        <translation>pa'al や hif'il など、辞書が示す動詞型を格納します。空欄 = スキップ。</translation>
     </message>
     <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
@@ -530,8 +638,8 @@
         <translation>表現読みフィールド</translation>
     </message>
     <message>
-        <source>Stores the expression as plain kana.</source>
-        <translation>表現をかなのみで格納します。</translation>
+        <source>Stores the expression's plain reading.</source>
+        <translation>表現の読みをプレーンテキストで格納します。</translation>
     </message>
     <message>
         <source>Sentence Furigana Field</source>
@@ -542,8 +650,8 @@
         <translation>例文読みフィールド</translation>
     </message>
     <message>
-        <source>Stores the sentence as plain kana.</source>
-        <translation>例文をかなのみで格納します。</translation>
+        <source>Stores the sentence's plain reading.</source>
+        <translation>例文の読みをプレーンテキストで格納します。</translation>
     </message>
     <message>
         <source>Auxiliary Data Fields</source>
@@ -630,8 +738,8 @@
         <translation>カードタイプ</translation>
     </message>
     <message>
-        <source>For JP Mining Note-style note types: an “x” in a marker field selects how each mined card renders.</source>
-        <translation>JP Mining Note 形式のノートタイプでは、マーカーフィールド内の「x」がマイニングされた各カードの表示形式を選択します。</translation>
+        <source>Note types with marker fields render each mined card by which field holds an “x”.</source>
+        <translation>マーカーフィールドを持つノートタイプでは、どのフィールドに「x」が入っているかで、マイニングした各カードの表示が決まります。</translation>
     </message>
     <message>
         <source>None (disabled)</source>
@@ -1142,6 +1250,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Google Translate (synthetic TTS)</source>
         <translation>Google 翻訳（合成 TTS）</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge (synthetic TTS)</source>
+        <translation>Microsoft Edge（合成 TTS）</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2158,12 +2270,12 @@ No index files are deleted.</source>
         <translation>選んだ再生時間または文字数を超える文をスキップします。</translation>
     </message>
     <message>
-        <source>Avoid duplicate cards</source>
-        <translation>重複カードを回避</translation>
+        <source>One word per sentence</source>
+        <translation>1 文につき 1 単語</translation>
     </message>
     <message>
-        <source>Skip making a second card for a word you've already mined this run.</source>
-        <translation>この実行ですでにマイニングした単語について、2枚目のカードを作成しないようにします。</translation>
+        <source>Mine at most one word from each example sentence, skipping the rest.</source>
+        <translation>各例文から最大 1 単語だけをマイニングし、残りはスキップします。</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2196,6 +2308,14 @@ No index files are deleted.</source>
     <message>
         <source>Treat the kana spelling of a word you know in kanji as known too (on by default).</source>
         <translation>漢字で既知の単語のかな表記も既知として扱います（既定でオン）。</translation>
+    </message>
+    <message>
+        <source>Simplified or traditional characters</source>
+        <translation>簡体字または繁体字</translation>
+    </message>
+    <message>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>文字セットでは、カードの表面と辞書検索に使う表記を選びます: 簡体字、繁体字、または各単語の元の表記をそのまま保つ「原文のまま」です。表面と異なる場合、もう一方の表記は設定 -&gt; Anki の繁体字フィールドに格納されます。</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -2380,6 +2500,22 @@ No index files are deleted.</source>
     <message>
         <source>Include the reading (furigana) for the word on your cards.</source>
         <translation>カードに単語の読み（ふりがな）を含めます。</translation>
+    </message>
+    <message>
+        <source>Pinyin readings &amp; tone colours</source>
+        <translation>ピンインの読みと声調の色分け</translation>
+    </message>
+    <message>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
+        <translation>単語のピンインを、音節ごとにその声調の色を付けてカードに載せます — 色分けは設定 -&gt; フィルタリングの「読みを声調で色分けする」です。</translation>
+    </message>
+    <message>
+        <source>Measure word field</source>
+        <translation>量詞フィールド</translation>
+    </message>
+    <message>
+        <source>Map the Measure Word Field to put the classifier from the dictionary entry on your cards.</source>
+        <translation>量詞フィールドを割り当てると、辞書項目の量詞をカードに載せられます。</translation>
     </message>
     <message>
         <source>Auto-tag mined notes</source>
@@ -5216,8 +5352,8 @@ No files on disk are deleted.</source>
         <translation>例文で重複除去</translation>
     </message>
     <message>
-        <source>Skips duplicate example sentences.</source>
-        <translation>重複する例文をスキップします。</translation>
+        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
+        <translation>1 つの例文からマイニングする単語は最大 1 つ（その文で最初に見つかった単語）です。同じ文に含まれる他の単語はスキップされます。</translation>
     </message>
     <message>
         <source>Script Type</source>
@@ -5252,6 +5388,10 @@ No files on disk are deleted.</source>
         <translation>字体バリエーション</translation>
     </message>
     <message>
+        <source>As written</source>
+        <translation>原文のまま</translation>
+    </message>
+    <message>
         <source>Simplified (简体)</source>
         <translation>簡体字（简体）</translation>
     </message>
@@ -5264,8 +5404,8 @@ No files on disk are deleted.</source>
         <translation>文字セット</translation>
     </message>
     <message>
-        <source>Which spelling the card front and the dictionary lookup prefer.</source>
-        <translation>カードの表面と辞書検索でどちらの表記を優先するかを指定します。</translation>
+        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
+        <translation>カードの表面と辞書検索でどの表記を優先するか。「原文のまま」は元のテキストの表記をそのまま保ちます。</translation>
     </message>
     <message>
         <source>Regional Variety</source>
@@ -5380,16 +5520,16 @@ No files on disk are deleted.</source>
         <translation>文中の対象単語を太字にする</translation>
     </message>
     <message>
-        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
-        <translation>Sentence および SentenceFurigana フィールド内で、マイニングした単語を &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; で囲みます。一致は MeCab が解析したマイニング対象の形態素の正確な範囲に基づくため、文中で同じ表記が重複していても、実際にマイニングされた箇所だけが太字になります。</translation>
+        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
+        <translation>例文フィールド内で、マイニングした単語を &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; で囲みます。対象はマイニングされた箇所そのものなので、文中に同じ表層形が複数あっても、実際にマイニングされた箇所だけが太字になります。</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>読みを声調で色分けする</translation>
     </message>
     <message>
-        <source>Wraps each pinyin syllable in a tone class so the card styling can colour it.</source>
-        <translation>各ピンイン音節を声調クラスで囲み、カードのスタイルで色を付けられるようにします。</translation>
+        <source>Colours each syllable of the reading by its tone.</source>
+        <translation>読みの各音節を声調ごとに色分けします。</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -6564,6 +6704,20 @@ Continue?</source>
     <message>
         <source>Show main window</source>
         <translation>メインウィンドウを表示</translation>
+    </message>
+</context><context>
+    <name>MiningLanguagePage</name>
+    <message>
+        <source>Choose a Mining Language</source>
+        <translation>マイニング言語を選択</translation>
+    </message>
+    <message>
+        <source>The language you are learning. The interface language is separate.</source>
+        <translation>学習している言語です。インターフェース言語は別です。</translation>
+    </message>
+    <message>
+        <source>The deck, note type and resources in the next steps follow this choice. A language missing from the list needs its engine pack: Settings → Mining Language.</source>
+        <translation>次のステップのデッキ、ノートタイプ、リソースはこの選択に従います。一覧にない言語はエンジンパックが必要です: 設定 → マイニング言語。</translation>
     </message>
 </context><context>
     <name>MiningLanguageSettingsPanel</name>
@@ -8288,24 +8442,36 @@ No index files are deleted.</source>
         <translation>推奨リソース</translation>
     </message>
     <message>
-        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
-        <translation>頻度とピッチアクセントは任意です。辞書は必須です。</translation>
-    </message>
-    <message>
         <source>What are these resources?</source>
         <translation>これらのリソースとは？</translation>
-    </message>
-    <message>
-        <source>%1 — %2</source>
-        <translation>%1 — %2</translation>
     </message>
     <message>
         <source>Download recommended resources</source>
         <translation>推奨リソースをダウンロード</translation>
     </message>
     <message>
+        <source>%1 — %2</source>
+        <translation>%1 — %2</translation>
+    </message>
+    <message>
         <source>No recommended resources for this language. Import a dictionary in Settings → Dictionaries.</source>
         <translation>この言語のおすすめリソースはありません。設定 → 辞書で辞書をインポートしてください。</translation>
+    </message>
+    <message>
+        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
+        <translation>頻度とピッチアクセントは任意です。辞書は必須です。</translation>
+    </message>
+    <message>
+        <source>Frequency is optional. A dictionary is required.</source>
+        <translation>頻度は任意です。辞書は必須です。</translation>
+    </message>
+    <message>
+        <source>Pitch accent is optional. A dictionary is required.</source>
+        <translation>ピッチアクセントは任意です。辞書は必須です。</translation>
+    </message>
+    <message>
+        <source>A dictionary is required.</source>
+        <translation>辞書は必須です。</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -10480,6 +10646,10 @@ Your installed resources and your theme are kept.</source>
         <translation>音声</translation>
     </message>
     <message>
+        <source>Position</source>
+        <translation>位置</translation>
+    </message>
+    <message>
         <source>How many times this word appears in the text being mined.
 
 The “Sentences” picker usually lists fewer: one option per line, and only lines whose form matches the card’s Word.</source>
@@ -10510,6 +10680,14 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation>音声ソースにこの単語の発音音声があるかどうかを示します。
 
 ✓ 見つかった、✗ 見つからなかった、- 未確認。このウィンドウが開いている間に単語がチェックされるため、残した単語には音声がすでに用意されています。このチェックによって、マイニングできる単語が変わることはありません。</translation>
+    </message>
+    <message>
+        <source>Where this word appears in what you are mining: a timestamp for video, a page or chapter for reading.
+
+Sort by it to work through a long recording in order — then highlight the rows up to where you stopped and include those.</source>
+        <translation>この単語がマイニング対象のどこに出てくるかを示します: 動画ならタイムスタンプ、読み物ならページまたは章です。
+
+これで並べ替えると、長い録画を順番に処理できます — 中断した位置までの行を選択して、まとめて含めてください。</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -11012,6 +11190,10 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     <message>
         <source>Source type:</source>
         <translation>ソースの種類：</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge read-aloud (synthetic TTS)</source>
+        <translation>Microsoft Edge の読み上げ（合成 TTS）</translation>
     </message>
     <message>
         <source>URL template (use {term} and {reading}):</source>

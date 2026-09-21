@@ -334,6 +334,14 @@
         <translation>儲存單字中包含的韓文漢字。留空＝略過。</translation>
     </message>
     <message>
+        <source>Hán Việt Field</source>
+        <translation>Hán Việt 欄位</translation>
+    </message>
+    <message>
+        <source>Stores the Chinese characters a Sino-Vietnamese word comes from, read from the dictionary entry. Blank = skip.</source>
+        <translation>儲存漢越詞所源自的漢字，讀取自字典詞條。留空＝略過。</translation>
+    </message>
+    <message>
         <source>Part of Speech Field</source>
         <translation>詞性欄位</translation>
     </message>
@@ -372,6 +380,106 @@
     <message>
         <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
         <translation>儲存動詞的體；若字典有列出另一體的對應動詞，也一併儲存。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Root Field</source>
+        <translation>詞根欄位</translation>
+    </message>
+    <message>
+        <source>Stores the word's root, from the dictionary entry. Blank = skip.</source>
+        <translation>儲存字典詞條中該單字的詞根。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Affixes Field</source>
+        <translation>詞綴欄位</translation>
+    </message>
+    <message>
+        <source>Stores the prefixes and suffixes around the root, from the dictionary entry. Blank = skip.</source>
+        <translation>儲存字典詞條中詞根前後的前綴與後綴。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Formal Form Field</source>
+        <translation>正式寫法欄位</translation>
+    </message>
+    <message>
+        <source>Stores the standard spelling of a colloquial word. Blank = skip.</source>
+        <translation>儲存口語詞的標準寫法。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Grammar Field</source>
+        <translation>語法欄位</translation>
+    </message>
+    <message>
+        <source>Stores the dictionary's grammar line: gender and plurals, or a verb's form and verbal noun. Blank = skip.</source>
+        <translation>儲存字典的語法資訊行：名詞的性別與複數，或動詞的形式與動名詞。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Segmentation Field</source>
+        <translation>詞素切分欄位</translation>
+    </message>
+    <message>
+        <source>Stores how the word you saw splits into prefixes, stem and suffixes. Blank = skip.</source>
+        <translation>儲存你所看到的詞如何切分為前綴、詞幹與後綴。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Reading Field</source>
+        <translation>讀音欄位</translation>
+    </message>
+    <message>
+        <source>Stores the Paiboon reading parsed from the dictionary entry. Blank = skip.</source>
+        <translation>儲存從字典詞條中解析出的 Paiboon 讀音。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Classifier Field</source>
+        <translation>類別詞欄位</translation>
+    </message>
+    <message>
+        <source>Stores the noun classifier stated by the dictionary entry. Blank = skip.</source>
+        <translation>儲存字典詞條所標示的名詞類別詞。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Romanization Field</source>
+        <translation>羅馬拼音欄位</translation>
+    </message>
+    <message>
+        <source>Stores the word's Latin spelling, from the dictionary entry. Blank = skip.</source>
+        <translation>儲存字典詞條中該單字的拉丁字母寫法。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Colloquial Form Field</source>
+        <translation>口語寫法欄位</translation>
+    </message>
+    <message>
+        <source>Stores the everyday spelling the line used, when the front is the standard one. Blank = skip.</source>
+        <translation>當卡片正面為標準寫法時，儲存該行實際使用的日常寫法。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Present Stem Field</source>
+        <translation>現在式詞幹欄位</translation>
+    </message>
+    <message>
+        <source>Stores the stem a verb's present-tense forms are built on. Blank = skip.</source>
+        <translation>儲存動詞現在式各形態所依據的詞幹。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Jyutping Field</source>
+        <translation>Jyutping 欄位</translation>
+    </message>
+    <message>
+        <source>Stores the jyutping reading, tone-coloured when that setting is on. Blank = skip.</source>
+        <translation>儲存 jyutping 讀音；若已開啟該設定，則會帶聲調顏色。留空＝略過。</translation>
+    </message>
+    <message>
+        <source>Transliteration Field</source>
+        <translation>轉寫欄位</translation>
+    </message>
+    <message>
+        <source>Binyan Field</source>
+        <translation>Binyan 欄位</translation>
+    </message>
+    <message>
+        <source>Stores the verb pattern the dictionary names, such as pa'al or hif'il. Blank = skip.</source>
+        <translation>儲存字典所標示的動詞構型，例如 pa'al 或 hif'il。留空＝略過。</translation>
     </message>
     <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
@@ -530,8 +638,8 @@
         <translation>表達式讀音欄位</translation>
     </message>
     <message>
-        <source>Stores the expression as plain kana.</source>
-        <translation>以純假名儲存表達式。</translation>
+        <source>Stores the expression's plain reading.</source>
+        <translation>儲存表達式的純文字讀音。</translation>
     </message>
     <message>
         <source>Sentence Furigana Field</source>
@@ -542,8 +650,8 @@
         <translation>例句讀音欄位</translation>
     </message>
     <message>
-        <source>Stores the sentence as plain kana.</source>
-        <translation>以純假名儲存例句。</translation>
+        <source>Stores the sentence's plain reading.</source>
+        <translation>儲存例句的純文字讀音。</translation>
     </message>
     <message>
         <source>Auxiliary Data Fields</source>
@@ -630,8 +738,8 @@
         <translation>卡片類型</translation>
     </message>
     <message>
-        <source>For JP Mining Note-style note types: an “x” in a marker field selects how each mined card renders.</source>
-        <translation>適用於 JP Mining Note 樣式的筆記類型：標記欄位中的 “x” 決定每張採集卡片的渲染方式。</translation>
+        <source>Note types with marker fields render each mined card by which field holds an “x”.</source>
+        <translation>具有標記欄位的筆記類型，會依哪個欄位含有「x」來呈現每張已採集的卡片。</translation>
     </message>
     <message>
         <source>None (disabled)</source>
@@ -1142,6 +1250,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Google Translate (synthetic TTS)</source>
         <translation>Google 翻譯（合成 TTS）</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge (synthetic TTS)</source>
+        <translation>Microsoft Edge（合成 TTS）</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2158,12 +2270,12 @@ No index files are deleted.</source>
         <translation>略過超過所選時長或字數的例句。</translation>
     </message>
     <message>
-        <source>Avoid duplicate cards</source>
-        <translation>避免重複卡片</translation>
+        <source>One word per sentence</source>
+        <translation>每句只採集一個單字</translation>
     </message>
     <message>
-        <source>Skip making a second card for a word you've already mined this run.</source>
-        <translation>略過為本次執行已採集過的單字再建立第二張卡片。</translation>
+        <source>Mine at most one word from each example sentence, skipping the rest.</source>
+        <translation>每個例句最多採集一個單字，其餘略過。</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2196,6 +2308,14 @@ No index files are deleted.</source>
     <message>
         <source>Treat the kana spelling of a word you know in kanji as known too (on by default).</source>
         <translation>將您已知漢字寫法之單字的假名拼寫也視為已知（預設開啟）。</translation>
+    </message>
+    <message>
+        <source>Simplified or traditional characters</source>
+        <translation>簡體或繁體字</translation>
+    </message>
+    <message>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>「字元集」決定卡片正面與字典查詢所使用的寫法：簡體、繁體，或「依原文」以保留每個單字來源本身的寫法。當另一種寫法與正面不同時，設定 -&gt; Anki 下的「繁體字欄位」會存放該寫法。</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -2380,6 +2500,22 @@ No index files are deleted.</source>
     <message>
         <source>Include the reading (furigana) for the word on your cards.</source>
         <translation>在你的卡片上包含單字的讀音（振假名）。</translation>
+    </message>
+    <message>
+        <source>Pinyin readings &amp; tone colours</source>
+        <translation>拼音讀音與聲調顏色</translation>
+    </message>
+    <message>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
+        <translation>在你的卡片上放入單字的拼音，每個音節都以其聲調的顏色顯示 -- 上色功能為設定 -&gt; 篩選中的「依聲調為讀音上色」。</translation>
+    </message>
+    <message>
+        <source>Measure word field</source>
+        <translation>量詞欄位</translation>
+    </message>
+    <message>
+        <source>Map the Measure Word Field to put the classifier from the dictionary entry on your cards.</source>
+        <translation>對應「量詞欄位」，即可將字典詞條中的量詞放到你的卡片上。</translation>
     </message>
     <message>
         <source>Auto-tag mined notes</source>
@@ -5216,8 +5352,8 @@ No files on disk are deleted.</source>
         <translation>依句子去除重複</translation>
     </message>
     <message>
-        <source>Skips duplicate example sentences.</source>
-        <translation>略過重複的例句。</translation>
+        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
+        <translation>每個例句最多採集一個單字 — 也就是該句中最先找到的那一個。其他共用該句的單字都會略過。</translation>
     </message>
     <message>
         <source>Script Type</source>
@@ -5252,6 +5388,10 @@ No files on disk are deleted.</source>
         <translation>字形變體</translation>
     </message>
     <message>
+        <source>As written</source>
+        <translation>依原文</translation>
+    </message>
+    <message>
         <source>Simplified (简体)</source>
         <translation>簡體</translation>
     </message>
@@ -5264,8 +5404,8 @@ No files on disk are deleted.</source>
         <translation>字元集</translation>
     </message>
     <message>
-        <source>Which spelling the card front and the dictionary lookup prefer.</source>
-        <translation>卡片正面與字典查詢優先使用哪一種寫法。</translation>
+        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
+        <translation>卡片正面與字典查詢優先使用哪一種寫法；「依原文」會保留來源本身的寫法。</translation>
     </message>
     <message>
         <source>Regional Variety</source>
@@ -5380,16 +5520,16 @@ No files on disk are deleted.</source>
         <translation>在句子中將目標單字加粗</translation>
     </message>
     <message>
-        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
-        <translation>在 Sentence 與 SentenceFurigana 欄位中將採集的單字以 &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; 包住。比對為採集詞素的精確 MeCab 範圍，因此句子中重複出現的表層形只會將實際採集的那一處加粗。</translation>
+        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
+        <translation>在例句欄位中，將採集的單字包在 &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; 之中。比對的是實際採集到的那一段文字，因此句中若有重複出現的相同詞形，只有實際採集的那一次會加粗。</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>依聲調為讀音上色</translation>
     </message>
     <message>
-        <source>Wraps each pinyin syllable in a tone class so the card styling can colour it.</source>
-        <translation>為每個拼音音節加上聲調類別，讓卡片樣式可以為其上色。</translation>
+        <source>Colours each syllable of the reading by its tone.</source>
+        <translation>依聲調為讀音的每個音節上色。</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -6564,6 +6704,20 @@ Continue?</source>
     <message>
         <source>Show main window</source>
         <translation>顯示主視窗</translation>
+    </message>
+</context><context>
+    <name>MiningLanguagePage</name>
+    <message>
+        <source>Choose a Mining Language</source>
+        <translation>選擇採集語言</translation>
+    </message>
+    <message>
+        <source>The language you are learning. The interface language is separate.</source>
+        <translation>你正在學習的語言。介面語言是另一項獨立設定。</translation>
+    </message>
+    <message>
+        <source>The deck, note type and resources in the next steps follow this choice. A language missing from the list needs its engine pack: Settings → Mining Language.</source>
+        <translation>後續步驟中的牌組、筆記類型與資源都會依此選擇而定。清單中沒有的語言需要安裝其引擎套件：設定 → 採集語言。</translation>
     </message>
 </context><context>
     <name>MiningLanguageSettingsPanel</name>
@@ -8288,24 +8442,36 @@ No index files are deleted.</source>
         <translation>建議資源</translation>
     </message>
     <message>
-        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
-        <translation>頻率與高低音調為選填。字典為必填。</translation>
-    </message>
-    <message>
         <source>What are these resources?</source>
         <translation>這些資源是什麼？</translation>
-    </message>
-    <message>
-        <source>%1 — %2</source>
-        <translation>%1 — %2</translation>
     </message>
     <message>
         <source>Download recommended resources</source>
         <translation>下載建議資源</translation>
     </message>
     <message>
+        <source>%1 — %2</source>
+        <translation>%1 — %2</translation>
+    </message>
+    <message>
         <source>No recommended resources for this language. Import a dictionary in Settings → Dictionaries.</source>
         <translation>此語言沒有推薦資源。請在「設定」→「字典」中匯入字典。</translation>
+    </message>
+    <message>
+        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
+        <translation>頻率與高低音調為選填。字典為必填。</translation>
+    </message>
+    <message>
+        <source>Frequency is optional. A dictionary is required.</source>
+        <translation>頻率為選填。字典為必填。</translation>
+    </message>
+    <message>
+        <source>Pitch accent is optional. A dictionary is required.</source>
+        <translation>高低音調為選填。字典為必填。</translation>
+    </message>
+    <message>
+        <source>A dictionary is required.</source>
+        <translation>字典為必填。</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -10480,6 +10646,10 @@ Your installed resources and your theme are kept.</source>
         <translation>音訊</translation>
     </message>
     <message>
+        <source>Position</source>
+        <translation>位置</translation>
+    </message>
+    <message>
         <source>How many times this word appears in the text being mined.
 
 The “Sentences” picker usually lists fewer: one option per line, and only lines whose form matches the card’s Word.</source>
@@ -10510,6 +10680,14 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation>你的音訊來源中是否有此單字的發音音訊。
 
 ✓ 已找到，✗ 未找到，- 尚未檢查。此視窗開啟期間會檢查各單字，因此你保留的單字屆時已備妥音訊。此檢查不會影響你可以採集的單字。</translation>
+    </message>
+    <message>
+        <source>Where this word appears in what you are mining: a timestamp for video, a page or chapter for reading.
+
+Sort by it to work through a long recording in order — then highlight the rows up to where you stopped and include those.</source>
+        <translation>此單字在你所採集的內容中出現的位置：影片為時間戳記，閱讀則為頁數或章節。
+
+依此欄位排序，即可按順序處理長篇素材 — 接著反白選取到你停下之處為止的列，並將這些列包含進來。</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -11012,6 +11190,10 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     <message>
         <source>Source type:</source>
         <translation>來源類型：</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge read-aloud (synthetic TTS)</source>
+        <translation>Microsoft Edge 朗讀（合成 TTS）</translation>
     </message>
     <message>
         <source>URL template (use {term} and {reading}):</source>
