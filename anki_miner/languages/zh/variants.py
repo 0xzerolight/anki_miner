@@ -4,13 +4,16 @@ OpenCC performs no Unicode normalisation of its own, so every string crossing
 into it goes through :func:`normalize_zh` first — the one shared rule the spec
 pins, reused by the dictionary key folding, so import-time and query-time keys
 can never disagree. The profile's ``normalize`` field is
-:func:`normalize_zh_text`, which adds the radical fold that only mined text
-needs.
+:func:`normalize_zh_text`, which adds the radical fold and the renderer-garbage
+strip that only mined text needs.
 
-OpenCC is optional. Without it there are no variants and lookups behave exactly
-as they would for a single-script corpus, so it stays out of the availability
-gate (``availability.zh_missing_required_reason``) and is named only by
-``availability.zh_unavailable_reason``, which lists the whole stack.
+OpenCC is optional, and its absence is degradation rather than disablement
+(``availability.ZH_OPTIONAL_PACKAGES`` states the same thing): simplified input
+never reaches a converter, while traditional input loses segmentation and
+readings — the tokenizer cuts a simplified copy of every line — along with the
+script-variant lookups and the Traditional field. It therefore stays out of the
+availability gate (``availability.zh_missing_required_reason``) and is named
+only by ``availability.zh_unavailable_reason``, which lists the whole stack.
 """
 
 from __future__ import annotations
@@ -178,9 +181,11 @@ def to_simplified(text: str) -> str:
     """Simplified spelling of ``text`` (tw2s), NFC-normalised.
 
     Many-to-one and lossy (麵 and 面 both become 面), so it feeds the tokenizer
-    and pinyin, which want the most simplified text they can get, never a
-    comparison key — :func:`script_key` is the key. Returns the normalised input
-    when OpenCC is absent or the conversion fails.
+    and pinyin, which want the most simplified text they can get. Never a
+    comparison key (:func:`script_key` is the key) and never the "is this
+    traditional?" question (:func:`is_traditional` is that one): it folds the
+    Taiwan variants too, so it answers yes for 显著. Returns the normalised
+    input when OpenCC is absent or the conversion fails.
     """
     return _convert_with(_TO_SIMPLIFIED, normalize_zh(text))
 

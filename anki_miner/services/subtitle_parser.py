@@ -449,9 +449,10 @@ class SubtitleParserService:
                 may run at all. The matcher joins adjacent tokens with "" and
                 reads UniDic POS names, so a space-delimited language passes
                 ``False`` through its ``create_parser`` (a spaced match would
-                print ``NewYork``). ``True`` — every ja path, and ko/zh today —
-                keeps the pre-seam gate exactly: built whenever a term lookup is
-                wired.
+                print ``NewYork``), as do zh/yue, whose jieba tags can never
+                equal the UniDic POS the matcher stamps its synthetics with.
+                ``True`` — every ja path, and ko today — keeps the pre-seam gate
+                exactly: built whenever a term lookup is wired.
             form_lookup: Optional batch read of a term's ``(content, tags)`` rows
                 from the enabled offline chain (spec R36,
                 ``DefinitionService.offline_term_rows``). Handed to

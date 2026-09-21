@@ -22,12 +22,14 @@ if TYPE_CHECKING:
 
 __all__ = ["ZH_CONTENT_STYLE", "ZH_FONT_FAMILIES", "zh_card_lang", "zh_cjk_wrap"]
 
-#: Installed Han faces in preference order, Simplified leading: an SC face
-#: renders a traditional string acceptably while the reverse drops or
-#: mis-shapes simplified glyphs on several of these, and the source material
-#: is simplified far more often. Windows first, then macOS, then the
-#: usual Linux packages; the TC-first faces are the tail, not the head. None is
-#: required to exist — Qt walks the list and takes the first one installed.
+#: Installed Han faces in preference order, Simplified leading, which is the
+#: script ``ZH_CONTENT_STYLE.writing_system`` below declares: the probe and this
+#: list answer the same question, so a head the probe does not name would warn
+#: about a face Qt never reaches. An SC face also renders a traditional string
+#: acceptably while the reverse drops or mis-shapes simplified glyphs on several
+#: of these. Windows first, then macOS, then the usual Linux packages; the
+#: TC-first faces are the tail, not the head. None is required to exist — Qt
+#: walks the list and takes the first one installed.
 ZH_FONT_FAMILIES: tuple[str, ...] = (
     "Microsoft YaHei UI",
     "Microsoft YaHei",

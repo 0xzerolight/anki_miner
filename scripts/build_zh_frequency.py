@@ -97,6 +97,10 @@ def frequency_key(surface: str) -> str | None:
 def count_lines(tagger: Any, lines: Iterable[str]) -> Counter[str]:
     counts: Counter[str] = Counter()
     for raw in lines:
+        # One fold short of the profile's ``normalize_zh_text`` (no radical fold,
+        # no renderer-garbage strip), and inert on this corpus — switching it is
+        # the next rebuild's call, since the shipped asset is sha256-pinned to
+        # what this script produces today.
         line = normalize_zh(raw).strip()
         if not line:
             continue
