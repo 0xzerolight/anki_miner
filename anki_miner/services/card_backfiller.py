@@ -382,18 +382,20 @@ class _AudioWord:
 class _HookWord:
     """Word-like view of a note for the profile's card render hooks.
 
-    Carries the three things a finished card still proves — the card front, the
-    definition the scan just looked up, and the reading the note carries or the
-    profile derived (blank where ``_resolve_context`` could only guess one) —
-    under the names ``EpisodeProcessor._apply_render_hooks`` gives them, so the
-    hooks run unchanged. A hook that reads a parse-time attribute instead
-    (``pos``, ``morph``: the token's own tags, which no note records) finds none
-    and renders nothing, and the empty-proposal rule drops it.
+    Carries the four things a finished card still proves — the card front, the
+    definition the scan just looked up, the reading the note carries or the
+    profile derived (blank where ``_resolve_context`` could only guess one), and
+    the sentence the note was mined from — under the names
+    ``EpisodeProcessor._apply_render_hooks`` gives them, so the hooks run
+    unchanged. A hook that reads a parse-time attribute instead (``pos``,
+    ``morph``: the token's own tags, which no note records) finds none and
+    renders nothing, and the empty-proposal rule drops it.
     """
 
     mined_form: str
     definition_html: str
     expression_reading: str
+    sentence: str
 
 
 def scan_backfill(
@@ -1006,7 +1008,7 @@ def _compute_note_changes(
                 card_definition = attach_card_style_block(
                     card_definition, dict_css_entries=dict_css_entries, direction=style_direction
                 )
-        rendered = _hook_proposals(ctx, config, hook_keys, render_hooks, card_definition)
+        rendered = _hook_proposals(ctx, config, hook_keys, render_hooks, card_definition, anki_fields)
         for key, value in rendered.items():
             proposals.setdefault(key, value if key in raw_hook_keys else html.escape(value))
 
@@ -1168,6 +1170,7 @@ def _hook_proposals(
     keys: frozenset[str],
     render_hooks: tuple[CardRenderHook, ...],
     definition: str,
+    anki_fields: Mapping[str, str],
 ) -> dict[str, str]:
     """Values for the language's own card fields, from its own render hooks.
 
@@ -1187,7 +1190,16 @@ def _hook_proposals(
     # of the hooks too: zh's tone colour paints the syllables it is handed, and
     # the tokenizer fallback hands it the front's own hanzi. Empty is what a
     # hook reads for any word carrying no reading — it recomputes from the front.
-    word = _HookWord(ctx.mined_form, definition, "" if ctx.reading_guessed else ctx.reading)
+    #
+    # The sentence is stripped the way every other field value here is: a mined
+    # card wraps it in a lang span, and zh's classifier reads the text for the
+    # script it is written in, not the markup around it.
+    word = _HookWord(
+        ctx.mined_form,
+        definition,
+        "" if ctx.reading_guessed else ctx.reading,
+        _strip_for_dedup(_field_value(ctx.fields, anki_fields.get("sentence")) or ""),
+    )
     proposals: dict[str, str] = {}
     for hook in render_hooks:
         try:

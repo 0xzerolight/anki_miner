@@ -13,7 +13,7 @@ import pytest
 from anki_miner.exceptions import AnkiConnectionError, SetupError
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
-from anki_miner.languages.zh.render import ZhToneColorHook
+from anki_miner.languages.zh.render import ZhMeasureWordHook, ZhToneColorHook
 from anki_miner.services.card_backfiller import (
     BACKFILL_TAG,
     BackfillOptions,
@@ -1593,7 +1593,7 @@ class TestApplyWordAudio:
 
 
 #: The zh hook targets, added to the default note type so the preflight keeps them.
-_ZH_NOTE_FIELDS = set(_DEFAULT_NOTE_FIELDS) | {"MeasureWord", "Traditional", "Pinyin"}
+_ZH_NOTE_FIELDS = set(_DEFAULT_NOTE_FIELDS) | {"MeasureWord", "Traditional", "Pinyin", "Sentence"}
 
 
 @pytest.fixture
@@ -1692,6 +1692,25 @@ class TestScanProfileCardFields:
         plan = scan_backfill(anki, zh_backfill_config, _services(), _options({"expression_traditional"}))
         assert _changes_by_key(plan, 1)["expression_traditional"] == "銀行"
         assert _changes_by_key(plan, 2) == {}
+
+    def test_the_classifier_reads_the_note_s_own_sentence(self, zh_backfill_config):
+        """狗 is spelt the same in both scripts, so the hook's second tier is the sentence."""
+        pytest.importorskip("opencc")
+        anki = _zh_anki(_note(1, word="狗", Sentence="那隻狗在門口等他。", MeasureWord=""))
+        defs = FakeDefinitionService(defs={"狗": "dog; CL:隻|只[zhi1]"})
+        plan = scan_backfill(anki, zh_backfill_config, _services(defs=defs), _options({"measure_word"}))
+        assert _changes_by_key(plan, 1)["measure_word"] == "隻"
+
+    def test_the_classifier_is_the_bytes_the_mining_hook_writes(self, zh_backfill_config):
+        """A mined card wraps its sentence in a lang span; the hook must see the text, not the markup."""
+        pytest.importorskip("opencc")
+        sentence = '<span lang="zh-Hant">那隻狗在門口等他。</span>'
+        anki = _zh_anki(_note(1, word="狗", Sentence=sentence, MeasureWord=""))
+        defs = FakeDefinitionService(defs={"狗": "dog; CL:隻|只[zhi1]"})
+        plan = scan_backfill(anki, zh_backfill_config, _services(defs=defs), _options({"measure_word"}))
+        mined = SimpleNamespace(mined_form="狗", definition_html="dog; CL:隻|只[zhi1]", sentence="那隻狗在門口等他。")
+        expected = ZhMeasureWordHook().render(mined, config=zh_backfill_config)
+        assert _changes_by_key(plan, 1)["measure_word"] == expected["measure_word"] == "隻"
 
     def test_a_filled_hook_field_is_left_alone_in_fill_mode(self, zh_backfill_config):
         anki = _zh_anki(_note(1, word="银行", Pinyin="yín háng"))
