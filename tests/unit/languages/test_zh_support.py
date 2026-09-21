@@ -159,12 +159,11 @@ def _cedict_row(*glosses: str) -> str:
 
 
 class TestSenseRank:
-    """Rows that state no sense of their own rank after the rows that do."""
+    """Rows that state no live sense rank after the rows that do."""
 
     @pytest.mark.parametrize(
         "gloss",
         [
-            "surname Gan",
             "variant of 乾|干[gān]",
             "old variant of 乾|干[gān]",
             "(old) variant of 款[kuǎn]",
@@ -177,8 +176,25 @@ class TestSenseRank:
             "used in 㐖毒[xiédú]",
         ],
     )
-    def test_a_row_that_only_points_elsewhere_is_demoted(self, gloss):
-        assert ZhDictKeyFolding().sense_rank(_cedict_row(gloss)) == 1
+    def test_a_row_that_only_points_elsewhere_sorts_last(self, gloss):
+        assert ZhDictKeyFolding().sense_rank(_cedict_row(gloss)) == 2
+
+    @pytest.mark.parametrize(
+        "glosses",
+        [
+            ("surname Gan",),
+            ("surname Liu",),
+            ("(classical) to kill", "(classical) to slaughter"),
+            ("long robe (old)",),
+            ("(literary) still", "(literary) yet"),
+            ("(archaic) navy",),
+            ("(obsolete) planet",),
+        ],
+    )
+    def test_a_surname_or_archaic_row_ranks_between(self, glosses):
+        """Between a surname row and an archaic-only row the index's own order
+        decides, and both still lead a row that only points elsewhere."""
+        assert ZhDictKeyFolding().sense_rank(_cedict_row(*glosses)) == 1
 
     @pytest.mark.parametrize(
         "gloss",
@@ -189,6 +205,7 @@ class TestSenseRank:
             "see through (a person, scheme, trick etc)",
             "used in place names",
             "abbr. for 三自愛國教會|三自爱国教会[sānzìàiguójiàohuì], Three-Self Patriotic Movement",
+            "surname and given name; full name",
         ],
     )
     def test_a_row_that_states_a_sense_keeps_its_rank(self, gloss):
@@ -196,6 +213,10 @@ class TestSenseRank:
 
     def test_a_surname_beside_a_real_sense_keeps_its_rank(self):
         assert ZhDictKeyFolding().sense_rank(_cedict_row("surname Wang", "king")) == 0
+
+    def test_an_archaic_sense_beside_a_modern_one_keeps_its_rank(self):
+        row = _cedict_row("(archaic) navy", "person employed to post messages on the Internet")
+        assert ZhDictKeyFolding().sense_rank(row) == 0
 
     def test_every_gloss_must_point_elsewhere(self):
         assert ZhDictKeyFolding().sense_rank(_cedict_row("variant of 乾|干[gān]", "surname Gan")) == 1

@@ -245,6 +245,38 @@ def test_a_zh_card_leads_with_the_sense_not_the_surname(tmp_path):
     assert rendered.index("dry") < rendered.index("old variant of")
 
 
+def test_a_zh_card_whose_only_other_row_is_archaic_keeps_the_surname_first(tmp_path):
+    """刘 is a surname and an archaic entry, nothing else. The two share a tier,
+    so CC-CEDICT's own order decides between them and the pointer still goes
+    last."""
+    db_path = tmp_path / "dicts" / "cedict-zh" / "index.sqlite"
+    db_path.parent.mkdir(parents=True)
+    create_index(db_path)
+    bulk_insert(
+        db_path,
+        [
+            DictRow(term="刘", reading="liú", content=_cedict_content("variant of 劉|刘[liú]"), sequence=14935),
+            DictRow(term="刘", reading="liú", content=_cedict_content("surname Liu"), sequence=14936),
+            DictRow(
+                term="刘",
+                reading="liú",
+                content=_cedict_content("(classical) a type of battle-ax", "(classical) to kill"),
+                sequence=14937,
+            ),
+        ],
+        keys=get_profile("zh").dict_keys,
+    )
+    write_meta(db_path, {"schema_version": str(SCHEMA_VERSION), "source_name": "CC-CEDICT", "language": "zh"})
+    provider = IndexedDictProvider("cedict-zh", db_path, display_name="CC-CEDICT", keys=get_profile("zh").dict_keys)
+    assert provider.load() is True
+
+    rendered = provider.lookup_many([("刘", "liú")])["刘"]
+
+    assert rendered is not None
+    assert rendered.index("surname Liu") < rendered.index("battle-ax")
+    assert rendered.index("battle-ax") < rendered.index("variant of")
+
+
 def test_a_zh_card_carries_its_hook_fields_end_to_end(test_config, tmp_path, make_tokenized_word, monkeypatch):
     monkeypatch.setattr("anki_miner.languages.zh.render.to_traditional", lambda text: {"银行": "銀行"}.get(text, text))
     monkeypatch.setattr("anki_miner.languages.zh.render.pinyin_syllables", lambda text: [("yín", 2), ("háng", 2)])

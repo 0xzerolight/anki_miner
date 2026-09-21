@@ -10,6 +10,7 @@ from unittest.mock import patch
 import pytest
 
 from anki_miner.exceptions import SetupError
+from anki_miner.languages.registry import get_profile
 from anki_miner.services.dictionary.storage import (
     _ATTEST_READING_CHUNK,
     _BIND_CHUNK,
@@ -2153,6 +2154,25 @@ _SENSE = DictRow(term="干", reading="gān", content="<div>dry</div>", sequence=
 _SURNAME = DictRow(term="干", reading="gān", content="<div>pointer: surname</div>", sequence=4428)
 _VARIANT = DictRow(term="干", reading="gān", content="<div>pointer: variant</div>", sequence=4425)
 
+_JA_ARCHAIC = DictRow(
+    term="辛い",
+    reading="からい",
+    content='<li class="gloss-sc-li">(archaic) harsh; severe</li>',
+    sequence=1595570,
+)
+_JA_SENSE = DictRow(
+    term="辛い",
+    reading="からい",
+    content='<li class="gloss-sc-li">spicy; hot</li>',
+    sequence=1595571,
+)
+_JA_OTHER_READING = DictRow(
+    term="辛い",
+    reading="つらい",
+    content='<li class="gloss-sc-li">painful; heart-breaking</li>',
+    sequence=2827864,
+)
+
 
 class TestSenseRankDemotion:
     """A profile-supplied row rank reorders rows INSIDE one reading-priority group.
@@ -2175,7 +2195,7 @@ class TestSenseRankDemotion:
         assert contents == [_SENSE.content, _VARIANT.content, _SURNAME.content]
 
     def test_without_the_rank_the_index_order_stands(self, tmp_path: Path):
-        """ja invariance: a folding pair with no rank orders exactly as before."""
+        """A folding pair with no rank orders exactly as before."""
         db = tmp_path / "d.sqlite"
         create_index(db)
         bulk_insert(db, [_SENSE, _SURNAME, _VARIANT])
@@ -2187,6 +2207,25 @@ class TestSenseRankDemotion:
             conn.close()
         assert plain == [_VARIANT.content, _SURNAME.content, _SENSE.content]
         assert no_rank == plain
+
+    def test_the_japanese_pair_keeps_the_index_order(self, tmp_path: Path):
+        """ja invariance on the real profile pair and a real multi-row lookup.
+
+        辛い is three JMdict rows; the archaic one the zh rule would demote is
+        the one the index puts first, and the katakana boost only reaches the
+        からい rows through ja's own reading folding.
+        """
+        db = tmp_path / "d.sqlite"
+        create_index(db)
+        bulk_insert(db, [_JA_ARCHAIC, _JA_SENSE, _JA_OTHER_READING])
+        conn = open_readonly(db)
+        try:
+            ja = [c for c, _tags, _seq in lookup(conn, "辛い", "カライ", keys=get_profile("ja").dict_keys)]
+            unfolded = [c for c, _tags, _seq in lookup(conn, "辛い", "からい")]
+        finally:
+            conn.close()
+        assert ja == [_JA_ARCHAIC.content, _JA_SENSE.content, _JA_OTHER_READING.content]
+        assert ja == unfolded
 
     def test_nothing_is_dropped_and_each_side_keeps_its_own_order(self, tmp_path: Path):
         db = tmp_path / "d.sqlite"

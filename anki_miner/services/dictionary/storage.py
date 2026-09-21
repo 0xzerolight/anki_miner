@@ -336,9 +336,9 @@ def _sense_rank_fn(keys: DictKeyFolding | None) -> Callable[[str], int] | None:
     """Resolve the profile's optional row-demotion rank once per call.
 
     Optional profile capability, probed like ``term_variants``: a language whose
-    dictionary carries rows stating no sense of their own — zh's CC-CEDICT
-    surname and cross-reference rows — ranks them after the rows that do, and
-    only among the rows already sharing a term/reading priority. ``None`` (the
+    dictionary carries rows stating no live sense of their own — zh's CC-CEDICT
+    surname, archaic-only and cross-reference rows — ranks them after the rows
+    that do, and only among the rows already sharing a term/reading priority. ``None`` (the
     Japanese pair and every profile without the method) leaves the SQL cascade
     untouched.
     """
