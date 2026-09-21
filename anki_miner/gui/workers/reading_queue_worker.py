@@ -43,9 +43,10 @@ from typing import Any
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.exceptions import OperationCancelled, SetupError
+from anki_miner.gui.utils.service_factory import import_decode_ladder
 from anki_miner.gui.workers._queue_progress import QueueMiningProgressAdapter
 from anki_miner.gui.workers._queue_worker_base import AttemptOutcome, SequentialQueueWorker
-from anki_miner.languages.registry import config_language, get_profile
+from anki_miner.languages.registry import get_profile
 from anki_miner.models import CANCELLED_ERROR, MiningOutcome, ProcessingResult, classify_result, result_error_text
 from anki_miner.models.mining_queue import ReadyItemStatus
 from anki_miner.models.reading import ReadingDocument
@@ -56,25 +57,6 @@ from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.utils.subtitle_encoding import script_check_kwarg
 
 logger = logging.getLogger(__name__)
-
-
-def reading_decode_ladder(config: AnkiMinerConfig) -> tuple[str, ...] | None:
-    """The decode ladder the novel/subtitle loaders sniff with, or the sentinel.
-
-    This worker is the one place a reading source is loaded with a config in
-    scope (the tabs only ``detect``), so the ladder is resolved here and threaded
-    down.
-
-    ``None`` is not "no ladder": it selects ``_util._decode``'s built-in
-    Japanese path, which is strictly more than an ordered list of encodings — a
-    UTF-16 BOM branch plus the cp932-versus-EUC-JP tiebreak. EUC-JP bytes decode
-    without error as cp932, so replaying Japanese through its own
-    ``import_encodings`` would return that mojibake and change Japanese output.
-    Gated on the profile object rather than on ``config.language``, the way
-    ``service_factory._lookup_kwarg`` is.
-    """
-    profile = get_profile(config_language(config))
-    return None if profile is get_profile("ja") else profile.import_encodings
 
 
 class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
@@ -197,7 +179,7 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
         exception (load or mining) propagates to the error handling in
         ``_run_item``.
         """
-        ladder = reading_decode_ladder(self._config)
+        ladder = import_decode_ladder(self._config)
         profile = get_profile(self._config.language)
         # The loader cleans cues with the SAME normaliser and bilingual-cue gate
         # the run's parser applies to every unit, so the two can never disagree

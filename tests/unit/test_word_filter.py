@@ -1507,11 +1507,13 @@ class TestAttachOccurrenceCounts:
 
 
 class TestOccurrenceCountsFoldToWordIdentity:
-    """zh: counts key on the word's comparison fold, not on its raw lemma (S4).
+    """zh: a mined word collects the spellings only it folds onto (S4).
 
     The parser counts each spelling under the lemma it saw, while the script
     fold makes 頭髮 and 头发 one word — so mixed-script material split that
-    word's occurrences across two keys and only one of them was ever read.
+    word's occurrences across two keys and only one of them was ever read. The
+    counts themselves stay keyed on the raw lemma; the restating is per mined
+    word, and a spelling two mined words share belongs to neither.
     """
 
     UNITS = ("她的頭髮很長。", "他的头发很短。", "頭髮還是頭髮。")
@@ -1573,6 +1575,25 @@ class TestOccurrenceCountsFoldToWordIdentity:
 
         hair = self._both_spellings(words)
         assert (hair["頭髮"].occurrence_count, hair["头发"].occurrence_count) == (3, 1)
+
+    def test_an_unmined_spelling_two_cards_share_is_credited_to_neither(self, test_config):
+        """裏面 and 裡面 both fold to 里面; crediting a third spelling to both double-counts it."""
+        pytest.importorskip("opencc")
+        config = dataclasses.replace(switch_language(test_config, "zh"), script_variant="")
+        words = [create_word("裏面"), create_word("裡面")]
+
+        self._service(config).attach_occurrence_counts(words, {"裏面": 3, "裡面": 2, "里面": 5})
+
+        assert [word.occurrence_count for word in words] == [3, 2]
+
+    def test_an_unmined_spelling_one_card_owns_is_still_credited_to_it(self, test_config):
+        pytest.importorskip("opencc")
+        config = dataclasses.replace(switch_language(test_config, "zh"), script_variant="")
+        words = [create_word("裏面")]
+
+        self._service(config).attach_occurrence_counts(words, {"裏面": 3, "里面": 5})
+
+        assert words[0].occurrence_count == 8
 
     def test_as_written_does_not_lift_both_cards_over_the_floor(self, test_config):
         """Crediting each card with 4 would mine a duplicate the floor used to reject."""

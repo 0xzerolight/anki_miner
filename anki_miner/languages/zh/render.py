@@ -13,7 +13,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from anki_miner.languages.zh.reading import pinyin_syllables, syllable_tone
-from anki_miner.languages.zh.variants import to_simplified, to_traditional
+from anki_miner.languages.zh.variants import is_traditional, to_traditional
 
 if TYPE_CHECKING:  # annotation-only: keeps profile.py's resource_catalog import out of the runtime path
     from anki_miner.config.config import AnkiMinerConfig
@@ -85,10 +85,11 @@ def _script_is_simplified(text: str) -> bool | None:
     Traditional evidence is tested first: a text with a simplified spelling of
     its own (裏, 汽車) is traditional, whichever standard spelt it. Only then
     does a text with a traditional spelling of its own count as simplified.
-    Both converters return their input when OpenCC is absent, so an install
-    without it answers ``None`` for everything rather than guessing.
+    :func:`is_traditional` is False and ``to_traditional`` returns its input
+    when OpenCC is absent, so an install without it answers ``None`` for
+    everything rather than guessing.
     """
-    if to_simplified(text) != text:
+    if is_traditional(text):
         return False
     if to_traditional(text) != text:
         return True
@@ -102,6 +103,11 @@ class ZhTraditionalHook:
     and when the conversion raises, so "output == input" is the only signal for
     "no variant" there is — emitting it anyway would put a simplified spelling
     in the traditional field on every machine without OpenCC.
+
+    A front that is already traditional is skipped before that: under "As
+    written" it keeps the source spelling, and s2tw would answer with a
+    DIFFERENT traditional spelling of the same word (裏面 -> 裡面,
+    怎麽 -> 怎麼), which is not the variant this field promises.
     """
 
     def field_names(self) -> tuple[str, ...]:
@@ -110,8 +116,10 @@ class ZhTraditionalHook:
     def render(self, word: Any, *, config: AnkiMinerConfig) -> dict[str, str]:
         del config  # script_variant selects the CARD FRONT, not this extra field
         form = getattr(word, "mined_form", "") or ""
-        traditional = to_traditional(form) if form else ""
-        return {"expression_traditional": traditional} if traditional and traditional != form else {}
+        if not form or is_traditional(form):
+            return {}
+        traditional = to_traditional(form)
+        return {"expression_traditional": traditional} if traditional != form else {}
 
 
 class ZhToneColorHook:

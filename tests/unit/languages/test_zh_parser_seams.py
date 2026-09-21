@@ -130,4 +130,5 @@ class TestTheNormaliseSeam:
         assert _sentences(_parser("zh"), ZH_MOJIBAKE_LINE) == {"他说这个电影很好看。"}
 
     def test_garbage_between_two_hanzi_does_not_split_their_word(self) -> None:
-        assert "电影" in _mine(_parser("zh"), ZH_SPLIT_WORD_LINE)
+        """Deleting the codepoint outright is what keeps 电影 one word and 电/影 off the cards."""
+        assert _mine(_parser("zh"), ZH_SPLIT_WORD_LINE) == {"我", "喜欢", "这部", "电影"}

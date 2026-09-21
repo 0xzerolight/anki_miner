@@ -21,8 +21,8 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from anki_miner.gui.utils.service_factory import import_decode_ladder
 from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
-from anki_miner.gui.workers.reading_queue_worker import reading_decode_ladder
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.book_sync.aligner import BookCursor, BookText
 from anki_miner.services.book_sync.pipeline import BookSyncResult, BookSyncStatus, load_book, sync_one
@@ -72,7 +72,7 @@ class BookSyncWorker(FileQueueWorker):
         self._book = load_book(
             self._book_path,
             rules=profile.sentence_rules,
-            encodings=reading_decode_ladder(self._config),
+            encodings=import_decode_ladder(self._config),
             cancel_check=lambda: self.is_cancelled,
         )
         self._cursor = BookCursor()

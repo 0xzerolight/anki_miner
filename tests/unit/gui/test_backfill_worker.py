@@ -512,6 +512,11 @@ def _audio_options(*keys: str) -> BackfillOptions:
     return BackfillOptions(field_keys=frozenset(keys))
 
 
+def _with_audio_field(config):
+    """The word-audio target mapped, which is what enables its checkbox."""
+    return replace(config, anki_fields={**config.anki_fields, "expression_audio": "WordAudio"})
+
+
 class TestBackfillScanWorkerWordAudio:
     def test_fetcher_is_built_and_closed_when_the_group_is_selected(self, test_config, monkeypatch):
         stubs = _stub_scan_worker(monkeypatch)
@@ -539,7 +544,8 @@ class TestBackfillScanWorkerWordAudio:
 
     def test_a_stale_audio_pack_aborts_an_audio_run(self, test_config, monkeypatch, qtbot):
         stubs = _stub_scan_worker(monkeypatch, gate_message="Audio pack out of date")
-        worker = BackfillScanWorker(test_config, _audio_options("expression_audio"))
+        config = _with_audio_field(test_config)
+        worker = BackfillScanWorker(config, _audio_options("expression_audio"))
         with qtbot.waitSignal(worker.error):
             worker.run()
         assert stubs.gate.call_args.kwargs["families"] == frozenset({"audio"})
@@ -551,3 +557,41 @@ class TestBackfillScanWorkerWordAudio:
         BackfillScanWorker(test_config, _audio_options("frequency")).run()
         assert stubs.gate.call_args.kwargs["families"] == frozenset({"frequency"})
         stubs.scan.assert_not_called()
+
+    def test_a_ticked_key_the_note_type_does_not_map_gates_on_nothing(self, test_config, monkeypatch):
+        """The scan drops an unmapped key, so it must not be able to abort the run either."""
+        stubs = _stub_scan_worker(monkeypatch, gate_message="Audio pack out of date")
+        BackfillScanWorker(test_config, _audio_options("expression_audio")).run()
+        stubs.gate.assert_not_called()
+        stubs.scan.assert_called_once()
+
+
+class TestBackfillScanWorkerAttestedReadings:
+    """A zh/yue scan reads the dictionary chain for every chunk, whatever is ticked."""
+
+    def test_an_audio_only_zh_run_still_gates_on_the_dictionary(self, test_config, monkeypatch):
+        stubs = _stub_scan_worker(monkeypatch, gate_message="Dictionary out of date")
+        config = _with_audio_field(_zh_config(test_config))
+        BackfillScanWorker(config, _audio_options("expression_audio")).run()
+        assert stubs.gate.call_args.kwargs["families"] == frozenset({"audio", "dictionary"})
+        stubs.scan.assert_not_called()
+
+    def test_a_reading_only_zh_run_gates_on_the_dictionary_alone(self, test_config, monkeypatch):
+        """No indexed family produces a reading field, but the ladder still reads the chain."""
+        stubs = _stub_scan_worker(monkeypatch, gate_message="Dictionary out of date")
+        config = _zh_config(test_config)
+        config = replace(config, anki_fields={**config.anki_fields, "expression_reading": "Reading"})
+        BackfillScanWorker(config, _audio_options("expression_reading")).run()
+        assert stubs.gate.call_args.kwargs["families"] == frozenset({"dictionary"})
+        stubs.scan.assert_not_called()
+
+    def test_a_run_with_nothing_mapped_gates_on_nothing(self, test_config, monkeypatch):
+        stubs = _stub_scan_worker(monkeypatch, gate_message="Dictionary out of date")
+        BackfillScanWorker(_zh_config(test_config), _audio_options("expression_audio")).run()
+        stubs.gate.assert_not_called()
+
+    def test_an_audio_only_japanese_run_does_not(self, test_config, monkeypatch):
+        """ja reconciles no readings, so its gate keeps the families it always had."""
+        stubs = _stub_scan_worker(monkeypatch, gate_message="Dictionary out of date")
+        BackfillScanWorker(_with_audio_field(test_config), _audio_options("expression_audio")).run()
+        assert stubs.gate.call_args.kwargs["families"] == frozenset({"audio"})

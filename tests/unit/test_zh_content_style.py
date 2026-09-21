@@ -101,6 +101,12 @@ class TestTheCardLanguageTag:
         pytest.importorskip("opencc")
         assert zh_card_lang(sentence, self._config(test_config, script_variant)) == "zh-Hant"
 
+    @pytest.mark.parametrize("word", ["显著", "著称", "专著", "执著", "论著", "土著", "原著", "编著"])
+    def test_a_simplified_sentence_holding_a_taiwan_variant_says_hans(self, test_config, word):
+        """tw2s folds 著 -> 着, so a probe built on it tagged these simplified sentences Hant."""
+        pytest.importorskip("opencc")
+        assert zh_card_lang(f"这个效果很{word}。", self._config(test_config, "")) == "zh-Hans"
+
     def test_text_spelled_the_same_in_both_scripts_says_hans(self, test_config):
         """我在北京 is its own simplification, so the card gets the mainland faces."""
         pytest.importorskip("opencc")
@@ -113,7 +119,7 @@ class TestTheCardLanguageTag:
 
     def test_without_opencc_everything_reads_as_simplified(self, test_config, monkeypatch):
         """No converter means no conversion, which is the shipped default's answer."""
-        monkeypatch.setattr(zh_style, "to_simplified", lambda text: text)
+        monkeypatch.setattr(zh_style, "is_traditional", lambda text: False)
         assert zh_card_lang("我每天學習中文。", self._config(test_config, "")) == "zh-Hans"
 
     def test_the_style_carries_the_resolver(self):

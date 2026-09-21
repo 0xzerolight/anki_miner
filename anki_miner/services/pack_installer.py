@@ -289,6 +289,10 @@ def install_components(
     # Resolved up front so an unsupported platform refuses before any bytes are
     # fetched, rather than half-installing and failing on the last component.
     plan: list[tuple[PackComponent, ArtifactSpec]] = []
+    # Packages pinned once per CPython ABI (zh's opencc) ship one component per
+    # interpreter, so three of the four resolve to nothing on any host by
+    # construction. That is the design, not a gap worth a line each.
+    supplied = {comp.import_name for comp in components if artifact_for(comp) is not None}
     for comp in components:
         if satisfied(comp):
             continue
@@ -305,7 +309,8 @@ def install_components(
                     f"The {display_noun} is not supported on this platform/Python "
                     f"({where}/{sys.version_info[0]}.{sys.version_info[1]})."
                 )
-            logger.info("Pack %s: no %s artifact for this platform; skipping", label, comp.import_name)
+            if comp.import_name not in supplied:
+                logger.info("Pack %s: no %s artifact for this platform; skipping", label, comp.import_name)
             continue
         plan.append((comp, spec))
 

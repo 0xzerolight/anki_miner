@@ -143,6 +143,28 @@ def selected_hook_field_keys(config: AnkiMinerConfig, field_keys: Iterable[str])
     return frozenset(spec.key for spec in specs) & frozenset(field_keys)
 
 
+def mapped_field_keys(config: AnkiMinerConfig, field_keys: Iterable[str]) -> frozenset[str]:
+    """``field_keys`` minus the ones this note type maps to no field name.
+
+    The one actionable-selection rule: the scan drops an unmapped key (there is
+    no ``""`` field to write to), so the worker's staleness gate has to read the
+    same set or a key that proposes nothing can still abort the run.
+    """
+    return frozenset(key for key in field_keys if config.anki_fields.get(key))
+
+
+def reconciles_attested_readings(config: AnkiMinerConfig) -> bool:
+    """Whether a scan reads the dictionary chain for the reading ladder's tier (c).
+
+    The condition ``_scan_backfill_impl`` batches ``offline_term_readings`` on,
+    minus the service it needs: true for a profile whose reading support
+    reconciles (zh, yue), and then for EVERY chunk of the scan, whatever fields
+    were ticked. The worker's staleness gate reads it for that reason — an
+    audio-only zh run still keys its filenames off the dictionary's answer.
+    """
+    return getattr(get_profile(config_language(config)).reading, "reconcile", None) is not None
+
+
 def definition_lookup_keys(config: AnkiMinerConfig, field_keys: Iterable[str]) -> frozenset[str]:
     """``field_keys`` widened by the definition a hook field rides on.
 
@@ -382,18 +404,20 @@ class _AudioWord:
 class _HookWord:
     """Word-like view of a note for the profile's card render hooks.
 
-    Carries the three things a finished card still proves — the card front, the
-    definition the scan just looked up, and the reading the note carries or the
-    profile derived (blank where ``_resolve_context`` could only guess one) —
-    under the names ``EpisodeProcessor._apply_render_hooks`` gives them, so the
-    hooks run unchanged. A hook that reads a parse-time attribute instead
-    (``pos``, ``morph``: the token's own tags, which no note records) finds none
-    and renders nothing, and the empty-proposal rule drops it.
+    Carries the four things a finished card still proves — the card front, the
+    definition the scan just looked up, the reading the note carries or the
+    profile derived (blank where ``_resolve_context`` could only guess one), and
+    the sentence the note was mined from — under the names
+    ``EpisodeProcessor._apply_render_hooks`` gives them, so the hooks run
+    unchanged. A hook that reads a parse-time attribute instead (``pos``,
+    ``morph``: the token's own tags, which no note records) finds none and
+    renders nothing, and the empty-proposal rule drops it.
     """
 
     mined_form: str
     definition_html: str
     expression_reading: str
+    sentence: str
 
 
 def scan_backfill(
@@ -449,7 +473,7 @@ def _scan_backfill_impl(
 
     # Only mapped keys are actionable; an unmapped selected key is dropped
     # (never write to a "" field name).
-    selected = {key for key in options.field_keys if anki_fields.get(key)}
+    selected = set(mapped_field_keys(config, options.field_keys))
 
     # Availability gating: `service is not None and is_available()` — the UI
     # enables checkboxes on field-mapping alone, so a mapped-but-service-None
@@ -494,7 +518,7 @@ def _scan_backfill_impl(
     audio_candidates = profile.audio.candidates
     # Tier (c) of the reading ladder, and whether it needs the dictionary.
     reading_support = profile.reading
-    wants_attested_readings = definition_service is not None and getattr(reading_support, "reconcile", None) is not None
+    wants_attested_readings = definition_service is not None and reconciles_attested_readings(config)
     # S21: mining's rtl block rule, so backfilled bytes equal fresh-mine bytes.
     style_direction = profile.content_style.direction
     # The language's own card fields, filled by the same hooks mining runs.
@@ -1006,7 +1030,7 @@ def _compute_note_changes(
                 card_definition = attach_card_style_block(
                     card_definition, dict_css_entries=dict_css_entries, direction=style_direction
                 )
-        rendered = _hook_proposals(ctx, config, hook_keys, render_hooks, card_definition)
+        rendered = _hook_proposals(ctx, config, hook_keys, render_hooks, card_definition, anki_fields)
         for key, value in rendered.items():
             proposals.setdefault(key, value if key in raw_hook_keys else html.escape(value))
 
@@ -1168,6 +1192,7 @@ def _hook_proposals(
     keys: frozenset[str],
     render_hooks: tuple[CardRenderHook, ...],
     definition: str,
+    anki_fields: Mapping[str, str],
 ) -> dict[str, str]:
     """Values for the language's own card fields, from its own render hooks.
 
@@ -1187,7 +1212,16 @@ def _hook_proposals(
     # of the hooks too: zh's tone colour paints the syllables it is handed, and
     # the tokenizer fallback hands it the front's own hanzi. Empty is what a
     # hook reads for any word carrying no reading — it recomputes from the front.
-    word = _HookWord(ctx.mined_form, definition, "" if ctx.reading_guessed else ctx.reading)
+    #
+    # The sentence is stripped the way every other field value here is: a mined
+    # card wraps it in a lang span, and zh's classifier reads the text for the
+    # script it is written in, not the markup around it.
+    word = _HookWord(
+        ctx.mined_form,
+        definition,
+        "" if ctx.reading_guessed else ctx.reading,
+        _strip_for_dedup(_field_value(ctx.fields, anki_fields.get("sentence")) or ""),
+    )
     proposals: dict[str, str] = {}
     for hook in render_hooks:
         try:

@@ -37,9 +37,12 @@ class JiebaTagger:
 
         ``ZH_FLAG_OVERRIDES`` is applied here, after the cut, so a retag can
         never move a token boundary; it is keyed on the simplified segment so
-        traditional text hits the same row. posseg's own ``word_tag_tab`` cannot
-        do this job: a run of single characters goes to the HMM, whose tags come
-        from ``char_state_tab``, and ``initialize()`` rebuilds the tab anyway.
+        traditional text hits the same row on the length-preserving branch. The
+        fallback below cuts the ORIGINAL text, so its segments carry the source
+        spelling and a traditional word misses its retag there. posseg's own
+        ``word_tag_tab`` cannot do this job: a run of single characters goes to
+        the HMM, whose tags come from ``char_state_tab``, and ``initialize()``
+        rebuilds the tab anyway.
         """
         simplified = to_simplified(text)
         if len(simplified) == len(text):

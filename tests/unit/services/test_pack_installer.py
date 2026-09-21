@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import logging
 import sys
 import zipfile
 from pathlib import Path
@@ -203,6 +204,39 @@ class TestInstallComponents:
                 display_noun="xx language pack",
                 cancelled_check=lambda: True,
             )
+
+    def test_an_abi_sibling_that_resolved_is_not_reported_as_a_gap(self, tmp_path, downloader, caplog) -> None:
+        """zh pins one opencc wheel per CPython; the three that miss are the design, not news."""
+        here = sys.version_info[:2]
+        siblings = tuple(
+            PackComponent(
+                import_name="xxopencc",
+                required=False,
+                sentinels=("__init__.py",),
+                universal=_PURE_SPEC,
+                abi=abi,
+            )
+            for abi in ((3, 11), (3, 12), (3, 13), here)
+        )
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.services.pack_installer"):
+            _install("xxpack", siblings, tmp_path / "root")
+
+        assert [record for record in caplog.records if "no xxopencc artifact" in record.getMessage()] == []
+        assert downloader.urls == [_PURE_SPEC.url]
+
+    def test_an_optional_component_nothing_supplies_is_still_reported(self, tmp_path, downloader, caplog) -> None:
+        optional = PackComponent(
+            import_name="xxgone",
+            required=False,
+            sentinels=("__init__.py",),
+            per_platform={("noplat", "noarch"): _PURE_SPEC},
+        )
+
+        with caplog.at_level(logging.INFO, logger="anki_miner.services.pack_installer"):
+            _install("xxpack", (_PURE_COMPONENT, optional), tmp_path / "root")
+
+        assert any("no xxgone artifact" in record.getMessage() for record in caplog.records)
 
     def test_components_supported_ignores_optional_gaps(self) -> None:
         optional = PackComponent(

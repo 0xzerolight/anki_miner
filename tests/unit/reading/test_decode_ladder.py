@@ -184,21 +184,21 @@ def test_the_sentinel_is_omitted_from_the_loader_call(kind: str, monkeypatch: py
 
 
 # ---------------------------------------------------------------------------
-# The one call site that owns a config
+# The one rule every user-picked text file is decoded by
 # ---------------------------------------------------------------------------
 
 
-def test_the_worker_resolves_the_sentinel_for_japanese() -> None:
-    from anki_miner.gui.workers.reading_queue_worker import reading_decode_ladder
+def test_the_ladder_resolves_to_the_sentinel_for_japanese() -> None:
+    from anki_miner.gui.utils.service_factory import import_decode_ladder
 
-    assert reading_decode_ladder(AnkiMinerConfig()) is None
+    assert import_decode_ladder(AnkiMinerConfig()) is None
 
 
-def test_the_worker_resolves_a_profile_ladder_for_another_language(monkeypatch) -> None:
-    from anki_miner.gui.workers.reading_queue_worker import reading_decode_ladder
+def test_the_ladder_resolves_to_the_profile_s_own_for_another_language(monkeypatch) -> None:
+    from anki_miner.gui.utils.service_factory import import_decode_ladder
     from tests.unit.languages.stub_registry import register_stub_profile
 
     profile = register_stub_profile(monkeypatch, "zh", import_encodings=("utf-8-sig", "gb18030", "big5"))
     zh_config = dataclasses.replace(AnkiMinerConfig(), language="zh")
 
-    assert reading_decode_ladder(zh_config) == profile.import_encodings
+    assert import_decode_ladder(zh_config) == profile.import_encodings

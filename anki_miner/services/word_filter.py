@@ -911,12 +911,15 @@ class WordFilterService:
         them — the curator under-reported and the reading occurrence floor
         dropped words that had cleared it.
 
-        A mined lemma therefore keeps its OWN count and collects only the counts
-        of spellings that fold onto it and that no other mined lemma claims.
-        Summing the fold outright would double the corpus wherever the run kept
-        both spellings as separate cards (Character Set = As written): each card
-        would report the pair's total, and two cards that occur three times and
-        once would both claim four.
+        A mined lemma therefore keeps its OWN count and collects the counts of
+        spellings that fold onto it only when it is the ONLY mined lemma with
+        that key. Summing the fold outright would double the corpus wherever
+        the run kept both spellings as separate cards (Character Set = As
+        written): each card would report the pair's total, and two cards that
+        occur three times and once would both claim four. Two mined spellings
+        can share a key without either being the other's (裏面 and 裡面 both
+        fold to 里面), and crediting an unmined third spelling to both is that
+        same double count one step further out — so it goes to neither.
 
         Folding happens HERE and never at the count site
         (``count_lemmas``/``parse_text_units``): ``corpus_aggregator.select``
@@ -928,14 +931,21 @@ class WordFilterService:
         if fold is None:
             return counts
         mined = {word.lemma for word in words}
-        unclaimed: dict[str, int] = {}
+        # The one mined lemma holding each key, or None where two of them do.
+        owner: dict[str, str | None] = {}
+        for lemma in mined:
+            key = fold(lemma)
+            owner[key] = None if key in owner else lemma
+        credit: dict[str, int] = {}
         for lemma, count in counts.items():
-            if lemma not in mined:
-                key = fold(lemma)
-                unclaimed[key] = unclaimed.get(key, 0) + count
-        if not unclaimed:
+            if lemma in mined:
+                continue
+            claimant = owner.get(fold(lemma))
+            if claimant is not None:
+                credit[claimant] = credit.get(claimant, 0) + count
+        if not credit:
             return counts
-        return {lemma: counts.get(lemma, 0) + unclaimed.get(fold(lemma), 0) for lemma in mined}
+        return {lemma: counts.get(lemma, 0) + credit.get(lemma, 0) for lemma in mined}
 
     def attach_occurrence_counts(self, words: list[TokenizedWord], counts: Mapping[str, int]) -> None:
         """Set ``word.occurrence_count`` from in-episode lemma counts (Issue #88).

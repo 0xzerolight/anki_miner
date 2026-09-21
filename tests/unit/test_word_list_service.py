@@ -22,10 +22,15 @@ EXPECTED_SITES = {
 
 def _ladder(language: str) -> dict:
     """The kwargs a construction site passes for *language*'s profile."""
-    profile = get_profile(language)
+    from dataclasses import replace
+
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.utils.service_factory import import_decode_ladder
+
+    encodings = import_decode_ladder(replace(AnkiMinerConfig(), language=language))
     return {
-        "encodings": profile.import_encodings,
-        **script_check_kwarg(profile.import_encodings, profile.script),
+        "encodings": encodings,
+        **script_check_kwarg(encodings, get_profile(language).script),
     }
 
 
@@ -249,14 +254,27 @@ class TestEncodings:
 
         assert service.whitelist_entries() == set(words)
 
-    def test_japanese_ladder_reads_a_cp932_list(self, tmp_path):
+    def test_japanese_gets_no_ladder_and_a_cp932_list_still_fails(self, tmp_path):
+        """ja is carved out of every first-success ladder: utf-8 (+BOM) or nothing."""
         bl = tmp_path / "bl.txt"
         bl.write_bytes("食べる\n飲む\n".encode("cp932"))
 
+        assert _ladder("ja")["encodings"] is None
         service = WordListService(blacklist_path=bl, **_ladder("ja"))
-        service.load()
 
-        assert service.is_blacklisted("食べる") is True
+        with pytest.raises(SetupError, match="Could not read your word list file."):
+            service.load()
+
+    def test_a_japanese_euc_jp_list_raises_instead_of_loading_mojibake(self, tmp_path):
+        """EUC-JP kana decode without error as cp932, so a ladder would load junk silently."""
+        words = ("あさ", "かさ", "けさ", "さけ", "たけ", "ちかい", "おおきい", "きせつ", "たいせつ", "そだち")
+        bl = tmp_path / "bl.txt"
+        bl.write_bytes(("\n".join(words) + "\n").encode("euc_jp"))
+
+        service = WordListService(blacklist_path=bl, **_ladder("ja"))
+
+        with pytest.raises(SetupError, match="Could not read your word list file."):
+            service.load()
 
     def test_plain_utf8_is_unchanged_by_a_ladder(self, tmp_path):
         bl = tmp_path / "bl.txt"
@@ -268,6 +286,24 @@ class TestEncodings:
         without.load()
 
         assert with_ladder._blacklist == without._blacklist == {"食べる", "飲む"}
+
+    def test_a_mis_picked_huge_file_is_refused_before_it_is_read(self, tmp_path, monkeypatch):
+        """The picker's "All Files (*)" filter lets a video through; stat it, don't decode it."""
+        from anki_miner.services import word_list_service as wls
+
+        bl = tmp_path / "bl.txt"
+        bl.write_text("的\n了\n", encoding="utf-8")
+        monkeypatch.setattr(wls, "_MAX_IMPORT_BYTES", 2)
+        monkeypatch.setattr(Path, "open", lambda *a, **k: pytest.fail("the file was read"))
+
+        with pytest.raises(SetupError, match="Could not read your word list file."):
+            WordListService(blacklist_path=bl).load()
+
+    def test_the_cap_is_the_one_the_known_words_importer_uses(self):
+        """One "a user mis-picked a huge file" bound for both import pickers."""
+        from anki_miner.services import known_words_import, word_list_service
+
+        assert word_list_service._MAX_IMPORT_BYTES is known_words_import._MAX_IMPORT_BYTES
 
     def test_an_undecodable_list_still_raises_setup_error(self, tmp_path):
         """An exhausted ladder is a read failure like any other."""
