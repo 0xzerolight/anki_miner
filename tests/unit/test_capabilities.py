@@ -203,6 +203,9 @@ def test_chinese_hides_the_japanese_only_entries() -> None:
         "name-wordsets",
         "furigana",
         "pitch-accent",
+        # Settings gates the whole Preset row on note_presets, so the guide's
+        # Open button would land a zh session on a page without it.
+        "note-type-preset",
     }
 
 

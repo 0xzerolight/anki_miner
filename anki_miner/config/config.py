@@ -265,7 +265,9 @@ class AnkiMinerConfig:
     deck_builder_top_n: int = 1000
     deck_builder_coverage_pct: float = 90.0
     deck_builder_skip_known: bool = True  # "Skip words already in my Anki collection"
-    backfill_field_groups: tuple[str, ...] = ()  # Ticked card_backfiller.FIELD_GROUPS keys
+    # Ticked backfill group keys: card_backfiller.FIELD_GROUPS plus one per
+    # profile-declared card field (measure_word, expression_pinyin, hanja, …).
+    backfill_field_groups: tuple[str, ...] = ()
 
     # Animated screenshot settings (opt-in; static JPEG remains default)
     screenshot_animated: bool = False

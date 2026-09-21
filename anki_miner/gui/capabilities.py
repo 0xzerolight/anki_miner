@@ -686,7 +686,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Capabilities",
             "Character Set picks the spelling the card front and the dictionary lookup use: Simplified, "
             "Traditional, or As written to keep each word's source spelling. The Traditional Field, under "
-            "Settings -> Anki, carries the other spelling when it differs from the front.",
+            "Settings -> Cards & Anki, carries the other spelling when it differs from the front.",
         ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
@@ -1007,6 +1007,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),
         keywords=("preset", "lapis", "kiku", "senren", "note type setup", "auto map fields"),
+        requires="note_presets",
     ),
     Capability(
         id="bold-target-word",

@@ -237,11 +237,20 @@ class AnkiProbeController:
             )
             return
         cleared = self._anki_panel.populate_from_field_list(field_names)
-        status = f"Fetched {len(field_names)} fields and auto-mapped them"
+        # %n numerus for both counts: a Python ternary picks an English plural
+        # no catalogue can adapt, and each clause carries its own count, so
+        # they cannot share one source string — hence the joining template.
+        status = QCoreApplication.translate(
+            "AnkiProbeController", "Fetched %n field(s) and auto-mapped them", "", len(field_names)
+        )
         if cleared:
             # Name the blanking: the rows it empties are ones the user can see,
             # and a silent clear reads as the panel losing their work.
-            status += f"; cleared {cleared} stale {'mapping' if cleared == 1 else 'mappings'}"
+            status = tr_format(
+                QCoreApplication.translate("AnkiProbeController", "%1; %2"),
+                status,
+                QCoreApplication.translate("AnkiProbeController", "cleared %n stale mapping(s)", "", cleared),
+            )
         self._anki_panel.set_notetype_status(True, status)
 
     def _on_fetch_fields_error(

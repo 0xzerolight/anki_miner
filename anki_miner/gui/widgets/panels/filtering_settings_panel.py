@@ -1177,10 +1177,11 @@ class FilteringSettingsPanel(FormPanel):
             bold_target_in_sentence=self.get_bold_target_in_sentence(),
         )
         # Language-scoped rows contribute only while their capability is present.
-        # A ja config holds script_variant "" and the combo has no entry for it,
-        # so a blind write here would drift ja to "simplified" on the next
-        # autosave. Visibility is the gate's own output, so there is one source
-        # of truth for "does this language have this setting".
+        # The two variant combos write the same field and at most one of them is
+        # ever visible, so a blind write would stamp the hidden one's own default
+        # ("br", the Portuguese row's first item) onto a language that has
+        # neither setting. Visibility is the gate's own output, so there is one
+        # source of truth for "does this language have this setting".
         # The kana boxes above already wrote these two fields unconditionally --
         # under another language they are hidden and still hold the loaded
         # value, so that write is a no-op. The visible option-driven row is the

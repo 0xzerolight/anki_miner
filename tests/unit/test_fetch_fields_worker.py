@@ -142,7 +142,7 @@ class TestSettingsTabFetchFieldsWiring:
         # The fetched list was handed to populate_from_field_list on the main thread.
         populate.assert_called_once_with(["Expression", "Sentence", "MainDefinition"])
         # Status surfaces the count.
-        assert "Fetched 3 fields" in tab.anki_panel.notetype_status.text()
+        assert tab.anki_panel.notetype_status.text() == "Fetched 3 field(s) and auto-mapped them"
         # Button is re-enabled after the result lands.
         assert tab.anki_panel.fetch_fields_button.isEnabled()
 
@@ -159,8 +159,10 @@ class TestSettingsTabFetchFieldsWiring:
         tab._anki_probe._on_fetch_fields_finished("Chinese Basic", ["Expression", "Sentence"])
 
         status = tab.anki_panel.notetype_status.text()
-        assert "Fetched 2 fields" in status
-        assert "cleared 1 stale mapping" in status
+        # Both halves are Qt numerus sources, so the count renders as "%n"
+        # substituted into the English fallback rather than a Python ternary a
+        # catalogue cannot reach.
+        assert status == "Fetched 2 field(s) and auto-mapped them; cleared 1 stale mapping(s)"
 
     def test_status_stays_quiet_when_nothing_was_cleared(self, test_config: AnkiMinerConfig, qtbot):
         tab = SettingsTab(test_config)

@@ -822,7 +822,7 @@ class NoteTypePage(_LiveCheckPage):
         # A note type we can name maps itself: the preset carries the exact
         # field names plus the pitch/marker settings the keyword pass below
         # cannot know about, so there is nothing left for the user to press.
-        preset = preset_for_field_names(names)
+        preset = self._matching_preset(names)
         if preset is not None:
             self.guidance_label.setVisible(False)
             self.guidance_label.setText("")
@@ -848,6 +848,20 @@ class NoteTypePage(_LiveCheckPage):
             self.guidance_label.setVisible(False)
             self.guidance_label.setText("")
         self.completeChanged.emit()
+
+    def _matching_preset(self, field_names: list[str]) -> NotePreset | None:
+        """The preset for these field names, but only where presets apply.
+
+        Lapis, Kiku and Senren are Japanese note types and their mappings carry
+        furigana and pitch fields, so they ride the same ``note_presets``
+        capability the Settings Preset row does: applying one elsewhere stages
+        mappings the language cannot fill and every run's field check then
+        rejects. Without it the caller falls through to the keyword pass.
+        """
+        from anki_miner.languages.registry import get_profile  # noqa: PLC0415
+
+        capabilities = get_profile(config_language(self._wizard.working_config())).capabilities
+        return preset_for_field_names(field_names) if "note_presets" in capabilities else None
 
     @staticmethod
     def _has_mining_shape(field_names: list[str]) -> bool:
@@ -931,7 +945,7 @@ class NoteTypePage(_LiveCheckPage):
         if not self._field_names or self._field_names_note_type != note_type:
             return
         self._sanitize_field_mappings(note_type, self._field_names)
-        preset = preset_for_field_names(self._field_names)
+        preset = self._matching_preset(self._field_names)
         if preset is not None:
             self._apply_preset(preset)
             return
