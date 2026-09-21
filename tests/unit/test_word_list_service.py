@@ -22,10 +22,15 @@ EXPECTED_SITES = {
 
 def _ladder(language: str) -> dict:
     """The kwargs a construction site passes for *language*'s profile."""
-    profile = get_profile(language)
+    from dataclasses import replace
+
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.utils.service_factory import import_decode_ladder
+
+    encodings = import_decode_ladder(replace(AnkiMinerConfig(), language=language))
     return {
-        "encodings": profile.import_encodings,
-        **script_check_kwarg(profile.import_encodings, profile.script),
+        "encodings": encodings,
+        **script_check_kwarg(encodings, get_profile(language).script),
     }
 
 
@@ -249,14 +254,27 @@ class TestEncodings:
 
         assert service.whitelist_entries() == set(words)
 
-    def test_japanese_ladder_reads_a_cp932_list(self, tmp_path):
+    def test_japanese_gets_no_ladder_and_a_cp932_list_still_fails(self, tmp_path):
+        """ja is carved out of every first-success ladder: utf-8 (+BOM) or nothing."""
         bl = tmp_path / "bl.txt"
         bl.write_bytes("食べる\n飲む\n".encode("cp932"))
 
+        assert _ladder("ja")["encodings"] is None
         service = WordListService(blacklist_path=bl, **_ladder("ja"))
-        service.load()
 
-        assert service.is_blacklisted("食べる") is True
+        with pytest.raises(SetupError, match="Could not read your word list file."):
+            service.load()
+
+    def test_a_japanese_euc_jp_list_raises_instead_of_loading_mojibake(self, tmp_path):
+        """EUC-JP kana decode without error as cp932, so a ladder would load junk silently."""
+        words = ("あさ", "かさ", "けさ", "さけ", "たけ", "ちかい", "おおきい", "きせつ", "たいせつ", "そだち")
+        bl = tmp_path / "bl.txt"
+        bl.write_bytes(("\n".join(words) + "\n").encode("euc_jp"))
+
+        service = WordListService(blacklist_path=bl, **_ladder("ja"))
+
+        with pytest.raises(SetupError, match="Could not read your word list file."):
+            service.load()
 
     def test_plain_utf8_is_unchanged_by_a_ladder(self, tmp_path):
         bl = tmp_path / "bl.txt"
