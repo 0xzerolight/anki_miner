@@ -13,7 +13,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from anki_miner.languages.zh.reading import pinyin_syllables, syllable_tone
-from anki_miner.languages.zh.variants import to_simplified, to_traditional
+from anki_miner.languages.zh.variants import is_traditional, to_traditional
 
 if TYPE_CHECKING:  # annotation-only: keeps profile.py's resource_catalog import out of the runtime path
     from anki_miner.config.config import AnkiMinerConfig
@@ -85,10 +85,11 @@ def _script_is_simplified(text: str) -> bool | None:
     Traditional evidence is tested first: a text with a simplified spelling of
     its own (裏, 汽車) is traditional, whichever standard spelt it. Only then
     does a text with a traditional spelling of its own count as simplified.
-    Both converters return their input when OpenCC is absent, so an install
-    without it answers ``None`` for everything rather than guessing.
+    :func:`is_traditional` is False and ``to_traditional`` returns its input
+    when OpenCC is absent, so an install without it answers ``None`` for
+    everything rather than guessing.
     """
-    if to_simplified(text) != text:
+    if is_traditional(text):
         return False
     if to_traditional(text) != text:
         return True

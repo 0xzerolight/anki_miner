@@ -142,6 +142,25 @@ def _convert_with(name: str, normalized: str) -> str:
     return _convert(converter, normalized) or normalized
 
 
+def is_traditional(text: str) -> bool:
+    """Whether ``text`` carries a traditional spelling of its own.
+
+    The one "is this traditional?" probe in the engine — the card front
+    (:func:`to_script`), the classifier's script (``render``) and the card's
+    ``lang`` tag (``style``) all ask it here, because each of them got it wrong
+    on its own. Asked with t2s, never with :func:`to_simplified`: tw2s also
+    folds the Taiwan variants 著 -> 着 and 麼 -> 么, so every simplified word
+    spelled with one of those (显著, 著称, 专著, 执著, 论著, 土著, 原著, 编著)
+    looked traditional. The cost is 么 in its rare yāo sense (老么), which reads
+    as traditional; no spelling-level rule separates the two senses.
+
+    False without OpenCC, where nothing converts and no text can prove its
+    script — the same answer as text that is spelt the same in both.
+    """
+    normalized = normalize_zh(text)
+    return _convert_with("t2s", normalized) != normalized
+
+
 def to_traditional(text: str) -> str:
     """Taiwan-standard traditional spelling of ``text`` (s2tw), NFC-normalised.
 
@@ -208,19 +227,13 @@ def to_script(text: str, script_variant: str) -> str:
 
     ``"simplified"`` uses :func:`script_key`, so a front always equals its own
     comparison key and an ambiguous word (麵) keeps its source spelling rather
-    than becoming a different word's front. ``"traditional"`` keeps text that is
-    already traditional and converts the rest to Taiwan spelling. Any other
-    value leaves the text as written.
-
-    "Already traditional?" is asked with t2s, not :func:`to_simplified`: tw2s
-    also folds the Taiwan variants 著 -> 着 and 麼 -> 么, so every simplified
-    word spelled with one of those (显著, 著称, 专著, 执著) looked traditional
-    and was left unconverted. The cost is 么 in its rare yāo sense (老么),
-    which becomes 麼; no spelling-level rule separates the two senses.
+    than becoming a different word's front. ``"traditional"`` keeps text
+    :func:`is_traditional` already answers for and converts the rest to Taiwan
+    spelling. Any other value leaves the text as written.
     """
     normalized = normalize_zh(text)
     if script_variant == "simplified":
         return script_key(normalized)
-    if script_variant == "traditional" and _convert_with("t2s", normalized) == normalized:
+    if script_variant == "traditional" and not is_traditional(normalized):
         return to_traditional(normalized)
     return normalized

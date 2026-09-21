@@ -100,6 +100,34 @@ class TestToSimplified:
         assert variants.to_simplified("兀") == "兀"
 
 
+#: Ordinary simplified words spelt with a Taiwan variant character. tw2s folds
+#: 著 -> 着 and 麼 -> 么, so a "is this traditional?" probe built on it calls
+#: every one of these traditional.
+_SIMPLIFIED_WITH_A_TAIWAN_VARIANT = ("显著", "著称", "专著", "执著", "论著", "土著", "原著", "编著")
+
+
+class TestIsTraditional:
+    @pytest.fixture(autouse=True)
+    def _opencc(self) -> None:
+        pytest.importorskip("opencc")
+
+    @pytest.mark.parametrize("word", _SIMPLIFIED_WITH_A_TAIWAN_VARIANT)
+    def test_a_simplified_word_holding_a_taiwan_variant_is_not_traditional(self, word: str) -> None:
+        assert variants.is_traditional(word) is False
+
+    @pytest.mark.parametrize("word", ["頭髮", "裏面", "怎麽", "這裡", "汽車"])
+    def test_a_traditional_word_is_traditional(self, word: str) -> None:
+        assert variants.is_traditional(word) is True
+
+    @pytest.mark.parametrize("word", ["我在北京", "银行", "他每天学习中文。"])
+    def test_a_simplified_or_invariant_text_is_not_traditional(self, word: str) -> None:
+        assert variants.is_traditional(word) is False
+
+    def test_without_opencc_nothing_reads_as_traditional(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(variants, "_converter", lambda _name: None)
+        assert variants.is_traditional("頭髮") is False
+
+
 #: (traditional, simplified) spellings of one word; each pair must share a key.
 _SAME_WORD = [
     ("頭髮", "头发"),
@@ -221,6 +249,7 @@ class TestToScript:
             ("论著", "論著"),
             ("土著", "土著"),
             ("原著", "原著"),
+            ("编著", "編著"),
         ],
     )
     def test_traditional_converts_a_word_holding_a_taiwan_variant_character(

@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from anki_miner.languages.profile import ContentTextStyle
-from anki_miner.languages.zh.variants import to_simplified
+from anki_miner.languages.zh.variants import is_traditional
 
 if TYPE_CHECKING:
     from anki_miner.config.config import AnkiMinerConfig
@@ -65,11 +65,11 @@ def zh_card_lang(text: str, config: AnkiMinerConfig) -> str:
     one. ``script_variant`` is not consulted: it governs the card front and the
     lookup ladder, while a mined sentence keeps the source file's own spelling,
     so a traditional source under Character Set = Simplified still needs Hant.
-    A form OpenCC already reads as simplified is Hans, anything else Hant;
+    Text :func:`is_traditional` answers for is Hant, anything else Hans;
     without OpenCC everything reads as simplified, which is the shipped
     default's answer anyway. ``config`` is the shared resolver signature.
     """
-    return "zh-Hant" if to_simplified(text) != text else "zh-Hans"
+    return "zh-Hant" if is_traditional(text) else "zh-Hans"
 
 
 #: ``writing_system`` turns on the installed-face probe and its one "may render
