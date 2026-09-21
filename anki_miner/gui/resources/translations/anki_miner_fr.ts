@@ -235,6 +235,24 @@
         <source>The Anki field mapping is not usable: %1</source>
         <translation>Le mappage des champs Anki n'est pas utilisable : %1</translation>
     </message>
+    <message numerus="yes">
+        <source>Fetched %n field(s) and auto-mapped them</source>
+        <translation>
+            <numerusform>%n champ récupéré et mappé automatiquement</numerusform>
+            <numerusform>%n champs récupérés et mappés automatiquement</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>%1; %2</source>
+        <translation>%1 ; %2</translation>
+    </message>
+    <message numerus="yes">
+        <source>cleared %n stale mapping(s)</source>
+        <translation>
+            <numerusform>%n mappage obsolète effacé</numerusform>
+            <numerusform>%n mappages obsolètes effacés</numerusform>
+        </translation>
+    </message>
     <message>
         <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
         <translation>Impossible de demander la liste des paquets. Vérifiez l’adresse AnkiConnect dans les paramètres.</translation>
@@ -2316,8 +2334,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Caractères simplifiés ou traditionnels</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>L'option Jeu de caractères choisit l'orthographe utilisée par le recto de la carte et la recherche dans le dictionnaire : Simplifié, Traditionnel, ou Tel quel pour conserver l'orthographe d'origine de chaque mot. Le champ Caractères traditionnels, dans Paramètres -&gt; Anki, porte l'autre orthographe lorsqu'elle diffère de celle du recto.</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>L'option Jeu de caractères choisit l'orthographe utilisée par le recto de la carte et la recherche dans le dictionnaire : Simplifié, Traditionnel, ou Tel quel pour conserver l'orthographe d'origine de chaque mot. Le champ Caractères traditionnels, dans Paramètres -&gt; Cartes et Anki, porte l'autre orthographe lorsqu'elle diffère de celle du recto.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>

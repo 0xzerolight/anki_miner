@@ -235,6 +235,24 @@
         <source>The Anki field mapping is not usable: %1</source>
         <translation>Die Anki-Feldzuordnung ist nicht nutzbar: %1</translation>
     </message>
+    <message numerus="yes">
+        <source>Fetched %n field(s) and auto-mapped them</source>
+        <translation>
+            <numerusform>%n Feld abgerufen und automatisch zugeordnet</numerusform>
+            <numerusform>%n Felder abgerufen und automatisch zugeordnet</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>%1; %2</source>
+        <translation>%1; %2</translation>
+    </message>
+    <message numerus="yes">
+        <source>cleared %n stale mapping(s)</source>
+        <translation>
+            <numerusform>%n veraltete Zuordnung gelöscht</numerusform>
+            <numerusform>%n veraltete Zuordnungen gelöscht</numerusform>
+        </translation>
+    </message>
     <message>
         <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
         <translation>Die Stapelliste konnte nicht angefordert werden. Prüfen Sie die AnkiConnect-Adresse in den Einstellungen.</translation>
@@ -2316,8 +2334,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Vereinfachte oder traditionelle Zeichen</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>Der Zeichensatz legt fest, welche Schreibweise die Kartenvorderseite und die Wörterbuchsuche verwenden: Vereinfacht, Traditionell oder Wie geschrieben, um die Ausgangsschreibweise jedes Wortes zu behalten. Das Langzeichen-Feld unter Einstellungen -&gt; Anki trägt die andere Schreibweise, wenn sie von der Vorderseite abweicht.</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>Der Zeichensatz legt fest, welche Schreibweise die Kartenvorderseite und die Wörterbuchsuche verwenden: Vereinfacht, Traditionell oder Wie geschrieben, um die Ausgangsschreibweise jedes Wortes zu behalten. Das Langzeichen-Feld unter Einstellungen -&gt; Karten &amp; Anki trägt die andere Schreibweise, wenn sie von der Vorderseite abweicht.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>

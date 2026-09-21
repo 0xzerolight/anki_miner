@@ -235,6 +235,22 @@
         <source>The Anki field mapping is not usable: %1</source>
         <translation type="unfinished" />
     </message>
+    <message numerus="yes">
+        <source>Fetched %n field(s) and auto-mapped them</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
+    <message>
+        <source>%1; %2</source>
+        <translation type="unfinished" />
+    </message>
+    <message numerus="yes">
+        <source>cleared %n stale mapping(s)</source>
+        <translation type="unfinished">
+            <numerusform />
+        </translation>
+    </message>
     <message>
         <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
         <translation type="unfinished" />
@@ -2305,7 +2321,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Anki, carries the other spelling when it differs from the front.</source>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
         <translation type="unfinished" />
     </message>
     <message>

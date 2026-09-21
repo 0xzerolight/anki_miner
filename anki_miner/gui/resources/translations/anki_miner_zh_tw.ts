@@ -235,6 +235,22 @@
         <source>The Anki field mapping is not usable: %1</source>
         <translation>Anki 欄位對應不可用：%1</translation>
     </message>
+    <message numerus="yes">
+        <source>Fetched %n field(s) and auto-mapped them</source>
+        <translation>
+            <numerusform>已擷取 %n 個欄位並自動對應</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>%1; %2</source>
+        <translation>%1；%2</translation>
+    </message>
+    <message numerus="yes">
+        <source>cleared %n stale mapping(s)</source>
+        <translation>
+            <numerusform>已清除 %n 個失效的對應</numerusform>
+        </translation>
+    </message>
     <message>
         <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
         <translation>無法要求取得牌組清單。請檢查「設定」中的 AnkiConnect 位址。</translation>
@@ -2314,8 +2330,8 @@ No index files are deleted.</source>
         <translation>簡體或繁體字</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>「字元集」決定卡片正面與字典查詢所使用的寫法：簡體、繁體，或「依原文」以保留每個單字來源本身的寫法。當另一種寫法與正面不同時，設定 -&gt; Anki 下的「繁體字欄位」會存放該寫法。</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>「字元集」決定卡片正面與字典查詢所使用的寫法：簡體、繁體，或「依原文」以保留每個單字來源本身的寫法。當另一種寫法與正面不同時，設定 -&gt; 卡片與 Anki 下的「繁體字欄位」會存放該寫法。</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>

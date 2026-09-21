@@ -235,6 +235,24 @@
         <source>The Anki field mapping is not usable: %1</source>
         <translation>La mappatura dei campi di Anki non è utilizzabile: %1</translation>
     </message>
+    <message numerus="yes">
+        <source>Fetched %n field(s) and auto-mapped them</source>
+        <translation>
+            <numerusform>Recuperato %n campo e mappato automaticamente</numerusform>
+            <numerusform>Recuperati %n campi e mappati automaticamente</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>%1; %2</source>
+        <translation>%1; %2</translation>
+    </message>
+    <message numerus="yes">
+        <source>cleared %n stale mapping(s)</source>
+        <translation>
+            <numerusform>cancellata %n mappatura obsoleta</numerusform>
+            <numerusform>cancellate %n mappature obsolete</numerusform>
+        </translation>
+    </message>
     <message>
         <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
         <translation>Impossibile richiedere l'elenco dei mazzi. Controllare l'indirizzo AnkiConnect nelle Impostazioni.</translation>
@@ -2316,8 +2334,8 @@ Nessun file indice viene eliminato.</translation>
         <translation>Caratteri semplificati o tradizionali</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>Set di caratteri determina la grafia usata dal fronte della carta e dalla ricerca nel dizionario: Semplificato, Tradizionale oppure Come scritto per mantenere la grafia originale di ogni parola. Il Campo caratteri tradizionali, in Impostazioni -&gt; Anki, riporta l'altra grafia quando differisce da quella del fronte.</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>Set di caratteri determina la grafia usata dal fronte della carta e dalla ricerca nel dizionario: Semplificato, Tradizionale oppure Come scritto per mantenere la grafia originale di ogni parola. Il Campo caratteri tradizionali, in Impostazioni -&gt; Carte e Anki, riporta l'altra grafia quando differisce da quella del fronte.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>

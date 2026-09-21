@@ -235,6 +235,26 @@
         <source>The Anki field mapping is not usable: %1</source>
         <translation>Сопоставление полей Anki непригодно: %1</translation>
     </message>
+    <message numerus="yes">
+        <source>Fetched %n field(s) and auto-mapped them</source>
+        <translation>
+            <numerusform>Получено и автоматически сопоставлено %n поле</numerusform>
+            <numerusform>Получено и автоматически сопоставлено %n поля</numerusform>
+            <numerusform>Получено и автоматически сопоставлено %n полей</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>%1; %2</source>
+        <translation>%1; %2</translation>
+    </message>
+    <message numerus="yes">
+        <source>cleared %n stale mapping(s)</source>
+        <translation>
+            <numerusform>очищено %n устаревшее сопоставление</numerusform>
+            <numerusform>очищено %n устаревших сопоставления</numerusform>
+            <numerusform>очищено %n устаревших сопоставлений</numerusform>
+        </translation>
+    </message>
     <message>
         <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
         <translation>Не удалось запросить список колод. Проверьте адрес AnkiConnect в настройках.</translation>
@@ -2318,8 +2338,8 @@ No index files are deleted.</source>
         <translation>Упрощённые или традиционные иероглифы</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>Набор иероглифов задаёт написание, которое используют лицевая сторона карточки и поиск в словаре: Упрощённое, Традиционное или Как в источнике, чтобы сохранить исходное написание каждого слова. Поле традиционного написания в разделе Настройки -&gt; Anki содержит другое написание, когда оно отличается от лицевой стороны.</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>Набор иероглифов задаёт написание, которое используют лицевая сторона карточки и поиск в словаре: Упрощённое, Традиционное или Как в источнике, чтобы сохранить исходное написание каждого слова. Поле традиционного написания в разделе Настройки -&gt; Карточки и Anki содержит другое написание, когда оно отличается от лицевой стороны.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>

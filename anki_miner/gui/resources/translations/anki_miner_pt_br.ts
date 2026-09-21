@@ -235,6 +235,24 @@
         <source>The Anki field mapping is not usable: %1</source>
         <translation>O mapeamento de campos do Anki não é utilizável: %1</translation>
     </message>
+    <message numerus="yes">
+        <source>Fetched %n field(s) and auto-mapped them</source>
+        <translation>
+            <numerusform>%n campo buscado e mapeado automaticamente</numerusform>
+            <numerusform>%n campos buscados e mapeados automaticamente</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>%1; %2</source>
+        <translation>%1; %2</translation>
+    </message>
+    <message numerus="yes">
+        <source>cleared %n stale mapping(s)</source>
+        <translation>
+            <numerusform>%n mapeamento obsoleto apagado</numerusform>
+            <numerusform>%n mapeamentos obsoletos apagados</numerusform>
+        </translation>
+    </message>
     <message>
         <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
         <translation>Não foi possível solicitar a lista de baralhos. Verifique o endereço do AnkiConnect em Configurações.</translation>
@@ -2316,8 +2334,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Caracteres simplificados ou tradicionais</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>Conjunto de Caracteres escolhe a grafia usada na frente do cartão e na busca no dicionário: Simplificado, Tradicional ou Conforme escrito para manter a grafia de origem de cada palavra. O Campo de Caracteres Tradicionais, em Configurações -&gt; Anki, guarda a outra grafia quando ela difere da frente.</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>Conjunto de Caracteres escolhe a grafia usada na frente do cartão e na busca no dicionário: Simplificado, Tradicional ou Conforme escrito para manter a grafia de origem de cada palavra. O Campo de Caracteres Tradicionais, em Configurações -&gt; Cartões e Anki, guarda a outra grafia quando ela difere da frente.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>

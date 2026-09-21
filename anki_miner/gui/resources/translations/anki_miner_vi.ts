@@ -235,6 +235,22 @@
         <source>The Anki field mapping is not usable: %1</source>
         <translation>Ánh xạ trường Anki không dùng được: %1</translation>
     </message>
+    <message numerus="yes">
+        <source>Fetched %n field(s) and auto-mapped them</source>
+        <translation>
+            <numerusform>Đã tải %n trường và tự động ánh xạ chúng</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>%1; %2</source>
+        <translation>%1; %2</translation>
+    </message>
+    <message numerus="yes">
+        <source>cleared %n stale mapping(s)</source>
+        <translation>
+            <numerusform>đã xóa %n ánh xạ lỗi thời</numerusform>
+        </translation>
+    </message>
     <message>
         <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
         <translation>Không thể yêu cầu danh sách bộ thẻ. Kiểm tra địa chỉ AnkiConnect trong Cài đặt.</translation>
@@ -2314,8 +2330,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Chữ giản thể hoặc phồn thể</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>Bộ ký tự chọn cách viết mà mặt trước thẻ và việc tra cứu từ điển dùng: Giản thể, Phồn thể, hoặc Như nguyên văn để giữ cách viết gốc của từng từ. Trường Phồn thể, trong Cài đặt -&gt; Anki, chứa cách viết còn lại khi nó khác với mặt trước.</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>Bộ ký tự chọn cách viết mà mặt trước thẻ và việc tra cứu từ điển dùng: Giản thể, Phồn thể, hoặc Như nguyên văn để giữ cách viết gốc của từng từ. Trường Phồn thể, trong Cài đặt -&gt; Thẻ &amp; Anki, chứa cách viết còn lại khi nó khác với mặt trước.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>

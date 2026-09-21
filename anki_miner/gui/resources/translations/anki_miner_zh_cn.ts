@@ -235,6 +235,22 @@
         <source>The Anki field mapping is not usable: %1</source>
         <translation>Anki 字段映射不可用：%1</translation>
     </message>
+    <message numerus="yes">
+        <source>Fetched %n field(s) and auto-mapped them</source>
+        <translation>
+            <numerusform>已获取 %n 个字段并自动映射</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>%1; %2</source>
+        <translation>%1；%2</translation>
+    </message>
+    <message numerus="yes">
+        <source>cleared %n stale mapping(s)</source>
+        <translation>
+            <numerusform>已清除 %n 个失效的映射</numerusform>
+        </translation>
+    </message>
     <message>
         <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
         <translation>无法获取牌组列表。请检查“设置”中的 AnkiConnect 地址。</translation>
@@ -2314,8 +2330,8 @@ No index files are deleted.</source>
         <translation>简体字或繁体字</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>字符集决定卡片正面和词典查询所用的写法：简体、繁体，或按原文以保留每个单词在来源中的写法。当另一种写法与正面不同时，设置 -&gt; Anki 下的繁体字字段会存储它。</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>字符集决定卡片正面和词典查询所用的写法：简体、繁体，或按原文以保留每个单词在来源中的写法。当另一种写法与正面不同时，设置 -&gt; 卡片和 Anki 下的繁体字字段会存储它。</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>

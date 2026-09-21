@@ -235,6 +235,22 @@
         <source>The Anki field mapping is not usable: %1</source>
         <translation>Pemetaan bidang Anki tidak dapat digunakan: %1</translation>
     </message>
+    <message numerus="yes">
+        <source>Fetched %n field(s) and auto-mapped them</source>
+        <translation>
+            <numerusform>Mengambil %n bidang dan memetakannya secara otomatis</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>%1; %2</source>
+        <translation>%1; %2</translation>
+    </message>
+    <message numerus="yes">
+        <source>cleared %n stale mapping(s)</source>
+        <translation>
+            <numerusform>menghapus %n pemetaan usang</numerusform>
+        </translation>
+    </message>
     <message>
         <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
         <translation>Daftar dek tidak dapat diminta. Periksa alamat AnkiConnect di Pengaturan.</translation>
@@ -2314,8 +2330,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Karakter sederhana atau tradisional</translation>
     </message>
     <message>
-        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Anki, carries the other spelling when it differs from the front.</source>
-        <translation>Set Karakter memilih ejaan yang dipakai sisi depan kartu dan pencarian kamus: Sederhana, Tradisional, atau Sesuai tulisan untuk mempertahankan ejaan asal setiap kata. Bidang Aksara Tradisional, di Pengaturan -&gt; Anki, memuat ejaan lainnya bila berbeda dari sisi depan.</translation>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>Set Karakter memilih ejaan yang dipakai sisi depan kartu dan pencarian kamus: Sederhana, Tradisional, atau Sesuai tulisan untuk mempertahankan ejaan asal setiap kata. Bidang Aksara Tradisional, di Pengaturan -&gt; Kartu &amp; Anki, memuat ejaan lainnya bila berbeda dari sisi depan.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
