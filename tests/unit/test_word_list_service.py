@@ -287,6 +287,24 @@ class TestEncodings:
 
         assert with_ladder._blacklist == without._blacklist == {"食べる", "飲む"}
 
+    def test_a_mis_picked_huge_file_is_refused_before_it_is_read(self, tmp_path, monkeypatch):
+        """The picker's "All Files (*)" filter lets a video through; stat it, don't decode it."""
+        from anki_miner.services import word_list_service as wls
+
+        bl = tmp_path / "bl.txt"
+        bl.write_text("的\n了\n", encoding="utf-8")
+        monkeypatch.setattr(wls, "_MAX_IMPORT_BYTES", 2)
+        monkeypatch.setattr(Path, "open", lambda *a, **k: pytest.fail("the file was read"))
+
+        with pytest.raises(SetupError, match="Could not read your word list file."):
+            WordListService(blacklist_path=bl).load()
+
+    def test_the_cap_is_the_one_the_known_words_importer_uses(self):
+        """One "a user mis-picked a huge file" bound for both import pickers."""
+        from anki_miner.services import known_words_import, word_list_service
+
+        assert word_list_service._MAX_IMPORT_BYTES is known_words_import._MAX_IMPORT_BYTES
+
     def test_an_undecodable_list_still_raises_setup_error(self, tmp_path):
         """An exhausted ladder is a read failure like any other."""
         bl = tmp_path / "bl.txt"

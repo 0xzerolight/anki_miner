@@ -6,6 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from anki_miner.exceptions import SetupError
+from anki_miner.services.known_words_import import _MAX_IMPORT_BYTES
 from anki_miner.services.reading._util import decode_with_ladder
 
 logger = logging.getLogger(__name__)
@@ -141,6 +142,14 @@ class WordListService:
             raise SetupError("Your word list file is missing.")
 
         try:
+            # The picker's "All Files (*)" filter lets a user mis-pick a video,
+            # and a decoded list is four live copies of the file, so stat it
+            # first — the same bound, and the same reason, as the known-words
+            # importer. Raised as an ordinary read failure: the sentence below
+            # is the one the user gets for any list that cannot be read, and
+            # the log line carries the size.
+            if path.stat().st_size > _MAX_IMPORT_BYTES:
+                raise ValueError(f"over the {_MAX_IMPORT_BYTES}-byte word list cap")
             with path.open("rb") as f:
                 raw = f.read()
             # Bytes, not text: a hand-made list is whatever the user's editor
