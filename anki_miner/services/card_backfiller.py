@@ -352,8 +352,11 @@ class _NoteContext:
     note_id: int
     fields: dict
     mined_form: str
-    reading: str  # hiragana; may be a tokenizer guess (see reading_recovered)
+    reading: str  # hiragana; may be a tokenizer guess (see reading_guessed)
     reading_source: str  # "field" | "furigana" | "tokenizer"
+    #: The tokenizer tier answered and no profile reconciled it — a context-free
+    #: guess, good enough to key a lookup and never good enough to write.
+    reading_guessed: bool
     lemma: str
     reading_failed: bool
     lemma_failed: bool
@@ -379,16 +382,18 @@ class _AudioWord:
 class _HookWord:
     """Word-like view of a note for the profile's card render hooks.
 
-    Carries the two things a finished card still proves — the card front and
-    the definition the scan just looked up — under the names
-    ``EpisodeProcessor._apply_render_hooks`` gives them, so the hooks run
-    unchanged. A hook that reads a parse-time attribute instead (``pos``,
-    ``morph``: the token's own tags, which no note records) finds none and
-    renders nothing, and the empty-proposal rule drops it.
+    Carries the three things a finished card still proves — the card front, the
+    definition the scan just looked up, and the reading the note carries or the
+    profile derived (blank where ``_resolve_context`` could only guess one) —
+    under the names ``EpisodeProcessor._apply_render_hooks`` gives them, so the
+    hooks run unchanged. A hook that reads a parse-time attribute instead
+    (``pos``, ``morph``: the token's own tags, which no note records) finds none
+    and renders nothing, and the empty-proposal rule drops it.
     """
 
     mined_form: str
     definition_html: str
+    expression_reading: str
 
 
 def scan_backfill(
@@ -487,6 +492,9 @@ def _scan_backfill_impl(
     # backfill_audio.word_audio_candidates.
     profile = get_profile(language)
     audio_candidates = profile.audio.candidates
+    # Tier (c) of the reading ladder, and whether it needs the dictionary.
+    reading_support = profile.reading
+    wants_attested_readings = definition_service is not None and getattr(reading_support, "reconcile", None) is not None
     # S21: mining's rtl block rule, so backfilled bytes equal fresh-mine bytes.
     style_direction = profile.content_style.direction
     # The language's own card fields, filled by the same hooks mining runs.
@@ -516,7 +524,7 @@ def _scan_backfill_impl(
         if is_cancelled and is_cancelled():
             break
 
-        contexts: list[_NoteContext] = []
+        identities: list[tuple[int, dict, str]] = []
         for info in anki_service.notes_info(list(chunk)):
             note_id = info.get("noteId")
             fields = info.get("fields")
@@ -529,8 +537,29 @@ def _scan_backfill_impl(
             if not mined_form:
                 skipped_no_identity += 1
                 continue
-            context = _resolve_context(note_id, fields, mined_form, anki_fields, tagger, tagger_failures)
-            contexts.append(context)
+            identities.append((note_id, fields, mined_form))
+
+        # The chunk's attested readings as one batch, the prefetch-then-emit
+        # shape mining uses — only for a profile whose reading tier asks for
+        # them, so no other language pays for the call.
+        attested_readings: dict[str, list[str]] = {}
+        if wants_attested_readings and identities:
+            attested_readings = definition_service.offline_term_readings([form for _id, _f, form in identities])
+
+        contexts: list[_NoteContext] = []
+        for note_id, fields, mined_form in identities:
+            contexts.append(
+                _resolve_context(
+                    note_id,
+                    fields,
+                    mined_form,
+                    anki_fields,
+                    tagger,
+                    tagger_failures,
+                    reading_support=reading_support,
+                    attested=tuple(attested_readings.get(mined_form) or ()),
+                )
+            )
 
         definitions, glossaries = _chunk_definition_lookups(
             definition_service,
@@ -741,6 +770,9 @@ def _resolve_context(
     anki_fields: Mapping[str, str],
     tagger: Any,
     failures: TaggerFailures | None = None,
+    *,
+    reading_support: Any = None,
+    attested: Sequence[str] = (),
 ) -> _NoteContext:
     """Recover the (reading, lemma) identity the lookup recipes key on.
 
@@ -748,10 +780,16 @@ def _resolve_context(
     the ExpressionFurigana brackets; (c) a context-free tokenizer reading —
     LOOKUP-ONLY, never persisted to the card (a homograph guess must not
     become durable data).
+
+    ``reading_support`` is the active profile's, and ``attested`` that front's
+    dictionary readings; both only reach tier (c), and only for a profile whose
+    support reconciles. A reconciled tier (c) is the reading the mine itself
+    would write, so it is the one the ``reading_guessed`` flag clears.
     """
     reading = ""
     reading_source = "tokenizer"
     reading_failed = False
+    reading_guessed = False
     stored = _field_value(fields, anki_fields.get("expression_reading"))
     if stored and not _is_empty(stored):
         reading = katakana_to_hiragana(_strip_for_dedup(stored))
@@ -764,8 +802,23 @@ def _resolve_context(
                 reading = parsed
                 reading_source = "furigana"
     if not reading:
+        # A support that reconciles derives the front's reading itself: for zh
+        # ``generate_reading`` hands the hanzi straight back, and that "reading"
+        # then keys the expression-audio filename and the Pinyin field away from
+        # what the mine wrote for the same word. Gated on the capability, NOT on
+        # "the profile has reading support" — ja has one, and it answers a
+        # multi-token front (気がする) with its FIRST token's reading. A front
+        # the tagger does not read as one token is not a mined form anyway; what
+        # the fallback returns for one is flagged a guess, because zh's is the
+        # front's own hanzi and may key a lookup and nothing more.
+        reconcile = getattr(reading_support, "reconcile", None)
         try:
-            reading = katakana_to_hiragana(generate_reading(mined_form, tagger))
+            front_tokens = list(tagger(mined_form)) if reconcile is not None else []
+            if reconcile is not None and len(front_tokens) == 1:
+                reading = reconcile(mined_form, reading_support.word_reading(front_tokens[0]), attested)
+            else:
+                reading = katakana_to_hiragana(generate_reading(mined_form, tagger))
+                reading_guessed = True
         except Exception as exc:  # noqa: BLE001 - bucket A: counted, reported once at scan end
             reading = ""
             reading_failed = True
@@ -790,6 +843,7 @@ def _resolve_context(
         mined_form,
         reading,
         reading_source,
+        reading_guessed,
         lemma,
         reading_failed,
         lemma_failed,
@@ -1129,7 +1183,11 @@ def _hook_proposals(
     """
     if not render_hooks:
         return {}
-    word = _HookWord(ctx.mined_form, definition)
+    # A guessed reading is withheld, keeping the ladder's lookup-only rule true
+    # of the hooks too: zh's tone colour paints the syllables it is handed, and
+    # the tokenizer fallback hands it the front's own hanzi. Empty is what a
+    # hook reads for any word carrying no reading — it recomputes from the front.
+    word = _HookWord(ctx.mined_form, definition, "" if ctx.reading_guessed else ctx.reading)
     proposals: dict[str, str] = {}
     for hook in render_hooks:
         try:

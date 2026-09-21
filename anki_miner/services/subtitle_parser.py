@@ -1224,7 +1224,16 @@ class SubtitleParserService:
         propagation is limited to real tokens whose card front equals the exact
         token surface. Expression fields still apply the unique rule to every
         real-token mined form.
+
+        Skipped outright when a ``ReadingSupport`` owns the reading fields: the
+        comparison reading below comes from ``feature.kana``, which is ``""`` by
+        the LanguageToken contract, so every attested headword compared unequal
+        and a multi-reading one was recorded for review the user cannot act on.
+        Nothing is lost — those languages set ``sentence_annotator=None``, so
+        the corrected stream this returns reaches no field.
         """
+        if self._reading_support is not None:
+            return display_tokens
         corrections: dict[tuple[int, int], str] = {}
         for token, (tok_start, tok_end, _), mined in zip(
             included_tokens,
@@ -1327,6 +1336,14 @@ class SubtitleParserService:
             # and none of it applies to a duck token whose feature.kana is ""
             # by the LanguageToken contract.
             reading = expression_reading = self._reading_support.word_reading(word_token)
+            reconcile = getattr(self._reading_support, "reconcile", None)
+            if reconcile is not None:
+                # Optional support seam (zh): the dictionary and the engine write
+                # the same romanisation, so a single attested reading for this
+                # exact card front outranks the engine's context-free guess.
+                # ``mined``, not the token — the front may be the other script
+                # (銀行 -> 银行) and that is what was probed for.
+                reading = expression_reading = reconcile(mined, expression_reading, self._attested_readings(mined))
             if not expression_reading and self._attested_reading_fallback and self._reading_lookup is not None:
                 # S24: the profile owns the reading fields but has no reading of its own
                 # (ru stress); a single attested dictionary reading is the card's

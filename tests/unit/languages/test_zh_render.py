@@ -165,6 +165,27 @@ def test_tone_colour_off_emits_plain_pinyin(monkeypatch):
     assert ZhToneColorHook().render(_word("银行"), config=TONE_OFF) == {"expression_pinyin": "yín háng"}
 
 
+def test_tone_colour_paints_the_word_s_own_reading(monkeypatch):
+    """The card's Pinyin field must agree with its Reading field, syllable for syllable."""
+    monkeypatch.setattr(
+        "anki_miner.languages.zh.render.pinyin_syllables",
+        lambda text: pytest.fail("the word already carries a reading"),
+    )
+    word = SimpleNamespace(mined_form="看得见", expression_reading="kàn de jiàn", definition_html="")
+    html_out = ZhToneColorHook().render(word, config=TONE_ON)["expression_pinyin"]
+    assert html_out.count("<span style=") == 3
+    assert '<span style="color:#868686">de</span>' in html_out
+
+
+def test_a_word_without_a_reading_still_paints_from_the_front(monkeypatch):
+    """Deck Builder words with no dictionary entry reach the hook with no reading."""
+    monkeypatch.setattr(
+        "anki_miner.languages.zh.render.pinyin_syllables",
+        lambda text: [("yín", 2), ("háng", 2)],
+    )
+    assert ZhToneColorHook().render(_word("银行"), config=TONE_OFF) == {"expression_pinyin": "yín háng"}
+
+
 def test_hooks_return_empty_dicts_rather_than_raising(monkeypatch):
     monkeypatch.setattr("anki_miner.languages.zh.render.pinyin_syllables", lambda text: [])
     assert ZhToneColorHook().render(_word(""), config=TONE_ON) == {}
