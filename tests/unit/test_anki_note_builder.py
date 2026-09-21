@@ -7,6 +7,7 @@ keys, so the default wire stays byte-identical.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import replace
 
 import pytest
@@ -92,6 +93,19 @@ class TestMissingNoteTypeMessage:
         assert message == no_note_type_message()
         assert "''" not in message
         assert "Settings → Cards & Anki" in message
+
+    def test_an_unset_name_is_not_logged_as_a_missing_note_type(self, caplog):
+        """The log is read as a diagnosis, and there is nothing missing here."""
+        with caplog.at_level(logging.WARNING, logger="anki_miner.services.anki_note_builder"):
+            missing_note_type_message("", ["Basic"])
+
+        assert "Anki note type missing" not in caplog.text
+
+    def test_a_configured_name_still_logs_the_collection_s_note_types(self, caplog):
+        with caplog.at_level(logging.WARNING, logger="anki_miner.services.anki_note_builder"):
+            missing_note_type_message("Lapis", ["Basic"])
+
+        assert "Anki note type missing: wanted=Lapis available=['Basic']" in caplog.text
 
 
 class TestPitchGraphTextFields:

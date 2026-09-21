@@ -84,12 +84,14 @@ def missing_note_type_message(note_type: str, available: list[str]) -> str:
     identical wording. Lives here rather than in ``anki_service`` because the
     backfill caller is deliberately PyQt-free and cannot import that module.
     """
+    # Before the log: nothing is missing when nobody named a note type, and the
+    # warning would report one called '' as absent from the collection.
+    if not note_type:
+        return no_note_type_message()
     # The list of note types the collection does have is diagnostics, not the
     # sentence (A8-34): the Settings panel this points at shows the same list
     # live, so it belongs in the log rather than in a banner summary.
     logger.warning("Anki note type missing: wanted=%s available=%s", note_type, sorted(available))
-    if not note_type:
-        return no_note_type_message()
     return f"Note type '{note_type}' is not in Anki — pick one in Settings → Cards & Anki."
 
 
