@@ -42,7 +42,9 @@ def test_identity(profile):
     assert profile.code == "ja"
     assert profile.display_name == "日本語"
     assert profile.asr_language == "ja"
-    assert profile.capabilities == frozenset({"pitch", "furigana", "kana_filters", "name_wordsets", "deinflection"})
+    assert profile.capabilities == frozenset(
+        {"pitch", "furigana", "kana_filters", "name_wordsets", "deinflection", "note_presets"}
+    )
 
 
 def test_media_and_import_values(profile):

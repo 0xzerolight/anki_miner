@@ -235,6 +235,24 @@ class TestValidationService:
             assert success is False
             assert "not found" in message.lower()
 
+        def test_an_unset_note_type_says_none_is_chosen(self, test_config):
+            """zh ships no note type name, so '' is a step not done, not a typo."""
+            from dataclasses import replace
+
+            from anki_miner.services.anki_note_builder import no_note_type_message
+
+            service = ValidationService(replace(test_config, anki_note_type=""))
+
+            mock_response = MagicMock()
+            mock_response.json.return_value = {"result": ["Basic", "Cloze"], "error": None}
+
+            with patch("anki_miner.services._ankiconnect.requests.post", return_value=mock_response):
+                success, message = service._check_note_type_exists()
+
+            assert success is False
+            assert message == no_note_type_message()
+            assert "''" not in message
+
         def test_generic_exception(self, test_config):
             """Generic exception should be caught and reported."""
             service = ValidationService(test_config)
@@ -877,6 +895,21 @@ class TestValidationService:
             assert success is False
             assert "IsClickCard" in message
 
+        def test_an_unset_note_type_never_reaches_anki(self, test_config):
+            """modelFieldNames("") answers with an error that reads as a fault."""
+            from dataclasses import replace
+
+            from anki_miner.services.anki_note_builder import no_note_type_message
+
+            service = ValidationService(replace(test_config, anki_note_type=""))
+
+            with patch("anki_miner.services._ankiconnect.requests.post") as post:
+                success, message = service._check_field_names_exist()
+
+            assert success is False
+            assert message == no_note_type_message()
+            assert post.call_count == 0
+
         def test_error_response_returns_failure(self, test_config):
             service = ValidationService(test_config)
 
@@ -951,7 +984,7 @@ class TestOptionalResourceWarnings:
         )
 
     @staticmethod
-    def _stage_dict(dicts_root, dict_id, *, entries=1234, schema_version=None):
+    def _stage_dict(dicts_root, dict_id, *, entries=1234, schema_version=None, language=None):
         """Write a dictionary slot the registry scan can read without SQLite.
 
         The meta sidecar is authoritative while it is newer than
@@ -965,17 +998,15 @@ class TestOptionalResourceWarnings:
         target = dicts_root / dict_id
         target.mkdir(parents=True)
         (target / "index.sqlite").write_bytes(b"placeholder")
-        (target / "meta.json").write_text(
-            json.dumps(
-                {
-                    "source_name": dict_id,
-                    "format": "yomitan",
-                    "schema_version": str(SCHEMA_VERSION if schema_version is None else schema_version),
-                    "entry_count": str(entries),
-                }
-            ),
-            encoding="utf-8",
-        )
+        meta = {
+            "source_name": dict_id,
+            "format": "yomitan",
+            "schema_version": str(SCHEMA_VERSION if schema_version is None else schema_version),
+            "entry_count": str(entries),
+        }
+        if language is not None:
+            meta["language"] = language
+        (target / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
         return target
 
     def test_warns_when_indexed_dict_enabled_but_missing(self, test_config, monkeypatch, tmp_path):
@@ -1084,6 +1115,26 @@ class TestOptionalResourceWarnings:
         ok, message = _check("empty-dict")
         assert ok is False
         assert "no entries" in message
+
+    def test_check_offline_dictionary_rejects_a_slot_stamped_for_another_language(self, test_config, tmp_path):
+        """A ja-stamped dictionary is not readiness for a zh run.
+
+        The chain drops it, so reporting it ready is the wizard promising a
+        dictionary the very next mine will refuse to use.
+        """
+        from dataclasses import replace
+
+        from anki_miner.config import ChainEntry
+
+        dicts_root = tmp_path / "dicts"
+        self._stage_dict(dicts_root, "ja-dict", language="ja")
+        chain = (ChainEntry(kind="indexed", dict_id="ja-dict", enabled=True),)
+
+        zh_config = replace(test_config, language="zh", dictionary_chain=chain, dicts_root=dicts_root)
+        assert ValidationService(zh_config).check_offline_dictionary()[0] is False
+
+        ja_config = replace(test_config, dictionary_chain=chain, dicts_root=dicts_root)
+        assert ValidationService(ja_config).check_offline_dictionary()[0] is True
 
 
 class TestCheckAlass:

@@ -529,12 +529,20 @@ class FilteringSettingsPanel(FormPanel):
         self._script_variants_section_label = self._active_section_label
 
         self.script_variant_combo = QComboBox()
+        # "" leads because it is the zh default. It must have an item of its
+        # own: findData returns -1 for a value the combo does not carry, the
+        # panel then shows item 0, and contribute() writes that item back on
+        # the next Save.
+        self.script_variant_combo.addItem(self.tr("As written"), "")
         self.script_variant_combo.addItem(self.tr("Simplified (简体)"), "simplified")
         self.script_variant_combo.addItem(self.tr("Traditional (繁體)"), "traditional")
         self.add_field(
             self.tr("Character Set"),
             self.script_variant_combo,
-            helper=self.tr("Which spelling the card front and the dictionary lookup prefer."),
+            helper=self.tr(
+                "Which spelling the card front and the dictionary lookup prefer; "
+                "As written keeps the source's own spelling."
+            ),
         )
 
         # Portuguese national variety (B.3): the same language-scoped field as
@@ -648,18 +656,18 @@ class FilteringSettingsPanel(FormPanel):
         # the literal "<b>...</b>" markup is visible. Issue #20.
         self.bold_target_in_sentence_checkbox.setToolTip(
             self.tr(
-                "Wrap the mined word in &lt;b&gt;...&lt;/b&gt; inside the Sentence and "
-                "SentenceFurigana fields. Match is the exact MeCab span of the "
-                "mined morpheme, so duplicated surfaces in a sentence only bold "
-                "the actually-mined occurrence."
+                "Wrap the mined word in &lt;b&gt;...&lt;/b&gt; inside the sentence "
+                "fields. Match is the exact span that was mined, so duplicated "
+                "surfaces in a sentence only bold the actually-mined occurrence."
             )
         )
         self.add_field("", self.bold_target_in_sentence_checkbox)
 
         self.reading_tone_color_checkbox = QCheckBox(self.tr("Colour the reading by tone"))
-        self.reading_tone_color_checkbox.setToolTip(
-            self.tr("Wraps each pinyin syllable in a tone class so the card styling can colour it.")
-        )
+        # The hook writes an inline style, never a class (languages/zh/render.py),
+        # so a tooltip promising a class sends the user off to write CSS that can
+        # neither match nor win.
+        self.reading_tone_color_checkbox.setToolTip(self.tr("Colours each syllable of the reading by its tone."))
         self.add_field("", self.reading_tone_color_checkbox)
 
         # Language-gated rows. Each row contributes its label too, so a hidden
@@ -1169,10 +1177,11 @@ class FilteringSettingsPanel(FormPanel):
             bold_target_in_sentence=self.get_bold_target_in_sentence(),
         )
         # Language-scoped rows contribute only while their capability is present.
-        # A ja config holds script_variant "" and the combo has no entry for it,
-        # so a blind write here would drift ja to "simplified" on the next
-        # autosave. Visibility is the gate's own output, so there is one source
-        # of truth for "does this language have this setting".
+        # The two variant combos write the same field and at most one of them is
+        # ever visible, so a blind write would stamp the hidden one's own default
+        # ("br", the Portuguese row's first item) onto a language that has
+        # neither setting. Visibility is the gate's own output, so there is one
+        # source of truth for "does this language have this setting".
         # The kana boxes above already wrote these two fields unconditionally --
         # under another language they are hidden and still hold the loaded
         # value, so that write is a no-op. The visible option-driven row is the

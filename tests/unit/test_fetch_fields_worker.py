@@ -108,7 +108,7 @@ class TestSettingsTabFetchFieldsWiring:
         tab.anki_panel.set_note_type("Japanese-1.0")
         tab.anki_panel.ankiconnect_url_input.setText("http://localhost:8765")
 
-        populate = MagicMock()
+        populate = MagicMock(return_value=0)
         monkeypatch.setattr(tab.anki_panel, "populate_from_field_list", populate)
 
         # Build a fake worker class whose instances:
@@ -142,9 +142,40 @@ class TestSettingsTabFetchFieldsWiring:
         # The fetched list was handed to populate_from_field_list on the main thread.
         populate.assert_called_once_with(["Expression", "Sentence", "MainDefinition"])
         # Status surfaces the count.
-        assert "Fetched 3 fields" in tab.anki_panel.notetype_status.text()
+        assert tab.anki_panel.notetype_status.text() == "Fetched 3 field(s) and auto-mapped them"
         # Button is re-enabled after the result lands.
         assert tab.anki_panel.fetch_fields_button.isEnabled()
+
+    def test_status_names_the_stale_mappings_auto_map_cleared(self, test_config: AnkiMinerConfig, qtbot):
+        """Silently blanking a row the user typed would read as data loss."""
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        tab.anki_panel.set_note_type("Chinese Basic")
+        tab.anki_panel.set_card_fields(
+            {"word": "Expression", "sentence": "Sentence", "definition": "MainDefinition"}
+            | dict.fromkeys(("picture", "audio", "expression_furigana", "sentence_furigana"), "")
+        )
+
+        tab._anki_probe._on_fetch_fields_finished("Chinese Basic", ["Expression", "Sentence"])
+
+        status = tab.anki_panel.notetype_status.text()
+        # Both halves are Qt numerus sources, so the count renders as "%n"
+        # substituted into the English fallback rather than a Python ternary a
+        # catalogue cannot reach.
+        assert status == "Fetched 2 field(s) and auto-mapped them; cleared 1 stale mapping(s)"
+
+    def test_status_stays_quiet_when_nothing_was_cleared(self, test_config: AnkiMinerConfig, qtbot):
+        tab = SettingsTab(test_config)
+        qtbot.addWidget(tab)
+        tab.anki_panel.set_note_type("Japanese-1.0")
+        tab.anki_panel.set_card_fields(
+            {"word": "Expression", "sentence": "Sentence"}
+            | dict.fromkeys(("definition", "picture", "audio", "expression_furigana", "sentence_furigana"), "")
+        )
+
+        tab._anki_probe._on_fetch_fields_finished("Japanese-1.0", ["Expression", "Sentence"])
+
+        assert "cleared" not in tab.anki_panel.notetype_status.text()
 
     def test_empty_fetch_result_shows_friendly_status(self, test_config: AnkiMinerConfig, monkeypatch, qtbot):
         tab = SettingsTab(test_config)

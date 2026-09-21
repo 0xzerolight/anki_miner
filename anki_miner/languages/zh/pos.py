@@ -8,9 +8,12 @@ That is the same two-level shape unidic gives the ja defaults, so
 What stays out is jieba's function-word and fragment vocabulary: numerals (m),
 classifiers (q), particles (u*), punctuation (x) and Latin runs (eng) never
 reach ``ZH_ALLOWED_POS`` at all, and the bound-morpheme flags (ng/vg/ag/dg),
-which mark pieces that are never independent words, are excluded subtypes. The
-name flags are narrower than the ja 固有名詞 mapping they came from: only the
-transliterated and name-like variants (nrt, nrfg) and the organisation flag
+which mark pieces that are rarely independent words, are excluded subtypes.
+Both rules have rows jieba files wrong — 一起 and 一点儿 are an adverb and a
+quantity word it tags m, 喝 a free verb it tags vg — and ``overrides.py``
+retags those words before the gate sees them, rather than admitting the class.
+The name flags are narrower than the ja 固有名詞 mapping they came from: only
+the transliterated and name-like variants (nrt, nrfg) and the organisation flag
 (nt) are excluded.
 
 Four rulings shape the defaults beyond that mapping:

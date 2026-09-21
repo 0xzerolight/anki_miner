@@ -12,8 +12,8 @@ import html
 import re
 from typing import TYPE_CHECKING, Any
 
-from anki_miner.languages.zh.reading import pinyin_syllables
-from anki_miner.languages.zh.variants import to_traditional
+from anki_miner.languages.zh.reading import pinyin_syllables, syllable_tone
+from anki_miner.languages.zh.variants import is_traditional, to_traditional
 
 if TYPE_CHECKING:  # annotation-only: keeps profile.py's resource_catalog import out of the runtime path
     from anki_miner.config.config import AnkiMinerConfig
@@ -23,26 +23,77 @@ if TYPE_CHECKING:  # annotation-only: keeps profile.py's resource_catalog import
 # Capture the first group, stop at the first separator or tag boundary.
 _CL_RE = re.compile(r"CL\s*:\s*([^\s;,<]+)")
 # 1 red / 2 orange / 3 green / 4 blue / 5 grey (surveyed convention, spec 9.1).
-_TONE_COLORS = {1: "#e02020", 2: "#e08a00", 3: "#1a9e3a", 4: "#1f6fe0", 5: "#8a8a8a"}
+# Each hue's lightness sits in the one band that clears 3.5:1 on BOTH a stock
+# white Anki card and Anki night mode (#2f2f31): an inline colour cannot adapt
+# to the theme, and 4.5:1 on white would force under 3:1 on night mode.
+_TONE_COLORS = {1: "#e75353", 2: "#be7500", 3: "#199a39", 4: "#4286e5", 5: "#868686"}
 
 
 class ZhMeasureWordHook:
-    """Measure word / classifier, best-effort from the fetched CC-CEDICT gloss."""
+    """Measure word / classifier, best-effort from the fetched CC-CEDICT gloss.
+
+    CC-CEDICT writes a two-script classifier as ``trad|simp`` (``CL:輛|辆``), so
+    the half the card shows follows ``config.script_variant`` — printing both
+    put a traditional glyph on a simplified learner's card and read as two
+    classifiers. The halves are PICKED, never converted: ``to_script`` does not
+    fold 隻 to 只, and the dictionary already supplies the pair.
+
+    With no variant set ("As written", and every yue card) the card's script is
+    read off the text itself, front before sentence, and ``prefer`` is the
+    answer when neither carries a script — a front spelt the same in both
+    (狗, 朋友, and every Cantonese-only glyph), or an install with no OpenCC,
+    which is what ``anki-miner[yue]`` is. yue therefore builds this hook
+    traditional-first; zh takes the default.
+
+    First classifier only, deliberately: a word with several (``CL:部,片,張|张``)
+    gets the one CC-CEDICT lists first, not a list the field cannot hold.
+    """
+
+    def __init__(self, prefer: str = "simplified") -> None:
+        self._prefer = prefer
 
     def field_names(self) -> tuple[str, ...]:
         return ("measure_word",)
 
     def render(self, word: Any, *, config: AnkiMinerConfig) -> dict[str, str]:
-        del config  # the classifier is always emitted when the gloss carries one
         match = _CL_RE.search(getattr(word, "definition_html", "") or "")
         if not match:
             return {}
-        forms: list[str] = []
-        for part in match.group(1).split("|"):
-            form = part.split("[")[0].strip()
-            if form and form not in forms:
-                forms.append(form)
-        return {"measure_word": "/".join(forms)} if forms else {}
+        halves = [part.split("[")[0].strip() for part in match.group(1).split("|")]
+        halves = [half for half in halves if half]
+        if not halves:
+            return {}
+        if len(halves) == 1:
+            return {"measure_word": halves[0]}
+        return {"measure_word": halves[-1] if self._wants_simplified(word, config) else halves[0]}
+
+    def _wants_simplified(self, word: Any, config: AnkiMinerConfig) -> bool:
+        """Whether the card's script is simplified, from the setting or the text."""
+        variant = getattr(config, "script_variant", "")
+        if variant:
+            return variant == "simplified"
+        for text in (getattr(word, "mined_form", ""), getattr(word, "sentence", "")):
+            simplified = _script_is_simplified(text or "")
+            if simplified is not None:
+                return simplified
+        return self._prefer == "simplified"
+
+
+def _script_is_simplified(text: str) -> bool | None:
+    """Which script ``text`` is written in, or ``None`` when it does not say.
+
+    Traditional evidence is tested first: a text with a simplified spelling of
+    its own (裏, 汽車) is traditional, whichever standard spelt it. Only then
+    does a text with a traditional spelling of its own count as simplified.
+    :func:`is_traditional` is False and ``to_traditional`` returns its input
+    when OpenCC is absent, so an install without it answers ``None`` for
+    everything rather than guessing.
+    """
+    if is_traditional(text):
+        return False
+    if to_traditional(text) != text:
+        return True
+    return None
 
 
 class ZhTraditionalHook:
@@ -52,6 +103,11 @@ class ZhTraditionalHook:
     and when the conversion raises, so "output == input" is the only signal for
     "no variant" there is — emitting it anyway would put a simplified spelling
     in the traditional field on every machine without OpenCC.
+
+    A front that is already traditional is skipped before that: under "As
+    written" it keeps the source spelling, and s2tw would answer with a
+    DIFFERENT traditional spelling of the same word (裏面 -> 裡面,
+    怎麽 -> 怎麼), which is not the variant this field promises.
     """
 
     def field_names(self) -> tuple[str, ...]:
@@ -60,8 +116,10 @@ class ZhTraditionalHook:
     def render(self, word: Any, *, config: AnkiMinerConfig) -> dict[str, str]:
         del config  # script_variant selects the CARD FRONT, not this extra field
         form = getattr(word, "mined_form", "") or ""
-        traditional = to_traditional(form) if form else ""
-        return {"expression_traditional": traditional} if traditional and traditional != form else {}
+        if not form or is_traditional(form):
+            return {}
+        traditional = to_traditional(form)
+        return {"expression_traditional": traditional} if traditional != form else {}
 
 
 class ZhToneColorHook:
@@ -81,13 +139,24 @@ class ZhToneColorHook:
     Syllables are joined with a SPACE, not concatenated: pinyin is a
     romanisation whose word boundaries are the spaces (yín háng, not yínháng),
     and the coloured field has to read like the plain one beside it.
+
+    The syllables are the word's OWN reading, split back apart, not a fresh
+    reading of the front: the two fields sit next to each other on the card and
+    a dictionary-reconciled reading would otherwise be coloured as the reading
+    it replaced. Recomputing is the fallback for a word that carries none —
+    a Deck Builder front with no entry, or any caller that is not a mined word.
     """
 
     def field_names(self) -> tuple[str, ...]:
         return ("expression_pinyin",)
 
     def render(self, word: Any, *, config: AnkiMinerConfig) -> dict[str, str]:
-        syllables = pinyin_syllables(getattr(word, "mined_form", "") or "")
+        reading = (getattr(word, "expression_reading", "") or "").split()
+        syllables = (
+            [(piece, syllable_tone(piece)) for piece in reading]
+            if reading
+            else pinyin_syllables(getattr(word, "mined_form", "") or "")
+        )
         if not syllables:
             return {}
         if not config.reading_tone_color:

@@ -240,8 +240,8 @@ def _drive_settings_manage(cfg, ctx) -> Path:
 
 def _drive_deck_filter_worker(cfg, ctx) -> Path:
     """Utilities -> Deck Filter builds its own known-words service."""
+    from anki_miner.languages import tagger_provider
     from anki_miner.languages.registry import get_profile
-    from anki_miner.services import tagger as tagger_module
 
     from anki_miner.gui.workers import deck_filter_worker  # isort: skip - kept beside its patches
 
@@ -250,7 +250,7 @@ def _drive_deck_filter_worker(cfg, ctx) -> Path:
     # The zh LanguageProfile lands in Stage 2A; the bundle's word_filter needs
     # one, and it is not what this test is about.
     ctx.monkeypatch.setattr(deck_filter_worker, "get_profile", lambda code: get_profile("ja"))
-    ctx.monkeypatch.setattr(tagger_module, "get_shared_tagger", lambda: MagicMock())
+    ctx.monkeypatch.setattr(tagger_provider, "get_tagger", lambda code: MagicMock())
 
     deck_filter_worker._build_filter_bundle(cfg, None)
     return seen[0]

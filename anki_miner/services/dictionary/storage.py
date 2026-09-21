@@ -137,8 +137,11 @@ _LOOKUP_LIMIT = 20
 # ``term`` is projected (last column) so the render-path homograph scope (Rule
 # A/B, U2) can classify each row term-exact vs reading-only in Python. No SQL
 # LIMIT: the pool cap moves to Python AFTER scoping (see _LOOKUP_LIMIT note).
+# ``reading`` trails ``term`` so the optional sense-rank re-sort (see
+# _sense_rank_fn) can rebuild this ORDER BY's two leading keys in Python and
+# reorder only INSIDE one of their groups.
 _LOOKUP_SQL = (
-    "SELECT content, tags, sequence, term FROM entries "
+    "SELECT content, tags, sequence, term, reading FROM entries "
     "WHERE term = ? OR reading = ? "
     "ORDER BY (term = ?) DESC, (reading = ?) DESC, score DESC, sequence, id"
 )
@@ -327,6 +330,19 @@ def _keep_mask_fn(
 ) -> Callable[[str, list[tuple[str, str]], str | None], list[bool]]:
     """Resolve the render-path homograph scope once per call."""
     return _homograph_keep_mask if keys is None else keys.homograph_keep_mask
+
+
+def _sense_rank_fn(keys: DictKeyFolding | None) -> Callable[[str], int] | None:
+    """Resolve the profile's optional row-demotion rank once per call.
+
+    Optional profile capability, probed like ``term_variants``: a language whose
+    dictionary carries rows stating no live sense of their own — zh's CC-CEDICT
+    surname, archaic-only and cross-reference rows — ranks them after the rows
+    that do, and only among the rows already sharing a term/reading priority. ``None`` (the
+    Japanese pair and every profile without the method) leaves the SQL cascade
+    untouched.
+    """
+    return None if keys is None else getattr(keys, "sense_rank", None)
 
 
 def _connect_for_bulk_write(db_path: Path) -> sqlite3.Connection:
@@ -671,13 +687,25 @@ def lookup(
     folded_boost = fold_r(reading)
     normalized_lemma = fold_t(lemma) if lemma else None
     rows = conn.execute(_LOOKUP_SQL, (word, folded_word, word, folded_boost)).fetchall()
-    # rows: (content, tags, sequence, term). Scope homographs (Rule A/A′/B) over
-    # the ORDER BY-sorted candidate set, THEN apply the pool cap — matching the
-    # filter-before-cap order ``lookup_many`` uses. Row-for-row equal to
-    # ``lookup_many`` on every input: neither fetch caps rows in SQL (see the
-    # ``_LOOKUP_LIMIT`` comment above).
+    # rows: (content, tags, sequence, term, reading). Scope homographs (Rule
+    # A/A′/B) over the ORDER BY-sorted candidate set, THEN apply the pool cap —
+    # matching the filter-before-cap order ``lookup_many`` uses. Row-for-row
+    # equal to ``lookup_many`` on every input: neither fetch caps rows in SQL
+    # (see the ``_LOOKUP_LIMIT`` comment above).
     keep = _keep_mask_fn(keys)(word, [(row[3], row[0]) for row in rows], normalized_lemma)
     kept = [row for row, k in zip(rows, keep, strict=True) if k]
+    sense_rank = _sense_rank_fn(keys)
+    if sense_rank is not None:
+        # Stable re-sort on the ORDER BY's own two leading keys plus the rank,
+        # so score/sequence/id order survives untouched and a row stating no
+        # sense can only move behind rows sharing its term/reading priority.
+        kept.sort(
+            key=lambda row: (
+                0 if row[3] == word else 1,
+                _reading_priority(fold_r(row[4]), folded_boost),
+                sense_rank(row[0]),
+            )
+        )
     # Redirect substitution BEFORE the pool cap (matching lookup_many) so a
     # resolved canonical entry can't be truncated by its own pointer row.
     projected = _substitute_redirect_rows(conn, [(row[0], row[1], row[2]) for row in kept])
@@ -707,6 +735,12 @@ def lookup_with_rules(
     # homographs (Rule A/B) then apply the pool cap, mirroring ``lookup``.
     keep = _keep_mask_fn(keys)(word, [(row[4], row[0]) for row in rows], None)
     kept = [row for row, k in zip(rows, keep, strict=True) if k]
+    sense_rank = _sense_rank_fn(keys)
+    if sense_rank is not None:
+        # Same demotion as ``lookup``, over this SQL's one leading key (it binds
+        # no reading boost): a card reached through the variant fallback opens on
+        # the same row a direct hit would.
+        kept.sort(key=lambda row: (0 if row[4] == word else 1, sense_rank(row[0])))
     projected = _substitute_redirect_rows(
         conn,
         [(row[0], row[1], row[2], row[3] if row[3] is not None else "") for row in kept],
@@ -781,6 +815,7 @@ def lookup_many(
     """
     fold_t, fold_r = _folders(keys)
     keep_mask = _keep_mask_fn(keys)
+    sense_rank = _sense_rank_fn(keys)
     # Preserve first-seen order; collapse duplicate words to one bucket (first
     # reading wins, matching the caller's own word-level dedup).
     unique_pairs: list[tuple[str, str | None]] = []
@@ -840,14 +875,17 @@ def lookup_many(
         #   * reading_priority: mirrors the reading boost ``(reading=?) DESC``
         #     against THIS word's contextual reading (0 match / 1 differ / 2 NULL;
         #     constant when the word has no boost). See _reading_priority.
+        #   * sense_rank: the profile's optional row demotion (see
+        #     _sense_rank_fn); constant 0 without one, so the cascade is
+        #     unchanged for every profile that has none.
         #   * score_key: (is_null, -score) mirrors ``score DESC`` with NULL last.
         #   * _seq_key(sequence): NULL-aware ascending sequence tiebreak.
         #   * row_id: SQLite resolves equal (priority, score, sequence) ties by
         #     rowid ascending under the single-word query's MULTI-INDEX OR plan;
         #     replaying it here keeps lookup_many byte-identical to lookup.
-        buckets: dict[str, list[tuple[int, int, tuple[int, int], tuple[int, int], int, str, str, str, int | None]]] = {
-            w: [] for w in chunk
-        }
+        buckets: dict[
+            str, list[tuple[int, int, int, tuple[int, int], tuple[int, int], int, str, str, str, int | None]]
+        ] = {w: [] for w in chunk}
         for req_idx, row_id, term, reading, content, tags, score, sequence in rows:
             w = chunk[req_idx]
             tags_val = tags if tags is not None else ""
@@ -856,8 +894,9 @@ def lookup_many(
             score_key = _score_key(score)
             term_priority = 0 if term == normalized_by_word[w] else 1
             reading_priority = _reading_priority(folded_reading, boost_by_word[w])
+            rank = sense_rank(content) if sense_rank is not None else 0
             buckets[w].append(
-                (term_priority, reading_priority, score_key, seq_key, row_id, term, content, tags_val, sequence)
+                (term_priority, reading_priority, rank, score_key, seq_key, row_id, term, content, tags_val, sequence)
             )
 
         pending: dict[str, list[tuple[str, str, int | None]]] = {}
@@ -865,12 +904,12 @@ def lookup_many(
             if scope_homographs:
                 # Filter BEFORE sort/cap: order-independent per-row predicate, so
                 # scoping then sorting equals ``lookup``'s scope-the-sorted-set.
-                # e[5]=term, e[6]=content (see the entry tuple above).
+                # e[6]=term, e[7]=content (see the entry tuple above).
                 raw_lemma = (lemmas or {}).get(w)
                 normalized_lemma = fold_t(raw_lemma) if raw_lemma else None
-                keep = keep_mask(normalized_by_word[w], [(e[5], e[6]) for e in entries], normalized_lemma)
+                keep = keep_mask(normalized_by_word[w], [(e[6], e[7]) for e in entries], normalized_lemma)
                 entries = [e for e, k in zip(entries, keep, strict=True) if k]
-            entries.sort(key=lambda e: (e[0], e[1], e[2], e[3], e[4]))
+            entries.sort(key=lambda e: (e[0], e[1], e[2], e[3], e[4], e[5]))
             pending[w] = [(content, tags, seq) for *_keys, content, tags, seq in entries]
 
         # Redirect substitution BEFORE the pool cap, sharing ONE target fetch

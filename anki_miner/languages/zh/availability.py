@@ -18,19 +18,21 @@ logger = logging.getLogger(__name__)
 
 # Hard requirements: without a tokenizer or readings there is no zh mining.
 ZH_REQUIRED_PACKAGES: tuple[str, ...] = ("jieba", "pypinyin")
-# Optional: OpenCC only adds simplified/traditional lookup fallbacks, so its
-# absence degrades a feature instead of disabling the language. It is still
-# reported, because a user whose traditional dictionary stops matching a
-# simplified subtitle needs to be told why.
+# Optional: simplified input never reaches a converter, so Chinese still mines
+# without OpenCC. Traditional input does reach one - the tokenizer cuts a
+# simplified copy of every line and readings are taken off that copy - so its
+# absence costs segmentation, readings, the script-variant lookups and the
+# Traditional field there. Degraded, not disabled, and still reported.
 ZH_OPTIONAL_PACKAGES: tuple[str, ...] = ("opencc",)
 
 #: A frozen bundle has no pip, so naming a package is dead advice — this names
 #: the download button directly instead.
 ZH_FROZEN_PACK_REASON = "Chinese mining needs the Chinese language pack. Download it in Settings -> Mining Language."
 
-#: The sentence naming the in-app download for a pip build. Required tier only:
-#: OpenCC pins one ABI, so the pack cannot satisfy the optional tier and the
-#: hint would send a user to a button that will not fix their install.
+#: The sentence naming the in-app download for a pip build. Carried by the
+#: required-tier message only - the one the availability gate puts on screen.
+#: The full-stack line has no product caller, so pointing it at a button would
+#: reach nobody.
 ZH_PACK_DOWNLOAD_HINT = "or download the Chinese pack in Settings -> Mining Language."
 
 
@@ -76,8 +78,8 @@ def zh_missing_required_reason() -> str | None:
     """Names the missing HARD requirements only - the availability gate.
 
     This, not :func:`zh_unavailable_reason`, is what the profile hands the GUI:
-    a build missing only OpenCC still mines Chinese (the variant lookups come
-    back empty), so gating on the full set would take the language out of the
-    selector and refuse the switch over a degraded feature.
+    a build missing only OpenCC still mines Chinese - simplified input is
+    untouched and traditional input degrades - so gating on the full set would
+    take the language out of the selector and refuse the switch over a feature.
     """
     return _reason([name for name in ZH_REQUIRED_PACKAGES if not _installed(name)], pack_hint=True)

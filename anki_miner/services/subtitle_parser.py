@@ -372,6 +372,7 @@ class SubtitleParserService:
         token_post_pass: TokenPostPass | None = None,
         normalize: Callable[[str], str] | None = None,
         has_target_script: Callable[[str], bool] | None = None,
+        ellipsis_fragment_guard: bool = True,
         sentence_annotation: bool = True,
         attested_reading_fallback: bool = False,
     ):
@@ -448,9 +449,10 @@ class SubtitleParserService:
                 may run at all. The matcher joins adjacent tokens with "" and
                 reads UniDic POS names, so a space-delimited language passes
                 ``False`` through its ``create_parser`` (a spaced match would
-                print ``NewYork``). ``True`` — every ja path, and ko/zh today —
-                keeps the pre-seam gate exactly: built whenever a term lookup is
-                wired.
+                print ``NewYork``), as do zh/yue, whose jieba tags can never
+                equal the UniDic POS the matcher stamps its synthetics with.
+                ``True`` — every ja path, and ko today — keeps the pre-seam gate
+                exactly: built whenever a term lookup is wired.
             form_lookup: Optional batch read of a term's ``(content, tags)`` rows
                 from the enabled offline chain (spec R36,
                 ``DefinitionService.offline_term_rows``). Handed to
@@ -471,13 +473,22 @@ class SubtitleParserService:
             normalize: The mining language's text normaliser for cue text and
                 reading units (``LanguageProfile.normalize``), replacing the
                 Japanese pair in :func:`clean_subtitle_text`. ``None`` — every
-                ja/ko/zh parser — keeps the Japanese pair.
+                ja/ko parser — keeps the Japanese pair.
             has_target_script: The mining language's script gate
                 (``LanguageProfile.ScriptSupport.contains_target_script``),
                 which makes :func:`clean_subtitle_text` drop the lines of a
                 multi-line cue written in another script — the English half of
                 a bilingual zh subtitle. ``None`` — every ja/ko path — keeps
                 every physical line of every cue.
+            ellipsis_fragment_guard: Whether the U8 truncation-fragment reject
+                (``_is_ellipsis_truncation_fragment``) runs at all. Both of its
+                signals read Japanese: a severed conjugation is recognised by a
+                unidic ``cForm``, and a single-character surface is a cut word
+                only where words are usually longer. A character-dense language
+                passes ``False`` — 钱…钱不见了… is a line ABOUT 钱 — and the whole
+                guard is skipped, neither half being able to mean for its tokens
+                what it means for unidic's. ``True`` — every ja path — keeps the
+                reject exactly as it was.
             sentence_annotation: Whether to generate the sentence
                 furigana/reading fields from the token stream. They assume
                 contiguous kana-bearing tokens: for a language with no
@@ -521,6 +532,9 @@ class SubtitleParserService:
         self._form_lookup = form_lookup
         # Cue/unit text normaliser (spec S5); None ⇒ the Japanese pair verbatim.
         self._normalize = normalize
+        # U8 truncation-fragment reject; False ⇒ skipped outright, both of its
+        # signals being unidic-shaped (see _mine_token).
+        self._ellipsis_fragment_guard = ellipsis_fragment_guard
         # Bilingual-cue line gate; None ⇒ every physical line of a cue is kept.
         # Injected once per instance, so the per-FILE line cache below can never
         # replay line state tokenized under a different gate.
@@ -1211,7 +1225,16 @@ class SubtitleParserService:
         propagation is limited to real tokens whose card front equals the exact
         token surface. Expression fields still apply the unique rule to every
         real-token mined form.
+
+        Skipped outright when a ``ReadingSupport`` owns the reading fields: the
+        comparison reading below comes from ``feature.kana``, which is ``""`` by
+        the LanguageToken contract, so every attested headword compared unequal
+        and a multi-reading one was recorded for review the user cannot act on.
+        Nothing is lost — those languages set ``sentence_annotator=None``, so
+        the corrected stream this returns reaches no field.
         """
+        if self._reading_support is not None:
+            return display_tokens
         corrections: dict[tuple[int, int], str] = {}
         for token, (tok_start, tok_end, _), mined in zip(
             included_tokens,
@@ -1314,6 +1337,14 @@ class SubtitleParserService:
             # and none of it applies to a duck token whose feature.kana is ""
             # by the LanguageToken contract.
             reading = expression_reading = self._reading_support.word_reading(word_token)
+            reconcile = getattr(self._reading_support, "reconcile", None)
+            if reconcile is not None:
+                # Optional support seam (zh): the dictionary and the engine write
+                # the same romanisation, so a single attested reading for this
+                # exact card front outranks the engine's context-free guess.
+                # ``mined``, not the token — the front may be the other script
+                # (銀行 -> 银行) and that is what was probed for.
+                reading = expression_reading = reconcile(mined, expression_reading, self._attested_readings(mined))
             if not expression_reading and self._attested_reading_fallback and self._reading_lookup is not None:
                 # S24: the profile owns the reading fields but has no reading of its own
                 # (ru stress); a single attested dictionary reading is the card's
@@ -2234,8 +2265,8 @@ class SubtitleParserService:
         candidate's functional neighbors.
 
         Two disjoint acceptance paths, each with its own reject layer, plus the
-        dict-free U8 ellipsis truncation-fragment reject
-        (``_is_ellipsis_truncation_fragment``) applied on BOTH:
+        dict-free U8 ellipsis truncation-fragment reject (``_ellipsis_reject``,
+        off for a parser whose factory closed that seam) applied on BOTH:
 
         - ``should_include`` accepts (kanji / katakana loanword): apply ONLY the
           U5 katakana run-fragment guard (``_is_katakana_run_fragment``). The U4
@@ -2255,12 +2286,23 @@ class SubtitleParserService:
         if self._inclusion_rule.should_include(word_token):
             if self._is_katakana_run_fragment(word_token, text, tok_start, tok_end):
                 return False
-            return not self._is_ellipsis_truncation_fragment(word_token, text, tok_start, tok_end)
+            return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
         if not self._recover_kana_content_word(word_token):
             return False
         if self._rejected_by_lexicalized_window(word_token, tokens):
             return False
-        return not self._is_ellipsis_truncation_fragment(word_token, text, tok_start, tok_end)
+        return not self._ellipsis_reject(word_token, text, tok_start, tok_end)
+
+    def _ellipsis_reject(self, word_token, text: str, tok_start: int, tok_end: int) -> bool:
+        """The U8 guard, or ``False`` outright for a parser that closed the seam.
+
+        One place, so the two ``_mine_token`` branches can never disagree about
+        whether the guard runs. ``_is_ellipsis_truncation_fragment`` itself stays
+        the unconditional rule the ja tests call directly.
+        """
+        if not self._ellipsis_fragment_guard:
+            return False
+        return self._is_ellipsis_truncation_fragment(word_token, text, tok_start, tok_end)
 
     def _rejected_by_lexicalized_window(self, word_token, tokens: list) -> bool:
         """Whether a recovered kana fragment sits inside an attested lexicalized expression.

@@ -13,7 +13,7 @@ from anki_miner.languages.yue.audio import YUE_AUDIO
 from anki_miner.languages.yue.availability import yue_missing_required_reason
 from anki_miner.languages.yue.catalog import YUE_CATALOG
 from anki_miner.languages.yue.fields import YUE_CARD_FIELD_DEFAULTS
-from anki_miner.languages.yue.style import YUE_CONTENT_STYLE
+from anki_miner.languages.yue.style import YUE_CONTENT_STYLE, yue_card_lang
 
 
 def test_the_audio_chain_is_google_only_with_an_edge_voice_available():
@@ -58,6 +58,14 @@ def test_the_writing_system_is_a_real_qt_member():
     from PyQt6.QtGui import QFontDatabase
 
     assert hasattr(QFontDatabase.WritingSystem, YUE_CONTENT_STYLE.writing_system)
+
+
+def test_every_card_is_tagged_traditional_whatever_the_text():
+    """``yue`` names no script, so the tag a font fallback can act on is zh-Hant."""
+    config = AnkiMinerConfig(language="yue")
+    assert yue_card_lang("我今日去咗香港。", config) == "zh-Hant"
+    assert yue_card_lang("我今天去了香港。", config) == "zh-Hant"
+    assert YUE_CONTENT_STYLE.card_lang is yue_card_lang
 
 
 def test_availability_is_none_when_the_engine_is_installed():

@@ -9,9 +9,14 @@ that identity cannot be mistaken for an unfinished implementation later.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
+import pytest
+
 from anki_miner.languages.profile import ContentTextStyle
 from anki_miner.languages.registry import get_profile
-from anki_miner.languages.zh.style import ZH_CONTENT_STYLE, ZH_FONT_FAMILIES, zh_cjk_wrap
+from anki_miner.languages.zh import style as zh_style
+from anki_miner.languages.zh.style import ZH_CONTENT_STYLE, ZH_FONT_FAMILIES, zh_card_lang, zh_cjk_wrap
 
 #: Faces whose default glyph forms are Simplified.
 _SIMPLIFIED_LEADING = frozenset(
@@ -57,6 +62,68 @@ class TestTheFaceList:
 
     def test_the_list_has_no_duplicates(self):
         assert len(set(ZH_FONT_FAMILIES)) == len(ZH_FONT_FAMILIES)
+
+
+class TestTheProbedWritingSystem:
+    def test_simplified_chinese_is_declared_with_no_bundled_face(self):
+        assert ZH_CONTENT_STYLE.writing_system == "SimplifiedChinese"
+        assert ZH_CONTENT_STYLE.bundled_fallback == ""
+
+    def test_the_writing_system_is_a_real_qt_member(self):
+        from PyQt6.QtGui import QFontDatabase
+
+        assert hasattr(QFontDatabase.WritingSystem, ZH_CONTENT_STYLE.writing_system)
+
+
+class TestTheCardLanguageTag:
+    """The BCP-47 tag the wrapped text carries, so Han unification resolves Chinese.
+
+    The tag describes the text it wraps, and a mined sentence keeps the source
+    file's own spelling whatever Character Set is set, so the setting is not
+    consulted -- a traditional source under Character Set = Simplified still has
+    traditional sentences on its cards.
+    """
+
+    _SETTINGS = ("", "simplified", "traditional")
+
+    @staticmethod
+    def _config(test_config, script_variant: str):
+        return replace(test_config, language="zh", script_variant=script_variant)
+
+    @pytest.mark.parametrize("script_variant", _SETTINGS)
+    @pytest.mark.parametrize("sentence", ["我每天学习中文。", "她买了三个苹果。", "他的头发很长。"])
+    def test_a_simplified_sentence_says_hans_under_every_setting(self, test_config, sentence, script_variant):
+        assert zh_card_lang(sentence, self._config(test_config, script_variant)) == "zh-Hans"
+
+    @pytest.mark.parametrize("script_variant", _SETTINGS)
+    @pytest.mark.parametrize("sentence", ["我每天學習中文。", "她買了三個蘋果。", "他的頭髮很長。"])
+    def test_a_traditional_sentence_says_hant_under_every_setting(self, test_config, sentence, script_variant):
+        pytest.importorskip("opencc")
+        assert zh_card_lang(sentence, self._config(test_config, script_variant)) == "zh-Hant"
+
+    @pytest.mark.parametrize("word", ["显著", "著称", "专著", "执著", "论著", "土著", "原著", "编著"])
+    def test_a_simplified_sentence_holding_a_taiwan_variant_says_hans(self, test_config, word):
+        """tw2s folds 著 -> 着, so a probe built on it tagged these simplified sentences Hant."""
+        pytest.importorskip("opencc")
+        assert zh_card_lang(f"这个效果很{word}。", self._config(test_config, "")) == "zh-Hans"
+
+    def test_text_spelled_the_same_in_both_scripts_says_hans(self, test_config):
+        """我在北京 is its own simplification, so the card gets the mainland faces."""
+        pytest.importorskip("opencc")
+        assert zh_card_lang("我在北京。", self._config(test_config, "")) == "zh-Hans"
+
+    def test_one_traditional_form_carries_the_whole_sentence(self, test_config):
+        """The traditional forms are the ones a Japanese face mis-shapes."""
+        pytest.importorskip("opencc")
+        assert zh_card_lang("我每天学习中文，學習很有趣。", self._config(test_config, "")) == "zh-Hant"
+
+    def test_without_opencc_everything_reads_as_simplified(self, test_config, monkeypatch):
+        """No converter means no conversion, which is the shipped default's answer."""
+        monkeypatch.setattr(zh_style, "is_traditional", lambda text: False)
+        assert zh_card_lang("我每天學習中文。", self._config(test_config, "")) == "zh-Hans"
+
+    def test_the_style_carries_the_resolver(self):
+        assert ZH_CONTENT_STYLE.card_lang is zh_card_lang
 
 
 class TestTheProfileUsesIt:

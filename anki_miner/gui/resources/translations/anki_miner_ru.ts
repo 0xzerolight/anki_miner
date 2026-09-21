@@ -235,6 +235,26 @@
         <source>The Anki field mapping is not usable: %1</source>
         <translation>Сопоставление полей Anki непригодно: %1</translation>
     </message>
+    <message numerus="yes">
+        <source>Fetched %n field(s) and auto-mapped them</source>
+        <translation>
+            <numerusform>Получено и автоматически сопоставлено %n поле</numerusform>
+            <numerusform>Получено и автоматически сопоставлено %n поля</numerusform>
+            <numerusform>Получено и автоматически сопоставлено %n полей</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>%1; %2</source>
+        <translation>%1; %2</translation>
+    </message>
+    <message numerus="yes">
+        <source>cleared %n stale mapping(s)</source>
+        <translation>
+            <numerusform>очищено %n устаревшее сопоставление</numerusform>
+            <numerusform>очищено %n устаревших сопоставления</numerusform>
+            <numerusform>очищено %n устаревших сопоставлений</numerusform>
+        </translation>
+    </message>
     <message>
         <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
         <translation>Не удалось запросить список колод. Проверьте адрес AnkiConnect в настройках.</translation>
@@ -336,6 +356,14 @@
         <translation>Хранит знаки ханчи, содержащиеся в слове. Пусто = пропустить.</translation>
     </message>
     <message>
+        <source>Hán Việt Field</source>
+        <translation>Поле Hán Việt</translation>
+    </message>
+    <message>
+        <source>Stores the Chinese characters a Sino-Vietnamese word comes from, read from the dictionary entry. Blank = skip.</source>
+        <translation>Хранит китайские иероглифы, от которых происходит сино-вьетнамское слово, взятые из словарной статьи. Пусто = пропустить.</translation>
+    </message>
+    <message>
         <source>Part of Speech Field</source>
         <translation>Поле части речи</translation>
     </message>
@@ -374,6 +402,106 @@
     <message>
         <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
         <translation>Хранит вид глагола, а также парный глагол другого вида, если словарь его указывает. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Root Field</source>
+        <translation>Поле корня</translation>
+    </message>
+    <message>
+        <source>Stores the word's root, from the dictionary entry. Blank = skip.</source>
+        <translation>Хранит корень слова из словарной статьи. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Affixes Field</source>
+        <translation>Поле аффиксов</translation>
+    </message>
+    <message>
+        <source>Stores the prefixes and suffixes around the root, from the dictionary entry. Blank = skip.</source>
+        <translation>Хранит префиксы и суффиксы вокруг корня из словарной статьи. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Formal Form Field</source>
+        <translation>Поле литературной формы</translation>
+    </message>
+    <message>
+        <source>Stores the standard spelling of a colloquial word. Blank = skip.</source>
+        <translation>Хранит литературное написание разговорного слова. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Grammar Field</source>
+        <translation>Поле грамматики</translation>
+    </message>
+    <message>
+        <source>Stores the dictionary's grammar line: gender and plurals, or a verb's form and verbal noun. Blank = skip.</source>
+        <translation>Хранит грамматическую строку словарной статьи: род и множественное число или форму глагола и отглагольное существительное. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Segmentation Field</source>
+        <translation>Поле морфемного членения</translation>
+    </message>
+    <message>
+        <source>Stores how the word you saw splits into prefixes, stem and suffixes. Blank = skip.</source>
+        <translation>Хранит то, как встреченное слово делится на префиксы, основу и суффиксы. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Reading Field</source>
+        <translation>Поле чтения</translation>
+    </message>
+    <message>
+        <source>Stores the Paiboon reading parsed from the dictionary entry. Blank = skip.</source>
+        <translation>Хранит чтение по системе Paiboon, разобранное из словарной статьи. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Classifier Field</source>
+        <translation>Поле классификатора</translation>
+    </message>
+    <message>
+        <source>Stores the noun classifier stated by the dictionary entry. Blank = skip.</source>
+        <translation>Хранит классификатор существительного, указанный в словарной статье. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Romanization Field</source>
+        <translation>Поле романизации</translation>
+    </message>
+    <message>
+        <source>Stores the word's Latin spelling, from the dictionary entry. Blank = skip.</source>
+        <translation>Хранит написание слова латиницей из словарной статьи. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Colloquial Form Field</source>
+        <translation>Поле разговорной формы</translation>
+    </message>
+    <message>
+        <source>Stores the everyday spelling the line used, when the front is the standard one. Blank = skip.</source>
+        <translation>Хранит обиходное написание, использованное в строке, когда на лицевой стороне стоит литературное. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Present Stem Field</source>
+        <translation>Поле основы настоящего времени</translation>
+    </message>
+    <message>
+        <source>Stores the stem a verb's present-tense forms are built on. Blank = skip.</source>
+        <translation>Хранит основу, на которой строятся формы настоящего времени глагола. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Jyutping Field</source>
+        <translation>Поле Jyutping</translation>
+    </message>
+    <message>
+        <source>Stores the jyutping reading, tone-coloured when that setting is on. Blank = skip.</source>
+        <translation>Хранит чтение в системе Jyutping, раскрашенное по тонам, если эта настройка включена. Пусто = пропустить.</translation>
+    </message>
+    <message>
+        <source>Transliteration Field</source>
+        <translation>Поле транслитерации</translation>
+    </message>
+    <message>
+        <source>Binyan Field</source>
+        <translation>Поле биньяна</translation>
+    </message>
+    <message>
+        <source>Stores the verb pattern the dictionary names, such as pa'al or hif'il. Blank = skip.</source>
+        <translation>Хранит глагольную породу, указанную в словаре, например pa'al или hif'il. Пусто = пропустить.</translation>
     </message>
     <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
@@ -532,8 +660,8 @@
         <translation>Поле чтения выражения</translation>
     </message>
     <message>
-        <source>Stores the expression as plain kana.</source>
-        <translation>Хранит выражение в виде чистой каны.</translation>
+        <source>Stores the expression's plain reading.</source>
+        <translation>Хранит чтение выражения обычным текстом.</translation>
     </message>
     <message>
         <source>Sentence Furigana Field</source>
@@ -544,8 +672,8 @@
         <translation>Поле чтения предложения</translation>
     </message>
     <message>
-        <source>Stores the sentence as plain kana.</source>
-        <translation>Хранит предложение в виде чистой каны.</translation>
+        <source>Stores the sentence's plain reading.</source>
+        <translation>Хранит чтение предложения обычным текстом.</translation>
     </message>
     <message>
         <source>Auxiliary Data Fields</source>
@@ -632,8 +760,8 @@
         <translation>Тип карточки</translation>
     </message>
     <message>
-        <source>For JP Mining Note-style note types: an “x” in a marker field selects how each mined card renders.</source>
-        <translation>Для типов заметок в стиле JP Mining Note: «x» в поле-маркере определяет, как отображается каждая созданная карточка.</translation>
+        <source>Note types with marker fields render each mined card by which field holds an “x”.</source>
+        <translation>Типы заметок с полями-маркерами определяют тип каждой намайненной карточки по тому, в каком поле стоит «x».</translation>
     </message>
     <message>
         <source>None (disabled)</source>
@@ -1144,6 +1272,10 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Google Translate (synthetic TTS)</source>
         <translation>Google Переводчик (синтетический TTS)</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge (synthetic TTS)</source>
+        <translation>Microsoft Edge (синтетический TTS)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2162,12 +2294,12 @@ No index files are deleted.</source>
         <translation>Пропускайте предложения длиннее выбранной длительности или количества символов.</translation>
     </message>
     <message>
-        <source>Avoid duplicate cards</source>
-        <translation>Избегать дубликатов карточек</translation>
+        <source>One word per sentence</source>
+        <translation>Одно слово на предложение</translation>
     </message>
     <message>
-        <source>Skip making a second card for a word you've already mined this run.</source>
-        <translation>Не создавать вторую карточку для слова, которое вы уже намайнили за этот запуск.</translation>
+        <source>Mine at most one word from each example sentence, skipping the rest.</source>
+        <translation>Майньте не более одного слова из каждого примера предложения, пропуская остальные.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2200,6 +2332,14 @@ No index files are deleted.</source>
     <message>
         <source>Treat the kana spelling of a word you know in kanji as known too (on by default).</source>
         <translation>Считайте кана-написание слова, известного вам в кандзи, тоже известным (включено по умолчанию).</translation>
+    </message>
+    <message>
+        <source>Simplified or traditional characters</source>
+        <translation>Упрощённые или традиционные иероглифы</translation>
+    </message>
+    <message>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>Набор иероглифов задаёт написание, которое используют лицевая сторона карточки и поиск в словаре: Упрощённое, Традиционное или Как в источнике, чтобы сохранить исходное написание каждого слова. Поле традиционного написания в разделе Настройки -&gt; Карточки и Anki содержит другое написание, когда оно отличается от лицевой стороны.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -2384,6 +2524,22 @@ No index files are deleted.</source>
     <message>
         <source>Include the reading (furigana) for the word on your cards.</source>
         <translation>Включайте чтение (фуригану) слова на ваших карточках.</translation>
+    </message>
+    <message>
+        <source>Pinyin readings &amp; tone colours</source>
+        <translation>Чтения в пиньине и цвета тонов</translation>
+    </message>
+    <message>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
+        <translation>Размещайте пиньинь слова на ваших карточках, окрашивая каждый слог в цвет его тона — за раскраску отвечает настройка «Раскрашивать чтение по тонам» в разделе Настройки -&gt; Фильтрация.</translation>
+    </message>
+    <message>
+        <source>Measure word field</source>
+        <translation>Поле счётного слова</translation>
+    </message>
+    <message>
+        <source>Map the Measure Word Field to put the classifier from the dictionary entry on your cards.</source>
+        <translation>Сопоставьте «Поле счётного слова», чтобы помещать на ваши карточки счётное слово из словарной статьи.</translation>
     </message>
     <message>
         <source>Auto-tag mined notes</source>
@@ -5242,8 +5398,8 @@ No files on disk are deleted.</source>
         <translation>Дедупликация по предложению</translation>
     </message>
     <message>
-        <source>Skips duplicate example sentences.</source>
-        <translation>Пропускает повторяющиеся примеры предложений.</translation>
+        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
+        <translation>Майнит не более одного слова на каждый пример предложения — первое найденное в этом предложении. Все остальные слова из него пропускаются.</translation>
     </message>
     <message>
         <source>Script Type</source>
@@ -5278,6 +5434,10 @@ No files on disk are deleted.</source>
         <translation>Варианты письменности</translation>
     </message>
     <message>
+        <source>As written</source>
+        <translation>Как в источнике</translation>
+    </message>
+    <message>
         <source>Simplified (简体)</source>
         <translation>Упрощённое (简体)</translation>
     </message>
@@ -5290,8 +5450,8 @@ No files on disk are deleted.</source>
         <translation>Набор иероглифов</translation>
     </message>
     <message>
-        <source>Which spelling the card front and the dictionary lookup prefer.</source>
-        <translation>Какое написание предпочитают лицевая сторона карточки и поиск по словарю.</translation>
+        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
+        <translation>Какое написание предпочитают лицевая сторона карточки и поиск в словаре; «Как в источнике» сохраняет собственное написание источника.</translation>
     </message>
     <message>
         <source>Regional Variety</source>
@@ -5406,16 +5566,16 @@ No files on disk are deleted.</source>
         <translation>Выделять целевое слово в предложении жирным</translation>
     </message>
     <message>
-        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
-        <translation>Оборачивать майненное слово в &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; внутри полей Sentence и SentenceFurigana. Совпадение — это точный диапазон MeCab майненной морфемы, поэтому при повторении одинаковых форм в предложении жирным выделяется только действительно майненное вхождение.</translation>
+        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
+        <translation>Заключает намайненное слово в &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; в полях предложения. Совпадением считается точный фрагмент, который был намайнен, поэтому при повторе одинаковых словоформ в предложении жирным выделяется только действительно намайненное вхождение.</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>Раскрашивать чтение по тонам</translation>
     </message>
     <message>
-        <source>Wraps each pinyin syllable in a tone class so the card styling can colour it.</source>
-        <translation>Оборачивает каждый слог пиньиня в класс тона, чтобы стили карточки могли его раскрасить.</translation>
+        <source>Colours each syllable of the reading by its tone.</source>
+        <translation>Раскрашивает каждый слог чтения в цвет его тона.</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -6592,6 +6752,20 @@ Continue?</source>
     <message>
         <source>Show main window</source>
         <translation>Показать главное окно</translation>
+    </message>
+</context><context>
+    <name>MiningLanguagePage</name>
+    <message>
+        <source>Choose a Mining Language</source>
+        <translation>Выберите язык майнинга</translation>
+    </message>
+    <message>
+        <source>The language you are learning. The interface language is separate.</source>
+        <translation>Язык, который вы изучаете. Язык интерфейса задаётся отдельно.</translation>
+    </message>
+    <message>
+        <source>The deck, note type and resources in the next steps follow this choice. A language missing from the list needs its engine pack: Settings → Mining Language.</source>
+        <translation>Колода, тип заметки и ресурсы на следующих шагах зависят от этого выбора. Для языка, которого нет в списке, нужен пакет движка: Настройки → Язык майнинга.</translation>
     </message>
 </context><context>
     <name>MiningLanguageSettingsPanel</name>
@@ -8318,24 +8492,36 @@ No index files are deleted.</source>
         <translation>Рекомендуемые ресурсы</translation>
     </message>
     <message>
-        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
-        <translation>Частотность и тональное ударение необязательны. Словарь обязателен.</translation>
-    </message>
-    <message>
         <source>What are these resources?</source>
         <translation>Что это за ресурсы?</translation>
-    </message>
-    <message>
-        <source>%1 — %2</source>
-        <translation>%1 — %2</translation>
     </message>
     <message>
         <source>Download recommended resources</source>
         <translation>Загрузить рекомендуемые ресурсы</translation>
     </message>
     <message>
+        <source>%1 — %2</source>
+        <translation>%1 — %2</translation>
+    </message>
+    <message>
         <source>No recommended resources for this language. Import a dictionary in Settings → Dictionaries.</source>
         <translation>Нет рекомендуемых ресурсов для этого языка. Импортируйте словарь в разделе Настройки → Словари.</translation>
+    </message>
+    <message>
+        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
+        <translation>Частотность и тональное ударение необязательны. Словарь обязателен.</translation>
+    </message>
+    <message>
+        <source>Frequency is optional. A dictionary is required.</source>
+        <translation>Частотность необязательна. Словарь обязателен.</translation>
+    </message>
+    <message>
+        <source>Pitch accent is optional. A dictionary is required.</source>
+        <translation>Тональное ударение необязательно. Словарь обязателен.</translation>
+    </message>
+    <message>
+        <source>A dictionary is required.</source>
+        <translation>Словарь обязателен.</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -10514,6 +10700,10 @@ Your installed resources and your theme are kept.</source>
         <translation>Аудио</translation>
     </message>
     <message>
+        <source>Position</source>
+        <translation>Позиция</translation>
+    </message>
+    <message>
         <source>How many times this word appears in the text being mined.
 
 The “Sentences” picker usually lists fewer: one option per line, and only lines whose form matches the card’s Word.</source>
@@ -10544,6 +10734,14 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
         <translation>Есть ли у ваших источников аудио произношение для этого слова.
 
 ✓ найдено, ✗ не найдено, - ещё не проверено. Слова проверяются, пока это окно открыто, поэтому у слова, которое вы оставите, аудио уже готово. Проверка никак не влияет на то, какие слова вы можете майнить.</translation>
+    </message>
+    <message>
+        <source>Where this word appears in what you are mining: a timestamp for video, a page or chapter for reading.
+
+Sort by it to work through a long recording in order — then highlight the rows up to where you stopped and include those.</source>
+        <translation>Где это слово встречается в том, что вы майните: метка времени для видео, страница или глава для чтения.
+
+Сортируйте по этому столбцу, чтобы проходить длинную запись по порядку — затем выделите строки до места, на котором вы остановились, и включите их.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -11046,6 +11244,10 @@ Sort ascending to put i+1 lines first — the ones whose only unknown word is th
     <message>
         <source>Source type:</source>
         <translation>Тип источника:</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge read-aloud (synthetic TTS)</source>
+        <translation>Microsoft Edge, чтение вслух (синтетический TTS)</translation>
     </message>
     <message>
         <source>URL template (use {term} and {reading}):</source>

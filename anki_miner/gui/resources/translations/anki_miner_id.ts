@@ -235,6 +235,22 @@
         <source>The Anki field mapping is not usable: %1</source>
         <translation>Pemetaan bidang Anki tidak dapat digunakan: %1</translation>
     </message>
+    <message numerus="yes">
+        <source>Fetched %n field(s) and auto-mapped them</source>
+        <translation>
+            <numerusform>Mengambil %n bidang dan memetakannya secara otomatis</numerusform>
+        </translation>
+    </message>
+    <message>
+        <source>%1; %2</source>
+        <translation>%1; %2</translation>
+    </message>
+    <message numerus="yes">
+        <source>cleared %n stale mapping(s)</source>
+        <translation>
+            <numerusform>menghapus %n pemetaan usang</numerusform>
+        </translation>
+    </message>
     <message>
         <source>The deck list could not be requested. Check the AnkiConnect address in Settings.</source>
         <translation>Daftar dek tidak dapat diminta. Periksa alamat AnkiConnect di Pengaturan.</translation>
@@ -334,6 +350,14 @@
         <translation>Menyimpan karakter hanja yang terkandung dalam kata. Kosong = lewati.</translation>
     </message>
     <message>
+        <source>Hán Việt Field</source>
+        <translation>Bidang Hán Việt</translation>
+    </message>
+    <message>
+        <source>Stores the Chinese characters a Sino-Vietnamese word comes from, read from the dictionary entry. Blank = skip.</source>
+        <translation>Menyimpan karakter Tionghoa asal sebuah kata Sino-Vietnam, dibaca dari entri kamus. Kosong = lewati.</translation>
+    </message>
+    <message>
         <source>Part of Speech Field</source>
         <translation>Bidang Kelas Kata</translation>
     </message>
@@ -372,6 +396,106 @@
     <message>
         <source>Stores a verb's aspect, plus its aspect partner when the dictionary names one. Blank = skip.</source>
         <translation>Menyimpan aspek sebuah verba, beserta verba pasangan aspeknya bila kamus menyebutkannya. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Root Field</source>
+        <translation>Bidang Akar Kata</translation>
+    </message>
+    <message>
+        <source>Stores the word's root, from the dictionary entry. Blank = skip.</source>
+        <translation>Menyimpan akar kata, dari entri kamus. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Affixes Field</source>
+        <translation>Bidang Imbuhan</translation>
+    </message>
+    <message>
+        <source>Stores the prefixes and suffixes around the root, from the dictionary entry. Blank = skip.</source>
+        <translation>Menyimpan awalan dan akhiran di sekitar akar kata, dari entri kamus. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Formal Form Field</source>
+        <translation>Bidang Bentuk Baku</translation>
+    </message>
+    <message>
+        <source>Stores the standard spelling of a colloquial word. Blank = skip.</source>
+        <translation>Menyimpan ejaan baku dari kata ragam percakapan. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Grammar Field</source>
+        <translation>Bidang Tata Bahasa</translation>
+    </message>
+    <message>
+        <source>Stores the dictionary's grammar line: gender and plurals, or a verb's form and verbal noun. Blank = skip.</source>
+        <translation>Menyimpan baris tata bahasa dari kamus: gender dan bentuk jamak, atau bentuk verba dan nomina verbalnya. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Segmentation Field</source>
+        <translation>Bidang Segmentasi</translation>
+    </message>
+    <message>
+        <source>Stores how the word you saw splits into prefixes, stem and suffixes. Blank = skip.</source>
+        <translation>Menyimpan cara kata yang Anda lihat terpecah menjadi awalan, kata dasar, dan akhiran. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Reading Field</source>
+        <translation>Bidang Bacaan</translation>
+    </message>
+    <message>
+        <source>Stores the Paiboon reading parsed from the dictionary entry. Blank = skip.</source>
+        <translation>Menyimpan bacaan Paiboon yang diuraikan dari entri kamus. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Classifier Field</source>
+        <translation>Bidang Penggolong Nomina</translation>
+    </message>
+    <message>
+        <source>Stores the noun classifier stated by the dictionary entry. Blank = skip.</source>
+        <translation>Menyimpan kata penggolong nomina yang dinyatakan oleh entri kamus. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Romanization Field</source>
+        <translation>Bidang Romanisasi</translation>
+    </message>
+    <message>
+        <source>Stores the word's Latin spelling, from the dictionary entry. Blank = skip.</source>
+        <translation>Menyimpan ejaan Latin kata tersebut, dari entri kamus. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Colloquial Form Field</source>
+        <translation>Bidang Bentuk Percakapan</translation>
+    </message>
+    <message>
+        <source>Stores the everyday spelling the line used, when the front is the standard one. Blank = skip.</source>
+        <translation>Menyimpan ejaan sehari-hari yang dipakai baris tersebut, bila sisi depan berisi bentuk bakunya. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Present Stem Field</source>
+        <translation>Bidang Kata Dasar Kala Kini</translation>
+    </message>
+    <message>
+        <source>Stores the stem a verb's present-tense forms are built on. Blank = skip.</source>
+        <translation>Menyimpan kata dasar yang menjadi landasan bentuk kala kini sebuah verba. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Jyutping Field</source>
+        <translation>Bidang Jyutping</translation>
+    </message>
+    <message>
+        <source>Stores the jyutping reading, tone-coloured when that setting is on. Blank = skip.</source>
+        <translation>Menyimpan bacaan jyutping, diwarnai berdasarkan nada bila pengaturan itu aktif. Kosong = lewati.</translation>
+    </message>
+    <message>
+        <source>Transliteration Field</source>
+        <translation>Bidang Transliterasi</translation>
+    </message>
+    <message>
+        <source>Binyan Field</source>
+        <translation>Bidang Binyan</translation>
+    </message>
+    <message>
+        <source>Stores the verb pattern the dictionary names, such as pa'al or hif'il. Blank = skip.</source>
+        <translation>Menyimpan pola verba yang disebutkan kamus, seperti pa'al atau hif'il. Kosong = lewati.</translation>
     </message>
     <message>
         <source>Not in Anki — mining will fail until you pick a real one or create it in Anki.</source>
@@ -530,8 +654,8 @@
         <translation>Bidang Bacaan Ekspresi</translation>
     </message>
     <message>
-        <source>Stores the expression as plain kana.</source>
-        <translation>Menyimpan ekspresi sebagai kana polos.</translation>
+        <source>Stores the expression's plain reading.</source>
+        <translation>Menyimpan bacaan biasa dari ekspresi.</translation>
     </message>
     <message>
         <source>Sentence Furigana Field</source>
@@ -542,8 +666,8 @@
         <translation>Bidang Bacaan Kalimat</translation>
     </message>
     <message>
-        <source>Stores the sentence as plain kana.</source>
-        <translation>Menyimpan kalimat sebagai kana polos.</translation>
+        <source>Stores the sentence's plain reading.</source>
+        <translation>Menyimpan bacaan biasa dari kalimat.</translation>
     </message>
     <message>
         <source>Auxiliary Data Fields</source>
@@ -630,8 +754,8 @@
         <translation>Tipe Kartu</translation>
     </message>
     <message>
-        <source>For JP Mining Note-style note types: an “x” in a marker field selects how each mined card renders.</source>
-        <translation>Untuk tipe catatan bergaya JP Mining Note: “x” pada bidang penanda menentukan cara setiap kartu hasil mining dirender.</translation>
+        <source>Note types with marker fields render each mined card by which field holds an “x”.</source>
+        <translation>Tipe catatan dengan bidang penanda menampilkan setiap kartu hasil mining berdasarkan bidang mana yang berisi “x”.</translation>
     </message>
     <message>
         <source>None (disabled)</source>
@@ -1142,6 +1266,10 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
     <message>
         <source>Google Translate (synthetic TTS)</source>
         <translation>Google Translate (TTS sintetis)</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge (synthetic TTS)</source>
+        <translation>Microsoft Edge (TTS sintetis)</translation>
     </message>
     <message>
         <source>Custom JSON</source>
@@ -2158,12 +2286,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Lewati kalimat yang lebih panjang dari durasi atau jumlah karakter yang dipilih.</translation>
     </message>
     <message>
-        <source>Avoid duplicate cards</source>
-        <translation>Hindari kartu duplikat</translation>
+        <source>One word per sentence</source>
+        <translation>Satu kata per kalimat</translation>
     </message>
     <message>
-        <source>Skip making a second card for a word you've already mined this run.</source>
-        <translation>Lewati pembuatan kartu kedua untuk kata yang sudah Anda mining dalam proses ini.</translation>
+        <source>Mine at most one word from each example sentence, skipping the rest.</source>
+        <translation>Mining paling banyak satu kata dari setiap kalimat contoh, sisanya dilewati.</translation>
     </message>
     <message>
         <source>Strip junk from subtitles (regex)</source>
@@ -2196,6 +2324,14 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Treat the kana spelling of a word you know in kanji as known too (on by default).</source>
         <translation>Perlakukan ejaan kana dari kata yang Anda kenal dalam kanji sebagai dikenal juga (aktif secara default).</translation>
+    </message>
+    <message>
+        <source>Simplified or traditional characters</source>
+        <translation>Karakter sederhana atau tradisional</translation>
+    </message>
+    <message>
+        <source>Character Set picks the spelling the card front and the dictionary lookup use: Simplified, Traditional, or As written to keep each word's source spelling. The Traditional Field, under Settings -&gt; Cards &amp; Anki, carries the other spelling when it differs from the front.</source>
+        <translation>Set Karakter memilih ejaan yang dipakai sisi depan kartu dan pencarian kamus: Sederhana, Tradisional, atau Sesuai tulisan untuk mempertahankan ejaan asal setiap kata. Bidang Aksara Tradisional, di Pengaturan -&gt; Kartu &amp; Anki, memuat ejaan lainnya bila berbeda dari sisi depan.</translation>
     </message>
     <message>
         <source>Use &amp; order multiple dictionaries</source>
@@ -2380,6 +2516,22 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Include the reading (furigana) for the word on your cards.</source>
         <translation>Sertakan bacaan (furigana) untuk kata pada kartu Anda.</translation>
+    </message>
+    <message>
+        <source>Pinyin readings &amp; tone colours</source>
+        <translation>Bacaan pinyin &amp; warna nada</translation>
+    </message>
+    <message>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
+        <translation>Tampilkan pinyin kata pada kartu Anda, setiap suku kata dalam warna nadanya -- pewarnaan itu adalah Warnai bacaan berdasarkan nada, di Pengaturan -&gt; Penyaringan.</translation>
+    </message>
+    <message>
+        <source>Measure word field</source>
+        <translation>Bidang kata penggolong</translation>
+    </message>
+    <message>
+        <source>Map the Measure Word Field to put the classifier from the dictionary entry on your cards.</source>
+        <translation>Petakan Bidang Kata Penggolong untuk menampilkan kata penggolong dari entri kamus pada kartu Anda.</translation>
     </message>
     <message>
         <source>Auto-tag mined notes</source>
@@ -5216,8 +5368,8 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Deduplikasi berdasarkan Kalimat</translation>
     </message>
     <message>
-        <source>Skips duplicate example sentences.</source>
-        <translation>Melewati kalimat contoh yang duplikat.</translation>
+        <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
+        <translation>Mining paling banyak satu kata per kalimat contoh — kata pertama yang ditemukan dalam kalimat itu. Setiap kata lain yang berbagi kalimat tersebut dilewati.</translation>
     </message>
     <message>
         <source>Script Type</source>
@@ -5252,6 +5404,10 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Varian Aksara</translation>
     </message>
     <message>
+        <source>As written</source>
+        <translation>Sesuai tulisan</translation>
+    </message>
+    <message>
         <source>Simplified (简体)</source>
         <translation>Sederhana (简体)</translation>
     </message>
@@ -5264,8 +5420,8 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Set Karakter</translation>
     </message>
     <message>
-        <source>Which spelling the card front and the dictionary lookup prefer.</source>
-        <translation>Ejaan mana yang didahulukan oleh bagian depan kartu dan pencarian kamus.</translation>
+        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
+        <translation>Ejaan mana yang diutamakan sisi depan kartu dan pencarian kamus; Sesuai tulisan mempertahankan ejaan asli sumber.</translation>
     </message>
     <message>
         <source>Regional Variety</source>
@@ -5380,16 +5536,16 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Tebalkan kata target dalam kalimat</translation>
     </message>
     <message>
-        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the Sentence and SentenceFurigana fields. Match is the exact MeCab span of the mined morpheme, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
-        <translation>Bungkus kata yang di-mining dalam &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; di dalam bidang Sentence dan SentenceFurigana. Kecocokan adalah rentang MeCab yang tepat dari morfem yang di-mining, sehingga permukaan yang berulang dalam sebuah kalimat hanya menebalkan kemunculan yang benar-benar di-mining.</translation>
+        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
+        <translation>Bungkus kata hasil mining dalam &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; di dalam bidang kalimat. Kecocokan adalah rentang persis yang di-mining, sehingga bentuk yang berulang dalam satu kalimat hanya menebalkan kemunculan yang benar-benar di-mining.</translation>
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>Warnai bacaan berdasarkan nada</translation>
     </message>
     <message>
-        <source>Wraps each pinyin syllable in a tone class so the card styling can colour it.</source>
-        <translation>Membungkus setiap suku kata pinyin dalam kelas nada agar gaya kartu dapat mewarnainya.</translation>
+        <source>Colours each syllable of the reading by its tone.</source>
+        <translation>Mewarnai setiap suku kata bacaan berdasarkan nadanya.</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -6564,6 +6720,20 @@ Lanjutkan?</translation>
     <message>
         <source>Show main window</source>
         <translation>Tampilkan jendela utama</translation>
+    </message>
+</context><context>
+    <name>MiningLanguagePage</name>
+    <message>
+        <source>Choose a Mining Language</source>
+        <translation>Pilih Bahasa Mining</translation>
+    </message>
+    <message>
+        <source>The language you are learning. The interface language is separate.</source>
+        <translation>Bahasa yang sedang Anda pelajari. Bahasa antarmuka terpisah.</translation>
+    </message>
+    <message>
+        <source>The deck, note type and resources in the next steps follow this choice. A language missing from the list needs its engine pack: Settings → Mining Language.</source>
+        <translation>Dek, tipe catatan, dan sumber daya pada langkah berikutnya mengikuti pilihan ini. Bahasa yang tidak ada dalam daftar memerlukan paket mesinnya: Pengaturan → Bahasa Mining.</translation>
     </message>
 </context><context>
     <name>MiningLanguageSettingsPanel</name>
@@ -8288,24 +8458,36 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Sumber Daya yang Direkomendasikan</translation>
     </message>
     <message>
-        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
-        <translation>Frekuensi dan aksen nada bersifat opsional. Kamus diperlukan.</translation>
-    </message>
-    <message>
         <source>What are these resources?</source>
         <translation>Apa saja sumber daya ini?</translation>
-    </message>
-    <message>
-        <source>%1 — %2</source>
-        <translation>%1 — %2</translation>
     </message>
     <message>
         <source>Download recommended resources</source>
         <translation>Unduh sumber daya yang direkomendasikan</translation>
     </message>
     <message>
+        <source>%1 — %2</source>
+        <translation>%1 — %2</translation>
+    </message>
+    <message>
         <source>No recommended resources for this language. Import a dictionary in Settings → Dictionaries.</source>
         <translation>Tidak ada sumber daya yang direkomendasikan untuk bahasa ini. Impor kamus di Pengaturan → Kamus.</translation>
+    </message>
+    <message>
+        <source>Frequency and pitch accent are optional. A dictionary is required.</source>
+        <translation>Frekuensi dan aksen nada bersifat opsional. Kamus diperlukan.</translation>
+    </message>
+    <message>
+        <source>Frequency is optional. A dictionary is required.</source>
+        <translation>Frekuensi bersifat opsional. Kamus diperlukan.</translation>
+    </message>
+    <message>
+        <source>Pitch accent is optional. A dictionary is required.</source>
+        <translation>Aksen nada bersifat opsional. Kamus diperlukan.</translation>
+    </message>
+    <message>
+        <source>A dictionary is required.</source>
+        <translation>Kamus diperlukan.</translation>
     </message>
     <message>
         <source>Checking for an offline dictionary...</source>
@@ -10480,6 +10662,10 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Audio</translation>
     </message>
     <message>
+        <source>Position</source>
+        <translation>Posisi</translation>
+    </message>
+    <message>
         <source>How many times this word appears in the text being mined.
 
 The “Sentences” picker usually lists fewer: one option per line, and only lines whose form matches the card’s Word.</source>
@@ -10510,6 +10696,14 @@ Urutkan menaik untuk menempatkan baris i+1 di awal — yaitu baris yang satu-sat
         <translation>Apakah sumber audio Anda memiliki audio pelafalan untuk kata ini.
 
 ✓ ditemukan, ✗ tidak ditemukan, - belum diperiksa. Kata-kata diperiksa selama jendela ini terbuka, sehingga kata yang Anda pertahankan sudah memiliki audionya siap. Pemeriksaan ini tidak pernah mengubah kata mana yang dapat Anda mining.</translation>
+    </message>
+    <message>
+        <source>Where this word appears in what you are mining: a timestamp for video, a page or chapter for reading.
+
+Sort by it to work through a long recording in order — then highlight the rows up to where you stopped and include those.</source>
+        <translation>Di mana kata ini muncul dalam materi yang Anda mining: stempel waktu untuk video, halaman atau bab untuk bacaan.
+
+Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan — lalu sorot baris hingga tempat Anda berhenti dan sertakan baris-baris itu.</translation>
     </message>
     <message>
         <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
@@ -11012,6 +11206,10 @@ Urutkan menaik untuk menempatkan baris i+1 di awal — yaitu baris yang satu-sat
     <message>
         <source>Source type:</source>
         <translation>Tipe sumber:</translation>
+    </message>
+    <message>
+        <source>Microsoft Edge read-aloud (synthetic TTS)</source>
+        <translation>Pembacaan nyaring Microsoft Edge (TTS sintetis)</translation>
     </message>
     <message>
         <source>URL template (use {term} and {reading}):</source>

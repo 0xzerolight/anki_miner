@@ -1,7 +1,8 @@
 """Card Backfill tool tab (Utilities → Card Backfill).
 
-Bulk-fills pitch/frequency/definition/glossary/reading fields on EXISTING
-miner notes after the user installs new resources. Two-step flow: Scan
+Bulk-fills pitch/frequency/definition/glossary/reading fields — plus whatever
+extra card fields the active mining language declares — on EXISTING miner
+notes after the user installs new resources. Two-step flow: Scan
 (read-only, off-thread) builds a :class:`BackfillPlan` shown in a preview
 table; the update writes exactly the previewed values and tags touched notes
 ``anki-miner::backfill``. Fill-only-empty by default; overwrite is an explicit
@@ -59,6 +60,10 @@ from anki_miner.gui.widgets.base import (
 )
 from anki_miner.gui.widgets.enhanced import ModernButton, SectionHeader
 from anki_miner.gui.widgets.enhanced.modern_button import ButtonVariant
+from anki_miner.gui.widgets.panels.anki_settings_panel import (
+    hook_field_row_text,
+    profile_card_field_specs,
+)
 from anki_miner.gui.workers.backfill_worker import BackfillApplyWorker, BackfillScanWorker
 from anki_miner.gui.workers.base_worker import SingleCallWorker
 from anki_miner.gui.workers.fetch_workers import FetchDecksWorker
@@ -70,6 +75,7 @@ from anki_miner.services.card_backfiller import (
     BackfillOptions,
     BackfillPlan,
     BackfillResult,
+    hook_field_groups,
 )
 from anki_miner.utils.logging_ext import log_summary
 
@@ -82,11 +88,12 @@ _CELL_ELIDE = 120
 #: grows, which is Issue #102's class of bug rather than its fix.
 PREVIEW_MIN_VISIBLE_ROWS = 8
 
-#: Backfill group → the capability whose absence makes it meaningless. The ja
-#: profile declares both "pitch" and "furigana". The other four groups
+#: Core backfill group → the capability whose absence makes it meaningless. The
+#: ja profile declares both "pitch" and "furigana". The other four core groups
 #: (frequency, definition, glossary, word_audio) are language-neutral and
-#: always offered.
-_GROUP_CAPABILITIES: dict[str, str] = {"pitch": "pitch", "reading": "furigana"}
+#: always offered. Each profile-declared card field adds its own entry from its
+#: spec's capability -- see ``_group_capabilities``.
+_CORE_GROUP_CAPABILITIES: dict[str, str] = {"pitch": "pitch", "reading": "furigana"}
 
 
 def _set_variant(button: ModernButton, variant: ButtonVariant) -> None:
@@ -128,6 +135,16 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         # The Expression column is mined content, so its face follows the mining
         # language; re-derived in update_config when the language changes.
         self._content_style = get_profile(config_language(config)).content_style
+        # Every registered profile's own card fields get a group of their own,
+        # beside the six core ones. Built once and gated afterwards, like the
+        # Settings field rows these mirror: the capability gate owns which of
+        # them the current language sees, so a language switch needs no rebuild.
+        self._hook_specs = profile_card_field_specs()
+        self._field_groups = {**FIELD_GROUPS, **hook_field_groups(self._hook_specs)}
+        self._group_capabilities = {
+            **_CORE_GROUP_CAPABILITIES,
+            **{spec.key: spec.capability for spec in self._hook_specs},
+        }
         self.worker_thread: BackfillScanWorker | BackfillApplyWorker | None = None
         self._plan: BackfillPlan | None = None
         self._scan_warnings: tuple[str, ...] = ()
@@ -185,6 +202,10 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
             "reading": self.tr("Reading + furigana"),
             "word_audio": self.tr("Word audio"),
         }
+        # The profile-declared fields borrow their Settings → Cards & Anki row
+        # label: the same field named the same way wherever the user meets it,
+        # and no second string to translate.
+        labels.update({spec.key: hook_field_row_text(spec.key)[0] for spec in self._hook_specs})
         # A group's own tooltip has to be remembered, not just set: the gate
         # below replaces the tooltip with "Map this field…" whenever the group
         # is disabled, so without a copy to restore from, one pass through an
@@ -198,7 +219,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
                 "Scanning a large deck can take a while the first time."
             ),
         }
-        for group in FIELD_GROUPS:
+        for group in self._field_groups:
             checkbox = QCheckBox(labels[group])
             checkbox.setToolTip(self._group_tooltips.get(group, ""))
             self.field_checkboxes[group] = checkbox
@@ -207,7 +228,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         for checkbox in self.field_checkboxes.values():
             checkbox.toggled.connect(self._on_field_groups_changed)
         self._language_gate_pairs.extend(
-            (self.field_checkboxes[group], capability) for group, capability in _GROUP_CAPABILITIES.items()
+            (self.field_checkboxes[group], capability) for group, capability in self._group_capabilities.items()
         )
 
         # Deliberately NOT persisted, unlike the field groups above. Off-by-default
@@ -399,7 +420,9 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         an enabled-but-inert checkbox would be dishonest UI.
 
         Then hide the groups the active mining language has no capability for:
-        pitch and reading are Japanese-only, the other four are neutral.
+        pitch and reading are Japanese-only, the other four core ones are
+        neutral, and a profile-declared field is offered only to the languages
+        whose capabilities carry it.
 
         The whole body runs inside the seed guard. Both forced unchecks below
         are a *view* concern: ``config.backfill_field_groups`` holds what the
@@ -408,7 +431,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         again or switching back restores it at the next seed.
         """
         with self.seeding():
-            for group in FIELD_GROUPS:
+            for group in self._field_groups:
                 enabled = self._group_fields_mapped(group)
                 checkbox = self.field_checkboxes[group]
                 checkbox.setEnabled(enabled)
@@ -427,7 +450,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
             # switch away from Japanese and back re-offers them.
             capabilities = get_profile(config_language(self.config)).capabilities
             apply_language_gate(self._language_gate_pairs, capabilities)
-            for group, capability in _GROUP_CAPABILITIES.items():
+            for group, capability in self._group_capabilities.items():
                 if capability not in capabilities:
                     self.field_checkboxes[group].setChecked(False)
 
@@ -437,7 +460,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         Non-reading groups need at least one key mapped (per-field compute skips
         unmapped keys); reading is pure cross-fill and needs both.
         """
-        mapped = [bool(self.config.anki_fields.get(key)) for key in FIELD_GROUPS[group]]
+        mapped = [bool(self.config.anki_fields.get(key)) for key in self._field_groups[group]]
         return all(mapped) if group == "reading" else any(mapped)
 
     def _group_is_masked(self, group: str) -> bool:
@@ -449,7 +472,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         """
         if not self._group_fields_mapped(group):
             return True
-        capability = _GROUP_CAPABILITIES.get(group)
+        capability = self._group_capabilities.get(group)
         if capability is None:
             return False
         return capability not in get_profile(config_language(self.config)).capabilities
@@ -461,7 +484,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
                 checkbox.setChecked(group in self.config.backfill_field_groups)
 
     def _on_field_groups_changed(self, _checked: bool) -> None:
-        """Persist the ticked groups in FIELD_GROUPS order, not click order.
+        """Persist the ticked groups in group order, not click order.
 
         A masked group keeps its stored value rather than contributing its
         (gate-forced) widget state. Stable ordering means re-ticking the same
@@ -470,7 +493,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         stored = set(self.config.backfill_field_groups)
         chosen = tuple(
             group
-            for group in FIELD_GROUPS
+            for group in self._field_groups
             if (group in stored if self._group_is_masked(group) else self.field_checkboxes[group].isChecked())
         )
         self.persist_run_options(backfill_field_groups=chosen)
@@ -578,7 +601,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         for group, checkbox in self.field_checkboxes.items():
             if not checkbox.isChecked():
                 continue
-            keys.update(key for key in FIELD_GROUPS[group] if self.config.anki_fields.get(key))
+            keys.update(key for key in self._field_groups[group] if self.config.anki_fields.get(key))
         return frozenset(keys)
 
     def _start_scan(self) -> None:
@@ -799,7 +822,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
             "Card Backfill apply started: field_groups=%d overwrite=%s deck=%s note_type=%s",
             sum(
                 any(field_key in plan.options.field_keys for field_key in group_keys)
-                for group_keys in FIELD_GROUPS.values()
+                for group_keys in self._field_groups.values()
             ),
             plan.options.overwrite,
             plan.options.deck or "-",

@@ -21,6 +21,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PyQt6.QtGui import QFontDatabase  # noqa: E402
 
+from anki_miner.config import AnkiMinerConfig  # noqa: E402
 from anki_miner.languages.profile import ContentTextStyle  # noqa: E402
 from anki_miner.languages.registry import available_languages, get_profile  # noqa: E402
 
@@ -28,13 +29,13 @@ ROOT = Path(__file__).resolve().parents[3]
 CODES = sorted(available_languages())
 FONTS_DIR = "anki_miner/gui/resources/fonts"
 
-#: The 21 languages that shipped before this seam. Pinned, not derived: they must
-#: stay left-to-right with no probe and no face, so every ja/ko/zh/Latin surface and
-#: card stays byte-identical. A later language is not added here.
+#: The languages that shipped before this seam and still declare nothing. Pinned,
+#: not derived: they must stay left-to-right with no probe and no face, so every
+#: ja/ko/Latin surface and card stays byte-identical. zh left the list when it
+#: declared SimplifiedChinese; a later language is not added here.
 SHIPPED_BEFORE_THE_SEAM = (
     "ja",
     "ko",
-    "zh",
     "en",
     "ca",
     "de",
@@ -91,12 +92,37 @@ def face_asset_problems(root: Path, basename: str) -> list[str]:
 def test_the_new_fields_default_to_the_pre_seam_behaviour():
     style = ContentTextStyle(font_role="x", families=("A",), wrap=str)
     assert (style.direction, style.writing_system, style.bundled_fallback) == ("ltr", "", "")
+    assert style.card_lang is None
 
 
 @pytest.mark.parametrize("code", SHIPPED_BEFORE_THE_SEAM)
 def test_languages_shipped_before_the_seam_keep_the_defaults(code):
     style = get_profile(code).content_style
     assert (style.direction, style.writing_system, style.bundled_fallback) == ("ltr", "", "")
+
+
+#: The languages whose cards declare a BCP-47 tag, pinned rather than derived so
+#: that a later profile picking one up is a deliberate edit here: every other
+#: language's note must stay byte-identical to the pre-seam one.
+TAG_THEIR_CARDS = ("yue", "zh")
+
+
+def test_the_pinned_list_is_the_registry_answer():
+    declaring = tuple(code for code in CODES if get_profile(code).content_style.card_lang is not None)
+    assert declaring == TAG_THEIR_CARDS
+
+
+@pytest.mark.parametrize("code", [code for code in CODES if code not in TAG_THEIR_CARDS])
+def test_only_the_han_languages_tag_their_cards(code):
+    """Han unification is the whole reason the tag exists; everyone else's note is untouched."""
+    assert get_profile(code).content_style.card_lang is None
+
+
+@pytest.mark.parametrize("code", TAG_THEIR_CARDS)
+def test_a_han_language_resolves_a_script_subtag(code):
+    style = get_profile(code).content_style
+    assert style.card_lang is not None
+    assert style.card_lang("中文", AnkiMinerConfig(language=code)) in ("zh-Hans", "zh-Hant")
 
 
 @pytest.mark.parametrize("code", CODES)

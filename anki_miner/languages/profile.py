@@ -108,6 +108,12 @@ class DictKeyFolding(Protocol):
 
     ``homograph_keep_mask`` mirrors ``services/dictionary/storage.py:247``
     verbatim in arity and return.
+
+    Two OPTIONAL methods an implementation may add, each probed by ``getattr``
+    at its one reader so the other profiles need neither: ``term_variants(term)
+    -> list[str]`` (read by ``IndexedFreqProvider``) and ``sense_rank(content)
+    -> int``, the lookup sort's row demotion (read by
+    ``storage._sense_rank_fn``). Both live on ``ZhDictKeyFolding``.
     """
 
     def fold_term(self, s: str) -> str: ...
@@ -280,8 +286,9 @@ class ContentTextStyle:
     byte-identically. ``families`` is the ordered candidate face list.
     ``wrap`` is the soft-wrap transform; ja == phrase_wrap.phrase_wrap_ja.
 
-    The three trailing fields are the S21/S22 seam; their defaults are the
-    pre-seam behaviour, so a profile that sets none of them is unchanged.
+    ``direction``, ``writing_system`` and ``bundled_fallback`` are the S21/S22
+    seam; their defaults are the pre-seam behaviour, so a profile that sets none
+    of them is unchanged.
     ``direction`` ("ltr" | "rtl") flips the content widgets and wraps the card's
     word and sentence fields (gui/utils/content_text.py, anki_note_builder).
     ``writing_system`` is a ``QFontDatabase.WritingSystem`` member name
@@ -289,6 +296,13 @@ class ContentTextStyle:
     faces installed for that script. ``bundled_fallback`` is a face basename under
     gui/resources/fonts/, registered only when that probe finds none
     (gui/utils/fonts.py::resolve_content_families).
+
+    ``card_lang`` answers the BCP-47 tag the card's sentence declares, given the
+    text being tagged and the config; ``""`` means "write no tag", and ``None``
+    means the language never writes one, which is the pre-existing note. It is a
+    resolver rather than a string because the tag describes that text: zh reads
+    the sentence's own script, which a mined sentence keeps whatever the
+    Character Set setting is.
     """
 
     font_role: str
@@ -297,6 +311,7 @@ class ContentTextStyle:
     direction: str = "ltr"
     writing_system: str = ""
     bundled_fallback: str = ""
+    card_lang: Callable[[str, AnkiMinerConfig], str] | None = None
 
 
 @dataclass(frozen=True)

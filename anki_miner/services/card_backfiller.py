@@ -5,7 +5,9 @@ enumerate → chunk → ``notesInfo`` → compute → ``updateNoteFields`` loop
 (``card_restyler.restyle_mined_cards``): after the user installs a pitch CSV,
 frequency sources, dictionaries, or an audio pack, it proposes values for pitch
 graph/text, frequency display/sort, definition, glossary, reading/furigana and
-word-audio fields that old cards are missing.
+word-audio fields that old cards are missing, plus the extra card fields the
+active language's profile declares (zh pinyin, measure word, traditional; ko
+hanja; …), rendered by that profile's own hooks.
 
 Word audio is the one proposal that is not a pure local lookup: it fetches
 through ``config.expression_audio_chain`` during the scan, so the preview keeps
@@ -23,7 +25,9 @@ Two phases, both GUI-free and cancellable:
   ``notesInfo`` staleness recheck, then tags touched notes ``anki-miner::backfill``.
 
 Field computation mirrors the mining pipeline's canonical recipes in
-``EpisodeProcessor`` (see per-field comments); the mined_form-primary +
+``EpisodeProcessor`` (see per-field comments), down to running a language's own
+render hooks for its own card fields, so a backfilled field carries the bytes a
+freshly mined one would; the mined_form-primary +
 whole-result lemma-fallback keying for frequency/definitions is load-bearing
 (Issues #19/#5 — see ``_phase2_filter``/``_phase4_lookup`` in
 ``orchestration/episode_processor.py``; editing either recipe means updating
@@ -36,7 +40,7 @@ import html
 import logging
 import re
 from collections import Counter
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
@@ -46,6 +50,7 @@ from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.languages.tagger_provider import get_tagger
 from anki_miner.services.anki_note_builder import (
     _HTML_TAG_RE,
+    _RAW_HTML_FIELD_KEYS,
     _SOUND_REF_RE,
     _strip_for_dedup,
     field_mapping_error,
@@ -79,6 +84,7 @@ from anki_miner.utils.timing import timed_phase
 
 if TYPE_CHECKING:
     from anki_miner.config import AnkiMinerConfig
+    from anki_miner.languages.profile import CardFieldSpec, CardRenderHook
     from anki_miner.services.anki_service import AnkiService
 
 logger = logging.getLogger(__name__)
@@ -91,7 +97,9 @@ _CHUNK = 500
 # UI checkbox groups → config.anki_fields keys. The reading group is pure
 # cross-fill (one field derived from the other, never generated from a
 # tokenizer guess), so its checkbox requires BOTH keys mapped; every other
-# group enables when at least one key is mapped.
+# group enables when at least one key is mapped. A language's own extra card
+# fields are NOT here: they come from its profile's ``extra_card_fields``, one
+# single-key group each (see ``hook_field_groups``).
 FIELD_GROUPS: dict[str, tuple[str, ...]] = {
     "pitch": ("pitch_graph", "pitch_text"),
     "frequency": ("frequency", "frequency_sort"),
@@ -100,7 +108,6 @@ FIELD_GROUPS: dict[str, tuple[str, ...]] = {
     "reading": ("expression_reading", "expression_furigana"),
     "word_audio": ("expression_audio",),
 }
-
 _PITCH_KEYS = frozenset(FIELD_GROUPS["pitch"])
 _FREQ_KEYS = frozenset(FIELD_GROUPS["frequency"])
 # Keys whose stored value is a media reference rather than text. _is_empty
@@ -117,6 +124,59 @@ _OLD_DISPLAY_CAP = 200
 # One `kanji[reading]` furigana group as _format_furigana renders it: a run
 # without brackets/spaces, then its bracketed kana. Used by the inverse scan.
 _FURIGANA_GROUP_RE = re.compile(r"([^\[\]\s]+)\[([^\[\]]+)\]")
+
+
+def hook_field_groups(specs: Iterable[CardFieldSpec]) -> dict[str, tuple[str, ...]]:
+    """One single-key group per extra card field a profile declares.
+
+    The group name IS the logical field key: a hook field is one field, so the
+    two never diverge the way pitch's and frequency's do. Derived from the
+    specs, so a language's field reaches the tool by being declared and nothing
+    here names it.
+    """
+    return {spec.key: (spec.key,) for spec in specs}
+
+
+def selected_hook_field_keys(config: AnkiMinerConfig, field_keys: Iterable[str]) -> frozenset[str]:
+    """The active profile's own card fields among ``field_keys``."""
+    specs = get_profile(config_language(config)).extra_card_fields
+    return frozenset(spec.key for spec in specs) & frozenset(field_keys)
+
+
+def mapped_field_keys(config: AnkiMinerConfig, field_keys: Iterable[str]) -> frozenset[str]:
+    """``field_keys`` minus the ones this note type maps to no field name.
+
+    The one actionable-selection rule: the scan drops an unmapped key (there is
+    no ``""`` field to write to), so the worker's staleness gate has to read the
+    same set or a key that proposes nothing can still abort the run.
+    """
+    return frozenset(key for key in field_keys if config.anki_fields.get(key))
+
+
+def reconciles_attested_readings(config: AnkiMinerConfig) -> bool:
+    """Whether a scan reads the dictionary chain for the reading ladder's tier (c).
+
+    The condition ``_scan_backfill_impl`` batches ``offline_term_readings`` on,
+    minus the service it needs: true for a profile whose reading support
+    reconciles (zh today), and then for EVERY chunk of the scan, whatever fields
+    were ticked. The worker's staleness gate reads it for that reason — an
+    audio-only zh run still keys its filenames off the dictionary's answer.
+    """
+    return getattr(get_profile(config_language(config)).reading, "reconcile", None) is not None
+
+
+def definition_lookup_keys(config: AnkiMinerConfig, field_keys: Iterable[str]) -> frozenset[str]:
+    """``field_keys`` widened by the definition a hook field rides on.
+
+    A hook field rides the definition lookup: zh's measure word parses the
+    ``CL:`` marker out of the fetched gloss, so ticking that group alone has to
+    fetch one. Nothing is proposed for the definition field itself unless the
+    user picked it — this widens the lookup, never the writes. The scan and the
+    worker's staleness gate both read it, so a hook-only run cannot reach a
+    stale dictionary chain without being told to reimport.
+    """
+    keys = frozenset(field_keys)
+    return keys | {"definition"} if selected_hook_field_keys(config, keys) else keys
 
 
 @dataclass(frozen=True)
@@ -314,8 +374,11 @@ class _NoteContext:
     note_id: int
     fields: dict
     mined_form: str
-    reading: str  # hiragana; may be a tokenizer guess (see reading_recovered)
+    reading: str  # hiragana; may be a tokenizer guess (see reading_guessed)
     reading_source: str  # "field" | "furigana" | "tokenizer"
+    #: The tokenizer tier answered and no profile reconciled it — a context-free
+    #: guess, good enough to key a lookup and never good enough to write.
+    reading_guessed: bool
     lemma: str
     reading_failed: bool
     lemma_failed: bool
@@ -335,6 +398,26 @@ class _AudioWord:
     mined_form: str
     expression_reading: str
     lemma: str
+
+
+@dataclass(frozen=True)
+class _HookWord:
+    """Word-like view of a note for the profile's card render hooks.
+
+    Carries the four things a finished card still proves — the card front, the
+    definition the scan just looked up, the reading the note carries or the
+    profile derived (blank where ``_resolve_context`` could only guess one), and
+    the sentence the note was mined from — under the names
+    ``EpisodeProcessor._apply_render_hooks`` gives them, so the hooks run
+    unchanged. A hook that reads a parse-time attribute instead (``pos``,
+    ``morph``: the token's own tags, which no note records) finds none and
+    renders nothing, and the empty-proposal rule drops it.
+    """
+
+    mined_form: str
+    definition_html: str
+    expression_reading: str
+    sentence: str
 
 
 def scan_backfill(
@@ -390,7 +473,7 @@ def _scan_backfill_impl(
 
     # Only mapped keys are actionable; an unmapped selected key is dropped
     # (never write to a "" field name).
-    selected = {key for key in options.field_keys if anki_fields.get(key)}
+    selected = set(mapped_field_keys(config, options.field_keys))
 
     # Availability gating: `service is not None and is_available()` — the UI
     # enables checkboxes on field-mapping alone, so a mapped-but-service-None
@@ -421,14 +504,6 @@ def _scan_backfill_impl(
         query += f' deck:"{_escape_anki_search(options.deck)}"'
     note_ids = anki_service.find_notes(query)
 
-    # Style-block inputs, collected once per scan (registry/SQLite I/O).
-    # Every proposed miner field gets its OWN trailing block — per-field
-    # self-containment, matching EpisodeProcessor._phase5_create (the old
-    # single-carrier "card-wide <style>" model broke JS note types that
-    # render fields in isolation).
-    want_styling = bool(selected & {"definition", "glossary"})
-    dict_css_entries = collect_dictionary_css_entries(config) if want_styling else []
-
     # get_shared_tagger stays a module attribute: the pre-existing tests patch
     # THIS name, so the ja branch must keep calling it here. config_language,
     # never the raw field — a whitelisted code with no registered profile yet
@@ -441,8 +516,28 @@ def _scan_backfill_impl(
     # backfill_audio.word_audio_candidates.
     profile = get_profile(language)
     audio_candidates = profile.audio.candidates
+    # Tier (c) of the reading ladder, and whether it needs the dictionary.
+    reading_support = profile.reading
+    wants_attested_readings = definition_service is not None and reconciles_attested_readings(config)
     # S21: mining's rtl block rule, so backfilled bytes equal fresh-mine bytes.
     style_direction = profile.content_style.direction
+    # The language's own card fields, filled by the same hooks mining runs.
+    # Empty for Japanese, whose fields are all rendered inline in _phase5_create.
+    hook_keys = selected_hook_field_keys(config, selected)
+    # A mined hook value reaches the card through build_note, which inserts a
+    # raw_html field verbatim and html.escape()s every other one. A backfilled
+    # value goes straight into the note, so that pass has to happen here or the
+    # two spellings of the same field diverge on the first ``&`` a gloss carries.
+    raw_hook_keys = frozenset(_RAW_HTML_FIELD_KEYS) | {spec.key for spec in profile.extra_card_fields if spec.raw_html}
+
+    # Style-block inputs, collected once per scan (registry/SQLite I/O).
+    # Every proposed miner field gets its OWN trailing block — per-field
+    # self-containment, matching EpisodeProcessor._phase5_create (the old
+    # single-carrier "card-wide <style>" model broke JS note types that
+    # render fields in isolation).
+    want_styling = bool(selected & {"definition", "glossary"}) or bool(hook_keys)
+    dict_css_entries = collect_dictionary_css_entries(config) if want_styling else []
+    definition_lookups = definition_lookup_keys(config, selected)
 
     scanned = skipped_no_identity = identical_skips = 0
     guessed_reading_skips = 0
@@ -453,7 +548,7 @@ def _scan_backfill_impl(
         if is_cancelled and is_cancelled():
             break
 
-        contexts: list[_NoteContext] = []
+        identities: list[tuple[int, dict, str]] = []
         for info in anki_service.notes_info(list(chunk)):
             note_id = info.get("noteId")
             fields = info.get("fields")
@@ -466,13 +561,34 @@ def _scan_backfill_impl(
             if not mined_form:
                 skipped_no_identity += 1
                 continue
-            context = _resolve_context(note_id, fields, mined_form, anki_fields, tagger, tagger_failures)
-            contexts.append(context)
+            identities.append((note_id, fields, mined_form))
+
+        # The chunk's attested readings as one batch, the prefetch-then-emit
+        # shape mining uses — only for a profile whose reading tier asks for
+        # them, so no other language pays for the call.
+        attested_readings: dict[str, list[str]] = {}
+        if wants_attested_readings and identities:
+            attested_readings = definition_service.offline_term_readings([form for _id, _f, form in identities])
+
+        contexts: list[_NoteContext] = []
+        for note_id, fields, mined_form in identities:
+            contexts.append(
+                _resolve_context(
+                    note_id,
+                    fields,
+                    mined_form,
+                    anki_fields,
+                    tagger,
+                    tagger_failures,
+                    reading_support=reading_support,
+                    attested=tuple(attested_readings.get(mined_form) or ()),
+                )
+            )
 
         definitions, glossaries = _chunk_definition_lookups(
             definition_service,
             contexts,
-            selected,
+            definition_lookups,
             is_cancelled=is_cancelled,
         )
 
@@ -501,6 +617,9 @@ def _scan_backfill_impl(
                 tagger=tagger,
                 audio_candidates=audio_candidates,
                 style_direction=style_direction,
+                render_hooks=profile.render_hooks,
+                hook_keys=hook_keys,
+                raw_hook_keys=raw_hook_keys,
                 is_cancelled=is_cancelled,
             )
             identical_skips += note_identicals
@@ -675,6 +794,9 @@ def _resolve_context(
     anki_fields: Mapping[str, str],
     tagger: Any,
     failures: TaggerFailures | None = None,
+    *,
+    reading_support: Any = None,
+    attested: Sequence[str] = (),
 ) -> _NoteContext:
     """Recover the (reading, lemma) identity the lookup recipes key on.
 
@@ -682,10 +804,16 @@ def _resolve_context(
     the ExpressionFurigana brackets; (c) a context-free tokenizer reading —
     LOOKUP-ONLY, never persisted to the card (a homograph guess must not
     become durable data).
+
+    ``reading_support`` is the active profile's, and ``attested`` that front's
+    dictionary readings; both only reach tier (c), and only for a profile whose
+    support reconciles. A reconciled tier (c) is the reading the mine itself
+    would write, so it is the one the ``reading_guessed`` flag clears.
     """
     reading = ""
     reading_source = "tokenizer"
     reading_failed = False
+    reading_guessed = False
     stored = _field_value(fields, anki_fields.get("expression_reading"))
     if stored and not _is_empty(stored):
         reading = katakana_to_hiragana(_strip_for_dedup(stored))
@@ -698,8 +826,23 @@ def _resolve_context(
                 reading = parsed
                 reading_source = "furigana"
     if not reading:
+        # A support that reconciles derives the front's reading itself: for zh
+        # ``generate_reading`` hands the hanzi straight back, and that "reading"
+        # then keys the expression-audio filename and the Pinyin field away from
+        # what the mine wrote for the same word. Gated on the capability, NOT on
+        # "the profile has reading support" — ja has one, and it answers a
+        # multi-token front (気がする) with its FIRST token's reading. A front
+        # the tagger does not read as one token is not a mined form anyway; what
+        # the fallback returns for one is flagged a guess, because zh's is the
+        # front's own hanzi and may key a lookup and nothing more.
+        reconcile = getattr(reading_support, "reconcile", None)
         try:
-            reading = katakana_to_hiragana(generate_reading(mined_form, tagger))
+            front_tokens = list(tagger(mined_form)) if reconcile is not None else []
+            if reconcile is not None and len(front_tokens) == 1:
+                reading = reconcile(mined_form, reading_support.word_reading(front_tokens[0]), attested)
+            else:
+                reading = katakana_to_hiragana(generate_reading(mined_form, tagger))
+                reading_guessed = True
         except Exception as exc:  # noqa: BLE001 - bucket A: counted, reported once at scan end
             reading = ""
             reading_failed = True
@@ -724,6 +867,7 @@ def _resolve_context(
         mined_form,
         reading,
         reading_source,
+        reading_guessed,
         lemma,
         reading_failed,
         lemma_failed,
@@ -733,7 +877,7 @@ def _resolve_context(
 def _chunk_definition_lookups(
     definition_service: Any,
     contexts: list[_NoteContext],
-    selected: set[str],
+    lookups: Collection[str],
     *,
     is_cancelled: Callable[[], bool] | None = None,
 ) -> tuple[list[str | None], list[str | None]]:
@@ -741,6 +885,10 @@ def _chunk_definition_lookups(
 
     Includes the miss-only lemma retry for glossaries and the
     mined_form → (lemma, None) fallback context for definitions.
+
+    ``lookups`` is which of the two to run, which is the selected keys plus the
+    definition when a render hook needs a gloss to read — a lookup is not a
+    write, and the caller still gates the proposal on the user's selection.
     """
     definitions: list[str | None] = [None] * len(contexts)
     glossaries: list[str | None] = [None] * len(contexts)
@@ -750,7 +898,7 @@ def _chunk_definition_lookups(
     for key, results in (("definition", definitions), ("glossary", glossaries)):
         if is_cancelled and is_cancelled():
             break
-        if key not in selected:
+        if key not in lookups:
             continue
         idx_map: list[int] = []
         pairs: list[tuple[str, str | None]] = []
@@ -813,6 +961,9 @@ def _compute_note_changes(
     tagger: Any = None,
     audio_candidates: Callable[[Any], list[tuple[str, str]]] | None = None,
     style_direction: str = "ltr",
+    render_hooks: tuple[CardRenderHook, ...] = (),
+    hook_keys: frozenset[str] = frozenset(),
+    raw_hook_keys: frozenset[str] = frozenset(),
     is_cancelled: Callable[[], bool] | None = None,
 ) -> tuple[list[FieldChange], int, int]:
     """Emit FieldChanges for one note under the fill/overwrite policy.
@@ -860,6 +1011,28 @@ def _compute_note_changes(
             proposals[key] = attach_card_style_block(
                 proposals[key], dict_css_entries=dict_css_entries, direction=style_direction
             )
+
+    # The language's own card fields, rendered by the profile's hooks — after
+    # the style-block loop, because mining runs them on the card definition
+    # (_phase5_create passes `card_definition`, block and all), and a hook that
+    # parses the gloss has to see the same bytes here. Then build_note's own
+    # escaping pass, since nothing downstream of a backfill applies it.
+    # setdefault, not update: the pipeline's own value wins a collision, as it
+    # does in mining.
+    if hook_keys:
+        card_definition = proposals.get("definition")
+        if card_definition is None:
+            # The definition field is not being filled this run, so build what
+            # it WOULD have carried: mining attaches the block whenever that
+            # field is mapped, whatever else the run is writing.
+            card_definition = definition or ""
+            if card_definition and anki_fields.get("definition"):
+                card_definition = attach_card_style_block(
+                    card_definition, dict_css_entries=dict_css_entries, direction=style_direction
+                )
+        rendered = _hook_proposals(ctx, config, hook_keys, render_hooks, card_definition, anki_fields)
+        for key, value in rendered.items():
+            proposals.setdefault(key, value if key in raw_hook_keys else html.escape(value))
 
     # Word audio, after the style-block loop (it carries no markup to stamp).
     # Fillability is checked HERE, before the fetch, rather than left to the
@@ -1010,6 +1183,55 @@ def _frequency_proposals(
         rank = harmonic_rank(sources)
         if rank is not None:
             proposals["frequency_sort"] = str(rank)
+    return proposals
+
+
+def _hook_proposals(
+    ctx: _NoteContext,
+    config: AnkiMinerConfig,
+    keys: frozenset[str],
+    render_hooks: tuple[CardRenderHook, ...],
+    definition: str,
+    anki_fields: Mapping[str, str],
+) -> dict[str, str]:
+    """Values for the language's own card fields, from its own render hooks.
+
+    The one call site for the hooks, mirroring
+    ``EpisodeProcessor._apply_render_hooks``: the same hooks, the same
+    keyword-only config (zh's tone colour reaches a card no other way), and the
+    same never-fatal contract — a raising hook is logged and skipped, because
+    one bad hook must not sink a scan of thousands of notes. Only the selected
+    keys are kept, so a hook that fills two fields can be taken one at a time.
+
+    Values come back as the hook rendered them; the caller applies build_note's
+    escaping, which is the half of the recipe that lives outside the hooks.
+    """
+    if not render_hooks:
+        return {}
+    # A guessed reading is withheld, keeping the ladder's lookup-only rule true
+    # of the hooks too: zh's tone colour paints the syllables it is handed, and
+    # the tokenizer fallback hands it the front's own hanzi. Empty is what a
+    # hook reads for any word carrying no reading — it recomputes from the front.
+    #
+    # The sentence is stripped the way every other field value here is: a mined
+    # card wraps it in a lang span, and zh's classifier reads the text for the
+    # script it is written in, not the markup around it.
+    word = _HookWord(
+        ctx.mined_form,
+        definition,
+        "" if ctx.reading_guessed else ctx.reading,
+        _strip_for_dedup(_field_value(ctx.fields, anki_fields.get("sentence")) or ""),
+    )
+    proposals: dict[str, str] = {}
+    for hook in render_hooks:
+        try:
+            rendered = hook.render(word, config=config)
+        except Exception:  # mining rule: log the hook, keep the run
+            logger.warning("Render hook %s failed", type(hook).__name__, exc_info=True)
+            continue
+        for key, value in rendered.items():
+            if value and key in keys:
+                proposals.setdefault(key, value)
     return proposals
 
 

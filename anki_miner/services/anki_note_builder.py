@@ -10,6 +10,7 @@ import html
 import logging
 import re
 import unicodedata
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from anki_miner.config import AnkiMinerConfig
@@ -64,6 +65,17 @@ def configured_target_field_names(config: AnkiMinerConfig) -> set[str]:
     return field_names
 
 
+def no_note_type_message() -> str:
+    """The one sentence for a config that names no note type at all.
+
+    A profile can ship without one (zh does), so the first run of a language
+    reaches every note-type check with an empty name. Reporting that as a note
+    type Anki does not have describes a typo nobody made; the step is simply
+    still open. Shared with ``validation_service`` so both surfaces say it once.
+    """
+    return "No note type is chosen yet — pick one in Settings → Cards & Anki."
+
+
 def missing_note_type_message(note_type: str, available: list[str]) -> str:
     """The one sentence every note-type-not-found check raises.
 
@@ -72,6 +84,10 @@ def missing_note_type_message(note_type: str, available: list[str]) -> str:
     identical wording. Lives here rather than in ``anki_service`` because the
     backfill caller is deliberately PyQt-free and cannot import that module.
     """
+    # Before the log: nothing is missing when nobody named a note type, and the
+    # warning would report one called '' as absent from the collection.
+    if not note_type:
+        return no_note_type_message()
     # The list of note types the collection does have is diagnostics, not the
     # sentence (A8-34): the Settings panel this points at shows the same list
     # live, so it belongs in the log rather than in a banner summary.
@@ -205,6 +221,21 @@ def _rtl_wrap(value: str, lang: str) -> str:
     return f'<div dir="rtl"{lang_attr}>{value}</div>'
 
 
+def _lang_wrap(value: str, lang: str) -> str:
+    """Declare the language of one mined-content field, without touching layout.
+
+    Han unification gives 骨, 直 and 令 a different shape per language, and a
+    reviewer's WebView with no ``lang`` takes them from the first CJK face it
+    finds -- the Japanese one on any machine that also mines Japanese, which is
+    most of them. The tag is what makes the fallback pick Chinese shapes. An
+    empty value or an empty tag is left exactly as it was, and
+    ``_strip_for_dedup`` strips the span like any other markup.
+    """
+    if not value or not lang:
+        return value
+    return f'<span lang="{html.escape(lang, quote=True)}">{value}</span>'
+
+
 def build_note(
     item: CardPayload,
     config: AnkiMinerConfig,
@@ -214,6 +245,7 @@ def build_note(
     extra_raw_html_keys: frozenset[str] = frozenset(),
     content_direction: str = "ltr",
     content_lang: str = "",
+    card_lang: Callable[[str, AnkiMinerConfig], str] | None = None,
 ) -> BuiltNote:
     """Map one CardPayload to the note dict ``addNotes`` expects.
 
@@ -235,6 +267,11 @@ def build_note(
             ``<div dir="rtl" lang=…>``; anything else leaves every field as
             before, so the three-argument call is unchanged.
         content_lang: The profile code written as that wrapper's ``lang``.
+        card_lang: The active profile's ``content_style.card_lang`` — (the text
+            being tagged, config) -> BCP-47 tag. A non-empty tag wraps the
+            sentence in ``<span lang=…>``; ``None`` (every non-Han profile)
+            leaves the note exactly as before. Ignored for an rtl language,
+            whose wrapper already carries a ``lang``.
 
     Returns:
         The note dict plus flags recording whether the bolded-sentence path
@@ -310,6 +347,17 @@ def build_note(
     if content_direction == "rtl":
         word_field = _rtl_wrap(word_field, content_lang)
         sentence_field = _rtl_wrap(sentence_field, content_lang)
+    elif card_lang is not None:
+        # Sentence only. The word field is the one a Chinese note type feeds to
+        # a Pleco/MDBG link or a {{tts}} tag, and the one the known-words scan
+        # and Anki's own duplicate check read back, so it stays plain text; the
+        # sentence is where the Han run long enough to show the wrong glyph
+        # shapes actually lives.
+        # The resolver is asked about the text it will wrap, in its source
+        # spelling: a mined sentence keeps the file's own script whatever the
+        # language's own script setting says, and the escaped/bolded form would
+        # carry markup no script rule can read.
+        sentence_field = _lang_wrap(sentence_field, card_lang(word.sentence, config))
 
     # Build fields, skipping any with empty config mapping
     field_data = {

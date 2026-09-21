@@ -7,13 +7,20 @@ keys, so the default wire stays byte-identical.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import replace
 
 import pytest
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.models import CardPayload, MediaData, TokenizedWord
-from anki_miner.services.anki_note_builder import _strip_for_dedup, build_note, configured_target_field_names
+from anki_miner.services.anki_note_builder import (
+    _strip_for_dedup,
+    build_note,
+    configured_target_field_names,
+    missing_note_type_message,
+    no_note_type_message,
+)
 
 
 def _word(**overrides) -> TokenizedWord:
@@ -64,6 +71,41 @@ def test_configured_target_field_names_uses_nonempty_mappings_and_active_marker(
     config = AnkiMinerConfig(anki_fields=fields, card_type="click")
 
     assert configured_target_field_names(config) == {"Expression", "MiningSource", "IsClickCard"}
+
+
+class TestMissingNoteTypeMessage:
+    """A configured name that Anki does not have, and a name nobody set.
+
+    zh ships ``anki_note_type=""`` on purpose, so the first run reported a note
+    type called '' as absent from the collection -- a typo the user never made
+    instead of the step they have not done yet.
+    """
+
+    def test_a_configured_name_reads_exactly_as_it_did(self):
+        assert (
+            missing_note_type_message("Lapis", ["Basic"])
+            == "Note type 'Lapis' is not in Anki — pick one in Settings → Cards & Anki."
+        )
+
+    def test_an_unset_name_says_so_and_points_at_the_same_place(self):
+        message = missing_note_type_message("", ["Basic"])
+
+        assert message == no_note_type_message()
+        assert "''" not in message
+        assert "Settings → Cards & Anki" in message
+
+    def test_an_unset_name_is_not_logged_as_a_missing_note_type(self, caplog):
+        """The log is read as a diagnosis, and there is nothing missing here."""
+        with caplog.at_level(logging.WARNING, logger="anki_miner.services.anki_note_builder"):
+            missing_note_type_message("", ["Basic"])
+
+        assert "Anki note type missing" not in caplog.text
+
+    def test_a_configured_name_still_logs_the_collection_s_note_types(self, caplog):
+        with caplog.at_level(logging.WARNING, logger="anki_miner.services.anki_note_builder"):
+            missing_note_type_message("Lapis", ["Basic"])
+
+        assert "Anki note type missing: wanted=Lapis available=['Basic']" in caplog.text
 
 
 class TestPitchGraphTextFields:
@@ -316,3 +358,105 @@ class TestRtlContentWrapper:
         assert build_note(item, test_config, set(), content_direction="ltr", content_lang=lang) == build_note(
             item, test_config, set()
         )
+
+
+class TestCardLangWrapper:
+    """A Han language's sentence declares its language so the WebView picks its glyph forms.
+
+    The resolver is a stand-in here; the zh and yue ones are pinned by their own
+    suites. The content stays Japanese so these assertions read as wrapper
+    mechanics rather than as Chinese examples.
+    """
+
+    @staticmethod
+    def _fields(config, word, **kwargs) -> dict:
+        item = CardPayload(word=word, media=MediaData(), definition="def")
+        return build_note(item, config, stored_files=set(), **kwargs).note["fields"]
+
+    def test_the_sentence_is_wrapped_and_the_word_is_not(self, test_config, make_tokenized_word):
+        fields = self._fields(test_config, make_tokenized_word(), card_lang=lambda text, config: "zh-Hans")
+        assert fields["sentence"] == '<span lang="zh-Hans">日本語を食べる。</span>'
+        assert fields["word"] == "食べる"
+
+    def test_the_resolver_sees_the_sentence_and_the_config(self, test_config, make_tokenized_word):
+        """The tag describes the text that gets wrapped, so the sentence is the argument."""
+        seen: list[tuple[str, object]] = []
+
+        def resolver(text: str, config) -> str:
+            seen.append((text, config))
+            return "zh-Hant"
+
+        fields = self._fields(test_config, make_tokenized_word(), card_lang=resolver)
+        assert seen == [("日本語を食べる。", test_config)]
+        assert fields["sentence"] == '<span lang="zh-Hant">日本語を食べる。</span>'
+
+    def test_the_bold_highlight_survives_inside_the_span(self, test_config, make_tokenized_word):
+        word = make_tokenized_word()
+        word.sentence_bolded = "日本語を<b>食べる</b>。"
+        config = replace(test_config, bold_target_in_sentence=True)
+        fields = self._fields(config, word, card_lang=lambda t, c: "zh-Hans")
+        assert fields["sentence"] == '<span lang="zh-Hans">日本語を<b>食べる</b>。</span>'
+
+    def test_the_resolver_sees_the_sentence_before_escaping_and_highlighting(self, test_config, make_tokenized_word):
+        """Markup would read as neither script; the resolver gets the plain source text."""
+        seen: list[str] = []
+
+        def resolver(text: str, _config) -> str:
+            seen.append(text)
+            return "zh-Hans"
+
+        word = make_tokenized_word(sentence='"日本語"を食べる。')
+        word.sentence_bolded = '"日本語"を<b>食べる</b>。'
+        config = replace(test_config, bold_target_in_sentence=True)
+        fields = self._fields(config, word, card_lang=resolver)
+        assert seen == ['"日本語"を食べる。']
+        assert fields["sentence"] == '<span lang="zh-Hans">"日本語"を<b>食べる</b>。</span>'
+
+    def test_an_empty_tag_leaves_the_sentence_alone(self, test_config, make_tokenized_word):
+        fields = self._fields(test_config, make_tokenized_word(), card_lang=lambda t, c: "")
+        assert fields["sentence"] == "日本語を食べる。"
+
+    def test_an_empty_sentence_stays_empty(self, test_config, make_tokenized_word):
+        fields = self._fields(test_config, make_tokenized_word(sentence=""), card_lang=lambda t, c: "zh-Hans")
+        assert fields["sentence"] == ""
+
+    def test_the_tag_is_escaped(self, test_config, make_tokenized_word):
+        fields = self._fields(test_config, make_tokenized_word(), card_lang=lambda t, c: 'x"y')
+        assert fields["sentence"] == '<span lang="x&quot;y">日本語を食べる。</span>'
+
+    def test_the_dedup_keys_survive_the_wrapper(self, test_config, make_tokenized_word):
+        fields = self._fields(test_config, make_tokenized_word(), card_lang=lambda t, c: "zh-Hans")
+        assert _strip_for_dedup(fields["word"]) == "食べる"
+        assert _strip_for_dedup(fields["sentence"]) == "日本語を食べる。"
+
+    def test_every_other_field_is_untouched(self, test_config, make_tokenized_word):
+        config = replace(
+            test_config,
+            anki_fields={**test_config.anki_fields, "expression_reading": "Reading", "sentence_translation": "Tr"},
+        )
+        word = make_tokenized_word(expression_reading="たべる")
+        word.sentence_translation = "I eat."
+        legacy = self._fields(config, word)
+        tagged = self._fields(config, word, card_lang=lambda t, c: "zh-Hans")
+        assert set(tagged) == set(legacy)
+        assert {k: v for k, v in tagged.items() if k != "sentence"} == {
+            k: v for k, v in legacy.items() if k != "sentence"
+        }
+
+    def test_an_rtl_language_is_never_double_wrapped(self, test_config, make_tokenized_word):
+        word = make_tokenized_word()
+        rtl = self._fields(test_config, word, content_direction="rtl", content_lang="he")
+        both = self._fields(
+            test_config, word, content_direction="rtl", content_lang="he", card_lang=lambda t, c: "zh-Hans"
+        )
+        assert both == rtl
+
+    @pytest.mark.parametrize("code", ["ja", "ko"])
+    def test_a_profile_declaring_no_resolver_writes_no_lang(self, test_config, make_tokenized_word, code):
+        from anki_miner.languages.registry import get_profile
+
+        assert get_profile(code).content_style.card_lang is None
+        item = CardPayload(word=make_tokenized_word(), media=MediaData(), definition="def")
+        built = build_note(item, test_config, set(), card_lang=get_profile(code).content_style.card_lang)
+        assert "lang=" not in "".join(built.note["fields"].values())
+        assert built == build_note(item, test_config, set())

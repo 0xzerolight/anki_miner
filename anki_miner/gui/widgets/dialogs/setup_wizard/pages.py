@@ -822,7 +822,7 @@ class NoteTypePage(_LiveCheckPage):
         # A note type we can name maps itself: the preset carries the exact
         # field names plus the pitch/marker settings the keyword pass below
         # cannot know about, so there is nothing left for the user to press.
-        preset = preset_for_field_names(names)
+        preset = self._matching_preset(names)
         if preset is not None:
             self.guidance_label.setVisible(False)
             self.guidance_label.setText("")
@@ -848,6 +848,20 @@ class NoteTypePage(_LiveCheckPage):
             self.guidance_label.setVisible(False)
             self.guidance_label.setText("")
         self.completeChanged.emit()
+
+    def _matching_preset(self, field_names: list[str]) -> NotePreset | None:
+        """The preset for these field names, but only where presets apply.
+
+        Lapis, Kiku and Senren are Japanese note types and their mappings carry
+        furigana and pitch fields, so they ride the same ``note_presets``
+        capability the Settings Preset row does: applying one elsewhere stages
+        mappings the language cannot fill and every run's field check then
+        rejects. Without it the caller falls through to the keyword pass.
+        """
+        from anki_miner.languages.registry import get_profile  # noqa: PLC0415
+
+        capabilities = get_profile(config_language(self._wizard.working_config())).capabilities
+        return preset_for_field_names(field_names) if "note_presets" in capabilities else None
 
     @staticmethod
     def _has_mining_shape(field_names: list[str]) -> bool:
@@ -931,7 +945,7 @@ class NoteTypePage(_LiveCheckPage):
         if not self._field_names or self._field_names_note_type != note_type:
             return
         self._sanitize_field_mappings(note_type, self._field_names)
-        preset = preset_for_field_names(self._field_names)
+        preset = self._matching_preset(self._field_names)
         if preset is not None:
             self._apply_preset(preset)
             return
@@ -1022,7 +1036,8 @@ class ResourcesPage(_LiveCheckPage):
         self._dictionary_ready = False
 
         self.setTitle(self.tr("Recommended Resources"))
-        self.setSubTitle(self.tr("Frequency and pitch accent are optional. A dictionary is required."))
+        # The subtitle is set by _rebuild_catalog_rows, from the kinds the
+        # active language's catalog actually offers.
 
         layout = QVBoxLayout(self)
 
@@ -1115,6 +1130,7 @@ class ResourcesPage(_LiveCheckPage):
             return
         self._specs_language = language
         self._specs = list(get_profile(language).catalog)
+        self.setSubTitle(self._subtitle_for_kinds({spec.kind for spec in self._specs}))
 
         while (item := self._catalog_rows_layout.takeAt(0)) is not None:
             widget = item.widget()
@@ -1158,6 +1174,25 @@ class ResourcesPage(_LiveCheckPage):
             if self._specs
             else self.tr("No recommended resources for this language. Import a dictionary in Settings → Dictionaries.")
         )
+
+    def _subtitle_for_kinds(self, kinds: set[str]) -> str:
+        """Name the optional families this catalog has, and nothing else.
+
+        A whole sentence per combination rather than a stitched-together one:
+        the optional clause and the required one share a subject in several
+        languages, and a translator handed two fragments cannot make them
+        agree. ja carries all three kinds, so its sentence is unchanged and
+        keeps its existing translations.
+        """
+        has_freq = "freq" in kinds
+        has_pitch = "pitch" in kinds
+        if has_freq and has_pitch:
+            return self.tr("Frequency and pitch accent are optional. A dictionary is required.")
+        if has_freq:
+            return self.tr("Frequency is optional. A dictionary is required.")
+        if has_pitch:
+            return self.tr("Pitch accent is optional. A dictionary is required.")
+        return self.tr("A dictionary is required.")
 
     def _sync_download_button(self) -> None:
         """Nothing ticked is not a run: an empty spec list reports success for no work."""

@@ -11,6 +11,9 @@ from types import SimpleNamespace
 import pytest
 
 from anki_miner.exceptions import AnkiConnectionError, SetupError
+from anki_miner.languages.registry import get_profile
+from anki_miner.languages.switching import switch_language
+from anki_miner.languages.zh.render import ZhMeasureWordHook, ZhToneColorHook
 from anki_miner.services.card_backfiller import (
     BACKFILL_TAG,
     BackfillOptions,
@@ -21,11 +24,13 @@ from anki_miner.services.card_backfiller import (
     _is_empty,
     _is_fillable,
     _reading_from_furigana,
+    _resolve_context,
     apply_backfill,
     scan_backfill,
 )
 from anki_miner.services.definition_service import DefinitionService
 from anki_miner.services.morphology import SyntheticToken
+from anki_miner.services.tagger import get_shared_tagger
 from anki_miner.services.validation_service import ValidationService
 
 # ---------------------------------------------------------------------------
@@ -128,9 +133,20 @@ class FakeFrequencyService:
 
 
 class FakeDefinitionService:
-    def __init__(self, defs: dict[str, str] | None = None, glossaries: dict[str, str] | None = None):
+    def __init__(
+        self,
+        defs: dict[str, str] | None = None,
+        glossaries: dict[str, str] | None = None,
+        readings: dict[str, list[str]] | None = None,
+    ):
         self.defs = defs or {}
         self.glossaries = glossaries or {}
+        self.readings = readings or {}
+        self.reading_batches: list[list[str]] = []
+
+    def offline_term_readings(self, terms):
+        self.reading_batches.append(list(terms))
+        return {t: self.readings[t] for t in terms if t in self.readings}
 
     def get_definitions_batch(
         self,
@@ -1569,3 +1585,207 @@ class TestApplyWordAudio:
         result = apply_backfill(anki, plan)
         assert anki.updates == []
         assert result.skipped_stale == 1
+
+
+# ---------------------------------------------------------------------------
+# Profile card fields (the active language's own render hooks)
+# ---------------------------------------------------------------------------
+
+
+#: The zh hook targets, added to the default note type so the preflight keeps them.
+_ZH_NOTE_FIELDS = set(_DEFAULT_NOTE_FIELDS) | {"MeasureWord", "Traditional", "Pinyin", "Sentence"}
+
+
+@pytest.fixture
+def zh_backfill_config(test_config):
+    """A zh config with the word, definition and hook-field targets mapped.
+
+    The zh defaults deliberately ship no note type and blank targets, so the
+    mapping is restored here — the scan is about what the hooks render, not
+    about a first-visit mapping the user has yet to do.
+    """
+    config = switch_language(test_config, "zh")
+    return replace(
+        config,
+        anki_note_type=test_config.anki_note_type,
+        anki_fields={
+            **config.anki_fields,
+            "word": "word",
+            "definition": "definition",
+            "measure_word": "MeasureWord",
+            "expression_traditional": "Traditional",
+            "expression_pinyin": "Pinyin",
+        },
+    )
+
+
+def _zh_anki(*notes: dict) -> FakeAnkiService:
+    return FakeAnkiService({note["noteId"]: note for note in notes}, note_fields=_ZH_NOTE_FIELDS)
+
+
+def _mined_word(mined_form: str, definition: str = ""):
+    """What the mining pipeline hands a render hook, for the byte comparison."""
+    return SimpleNamespace(mined_form=mined_form, definition_html=definition)
+
+
+class TestScanProfileCardFields:
+    def test_pinyin_is_the_bytes_the_mining_hook_writes(self, zh_backfill_config):
+        anki = _zh_anki(_note(1, word="银行", Pinyin=""))
+        plan = scan_backfill(anki, zh_backfill_config, _services(), _options({"expression_pinyin"}))
+        expected = ZhToneColorHook().render(_mined_word("银行"), config=zh_backfill_config)
+        assert _changes_by_key(plan, 1)["expression_pinyin"] == expected["expression_pinyin"]
+        # Tone colour is on by default for zh, so the mined bytes carry spans.
+        assert "<span" in expected["expression_pinyin"]
+
+    def test_pinyin_follows_the_tone_colour_setting(self, zh_backfill_config):
+        config = replace(zh_backfill_config, reading_tone_color=False)
+        anki = _zh_anki(_note(1, word="银行", Pinyin=""))
+        plan = scan_backfill(anki, config, _services(), _options({"expression_pinyin"}))
+        expected = ZhToneColorHook().render(_mined_word("银行"), config=config)
+        assert _changes_by_key(plan, 1)["expression_pinyin"] == expected["expression_pinyin"]
+        assert "<span" not in expected["expression_pinyin"]
+
+    def test_measure_word_rides_the_definition_lookup(self, zh_backfill_config):
+        # Only the measure-word group is ticked: the gloss it parses still has
+        # to be fetched, or the one field a zh user cannot recompute by hand
+        # silently proposes nothing.
+        anki = _zh_anki(_note(1, word="银行", MeasureWord=""))
+        defs = FakeDefinitionService(defs={"银行": "bank; CL:家[jia1]"})
+        plan = scan_backfill(anki, zh_backfill_config, _services(defs=defs), _options({"measure_word"}))
+        assert _changes_by_key(plan, 1)["measure_word"] == "家"
+
+    def test_measure_word_reads_the_definition_the_field_receives(self, zh_backfill_config):
+        gloss = (
+            '<div class="yomitan-glossary"><ol data-count="1"><li data-dictionary="D">bank; CL:家[jia1]</li></ol></div>'
+        )
+        anki = _zh_anki(_note(1, word="银行", MeasureWord="", definition=""))
+        defs = FakeDefinitionService(defs={"银行": gloss})
+        plan = scan_backfill(
+            anki,
+            zh_backfill_config,
+            _services(defs=defs),
+            _options({"measure_word", "definition"}),
+        )
+        changes = _changes_by_key(plan, 1)
+        assert changes["measure_word"] == "家"
+        assert changes["definition"].startswith(gloss)
+        assert changes["definition"].endswith("</style>")
+
+    def test_a_plain_text_hook_field_is_escaped_the_way_a_mined_card_escapes_it(self, zh_backfill_config):
+        # build_note inserts a raw_html field verbatim and html.escape()s every
+        # other one, so a classifier read out of a gloss carrying & must arrive
+        # escaped here too — the pinyin field, declared raw_html, must not.
+        anki = _zh_anki(_note(1, word="银行", MeasureWord="", Pinyin=""))
+        defs = FakeDefinitionService(defs={"银行": "bank; CL:家&个[jia1]"})
+        plan = scan_backfill(
+            anki,
+            zh_backfill_config,
+            _services(defs=defs),
+            _options({"measure_word", "expression_pinyin"}),
+        )
+        changes = _changes_by_key(plan, 1)
+        assert changes["measure_word"] == "家&amp;个"
+        assert changes["expression_pinyin"].startswith("<span")
+
+    def test_traditional_is_proposed_only_when_it_differs_from_the_front(self, zh_backfill_config):
+        anki = _zh_anki(_note(1, word="银行", Traditional=""), _note(2, word="大人", Traditional=""))
+        plan = scan_backfill(anki, zh_backfill_config, _services(), _options({"expression_traditional"}))
+        assert _changes_by_key(plan, 1)["expression_traditional"] == "銀行"
+        assert _changes_by_key(plan, 2) == {}
+
+    def test_the_classifier_reads_the_note_s_own_sentence(self, zh_backfill_config):
+        """狗 is spelt the same in both scripts, so the hook's second tier is the sentence."""
+        pytest.importorskip("opencc")
+        anki = _zh_anki(_note(1, word="狗", Sentence="那隻狗在門口等他。", MeasureWord=""))
+        defs = FakeDefinitionService(defs={"狗": "dog; CL:隻|只[zhi1]"})
+        plan = scan_backfill(anki, zh_backfill_config, _services(defs=defs), _options({"measure_word"}))
+        assert _changes_by_key(plan, 1)["measure_word"] == "隻"
+
+    def test_the_classifier_is_the_bytes_the_mining_hook_writes(self, zh_backfill_config):
+        """A mined card wraps its sentence in a lang span; the hook must see the text, not the markup."""
+        pytest.importorskip("opencc")
+        sentence = '<span lang="zh-Hant">那隻狗在門口等他。</span>'
+        anki = _zh_anki(_note(1, word="狗", Sentence=sentence, MeasureWord=""))
+        defs = FakeDefinitionService(defs={"狗": "dog; CL:隻|只[zhi1]"})
+        plan = scan_backfill(anki, zh_backfill_config, _services(defs=defs), _options({"measure_word"}))
+        mined = SimpleNamespace(mined_form="狗", definition_html="dog; CL:隻|只[zhi1]", sentence="那隻狗在門口等他。")
+        expected = ZhMeasureWordHook().render(mined, config=zh_backfill_config)
+        assert _changes_by_key(plan, 1)["measure_word"] == expected["measure_word"] == "隻"
+
+    def test_a_filled_hook_field_is_left_alone_in_fill_mode(self, zh_backfill_config):
+        anki = _zh_anki(_note(1, word="银行", Pinyin="yín háng"))
+        plan = scan_backfill(anki, zh_backfill_config, _services(), _options({"expression_pinyin"}))
+        assert plan.notes == ()
+
+    def test_a_hook_field_absent_from_the_note_type_is_reported(self, zh_backfill_config):
+        anki = FakeAnkiService({1: _note(1, word="银行")}, note_fields=set(_DEFAULT_NOTE_FIELDS))
+        plan = scan_backfill(anki, zh_backfill_config, _services(), _options({"expression_pinyin"}))
+        assert plan.absent_fields == ("Pinyin",)
+        assert plan.notes == ()
+
+    def test_a_note_with_no_reading_gets_the_dictionary_s_own_reading(self, zh_backfill_config):
+        """Backfilled bytes equal fresh-mine bytes, and the mine reconciles."""
+        anki = _zh_anki(_note(1, word="先生", Pinyin=""))
+        defs = FakeDefinitionService(readings={"先生": ["xiānsheng"]})
+        plan = scan_backfill(anki, zh_backfill_config, _services(defs=defs), _options({"expression_pinyin"}))
+        mined = SimpleNamespace(mined_form="先生", expression_reading="xiān sheng", definition_html="")
+        expected = ZhToneColorHook().render(mined, config=zh_backfill_config)
+        assert _changes_by_key(plan, 1)["expression_pinyin"] == expected["expression_pinyin"]
+        assert defs.reading_batches == [["先生"]]
+
+    def test_the_attested_readings_are_fetched_once_per_chunk(self, zh_backfill_config):
+        anki = _zh_anki(_note(1, word="先生", Pinyin=""), _note(2, word="银行", Pinyin=""))
+        defs = FakeDefinitionService(readings={"先生": ["xiānsheng"]})
+        scan_backfill(anki, zh_backfill_config, _services(defs=defs), _options({"expression_pinyin"}))
+        assert defs.reading_batches == [["先生", "银行"]]
+
+    def test_a_multi_token_japanese_front_keeps_its_tokenizer_reading(self):
+        """The reconcile tier is gated on the capability, never on "has a profile reading".
+
+        A ja profile HAS reading support; asking it for a multi-token front's
+        reading returns the FIRST token's (気がする -> き), which is how this
+        gate goes wrong.
+        """
+        tagger = get_shared_tagger()
+        ja_reading = get_profile("ja").reading
+        ctx = _resolve_context(
+            1,
+            {"word": "気がする"},
+            "気がする",
+            {"word": "word"},
+            tagger,
+            None,
+            reading_support=ja_reading,
+        )
+        assert ctx.reading == "きがする"
+
+    def test_a_multi_token_chinese_front_is_never_painted_as_its_own_hanzi(self, zh_backfill_config):
+        """The same gate on the zh side, where the fallback under it is not a reading.
+
+        jieba cuts 不慢 in two in isolation, so the reconcile tier cannot run
+        and the tier below hands the front's characters back. The Pinyin field
+        is the one place that would persist them.
+        """
+        anki = _zh_anki(_note(1, word="不慢", Pinyin=""))
+        plan = scan_backfill(anki, zh_backfill_config, _services(), _options({"expression_pinyin"}))
+        proposed = _changes_by_key(plan, 1)["expression_pinyin"]
+        expected = ZhToneColorHook().render(_mined_word("不慢"), config=zh_backfill_config)
+        assert proposed == expected["expression_pinyin"]
+        assert not any(char in proposed for char in "不慢")
+
+    def test_the_pinyin_field_is_painted_from_the_reading_the_note_stores(self, zh_backfill_config):
+        """A reading the card already carries is card data, not a guess."""
+        config = replace(
+            zh_backfill_config,
+            anki_fields={**zh_backfill_config.anki_fields, "expression_reading": "ExpressionReading"},
+        )
+        anki = _zh_anki(_note(1, word="银行", ExpressionReading="yín xíng", Pinyin=""))
+        plan = scan_backfill(anki, config, _services(), _options({"expression_pinyin"}))
+        mined = SimpleNamespace(mined_form="银行", expression_reading="yín xíng", definition_html="")
+        expected = ZhToneColorHook().render(mined, config=config)
+        assert _changes_by_key(plan, 1)["expression_pinyin"] == expected["expression_pinyin"]
+
+    def test_japanese_declares_no_hook_fields(self, backfill_config):
+        # The ja pipeline renders its own fields inline and must never route
+        # one through a hook; nothing here can change what a ja scan proposes.
+        assert get_profile("ja").extra_card_fields == ()

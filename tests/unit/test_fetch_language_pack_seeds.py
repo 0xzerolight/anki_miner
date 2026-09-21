@@ -110,9 +110,13 @@ def test_print_manifest_resolves_every_artifact_without_downloading(tmp_path, mo
     assert zh["jieba"]["artifact"]["url"].endswith("jieba-0.42.1.tar.gz")
     assert len(zh["jieba"]["artifact"]["sha256"]) == 64
     assert zh["pypinyin"]["artifact"]["kind"] == "wheel"
-    # opencc pins a cp312 ABI, so its artifact is null on any other interpreter —
-    # and it is optional precisely so that stays a seedable pack.
-    assert zh["opencc"]["required"] is False
+    # opencc is declared once per CPython ABI, so the manifest carries one entry
+    # per sibling and at most one of them resolves on the runner asking. It is
+    # optional so that a platform with no wheel still leaves a seedable pack.
+    opencc = [comp for comp in packs["zh"]["components"] if comp["import_name"] == "opencc"]
+    assert len(opencc) == 4
+    assert [comp["required"] for comp in opencc] == [False] * 4
+    assert len([comp for comp in opencc if comp["artifact"] is not None]) <= 1
 
     ko = {comp["import_name"]: comp for comp in packs["ko"]["components"]}
     assert ko["kiwipiepy_model"]["artifact"]["url"].endswith("kiwipiepy_model-0.23.0.tar.gz")

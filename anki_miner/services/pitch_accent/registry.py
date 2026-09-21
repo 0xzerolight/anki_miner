@@ -141,19 +141,21 @@ class PitchSourceRegistry:
     def usable_enabled(self, config: AnkiMinerConfig) -> list[PitchSourceMeta]:
         """Enabled chain slots that can actually answer a lookup.
 
-        Present on disk, schema-current, and holding at least one entry — read
-        off this snapshot without opening a SQLite connection, so a readiness
-        check can call it without file-locking an index Reimport All is about to
-        replace (Windows).
+        Present on disk, schema-current, holding at least one entry, and
+        stamped for the run's mining language — the same gate ``build_sources``
+        applies, read off this snapshot without opening a SQLite connection, so
+        a readiness check can call it without file-locking an index Reimport
+        All is about to replace (Windows).
 
         Does NOT call load(); callers control when the scan happens.
         """
+        language = config_language(config)
         usable: list[PitchSourceMeta] = []
         for entry in config.pitch_chain:
             if not entry.enabled or not entry.source_id:
                 continue
             meta = self._sources.get(entry.source_id)
-            if meta is not None and meta.schema_ok and meta.entry_count > 0:
+            if meta is not None and meta.schema_ok and meta.entry_count > 0 and meta.language == language:
                 usable.append(meta)
         return sorted(usable, key=lambda m: m.source_id)
 

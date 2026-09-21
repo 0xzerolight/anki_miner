@@ -279,7 +279,7 @@ def test_cjk_ideograph_ranges_are_well_formed():
 
 # --- TV-caption decoration glyphs (owned strip, 2026-07 card audit) -----------
 
-from anki_miner.utils.ja_normalize import strip_decoration_glyphs  # noqa: E402
+from anki_miner.utils.ja_normalize import strip_decoration_glyphs, strip_renderer_garbage  # noqa: E402
 
 
 class TestStripDecorationGlyphs:
@@ -326,3 +326,24 @@ class TestStripDecorationGlyphs:
 
     def test_runs_first_in_normalize_for_tokenization(self):
         assert normalize_for_tokenization("ﾊﾟｿｺﾝ📱を使う➡") == "パソコン を使う"
+
+
+class TestStripRendererGarbage:
+    """The half a spaceless language reuses: garbage goes, caption glyphs stay."""
+
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("変換�エラー", "変換エラー"),  # replacement character
+            ("他说这个电影", "他说这个电影"),  # BMP private-use
+            ("普通の文。", "普通の文。"),
+        ],
+    )
+    def test_deletes_garbage_leaving_no_separator(self, raw, expected):
+        # No space in its place: the caller may be a language that writes none,
+        # and a separator there splits the word the codepoint landed inside.
+        assert strip_renderer_garbage(raw) == expected
+
+    @pytest.mark.parametrize("kept", ["あ ➡ い", "📱うん", "話す➡️聞く"])
+    def test_keeps_caption_decoration(self, kept):
+        assert strip_renderer_garbage(kept) == kept

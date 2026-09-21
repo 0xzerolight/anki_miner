@@ -54,6 +54,7 @@ from anki_miner.services.word_list_service import WordListService
 from anki_miner.services.wordset_service import WordsetService
 from anki_miner.services.youtube_fetcher import YouTubeFetcherService
 from anki_miner.utils.i18n import tr_format
+from anki_miner.utils.subtitle_encoding import script_check_kwarg
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +185,25 @@ def _lookup_kwarg(config: AnkiMinerConfig) -> _LookupKwarg:
     """
     lookup = get_profile(config_language(config)).lookup
     return {} if lookup is get_profile("ja").lookup else {"lookup": lookup}
+
+
+def import_decode_ladder(config: AnkiMinerConfig) -> tuple[str, ...] | None:
+    """The decode ladder a user's own text file is read with, or the sentinel.
+
+    One rule for every file the user picked rather than the app wrote — the
+    novel/subtitle loaders, the word lists — so the Japanese carve-out below
+    cannot hold at one of them and not the other.
+
+    ``None`` is not "no ladder": it selects the caller's built-in Japanese
+    path, which is strictly more than an ordered list of encodings — a UTF-16
+    BOM branch (``reading/_util._decode``) or plain UTF-8 with the BOM stripped
+    (``WordListService``). EUC-JP bytes decode without error as cp932, so
+    replaying Japanese through its own ``import_encodings`` would return that
+    mojibake and change Japanese output. Gated on the profile object rather
+    than on ``config.language``, the way :func:`_lookup_kwarg` is.
+    """
+    profile = get_profile(config_language(config))
+    return None if profile is get_profile("ja") else profile.import_encodings
 
 
 def build_definition_service(
@@ -937,10 +957,13 @@ def create_services(
     word_list_service = None
     if config.use_blacklist or config.use_whitelist:
         try:
+            ladder = import_decode_ladder(config)
             word_list_service = WordListService(
                 blacklist_path=config.blacklist_path if config.use_blacklist else None,
                 whitelist_path=config.whitelist_path if config.use_whitelist else None,
-                dedup_fold=get_profile(config_language(config)).dedup_fold,
+                dedup_fold=profile.dedup_fold,
+                encodings=ladder,
+                **script_check_kwarg(ladder, profile.script),
             )
             word_list_service.load()
         except MemoryError:

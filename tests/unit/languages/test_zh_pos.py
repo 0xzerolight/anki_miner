@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from anki_miner.languages.token import LanguageToken
+from anki_miner.languages.zh.overrides import ZH_FLAG_OVERRIDES
 from anki_miner.languages.zh.pos import ZH_ALLOWED_POS, ZH_EXCLUDED_SUBTYPES, ZH_POS_LABELS
 from anki_miner.languages.zh.tokenizer import build_tagger
 from anki_miner.services.morphology import TokenInclusionRule
@@ -74,6 +75,12 @@ def test_every_allowed_pos_has_a_label() -> None:
 def test_excluded_subtypes_are_all_reachable_from_an_allowed_class() -> None:
     # A subtype whose first letter is not an allowed pos1 could never fire.
     assert all(subtype[0] in ZH_ALLOWED_POS for subtype in ZH_EXCLUDED_SUBTYPES)
+
+
+def test_the_flag_overrides_retag_rows_without_moving_a_class() -> None:
+    # 喝 comes in as a row, not by admitting the bound-verb class it sits in.
+    assert all(flag[0] in ZH_ALLOWED_POS for flag in ZH_FLAG_OVERRIDES.values())
+    assert "vg" in ZH_EXCLUDED_SUBTYPES
 
 
 def _mined(sentence: str) -> set[str]:

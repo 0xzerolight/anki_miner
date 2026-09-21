@@ -32,7 +32,7 @@ from anki_miner.languages.zh.support import (
     ZhMinedFormPolicy,
     ZhScriptSupport,
 )
-from anki_miner.languages.zh.variants import normalize_zh, script_key
+from anki_miner.languages.zh.variants import normalize_zh_text, script_key
 
 __all__ = ["build_profile"]
 
@@ -76,7 +76,11 @@ def _scoped_defaults() -> Mapping[str, object]:
             # fields a zh run cannot fill — so zh ships empty and the user picks.
             "anki_deck_name": "Anki Miner",
             "anki_note_type": "",
-            "script_variant": "simplified",
+            # Keep the source spelling: a front rewritten to the other script
+            # is absent from its own example sentence, and the bold marker
+            # lands on a word the front does not show. Cross-script dedup is
+            # unaffected — ``dedup_fold`` below is independent of this field.
+            "script_variant": "",
             "reading_tone_color": True,
         }
     )
@@ -114,7 +118,7 @@ def build_profile() -> LanguageProfile:
             closers=frozenset("」｣』）〕］｝〉》】)]}｠〟”’"),
             space_aware=False,
         ),
-        normalize=normalize_zh,
+        normalize=normalize_zh_text,
         dict_keys=ZhDictKeyFolding(),
         audio=ZH_AUDIO,
         asr_language="zh",
@@ -136,9 +140,9 @@ def build_profile() -> LanguageProfile:
         card_field_defaults=ZH_CARD_FIELD_DEFAULTS,
         render_hooks=ZH_RENDER_HOOKS,
         content_style=ZH_CONTENT_STYLE,
-        # Required packages only. OpenCC absent leaves the variant lookups empty
-        # and mining working, so gating on it would take the language off the
-        # selector and refuse the switch over a degraded feature.
+        # Required packages only. OpenCC absent still mines: simplified input
+        # never reaches a converter and traditional input degrades rather than
+        # stopping, so gating on it would take the language off the selector.
         unavailable_reason=zh_missing_required_reason,
         extra_card_fields=ZH_EXTRA_CARD_FIELDS,
         smoke_sentence=ZH_SMOKE_SENTENCE,

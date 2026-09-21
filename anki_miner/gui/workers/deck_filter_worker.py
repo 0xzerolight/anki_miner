@@ -6,7 +6,11 @@ from types import SimpleNamespace
 from PyQt6.QtCore import pyqtSignal
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.utils.service_factory import create_shared_lookup_services, resolve_known_words_db_path
+from anki_miner.gui.utils.service_factory import (
+    create_shared_lookup_services,
+    import_decode_ladder,
+    resolve_known_words_db_path,
+)
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.services.anki_service import AnkiService
@@ -22,6 +26,7 @@ from anki_miner.services.word_filter import WordFilterService
 from anki_miner.services.word_list_service import WordListService
 from anki_miner.services.wordset_service import WordsetService
 from anki_miner.utils.logging_ext import log_summary
+from anki_miner.utils.subtitle_encoding import script_check_kwarg
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +40,8 @@ def _build_filter_bundle(config: AnkiMinerConfig, frequency_service) -> SimpleNa
     to None, never aborts the scan). The tagger is optional too — without it
     the scan keeps ``lemma == expression`` and generates no readings.
     """
+    profile = get_profile(config_language(config))
+
     known_word_db = None
     try:
         known_word_db = KnownWordDB(resolve_known_words_db_path(config), language=config_language(config))
@@ -44,10 +51,13 @@ def _build_filter_bundle(config: AnkiMinerConfig, frequency_service) -> SimpleNa
     word_list_service = None
     if config.use_blacklist or config.use_whitelist:
         try:
+            ladder = import_decode_ladder(config)
             word_list_service = WordListService(
                 blacklist_path=config.blacklist_path if config.use_blacklist else None,
                 whitelist_path=config.whitelist_path if config.use_whitelist else None,
-                dedup_fold=get_profile(config_language(config)).dedup_fold,
+                dedup_fold=profile.dedup_fold,
+                encodings=ladder,
+                **script_check_kwarg(ladder, profile.script),
             )
             word_list_service.load()
         except Exception as e:
@@ -67,13 +77,15 @@ def _build_filter_bundle(config: AnkiMinerConfig, frequency_service) -> SimpleNa
 
     tagger = None
     try:
-        from anki_miner.services.tagger import get_shared_tagger
+        from anki_miner.languages.tagger_provider import get_tagger
 
-        tagger = get_shared_tagger()
+        # No ``== "ja"`` branch: the provider's ja entry already returns the
+        # shared tagger. Asking it unconditionally is what keeps a Chinese deck
+        # off the fugashi tagger, which read 苹果 as りんご.
+        tagger = get_tagger(config_language(config))
     except Exception as e:
         logger.warning("Tagger unavailable for deck filter scan (%s); readings/lemmas degrade.", e)
 
-    profile = get_profile(config_language(config))
     return SimpleNamespace(
         # ``script=`` is load-bearing for non-ja: this object IS the bundle's
         # word_filter, and without it ko/zh option ids would reach the JA

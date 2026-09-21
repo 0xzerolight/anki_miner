@@ -47,11 +47,11 @@ def test_fold_term_is_nfc():
     assert ZhDictKeyFolding().fold_term("兀") == "兀"
 
 
-def test_fold_reading_preserves_none_and_case_folds_pinyin():
+def test_fold_reading_preserves_none_case_folds_and_drops_spacing():
     folding = ZhDictKeyFolding()
     assert folding.fold_reading(None) is None
-    assert folding.fold_reading("Zhōng Guó") == "zhōng guó"
-    assert folding.fold_reading("nī hǎo") == "nī hǎo"
+    assert folding.fold_reading("Zhōng Guó") == "zhōngguó"
+    assert folding.fold_reading("nī hǎo") == "nīhǎo"
 
 
 def test_the_import_side_and_the_query_side_fold_identically():
@@ -59,7 +59,7 @@ def test_the_import_side_and_the_query_side_fold_identically():
     folding = ZhDictKeyFolding()
     stored = folding.fold_reading("Yín Háng")  # importer writes this key
     queried = folding.fold_reading("yín háng")  # lookup asks for this one
-    assert stored == queried
+    assert stored == queried == "yínháng"
 
 
 def test_rule_a_drops_reading_only_homographs():
@@ -121,3 +121,106 @@ def test_candidates_are_variants_with_a_zero_condition_mask(fake_variants):
 def test_the_query_word_is_never_re_emitted(fake_variants):
     fake_variants({"中文": ["中文"]})
     assert ZhLookupStrategy().candidates("中文", "中文", "vs") == []
+
+
+class TestTaiwanSpellingIsACandidate:
+    """The spelling ``to_script`` writes on the card must be queryable (spec 10.1).
+
+    Generic s2t is the only traditional candidate the ladder used to emit, so a
+    traditional-keyed resource indexed under the Taiwan spelling the app itself
+    produces (為什麼, 觀眾, 接著) was missed on every lookup.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _opencc(self) -> None:
+        pytest.importorskip("opencc")
+
+    @pytest.mark.parametrize(("term", "taiwan"), [("为什么", "為什麼"), ("观众", "觀眾"), ("接着", "接著")])
+    def test_term_variants_offer_the_taiwan_spelling(self, term, taiwan):
+        assert taiwan in ZhDictKeyFolding().term_variants(term)
+
+    @pytest.mark.parametrize(("term", "taiwan"), [("为什么", "為什麼"), ("观众", "觀眾"), ("接着", "接著")])
+    def test_lookup_candidates_offer_the_taiwan_spelling(self, term, taiwan):
+        assert (taiwan, 0) in ZhLookupStrategy().candidates(term, "", None)
+
+    def test_candidates_hold_each_spelling_once(self):
+        candidates = ZhLookupStrategy().candidates("银行", "", None)
+        assert [c for c, _ in candidates] == list(dict.fromkeys(c for c, _ in candidates))
+
+
+def _cedict_row(*glosses: str) -> str:
+    """One CC-CEDICT row's stored ``content``, shaped as the importer renders it."""
+    items = "".join(f'<li class="gloss-sc-li">{gloss}</li>' for gloss in glosses)
+    return (
+        '<li class="gloss-item"><div class="gloss-content">'
+        '<ul class="gloss-sc-ul" data-sc-cccedict="definition">'
+        f"{items}</ul></div></li>"
+    )
+
+
+class TestSenseRank:
+    """Rows that state no live sense rank after the rows that do."""
+
+    @pytest.mark.parametrize(
+        "gloss",
+        [
+            "variant of 乾|干[gān]",
+            "old variant of 乾|干[gān]",
+            "(old) variant of 款[kuǎn]",
+            "archaic variant of 蒸[zhēng]",
+            "erhua variant of 一個勁|一个劲[yīgèjìn]",
+            "erhua form of 今兒|今儿[jīnr]",
+            "Japanese variant of 圓|圆",
+            "see 基友[jīyǒu]",
+            "see also 西皮[xīpí]",
+            "used in 㐖毒[xiédú]",
+        ],
+    )
+    def test_a_row_that_only_points_elsewhere_sorts_last(self, gloss):
+        assert ZhDictKeyFolding().sense_rank(_cedict_row(gloss)) == 2
+
+    @pytest.mark.parametrize(
+        "glosses",
+        [
+            ("surname Gan",),
+            ("surname Liu",),
+            ("(classical) to kill", "(classical) to slaughter"),
+            ("long robe (old)",),
+            ("(literary) still", "(literary) yet"),
+            ("(archaic) navy",),
+            ("(obsolete) planet",),
+        ],
+    )
+    def test_a_surname_or_archaic_row_ranks_between(self, glosses):
+        """Between a surname row and an archaic-only row the index's own order
+        decides, and both still lead a row that only points elsewhere."""
+        assert ZhDictKeyFolding().sense_rank(_cedict_row(*glosses)) == 1
+
+    @pytest.mark.parametrize(
+        "gloss",
+        [
+            "dry",
+            "to pay back; to return",
+            "see you next time",
+            "see through (a person, scheme, trick etc)",
+            "used in place names",
+            "abbr. for 三自愛國教會|三自爱国教会[sānzìàiguójiàohuì], Three-Self Patriotic Movement",
+            "surname and given name; full name",
+        ],
+    )
+    def test_a_row_that_states_a_sense_keeps_its_rank(self, gloss):
+        assert ZhDictKeyFolding().sense_rank(_cedict_row(gloss)) == 0
+
+    def test_a_surname_beside_a_real_sense_keeps_its_rank(self):
+        assert ZhDictKeyFolding().sense_rank(_cedict_row("surname Wang", "king")) == 0
+
+    def test_an_archaic_sense_beside_a_modern_one_keeps_its_rank(self):
+        row = _cedict_row("(archaic) navy", "person employed to post messages on the Internet")
+        assert ZhDictKeyFolding().sense_rank(row) == 0
+
+    def test_every_gloss_must_point_elsewhere(self):
+        assert ZhDictKeyFolding().sense_rank(_cedict_row("variant of 乾|干[gān]", "surname Gan")) == 1
+
+    def test_content_with_no_gloss_items_keeps_its_rank(self):
+        """A dictionary this predicate cannot read is left where the index put it."""
+        assert ZhDictKeyFolding().sense_rank("<div>bank</div>") == 0

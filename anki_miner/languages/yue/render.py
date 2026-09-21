@@ -5,7 +5,8 @@ them into ``extra_fields`` and ``anki_note_builder`` maps key -> Anki field name
 An unmapped key is skipped by the existing empty-name rule, so every hook field
 is opt-in exactly like frequency/pitch/expression_audio.
 
-``ZhMeasureWordHook`` is imported UNCHANGED (R32): CC-CEDICT-Canto writes
+``ZhMeasureWordHook`` is imported UNCHANGED (R32), built traditional-first
+because that is the script every yue card is in: CC-CEDICT-Canto writes
 classifiers inline as ``CL:套[tou3]`` in 2,458 of its 166,267 rows (measured
 2026-09-20) and CC-Canto in none, so the field fills only when the
 CC-CEDICT-Canto slot is the hit -- and the bracketed reading there is Mandarin
@@ -29,8 +30,10 @@ if TYPE_CHECKING:  # annotation-only: keeps profile.py's resource_catalog import
 #: Six tones, six colours. Cantonese has no single community convention the way
 #: Mandarin does, so this is a default in profile data rather than a setting:
 #: 1 red, 2 orange, 3 green, 4 blue, 5 purple, 6 grey. Tone 0 (a syllable with
-#: no digit, which only imported data produces) takes the neutral grey.
-_TONE_COLORS = {1: "#e02020", 2: "#e08a00", 3: "#1a9e3a", 4: "#1f6fe0", 5: "#8a3fc4", 6: "#8a8a8a"}
+#: no digit, which only imported data produces) takes the neutral grey. The five
+#: shared hues are zh's, in the same both-backgrounds lightness band (see the
+#: note on ``zh.render._TONE_COLORS``); purple joins them there.
+_TONE_COLORS = {1: "#e75353", 2: "#be7500", 3: "#199a39", 4: "#4286e5", 5: "#a66dd2", 6: "#868686"}
 _NEUTRAL = _TONE_COLORS[6]
 
 
@@ -69,4 +72,4 @@ class YueJyutpingHook:
         return {"expression_jyutping": spans}
 
 
-YUE_RENDER_HOOKS: tuple[CardRenderHook, ...] = (ZhMeasureWordHook(), YueJyutpingHook())
+YUE_RENDER_HOOKS: tuple[CardRenderHook, ...] = (ZhMeasureWordHook(prefer="traditional"), YueJyutpingHook())

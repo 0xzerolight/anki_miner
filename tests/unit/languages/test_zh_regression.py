@@ -17,6 +17,7 @@ from anki_miner.gui.widgets.youtube_playlist_flow import _classify_probe_result
 from anki_miner.languages import registry
 from anki_miner.languages.registry import get_profile
 from anki_miner.languages.switching import switch_language
+from anki_miner.languages.zh.reading import word_pinyin
 from anki_miner.models import TokenizedWord
 from anki_miner.models.card_payload import CardPayload
 from anki_miner.models.media import MediaData
@@ -156,9 +157,10 @@ def _seed_zh_dict(dicts_root, dict_id="cedict-zh"):
     create_index(db_path)
     bulk_insert(
         db_path,
-        # Source case as a CC-CEDICT port ships it; the term is Han, so the row
-        # is reachable ONLY through its folded reading key.
-        [DictRow(term="銀行", reading="Yín Háng", content="<div>bank</div>", sequence=1)],
+        # Reading spelled as a CC-CEDICT port ships it - one unspaced,
+        # mixed-case run - while the engine generates "yín háng". The term is
+        # Han, so the row is reachable ONLY through its folded reading key.
+        [DictRow(term="銀行", reading="YínHáng", content="<div>bank</div>", sequence=1)],
         keys=get_profile("zh").dict_keys,
     )
     write_meta(
@@ -197,16 +199,110 @@ def test_a_zh_index_imported_with_the_real_folding_is_queryable(test_config, tmp
     assert isinstance(provider, IndexedDictProvider)
     assert provider._keys is get_profile("zh").dict_keys
     assert provider.load() is True
-    # Query cased as the source ships it and as the engine generates it: both
-    # resolve, because both sides casefold.
-    assert provider.lookup("Yín Háng") is not None
+    # Query cased and spaced as the engine generates it, and as the source
+    # ships it: both resolve, because both sides casefold and drop spacing.
     assert provider.lookup("yín háng") is not None
+    assert provider.lookup("YínHáng") is not None
 
-    # Asymmetry proof: the ja folding does not casefold, so the source-cased
-    # query finds nothing in the same file.
+    # Asymmetry proof: the ja folding neither casefolds nor drops spacing, so
+    # neither query finds anything in the same file.
     ja_side = IndexedDictProvider("cedict-zh", db_path, display_name="CC-CEDICT", keys=get_profile("ja").dict_keys)
     assert ja_side.load() is True
-    assert ja_side.lookup("Yín Háng") is None
+    assert ja_side.lookup("yín háng") is None
+    assert ja_side.lookup("YínHáng") is None
+
+
+def _cedict_content(*glosses: str) -> str:
+    """One CC-CEDICT row's stored ``content``, shaped as the importer renders it."""
+    items = "".join(f'<li class="gloss-sc-li">{gloss}</li>' for gloss in glosses)
+    return (
+        '<li class="gloss-item"><div class="gloss-content">'
+        '<ul class="gloss-sc-ul" data-sc-cccedict="definition">'
+        f"{items}</ul></div></li>"
+    )
+
+
+def test_a_zh_card_leads_with_the_sense_not_the_surname(tmp_path):
+    """干 read gān opens on "dry", not on the surname and variant rows CC-CEDICT
+    happens to store ahead of it. Real zh folding, real index, real provider."""
+    db_path = tmp_path / "dicts" / "cedict-zh" / "index.sqlite"
+    db_path.parent.mkdir(parents=True)
+    create_index(db_path)
+    bulk_insert(
+        db_path,
+        [
+            DictRow(term="干", reading="gān", content=_cedict_content("old variant of 乾|干[gān]"), sequence=4425),
+            DictRow(term="干", reading="gān", content=_cedict_content("surname Gan"), sequence=4428),
+            DictRow(term="干", reading="gān", content=_cedict_content("dry", "dried food"), sequence=4429),
+        ],
+        keys=get_profile("zh").dict_keys,
+    )
+    write_meta(db_path, {"schema_version": str(SCHEMA_VERSION), "source_name": "CC-CEDICT", "language": "zh"})
+    provider = IndexedDictProvider("cedict-zh", db_path, display_name="CC-CEDICT", keys=get_profile("zh").dict_keys)
+    assert provider.load() is True
+
+    rendered = provider.lookup_many([("干", "gān")])["干"]
+
+    assert rendered is not None
+    assert rendered.index("dry") < rendered.index("surname Gan")
+    assert rendered.index("dry") < rendered.index("old variant of")
+
+
+def test_a_zh_card_whose_only_other_row_is_archaic_keeps_the_surname_first(tmp_path):
+    """袁 is a surname and an archaic entry, nothing else. The two share a tier,
+    so CC-CEDICT's own order decides between them and the pointer still goes
+    last. (刘 is NOT this case: its other row is "(classical) a type of
+    battle-ax | to kill | to slaughter", and one unmarked gloss keeps a row live.)"""
+    db_path = tmp_path / "dicts" / "cedict-zh" / "index.sqlite"
+    db_path.parent.mkdir(parents=True)
+    create_index(db_path)
+    bulk_insert(
+        db_path,
+        [
+            DictRow(term="袁", reading="yuán", content=_cedict_content("variant of 袁[yuán]"), sequence=1),
+            DictRow(term="袁", reading="yuán", content=_cedict_content("surname Yuan"), sequence=2),
+            DictRow(term="袁", reading="yuán", content=_cedict_content("long robe (old)"), sequence=3),
+        ],
+        keys=get_profile("zh").dict_keys,
+    )
+    write_meta(db_path, {"schema_version": str(SCHEMA_VERSION), "source_name": "CC-CEDICT", "language": "zh"})
+    provider = IndexedDictProvider("cedict-zh", db_path, display_name="CC-CEDICT", keys=get_profile("zh").dict_keys)
+    assert provider.load() is True
+
+    rendered = provider.lookup_many([("袁", "yuán")])["袁"]
+
+    assert rendered is not None
+    assert rendered.index("surname Yuan") < rendered.index("long robe")
+    assert rendered.index("long robe") < rendered.index("variant of")
+
+
+def test_a_row_with_one_unmarked_gloss_stays_live(tmp_path):
+    """Only a row whose EVERY gloss is marked is demoted: 刘's archaic row
+    carries two unmarked glosses, so it keeps leading the surname row."""
+    db_path = tmp_path / "dicts" / "cedict-zh" / "index.sqlite"
+    db_path.parent.mkdir(parents=True)
+    create_index(db_path)
+    bulk_insert(
+        db_path,
+        [
+            DictRow(term="刘", reading="liú", content=_cedict_content("surname Liu"), sequence=14936),
+            DictRow(
+                term="刘",
+                reading="liú",
+                content=_cedict_content("(classical) a type of battle-ax", "to kill", "to slaughter"),
+                sequence=14937,
+            ),
+        ],
+        keys=get_profile("zh").dict_keys,
+    )
+    write_meta(db_path, {"schema_version": str(SCHEMA_VERSION), "source_name": "CC-CEDICT", "language": "zh"})
+    provider = IndexedDictProvider("cedict-zh", db_path, display_name="CC-CEDICT", keys=get_profile("zh").dict_keys)
+    assert provider.load() is True
+
+    rendered = provider.lookup_many([("刘", "liú")])["刘"]
+
+    assert rendered is not None
+    assert rendered.index("battle-ax") < rendered.index("surname Liu")
 
 
 def test_a_zh_card_carries_its_hook_fields_end_to_end(test_config, tmp_path, make_tokenized_word, monkeypatch):
@@ -271,6 +367,42 @@ def test_a_traditional_srt_splits_and_reads_like_its_simplified_twin(test_config
     assert {"銀行", "電影"} <= set(words)
     assert "後" not in words
     assert words["銀行"].expression_reading == "yín háng"
+
+
+def test_a_single_attested_reading_reaches_the_card_reading_field(test_config, tmp_path):
+    """The reconcile seam, through the real parser: 先生 reads xiān sheng, not xiān shēng."""
+    parser = _create_subtitle_parser(switch_language(test_config, "zh"))
+    parser._reading_lookup = lambda terms: {"先生": ["xiānsheng"], "流血": ["liúxuè"]}
+    path = _srt_file(tmp_path, "zh.srt", "那位先生说他流血了")
+    words = {w.mined_form: w for w in parser.parse_subtitle_file(path)}
+    assert words["先生"].expression_reading == "xiān sheng"
+    assert words["流血"].expression_reading == "liú xuè"
+    assert words["先生"].reading == words["先生"].expression_reading
+
+
+def test_two_attested_readings_leave_the_engine_reading_alone(test_config, tmp_path):
+    """Choosing between attested readings without context is the guess ZH-017 refused."""
+    parser = _create_subtitle_parser(switch_language(test_config, "zh"))
+    parser._reading_lookup = lambda terms: {"先生": ["xiānsheng", "xiānshēng"]}
+    path = _srt_file(tmp_path, "zh.srt", "那位先生说话")
+    words = {w.mined_form: w for w in parser.parse_subtitle_file(path)}
+    assert words["先生"].expression_reading == word_pinyin("先生")
+
+
+def test_several_attested_readings_are_not_a_review_receipt_for_zh(test_config, tmp_path):
+    """A profile that owns the reading fields owes no kana-attestation review.
+
+    The pass this gates derives its comparison reading from ``feature.kana``,
+    which a zh token does not carry, so every multi-reading headword looked
+    unresolved and the run ended on a warning naming words nothing was wrong
+    with.
+    """
+    parser = _create_subtitle_parser(switch_language(test_config, "zh"))
+    parser._reading_lookup = lambda terms: {"先生": ["xiānsheng", "xiānshēng"]}
+    path = _srt_file(tmp_path, "zh.srt", "那位先生说话")
+    words = parser.parse_subtitle_file(path)
+    assert {"先生"} <= {w.mined_form for w in words}
+    assert parser.ambiguous_reading_count == 0
 
 
 def test_character_set_simplified_converts_traditional_fronts_only(test_config, tmp_path):

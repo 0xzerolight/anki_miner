@@ -376,6 +376,13 @@ class KnownWordDB:
         entries, and by the Undo callback to revert ``source='mined'`` rows
         without touching ``source='user'`` or ``source='anki'`` rows (OVH-030).
 
+        Rows are matched on :meth:`normalize_key`, the comparison every read
+        already applies, not on the stored spelling. A row written before its
+        language had a fold — or, for zh, while OpenCC was unavailable — is
+        stored unfolded, so matching the folded request against the raw column
+        deleted nothing: Manage Known Words listed the folded spelling, Remove
+        was silently a no-op, and the word stayed known for good.
+
         Args:
             words: Set of lemma strings to remove.
             source: When given, only rows whose ``source`` matches this value
@@ -395,11 +402,16 @@ class KnownWordDB:
         with closing(self._connect()) as conn:
             before = self._count(conn)
             if source is None:
-                conn.executemany("DELETE FROM known_words WHERE lemma = ?", [(w,) for w in words])
+                stored = conn.execute("SELECT lemma FROM known_words").fetchall()
+                conn.executemany(
+                    "DELETE FROM known_words WHERE lemma = ?",
+                    [(lemma,) for (lemma,) in stored if self.normalize_key(lemma) in words],
+                )
             else:
+                stored = conn.execute("SELECT lemma FROM known_words WHERE source = ?", (source,)).fetchall()
                 conn.executemany(
                     "DELETE FROM known_words WHERE lemma = ? AND source = ?",
-                    [(w, source) for w in words],
+                    [(lemma, source) for (lemma,) in stored if self.normalize_key(lemma) in words],
                 )
             conn.commit()
             after = self._count(conn)

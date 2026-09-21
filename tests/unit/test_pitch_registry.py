@@ -12,20 +12,26 @@ from anki_miner.services.pitch_accent import storage
 from anki_miner.services.pitch_accent.registry import PitchSourceRegistry
 
 
-def _make_source(root: Path, source_id: str, *, schema_version: int | None = None, name: str | None = None) -> None:
+def _make_source(
+    root: Path,
+    source_id: str,
+    *,
+    schema_version: int | None = None,
+    name: str | None = None,
+    language: str | None = None,
+) -> None:
     db = root / source_id / "index.sqlite"
-    storage.build_index(
-        db,
-        [("ねこ", "猫", "1", "", "")],
-        {
-            "schema_version": str(schema_version if schema_version is not None else storage.SCHEMA_VERSION),
-            "format": "csv",
-            "source_name": name or source_id,
-            "source_revision": "",
-            "import_date": "2026-01-01T00:00:00+00:00",
-            "entry_count": "1",
-        },
-    )
+    meta = {
+        "schema_version": str(schema_version if schema_version is not None else storage.SCHEMA_VERSION),
+        "format": "csv",
+        "source_name": name or source_id,
+        "source_revision": "",
+        "import_date": "2026-01-01T00:00:00+00:00",
+        "entry_count": "1",
+    }
+    if language is not None:
+        meta["language"] = language
+    storage.build_index(db, [("ねこ", "猫", "1", "", "")], meta)
 
 
 @pytest.fixture
@@ -179,3 +185,21 @@ class TestStaleAndUsable:
         registry.load()
 
         assert [m.source_id for m in registry.usable_enabled(cfg)] == ["good"]
+
+    def test_usable_enabled_drops_slots_stamped_for_another_language(self, root: Path) -> None:
+        """``usable_enabled`` answers the question ``build_sources`` answers.
+
+        A cross-stamped slot is dropped from the chain, so counting it as
+        usable reports a ready pitch source over an empty chain.
+        """
+        _make_source(root, "ja-pitch", language="ja")
+        _make_source(root, "zh-pitch", language="zh")
+        registry = PitchSourceRegistry(root)
+        registry.load()
+        chain = (PitchSourceEntry("ja-pitch"), PitchSourceEntry("zh-pitch"))
+
+        zh_cfg = replace(AnkiMinerConfig(), language="zh", pitch_root=root, pitch_chain=chain)
+        assert [m.source_id for m in registry.usable_enabled(zh_cfg)] == ["zh-pitch"]
+
+        ja_cfg = replace(AnkiMinerConfig(), pitch_root=root, pitch_chain=chain)
+        assert [m.source_id for m in registry.usable_enabled(ja_cfg)] == ["ja-pitch"]
