@@ -1007,6 +1007,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),
         keywords=("preset", "lapis", "kiku", "senren", "note type setup", "auto map fields"),
+        requires="note_presets",
     ),
     Capability(
         id="bold-target-word",
