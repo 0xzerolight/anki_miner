@@ -567,7 +567,7 @@ class TestBackfillScanWorkerWordAudio:
 
 
 class TestBackfillScanWorkerAttestedReadings:
-    """A zh/yue scan reads the dictionary chain for every chunk, whatever is ticked."""
+    """A zh scan reads the dictionary chain for every chunk, whatever is ticked."""
 
     def test_an_audio_only_zh_run_still_gates_on_the_dictionary(self, test_config, monkeypatch):
         stubs = _stub_scan_worker(monkeypatch, gate_message="Dictionary out of date")

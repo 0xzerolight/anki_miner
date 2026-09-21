@@ -3,8 +3,8 @@
 The service is the shared ``SubtitleParserService`` -- nothing is subclassed.
 The tokenizer arrives through ``tagger_provider.get_tagger(config.language)``.
 
-``compound_matching=False`` (S7) is the one seam this factory closes that zh
-leaves open: the compound matcher greedily joins adjacent tokens against the
+``compound_matching=False`` (S7), as the zh and yue factories also pass: the
+compound matcher greedily joins adjacent tokens against the
 installed dictionary, and with no spaces to stop it a Thai line merges up to
 five tokens into one attested-looking string.
 """

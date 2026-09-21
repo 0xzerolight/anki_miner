@@ -158,7 +158,7 @@ def reconciles_attested_readings(config: AnkiMinerConfig) -> bool:
 
     The condition ``_scan_backfill_impl`` batches ``offline_term_readings`` on,
     minus the service it needs: true for a profile whose reading support
-    reconciles (zh, yue), and then for EVERY chunk of the scan, whatever fields
+    reconciles (zh today), and then for EVERY chunk of the scan, whatever fields
     were ticked. The worker's staleness gate reads it for that reason — an
     audio-only zh run still keys its filenames off the dictionary's answer.
     """
