@@ -143,6 +143,28 @@ def selected_hook_field_keys(config: AnkiMinerConfig, field_keys: Iterable[str])
     return frozenset(spec.key for spec in specs) & frozenset(field_keys)
 
 
+def mapped_field_keys(config: AnkiMinerConfig, field_keys: Iterable[str]) -> frozenset[str]:
+    """``field_keys`` minus the ones this note type maps to no field name.
+
+    The one actionable-selection rule: the scan drops an unmapped key (there is
+    no ``""`` field to write to), so the worker's staleness gate has to read the
+    same set or a key that proposes nothing can still abort the run.
+    """
+    return frozenset(key for key in field_keys if config.anki_fields.get(key))
+
+
+def reconciles_attested_readings(config: AnkiMinerConfig) -> bool:
+    """Whether a scan reads the dictionary chain for the reading ladder's tier (c).
+
+    The condition ``_scan_backfill_impl`` batches ``offline_term_readings`` on,
+    minus the service it needs: true for a profile whose reading support
+    reconciles (zh, yue), and then for EVERY chunk of the scan, whatever fields
+    were ticked. The worker's staleness gate reads it for that reason — an
+    audio-only zh run still keys its filenames off the dictionary's answer.
+    """
+    return getattr(get_profile(config_language(config)).reading, "reconcile", None) is not None
+
+
 def definition_lookup_keys(config: AnkiMinerConfig, field_keys: Iterable[str]) -> frozenset[str]:
     """``field_keys`` widened by the definition a hook field rides on.
 
@@ -451,7 +473,7 @@ def _scan_backfill_impl(
 
     # Only mapped keys are actionable; an unmapped selected key is dropped
     # (never write to a "" field name).
-    selected = {key for key in options.field_keys if anki_fields.get(key)}
+    selected = set(mapped_field_keys(config, options.field_keys))
 
     # Availability gating: `service is not None and is_available()` — the UI
     # enables checkboxes on field-mapping alone, so a mapped-but-service-None
@@ -496,7 +518,7 @@ def _scan_backfill_impl(
     audio_candidates = profile.audio.candidates
     # Tier (c) of the reading ladder, and whether it needs the dictionary.
     reading_support = profile.reading
-    wants_attested_readings = definition_service is not None and getattr(reading_support, "reconcile", None) is not None
+    wants_attested_readings = definition_service is not None and reconciles_attested_readings(config)
     # S21: mining's rtl block rule, so backfilled bytes equal fresh-mine bytes.
     style_direction = profile.content_style.direction
     # The language's own card fields, filled by the same hooks mining runs.

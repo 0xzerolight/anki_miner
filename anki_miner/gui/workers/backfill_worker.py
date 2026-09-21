@@ -22,6 +22,8 @@ from anki_miner.services.card_backfiller import (
     BackfillResult,
     apply_backfill,
     definition_lookup_keys,
+    mapped_field_keys,
+    reconciles_attested_readings,
     scan_backfill,
 )
 from anki_miner.services.resource_staleness import stale_resource_reimport_error
@@ -67,13 +69,19 @@ class BackfillScanWorker(CancellableWorker):
         read, and vice versa. Each family maps to the field keys whose values it
         produces.
 
-        Read through ``definition_lookup_keys``, the same widening the scan
-        applies: a language's own card field is rendered from the fetched
-        gloss, so selecting one reads the dictionary chain and must be gated on
-        it even though no dictionary key was ticked.
+        Read through ``mapped_field_keys`` and ``definition_lookup_keys``, the
+        same two sets the scan itself derives: an unmapped ticked key proposes
+        nothing and must abort nothing, while a language's own card field is
+        rendered from the fetched gloss, so selecting one reads the dictionary
+        chain and must be gated on it even though no dictionary key was ticked.
         """
-        requested = definition_lookup_keys(self.config, self.options.field_keys)
+        requested = definition_lookup_keys(self.config, mapped_field_keys(self.config, self.options.field_keys))
         families = {family for family, keys in _BACKFILL_FIELD_FAMILIES.items() if requested & keys}
+        if requested and reconciles_attested_readings(self.config):
+            # The reading ladder's tier (c) batches the whole chunk's attested
+            # readings out of the dictionary chain whatever was ticked, so an
+            # audio-only or reading-only scan reads it too.
+            families.add("dictionary")
         if not families:
             return
         message = stale_resource_reimport_error(
