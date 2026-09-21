@@ -9,10 +9,10 @@ ZH_FLAG_OVERRIDES  jieba's flag for a word jieba's own dictionary mis-files.
                    Applied to the flag jieba emits, on the SIMPLIFIED segment,
                    after the cut - so it can never move a token boundary.
 
-ZH_SPLIT_ENTRIES   jieba dictionary rows that fuse a verb and its object, or a
-                   classifier and its noun, into one token. Removed from the
-                   tagger's PRIVATE dictionary with del_word, which DOES move
-                   the cut.
+ZH_SPLIT_ENTRIES   jieba dictionary rows that fuse a verb and its object, a
+                   classifier and its noun, or a word and sentence-final 吧
+                   into one token. Removed from the tagger's PRIVATE dictionary
+                   with del_word, which DOES move the cut.
 """
 
 from __future__ import annotations
@@ -137,4 +137,25 @@ ZH_SPLIT_ENTRIES: tuple[str, ...] = (
     "封信里",
     "十封信",
     "封信中",
+    # Word + sentence-final 吧. jieba lists these as one token and CC-CEDICT
+    # lists none of them, so 你看吧 lost 看 and 喝咖啡吧 lost 咖啡 (the second only
+    # once 喝咖啡 above stopped winning the route). Real 吧-venues CC-CEDICT
+    # does list (酒吧, 网吧, 迪吧) stay whole.
+    "看吧",
+    "玩吧",
+    "回家吧",
+    "算了吧",
+    "去死吧",
+    "咖啡吧",
+    "可乐吧",
+    "电影吧",
+    "音乐吧",
+    "小说吧",
+    "游戏吧",
+    "漫画吧",
+    "图片吧",
+    "娱乐吧",
+    "休闲吧",
+    "书吧",
+    "水吧",
 )

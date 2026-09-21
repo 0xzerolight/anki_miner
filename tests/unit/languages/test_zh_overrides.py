@@ -50,7 +50,28 @@ CLASSIFIER_FRAMES = {
     "十封信": "他一连写了十封信。",
     "封信中": "这封信中提到了你的名字。",
 }
-VERB_OBJECT = tuple(word for word in ZH_SPLIT_ENTRIES if word not in CLASSIFIER_FRAMES)
+# Word + sentence-final 吧: the frame is the sentence jieba fuses, the second
+# item the word the split has to give back.
+PARTICLE_FRAMES = {
+    "看吧": ("你自己看吧。", "看"),
+    "玩吧": ("你们去玩吧。", "玩"),
+    "回家吧": ("我们回家吧。", "回家"),
+    "算了吧": ("还是算了吧。", "算了"),
+    "去死吧": ("你去死吧！", "死"),
+    "咖啡吧": ("来杯咖啡吧。", "咖啡"),
+    "可乐吧": ("给我一杯可乐吧。", "可乐"),
+    "电影吧": ("今晚看电影吧。", "电影"),
+    "音乐吧": ("我们听音乐吧。", "音乐"),
+    "小说吧": ("你写小说吧。", "小说"),
+    "游戏吧": ("那就换游戏吧。", "游戏"),
+    "漫画吧": ("你看漫画吧。", "漫画"),
+    "图片吧": ("还是用图片吧。", "图片"),
+    "娱乐吧": ("周末去娱乐吧。", "娱乐"),
+    "休闲吧": ("周末好好休闲吧。", "休闲"),
+    "书吧": ("还是买书吧。", "书"),
+    "水吧": ("给我水吧。", "水"),
+}
+VERB_OBJECT = tuple(word for word in ZH_SPLIT_ENTRIES if word not in CLASSIFIER_FRAMES and word not in PARTICLE_FRAMES)
 
 
 @pytest.fixture(scope="module")
@@ -135,6 +156,16 @@ class TestSplitEntries:
     def test_a_classifier_row_fires_and_is_split(self, word: str, text: str, stock: Any, tagger: Any) -> None:
         assert word in [w for w, _ in _cut(stock, text)], text
         assert word not in [w for w, _ in _tagged(tagger, text)], text
+
+    @pytest.mark.parametrize(("word", "frame"), sorted(PARTICLE_FRAMES.items()))
+    def test_a_particle_row_fires_and_gives_its_word_back(
+        self, word: str, frame: tuple[str, str], stock: Any, tagger: Any
+    ) -> None:
+        text, freed = frame
+        assert word in [w for w, _ in _cut(stock, text)], text
+        surfaces = [w for w, _ in _tagged(tagger, text)]
+        assert word not in surfaces, text
+        assert freed in surfaces and "吧" in surfaces, surfaces
 
     def test_the_two_rows_the_review_named_give_their_words_back(self, tagger: Any) -> None:
         assert _tagged(tagger, "我每天早上都喝咖啡")[-2:] == [("喝", "v"), ("咖啡", "n")]
