@@ -108,6 +108,12 @@ class DictKeyFolding(Protocol):
 
     ``homograph_keep_mask`` mirrors ``services/dictionary/storage.py:247``
     verbatim in arity and return.
+
+    Two OPTIONAL methods an implementation may add, each probed by ``getattr``
+    at its one reader so the other profiles need neither: ``term_variants(term)
+    -> list[str]`` (read by ``IndexedFreqProvider``) and ``sense_rank(content)
+    -> int``, the lookup sort's row demotion (read by
+    ``storage._sense_rank_fn``). Both live on ``ZhDictKeyFolding``.
     """
 
     def fold_term(self, s: str) -> str: ...

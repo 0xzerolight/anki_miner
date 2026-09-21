@@ -212,6 +212,99 @@ def test_a_zh_index_imported_with_the_real_folding_is_queryable(test_config, tmp
     assert ja_side.lookup("YínHáng") is None
 
 
+def _cedict_content(*glosses: str) -> str:
+    """One CC-CEDICT row's stored ``content``, shaped as the importer renders it."""
+    items = "".join(f'<li class="gloss-sc-li">{gloss}</li>' for gloss in glosses)
+    return (
+        '<li class="gloss-item"><div class="gloss-content">'
+        '<ul class="gloss-sc-ul" data-sc-cccedict="definition">'
+        f"{items}</ul></div></li>"
+    )
+
+
+def test_a_zh_card_leads_with_the_sense_not_the_surname(tmp_path):
+    """干 read gān opens on "dry", not on the surname and variant rows CC-CEDICT
+    happens to store ahead of it. Real zh folding, real index, real provider."""
+    db_path = tmp_path / "dicts" / "cedict-zh" / "index.sqlite"
+    db_path.parent.mkdir(parents=True)
+    create_index(db_path)
+    bulk_insert(
+        db_path,
+        [
+            DictRow(term="干", reading="gān", content=_cedict_content("old variant of 乾|干[gān]"), sequence=4425),
+            DictRow(term="干", reading="gān", content=_cedict_content("surname Gan"), sequence=4428),
+            DictRow(term="干", reading="gān", content=_cedict_content("dry", "dried food"), sequence=4429),
+        ],
+        keys=get_profile("zh").dict_keys,
+    )
+    write_meta(db_path, {"schema_version": str(SCHEMA_VERSION), "source_name": "CC-CEDICT", "language": "zh"})
+    provider = IndexedDictProvider("cedict-zh", db_path, display_name="CC-CEDICT", keys=get_profile("zh").dict_keys)
+    assert provider.load() is True
+
+    rendered = provider.lookup_many([("干", "gān")])["干"]
+
+    assert rendered is not None
+    assert rendered.index("dry") < rendered.index("surname Gan")
+    assert rendered.index("dry") < rendered.index("old variant of")
+
+
+def test_a_zh_card_whose_only_other_row_is_archaic_keeps_the_surname_first(tmp_path):
+    """袁 is a surname and an archaic entry, nothing else. The two share a tier,
+    so CC-CEDICT's own order decides between them and the pointer still goes
+    last. (刘 is NOT this case: its other row is "(classical) a type of
+    battle-ax | to kill | to slaughter", and one unmarked gloss keeps a row live.)"""
+    db_path = tmp_path / "dicts" / "cedict-zh" / "index.sqlite"
+    db_path.parent.mkdir(parents=True)
+    create_index(db_path)
+    bulk_insert(
+        db_path,
+        [
+            DictRow(term="袁", reading="yuán", content=_cedict_content("variant of 袁[yuán]"), sequence=1),
+            DictRow(term="袁", reading="yuán", content=_cedict_content("surname Yuan"), sequence=2),
+            DictRow(term="袁", reading="yuán", content=_cedict_content("long robe (old)"), sequence=3),
+        ],
+        keys=get_profile("zh").dict_keys,
+    )
+    write_meta(db_path, {"schema_version": str(SCHEMA_VERSION), "source_name": "CC-CEDICT", "language": "zh"})
+    provider = IndexedDictProvider("cedict-zh", db_path, display_name="CC-CEDICT", keys=get_profile("zh").dict_keys)
+    assert provider.load() is True
+
+    rendered = provider.lookup_many([("袁", "yuán")])["袁"]
+
+    assert rendered is not None
+    assert rendered.index("surname Yuan") < rendered.index("long robe")
+    assert rendered.index("long robe") < rendered.index("variant of")
+
+
+def test_a_row_with_one_unmarked_gloss_stays_live(tmp_path):
+    """Only a row whose EVERY gloss is marked is demoted: 刘's archaic row
+    carries two unmarked glosses, so it keeps leading the surname row."""
+    db_path = tmp_path / "dicts" / "cedict-zh" / "index.sqlite"
+    db_path.parent.mkdir(parents=True)
+    create_index(db_path)
+    bulk_insert(
+        db_path,
+        [
+            DictRow(term="刘", reading="liú", content=_cedict_content("surname Liu"), sequence=14936),
+            DictRow(
+                term="刘",
+                reading="liú",
+                content=_cedict_content("(classical) a type of battle-ax", "to kill", "to slaughter"),
+                sequence=14937,
+            ),
+        ],
+        keys=get_profile("zh").dict_keys,
+    )
+    write_meta(db_path, {"schema_version": str(SCHEMA_VERSION), "source_name": "CC-CEDICT", "language": "zh"})
+    provider = IndexedDictProvider("cedict-zh", db_path, display_name="CC-CEDICT", keys=get_profile("zh").dict_keys)
+    assert provider.load() is True
+
+    rendered = provider.lookup_many([("刘", "liú")])["刘"]
+
+    assert rendered is not None
+    assert rendered.index("battle-ax") < rendered.index("surname Liu")
+
+
 def test_a_zh_card_carries_its_hook_fields_end_to_end(test_config, tmp_path, make_tokenized_word, monkeypatch):
     monkeypatch.setattr("anki_miner.languages.zh.render.to_traditional", lambda text: {"银行": "銀行"}.get(text, text))
     monkeypatch.setattr("anki_miner.languages.zh.render.pinyin_syllables", lambda text: [("yín", 2), ("háng", 2)])

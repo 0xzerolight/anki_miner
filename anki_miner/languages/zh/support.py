@@ -7,6 +7,7 @@ with NFC only, and the settings script-filter section has no options at all.
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from anki_miner.languages.profile import ScriptFilterOption
@@ -31,6 +32,50 @@ class ZhScriptSupport:
 
     def contains_target_script(self, text: str) -> bool:
         return any(is_cjk_ideograph(char) for char in text)
+
+
+# One rendered glossary item, as the importer writes it into ``entries.content``
+# (yomitan_renderer's nested-member list and the ``<ul>`` a CC-CEDICT port's own
+# structured content carries both use this class). Non-greedy: a nested list
+# would clip the text, which at worst leaves the item's leading words — enough
+# for the patterns below.
+_GLOSS_ITEM = re.compile(r'<li class="gloss-sc-li">(.*?)</li>', re.DOTALL)
+_HTML_TAG = re.compile(r"<[^>]+>")
+
+# CC-CEDICT stores one row per (headword, reading, entry), and its own order
+# puts a common character's surname and cross-reference rows ahead of the sense
+# rows. These name a row that states nothing a learner can use: "surname Gan",
+# "old variant of 乾|干[gān]", "see 基友[jīyǒu]", "used in 㐖毒[xiédú]", and the
+# register-marked survivals "(classical) to kill", "long robe (old)". Counted
+# over the shipped index (202,889 rows, 320,036 glosses): 997 surname glosses,
+# 5,560 variant/form glosses, 7,081 "see", 1,202 "used in" — 13,252 rows are
+# made of nothing else — and 1,478 further rows whose every gloss carries a
+# register marker (959 literary, 386 old, 129 archaic, 14 classical, 1
+# obsolete; "(arch.)" is the same marker abbreviated). "(lit.)" is NOT one: it
+# means "literally". The name must be capitalised, which is what keeps 姓名's
+# "surname and given name; full name" out.
+_SURNAME_GLOSS = re.compile(r"surname [A-Z]")
+_CROSS_REFERENCE_GLOSS = re.compile(
+    r"(?:old |archaic |erhua |Japanese |\(old\) )?variant of\s|erhua form of\s|see\s|used in\s",
+    re.IGNORECASE,
+)
+_REGISTER_MARKER = r"\((?:old|archaic|arch\.|classical|literary|obsolete)\)"
+_ARCHAIC_GLOSS = re.compile(rf"^{_REGISTER_MARKER}|{_REGISTER_MARKER}$", re.IGNORECASE)
+
+
+def _points_elsewhere(gloss: str) -> bool:
+    """True iff ``gloss`` only names another entry.
+
+    A cross-reference must actually point at a headword: "see you next time"
+    (再見) and "used in place names" are senses that happen to open with the
+    same words, so the Han character of the referent is what separates them.
+    """
+    return bool(_CROSS_REFERENCE_GLOSS.match(gloss)) and any(is_cjk_ideograph(char) for char in gloss)
+
+
+def _states_no_live_sense(gloss: str) -> bool:
+    """True iff ``gloss`` is a family name, a register-marked survival or a pointer."""
+    return bool(_SURNAME_GLOSS.match(gloss)) or bool(_ARCHAIC_GLOSS.search(gloss)) or _points_elsewhere(gloss)
 
 
 class ZhDictKeyFolding:
@@ -71,6 +116,32 @@ class ZhDictKeyFolding:
             return [True] * len(rows)
         exact_contents = {content for (_, content), keep in zip(rows, term_exact, strict=True) if keep}
         return [keep or content in exact_contents for (_, content), keep in zip(rows, term_exact, strict=True)]
+
+    def sense_rank(self, content: str) -> int:
+        """Where this row sorts among the rows sharing its reading priority.
+
+        ``0`` for a row stating a live sense; ``1`` when its every gloss is a
+        family name or a register-marked survival; ``2`` when its every gloss
+        only points at another entry. Read by ``services/dictionary/storage.py``'s
+        lookup sort, which leaves the rest of the cascade alone — nothing is
+        dropped and a word whose rows all rank alike is unchanged. Without it 干
+        read gān opens on "old variant of 乾|干[gān]" and 还 read huán on
+        "surname Huan", because index order is all that separates rows sharing
+        a reading.
+
+        The middle rank is what keeps 刘 on "surname Liu" rather than on its
+        "(classical) a type of battle-ax" row while both still lead the pure
+        pointer. A row mixing a surname or an archaism with a live sense (王
+        "surname Wang; king") states a sense and keeps rank 0. Content this
+        cannot read as glossary items - another zh dictionary's own markup -
+        ranks 0, so an unreadable dictionary is left in the order its index gave
+        it.
+        """
+        glosses = [_HTML_TAG.sub("", item).strip() for item in _GLOSS_ITEM.findall(content)]
+        present = [gloss for gloss in glosses if gloss]
+        if not present or not all(_states_no_live_sense(gloss) for gloss in present):
+            return 0
+        return 2 if all(_points_elsewhere(gloss) for gloss in present) else 1
 
     def term_variants(self, term: str) -> list[str]:
         """Other-script spellings a frequency source may rank ``term`` under.
