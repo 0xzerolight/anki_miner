@@ -246,21 +246,47 @@ def test_a_zh_card_leads_with_the_sense_not_the_surname(tmp_path):
 
 
 def test_a_zh_card_whose_only_other_row_is_archaic_keeps_the_surname_first(tmp_path):
-    """刘 is a surname and an archaic entry, nothing else. The two share a tier,
+    """袁 is a surname and an archaic entry, nothing else. The two share a tier,
     so CC-CEDICT's own order decides between them and the pointer still goes
-    last."""
+    last. (刘 is NOT this case: its other row is "(classical) a type of
+    battle-ax | to kill | to slaughter", and one unmarked gloss keeps a row live.)"""
     db_path = tmp_path / "dicts" / "cedict-zh" / "index.sqlite"
     db_path.parent.mkdir(parents=True)
     create_index(db_path)
     bulk_insert(
         db_path,
         [
-            DictRow(term="刘", reading="liú", content=_cedict_content("variant of 劉|刘[liú]"), sequence=14935),
+            DictRow(term="袁", reading="yuán", content=_cedict_content("variant of 袁[yuán]"), sequence=1),
+            DictRow(term="袁", reading="yuán", content=_cedict_content("surname Yuan"), sequence=2),
+            DictRow(term="袁", reading="yuán", content=_cedict_content("long robe (old)"), sequence=3),
+        ],
+        keys=get_profile("zh").dict_keys,
+    )
+    write_meta(db_path, {"schema_version": str(SCHEMA_VERSION), "source_name": "CC-CEDICT", "language": "zh"})
+    provider = IndexedDictProvider("cedict-zh", db_path, display_name="CC-CEDICT", keys=get_profile("zh").dict_keys)
+    assert provider.load() is True
+
+    rendered = provider.lookup_many([("袁", "yuán")])["袁"]
+
+    assert rendered is not None
+    assert rendered.index("surname Yuan") < rendered.index("long robe")
+    assert rendered.index("long robe") < rendered.index("variant of")
+
+
+def test_a_row_with_one_unmarked_gloss_stays_live(tmp_path):
+    """Only a row whose EVERY gloss is marked is demoted: 刘's archaic row
+    carries two unmarked glosses, so it keeps leading the surname row."""
+    db_path = tmp_path / "dicts" / "cedict-zh" / "index.sqlite"
+    db_path.parent.mkdir(parents=True)
+    create_index(db_path)
+    bulk_insert(
+        db_path,
+        [
             DictRow(term="刘", reading="liú", content=_cedict_content("surname Liu"), sequence=14936),
             DictRow(
                 term="刘",
                 reading="liú",
-                content=_cedict_content("(classical) a type of battle-ax", "(classical) to kill"),
+                content=_cedict_content("(classical) a type of battle-ax", "to kill", "to slaughter"),
                 sequence=14937,
             ),
         ],
@@ -273,8 +299,7 @@ def test_a_zh_card_whose_only_other_row_is_archaic_keeps_the_surname_first(tmp_p
     rendered = provider.lookup_many([("刘", "liú")])["刘"]
 
     assert rendered is not None
-    assert rendered.index("surname Liu") < rendered.index("battle-ax")
-    assert rendered.index("battle-ax") < rendered.index("variant of")
+    assert rendered.index("battle-ax") < rendered.index("surname Liu")
 
 
 def test_a_zh_card_carries_its_hook_fields_end_to_end(test_config, tmp_path, make_tokenized_word, monkeypatch):

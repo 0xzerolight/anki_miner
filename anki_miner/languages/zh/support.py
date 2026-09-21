@@ -51,14 +51,15 @@ _HTML_TAG = re.compile(r"<[^>]+>")
 # 5,560 variant/form glosses, 7,081 "see", 1,202 "used in" — 13,252 rows are
 # made of nothing else — and 1,478 further rows whose every gloss carries a
 # register marker (959 literary, 386 old, 129 archaic, 14 classical, 1
-# obsolete). The name must be capitalised, which is what keeps 姓名's "surname
-# and given name; full name" out.
+# obsolete; "(arch.)" is the same marker abbreviated). "(lit.)" is NOT one: it
+# means "literally". The name must be capitalised, which is what keeps 姓名's
+# "surname and given name; full name" out.
 _SURNAME_GLOSS = re.compile(r"surname [A-Z]")
 _CROSS_REFERENCE_GLOSS = re.compile(
     r"(?:old |archaic |erhua |Japanese |\(old\) )?variant of\s|erhua form of\s|see\s|used in\s",
     re.IGNORECASE,
 )
-_REGISTER_MARKER = r"\((?:old|archaic|classical|literary|obsolete)\)"
+_REGISTER_MARKER = r"\((?:old|archaic|arch\.|classical|literary|obsolete)\)"
 _ARCHAIC_GLOSS = re.compile(rf"^{_REGISTER_MARKER}|{_REGISTER_MARKER}$", re.IGNORECASE)
 
 
