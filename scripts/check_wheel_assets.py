@@ -174,15 +174,21 @@ def check_required_wheel_licenses(wheel_path: Path) -> None:
             sys.exit(f"error: required license missing from {wheel_path.name}: {license_path}")
 
 
-def check_required_assets(on_disk: set[str], in_wheel: set[str], wheel_name: str) -> int:
-    """Assert each named asset is present on disk and in the wheel."""
+def check_required_assets(wheel_path: Path) -> int:
+    """Assert each named asset is present on disk and in the wheel.
+
+    Reads the repository and the full wheel listing, not fs_assets()/wheel_assets():
+    a required asset may sit outside RESOURCE_DIRS (the Persian tables do).
+    """
+    with zipfile.ZipFile(wheel_path) as zf:
+        in_wheel = set(zf.namelist())
     failures = 0
     for asset in REQUIRED_ASSETS:
-        if asset not in on_disk:
+        if not (REPO_ROOT / asset).is_file():
             print(f"error: required asset missing from the repository: {asset}")
             failures += 1
         elif asset not in in_wheel:
-            print(f"error: required asset missing from {wheel_name}: {asset}")
+            print(f"error: required asset missing from {wheel_path.name}: {asset}")
             failures += 1
     return failures
 
@@ -193,11 +199,11 @@ def main() -> int:
 
     wheel = find_wheel()
     check_required_wheel_licenses(wheel)
+    if check_required_assets(wheel):
+        return 1
+
     on_disk = fs_assets()
     in_wheel = wheel_assets(wheel)
-
-    if check_required_assets(on_disk, in_wheel, wheel.name):
-        return 1
 
     missing = on_disk - in_wheel
     if missing:
