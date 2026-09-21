@@ -1740,6 +1740,32 @@ class TestScanProfileCardFields:
         )
         assert ctx.reading == "きがする"
 
+    def test_a_multi_token_chinese_front_is_never_painted_as_its_own_hanzi(self, zh_backfill_config):
+        """The same gate on the zh side, where the fallback under it is not a reading.
+
+        jieba cuts 不慢 in two in isolation, so the reconcile tier cannot run
+        and the tier below hands the front's characters back. The Pinyin field
+        is the one place that would persist them.
+        """
+        anki = _zh_anki(_note(1, word="不慢", Pinyin=""))
+        plan = scan_backfill(anki, zh_backfill_config, _services(), _options({"expression_pinyin"}))
+        proposed = _changes_by_key(plan, 1)["expression_pinyin"]
+        expected = ZhToneColorHook().render(_mined_word("不慢"), config=zh_backfill_config)
+        assert proposed == expected["expression_pinyin"]
+        assert not any(char in proposed for char in "不慢")
+
+    def test_the_pinyin_field_is_painted_from_the_reading_the_note_stores(self, zh_backfill_config):
+        """A reading the card already carries is card data, not a guess."""
+        config = replace(
+            zh_backfill_config,
+            anki_fields={**zh_backfill_config.anki_fields, "expression_reading": "ExpressionReading"},
+        )
+        anki = _zh_anki(_note(1, word="银行", ExpressionReading="yín xíng", Pinyin=""))
+        plan = scan_backfill(anki, config, _services(), _options({"expression_pinyin"}))
+        mined = SimpleNamespace(mined_form="银行", expression_reading="yín xíng", definition_html="")
+        expected = ZhToneColorHook().render(mined, config=config)
+        assert _changes_by_key(plan, 1)["expression_pinyin"] == expected["expression_pinyin"]
+
     def test_japanese_declares_no_hook_fields(self, backfill_config):
         # The ja pipeline renders its own fields inline and must never route
         # one through a hook; nothing here can change what a ja scan proposes.
