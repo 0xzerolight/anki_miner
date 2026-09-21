@@ -109,7 +109,8 @@ class TestFlagOverrides:
             differ = {w for (w, f1), (_w, f2) in zip(before, after, strict=True) if f1 != f2}
             assert differ <= {word}, text
 
-    def test_a_retagged_word_reaches_a_card(self, tagger: Any) -> None:
+    def test_a_retagged_word_passes_the_pos_gate(self, tagger: Any) -> None:
+        """The retag is only worth having if the new class is one the inclusion rule mines."""
         mined = {token.surface for token in tagger("我们一起去喝咖啡。") if RULE.should_include(token)}
         assert {"一起", "喝"} <= mined
 
@@ -141,7 +142,9 @@ class TestSplitEntries:
 
 
 def test_the_shared_jieba_tagger_keeps_its_own_dictionary(tagger: Any) -> None:
-    # Overrides belong to the tagger's private POSTokenizer: another jieba user
-    # in the process sees jieba's dictionary exactly as it ships.
+    # The fixture is requested for its side effect, not its value: building the
+    # tagger is what runs del_word, and this asserts against the MODULE-level
+    # jieba afterwards. Overrides belong to the tagger's private POSTokenizer:
+    # another jieba user in the process sees jieba's dictionary as it ships.
     assert posseg.dt.word_tag_tab["一起"] == "m"
     assert ("看电视", "v") in [(pair.word, pair.flag) for pair in posseg.dt.lcut("他看电视")]

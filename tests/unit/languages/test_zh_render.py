@@ -204,12 +204,15 @@ def test_tone_colour_paints_the_word_s_own_reading(monkeypatch):
 
 
 def test_a_word_without_a_reading_still_paints_from_the_front(monkeypatch):
-    """Deck Builder words with no dictionary entry reach the hook with no reading."""
+    """Deck Builder words with no dictionary entry reach the hook carrying no reading at all."""
     monkeypatch.setattr(
         "anki_miner.languages.zh.render.pinyin_syllables",
         lambda text: [("yín", 2), ("háng", 2)],
     )
-    assert ZhToneColorHook().render(_word("银行"), config=TONE_OFF) == {"expression_pinyin": "yín háng"}
+    word = _word("银行")
+    assert not hasattr(word, "expression_reading")
+    html_out = ZhToneColorHook().render(word, config=TONE_ON)["expression_pinyin"]
+    assert html_out == '<span style="color:#be7500">yín</span> <span style="color:#be7500">háng</span>'
 
 
 def test_hooks_return_empty_dicts_rather_than_raising(monkeypatch):
