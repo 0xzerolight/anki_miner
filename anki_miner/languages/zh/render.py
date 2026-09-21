@@ -103,6 +103,11 @@ class ZhTraditionalHook:
     and when the conversion raises, so "output == input" is the only signal for
     "no variant" there is — emitting it anyway would put a simplified spelling
     in the traditional field on every machine without OpenCC.
+
+    A front that is already traditional is skipped before that: under "As
+    written" it keeps the source spelling, and s2tw would answer with a
+    DIFFERENT traditional spelling of the same word (裏面 -> 裡面,
+    怎麽 -> 怎麼), which is not the variant this field promises.
     """
 
     def field_names(self) -> tuple[str, ...]:
@@ -111,8 +116,10 @@ class ZhTraditionalHook:
     def render(self, word: Any, *, config: AnkiMinerConfig) -> dict[str, str]:
         del config  # script_variant selects the CARD FRONT, not this extra field
         form = getattr(word, "mined_form", "") or ""
-        traditional = to_traditional(form) if form else ""
-        return {"expression_traditional": traditional} if traditional and traditional != form else {}
+        if not form or is_traditional(form):
+            return {}
+        traditional = to_traditional(form)
+        return {"expression_traditional": traditional} if traditional != form else {}
 
 
 class ZhToneColorHook:

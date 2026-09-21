@@ -138,6 +138,20 @@ def test_traditional_hook_emits_only_a_real_variant(monkeypatch):
     assert ZhTraditionalHook().render(_word("你好"), config=TONE_ON) == {}
 
 
+@pytest.mark.parametrize("front", ["裏面", "怎麽", "頭髮", "這裡"])
+def test_a_traditional_front_gets_no_traditional_field(front):
+    """Under As written the front keeps its own spelling; s2tw would re-spell it (裏面 -> 裡面)."""
+    pytest.importorskip("opencc")
+    config = dataclasses.replace(AnkiMinerConfig(), script_variant="")
+    assert ZhTraditionalHook().render(_word(front), config=config) == {}
+
+
+def test_a_simplified_front_still_gets_its_variant():
+    pytest.importorskip("opencc")
+    config = dataclasses.replace(AnkiMinerConfig(), script_variant="")
+    assert ZhTraditionalHook().render(_word("里面"), config=config) == {"expression_traditional": "裡面"}
+
+
 def test_tone_colour_spans_are_self_contained_and_escaped(monkeypatch):
     monkeypatch.setattr(
         "anki_miner.languages.zh.render.pinyin_syllables",
