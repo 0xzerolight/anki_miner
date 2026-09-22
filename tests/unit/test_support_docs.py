@@ -100,6 +100,12 @@ def test_bug_report_collects_log_files_and_status() -> None:
 
     version_help = fields["version"]["attributes"]["description"]
     assert "use the version from the installer filename or the release page" in version_help
+    # With 32 mining languages, triage needs the one the reporter mines in.
+    language = fields["mining_language"]
+    assert language["type"] == "input"
+    assert language["attributes"]["label"] == "Mining language"
+    assert language["validations"]["required"] is False
+    assert "macOS/Linux: `~/.anki_miner/anki_miner.log`" in upload_help
     assert "optional paste alternative" in fields["logs"]["attributes"]["label"]
     assert fields["logs"]["attributes"]["render"] == "shell"
     assert fields["logs"]["validations"]["required"] is False

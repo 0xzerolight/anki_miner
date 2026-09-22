@@ -36,10 +36,19 @@ body:
     id: version
     attributes:
       label: Anki Miner version
-      description: Shown in Help → About. e.g. 2.5.0. Please make sure to update to the latest version to see if that fixes the bug. If Anki Miner will not open, use the version from the installer filename or the release page.
-      placeholder: 2.5.0
+      description: Shown in Help → About Anki Miner. e.g. 3.4.0. Please make sure to update to the latest version to see if that fixes the bug. If Anki Miner will not open, use the version from the installer filename or the release page.
+      placeholder: 3.4.0
     validations:
       required: true
+
+  - type: input
+    id: mining_language
+    attributes:
+      label: Mining language
+      description: The language you mine in (Settings → Mining Language), if the bug involves mining.
+      placeholder: e.g. Japanese, Cantonese, Arabic
+    validations:
+      required: false
 
   - type: input
     id: os
@@ -60,7 +69,7 @@ body:
         - AppImage (Linux)
         - .deb (Linux)
         - Windows installer (.exe)
-        - macOS bundle
+        - .dmg (macOS)
         - Run from source
         - Other
     validations:
@@ -71,7 +80,7 @@ body:
     attributes:
       label: Anki Miner log files
       description: |
-        Windows: `%USERPROFILE%\.anki_miner\anki_miner.log`. Rotated logs use `.1` through `.5`; ZIP the `anki_miner.log*` files. Use Help → Open Log Folder to find them. Review logs for private information before uploading. Help → Export Diagnostics… creates the ZIP in one step.
+        Windows: `%USERPROFILE%\.anki_miner\anki_miner.log`. macOS/Linux: `~/.anki_miner/anki_miner.log`. Rotated logs use `.1` through `.5`; ZIP the `anki_miner.log*` files. Use Help → Open Log Folder to find them. Review logs for private information before uploading. Help → Export Diagnostics… creates the ZIP in one step.
     validations:
       required: false
       accept: ".log,.txt,.zip"
