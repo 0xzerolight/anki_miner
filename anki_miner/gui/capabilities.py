@@ -322,7 +322,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Copy the notes of a premade Anki deck that survive your filters — known words, "
-            "frequency band, blacklist, script type (Japanese) — into a new deck. The source deck is not modified.",
+            "frequency band, blacklist, script type (Japanese, Korean) — into a new deck. The source deck is not "
+            "modified.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("subtitles", "deckfilter"),
@@ -687,7 +688,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Brazilian or European Portuguese"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Choose which Portuguese variety the card front and the dictionary lookup prefer.",
+            "Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.",
         ),
         category=_CAT_FILTERING,
         target=CapabilityTarget("settings", "filtering"),
@@ -859,8 +860,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Word pronunciation audio"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Attach word audio to cards from audio packs, JPod101 (Japanese), or Google or Microsoft Edge "
-            "text-to-speech.",
+            "Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or "
+            "Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).",
         ),
         category=_CAT_AUDIO,
         target=CapabilityTarget("settings", "audio"),

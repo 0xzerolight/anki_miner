@@ -2154,8 +2154,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Filter dek siap pakai menjadi dek baru</translation>
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese) — into a new deck. The source deck is not modified.</source>
-        <translation>Salin catatan dari dek Anki siap pakai yang lolos filter Anda — kata yang dikenal, rentang frekuensi, daftar hitam, tipe aksara (Jepang) — ke dek baru. Dek sumber tidak diubah.</translation>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese, Korean) — into a new deck. The source deck is not modified.</source>
+        <translation>Salin catatan dari dek Anki siap pakai yang lolos filter Anda — kata yang dikenal, rentang frekuensi, daftar hitam, tipe aksara (Jepang, Korea) — ke dek baru. Dek sumber tidak diubah.</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
@@ -2330,8 +2330,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Portugis Brasil atau Eropa</translation>
     </message>
     <message>
-        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
-        <translation>Pilih ragam bahasa Portugis yang diutamakan sisi depan kartu dan pencarian kamus.</translation>
+        <source>Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>Pilih ragam bahasa Portugis yang membacakan audio kata dan kalimat, serta daftar frekuensi yang disarankan saat penyiapan.</translation>
     </message>
     <message>
         <source>Hangul and hanja word filters</source>
@@ -2434,8 +2434,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Audio pelafalan kata</translation>
     </message>
     <message>
-        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), or Google or Microsoft Edge text-to-speech.</source>
-        <translation>Lampirkan audio kata ke kartu dari paket audio, JPod101 (Jepang), atau text-to-speech Google atau Microsoft Edge.</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
+        <translation>Lampirkan audio kata ke kartu dari paket audio, JPod101 (Jepang), text-to-speech Google, atau text-to-speech Microsoft Edge (Kanton, Ibrani, Persia, Slovenia).</translation>
     </message>
     <message>
         <source>Import local audio packs</source>

@@ -2154,8 +2154,8 @@ No index files are deleted.</source>
         <translation>將現成牌組篩選進新牌組</translation>
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese) — into a new deck. The source deck is not modified.</source>
-        <translation>將現成 Anki 牌組中通過篩選條件——已知單字、頻率範圍、黑名單、文字類型（日文）——的筆記複製到新牌組。來源牌組不會被修改。</translation>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese, Korean) — into a new deck. The source deck is not modified.</source>
+        <translation>將現成 Anki 牌組中通過篩選條件——已知單字、頻率範圍、黑名單、文字類型（日文、韓文）——的筆記複製到新牌組。來源牌組不會被修改。</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
@@ -2330,8 +2330,8 @@ No index files are deleted.</source>
         <translation>巴西或歐洲葡萄牙文</translation>
     </message>
     <message>
-        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
-        <translation>選擇卡片正面與字典查詢優先採用哪種葡萄牙文變體。</translation>
+        <source>Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>選擇用哪種葡萄牙文變體朗讀單字與句子音訊，以及設定時建議哪份頻率清單。</translation>
     </message>
     <message>
         <source>Hangul and hanja word filters</source>
@@ -2434,8 +2434,8 @@ No index files are deleted.</source>
         <translation>單字發音音訊</translation>
     </message>
     <message>
-        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), or Google or Microsoft Edge text-to-speech.</source>
-        <translation>從音訊包、JPod101（日文）或 Google、Microsoft Edge 的文字轉語音，為卡片附上單字音訊。</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
+        <translation>從音訊包、JPod101（日文）、Google 文字轉語音或 Microsoft Edge 文字轉語音（粵語、希伯來文、波斯文、斯洛維尼亞文），為卡片附上單字音訊。</translation>
     </message>
     <message>
         <source>Import local audio packs</source>

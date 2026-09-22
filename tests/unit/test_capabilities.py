@@ -279,11 +279,35 @@ def test_audiobook_sync_names_the_reading_subtab_by_its_label() -> None:
     assert "Reading -> Subtitle Files" in _entry("audiobook-sync").description
 
 
-def test_word_audio_entry_lists_edge_tts() -> None:
+def test_word_audio_entry_scopes_edge_tts_to_the_languages_that_offer_it() -> None:
+    # Settings -> Audio offers Edge only where the profile names an Edge voice;
+    # a fifth language gaining one has to be added to the entry's text too.
+    from anki_miner.languages import AVAILABLE_LANGUAGES
+
+    with_edge = {code for code in AVAILABLE_LANGUAGES if get_profile(code).audio.edge_voice}
     cap = _entry("expression-audio")
 
-    assert "Microsoft Edge" in cap.description
+    assert with_edge == {"yue", "he", "fa", "sl"}
+    assert "Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian)" in cap.description
     assert "edge tts" in cap.keywords
+
+
+def test_deck_filter_names_every_language_with_a_script_filter() -> None:
+    from anki_miner.languages import AVAILABLE_LANGUAGES
+
+    with_options = {code for code in AVAILABLE_LANGUAGES if get_profile(code).script.filter_options()}
+
+    assert with_options == {"ja", "ko"}
+    assert "script type (Japanese, Korean)" in _entry("deck-filter").description
+
+
+def test_portuguese_variety_entry_states_what_the_variety_changes() -> None:
+    # The variety picks the Google voice and the suggested frequency list; it
+    # does not touch the card front or the dictionary lookup.
+    description = _entry("regional-variety").description
+
+    assert "frequency list" in description
+    assert "card front" not in description
 
 
 def test_sentence_tts_names_the_languages_without_a_voice() -> None:

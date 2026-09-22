@@ -2154,8 +2154,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Lọc bộ thẻ dựng sẵn thành bộ thẻ mới</translation>
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese) — into a new deck. The source deck is not modified.</source>
-        <translation>Sao chép các ghi chú của một bộ thẻ Anki dựng sẵn vượt qua bộ lọc của bạn — từ đã biết, dải tần suất, danh sách đen, loại chữ viết (tiếng Nhật) — vào một bộ thẻ mới. Bộ thẻ nguồn không bị thay đổi.</translation>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese, Korean) — into a new deck. The source deck is not modified.</source>
+        <translation>Sao chép các ghi chú của một bộ thẻ Anki dựng sẵn vượt qua bộ lọc của bạn — từ đã biết, dải tần suất, danh sách đen, loại chữ viết (tiếng Nhật, tiếng Hàn) — vào một bộ thẻ mới. Bộ thẻ nguồn không bị thay đổi.</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
@@ -2330,8 +2330,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Tiếng Bồ Đào Nha Brazil hay châu Âu</translation>
     </message>
     <message>
-        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
-        <translation>Chọn biến thể tiếng Bồ Đào Nha mà mặt trước thẻ và tra cứu từ điển ưu tiên.</translation>
+        <source>Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>Chọn biến thể tiếng Bồ Đào Nha dùng để đọc âm thanh từ và câu, và danh sách tần suất mà phần thiết lập gợi ý.</translation>
     </message>
     <message>
         <source>Hangul and hanja word filters</source>
@@ -2434,8 +2434,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Âm thanh phát âm từ</translation>
     </message>
     <message>
-        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), or Google or Microsoft Edge text-to-speech.</source>
-        <translation>Đính kèm âm thanh từ vào thẻ từ gói âm thanh, JPod101 (tiếng Nhật), hoặc chuyển văn bản thành giọng nói của Google hay Microsoft Edge.</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
+        <translation>Đính kèm âm thanh từ vào thẻ từ gói âm thanh, JPod101 (tiếng Nhật), chuyển văn bản thành giọng nói của Google, hoặc của Microsoft Edge (tiếng Quảng Đông, tiếng Do Thái, tiếng Ba Tư, tiếng Slovenia).</translation>
     </message>
     <message>
         <source>Import local audio packs</source>

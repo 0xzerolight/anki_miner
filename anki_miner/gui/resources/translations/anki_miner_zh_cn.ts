@@ -2154,8 +2154,8 @@ No index files are deleted.</source>
         <translation>将现成牌组过滤到新牌组</translation>
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese) — into a new deck. The source deck is not modified.</source>
-        <translation>将现成 Anki 牌组中通过你的过滤器——已知单词、词频范围、黑名单、文字类型（日语）——的笔记复制到新牌组中。源牌组不会被修改。</translation>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese, Korean) — into a new deck. The source deck is not modified.</source>
+        <translation>将现成 Anki 牌组中通过你的过滤器——已知单词、词频范围、黑名单、文字类型（日语、韩语）——的笔记复制到新牌组中。源牌组不会被修改。</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
@@ -2330,8 +2330,8 @@ No index files are deleted.</source>
         <translation>巴西或欧洲葡萄牙语</translation>
     </message>
     <message>
-        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
-        <translation>选择卡片正面和词典查询优先使用哪种葡萄牙语变体。</translation>
+        <source>Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>选择用哪种葡萄牙语变体朗读单词和句子音频，以及设置时推荐哪份词频列表。</translation>
     </message>
     <message>
         <source>Hangul and hanja word filters</source>
@@ -2434,8 +2434,8 @@ No index files are deleted.</source>
         <translation>单词发音音频</translation>
     </message>
     <message>
-        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), or Google or Microsoft Edge text-to-speech.</source>
-        <translation>从音频包、JPod101（日语）或 Google、Microsoft Edge 的文字转语音为卡片附加单词音频。</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
+        <translation>从音频包、JPod101（日语）、Google 文字转语音或 Microsoft Edge 文字转语音（粤语、希伯来语、波斯语、斯洛文尼亚语）为卡片附加单词音频。</translation>
     </message>
     <message>
         <source>Import local audio packs</source>

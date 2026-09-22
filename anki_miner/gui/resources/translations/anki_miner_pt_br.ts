@@ -2158,8 +2158,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Filtrar um baralho pronto em um novo baralho</translation>
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese) — into a new deck. The source deck is not modified.</source>
-        <translation>Copie as notas de um baralho pronto do Anki que passam pelos seus filtros — palavras conhecidas, faixa de frequência, blacklist, tipo de escrita (japonês) — para um novo baralho. O baralho de origem não é modificado.</translation>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese, Korean) — into a new deck. The source deck is not modified.</source>
+        <translation>Copie as notas de um baralho pronto do Anki que passam pelos seus filtros — palavras conhecidas, faixa de frequência, blacklist, tipo de escrita (japonês, coreano) — para um novo baralho. O baralho de origem não é modificado.</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
@@ -2334,8 +2334,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Português brasileiro ou europeu</translation>
     </message>
     <message>
-        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
-        <translation>Escolha qual variedade do português a frente do cartão e a busca no dicionário preferem.</translation>
+        <source>Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>Escolha qual variedade do português lê o áudio de palavras e frases, e qual lista de frequência a configuração sugere.</translation>
     </message>
     <message>
         <source>Hangul and hanja word filters</source>
@@ -2438,8 +2438,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Áudio de pronúncia da palavra</translation>
     </message>
     <message>
-        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), or Google or Microsoft Edge text-to-speech.</source>
-        <translation>Anexe áudio da palavra aos cartões a partir de packs de áudio, JPod101 (japonês) ou texto-para-fala do Google ou do Microsoft Edge.</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
+        <translation>Anexe áudio da palavra aos cartões a partir de packs de áudio, JPod101 (japonês), texto-para-fala do Google ou texto-para-fala do Microsoft Edge (cantonês, hebraico, persa, esloveno).</translation>
     </message>
     <message>
         <source>Import local audio packs</source>

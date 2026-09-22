@@ -2158,8 +2158,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Einen vorgefertigten Stapel in einen neuen Stapel filtern</translation>
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese) — into a new deck. The source deck is not modified.</source>
-        <translation>Die Notizen eines vorgefertigten Anki-Stapels, die Ihre Filter überstehen -- bekannte Wörter, Häufigkeitsband, Blacklist, Schrifttyp (Japanisch) -- in einen neuen Stapel kopieren. Der Quellstapel wird nicht verändert.</translation>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese, Korean) — into a new deck. The source deck is not modified.</source>
+        <translation>Die Notizen eines vorgefertigten Anki-Stapels, die Ihre Filter überstehen -- bekannte Wörter, Häufigkeitsband, Blacklist, Schrifttyp (Japanisch, Koreanisch) -- in einen neuen Stapel kopieren. Der Quellstapel wird nicht verändert.</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
@@ -2334,8 +2334,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Brasilianisches oder Europäisches Portugiesisch</translation>
     </message>
     <message>
-        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
-        <translation>Wählen, welche portugiesische Sprachvariante Kartenvorderseite und Wörterbuchsuche bevorzugen.</translation>
+        <source>Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>Wählen, welche portugiesische Sprachvariante Wort- und Satz-Audio spricht und welche Häufigkeitsliste die Einrichtung vorschlägt.</translation>
     </message>
     <message>
         <source>Hangul and hanja word filters</source>
@@ -2438,8 +2438,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Aussprache-Audio des Wortes</translation>
     </message>
     <message>
-        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), or Google or Microsoft Edge text-to-speech.</source>
-        <translation>Wort-Audio aus Audio-Paketen, JPod101 (Japanisch) oder der Sprachsynthese von Google oder Microsoft Edge an Karten anhängen.</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
+        <translation>Wort-Audio aus Audio-Paketen, JPod101 (Japanisch), der Sprachsynthese von Google oder der Sprachsynthese von Microsoft Edge (Kantonesisch, Hebräisch, Persisch, Slowenisch) an Karten anhängen.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>

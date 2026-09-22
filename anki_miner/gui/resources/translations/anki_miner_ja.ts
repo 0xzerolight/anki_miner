@@ -2154,8 +2154,8 @@ No index files are deleted.</source>
         <translation>既存デッキをフィルターして新しいデッキへ</translation>
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese) — into a new deck. The source deck is not modified.</source>
-        <translation>既存の Anki デッキのノートのうち、フィルター（既知単語、頻度帯、ブラックリスト、日本語の文字種）を通過したものを新しいデッキにコピーします。元のデッキは変更されません。</translation>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese, Korean) — into a new deck. The source deck is not modified.</source>
+        <translation>既存の Anki デッキのノートのうち、フィルター（既知単語、頻度帯、ブラックリスト、日本語と韓国語の文字種）を通過したものを新しいデッキにコピーします。元のデッキは変更されません。</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
@@ -2330,8 +2330,8 @@ No index files are deleted.</source>
         <translation>ブラジルまたはヨーロッパのポルトガル語</translation>
     </message>
     <message>
-        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
-        <translation>カードの表面と辞書検索で優先するポルトガル語の変種を選びます。</translation>
+        <source>Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>単語と例文の音声を読み上げるポルトガル語の変種と、セットアップで提案する頻度リストを選びます。</translation>
     </message>
     <message>
         <source>Hangul and hanja word filters</source>
@@ -2434,8 +2434,8 @@ No index files are deleted.</source>
         <translation>単語の発音音声</translation>
     </message>
     <message>
-        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), or Google or Microsoft Edge text-to-speech.</source>
-        <translation>音声パック、JPod101（日本語）、または Google や Microsoft Edge の音声合成から、単語音声をカードに添付します。</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
+        <translation>音声パック、JPod101（日本語）、Google の音声合成、または Microsoft Edge の音声合成（広東語、ヘブライ語、ペルシア語、スロベニア語）から、単語音声をカードに添付します。</translation>
     </message>
     <message>
         <source>Import local audio packs</source>

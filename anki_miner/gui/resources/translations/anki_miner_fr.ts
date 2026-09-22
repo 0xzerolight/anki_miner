@@ -2158,8 +2158,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Filtrer un paquet préexistant vers un nouveau paquet</translation>
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese) — into a new deck. The source deck is not modified.</source>
-        <translation>Copiez les notes d'un paquet Anki préexistant qui survivent à vos filtres — mots connus, plage de fréquence, liste noire, type d'écriture (japonais) — vers un nouveau paquet. Le paquet source n'est pas modifié.</translation>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese, Korean) — into a new deck. The source deck is not modified.</source>
+        <translation>Copiez les notes d'un paquet Anki préexistant qui survivent à vos filtres — mots connus, plage de fréquence, liste noire, type d'écriture (japonais, coréen) — vers un nouveau paquet. Le paquet source n'est pas modifié.</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
@@ -2334,8 +2334,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Portugais brésilien ou européen</translation>
     </message>
     <message>
-        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
-        <translation>Choisissez la variété de portugais que privilégient le recto de la carte et la recherche dans le dictionnaire.</translation>
+        <source>Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>Choisissez la variété de portugais qui lit l'audio des mots et des phrases, et la liste de fréquence que la configuration propose.</translation>
     </message>
     <message>
         <source>Hangul and hanja word filters</source>
@@ -2438,8 +2438,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Audio de prononciation des mots</translation>
     </message>
     <message>
-        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), or Google or Microsoft Edge text-to-speech.</source>
-        <translation>Attachez aux cartes l'audio des mots depuis des packs audio, JPod101 (japonais) ou la synthèse vocale de Google ou de Microsoft Edge.</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
+        <translation>Attachez aux cartes l'audio des mots depuis des packs audio, JPod101 (japonais), la synthèse vocale de Google ou celle de Microsoft Edge (cantonais, hébreu, persan, slovène).</translation>
     </message>
     <message>
         <source>Import local audio packs</source>

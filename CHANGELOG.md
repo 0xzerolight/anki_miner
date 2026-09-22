@@ -87,7 +87,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Latin letters and digits survive into a Chinese reading.** T恤 read `xù` and AA制 `zhì`; they read `T xù` and `AA zhì`, as CC-CEDICT writes them.
 - **A Chinese run no longer warns that words "have more than one reading".** A Japanese attestation pass compared each hanzi word against its pinyin readings, never matched, and raised the warning on every run for a result Chinese discards.
 - **Garbage characters no longer split a Chinese word.** A replacement or private-use character inside 电影 mined 电 and 影; it is deleted before segmentation. ㎡ and ㎞ are no longer rewritten to `m2` and `km` in a Chinese sentence.
-- **The Usage Guide no longer presents Japanese-only features as available in every language (F1).** Jisho, manga OCR, pitch-accent downloads and the kana script filter say they are Japanese-only, word audio lists Microsoft Edge TTS, and Audiobook Sync names Reading → Subtitle Files.
+- **The Usage Guide no longer presents Japanese-only features as available in every language (F1).** Jisho, manga OCR and pitch-accent downloads say they are Japanese-only, the Deck Filter script type names Japanese and Korean, word audio names Microsoft Edge TTS for the four languages it serves, and Audiobook Sync names Reading → Subtitle Files.
 
 ### Removed
 

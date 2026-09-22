@@ -2162,8 +2162,8 @@ No index files are deleted.</source>
         <translation>Отфильтровать готовую колоду в новую колоду</translation>
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese) — into a new deck. The source deck is not modified.</source>
-        <translation>Скопируйте в новую колоду заметки готовой колоды Anki, прошедшие ваши фильтры — известные слова, диапазон частотности, чёрный список, тип письменности (японский). Исходная колода не изменяется.</translation>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese, Korean) — into a new deck. The source deck is not modified.</source>
+        <translation>Скопируйте в новую колоду заметки готовой колоды Anki, прошедшие ваши фильтры — известные слова, диапазон частотности, чёрный список, тип письменности (японский, корейский). Исходная колода не изменяется.</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
@@ -2338,8 +2338,8 @@ No index files are deleted.</source>
         <translation>Бразильский или европейский португальский</translation>
     </message>
     <message>
-        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
-        <translation>Выберите, какой вариант португальского предпочитают лицевая сторона карточки и поиск по словарю.</translation>
+        <source>Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>Выберите, какой вариант португальского озвучивает слова и предложения и какой список частотности предлагает первоначальная настройка.</translation>
     </message>
     <message>
         <source>Hangul and hanja word filters</source>
@@ -2442,8 +2442,8 @@ No index files are deleted.</source>
         <translation>Аудио произношения слова</translation>
     </message>
     <message>
-        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), or Google or Microsoft Edge text-to-speech.</source>
-        <translation>Прикрепляйте к карточкам аудио слова из аудиопакетов, JPod101 (японский) или синтеза речи Google или Microsoft Edge.</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
+        <translation>Прикрепляйте к карточкам аудио слова из аудиопакетов, JPod101 (японский), синтеза речи Google или синтеза речи Microsoft Edge (кантонский, иврит, персидский, словенский).</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
