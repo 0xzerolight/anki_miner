@@ -65,7 +65,7 @@ def test_readme_exposes_first_install_recovery_and_troubleshooting() -> None:
     assert "%USERPROFILE%\\.anki_miner\\anki_miner.log" in troubleshooting
     assert "~/.anki_miner/anki_miner.log" in troubleshooting
     assert "`.1` through `.5` suffixes" in troubleshooting
-    assert "Help → Export Diagnostics…" in troubleshooting
+    assert "Help -> Export Diagnostics…" in troubleshooting
     assert (
         "Review it before uploading because it contains file paths and file names from your computer" in troubleshooting
     )
@@ -100,6 +100,12 @@ def test_bug_report_collects_log_files_and_status() -> None:
 
     version_help = fields["version"]["attributes"]["description"]
     assert "use the version from the installer filename or the release page" in version_help
+    # With 32 mining languages, triage needs the one the reporter mines in.
+    language = fields["mining_language"]
+    assert language["type"] == "input"
+    assert language["attributes"]["label"] == "Mining language"
+    assert language["validations"]["required"] is False
+    assert "macOS/Linux: `~/.anki_miner/anki_miner.log`" in upload_help
     assert "optional paste alternative" in fields["logs"]["attributes"]["label"]
     assert fields["logs"]["attributes"]["render"] == "shell"
     assert fields["logs"]["validations"]["required"] is False

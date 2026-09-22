@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:7f211d1a7cf8c731 -->
+<!-- i18n-source: README.md sha256:1f8a3147ec4f94c3 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -67,7 +67,7 @@ Lade den Download für deine Plattform von der [neuesten Version](https://github
 | Plattform | Download |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS (Apple Silicon / M1-M4) | `AnkiMiner-*-macOS-arm64.dmg` |
+| macOS (Apple Silicon) | `AnkiMiner-*-macOS-arm64.dmg` |
 | macOS (Intel) | `AnkiMiner-*-macOS-x86_64.dmg` ¹ |
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (sonstige) | `AnkiMiner-*-Linux-x86_64.AppImage` |
@@ -89,13 +89,13 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
-Japanisch braucht nichts Zusätzliches. Für jede andere Mining-Sprache die Engine ergänzen:
+Japanisch, Indonesisch und Hebräisch brauchen nichts Zusätzliches. Für eine andere Mining-Sprache die Engine ergänzen:
 
 ```bash
-pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da] for one
+pipx install "anki-miner[languages]"   # all; or one of [zh], [ko], [yue], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da], [ru], [uk], [sl], [tr], [th], [vi]
 ```
 
-Die Downloads oben holen diese stattdessen in der App, unter Einstellungen -> Mining-Sprache.
+Arabisch und Persisch haben kein Extra. Ihre Daten und die spaCy-Modelle der europäischen Sprachen werden in der App unter Einstellungen -> Mining-Sprache heruntergeladen; die Downloads oben holen dort alles.
 
 </details>
 
@@ -120,7 +120,7 @@ Die vollständige Entwicklungseinrichtung findest du in [CONTRIBUTING.md](../CON
 - **Audiobooks** - mine Hörbücher, Podcasts, Radio, Songs (Audio- + Untertitel-/Transkript-Paare).
 - **Reading** - mine Manga (mokuro), Romane (`.epub`, `.txt`; einzelnes Buch oder ein ganzer Ordner), eigenständige Untertiteldateien oder eingefügten Text.
 - **Analytics** - Mining-Verlauf, Schwierigkeitsrangliste, Meilensteine.
-- **Utilities** - Untertitel erzeugen (lokales Whisper), Untertitel neu timen (ffsubsync/alass), Medien auf reines Dialog-Audio kondensieren, Video/Audio/Untertitel von jeder Seite herunterladen, die yt-dlp unterstützt, den lernenswerten Teil eines fertigen Stapels in einen neuen kopieren, Felder bestehender Karten nachträglich befüllen und Manga-Seitenbilder per OCR in .mokuro-Dateien umwandeln (mokuro, in den Einstellungen installierbar).
+- **Utilities** - Untertitel erzeugen (lokales Whisper), Untertitel neu timen (ffsubsync/alass), Medien auf reines Dialog-Audio kondensieren, Video/Audio/Untertitel von jeder Seite herunterladen, die yt-dlp unterstützt, den lernenswerten Teil eines fertigen Stapels in einen neuen kopieren, Felder bestehender Karten nachträglich befüllen, Manga-Seitenbilder per OCR in .mokuro-Dateien umwandeln (mokuro, in den Einstellungen installierbar) und ein Hörbuch auf den Text seines Buchs timen (Hörbuch-Synchronisierung).
 - **Settings** - alles konfigurierbar.
 
 ## Weitere Funktionen
@@ -131,8 +131,8 @@ Die vollständige Entwicklungseinrichtung findest du in [CONTRIBUTING.md](../CON
 - Umfangreiche Filterung: i+1, Häufigkeitsrang-Bereich, Sperrliste, Regex, Wortgruppen und mehr.
 - Offline-Import von Yomitan-Wörterbüchern - Definitionen, Tonhöhenakzent, Häufigkeit - nach Priorität verkettet.
 - Mehrere Häufigkeitslisten, nach Priorität verkettet.
-- Wortaudio auf Karten aus lokalen Audio-Paketen, JapanesePod101 oder Google TTS.
-- Satzaudio auf Reading-Karten von Google Translate TTS oder Naver Papago (standardmäßig aus).
+- Wortaudio auf Karten aus lokalen Audio-Paketen, JapanesePod101, Google TTS oder Microsoft Edge TTS.
+- Satzaudio auf Reading-Karten von Google Translate TTS oder, für Japanisch und Koreanisch, Naver Papago (standardmäßig aus).
 - Wörterbuchspezifisches Glossar-Styling im Yomitan-Stil.
 - Eingebettete libmpv-Videovorschau - die Szene eines Worts während der Prüfung abspielen oder das Untertitel-Timing per Live-Wiedergabe nachjustieren.
 - Animierte Screenshots (siehe Beispielkarten oben).
@@ -164,7 +164,7 @@ Möchtest du ein weiteres Theme vorschlagen? Reiche einen Vorschlag als GitHub I
 1. **Untertitel einlesen** und den Text in einzelne Wörter zerlegen.
 2. **Filtern** auf Inhaltswörter, die du noch nicht kennst - optional selbst im Word Curator prüfen.
 3. **Screenshot und Audioclip** für jede Zeile aus dem Video holen.
-4. **Definitionen nachschlagen** in deinen konfigurierten Offline-Wörterbüchern, optional mit Rückgriff auf Jisho online, falls aktiviert (langsamer, ratenbegrenzt).
+4. **Definitionen nachschlagen** in deinen konfigurierten Offline-Wörterbüchern, optional mit Rückgriff auf Jisho online für Japanisch (langsamer, ratenbegrenzt).
 5. **Fertige Karten an Anki senden.**
 
 </details>
@@ -175,16 +175,16 @@ Japanisch, sofern nicht anders markiert. Der Einrichtungsassistent bietet den pa
 
 | Typ | Ressource | Download | Hinzufügen über |
 |------|----------|----------|---------|
-| Wörterbuch | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan-ZIP](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Wörterbuch hinzufügen… |
-| Wörterbuch | [Jitendex](https://jitendex.org/) | [Yomitan-ZIP](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Wörterbuch hinzufügen… |
-| Wörterbuch | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Auf der Website generiert | Wörterbuch hinzufügen… |
+| Wörterbuch | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan-ZIP](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Wörterbücher -> Wörterbuch hinzufügen… |
+| Wörterbuch | [Jitendex](https://jitendex.org/) | [Yomitan-ZIP](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Wörterbücher -> Wörterbuch hinzufügen… |
+| Wörterbuch | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Auf der Website generiert | Wörterbücher -> Wörterbuch hinzufügen… |
 | Tonhöhenakzent | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Tonhöhenakzent -> Tonhöhenquelle hinzufügen… |
 | Tonhöhenakzent | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Tonhöhenakzent -> Tonhöhenquelle hinzufügen… |
 | Häufigkeit | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan-ZIP](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Häufigkeit -> Häufigkeitsquelle hinzufügen… |
 | Häufigkeit | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan-ZIP](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Häufigkeit -> Häufigkeitsquelle hinzufügen… |
 | Wortaudio | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | Sammlungs-Torrent oder generierte `android.db` | Audio -> Audioquelle hinzufügen… |
-| Wörterbuch (Chinesisch) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Wörterbuch hinzufügen… |
-| Wörterbuch (Koreanisch) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Wörterbuch hinzufügen… |
+| Wörterbuch (Chinesisch) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Wörterbücher -> Wörterbuch hinzufügen… |
+| Wörterbuch (Koreanisch) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Wörterbücher -> Wörterbuch hinzufügen… |
 
 
 <details>
@@ -202,14 +202,14 @@ Verwendet mitgelieferte Namens-Wortgruppen, abgeleitet von [JMnedict](https://ww
 | „Stapel nicht gefunden“         | Einen vorhandenen Stapel in Einstellungen -> Karten & Anki auswählen. Stapel werden nicht automatisch erstellt; lege ihn bei Bedarf zuerst in Anki an. |
 | „Notiztyp nicht gefunden“    | Die Feldnamen deines Notiztyps in Einstellungen -> Karten & Anki konfigurieren. |
 | „ffmpeg nicht gefunden“       | ffmpeg installieren und zum PATH hinzufügen.                                     |
-| Keine Definitionen gefunden     | Ein Yomitan-Wörterbuch unter Einstellungen -> Wörterbuch hinzufügen… ergänzen (empfohlen) oder den Jisho-Rückgriff aktivieren (langsamer, ratenbegrenzt). |
+| Keine Definitionen gefunden     | Ein Yomitan-Wörterbuch unter Einstellungen -> Wörterbücher -> Wörterbuch hinzufügen… ergänzen (empfohlen) oder, für Japanisch, den Jisho-Rückgriff aktivieren (langsamer, ratenbegrenzt). |
 | Windows-Installer öffnet nicht / SmartScreen-Warnung | Siehe [Hinweise zum ersten Start](#hinweise-zum-ersten-start-unsignierte-builds): **Weitere Informationen** -> **Trotzdem ausführen** wählen; Defender-Fehlalarme aus dem **Schutzverlauf** wiederherstellen. |
 | Frische Installation hat keine Definitionen | Tools -> Einrichtungsassistent oder Tools -> Empfohlene Ressourcen herunterladen ausführen. Für den manuellen Import die Yomitan-ZIP unverändert lassen (nicht entpacken). |
 | Wörterbuch hinzufügen bleibt hängen oder schlägt fehl | Die zuletzt sichtbare Phase notieren und Logs anhängen (siehe „Wo sind die Logs?“ unten). Name, Quelle und Größe der Wörterbuch-ZIP in der Meldung angeben. |
 | Wo sind die Logs?      | Hilfe -> Protokollordner öffnen verwenden, oder unter Windows `%USERPROFILE%\.anki_miner\anki_miner.log` bzw. unter macOS/Linux `~/.anki_miner/anki_miner.log` öffnen. Rotierte Logs verwenden die Endungen `.1` bis `.5`. Sende auch `anki_miner.crash`, falls vorhanden - ein Absturz, der die App beendet hat, schreibt seinen Stack in diese Datei und nicht ins Log - sowie `anki_miner.child.log` mit der Ausgabe eines Hilfsprozesses. |
 | Einen Fehler melden          | Hilfe -> Diagnose exportieren… schreibt eine ZIP an einen Ort deiner Wahl: die Logs (`anki_miner.log` samt Rotationen, `anki_miner.crash`, `anki_miner.child.log`), deine `settings.json`, die Konfigurations- und UI-Zustandsdateien, Warteschlangen-Snapshots und Download-Manifeste sowie erzeugte Berichte zu Rechner und App-Zustand (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Vor dem Hochladen prüfen, da sie Dateipfade und Dateinamen von deinem Computer enthält. Es wird nichts automatisch hochgeladen. |
 | Mehr Diagnoseprotokollierung | `ANKI_MINER_LOG_LEVEL=DEBUG` vor dem Start von Anki Miner setzen, um Details von yt-dlp, urllib3 und fugashi (Drittanbieter) zu erfassen. Standard ist `WARNING`; Anki-Miner-Logs bleiben bei DEBUG. |
-| Audio ist in falscher Sprache  | Das Tool versucht zuerst Audiospuren in der Mining-Sprache, dann greift es auf die Standardspur zurück. |
+| Audio ist in falscher Sprache  | Das Tool wählt die Audiospur in der Mining-Sprache, sonst die erste. Mit Spuren (Video -> Einzeln) selbst wählen. |
 | Untertitel sind nicht synchron    | Die Untertitel-Offset-Steuerung in der GUI verwenden (Bereich ±300 Sekunden).      |
 
 ## Roadmap
@@ -227,8 +227,8 @@ Liste von Ideen für künftige Versionen von Anki Miner. Nicht nach Priorität g
   - [ ] Automatischer Untertitel-Download.
 
 - **Langfristig**:
-  - [x] Android-Portierung -- https://github.com/0xzerolight/anki_miner_android
-  - [x] Über Japanisch hinaus: Mining von Chinesisch, Koreanisch und achtzehn europäischen Sprachen.
+  - [x] Android-Portierung - https://github.com/0xzerolight/anki_miner_android
+  - [x] Über Japanisch hinaus: einunddreißig weitere Mining-Sprachen.
   - [ ] Anki-Miner-Browsererweiterung.
 
 

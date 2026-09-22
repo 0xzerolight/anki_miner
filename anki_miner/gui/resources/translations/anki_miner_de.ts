@@ -2094,8 +2094,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Aus Manga sammeln</translation>
     </message>
     <message>
-        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
-        <translation>Vokabeln aus mit mokuro verarbeiteten Manga-Bänden sammeln.</translation>
+        <source>Mine vocabulary from Japanese manga volumes processed with mokuro.</source>
+        <translation>Vokabeln aus mit mokuro verarbeiteten japanischen Manga-Bänden sammeln.</translation>
     </message>
     <message>
         <source>Mine from novels</source>
@@ -2158,8 +2158,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Einen vorgefertigten Stapel in einen neuen Stapel filtern</translation>
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type — into a new deck. The source deck is not modified.</source>
-        <translation>Die Notizen eines vorgefertigten Anki-Stapels, die Ihre Filter überstehen -- bekannte Wörter, Häufigkeitsband, Blacklist, Schrifttyp -- in einen neuen Stapel kopieren. Der Quellstapel wird nicht verändert.</translation>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese, Korean) — into a new deck. The source deck is not modified.</source>
+        <translation>Die Notizen eines vorgefertigten Anki-Stapels, die Ihre Filter überstehen -- bekannte Wörter, Häufigkeitsband, Blacklist, Schrifttyp (Japanisch, Koreanisch) -- in einen neuen Stapel kopieren. Der Quellstapel wird nicht verändert.</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
@@ -2222,8 +2222,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>In einer anderen Sprache sammeln</translation>
     </message>
     <message>
-        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
-        <translation>Die Sprache wechseln, die Sie sammeln; jede behält eigene Wörterbücher, Filter, Stapel und Kartenfelder.</translation>
+        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields. Most languages download their engine here the first time.</source>
+        <translation>Die Sprache wechseln, die Sie sammeln; jede behält eigene Wörterbücher, Filter, Stapel und Kartenfelder. Die meisten Sprachen laden hier beim ersten Mal ihre Engine herunter.</translation>
     </message>
     <message>
         <source>i+1 sentence mining</source>
@@ -2330,6 +2330,22 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Die Kana-Schreibweise eines Ihnen in Kanji bekannten Worts ebenfalls als bekannt behandeln (standardmäßig aktiviert).</translation>
     </message>
     <message>
+        <source>Brazilian or European Portuguese</source>
+        <translation>Brasilianisches oder Europäisches Portugiesisch</translation>
+    </message>
+    <message>
+        <source>Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>Wählen, welche portugiesische Sprachvariante Wort- und Satz-Audio spricht und welche Häufigkeitsliste die Einrichtung vorschlägt.</translation>
+    </message>
+    <message>
+        <source>Hangul and hanja word filters</source>
+        <translation>Hangul- und Hanja-Wortfilter</translation>
+    </message>
+    <message>
+        <source>Exclude hangul-only words, or words that contain hanja.</source>
+        <translation>Reine Hangul-Wörter oder Wörter mit Hanja ausschließen.</translation>
+    </message>
+    <message>
         <source>Simplified or traditional characters</source>
         <translation>Vereinfachte oder traditionelle Zeichen</translation>
     </message>
@@ -2354,12 +2370,12 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Ein eigenes ZIP im Yomitan-Format als Definitionsquelle hinzufügen.</translation>
     </message>
     <message>
-        <source>Jisho.org online fallback</source>
-        <translation>Jisho.org-Online-Rückgriff</translation>
+        <source>Jisho.org online fallback (Japanese)</source>
+        <translation>Jisho.org-Online-Rückgriff (Japanisch)</translation>
     </message>
     <message>
-        <source>Fall back to Jisho.org when your offline dictionaries have no entry.</source>
-        <translation>Auf Jisho.org zurückgreifen, wenn Ihre Offline-Wörterbücher keinen Eintrag haben.</translation>
+        <source>For Japanese, fall back to Jisho.org when your offline dictionaries have no entry.</source>
+        <translation>Für Japanisch auf Jisho.org zurückgreifen, wenn Ihre Offline-Wörterbücher keinen Eintrag haben.</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2382,8 +2398,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Fehlende Felder vorhandener Notizen füllen</translation>
     </message>
     <message>
-        <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
-        <translation>Fehlende Felder für Tonhöhe, Häufigkeit, Definition, Lesung und Wort-Audio auf bereits gesammelten Notizen ergänzen.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
+        <translation>Fehlende Felder für Häufigkeit, Definition und Wort-Audio auf bereits gesammelten Notizen ergänzen, dazu Tonhöhe und Lesung für Japanisch sowie die eigenen Kartenfelder Ihrer Sprache.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2422,8 +2438,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Aussprache-Audio des Wortes</translation>
     </message>
     <message>
-        <source>Attach native word audio to cards from audio packs, JPod101, or text-to-speech.</source>
-        <translation>Muttersprachliches Wort-Audio aus Audio-Paketen, JPod101 oder Sprachsynthese an Karten anhängen.</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
+        <translation>Wort-Audio aus Audio-Paketen, JPod101 (Japanisch), der Sprachsynthese von Google oder der Sprachsynthese von Microsoft Edge (Kantonesisch, Hebräisch, Persisch, Slowenisch) an Karten anhängen.</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2446,8 +2462,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Satz-Audio für Lesematerial (TTS)</translation>
     </message>
     <message>
-        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
-        <translation>Gesprochenes Satz-Audio für Karten synthetisieren, die aus Büchern, Manga und eingefügtem Text gesammelt wurden.</translation>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text. Not available for Persian or Slovenian.</source>
+        <translation>Gesprochenes Satz-Audio für Karten synthetisieren, die aus Büchern, Manga und eingefügtem Text gesammelt wurden. Für Persisch und Slowenisch nicht verfügbar.</translation>
     </message>
     <message>
         <source>Add a custom word-audio source</source>
@@ -2528,6 +2544,14 @@ Es werden keine Indexdateien gelöscht.</translation>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
         <translation>Das Pinyin des Wortes auf Ihre Karten bringen, jede Silbe in der Farbe ihres Tons -- die Einfärbung ist „Lesung nach Ton einfärben“, unter Einstellungen -&gt; Filterung.</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>Lesung nach Ton einfärben</translation>
+    </message>
+    <message>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
+        <translation>Jede Silbe der Pinyin- oder Jyutping-Lesung nach ihrem Ton einfärben, unter Einstellungen -&gt; Filterung.</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2646,16 +2670,16 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>.mokuro-Dateien aus Manga-Bildern erstellen</translation>
     </message>
     <message>
-        <source>Run mokuro's OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation>Führt mokuros OCR auf einem Band-Ordner oder einer ganzen Serie aus, damit Lesung -&gt; Manga es sammeln kann. Installieren Sie mokuro unter Einstellungen -&gt; Transkription &amp; Ausrichtung.</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
+        <translation>Führt mokuros japanische OCR auf einem Band-Ordner oder einer ganzen Serie aus, damit Lesung -&gt; Manga es sammeln kann. Installieren Sie mokuro unter Einstellungen -&gt; Transkription &amp; Ausrichtung.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>Ein Hörbuch mit seinem EPUB synchronisieren</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitles or a reader can use.</source>
-        <translation>Transkribiert ein Hörbuch und ordnet ihm die eigenen Sätze des Buches zeitlich zu, wodurch eine .srt-Datei entsteht, die der Tab Hörbücher, Lesung -&gt; Untertitel oder eine Lese-App nutzen kann.</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
+        <translation>Transkribiert ein Hörbuch und ordnet ihm die eigenen Sätze des Buches zeitlich zu, wodurch eine .srt-Datei entsteht, die der Tab Hörbücher, Lesung -&gt; Untertiteldateien oder eine Lese-App nutzen kann.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -2686,8 +2710,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Empfohlene Ressourcen herunterladen</translation>
     </message>
     <message>
-        <source>Get a curated dictionary, frequency list and pitch-accent data in one click from the Tools menu.</source>
-        <translation>Ein kuratiertes Wörterbuch, eine Häufigkeitsliste und Tonhöhenakzent-Daten mit einem Klick über das Werkzeuge-Menü erhalten.</translation>
+        <source>Get the resources recommended for your mining language (dictionaries, frequency lists, and pitch-accent data for Japanese) in one click from the Tools menu.</source>
+        <translation>Die für Ihre Mining-Sprache empfohlenen Ressourcen (Wörterbücher, Häufigkeitslisten und für Japanisch Tonhöhenakzent-Daten) mit einem Klick über das Werkzeuge-Menü erhalten.</translation>
     </message>
     <message>
         <source>Create a desktop shortcut</source>

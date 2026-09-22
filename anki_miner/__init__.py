@@ -1,8 +1,8 @@
 """
-Anki Miner - Automated Japanese Vocabulary Mining Tool
+Anki Miner - Automated Vocabulary Mining Tool
 
-A unified tool for extracting Japanese vocabulary from video subtitles
-and creating Anki flashcards with audio, screenshots, and definitions.
+Mines vocabulary from video, audio, manga, books and text into Anki
+flashcards with audio, screenshots, and definitions.
 """
 
 # Single source of truth. Bump this on release; pyproject.toml reads it via

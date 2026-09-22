@@ -2098,8 +2098,8 @@ No index files are deleted.</source>
         <translation>Майнить из манги</translation>
     </message>
     <message>
-        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
-        <translation>Майнить лексику из томов манги, обработанных через mokuro.</translation>
+        <source>Mine vocabulary from Japanese manga volumes processed with mokuro.</source>
+        <translation>Майнить лексику из томов японской манги, обработанных через mokuro.</translation>
     </message>
     <message>
         <source>Mine from novels</source>
@@ -2162,8 +2162,8 @@ No index files are deleted.</source>
         <translation>Отфильтровать готовую колоду в новую колоду</translation>
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type — into a new deck. The source deck is not modified.</source>
-        <translation>Скопируйте в новую колоду заметки готовой колоды Anki, прошедшие ваши фильтры — известные слова, диапазон частотности, чёрный список, тип письменности. Исходная колода не изменяется.</translation>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese, Korean) — into a new deck. The source deck is not modified.</source>
+        <translation>Скопируйте в новую колоду заметки готовой колоды Anki, прошедшие ваши фильтры — известные слова, диапазон частотности, чёрный список, тип письменности (японский, корейский). Исходная колода не изменяется.</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
@@ -2226,8 +2226,8 @@ No index files are deleted.</source>
         <translation>Майнинг другого языка</translation>
     </message>
     <message>
-        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
-        <translation>Переключайте язык майнинга — у каждого свои словари, фильтры, колода и поля карточек.</translation>
+        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields. Most languages download their engine here the first time.</source>
+        <translation>Переключайте язык майнинга — у каждого свои словари, фильтры, колода и поля карточек. Большинство языков при первом выборе скачивают здесь свой движок.</translation>
     </message>
     <message>
         <source>i+1 sentence mining</source>
@@ -2334,6 +2334,22 @@ No index files are deleted.</source>
         <translation>Считайте кана-написание слова, известного вам в кандзи, тоже известным (включено по умолчанию).</translation>
     </message>
     <message>
+        <source>Brazilian or European Portuguese</source>
+        <translation>Бразильский или европейский португальский</translation>
+    </message>
+    <message>
+        <source>Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>Выберите, какой вариант португальского озвучивает слова и предложения и какой список частотности предлагает первоначальная настройка.</translation>
+    </message>
+    <message>
+        <source>Hangul and hanja word filters</source>
+        <translation>Фильтры слов по хангылю и ханче</translation>
+    </message>
+    <message>
+        <source>Exclude hangul-only words, or words that contain hanja.</source>
+        <translation>Исключайте слова только из хангыля или слова, содержащие ханчу.</translation>
+    </message>
+    <message>
         <source>Simplified or traditional characters</source>
         <translation>Упрощённые или традиционные иероглифы</translation>
     </message>
@@ -2358,12 +2374,12 @@ No index files are deleted.</source>
         <translation>Добавьте свой собственный zip-словарь формата Yomitan как источник определений.</translation>
     </message>
     <message>
-        <source>Jisho.org online fallback</source>
-        <translation>Онлайн-резерв Jisho.org</translation>
+        <source>Jisho.org online fallback (Japanese)</source>
+        <translation>Онлайн-резерв Jisho.org (японский)</translation>
     </message>
     <message>
-        <source>Fall back to Jisho.org when your offline dictionaries have no entry.</source>
-        <translation>Используйте Jisho.org как резерв, когда в ваших офлайн-словарях нет записи.</translation>
+        <source>For Japanese, fall back to Jisho.org when your offline dictionaries have no entry.</source>
+        <translation>Для японского используйте Jisho.org как резерв, когда в ваших офлайн-словарях нет записи.</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2386,8 +2402,8 @@ No index files are deleted.</source>
         <translation>Заполнить недостающие поля существующих заметок</translation>
     </message>
     <message>
-        <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
-        <translation>Заполняет пустые поля тонального ударения, частотности, определения, чтения и аудио слова в уже собранных заметках.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
+        <translation>Заполняет пустые поля частотности, определения и аудио слова в уже собранных заметках, а также тональное ударение и чтение для японского и собственные поля карточек вашего языка.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2426,8 +2442,8 @@ No index files are deleted.</source>
         <translation>Аудио произношения слова</translation>
     </message>
     <message>
-        <source>Attach native word audio to cards from audio packs, JPod101, or text-to-speech.</source>
-        <translation>Прикрепляйте к карточкам аудио произношения слова носителем из аудиопакетов, JPod101 или синтеза речи.</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
+        <translation>Прикрепляйте к карточкам аудио слова из аудиопакетов, JPod101 (японский), синтеза речи Google или синтеза речи Microsoft Edge (кантонский, иврит, персидский, словенский).</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2450,8 +2466,8 @@ No index files are deleted.</source>
         <translation>Аудио предложений для чтения (TTS)</translation>
     </message>
     <message>
-        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
-        <translation>Синтезируйте озвученные предложения для карточек, намайненных из книг, манги и вставленного текста.</translation>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text. Not available for Persian or Slovenian.</source>
+        <translation>Синтезируйте озвученные предложения для карточек, намайненных из книг, манги и вставленного текста. Недоступно для персидского и словенского.</translation>
     </message>
     <message>
         <source>Add a custom word-audio source</source>
@@ -2532,6 +2548,14 @@ No index files are deleted.</source>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
         <translation>Размещайте пиньинь слова на ваших карточках, окрашивая каждый слог в цвет его тона — за раскраску отвечает настройка «Раскрашивать чтение по тонам» в разделе Настройки -&gt; Фильтрация.</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>Раскрашивать чтение по тонам</translation>
+    </message>
+    <message>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
+        <translation>Раскрашивает каждый слог чтения пиньинь или ютпхин по его тону; находится в разделе Настройки -&gt; Фильтрация.</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2650,16 +2674,16 @@ No index files are deleted.</source>
         <translation>Создать файлы .mokuro из изображений манги</translation>
     </message>
     <message>
-        <source>Run mokuro's OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation>Запустите OCR mokuro для папки тома или целой серии, чтобы её можно было майнить в разделе Чтение -&gt; Манга. Установите mokuro в разделе Настройки -&gt; Транскрипция и выравнивание.</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
+        <translation>Запустите японское OCR mokuro для папки тома или целой серии, чтобы её можно было майнить в разделе Чтение -&gt; Манга. Установите mokuro в разделе Настройки -&gt; Транскрипция и выравнивание.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>Синхронизация аудиокниги с её EPUB</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitles or a reader can use.</source>
-        <translation>Транскрибировать аудиокнигу и синхронизировать с ней предложения самой книги, записывая файл .srt, который можно использовать на вкладке «Аудиокниги», в разделе Чтение -&gt; Субтитры или в приложении для чтения.</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
+        <translation>Транскрибировать аудиокнигу и синхронизировать с ней предложения самой книги, записывая файл .srt, который можно использовать на вкладке «Аудиокниги», в разделе Чтение -&gt; Файлы субтитров или в приложении для чтения.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -2690,8 +2714,8 @@ No index files are deleted.</source>
         <translation>Загрузить рекомендуемые ресурсы</translation>
     </message>
     <message>
-        <source>Get a curated dictionary, frequency list and pitch-accent data in one click from the Tools menu.</source>
-        <translation>Получите подобранный словарь, список частотности и данные тонального ударения одним кликом из меню «Инструменты».</translation>
+        <source>Get the resources recommended for your mining language (dictionaries, frequency lists, and pitch-accent data for Japanese) in one click from the Tools menu.</source>
+        <translation>Получите одним кликом из меню «Инструменты» ресурсы, рекомендованные для вашего языка майнинга (словари, списки частотности и, для японского, данные тонального ударения).</translation>
     </message>
     <message>
         <source>Create a desktop shortcut</source>

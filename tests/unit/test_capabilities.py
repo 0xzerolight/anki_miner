@@ -15,10 +15,18 @@ from anki_miner.gui.capabilities import (
 from anki_miner.languages.registry import get_profile
 from tests.unit.languages.test_language_contract import CAPABILITY_VOCABULARY
 
-#: The entries a Japanese session never lists (all three are Chinese gates;
-#: ``measure-word`` reaches Cantonese too). Everything else is what a Japanese
-#: session listed before the catalogue was gated, which the ja pin below fixes.
-_NON_JAPANESE_IDS = ("script-variant", "pinyin", "measure-word")
+#: The entries a Japanese session never lists: the Chinese gates (``measure-word``
+#: and ``tone-colour`` reach Cantonese too), Portuguese's variety and Korean's
+#: hangul filters. Everything else is what a Japanese session listed before the
+#: catalogue was gated, which the ja pin below fixes.
+_NON_JAPANESE_IDS = (
+    "script-variant",
+    "pinyin",
+    "measure-word",
+    "tone-colour",
+    "regional-variety",
+    "hangul-filters",
+)
 
 
 def test_ids_are_unique() -> None:
@@ -213,7 +221,7 @@ def test_chinese_lists_its_own_entries() -> None:
     chinese = get_profile("zh").capabilities
     shown = {cap.id for cap in search("", chinese)}
 
-    assert set(_NON_JAPANESE_IDS) <= shown
+    assert {"script-variant", "pinyin", "measure-word", "tone-colour"} <= shown
 
 
 def test_chinese_entries_are_findable_by_search() -> None:
@@ -249,3 +257,75 @@ def test_search_within_a_capability_set_drops_gated_hits() -> None:
     assert any(cap.id == "pitch-accent" for cap in search("pitch", japanese))
     assert not any(cap.id == "pitch-accent" for cap in search("pitch", chinese))
     assert not any(cap.id == "pinyin" for cap in search("pinyin", japanese))
+
+
+def _entry(cap_id: str) -> Capability:
+    return next(cap for cap in CAPABILITIES if cap.id == cap_id)
+
+
+@pytest.mark.parametrize(
+    "cap_id",
+    ["jisho-fallback", "manga-mining", "manga-ocr", "download-resources", "card-backfill", "deck-filter"],
+)
+def test_ungated_entries_name_their_japanese_only_part(cap_id: str) -> None:
+    # No profile capability gates these, so every language lists them; the
+    # text has to say which part only Japanese gets.
+    cap = _entry(cap_id)
+
+    assert "Japanese" in f"{cap.title} {cap.description}"
+
+
+def test_audiobook_sync_names_the_reading_subtab_by_its_label() -> None:
+    assert "Reading -> Subtitle Files" in _entry("audiobook-sync").description
+
+
+def test_word_audio_entry_scopes_edge_tts_to_the_languages_that_offer_it() -> None:
+    # Settings -> Audio offers Edge only where the profile names an Edge voice;
+    # a fifth language gaining one has to be added to the entry's text too.
+    from anki_miner.languages import AVAILABLE_LANGUAGES
+
+    with_edge = {code for code in AVAILABLE_LANGUAGES if get_profile(code).audio.edge_voice}
+    cap = _entry("expression-audio")
+
+    assert with_edge == {"yue", "he", "fa", "sl"}
+    assert "Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian)" in cap.description
+    assert "edge tts" in cap.keywords
+
+
+def test_deck_filter_names_every_language_with_a_script_filter() -> None:
+    from anki_miner.languages import AVAILABLE_LANGUAGES
+
+    with_options = {code for code in AVAILABLE_LANGUAGES if get_profile(code).script.filter_options()}
+
+    assert with_options == {"ja", "ko"}
+    assert "script type (Japanese, Korean)" in _entry("deck-filter").description
+
+
+def test_portuguese_variety_entry_states_what_the_variety_changes() -> None:
+    # The variety picks the Google voice and the suggested frequency list; it
+    # does not touch the card front or the dictionary lookup.
+    description = _entry("regional-variety").description
+
+    assert "frequency list" in description
+    assert "card front" not in description
+
+
+def test_sentence_tts_names_the_languages_without_a_voice() -> None:
+    assert "Persian or Slovenian" in _entry("sentence-tts").description
+
+
+@pytest.mark.parametrize(
+    ("cap_id", "code"),
+    [("tone-colour", "zh"), ("tone-colour", "yue"), ("regional-variety", "pt"), ("hangul-filters", "ko")],
+)
+def test_gated_setting_entry_is_listed_for_its_language(cap_id: str, code: str) -> None:
+    shown = {cap.id for cap in search("", get_profile(code).capabilities)}
+
+    assert cap_id in shown
+
+
+@pytest.mark.parametrize("cap_id", ["tone-colour", "regional-variety", "hangul-filters"])
+def test_gated_setting_entry_is_hidden_from_japanese(cap_id: str) -> None:
+    shown = {cap.id for cap in search("", get_profile("ja").capabilities)}
+
+    assert cap_id not in shown

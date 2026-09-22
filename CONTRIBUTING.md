@@ -1,6 +1,6 @@
 # Contributing to Anki Miner
 
-Thanks for helping out. Anki Miner is a solo-maintained mining tool for Japanese, Chinese, Korean and eighteen European languages, and contributions of any size are welcome — bug reports, fixes, dictionary integrations, GUI polish, doc improvements.
+Thanks for helping out. Anki Miner is a solo-maintained mining tool for Japanese, Chinese, Korean and twenty-nine more languages, and contributions of any size are welcome — bug reports, fixes, dictionary integrations, GUI polish, doc improvements.
 
 ## Before you start
 
@@ -26,15 +26,15 @@ pre-commit install
 
 Anki Miner requires Python 3.11 or newer; CI runs the suite on 3.11, 3.12 and 3.13, with lint and type checks on 3.12.
 
-The `languages` extra adds the Chinese and Korean engines and every spaCy language's engine and model. The zh/ko suites skip themselves through `pytest.importorskip` rather than failing - so a contributor without the extra gets a passing run that never exercised those languages - but each spaCy language's own suite hard-requires its model and errors without it, so install the extra before running the suite.
+The `languages` extra adds the Chinese, Korean, Cantonese, Turkish, Thai and Vietnamese engines, spaCy, and pymorphy3 with its Russian and Ukrainian dictionaries. It does not add the spaCy models: they are GitHub and HuggingFace release assets that no extra can name, so install the pinned model wheels the `test` job in `.github/workflows/ci.yml` installs. The zh/ko suites skip themselves through `pytest.importorskip` rather than failing - so a contributor without the extra gets a passing run that never exercised those languages - but every other language's suite hard-requires its engine or model and errors without it.
 
-The Arabic tests read a seeded morphology database, which no package carries: `python scripts/fetch_language_pack_seeds.py ~/.cache/anki-miner-pack-seeds ar` (40 MB, once).
+The Arabic and Persian tests read seeded data packs, which no package carries: `python scripts/fetch_language_pack_seeds.py ~/.cache/anki-miner-pack-seeds ar fa` (about 41 MB, once).
 
 External runtime dependencies:
 
 - `ffmpeg` on PATH (`brew install ffmpeg`, `sudo apt install ffmpeg`, or the official Windows build).
 - Anki running with the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on.
-- Optional: a Yomitan-format dictionary installed via **Settings -> Dictionaries -> Add Dictionary**, or the legacy `JMdict_e` at `~/.anki_miner/JMdict_e` (auto-migrated on first launch).
+- Optional: a Yomitan-format dictionary installed via **Settings -> Dictionaries -> Add dictionary…**, or the legacy `JMdict_e` at `~/.anki_miner/JMdict_e` (auto-migrated on first launch).
 - fugashi/MeCab may need system-level MeCab libraries on some platforms; the bundled `unidic-lite` provides the dictionary.
 - Headless Linux (and CI) also needs the Qt runtime libs `libegl1 libpulse0 libxkbcommon0` for any test that imports a PyQt6 widget (`sudo apt-get install -y libegl1 libpulse0 libxkbcommon0`).
 
@@ -63,11 +63,11 @@ mypy anki_miner
 pytest -m "not youtube and not asr and not e2e and not golden"
 ```
 
-`scripts/health.sh` runs the full local gate in one command: the four above, then the ASR suite (`pytest -m "asr and not e2e"`), then vulture, shellcheck and the Linux launcher smoke. The first five are hard steps and gate "done"; the last three only warn, and skip when their binary is missing.
+`scripts/health.sh` runs the full local gate in one command: the four above (black in `--check` mode), then the ASR suite (`pytest -m "asr and not e2e"`), then vulture, shellcheck and the Linux launcher smoke. The last three are skipped when their binary is missing; every step that runs, and fails, fails the gate.
 
 ## Tests
 
-Tests live under `tests/unit/` (external services mocked — most of the suite), `tests/integration/` (the assembled pipeline, still mocked at the process boundary), and `tests/e2e/` (an on-demand live harness; see `tests/e2e/README.md`). Shared fixtures go in `tests/conftest.py`.
+Tests live under `tests/unit/` (external services mocked — most of the suite), `tests/integration/` (the assembled pipeline, still mocked at the process boundary), and `tests/e2e/` (an on-demand live harness; see `tests/e2e/README.md`). Per-language suites live in `tests/unit/languages/`, with their corpora under `tests/fixtures/<code>/`. Shared fixtures go in `tests/conftest.py`.
 
 ```bash
 # What CI runs, and what to run before pushing
@@ -89,7 +89,7 @@ Coverage is computed but never gated, so it is off by default. Opt in with `pyte
 | `asr` | Needs an ASR backend and a downloaded model. Runs in the dedicated `test-asr` CI job, which installs `.[dev,asr,asr-vulkan]`. |
 | `e2e` | Drives the real GUI through the `tests/e2e/` harness. Excluded by default via `addopts`. Most of these need Anki running; a couple (motion timing, mpv playback cycles) do not. |
 | `soak` | Multi-session soak runs through the same harness. |
-| `real_ytdlp` | Exercises the real `_ytdlp_supports_js_runtimes` probe (no autouse stub). |
+| `real_ytdlp` | Exercises the real `ytdlp_supports_js_runtimes` / `ytdlp_supports_remote_components` probes in `services/ytdlp_invocation.py` (no autouse stub). |
 | `real_probe` | Exercises the real `AnkiService._probe_duplicates` (no autouse stub). |
 | `network` | Genuinely needs the network; suppresses the socket tripwire in `tests/_network_tripwire.py`. |
 | `golden` | Android-port engine parity contract. Clones a pinned revision and runs real exports, so it is on-demand only. |
@@ -106,11 +106,31 @@ Any test importing a PyQt6 widget needs the offscreen platform plugin (`QT_QPA_P
 Patch at the smallest boundary that still exercises your code:
 
 - **AnkiConnect** — `anki_miner.services._ankiconnect.requests.post`, the actual HTTP call site.
-- **ffmpeg** — `subprocess.run`, returning canned probe/extraction output.
+- **ffmpeg** — `anki_miner.services.media_extractor.subprocess.Popen` for extraction and `subprocess.run` for probes, returning canned output.
 - **Jisho** — `requests.get`, with payloads stored as JSON fixtures where practical.
 - **yt-dlp** — the subprocess boundary, leaving `YouTubeFetcherService` as the unit under test.
 
 New code should add tests where reasonable; refactors should not regress existing coverage by a meaningful amount.
+
+## Adding a mining language
+
+Each language is a package plus a set of registration sites. A site you miss either breaks a test or fails quietly in the frozen build, so walk the whole list. The Hebrew and Slovenian commits are worked examples, including the ones outside the language package: `git log --oneline --grep='(he)' --grep='(sl)'`.
+
+1. **Package**: `anki_miner/languages/<code>/` with `build_profile()` in `__init__.py`, `tokenizer.py::build_tagger()`, a parser factory and `catalog.py` (recommended dictionary and frequency list). `registry.py` finds the package by its code, and `tagger_provider.py` builds the tagger without a per-language branch. Space-delimited languages build on `languages/_spaced/`.
+2. **Code tuples**: append the code to `AVAILABLE_LANGUAGES` (`languages/__init__.py`) and to its deliberate duplicate `_LANGUAGE_CODES` (`config/config.py`). A test pins the two identical. Don't pin the tuple's last element in a test; the next language breaks it.
+3. **Engine pack**: generate a spaCy-model or PyPI-closure `languages/<code>/pack.py` with `scripts/pin_language_pack.py`, which also writes `tests/fixtures/language_packs/<code>.resolved.json`, and never hand-edit a generated one. A data-only or trimmed pack is hand-pinned instead, like those of Arabic, Persian, Vietnamese, Chinese and Korean. spaCy languages set `requires=("_spacy",)`. A language with no engine and no data (Indonesian, Hebrew) has no pack.
+4. **pip extra**: add a `[<code>]` extra to `pyproject.toml` and list it in the `languages` aggregate. Check the result by loading the file with `tomllib`, not by reading the diff.
+5. **Frozen build**: add every engine module to `excludes` in `anki_miner.spec`, add the licence-notice `datas` block, and ship the notice under `licenses/<component>/`.
+6. **CI and release**:
+   - `ci.yml`: pin the spaCy model wheel, or add the code to the seed line for a data-only pack.
+   - `release.yml`: add the code to `BUNDLE_SMOKE_LANGS`, and to the seed line if it has a pack.
+   - Give the profile a `smoke_sentence` for the bundle smoke.
+7. **Capabilities and fields**:
+   - Add any new profile capability to `CAPABILITY_VOCABULARY` (`tests/unit/languages/test_language_contract.py`).
+   - Add any new card field to its settings row in `gui/widgets/panels/anki_settings_panel.py`.
+   - Add a new language-varying config field to `LANGUAGE_SCOPED_FIELDS` (`languages/switching.py`).
+8. **Findability**: add the language's names to the `mining-language` keywords in `gui/capabilities.py`, and its frequency probe terms to `MORE_COMMON_TERMS` / `LESS_COMMON_TERMS` (`services/frequency/mode_probe.py`).
+9. **Docs**: add a CHANGELOG entry, update the README language list and the eleven translations (then `python scripts/readme_i18n.py stamp`), and update [ARCHITECTURE.md](ARCHITECTURE.md#mining-languages).
 
 ## Logging
 

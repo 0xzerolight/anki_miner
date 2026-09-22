@@ -2090,8 +2090,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Mining dari manga</translation>
     </message>
     <message>
-        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
-        <translation>Mining kosakata dari volume manga yang diproses dengan mokuro.</translation>
+        <source>Mine vocabulary from Japanese manga volumes processed with mokuro.</source>
+        <translation>Mining kosakata dari volume manga Jepang yang diproses dengan mokuro.</translation>
     </message>
     <message>
         <source>Mine from novels</source>
@@ -2154,8 +2154,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Filter dek siap pakai menjadi dek baru</translation>
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type — into a new deck. The source deck is not modified.</source>
-        <translation>Salin catatan dari dek Anki siap pakai yang lolos filter Anda — kata yang dikenal, rentang frekuensi, daftar hitam, tipe aksara — ke dek baru. Dek sumber tidak diubah.</translation>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese, Korean) — into a new deck. The source deck is not modified.</source>
+        <translation>Salin catatan dari dek Anki siap pakai yang lolos filter Anda — kata yang dikenal, rentang frekuensi, daftar hitam, tipe aksara (Jepang, Korea) — ke dek baru. Dek sumber tidak diubah.</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
@@ -2218,8 +2218,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Mining bahasa lain</translation>
     </message>
     <message>
-        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
-        <translation>Ganti bahasa yang Anda mining; masing-masing memiliki kamus, filter, dek, dan bidang kartu sendiri.</translation>
+        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields. Most languages download their engine here the first time.</source>
+        <translation>Ganti bahasa yang Anda mining; masing-masing memiliki kamus, filter, dek, dan bidang kartu sendiri. Sebagian besar bahasa mengunduh mesinnya di sini saat pertama kali.</translation>
     </message>
     <message>
         <source>i+1 sentence mining</source>
@@ -2326,6 +2326,22 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Perlakukan ejaan kana dari kata yang Anda kenal dalam kanji sebagai dikenal juga (aktif secara default).</translation>
     </message>
     <message>
+        <source>Brazilian or European Portuguese</source>
+        <translation>Portugis Brasil atau Eropa</translation>
+    </message>
+    <message>
+        <source>Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>Pilih ragam bahasa Portugis yang membacakan audio kata dan kalimat, serta daftar frekuensi yang disarankan saat penyiapan.</translation>
+    </message>
+    <message>
+        <source>Hangul and hanja word filters</source>
+        <translation>Filter kata hangul dan hanja</translation>
+    </message>
+    <message>
+        <source>Exclude hangul-only words, or words that contain hanja.</source>
+        <translation>Kecualikan kata yang hanya berisi hangul, atau kata yang mengandung hanja.</translation>
+    </message>
+    <message>
         <source>Simplified or traditional characters</source>
         <translation>Karakter sederhana atau tradisional</translation>
     </message>
@@ -2350,12 +2366,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Tambahkan zip kamus berformat Yomitan Anda sendiri sebagai sumber definisi.</translation>
     </message>
     <message>
-        <source>Jisho.org online fallback</source>
-        <translation>Fallback daring Jisho.org</translation>
+        <source>Jisho.org online fallback (Japanese)</source>
+        <translation>Fallback daring Jisho.org (Jepang)</translation>
     </message>
     <message>
-        <source>Fall back to Jisho.org when your offline dictionaries have no entry.</source>
-        <translation>Beralih ke Jisho.org ketika kamus luring Anda tidak memiliki entri.</translation>
+        <source>For Japanese, fall back to Jisho.org when your offline dictionaries have no entry.</source>
+        <translation>Untuk bahasa Jepang, beralih ke Jisho.org ketika kamus luring Anda tidak memiliki entri.</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2378,8 +2394,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Isi bidang yang hilang pada catatan yang ada</translation>
     </message>
     <message>
-        <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
-        <translation>Mengisi bidang aksen nada, frekuensi, definisi, cara baca, dan audio kata yang kosong pada catatan yang sudah ditambang.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
+        <translation>Mengisi bidang frekuensi, definisi, dan audio kata yang kosong pada catatan yang sudah ditambang, ditambah aksen nada dan cara baca untuk bahasa Jepang serta bidang kartu khusus bahasa Anda.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2418,8 +2434,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Audio pelafalan kata</translation>
     </message>
     <message>
-        <source>Attach native word audio to cards from audio packs, JPod101, or text-to-speech.</source>
-        <translation>Lampirkan audio kata penutur asli ke kartu dari paket audio, JPod101, atau text-to-speech.</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
+        <translation>Lampirkan audio kata ke kartu dari paket audio, JPod101 (Jepang), text-to-speech Google, atau text-to-speech Microsoft Edge (Kanton, Ibrani, Persia, Slovenia).</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2442,8 +2458,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Audio kalimat untuk bacaan (TTS)</translation>
     </message>
     <message>
-        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
-        <translation>Sintesis audio kalimat lisan untuk kartu hasil mining dari buku, manga, dan teks yang ditempel.</translation>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text. Not available for Persian or Slovenian.</source>
+        <translation>Sintesis audio kalimat lisan untuk kartu hasil mining dari buku, manga, dan teks yang ditempel. Tidak tersedia untuk bahasa Persia atau Slovenia.</translation>
     </message>
     <message>
         <source>Add a custom word-audio source</source>
@@ -2524,6 +2540,14 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
         <translation>Tampilkan pinyin kata pada kartu Anda, setiap suku kata dalam warna nadanya -- pewarnaan itu adalah Warnai bacaan berdasarkan nada, di Pengaturan -&gt; Penyaringan.</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>Warnai bacaan berdasarkan nada</translation>
+    </message>
+    <message>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
+        <translation>Warnai setiap suku kata bacaan pinyin atau jyutping berdasarkan nadanya, di Pengaturan -&gt; Penyaringan.</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2642,16 +2666,16 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Buat berkas .mokuro dari gambar manga</translation>
     </message>
     <message>
-        <source>Run mokuro's OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation>Jalankan OCR mokuro pada folder volume atau seluruh seri agar Membaca -&gt; Manga dapat mining-nya. Pasang mokuro dari Pengaturan -&gt; Transkripsi &amp; Penyelarasan.</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
+        <translation>Jalankan OCR Jepang mokuro pada folder volume atau seluruh seri agar Membaca -&gt; Manga dapat mining-nya. Pasang mokuro dari Pengaturan -&gt; Transkripsi &amp; Penyelarasan.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>Sinkronkan buku audio dengan EPUB-nya</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitles or a reader can use.</source>
-        <translation>Transkripsikan buku audio dan atur waktu kalimat buku itu sendiri terhadapnya, lalu tulis .srt yang dapat digunakan tab Buku Audio, Bacaan -&gt; Subtitel, atau pembaca lain.</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
+        <translation>Transkripsikan buku audio dan atur waktu kalimat buku itu sendiri terhadapnya, lalu tulis .srt yang dapat digunakan tab Buku Audio, Bacaan -&gt; Berkas Subtitel, atau pembaca lain.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -2682,8 +2706,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Unduh sumber daya yang direkomendasikan</translation>
     </message>
     <message>
-        <source>Get a curated dictionary, frequency list and pitch-accent data in one click from the Tools menu.</source>
-        <translation>Dapatkan kamus, daftar frekuensi, dan data aksen nada pilihan dalam satu klik dari menu Alat.</translation>
+        <source>Get the resources recommended for your mining language (dictionaries, frequency lists, and pitch-accent data for Japanese) in one click from the Tools menu.</source>
+        <translation>Dapatkan sumber daya yang disarankan untuk bahasa mining Anda (kamus, daftar frekuensi, dan data aksen nada untuk bahasa Jepang) dalam satu klik dari menu Alat.</translation>
     </message>
     <message>
         <source>Create a desktop shortcut</source>

@@ -44,6 +44,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **The Usage Guide shows each mining language its own entries (F1).** Entries about kana, furigana, pitch accent and Japanese names are shown only to a language that has them, and Chinese gains entries for pinyin and tone colours, Character Set and the Measure Word field. A Japanese session lists exactly what it listed before.
 
+- **Usage Guide entries for tone colours, the Portuguese variety and the Korean hangul filters (F1).** Each is listed only for the languages that show the setting.
+
 ### Changed
 
 - **Chinese mines the word classes jieba uses for ordinary vocabulary.** The Chinese part-of-speech gate was mapped from the Japanese one and dropped classes that, in jieba's own dictionary, hold everyday words: place- and person-tagged nouns (`ns`, `nr` — 太阳, 东西, 城市, 明白), distinguishing and state words (`b`, `z` — 高兴, 主要, 所有, 很, 您), conjunctions (`c` — 因为, 所以, 虽然) and prepositions (`p` — 在, 给, 跟, 为了). On a 186-sentence corpus nearly a third of sentences lost a dictionary-attested word with nothing on screen saying why. All six are mined now; transliterated and famous-person names, organisations, bound morphemes, numerals, classifiers and particles stay out, and a word no offline dictionary lists still never becomes a card, so full personal names do not appear. Existing Chinese setups keep their saved lists.
@@ -60,6 +62,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Tone colours are readable on white and night-mode cards.** Nine of the eleven Chinese and Cantonese tone colours fell below 3:1 on one of Anki's two backgrounds (tone 2 was 2.69:1 on white, tones 1 and 4 2.80:1 in night mode). Each keeps its hue and clears 3.6:1 on both; one inline colour cannot reach 4.5:1 on both, and the cards take no theme dependency.
 - **A Chinese or Cantonese card's sentence declares its language.** With no `lang` attribute Anki's WebView drew Han characters with the first CJK face it found, which on a machine with Japanese fonts first is the Japanese shape. The Sentence field is wrapped in `<span lang="zh-Hans">` or `zh-Hant` by the script the sentence is actually written in (Cantonese: `zh-Hant`). The word field stays plain text, since Chinese note types embed it in dictionary links and `{{tts}}` tags.
 - **Auto-Map Fields clears mappings the note type has no field for (Settings → Cards & Anki).** It only filled matches, so after switching language the previous note type's names stayed behind and failed the pre-run check (Expression, MainDefinition, Picture, SentenceAudio on a Chinese note type). Rows the panel shows, and the active card type's marker, are blanked when the fetched note type lacks the field; hand-set keys, rows hidden for the current language and the other card types' markers are left alone. Applies to every mining language.
+- **The Linux software-centre listing and the Windows file description no longer describe a Japanese-only app.**
 
 ### Fixed
 
@@ -84,6 +87,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Latin letters and digits survive into a Chinese reading.** T恤 read `xù` and AA制 `zhì`; they read `T xù` and `AA zhì`, as CC-CEDICT writes them.
 - **A Chinese run no longer warns that words "have more than one reading".** A Japanese attestation pass compared each hanzi word against its pinyin readings, never matched, and raised the warning on every run for a result Chinese discards.
 - **Garbage characters no longer split a Chinese word.** A replacement or private-use character inside 电影 mined 电 and 影; it is deleted before segmentation. ㎡ and ㎞ are no longer rewritten to `m2` and `km` in a Chinese sentence.
+- **The Usage Guide no longer presents Japanese-only features as available in every language (F1).** Jisho, manga OCR and pitch-accent downloads say they are Japanese-only, the Deck Filter script type names Japanese and Korean, word audio names Microsoft Edge TTS for the four languages it serves, and Audiobook Sync names Reading → Subtitle Files.
 
 ### Removed
 

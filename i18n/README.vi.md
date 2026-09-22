@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:7f211d1a7cf8c731 -->
+<!-- i18n-source: README.md sha256:1f8a3147ec4f94c3 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -67,7 +67,7 @@ Tải bản dành cho nền tảng của bạn từ [bản phát hành mới nh�
 | Nền tảng | Tải về |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS (Apple Silicon / M1-M4) | `AnkiMiner-*-macOS-arm64.dmg` |
+| macOS (Apple Silicon) | `AnkiMiner-*-macOS-arm64.dmg` |
 | macOS (Intel) | `AnkiMiner-*-macOS-x86_64.dmg` ¹ |
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (khác) | `AnkiMiner-*-Linux-x86_64.AppImage` |
@@ -89,13 +89,13 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
-Tiếng Nhật không cần gì thêm. Để khai thác bất kỳ ngôn ngữ nào khác, hãy thêm engine của ngôn ngữ đó:
+Tiếng Nhật, tiếng Indonesia và tiếng Do Thái không cần gì thêm. Để khai thác một ngôn ngữ khác, hãy thêm engine của ngôn ngữ đó:
 
 ```bash
-pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da] for one
+pipx install "anki-miner[languages]"   # all; or one of [zh], [ko], [yue], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da], [ru], [uk], [sl], [tr], [th], [vi]
 ```
 
-Các bản tải ở trên lấy chúng ngay trong ứng dụng, tại Cài đặt -> Ngôn ngữ khai thác.
+Tiếng Ả Rập và tiếng Ba Tư không có extra. Dữ liệu của chúng, cùng các mô hình spaCy của các ngôn ngữ châu Âu, được tải trong ứng dụng tại Cài đặt -> Ngôn ngữ khai thác, nơi các bản tải ở trên lấy mọi thứ.
 
 </details>
 
@@ -120,7 +120,7 @@ anki_miner_gui
 - **Sách nói** - khai thác sách nói, podcast, radio, bài hát (cặp âm thanh + phụ đề/bản chép lời).
 - **Cách đọc** - khai thác manga (mokuro), tiểu thuyết (`.epub`, `.txt`; một cuốn sách hoặc cả thư mục), tệp phụ đề độc lập, hoặc văn bản dán vào.
 - **Phân tích** - lịch sử khai thác, xếp hạng độ khó, cột mốc.
-- **Tiện ích** - tạo phụ đề (Whisper cục bộ), căn lại thời gian phụ đề (ffsubsync/alass), cô đọng media thành âm thanh chỉ có hội thoại, tải video/âm thanh/phụ đề từ bất kỳ trang nào yt-dlp hỗ trợ, sao chép phần đáng học của một bộ thẻ dựng sẵn sang một bộ thẻ mới, điền bổ sung các trường trên thẻ đã có, và OCR ảnh trang manga thành tệp .mokuro (mokuro, cài được từ Cài đặt).
+- **Tiện ích** - tạo phụ đề (Whisper cục bộ), căn lại thời gian phụ đề (ffsubsync/alass), cô đọng media thành âm thanh chỉ có hội thoại, tải video/âm thanh/phụ đề từ bất kỳ trang nào yt-dlp hỗ trợ, sao chép phần đáng học của một bộ thẻ dựng sẵn sang một bộ thẻ mới, điền bổ sung các trường trên thẻ đã có, OCR ảnh trang manga thành tệp .mokuro (mokuro, cài được từ Cài đặt), và căn thời gian một sách nói theo văn bản của cuốn sách (Đồng bộ sách nói).
 - **Cài đặt** - mọi thứ có thể cấu hình.
 
 ## Tính năng khác
@@ -131,8 +131,8 @@ anki_miner_gui
 - Bộ lọc phong phú: i+1, khoảng hạng tần suất, danh sách đen, regex, tập từ, và hơn thế nữa.
 - Nhập từ điển Yomitan ngoại tuyến - định nghĩa, trọng âm cao độ, tần suất - xâu chuỗi theo thứ tự ưu tiên.
 - Nhiều danh sách tần suất được xâu chuỗi theo thứ tự ưu tiên.
-- Âm thanh của từ trên thẻ, lấy từ gói âm thanh cục bộ, JapanesePod101, hoặc Google TTS.
-- Âm thanh câu trên thẻ Cách đọc, lấy từ Google Translate TTS hoặc Naver Papago (mặc định tắt).
+- Âm thanh của từ trên thẻ, lấy từ gói âm thanh cục bộ, JapanesePod101, Google TTS, hoặc Microsoft Edge TTS.
+- Âm thanh câu trên thẻ Cách đọc, lấy từ Google Translate TTS, hoặc Naver Papago cho tiếng Nhật và tiếng Hàn (mặc định tắt).
 - Định kiểu bảng nghĩa riêng cho từng từ điển, theo phong cách Yomitan.
 - Xem trước video bằng libmpv nhúng - phát cảnh phim của một từ trong lúc chọn lọc, hoặc tinh chỉnh thời gian phụ đề với phát trực tiếp.
 - Ảnh chụp màn hình động (xem thẻ ví dụ ở trên).
@@ -164,7 +164,7 @@ Muốn thêm chủ đề khác? Hãy đề xuất trong một GitHub Issue.
 1. **Đọc phụ đề** và tách văn bản thành từng từ riêng lẻ.
 2. **Lọc** xuống còn các từ mang nghĩa mà bạn chưa biết - tùy chọn tự bạn xem lại danh sách trong Word Curator.
 3. **Lấy ảnh chụp màn hình và đoạn âm thanh** từ video cho mỗi dòng.
-4. **Tra định nghĩa** trong các từ điển ngoại tuyến bạn đã cấu hình, tùy chọn dự phòng sang Jisho trực tuyến nếu được bật (chậm hơn, bị giới hạn tốc độ).
+4. **Tra định nghĩa** trong các từ điển ngoại tuyến bạn đã cấu hình, tùy chọn dự phòng sang Jisho trực tuyến cho tiếng Nhật (chậm hơn, bị giới hạn tốc độ).
 5. **Gửi các thẻ đã hoàn thiện sang Anki.**
 
 </details>
@@ -175,16 +175,16 @@ Tiếng Nhật trừ khi có ghi chú khác. Trình hướng dẫn thiết lập
 
 | Loại | Tài nguyên | Tải về | Thêm qua |
 |------|----------|----------|---------|
-| Từ điển | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Zip Yomitan](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Thêm từ điển… |
-| Từ điển | [Jitendex](https://jitendex.org/) | [Zip Yomitan](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Thêm từ điển… |
-| Từ điển | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Tạo ngay trên trang | Thêm từ điển… |
+| Từ điển | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Zip Yomitan](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Từ điển -> Thêm từ điển… |
+| Từ điển | [Jitendex](https://jitendex.org/) | [Zip Yomitan](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Từ điển -> Thêm từ điển… |
+| Từ điển | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Tạo ngay trên trang | Từ điển -> Thêm từ điển… |
 | Trọng âm | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Trọng âm cao độ -> Thêm nguồn trọng âm cao độ… |
 | Trọng âm | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Trọng âm cao độ -> Thêm nguồn trọng âm cao độ… |
 | Tần suất | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Zip Yomitan](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Tần suất -> Thêm nguồn tần suất… |
 | Tần suất | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Zip Yomitan](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Tần suất -> Thêm nguồn tần suất… |
 | Âm thanh từ vựng | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | Torrent bộ sưu tập hoặc `android.db` đã tạo | Âm thanh -> Thêm nguồn âm thanh… |
-| Từ điển (tiếng Trung) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Thêm từ điển… |
-| Từ điển (tiếng Hàn) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Thêm từ điển… |
+| Từ điển (tiếng Trung) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Từ điển -> Thêm từ điển… |
+| Từ điển (tiếng Hàn) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Từ điển -> Thêm từ điển… |
 
 
 <details>
@@ -202,14 +202,14 @@ Sử dụng các tập từ tên riêng đi kèm được dẫn xuất từ [JMn
 | "Không tìm thấy bộ thẻ"         | Chọn một bộ thẻ đã có trong Cài đặt -> Thẻ & Anki. Bộ thẻ không được tạo sẵn cho bạn; nếu cần bộ thẻ mới, hãy tạo trong Anki trước. |
 | "Không tìm thấy loại ghi chú"    | Cấu hình tên các trường của loại ghi chú trong Cài đặt -> Thẻ & Anki.               |
 | "Không tìm thấy ffmpeg"       | Cài đặt ffmpeg và thêm nó vào PATH.                                               |
-| Không tìm thấy định nghĩa nào     | Thêm một từ điển Yomitan trong Cài đặt -> Thêm từ điển… (khuyến nghị), hoặc bật dự phòng Jisho (chậm hơn, bị giới hạn tốc độ). |
+| Không tìm thấy định nghĩa nào     | Thêm một từ điển Yomitan trong Cài đặt -> Từ điển -> Thêm từ điển… (khuyến nghị), hoặc, với tiếng Nhật, bật dự phòng Jisho (chậm hơn, bị giới hạn tốc độ). |
 | Trình cài đặt Windows không mở được / cảnh báo SmartScreen | Xem [Lưu ý lần chạy đầu](#lưu-ý-lần-chạy-đầu-bản-dựng-chưa-ký): chọn **More info** -> **Run anyway**; khôi phục các cảnh báo nhầm của Defender từ **Protection history**. |
 | Bản cài mới không có định nghĩa | Chạy Công cụ -> Trình hướng dẫn cài đặt hoặc Công cụ -> Tải tài nguyên được đề xuất. Nếu nhập thủ công, hãy giữ nguyên tệp ZIP Yomitan (đừng giải nén). |
 | Thêm từ điển bị treo hoặc thất bại | Ghi lại giai đoạn cuối cùng bạn nhìn thấy và đính kèm nhật ký (xem "Nhật ký nằm ở đâu?" bên dưới). Kèm theo tên, nguồn và kích thước tệp ZIP từ điển trong báo cáo. |
 | Nhật ký nằm ở đâu?      | Dùng Trợ giúp -> Mở thư mục nhật ký, hoặc mở `%USERPROFILE%\.anki_miner\anki_miner.log` trên Windows hoặc `~/.anki_miner/anki_miner.log` trên macOS/Linux. Nhật ký xoay vòng dùng hậu tố `.1` đến `.5`. Hãy gửi kèm `anki_miner.crash` nếu có - một sự cố làm sập ứng dụng sẽ ghi ngăn xếp vào tệp đó chứ không phải vào nhật ký - và `anki_miner.child.log`, chứa đầu ra của tiến trình phụ trợ. |
 | Báo cáo lỗi          | Trợ giúp -> Xuất chẩn đoán… sẽ ghi một tệp ZIP vào vị trí bạn chọn, chứa nhật ký (`anki_miner.log` cùng các bản xoay vòng, `anki_miner.crash`, `anki_miner.child.log`), tệp `settings.json` của bạn, các tệp cấu hình và trạng thái giao diện, ảnh chụp hàng đợi và tệp kê khai tải xuống, cùng các báo cáo được tạo về máy và trạng thái ứng dụng (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Hãy xem lại nó trước khi tải lên vì nó chứa đường dẫn và tên tệp từ máy tính của bạn. Không có gì được tải lên tự động. |
 | Nhật ký chẩn đoán chi tiết hơn | Đặt `ANKI_MINER_LOG_LEVEL=DEBUG` trước khi khởi động Anki Miner để ghi lại chi tiết của yt-dlp, urllib3 và fugashi bên thứ ba. Mặc định là `WARNING`; nhật ký của Anki Miner vẫn ở mức DEBUG. |
-| Âm thanh sai ngôn ngữ  | Công cụ thử các bản âm thanh theo ngôn ngữ khai thác trước, rồi mới lùi về bản mặc định.      |
+| Âm thanh sai ngôn ngữ  | Công cụ chọn bản âm thanh của ngôn ngữ khai thác, nếu không có thì chọn bản đầu tiên. Tự chọn bằng Rãnh (Video -> Đơn lẻ).      |
 | Phụ đề không khớp tiếng    | Dùng điều khiển bù thời gian phụ đề trong giao diện (khoảng ±300 giây).                 |
 
 ## Lộ trình
@@ -227,8 +227,8 @@ Danh sách ý tưởng cho các phiên bản Anki Miner trong tương lai. Khôn
   - [ ] Tự động tải phụ đề.
 
 - **Dài hạn**:
-  - [x] Bản chuyển sang Android -- https://github.com/0xzerolight/anki_miner_android
-  - [x] Vượt ra ngoài tiếng Nhật: khai thác tiếng Trung, tiếng Hàn và mười tám ngôn ngữ châu Âu.
+  - [x] Bản chuyển sang Android - https://github.com/0xzerolight/anki_miner_android
+  - [x] Vượt ra ngoài tiếng Nhật: thêm ba mươi mốt ngôn ngữ khai thác.
   - [ ] Tiện ích mở rộng trình duyệt cho Anki Miner.
 
 

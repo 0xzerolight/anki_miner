@@ -2090,8 +2090,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Khai thác từ manga</translation>
     </message>
     <message>
-        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
-        <translation>Khai thác từ vựng từ các tập manga đã xử lý bằng mokuro.</translation>
+        <source>Mine vocabulary from Japanese manga volumes processed with mokuro.</source>
+        <translation>Khai thác từ vựng từ các tập manga tiếng Nhật đã xử lý bằng mokuro.</translation>
     </message>
     <message>
         <source>Mine from novels</source>
@@ -2154,8 +2154,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Lọc bộ thẻ dựng sẵn thành bộ thẻ mới</translation>
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type — into a new deck. The source deck is not modified.</source>
-        <translation>Sao chép các ghi chú của một bộ thẻ Anki dựng sẵn vượt qua bộ lọc của bạn — từ đã biết, dải tần suất, danh sách đen, loại chữ viết — vào một bộ thẻ mới. Bộ thẻ nguồn không bị thay đổi.</translation>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese, Korean) — into a new deck. The source deck is not modified.</source>
+        <translation>Sao chép các ghi chú của một bộ thẻ Anki dựng sẵn vượt qua bộ lọc của bạn — từ đã biết, dải tần suất, danh sách đen, loại chữ viết (tiếng Nhật, tiếng Hàn) — vào một bộ thẻ mới. Bộ thẻ nguồn không bị thay đổi.</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
@@ -2218,8 +2218,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Khai thác một ngôn ngữ khác</translation>
     </message>
     <message>
-        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
-        <translation>Chuyển đổi ngôn ngữ khai thác; mỗi ngôn ngữ có từ điển, bộ lọc, bộ thẻ và trường thẻ riêng.</translation>
+        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields. Most languages download their engine here the first time.</source>
+        <translation>Chuyển đổi ngôn ngữ khai thác; mỗi ngôn ngữ có từ điển, bộ lọc, bộ thẻ và trường thẻ riêng. Hầu hết các ngôn ngữ tải engine của mình tại đây trong lần đầu.</translation>
     </message>
     <message>
         <source>i+1 sentence mining</source>
@@ -2326,6 +2326,22 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Coi cách viết kana của một từ bạn đã biết dưới dạng kanji cũng là đã biết (bật theo mặc định).</translation>
     </message>
     <message>
+        <source>Brazilian or European Portuguese</source>
+        <translation>Tiếng Bồ Đào Nha Brazil hay châu Âu</translation>
+    </message>
+    <message>
+        <source>Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>Chọn biến thể tiếng Bồ Đào Nha dùng để đọc âm thanh từ và câu, và danh sách tần suất mà phần thiết lập gợi ý.</translation>
+    </message>
+    <message>
+        <source>Hangul and hanja word filters</source>
+        <translation>Bộ lọc từ hangul và hanja</translation>
+    </message>
+    <message>
+        <source>Exclude hangul-only words, or words that contain hanja.</source>
+        <translation>Loại trừ từ chỉ có hangul, hoặc từ có chứa hanja.</translation>
+    </message>
+    <message>
         <source>Simplified or traditional characters</source>
         <translation>Chữ giản thể hoặc phồn thể</translation>
     </message>
@@ -2350,12 +2366,12 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Thêm tệp zip từ điển định dạng Yomitan của riêng bạn làm nguồn định nghĩa.</translation>
     </message>
     <message>
-        <source>Jisho.org online fallback</source>
-        <translation>Dự phòng trực tuyến Jisho.org</translation>
+        <source>Jisho.org online fallback (Japanese)</source>
+        <translation>Dự phòng trực tuyến Jisho.org (tiếng Nhật)</translation>
     </message>
     <message>
-        <source>Fall back to Jisho.org when your offline dictionaries have no entry.</source>
-        <translation>Dự phòng sang Jisho.org khi từ điển ngoại tuyến của bạn không có mục nào.</translation>
+        <source>For Japanese, fall back to Jisho.org when your offline dictionaries have no entry.</source>
+        <translation>Với tiếng Nhật, dự phòng sang Jisho.org khi từ điển ngoại tuyến của bạn không có mục nào.</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2378,8 +2394,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Điền các trường còn thiếu trên ghi chú hiện có</translation>
     </message>
     <message>
-        <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
-        <translation>Điền các trường trọng âm cao độ, tần suất, định nghĩa, cách đọc và âm thanh từ còn trống trên các ghi chú đã khai thác.</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
+        <translation>Điền các trường tần suất, định nghĩa và âm thanh từ còn trống trên các ghi chú đã khai thác, cùng trọng âm cao độ và cách đọc cho tiếng Nhật và các trường thẻ riêng của ngôn ngữ bạn.</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2418,8 +2434,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Âm thanh phát âm từ</translation>
     </message>
     <message>
-        <source>Attach native word audio to cards from audio packs, JPod101, or text-to-speech.</source>
-        <translation>Đính kèm âm thanh từ do người bản xứ đọc vào thẻ từ gói âm thanh, JPod101 hoặc chuyển văn bản thành giọng nói.</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
+        <translation>Đính kèm âm thanh từ vào thẻ từ gói âm thanh, JPod101 (tiếng Nhật), chuyển văn bản thành giọng nói của Google, hoặc của Microsoft Edge (tiếng Quảng Đông, tiếng Do Thái, tiếng Ba Tư, tiếng Slovenia).</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2442,8 +2458,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Âm thanh câu cho tài liệu đọc (TTS)</translation>
     </message>
     <message>
-        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
-        <translation>Tổng hợp âm thanh câu nói cho thẻ khai thác từ sách, manga và văn bản dán vào.</translation>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text. Not available for Persian or Slovenian.</source>
+        <translation>Tổng hợp âm thanh câu nói cho thẻ khai thác từ sách, manga và văn bản dán vào. Không khả dụng cho tiếng Ba Tư và tiếng Slovenia.</translation>
     </message>
     <message>
         <source>Add a custom word-audio source</source>
@@ -2524,6 +2540,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
         <translation>Đưa pinyin của từ lên thẻ của bạn, mỗi âm tiết mang màu của thanh điệu -- tùy chọn tô màu là Tô màu cách đọc theo thanh điệu, trong Cài đặt -&gt; Lọc.</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>Tô màu cách đọc theo thanh điệu</translation>
+    </message>
+    <message>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
+        <translation>Tô màu từng âm tiết của cách đọc pinyin hoặc jyutping theo thanh điệu, trong Cài đặt -&gt; Lọc.</translation>
     </message>
     <message>
         <source>Measure word field</source>
@@ -2642,16 +2666,16 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Tạo tệp .mokuro từ ảnh manga</translation>
     </message>
     <message>
-        <source>Run mokuro's OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation>Chạy OCR của mokuro trên một thư mục tập hoặc cả bộ để Đọc -&gt; Manga có thể khai thác. Cài đặt mokuro từ Cài đặt -&gt; Phiên âm &amp; Căn chỉnh.</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
+        <translation>Chạy OCR tiếng Nhật của mokuro trên một thư mục tập hoặc cả bộ để Đọc -&gt; Manga có thể khai thác. Cài đặt mokuro từ Cài đặt -&gt; Phiên âm &amp; Căn chỉnh.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>Đồng bộ sách nói với EPUB của nó</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitles or a reader can use.</source>
-        <translation>Phiên âm sách nói rồi khớp thời gian các câu của sách với bản ghi, tạo tệp .srt mà tab Sách nói, Đọc -&gt; Phụ đề, hoặc một trình đọc khác có thể dùng.</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
+        <translation>Phiên âm sách nói rồi khớp thời gian các câu của sách với bản ghi, tạo tệp .srt mà tab Sách nói, Đọc -&gt; Tệp phụ đề, hoặc một trình đọc khác có thể dùng.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -2682,8 +2706,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Tải các tài nguyên được đề xuất</translation>
     </message>
     <message>
-        <source>Get a curated dictionary, frequency list and pitch-accent data in one click from the Tools menu.</source>
-        <translation>Nhận từ điển, danh sách tần suất và dữ liệu trọng âm cao độ được chọn lọc chỉ trong một chạm từ menu Công cụ.</translation>
+        <source>Get the resources recommended for your mining language (dictionaries, frequency lists, and pitch-accent data for Japanese) in one click from the Tools menu.</source>
+        <translation>Nhận các tài nguyên được đề xuất cho ngôn ngữ khai thác của bạn (từ điển, danh sách tần suất, và dữ liệu trọng âm cao độ cho tiếng Nhật) chỉ trong một chạm từ menu Công cụ.</translation>
     </message>
     <message>
         <source>Create a desktop shortcut</source>

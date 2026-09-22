@@ -2081,7 +2081,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
+        <source>Mine vocabulary from Japanese manga volumes processed with mokuro.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2145,7 +2145,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type — into a new deck. The source deck is not modified.</source>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese, Korean) — into a new deck. The source deck is not modified.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2209,7 +2209,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
+        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields. Most languages download their engine here the first time.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2317,6 +2317,22 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Brazilian or European Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Hangul and hanja word filters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Exclude hangul-only words, or words that contain hanja.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Simplified or traditional characters</source>
         <translation type="unfinished" />
     </message>
@@ -2341,11 +2357,11 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Jisho.org online fallback</source>
+        <source>Jisho.org online fallback (Japanese)</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Fall back to Jisho.org when your offline dictionaries have no entry.</source>
+        <source>For Japanese, fall back to Jisho.org when your offline dictionaries have no entry.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2369,7 +2385,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2409,7 +2425,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Attach native word audio to cards from audio packs, JPod101, or text-to-speech.</source>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), Google text-to-speech, or Microsoft Edge text-to-speech (Cantonese, Hebrew, Persian, Slovenian).</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2433,7 +2449,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text. Not available for Persian or Slovenian.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2514,6 +2530,14 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2633,7 +2657,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Run mokuro's OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2641,7 +2665,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitles or a reader can use.</source>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2673,7 +2697,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Get a curated dictionary, frequency list and pitch-accent data in one click from the Tools menu.</source>
+        <source>Get the resources recommended for your mining language (dictionaries, frequency lists, and pitch-accent data for Japanese) in one click from the Tools menu.</source>
         <translation type="unfinished" />
     </message>
     <message>
