@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:7f211d1a7cf8c731 -->
+<!-- i18n-source: README.md sha256:1f8a3147ec4f94c3 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -67,7 +67,7 @@
 | Платформа | Файл |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS (Apple Silicon / M1-M4) | `AnkiMiner-*-macOS-arm64.dmg` |
+| macOS (Apple Silicon) | `AnkiMiner-*-macOS-arm64.dmg` |
 | macOS (Intel) | `AnkiMiner-*-macOS-x86_64.dmg` ¹ |
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (прочие) | `AnkiMiner-*-Linux-x86_64.AppImage` |
@@ -89,13 +89,13 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
-Для японского ничего дополнительно не нужно. Для майнинга любого другого языка добавьте его движок:
+Для японского, индонезийского и иврита ничего дополнительно не нужно. Для майнинга другого языка добавьте его движок:
 
 ```bash
-pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da] for one
+pipx install "anki-miner[languages]"   # all; or one of [zh], [ko], [yue], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da], [ru], [uk], [sl], [tr], [th], [vi]
 ```
 
-Сборки выше получают их прямо в приложении: Настройки -> Язык майнинга.
+У арабского и персидского нет extra. Их данные и модели spaCy для европейских языков скачиваются в приложении: Настройки -> Язык майнинга; сборки выше получают там всё.
 
 </details>
 
@@ -120,7 +120,7 @@ anki_miner_gui
 - **Аудиокниги** - майнинг аудиокниг, подкастов, радио, песен (пары аудио + субтитры/транскрипт).
 - **Чтение** - майнинг манги (mokuro), новелл (`.epub`, `.txt`; одна книга или целая папка), отдельных файлов субтитров или вставленного текста.
 - **Аналитика** - история майнинга, рейтинги сложности, достижения.
-- **Утилиты** - генерация субтитров (локальный Whisper), синхронизация субтитров по времени (ffsubsync/alass), сжатие медиа до аудио только с диалогами, загрузка видео/аудио/субтитров с любого сайта, поддерживаемого yt-dlp, копирование достойной изучения части готовой колоды в новую, дозаполнение полей на существующих карточках, а также OCR изображений страниц манги в файлы .mokuro (mokuro, устанавливается в Настройках).
+- **Утилиты** - генерация субтитров (локальный Whisper), синхронизация субтитров по времени (ffsubsync/alass), сжатие медиа до аудио только с диалогами, загрузка видео/аудио/субтитров с любого сайта, поддерживаемого yt-dlp, копирование достойной изучения части готовой колоды в новую, дозаполнение полей на существующих карточках, OCR изображений страниц манги в файлы .mokuro (mokuro, устанавливается в Настройках), а также синхронизация аудиокниги с текстом её книги (Синхронизация аудиокниги).
 - **Настройки** - все параметры конфигурации.
 
 ## Другие возможности
@@ -131,8 +131,8 @@ anki_miner_gui
 - Обширная фильтрация: i+1, диапазон рангов частотности, чёрный список, regex, наборы слов и другое.
 - Импорт офлайн-словарей Yomitan - определения, тональное ударение, частотность - объединяются по приоритету.
 - Несколько списков частотности, объединяемых по приоритету.
-- Аудио слов на карточках из локальных аудиопакетов, JapanesePod101 или Google TTS.
-- Аудио предложений на карточках Чтения из Google Translate TTS или Naver Papago (по умолчанию выключено).
+- Аудио слов на карточках из локальных аудиопакетов, JapanesePod101, Google TTS или Microsoft Edge TTS.
+- Аудио предложений на карточках Чтения из Google Translate TTS или, для японского и корейского, Naver Papago (по умолчанию выключено).
 - Оформление глоссария для каждого словаря отдельно, в стиле Yomitan.
 - Встроенный предпросмотр видео на libmpv - воспроизведение сцены слова во время курирования или подстройка времени субтитров с живым воспроизведением.
 - Анимированные скриншоты (см. примеры карточек выше).
@@ -164,7 +164,7 @@ anki_miner_gui
 1. **Прочитать субтитры** и разбить текст на отдельные слова.
 2. **Отфильтровать** до значимых слов, которые вы ещё не знаете - при желании можно самостоятельно просмотреть список в Кураторе слов.
 3. **Захватить скриншот и аудиофрагмент** из видео для каждой строки.
-4. **Найти определения** в настроенных офлайн-словарях, при необходимости с резервным обращением к Jisho онлайн (медленнее, с ограничением частоты запросов).
+4. **Найти определения** в настроенных офлайн-словарях, для японского при необходимости с резервным обращением к Jisho онлайн (медленнее, с ограничением частоты запросов).
 5. **Отправить готовые карточки в Anki.**
 
 </details>
@@ -175,16 +175,16 @@ anki_miner_gui
 
 | Тип | Ресурс | Загрузка | Как добавить |
 |------|----------|----------|---------|
-| Словарь | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Добавить словарь… |
-| Словарь | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Добавить словарь… |
-| Словарь | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Формируется на сайте | Добавить словарь… |
+| Словарь | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Словари -> Добавить словарь… |
+| Словарь | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Словари -> Добавить словарь… |
+| Словарь | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Формируется на сайте | Словари -> Добавить словарь… |
 | Тональное ударение | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Тональное ударение -> Добавить источник тонального ударения… |
 | Тональное ударение | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Тональное ударение -> Добавить источник тонального ударения… |
 | Частотность | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Частотность -> Добавить источник частотности… |
 | Частотность | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Частотность -> Добавить источник частотности… |
 | Аудио слов | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | Торрент коллекции или созданный `android.db` | Аудио -> Добавить источник аудио… |
-| Словарь (китайский) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Добавить словарь… |
-| Словарь (корейский) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Добавить словарь… |
+| Словарь (китайский) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Словари -> Добавить словарь… |
+| Словарь (корейский) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Словари -> Добавить словарь… |
 
 
 <details>
@@ -202,14 +202,14 @@ anki_miner_gui
 | «Колода не найдена»         | Выберите существующую колоду в Настройки -> Карточки и Anki. Колоды не создаются автоматически; сначала создайте её в Anki, если нужна новая. |
 | «Тип заметки не найден»    | Настройте названия полей типа заметки в Настройки -> Карточки и Anki.               |
 | «ffmpeg не найден»       | Установите ffmpeg и добавьте его в PATH.                                               |
-| Определения не найдены     | Добавьте словарь Yomitan в Настройки -> Добавить словарь… (рекомендуется) или включите резервный вариант с Jisho (медленнее, с ограничением частоты запросов). |
+| Определения не найдены     | Добавьте словарь Yomitan в Настройки -> Словари -> Добавить словарь… (рекомендуется) или, для японского, включите резервный вариант с Jisho (медленнее, с ограничением частоты запросов). |
 | Установщик Windows не открывается / предупреждение SmartScreen | См. [Заметки о первом запуске](#заметки-о-первом-запуске-неподписанные-сборки): выберите **Подробнее** -> **Выполнить в любом случае**; восстановите ложные срабатывания Defender из **Журнала защиты**. |
 | После чистой установки нет определений | Запустите Инструменты -> Мастер настройки или Инструменты -> Загрузить рекомендуемые ресурсы. Для ручного импорта не распаковывайте ZIP-архив Yomitan. |
 | Добавление словаря зависает или завершается ошибкой | Отметьте последний видимый этап и приложите журналы (см. «Где найти журналы?» ниже). Укажите в отчёте имя ZIP-архива словаря, источник и размер. |
 | Где найти журналы?      | Используйте Справка -> Открыть папку журналов или откройте `%USERPROFILE%\.anki_miner\anki_miner.log` на Windows либо `~/.anki_miner/anki_miner.log` на macOS/Linux. У ротированных журналов суффиксы от `.1` до `.5`. Приложите также `anki_miner.crash`, если он есть: аварийное завершение записывает стек именно в этот файл, а не в журнал, - и `anki_miner.child.log` с выводом вспомогательного процесса. |
 | Как сообщить об ошибке          | Справка -> Экспорт диагностики… записывает в выбранное вами место ZIP-архив с журналами (`anki_miner.log` и его ротации, `anki_miner.crash`, `anki_miner.child.log`), вашим `settings.json`, файлами конфигурации и состояния интерфейса, снимками очередей и манифестами загрузок, а также со сформированными отчётами о машине и состоянии приложения (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Проверьте его перед отправкой, так как он содержит пути и имена файлов с вашего компьютера. Автоматически ничего не отправляется. |
 | Более подробное журналирование | Установите `ANKI_MINER_LOG_LEVEL=DEBUG` перед запуском Anki Miner, чтобы фиксировать подробности сторонних yt-dlp, urllib3 и fugashi. По умолчанию `WARNING`; журналы Anki Miner остаются на уровне DEBUG. |
-| Аудио не на том языке  | Инструмент сначала пробует аудиодорожки на языке майнинга, затем переключается на дорожку по умолчанию.      |
+| Аудио не на том языке  | Инструмент выбирает аудиодорожку на языке майнинга, а если её нет, первую. Выберите её сами кнопкой Дорожки (Видео -> Один).      |
 | Субтитры рассинхронизированы    | Используйте регулятор смещения субтитров в интерфейсе (диапазон ±300 секунд).                 |
 
 ## Планы на будущее
@@ -227,8 +227,8 @@ anki_miner_gui
   - [ ] Автоматическая загрузка субтитров.
 
 - **Долгосрочные планы**:
-  - [x] Портирование на Android -- https://github.com/0xzerolight/anki_miner_android
-  - [x] За пределами японского: майнинг китайского, корейского и восемнадцати европейских языков.
+  - [x] Портирование на Android - https://github.com/0xzerolight/anki_miner_android
+  - [x] За пределами японского: ещё тридцать один язык майнинга.
   - [ ] Расширение для браузера Anki Miner.
 
 

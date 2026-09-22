@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:7f211d1a7cf8c731 -->
+<!-- i18n-source: README.md sha256:1f8a3147ec4f94c3 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -67,7 +67,7 @@ Ambil unduhan untuk platform Anda dari [rilis terbaru](https://github.com/0xzero
 | Platform | Unduhan |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS (Apple Silicon / M1-M4) | `AnkiMiner-*-macOS-arm64.dmg` |
+| macOS (Apple Silicon) | `AnkiMiner-*-macOS-arm64.dmg` |
 | macOS (Intel) | `AnkiMiner-*-macOS-x86_64.dmg` ¹ |
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (lainnya) | `AnkiMiner-*-Linux-x86_64.AppImage` |
@@ -89,13 +89,13 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
-Bahasa Jepang tidak perlu tambahan apa pun. Untuk bahasa mining lainnya, tambahkan mesinnya:
+Bahasa Jepang, Indonesia, dan Ibrani tidak perlu tambahan apa pun. Untuk bahasa mining lain, tambahkan mesinnya:
 
 ```bash
-pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da] for one
+pipx install "anki-miner[languages]"   # all; or one of [zh], [ko], [yue], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da], [ru], [uk], [sl], [tr], [th], [vi]
 ```
 
-Unduhan di atas mengambilnya langsung di dalam aplikasi, lewat Pengaturan -> Bahasa Mining.
+Bahasa Arab dan Persia tidak punya extra. Datanya, dan model spaCy untuk bahasa-bahasa Eropa, diunduh di dalam aplikasi lewat Pengaturan -> Bahasa Mining, tempat unduhan di atas mengambil semuanya.
 
 </details>
 
@@ -120,7 +120,7 @@ Untuk pengaturan pengembangan lengkap, lihat [CONTRIBUTING.md](../CONTRIBUTING.m
 - **Buku Audio** - mining buku audio, podcast, radio, lagu (pasangan audio + subtitel/transkrip).
 - **Bacaan** - mining manga (mokuro), novel (`.epub`, `.txt`; satu buku atau seluruh folder), berkas subtitel mandiri, atau teks yang ditempel.
 - **Analitik** - riwayat mining, peringkat kesulitan, milestone.
-- **Utilitas** - membuat subtitel (Whisper lokal), mengatur ulang waktu subtitel (ffsubsync/alass), memadatkan media menjadi audio berisi dialog saja, mengunduh video/audio/subtitel dari situs mana pun yang didukung yt-dlp, menyalin bagian yang layak dipelajari dari dek siap pakai ke dek baru, mengisi ulang bidang pada kartu yang sudah ada, dan meng-OCR gambar halaman manga menjadi berkas .mokuro (mokuro, dapat dipasang dari Pengaturan).
+- **Utilitas** - membuat subtitel (Whisper lokal), mengatur ulang waktu subtitel (ffsubsync/alass), memadatkan media menjadi audio berisi dialog saja, mengunduh video/audio/subtitel dari situs mana pun yang didukung yt-dlp, menyalin bagian yang layak dipelajari dari dek siap pakai ke dek baru, mengisi ulang bidang pada kartu yang sudah ada, meng-OCR gambar halaman manga menjadi berkas .mokuro (mokuro, dapat dipasang dari Pengaturan), dan menyelaraskan buku audio dengan teks bukunya (Sinkronisasi Buku Audio).
 - **Pengaturan** - semua yang bisa dikonfigurasi.
 
 ## Fitur Lainnya
@@ -131,8 +131,8 @@ Untuk pengaturan pengembangan lengkap, lihat [CONTRIBUTING.md](../CONTRIBUTING.m
 - Filter yang luas: i+1, rentang peringkat frekuensi, daftar hitam, regex, kumpulan kata, dan lainnya.
 - Impor kamus Yomitan offline - definisi, aksen nada, frekuensi - dirangkai berdasarkan prioritas.
 - Beberapa daftar frekuensi dirangkai berdasarkan prioritas.
-- Audio kata pada kartu dari paket audio lokal, JapanesePod101, atau Google TTS.
-- Audio kalimat pada kartu Bacaan dari Google Translate TTS atau Naver Papago (nonaktif secara default).
+- Audio kata pada kartu dari paket audio lokal, JapanesePod101, Google TTS, atau Microsoft Edge TTS.
+- Audio kalimat pada kartu Bacaan dari Google Translate TTS, atau Naver Papago untuk bahasa Jepang dan Korea (nonaktif secara default).
 - Gaya glosarium per kamus, bergaya Yomitan.
 - Pratinjau video libmpv tersemat - putar adegan sebuah kata saat mengkurasi, atau sesuaikan waktu subtitel dengan pemutaran langsung.
 - Tangkapan layar beranimasi (lihat contoh kartu di atas).
@@ -164,7 +164,7 @@ Ingin tema lain ditambahkan? Ajukan lewat GitHub Issue.
 1. **Baca subtitel** dan pecah teksnya menjadi kata per kata.
 2. **Filter** ke kata isi yang belum Anda kenal - opsional meninjau sendiri daftarnya di Word Curator.
 3. **Ambil tangkapan layar dan klip audio** dari video untuk setiap baris.
-4. **Cari definisi** di kamus offline yang Anda konfigurasi, opsional beralih ke Jisho online jika diaktifkan (lebih lambat, dibatasi laju).
+4. **Cari definisi** di kamus offline yang Anda konfigurasi, opsional beralih ke Jisho online untuk bahasa Jepang (lebih lambat, dibatasi laju).
 5. **Kirim kartu yang sudah jadi ke Anki.**
 
 </details>
@@ -175,16 +175,16 @@ Bahasa Jepang kecuali ditandai lain. Panduan Penyiapan menawarkan set yang sesua
 
 | Jenis | Sumber Daya | Unduhan | Tambah melalui |
 |------|----------|----------|---------|
-| Kamus | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Tambahkan kamus… |
-| Kamus | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Tambahkan kamus… |
-| Kamus | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Dibuat di situs | Tambahkan kamus… |
+| Kamus | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Kamus -> Tambahkan kamus… |
+| Kamus | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Kamus -> Tambahkan kamus… |
+| Kamus | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Dibuat di situs | Kamus -> Tambahkan kamus… |
 | Aksen Nada | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Aksen Nada -> Tambahkan sumber aksen nada… |
 | Aksen Nada | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Aksen Nada -> Tambahkan sumber aksen nada… |
 | Frekuensi | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Frekuensi -> Tambahkan sumber frekuensi… |
 | Frekuensi | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Frekuensi -> Tambahkan sumber frekuensi… |
 | Audio kata | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | Torrent koleksi atau `android.db` yang dihasilkan | Audio -> Tambahkan sumber audio… |
-| Kamus (Mandarin) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Tambahkan kamus… |
-| Kamus (Korea) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Tambahkan kamus… |
+| Kamus (Mandarin) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Kamus -> Tambahkan kamus… |
+| Kamus (Korea) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Kamus -> Tambahkan kamus… |
 
 
 <details>
@@ -202,14 +202,14 @@ Menggunakan kumpulan kata nama bawaan yang berasal dari [JMnedict](https://www.e
 | "Dek tidak ditemukan"         | Pilih dek yang sudah ada di Pengaturan -> Kartu & Anki. Dek tidak dibuat otomatis; buat dulu di Anki jika Anda perlu dek baru. |
 | "Tipe catatan tidak ditemukan"    | Konfigurasikan nama bidang tipe catatan Anda di Pengaturan -> Kartu & Anki.               |
 | "ffmpeg tidak ditemukan"       | Pasang ffmpeg dan tambahkan ke PATH.                                               |
-| Tidak ada definisi ditemukan     | Tambahkan kamus Yomitan di Pengaturan -> Tambahkan kamus… (disarankan), atau aktifkan fallback Jisho (lebih lambat, dibatasi laju). |
+| Tidak ada definisi ditemukan     | Tambahkan kamus Yomitan di Pengaturan -> Kamus -> Tambahkan kamus… (disarankan), atau, untuk bahasa Jepang, aktifkan fallback Jisho (lebih lambat, dibatasi laju). |
 | Installer Windows tidak mau terbuka / peringatan SmartScreen | Lihat [Catatan penjalanan pertama](#catatan-penjalanan-pertama-build-tanpa-tanda-tangan): pilih **Info lainnya** -> **Tetap jalankan**; pulihkan positif palsu Defender dari **Riwayat perlindungan**. |
 | Instalasi baru tidak punya definisi | Jalankan Alat -> Wizard Penyiapan atau Alat -> Unduh Sumber Daya yang Direkomendasikan. Untuk impor manual, biarkan ZIP Yomitan utuh (jangan diekstrak). |
 | Tambahkan kamus macet atau gagal | Catat tahap terakhir yang terlihat dan lampirkan log (lihat "Di mana letak lognya?" di bawah). Sertakan nama ZIP kamus, sumber, dan ukurannya dalam laporan. |
 | Di mana letak lognya?      | Gunakan Bantuan -> Buka Folder Log, atau buka `%USERPROFILE%\.anki_miner\anki_miner.log` di Windows atau `~/.anki_miner/anki_miner.log` di macOS/Linux. Log yang dirotasi memakai akhiran `.1` sampai `.5`. Kirim juga `anki_miner.crash` bila ada - crash yang mematikan aplikasi menulis stack-nya ke berkas itu, bukan ke log - dan `anki_miner.child.log`, yang memuat keluaran proses pembantu. |
 | Melaporkan bug          | Bantuan -> Ekspor Diagnostik… menulis ZIP ke lokasi pilihan Anda, berisi log (`anki_miner.log` beserta rotasinya, `anki_miner.crash`, `anki_miner.child.log`), `settings.json` Anda, berkas konfigurasi dan status antarmuka, snapshot antrean dan manifes unduhan, serta laporan yang dihasilkan tentang mesin dan status aplikasi (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Tinjau dulu sebelum mengunggahnya karena berisi jalur berkas dan nama berkas dari komputer Anda. Tidak ada yang diunggah otomatis. |
 | Logging diagnostik lebih rinci | Atur `ANKI_MINER_LOG_LEVEL=DEBUG` sebelum menjalankan Anki Miner untuk menangkap detail yt-dlp, urllib3, dan fugashi pihak ketiga. Default-nya `WARNING`; log Anki Miner tetap di DEBUG. |
-| Audio bahasanya salah  | Alat ini mencoba trek audio dalam bahasa mining terlebih dahulu, lalu beralih ke default.      |
+| Audio bahasanya salah  | Alat ini memilih trek audio bahasa mining, atau trek pertama jika tidak ada. Pilih sendiri lewat Trek (Video -> Tunggal).      |
 | Subtitel tidak sinkron    | Gunakan kontrol offset subtitel di GUI (rentang ±300 detik).                 |
 
 ## Peta Jalan
@@ -227,8 +227,8 @@ Daftar ide untuk versi mendatang Anki Miner. Bukan dalam urutan prioritas. Permi
   - [ ] Pengunduhan subtitel otomatis.
 
 - **Jangka panjang**:
-  - [x] Port Android -- https://github.com/0xzerolight/anki_miner_android
-  - [x] Di luar bahasa Jepang: mining bahasa Mandarin, Korea, dan delapan belas bahasa Eropa.
+  - [x] Port Android - https://github.com/0xzerolight/anki_miner_android
+  - [x] Di luar bahasa Jepang: tiga puluh satu bahasa mining lainnya.
   - [ ] Ekstensi peramban Anki Miner.
 
 

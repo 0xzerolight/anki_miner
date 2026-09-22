@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:7f211d1a7cf8c731 -->
+<!-- i18n-source: README.md sha256:1f8a3147ec4f94c3 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -67,7 +67,7 @@ Android 上也能用 - <a href="https://github.com/0xzerolight/anki_miner_androi
 | 平台 | 下載檔案 |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS（Apple Silicon / M1-M4） | `AnkiMiner-*-macOS-arm64.dmg` |
+| macOS（Apple Silicon） | `AnkiMiner-*-macOS-arm64.dmg` |
 | macOS（Intel） | `AnkiMiner-*-macOS-x86_64.dmg` ¹ |
 | Linux（Debian/Ubuntu） | `anki-miner_*_amd64.deb` |
 | Linux（其他） | `AnkiMiner-*-Linux-x86_64.AppImage` |
@@ -89,13 +89,13 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
-日語不需額外安裝。要採集其他語言，請加裝對應的引擎:
+日語、印尼語和希伯來語不需額外安裝。要採集其他語言，請加裝對應的引擎:
 
 ```bash
-pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da] for one
+pipx install "anki-miner[languages]"   # all; or one of [zh], [ko], [yue], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da], [ru], [uk], [sl], [tr], [th], [vi]
 ```
 
-上面的下載版改為在應用程式內取得，位於設定 -> 採集語言。
+阿拉伯語和波斯語沒有 extra。它們的資料以及歐洲語言的 spaCy 模型會在應用程式內從設定 -> 採集語言下載，上面的下載版也在那裡取得全部內容。
 
 </details>
 
@@ -120,7 +120,7 @@ anki_miner_gui
 - **有聲書** - 採集有聲書、Podcast、廣播、歌曲（音訊 + 字幕／逐字稿組合）。
 - **閱讀** - 採集漫畫（mokuro）、小說（`.epub`、`.txt`；單本書或整個資料夾）、獨立字幕檔，或貼上的文字。
 - **分析** - 採集歷史、難度排名、里程碑。
-- **工具** - 生成字幕（本機 Whisper）、重新校時字幕（ffsubsync/alass）、把媒體濃縮成只有對話的音訊、從 yt-dlp 支援的任何網站下載影片/音訊/字幕、把現成牌組中值得學的部分複製到新牌組、為既有卡片補齊欄位，以及把漫畫頁面圖片 OCR 成 .mokuro 檔案（mokuro，可從設定安裝）。
+- **工具** - 生成字幕（本機 Whisper）、重新校時字幕（ffsubsync/alass）、把媒體濃縮成只有對話的音訊、從 yt-dlp 支援的任何網站下載影片/音訊/字幕、把現成牌組中值得學的部分複製到新牌組、為既有卡片補齊欄位、把漫畫頁面圖片 OCR 成 .mokuro 檔案（mokuro，可從設定安裝），以及讓有聲書對齊書本文字（有聲書同步）。
 - **設定** - 所有可調整的項目。
 
 ## 其他功能
@@ -131,8 +131,8 @@ anki_miner_gui
 - 完整的篩選機制：i+1、頻率排名區間、黑名單、正規表示式、單字集等等。
 - 離線 Yomitan 字典匯入 - 釋義、高低音調、頻率 - 依優先順序串接。
 - 多份頻率清單依優先順序串接。
-- 卡片上的單字音訊，來源可為本機音訊包、JapanesePod101 或 Google TTS。
-- 閱讀卡片上的句子音訊，來源可為 Google Translate TTS 或 Naver Papago（預設關閉）。
+- 卡片上的單字音訊，來源可為本機音訊包、JapanesePod101、Google TTS 或 Microsoft Edge TTS。
+- 閱讀卡片上的句子音訊，來源可為 Google Translate TTS，日文與韓文也可用 Naver Papago（預設關閉）。
 - 各字典獨立的釋義樣式，Yomitan 風格。
 - 內嵌的 libmpv 影片預覽 - 整理單字時播放該單字的場景，或在即時播放中微調字幕時間。
 - 動態螢幕截圖（見上方的卡片範例）。
@@ -164,7 +164,7 @@ anki_miner_gui
 1. **讀取字幕**並把文字切分成一個個單字。
 2. **篩選**出你還不認識的實詞 - 也可以自己在單字整理工具中檢視清單。
 3. 為每一行**擷取螢幕截圖與音訊片段**。
-4. 在你設定的離線字典中**查詢釋義**，若有啟用則可退回線上 Jisho（較慢，有速率限制）。
+4. 在你設定的離線字典中**查詢釋義**，日文還可退回線上 Jisho（較慢，有速率限制）。
 5. **把完成的卡片送到 Anki。**
 
 </details>
@@ -175,16 +175,16 @@ anki_miner_gui
 
 | 類型 | 資源 | 下載 | 加入方式 |
 |------|----------|----------|---------|
-| 字典 | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | 新增字典… |
-| 字典 | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | 新增字典… |
-| 字典 | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | 於網站上產生 | 新增字典… |
+| 字典 | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | 字典 -> 新增字典… |
+| 字典 | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | 字典 -> 新增字典… |
+| 字典 | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | 於網站上產生 | 字典 -> 新增字典… |
 | 高低音調 | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | 高低音調 -> 新增高低音調來源… |
 | 高低音調 | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | 高低音調 -> 新增高低音調來源… |
 | 頻率 | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | 頻率 -> 新增頻率來源… |
 | 頻率 | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | 頻率 -> 新增頻率來源… |
 | 單字音訊 | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | 合集種子或產生的 `android.db` | 音訊 -> 新增音訊來源… |
-| 字典（中文） | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | 新增字典… |
-| 字典（韓文） | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | 新增字典… |
+| 字典（中文） | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | 字典 -> 新增字典… |
+| 字典（韓文） | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | 字典 -> 新增字典… |
 
 
 <details>
@@ -202,14 +202,14 @@ anki_miner_gui
 | 「找不到牌組」         | 在設定 -> 卡片與 Anki 中選擇既有的牌組。程式不會替你建立牌組；若需要新牌組，請先在 Anki 中建立。 |
 | 「找不到筆記類型」    | 在設定 -> 卡片與 Anki 中設定你的筆記類型欄位名稱。               |
 | 「找不到 ffmpeg」       | 安裝 ffmpeg 並把它加入 PATH。                                               |
-| 找不到任何釋義     | 在設定 -> 新增字典… 中加入 Yomitan 字典（建議做法），或啟用 Jisho 備援（較慢，有速率限制）。 |
+| 找不到任何釋義     | 在設定 -> 字典 -> 新增字典… 中加入 Yomitan 字典（建議做法），或（僅限日文）啟用 Jisho 備援（較慢，有速率限制）。 |
 | Windows 安裝程式無法開啟／出現 SmartScreen 警告 | 見[首次執行注意事項](#首次執行注意事項未簽章版本)：選擇**其他資訊** -> **仍要執行**；Defender 誤判請從**保護歷程記錄**還原。 |
 | 全新安裝後沒有任何釋義 | 執行工具 -> 設定精靈，或工具 -> 下載推薦資源。若要手動匯入，請保持 Yomitan ZIP 原樣（不要解壓縮）。 |
 | 新增字典卡住或失敗 | 記下最後看到的階段並附上記錄檔（見下方「記錄檔在哪裡？」）。回報時請附上字典 ZIP 的檔名、來源與大小。 |
 | 記錄檔在哪裡？      | 使用說明 -> 開啟記錄資料夾，或在 Windows 上開啟 `%USERPROFILE%\.anki_miner\anki_miner.log`，macOS/Linux 上開啟 `~/.anki_miner/anki_miner.log`。輪替後的記錄檔使用 `.1` 到 `.5` 的後綴。 若有 `anki_miner.crash` 也請一併提供：讓應用程式崩潰的錯誤會把呼叫堆疊寫進該檔案而非記錄檔；保存輔助行程輸出的 `anki_miner.child.log` 同樣如此。 |
 | 回報錯誤          | 說明 -> 匯出診斷資訊… 會把記錄檔（`anki_miner.log` 及其輪替檔、`anki_miner.crash`、`anki_miner.child.log`）、你的 `settings.json`、設定與介面狀態檔案、佇列快照與下載清單，以及關於本機和應用程式狀態的產生報告（`environment.txt`、`health.txt`、`resources.txt`、`stores.txt`、`disk.txt`、`screens.txt`）寫成 ZIP，存到你選擇的位置。上傳前請先檢視內容，因為其中包含你電腦上的檔案路徑與檔名。程式不會自動上傳任何東西。 |
 | 更詳細的診斷記錄 | 啟動 Anki Miner 前設定 `ANKI_MINER_LOG_LEVEL=DEBUG`，以擷取第三方 yt-dlp、urllib3 與 fugashi 的細節。預設為 `WARNING`；Anki Miner 本身的記錄維持在 DEBUG。 |
-| 音訊語言不對  | 程式會先嘗試採集語言的音軌，找不到才退回預設音軌。      |
+| 音訊語言不對  | 程式會選擇採集語言的音軌，沒有則用第一條音軌。可用音軌（影片 -> 單一）自行選擇。      |
 | 字幕不同步    | 使用 GUI 中的字幕位移控制項（範圍 ±300 秒）。                 |
 
 ## 藍圖
@@ -227,8 +227,8 @@ Anki Miner 未來版本的構想清單。順序不代表優先度。功能請求
   - [ ] 自動下載字幕。
 
 - **長期目標**：
-  - [x] Android 移植 -- https://github.com/0xzerolight/anki_miner_android
-  - [x] 超越日文：採集中文、韓文與十八種歐洲語言。
+  - [x] Android 移植 - https://github.com/0xzerolight/anki_miner_android
+  - [x] 超越日文：另外三十一種採集語言。
   - [ ] Anki Miner 瀏覽器擴充功能。
 
 

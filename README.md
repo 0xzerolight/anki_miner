@@ -65,7 +65,7 @@ Grab the download for your platform from the [latest release](https://github.com
 | Platform | Download |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS (Apple Silicon / M1-M4) | `AnkiMiner-*-macOS-arm64.dmg` |
+| macOS (Apple Silicon) | `AnkiMiner-*-macOS-arm64.dmg` |
 | macOS (Intel) | `AnkiMiner-*-macOS-x86_64.dmg` ¹ |
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (other) | `AnkiMiner-*-Linux-x86_64.AppImage` |
@@ -87,13 +87,13 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
-Japanese needs nothing extra. For any other mining language, add its engine:
+Japanese, Indonesian and Hebrew need nothing extra. For another mining language, add its engine:
 
 ```bash
-pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da] for one
+pipx install "anki-miner[languages]"   # all; or one of [zh], [ko], [yue], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da], [ru], [uk], [sl], [tr], [th], [vi]
 ```
 
-The downloads above fetch these in-app instead, from Settings -> Mining Language.
+Arabic and Persian have no extra. Their data, and the spaCy models of the European languages, download in-app from Settings -> Mining Language, where the downloads above fetch everything.
 
 </details>
 
@@ -118,7 +118,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Audiobooks** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
 - **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), standalone subtitle files, or pasted text.
 - **Analytics** - mining history, difficulty rankings, milestones.
-- **Utilities** - generate subtitles (local Whisper), retime subtitles (ffsubsync/alass), condense media to dialogue-only audio, download video/audio/subtitles from any site yt-dlp supports, copy the worth-learning part of a premade deck into a new one, backfill fields on existing cards, and OCR manga page images into .mokuro files (mokuro, installable from Settings).
+- **Utilities** - generate subtitles (local Whisper), retime subtitles (ffsubsync/alass), condense media to dialogue-only audio, download video/audio/subtitles from any site yt-dlp supports, copy the worth-learning part of a premade deck into a new one, backfill fields on existing cards, OCR manga page images into .mokuro files (mokuro, installable from Settings), and time an audiobook to its book's text (Audiobook Sync).
 - **Settings** - everything configurable.
 
 ## Other Features
@@ -129,8 +129,8 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - Extensive filtering: i+1, frequency rank range, blacklist, regex, wordsets, and more.
 - Offline Yomitan dictionary import - definitions, pitch accent, frequency - chained by priority.
 - Multiple frequency lists chained by priority.
-- Word audio on cards from local audio packs, JapanesePod101, or Google TTS.
-- Sentence audio on Reading cards from Google Translate TTS or Naver Papago (off by default).
+- Word audio on cards from local audio packs, JapanesePod101, Google TTS, or Microsoft Edge TTS.
+- Sentence audio on Reading cards from Google Translate TTS, or Naver Papago for Japanese and Korean (off by default).
 - Per-dictionary glossary styling, Yomitan-style.
 - Embedded libmpv video preview - play a word's scene while curating, or nudge subtitle timing with live playback.
 - Animated screenshots (see example cards above).
@@ -162,7 +162,7 @@ Want another theme added? Suggest in a GitHub Issue.
 1. **Read the subtitles** and split the text into individual words.
 2. **Filter** to content words you don't already know - optionally reviewing the list yourself in the Word Curator.
 3. **Grab a screenshot and audio clip** from the video for each line.
-4. **Look up definitions** in your configured offline dictionaries, optionally falling back to Jisho online if enabled (slower, rate-limited).
+4. **Look up definitions** in your configured offline dictionaries, optionally falling back to Jisho online for Japanese (slower, rate-limited).
 5. **Send the finished cards to Anki.**
 
 </details>
@@ -173,16 +173,16 @@ Japanese unless marked otherwise. The Setup Wizard offers the right set for your
 
 | Type | Resource | Download | Add via |
 |------|----------|----------|---------|
-| Dictionary | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Add Dictionary… |
-| Dictionary | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Add Dictionary… |
-| Dictionary | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Generated on site | Add Dictionary… |
+| Dictionary | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Dictionaries -> Add dictionary… |
+| Dictionary | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Dictionaries -> Add dictionary… |
+| Dictionary | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Generated on site | Dictionaries -> Add dictionary… |
 | Pitch | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Pitch Accent -> Add pitch source… |
 | Pitch | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Pitch Accent -> Add pitch source… |
 | Frequency | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Frequency -> Add frequency source… |
 | Frequency | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Frequency -> Add frequency source… |
 | Word audio | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | Collection torrent or generated `android.db` | Audio -> Add audio source… |
-| Dictionary (Chinese) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Add Dictionary… |
-| Dictionary (Korean) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Add Dictionary… |
+| Dictionary (Chinese) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Dictionaries -> Add dictionary… |
+| Dictionary (Korean) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Dictionaries -> Add dictionary… |
 
 
 <details>
@@ -200,14 +200,14 @@ Uses bundled name wordsets derived from [JMnedict](https://www.edrdg.org/enamdic
 | "Deck not found"         | Pick an existing deck in Settings -> Cards & Anki. Decks are not created for you; make it in Anki first if you need a new one. |
 | "Note type not found"    | Configure your note type's field names in Settings -> Cards & Anki.               |
 | "ffmpeg not found"       | Install ffmpeg and add it to PATH.                                               |
-| No definitions found     | Add a Yomitan dictionary in Settings -> Add Dictionary… (recommended), or enable the Jisho fallback (slower, rate-limited). |
+| No definitions found     | Add a Yomitan dictionary in Settings -> Dictionaries -> Add dictionary… (recommended), or, for Japanese, enable the Jisho fallback (slower, rate-limited). |
 | Windows installer will not open / SmartScreen warning | See [First-run notes](#first-run-notes-unsigned-builds): select **More info** -> **Run anyway**; restore Defender false positives from **Protection history**. |
 | Fresh install has no definitions | Run Tools -> Setup Wizard or Tools -> Download Recommended Resources. For manual import, keep the Yomitan ZIP intact (do not unzip it). |
 | Add Dictionary stalls or fails | Note the last visible stage and attach logs (see "Where are the logs?" below). Include the dictionary ZIP name, source, and size in the report. |
-| Where are the logs?      | Use Help -> Open Log Folder, or open `%USERPROFILE%\.anki_miner\anki_miner.log` on Windows or `~/.anki_miner/anki_miner.log` on macOS/Linux. Rotated logs use the `.1` through `.5` suffixes. Send `anki_miner.crash` too if it is there — a crash that took the app down writes its stack to that file, not to the log — and `anki_miner.child.log`, which holds a helper process's output. |
-| Reporting a bug          | Help → Export Diagnostics… writes a ZIP to a location you choose, holding the logs (`anki_miner.log` and its rotations, `anki_miner.crash`, `anki_miner.child.log`), your `settings.json`, your config and UI-state files, queue snapshots and download manifests, and generated reports of the machine and app state (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Review it before uploading because it contains file paths and file names from your computer. Nothing is uploaded automatically. |
+| Where are the logs?      | Use Help -> Open Log Folder, or open `%USERPROFILE%\.anki_miner\anki_miner.log` on Windows or `~/.anki_miner/anki_miner.log` on macOS/Linux. Rotated logs use the `.1` through `.5` suffixes. Send `anki_miner.crash` too if it is there (a crash that took the app down writes its stack to that file, not to the log), and `anki_miner.child.log`, which holds a helper process's output. |
+| Reporting a bug          | Help -> Export Diagnostics… writes a ZIP to a location you choose, holding the logs (`anki_miner.log` and its rotations, `anki_miner.crash`, `anki_miner.child.log`), your `settings.json`, your config and UI-state files, queue snapshots and download manifests, and generated reports of the machine and app state (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Review it before uploading because it contains file paths and file names from your computer. Nothing is uploaded automatically. |
 | More diagnostic logging | Set `ANKI_MINER_LOG_LEVEL=DEBUG` before starting Anki Miner to capture third-party yt-dlp, urllib3, and fugashi details. The default is `WARNING`; Anki Miner logs remain at DEBUG. |
-| Audio is wrong language  | The tool tries the mining language's audio tracks first, then falls back to the default. |
+| Audio is wrong language  | The tool picks the mining language's audio track, else the first one. Choose it yourself with Tracks (Video -> Single). |
 | Subtitles out of sync    | Use the subtitle offset control in the GUI (range ±300 seconds).                 |
 
 ## Roadmap
@@ -225,8 +225,8 @@ List of ideas for future versions of Anki Miner. Not in priority order. Feature 
   - [ ] Automatic subtitle downloading.
 
 - **Long-term**:
-  - [x] Android port -- https://github.com/0xzerolight/anki_miner_android
-  - [x] Beyond Japanese: Chinese, Korean, and eighteen European languages.
+  - [x] Android port - https://github.com/0xzerolight/anki_miner_android
+  - [x] Beyond Japanese: thirty-one more mining languages.
   - [ ] Anki Miner browser extension.
 
 

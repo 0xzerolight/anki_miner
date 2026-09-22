@@ -65,7 +65,7 @@ def test_readme_exposes_first_install_recovery_and_troubleshooting() -> None:
     assert "%USERPROFILE%\\.anki_miner\\anki_miner.log" in troubleshooting
     assert "~/.anki_miner/anki_miner.log" in troubleshooting
     assert "`.1` through `.5` suffixes" in troubleshooting
-    assert "Help → Export Diagnostics…" in troubleshooting
+    assert "Help -> Export Diagnostics…" in troubleshooting
     assert (
         "Review it before uploading because it contains file paths and file names from your computer" in troubleshooting
     )

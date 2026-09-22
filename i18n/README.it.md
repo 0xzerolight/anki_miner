@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:7f211d1a7cf8c731 -->
+<!-- i18n-source: README.md sha256:1f8a3147ec4f94c3 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -67,7 +67,7 @@ Scarica il pacchetto per la tua piattaforma dall'[ultima versione](https://githu
 | Piattaforma | Download |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS (Apple Silicon / M1-M4) | `AnkiMiner-*-macOS-arm64.dmg` |
+| macOS (Apple Silicon) | `AnkiMiner-*-macOS-arm64.dmg` |
 | macOS (Intel) | `AnkiMiner-*-macOS-x86_64.dmg` ¹ |
 | Linux (Debian/Ubuntu) | `anki-miner_*_amd64.deb` |
 | Linux (altro) | `AnkiMiner-*-Linux-x86_64.AppImage` |
@@ -89,13 +89,13 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
-Il giapponese non richiede nulla in più. Per il mining di qualsiasi altra lingua, aggiungi il suo motore:
+Il giapponese, l'indonesiano e l'ebraico non richiedono nulla in più. Per il mining di un'altra lingua, aggiungi il suo motore:
 
 ```bash
-pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da] for one
+pipx install "anki-miner[languages]"   # all; or one of [zh], [ko], [yue], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da], [ru], [uk], [sl], [tr], [th], [vi]
 ```
 
-I download qui sopra li recuperano direttamente nell'app, da Impostazioni -> Lingua di mining.
+L'arabo e il persiano non hanno un extra. I loro dati, e i modelli spaCy delle lingue europee, si scaricano nell'app da Impostazioni -> Lingua di mining, dove i download qui sopra recuperano tutto.
 
 </details>
 
@@ -120,7 +120,7 @@ Per la configurazione completa dell'ambiente di sviluppo, consulta [CONTRIBUTING
 - **Audiolibri** - estrai audiolibri, podcast, radio, canzoni (coppie audio + sottotitoli/trascrizione).
 - **Lettura** - estrai manga (mokuro), romanzi (`.epub`, `.txt`; un singolo libro o un'intera cartella), file di sottotitoli autonomi o testo incollato.
 - **Analisi** - cronologia del mining, classifiche di difficoltà, traguardi.
-- **Utilità** - genera sottotitoli (Whisper locale), risincronizza sottotitoli (ffsubsync/alass), condensa i contenuti multimediali in audio con solo dialoghi, scarica video/audio/sottotitoli da qualsiasi sito supportato da yt-dlp, copia la parte che vale la pena imparare di un mazzo predefinito in uno nuovo, completa retroattivamente i campi delle carte esistenti ed esegui l'OCR delle immagini delle pagine manga in file .mokuro (mokuro, installabile dalle Impostazioni).
+- **Utilità** - genera sottotitoli (Whisper locale), risincronizza sottotitoli (ffsubsync/alass), condensa i contenuti multimediali in audio con solo dialoghi, scarica video/audio/sottotitoli da qualsiasi sito supportato da yt-dlp, copia la parte che vale la pena imparare di un mazzo predefinito in uno nuovo, completa retroattivamente i campi delle carte esistenti, esegui l'OCR delle immagini delle pagine manga in file .mokuro (mokuro, installabile dalle Impostazioni) e sincronizza un audiolibro con il testo del suo libro (Sincronizzazione dell'audiolibro).
 - **Impostazioni** - tutto ciò che è configurabile.
 
 ## Altre funzionalità
@@ -131,8 +131,8 @@ Per la configurazione completa dell'ambiente di sviluppo, consulta [CONTRIBUTING
 - Filtri avanzati: i+1, intervallo di rango di frequenza, blacklist, regex, insiemi di parole e altro ancora.
 - Importazione offline di dizionari Yomitan - definizioni, accento tonale, frequenza - concatenati per priorità.
 - Più elenchi di frequenza concatenati per priorità.
-- Audio delle parole sulle carte da pacchetti audio locali, JapanesePod101 o Google TTS.
-- Audio delle frasi sulle carte di Lettura da Google Translate TTS o Naver Papago (disattivato per impostazione predefinita).
+- Audio delle parole sulle carte da pacchetti audio locali, JapanesePod101, Google TTS o Microsoft Edge TTS.
+- Audio delle frasi sulle carte di Lettura da Google Translate TTS, o da Naver Papago per giapponese e coreano (disattivato per impostazione predefinita).
 - Stile del glossario per dizionario, in stile Yomitan.
 - Anteprima video integrata con libmpv - riproduci la scena di una parola durante la revisione, oppure regola la sincronizzazione dei sottotitoli con la riproduzione dal vivo.
 - Schermate animate (vedi gli esempi di carte sopra).
@@ -164,7 +164,7 @@ Vuoi che venga aggiunto un altro tema? Proponilo in una Issue di GitHub.
 1. **Leggi i sottotitoli** e suddividi il testo in singole parole.
 2. **Filtra** per ottenere le parole di contenuto che non conosci già - rivedendo facoltativamente l'elenco tu stesso nel Curatore di parole.
 3. **Cattura una schermata e una clip audio** dal video per ogni riga.
-4. **Cerca le definizioni** nei tuoi dizionari offline configurati, ricadendo facoltativamente su Jisho online se abilitato (più lento, con limite di velocità).
+4. **Cerca le definizioni** nei tuoi dizionari offline configurati, ricadendo facoltativamente su Jisho online per il giapponese (più lento, con limite di velocità).
 5. **Invia le carte finite ad Anki.**
 
 </details>
@@ -175,16 +175,16 @@ Giapponese salvo diversa indicazione. La procedura guidata propone il set adatto
 
 | Tipo | Risorsa | Download | Aggiungi tramite |
 |------|----------|----------|---------|
-| Dizionario | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [ZIP Yomitan](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Aggiungi dizionario… |
-| Dizionario | [Jitendex](https://jitendex.org/) | [ZIP Yomitan](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Aggiungi dizionario… |
-| Dizionario | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Generato sul sito | Aggiungi dizionario… |
+| Dizionario | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [ZIP Yomitan](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Dizionari -> Aggiungi dizionario… |
+| Dizionario | [Jitendex](https://jitendex.org/) | [ZIP Yomitan](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Dizionari -> Aggiungi dizionario… |
+| Dizionario | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Generato sul sito | Dizionari -> Aggiungi dizionario… |
 | Accento tonale | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Accento tonale -> Aggiungi fonte di accento tonale… |
 | Accento tonale | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Accento tonale -> Aggiungi fonte di accento tonale… |
 | Frequenza | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [ZIP Yomitan](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Frequenza -> Aggiungi fonte di frequenza… |
 | Frequenza | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [ZIP Yomitan](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Frequenza -> Aggiungi fonte di frequenza… |
 | Audio delle parole | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | Torrent della collezione o `android.db` generato | Audio -> Aggiungi fonte audio… |
-| Dizionario (cinese) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Aggiungi dizionario… |
-| Dizionario (coreano) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Aggiungi dizionario… |
+| Dizionario (cinese) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Dizionari -> Aggiungi dizionario… |
+| Dizionario (coreano) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Dizionari -> Aggiungi dizionario… |
 
 
 <details>
@@ -202,14 +202,14 @@ Utilizza insiemi di nomi in bundle derivati da [JMnedict](https://www.edrdg.org/
 | "Mazzo non trovato"         | Scegli un mazzo esistente in Impostazioni -> Carte e Anki. I mazzi non vengono creati automaticamente; creane uno in Anki prima se te ne serve uno nuovo. |
 | "Tipo di nota non trovato"    | Configura i nomi dei campi del tuo tipo di nota in Impostazioni -> Carte e Anki.               |
 | "ffmpeg non trovato"       | Installa ffmpeg e aggiungilo al PATH.                                               |
-| Nessuna definizione trovata     | Aggiungi un dizionario Yomitan in Impostazioni -> Aggiungi dizionario… (consigliato), oppure abilita il fallback su Jisho (più lento, con limite di velocità). |
+| Nessuna definizione trovata     | Aggiungi un dizionario Yomitan in Impostazioni -> Dizionari -> Aggiungi dizionario… (consigliato), oppure, per il giapponese, abilita il fallback su Jisho (più lento, con limite di velocità). |
 | L'installer di Windows non si apre / avviso SmartScreen | Consulta [Note sul primo avvio](#note-sul-primo-avvio-build-non-firmate): seleziona **Ulteriori informazioni** -> **Esegui comunque**; ripristina i falsi positivi di Defender da **Cronologia protezione**. |
 | Un'installazione pulita non ha definizioni | Esegui Strumenti -> Procedura guidata di configurazione oppure Strumenti -> Scarica risorse consigliate. Per l'importazione manuale, mantieni intatto lo ZIP Yomitan (non estrarlo). |
 | Aggiungi dizionario si blocca o fallisce | Annota l'ultima fase visibile e allega i log (vedi "Dove si trovano i log?" più sotto). Includi nella segnalazione il nome, la fonte e la dimensione dello ZIP del dizionario. |
 | Dove si trovano i log?      | Usa Aiuto -> Apri cartella dei registri, oppure apri `%USERPROFILE%\.anki_miner\anki_miner.log` su Windows o `~/.anki_miner/anki_miner.log` su macOS/Linux. I log ruotati usano i suffissi da `.1` a `.5`. Invia anche `anki_miner.crash`, se c'è: un crash che ha chiuso l'app scrive lì il proprio stack anziché nel log, e `anki_miner.child.log`, che contiene l'output di un processo ausiliario. |
 | Segnalare un bug          | Aiuto -> Esporta diagnostica… scrive uno ZIP in una posizione a tua scelta, con i log (`anki_miner.log` e le sue rotazioni, `anki_miner.crash`, `anki_miner.child.log`), il tuo `settings.json`, i file di configurazione e di stato dell'interfaccia, gli snapshot delle code e i manifest dei download, e alcuni report generati su macchina e stato dell'app (`environment.txt`, `health.txt`, `resources.txt`, `stores.txt`, `disk.txt`, `screens.txt`). Controllalo prima di caricarlo perché contiene percorsi e nomi di file del tuo computer. Nulla viene caricato automaticamente. |
 | Più log diagnostici | Imposta `ANKI_MINER_LOG_LEVEL=DEBUG` prima di avviare Anki Miner per acquisire i dettagli di terze parti di yt-dlp, urllib3 e fugashi. Il valore predefinito è `WARNING`; i log di Anki Miner restano a DEBUG. |
-| L'audio è nella lingua sbagliata  | Lo strumento prova prima le tracce audio nella lingua di mining, poi ricade su quella predefinita.      |
+| L'audio è nella lingua sbagliata  | Lo strumento sceglie la traccia audio nella lingua di mining, altrimenti la prima. Sceglila tu con Tracce (Video -> Singolo).      |
 | Sottotitoli non sincronizzati    | Usa il controllo di offset dei sottotitoli nell'interfaccia grafica (intervallo ±300 secondi).                 |
 
 ## Roadmap
@@ -227,8 +227,8 @@ Elenco di idee per le versioni future di Anki Miner. Non in ordine di priorità.
   - [ ] Download automatico dei sottotitoli.
 
 - **Lungo termine**:
-  - [x] Port per Android -- https://github.com/0xzerolight/anki_miner_android
-  - [x] Oltre il giapponese: mining di cinese, coreano e diciotto lingue europee.
+  - [x] Port per Android - https://github.com/0xzerolight/anki_miner_android
+  - [x] Oltre il giapponese: altre trentuno lingue di mining.
   - [ ] Estensione per browser di Anki Miner.
 
 

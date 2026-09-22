@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:7f211d1a7cf8c731 -->
+<!-- i18n-source: README.md sha256:1f8a3147ec4f94c3 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -67,7 +67,7 @@ Anki Miner が役に立ったら ⭐ スターをお願いします - 他の人�
 | プラットフォーム | ダウンロード |
 |----------|----------|
 | Windows | `AnkiMiner-*-Setup.exe` |
-| macOS（Apple Silicon / M1-M4） | `AnkiMiner-*-macOS-arm64.dmg` |
+| macOS（Apple Silicon） | `AnkiMiner-*-macOS-arm64.dmg` |
 | macOS（Intel） | `AnkiMiner-*-macOS-x86_64.dmg` ¹ |
 | Linux（Debian/Ubuntu） | `anki-miner_*_amd64.deb` |
 | Linux（その他） | `AnkiMiner-*-Linux-x86_64.AppImage` |
@@ -89,13 +89,13 @@ pipx install anki-miner   # or: pip install anki-miner
 anki_miner_gui
 ```
 
-日本語は追加不要です。ほかの言語をマイニングする場合は、その言語のエンジンを追加してください:
+日本語・インドネシア語・ヘブライ語は追加不要です。ほかの言語をマイニングする場合は、その言語のエンジンを追加してください:
 
 ```bash
-pipx install "anki-miner[languages]"   # all; or [zh], [ko], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da] for one
+pipx install "anki-miner[languages]"   # all; or one of [zh], [ko], [yue], [en], [ca], [de], [pt], [fr], [es], [it], [nl], [nb], [ro], [el], [fi], [hu], [hr], [sv], [pl], [lt], [da], [ru], [uk], [sl], [tr], [th], [vi]
 ```
 
-上記のダウンロード版では、設定 -> マイニング言語からアプリ内で取得します。
+アラビア語とペルシア語には extra がありません。これらのデータと欧州の言語の spaCy モデルは、設定 -> マイニング言語からアプリ内でダウンロードされます。上記のダウンロード版もそこですべて取得します。
 
 </details>
 
@@ -120,7 +120,7 @@ anki_miner_gui
 - **オーディオブック** - オーディオブック、ポッドキャスト、ラジオ、楽曲（音声 + 字幕/文字起こしのペア）をマイニングします。
 - **読み** - 漫画（mokuro）、小説（`.epub`、`.txt`。1 冊でもフォルダ全体でも可）、単体の字幕ファイル、貼り付けたテキストをマイニングします。
 - **分析** - マイニング履歴、難易度ランキング、マイルストーン。
-- **ユーティリティ** - 字幕の生成（ローカル Whisper）、字幕のタイミング調整（ffsubsync/alass）、メディアをセリフだけの音声に凝縮、yt-dlp が対応するあらゆるサイトから動画・音声・字幕をダウンロード、既製デッキの学ぶ価値がある部分を新しいデッキにコピー、既存カードのフィールドの補完、漫画のページ画像を OCR して .mokuro ファイルに変換（mokuro、設定からインストール可能）。
+- **ユーティリティ** - 字幕の生成（ローカル Whisper）、字幕のタイミング調整（ffsubsync/alass）、メディアをセリフだけの音声に凝縮、yt-dlp が対応するあらゆるサイトから動画・音声・字幕をダウンロード、既製デッキの学ぶ価値がある部分を新しいデッキにコピー、既存カードのフィールドの補完、漫画のページ画像を OCR して .mokuro ファイルに変換（mokuro、設定からインストール可能）、オーディオブックを本のテキストに合わせてタイミング付け（オーディオブック同期）。
 - **設定** - 設定できるものすべて。
 
 ## その他の機能
@@ -131,8 +131,8 @@ anki_miner_gui
 - 豊富なフィルタリング: i+1、頻度ランクの範囲、ブラックリスト、正規表現、単語セットなど。
 - オフラインの Yomitan 辞書のインポート - 語義、ピッチアクセント、頻度 - 優先順位で連鎖します。
 - 複数の頻度リストを優先順位で連鎖できます。
-- ローカルの音声パック、JapanesePod101、Google TTS からカードに単語の音声を付けられます。
-- 「読み」のカードには Google 翻訳 TTS または Naver Papago の例文音声を付けられます（既定ではオフ）。
+- ローカルの音声パック、JapanesePod101、Google TTS、Microsoft Edge TTS からカードに単語の音声を付けられます。
+- 「読み」のカードには Google 翻訳 TTS、または日本語と韓国語なら Naver Papago の例文音声を付けられます（既定ではオフ）。
 - 辞書ごとの語義スタイル設定（Yomitan 風）。
 - 埋め込み libmpv による動画プレビュー - キュレーション中に単語のシーンを再生したり、再生を見ながら字幕のタイミングを微調整したりできます。
 - アニメーションするスクリーンショット（上のカードの例を参照）。
@@ -164,7 +164,7 @@ anki_miner_gui
 1. **字幕を読み込み**、テキストを個々の単語に分割します。
 2. まだ知らない内容語だけに**フィルタリング**します。必要なら単語キュレーターで自分でリストを確認できます。
 3. 各行について、動画から**スクリーンショットと音声クリップを取得**します。
-4. 設定したオフライン辞書で**語義を検索**します。有効にしていればオンラインの Jisho にフォールバックすることもできます（低速、レート制限あり）。
+4. 設定したオフライン辞書で**語義を検索**します。日本語では、オンラインの Jisho にフォールバックすることもできます（低速、レート制限あり）。
 5. **完成したカードを Anki に送信します。**
 
 </details>
@@ -175,16 +175,16 @@ anki_miner_gui
 
 | 種類 | リソース | ダウンロード | 追加方法 |
 |------|----------|----------|---------|
-| 辞書 | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | 辞書を追加… |
-| 辞書 | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | 辞書を追加… |
-| 辞書 | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | サイト上で生成 | 辞書を追加… |
+| 辞書 | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | 辞書 -> 辞書を追加… |
+| 辞書 | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | 辞書 -> 辞書を追加… |
+| 辞書 | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | サイト上で生成 | 辞書 -> 辞書を追加… |
 | ピッチ | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | ピッチアクセント -> ピッチソースを追加… |
 | ピッチ | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | ピッチアクセント -> ピッチソースを追加… |
 | 頻度 | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | 頻度 -> 頻度ソースを追加… |
 | 頻度 | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | 頻度 -> 頻度ソースを追加… |
 | 単語音声 | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | コレクションの torrent または生成した `android.db` | 音声 -> 音声ソースを追加… |
-| 辞書（中国語） | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | 辞書を追加… |
-| 辞書（韓国語） | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | 辞書を追加… |
+| 辞書（中国語） | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | 辞書 -> 辞書を追加… |
+| 辞書（韓国語） | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | 辞書 -> 辞書を追加… |
 
 
 <details>
@@ -202,14 +202,14 @@ anki_miner_gui
 | 「デッキが見つかりません」 | 設定 -> カードと Anki で既存のデッキを選んでください。デッキは自動では作成されません。新しいデッキが必要な場合は、先に Anki で作成してください。 |
 | 「ノートタイプが見つかりません」 | 設定 -> カードと Anki でノートタイプのフィールド名を設定してください。            |
 | 「ffmpeg が見つかりません」 | ffmpeg をインストールし、PATH に追加してください。                               |
-| 語義が見つからない       | 設定 -> 辞書を追加… で Yomitan 辞書を追加するか（推奨）、Jisho へのフォールバックを有効にしてください（低速、レート制限あり）。 |
+| 語義が見つからない       | 設定 -> 辞書 -> 辞書を追加… で Yomitan 辞書を追加するか（推奨）、日本語なら Jisho へのフォールバックを有効にしてください（低速、レート制限あり）。 |
 | Windows のインストーラーが開かない / SmartScreen の警告 | [初回起動時の注意](#初回起動時の注意未署名ビルド)を参照してください: **詳細情報** -> **実行** を選びます。Defender の誤検知は **保護の履歴** から復元してください。 |
 | 新規インストールで語義が出ない | ツール -> セットアップウィザード、またはツール -> 推奨リソースをダウンロード を実行してください。手動でインポートする場合は、Yomitan の ZIP をそのままの状態にしておいてください（解凍しないでください）。 |
 | 辞書を追加 が止まる、または失敗する | 最後に見えた段階を控え、ログを添付してください（下の「ログはどこにありますか？」を参照）。報告には辞書 ZIP の名前、入手元、サイズを含めてください。 |
 | ログはどこにありますか？ | ヘルプ -> ログフォルダを開く を使うか、Windows では `%USERPROFILE%\.anki_miner\anki_miner.log`、macOS/Linux では `~/.anki_miner/anki_miner.log` を開いてください。ローテーションされたログには `.1` から `.5` の接尾辞が付きます。 `anki_miner.crash` があれば一緒に送ってください。アプリを落としたクラッシュは、ログではなくこのファイルにスタックを書き出します。補助プロセスの出力が入る `anki_miner.child.log` も同じです。 |
 | バグを報告する           | ヘルプ -> 診断情報をエクスポート… で、ログ（`anki_miner.log` とそのローテーション、`anki_miner.crash`、`anki_miner.child.log`）、`settings.json`、設定と UI 状態のファイル、キューのスナップショットとダウンロードのマニフェスト、そしてマシンとアプリの状態をまとめたレポート（`environment.txt`、`health.txt`、`resources.txt`、`stores.txt`、`disk.txt`、`screens.txt`）を含む ZIP を任意の場所に書き出します。お使いのコンピューターのファイルパスやファイル名が含まれるため、アップロードする前に内容を確認してください。自動でアップロードされるものはありません。 |
 | 診断ログを増やしたい | Anki Miner を起動する前に `ANKI_MINER_LOG_LEVEL=DEBUG` を設定すると、サードパーティの yt-dlp、urllib3、fugashi の詳細を記録できます。既定は `WARNING` で、Anki Miner 自身のログは DEBUG のままです。 |
-| 音声の言語が違う         | 最初にマイニング言語の音声トラックを試し、なければ既定のものにフォールバックします。      |
+| 音声の言語が違う         | マイニング言語の音声トラックを選び、なければ最初のトラックを使います。音声トラック（動画 -> 単一）で自分で選べます。      |
 | 字幕がずれている         | GUI の字幕オフセット調整を使ってください（範囲は ±300 秒）。                     |
 
 ## ロードマップ
@@ -227,8 +227,8 @@ Anki Miner の今後のバージョンに向けたアイデアの一覧です。
   - [ ] 字幕の自動ダウンロード。
 
 - **長期**:
-  - [x] Android への移植 -- https://github.com/0xzerolight/anki_miner_android
-  - [x] 日本語の先へ: 中国語・韓国語と欧州の18言語のマイニング。
+  - [x] Android への移植 - https://github.com/0xzerolight/anki_miner_android
+  - [x] 日本語の先へ: ほかに31のマイニング言語。
   - [ ] Anki Miner のブラウザ拡張機能。
 
 
