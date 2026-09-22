@@ -2326,6 +2326,22 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Coi cách viết kana của một từ bạn đã biết dưới dạng kanji cũng là đã biết (bật theo mặc định).</translation>
     </message>
     <message>
+        <source>Brazilian or European Portuguese</source>
+        <translation>Tiếng Bồ Đào Nha Brazil hay châu Âu</translation>
+    </message>
+    <message>
+        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
+        <translation>Chọn biến thể tiếng Bồ Đào Nha mà mặt trước thẻ và tra cứu từ điển ưu tiên.</translation>
+    </message>
+    <message>
+        <source>Hangul and hanja word filters</source>
+        <translation>Bộ lọc từ hangul và hanja</translation>
+    </message>
+    <message>
+        <source>Exclude hangul-only words, or words that contain hanja.</source>
+        <translation>Loại trừ từ chỉ có hangul, hoặc từ có chứa hanja.</translation>
+    </message>
+    <message>
         <source>Simplified or traditional characters</source>
         <translation>Chữ giản thể hoặc phồn thể</translation>
     </message>
@@ -2524,6 +2540,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
         <translation>Đưa pinyin của từ lên thẻ của bạn, mỗi âm tiết mang màu của thanh điệu -- tùy chọn tô màu là Tô màu cách đọc theo thanh điệu, trong Cài đặt -&gt; Lọc.</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>Tô màu cách đọc theo thanh điệu</translation>
+    </message>
+    <message>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
+        <translation>Tô màu từng âm tiết của cách đọc pinyin hoặc jyutping theo thanh điệu, trong Cài đặt -&gt; Lọc.</translation>
     </message>
     <message>
         <source>Measure word field</source>

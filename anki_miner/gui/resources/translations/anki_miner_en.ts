@@ -2317,6 +2317,22 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Brazilian or European Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Hangul and hanja word filters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Exclude hangul-only words, or words that contain hanja.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Simplified or traditional characters</source>
         <translation type="unfinished" />
     </message>
@@ -2514,6 +2530,14 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
         <translation type="unfinished" />
     </message>
     <message>

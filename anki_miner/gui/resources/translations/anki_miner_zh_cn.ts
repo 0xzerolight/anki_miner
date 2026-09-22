@@ -2326,6 +2326,22 @@ No index files are deleted.</source>
         <translation>将你以汉字形式已知的单词的假名拼写也视为已知（默认开启）。</translation>
     </message>
     <message>
+        <source>Brazilian or European Portuguese</source>
+        <translation>巴西或欧洲葡萄牙语</translation>
+    </message>
+    <message>
+        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
+        <translation>选择卡片正面和词典查询优先使用哪种葡萄牙语变体。</translation>
+    </message>
+    <message>
+        <source>Hangul and hanja word filters</source>
+        <translation>谚文与韩文汉字单词过滤</translation>
+    </message>
+    <message>
+        <source>Exclude hangul-only words, or words that contain hanja.</source>
+        <translation>排除纯谚文单词，或含韩文汉字的单词。</translation>
+    </message>
+    <message>
         <source>Simplified or traditional characters</source>
         <translation>简体字或繁体字</translation>
     </message>
@@ -2524,6 +2540,14 @@ No index files are deleted.</source>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
         <translation>把单词的拼音放到你的卡片上，每个音节按其声调着色——着色开关是设置 -&gt; 过滤下的“按声调为读音着色”。</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>按声调为读音着色</translation>
+    </message>
+    <message>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
+        <translation>按声调为拼音或粤拼读音的每个音节着色，位于 设置 -&gt; 过滤。</translation>
     </message>
     <message>
         <source>Measure word field</source>

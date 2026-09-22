@@ -2334,6 +2334,22 @@ No index files are deleted.</source>
         <translation>Считайте кана-написание слова, известного вам в кандзи, тоже известным (включено по умолчанию).</translation>
     </message>
     <message>
+        <source>Brazilian or European Portuguese</source>
+        <translation>Бразильский или европейский португальский</translation>
+    </message>
+    <message>
+        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
+        <translation>Выберите, какой вариант португальского предпочитают лицевая сторона карточки и поиск по словарю.</translation>
+    </message>
+    <message>
+        <source>Hangul and hanja word filters</source>
+        <translation>Фильтры слов по хангылю и ханче</translation>
+    </message>
+    <message>
+        <source>Exclude hangul-only words, or words that contain hanja.</source>
+        <translation>Исключайте слова только из хангыля или слова, содержащие ханчу.</translation>
+    </message>
+    <message>
         <source>Simplified or traditional characters</source>
         <translation>Упрощённые или традиционные иероглифы</translation>
     </message>
@@ -2532,6 +2548,14 @@ No index files are deleted.</source>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
         <translation>Размещайте пиньинь слова на ваших карточках, окрашивая каждый слог в цвет его тона — за раскраску отвечает настройка «Раскрашивать чтение по тонам» в разделе Настройки -&gt; Фильтрация.</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>Раскрашивать чтение по тонам</translation>
+    </message>
+    <message>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
+        <translation>Раскрашивает каждый слог чтения пиньинь или ютпхин по его тону; находится в разделе Настройки -&gt; Фильтрация.</translation>
     </message>
     <message>
         <source>Measure word field</source>

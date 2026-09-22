@@ -44,6 +44,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 - **The Usage Guide shows each mining language its own entries (F1).** Entries about kana, furigana, pitch accent and Japanese names are shown only to a language that has them, and Chinese gains entries for pinyin and tone colours, Character Set and the Measure Word field. A Japanese session lists exactly what it listed before.
 
+- **Usage Guide entries for tone colours, the Portuguese variety and the Korean hangul filters (F1).** Each is listed only for the languages that show the setting.
+
 ### Changed
 
 - **Chinese mines the word classes jieba uses for ordinary vocabulary.** The Chinese part-of-speech gate was mapped from the Japanese one and dropped classes that, in jieba's own dictionary, hold everyday words: place- and person-tagged nouns (`ns`, `nr` — 太阳, 东西, 城市, 明白), distinguishing and state words (`b`, `z` — 高兴, 主要, 所有, 很, 您), conjunctions (`c` — 因为, 所以, 虽然) and prepositions (`p` — 在, 给, 跟, 为了). On a 186-sentence corpus nearly a third of sentences lost a dictionary-attested word with nothing on screen saying why. All six are mined now; transliterated and famous-person names, organisations, bound morphemes, numerals, classifiers and particles stay out, and a word no offline dictionary lists still never becomes a card, so full personal names do not appear. Existing Chinese setups keep their saved lists.

@@ -2330,6 +2330,22 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Trate a grafia em kana de uma palavra que você conhece em kanji como também conhecida (ativado por padrão).</translation>
     </message>
     <message>
+        <source>Brazilian or European Portuguese</source>
+        <translation>Português brasileiro ou europeu</translation>
+    </message>
+    <message>
+        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
+        <translation>Escolha qual variedade do português a frente do cartão e a busca no dicionário preferem.</translation>
+    </message>
+    <message>
+        <source>Hangul and hanja word filters</source>
+        <translation>Filtros de palavras em hangul e hanja</translation>
+    </message>
+    <message>
+        <source>Exclude hangul-only words, or words that contain hanja.</source>
+        <translation>Exclua palavras só em hangul, ou palavras que contêm hanja.</translation>
+    </message>
+    <message>
         <source>Simplified or traditional characters</source>
         <translation>Caracteres simplificados ou tradicionais</translation>
     </message>
@@ -2528,6 +2544,14 @@ Nenhum arquivo de índice é excluído.</translation>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
         <translation>Coloque o pinyin da palavra nos seus cartões, cada sílaba na cor do seu tom -- a coloração é Colorir a leitura por tom, em Configurações -&gt; Filtragem.</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>Colorir a leitura por tom</translation>
+    </message>
+    <message>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
+        <translation>Colore cada sílaba da leitura em pinyin ou jyutping pelo seu tom, em Configurações -&gt; Filtragem.</translation>
     </message>
     <message>
         <source>Measure word field</source>

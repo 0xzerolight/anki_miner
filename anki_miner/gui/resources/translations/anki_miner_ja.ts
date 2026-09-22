@@ -2326,6 +2326,22 @@ No index files are deleted.</source>
         <translation>漢字で既知の単語のかな表記も既知として扱います（既定でオン）。</translation>
     </message>
     <message>
+        <source>Brazilian or European Portuguese</source>
+        <translation>ブラジルまたはヨーロッパのポルトガル語</translation>
+    </message>
+    <message>
+        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
+        <translation>カードの表面と辞書検索で優先するポルトガル語の変種を選びます。</translation>
+    </message>
+    <message>
+        <source>Hangul and hanja word filters</source>
+        <translation>ハングルと韓国漢字の単語フィルター</translation>
+    </message>
+    <message>
+        <source>Exclude hangul-only words, or words that contain hanja.</source>
+        <translation>ハングルのみの単語、または韓国漢字を含む単語を除外します。</translation>
+    </message>
+    <message>
         <source>Simplified or traditional characters</source>
         <translation>簡体字または繁体字</translation>
     </message>
@@ -2524,6 +2540,14 @@ No index files are deleted.</source>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
         <translation>単語のピンインを、音節ごとにその声調の色を付けてカードに載せます — 色分けは設定 -&gt; フィルタリングの「読みを声調で色分けする」です。</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>読みを声調で色分けする</translation>
+    </message>
+    <message>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
+        <translation>ピンインまたは粤拼の読みの各音節を声調で色分けします。設定 -&gt; フィルタリングにあります。</translation>
     </message>
     <message>
         <source>Measure word field</source>

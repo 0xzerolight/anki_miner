@@ -2326,6 +2326,22 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Perlakukan ejaan kana dari kata yang Anda kenal dalam kanji sebagai dikenal juga (aktif secara default).</translation>
     </message>
     <message>
+        <source>Brazilian or European Portuguese</source>
+        <translation>Portugis Brasil atau Eropa</translation>
+    </message>
+    <message>
+        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
+        <translation>Pilih ragam bahasa Portugis yang diutamakan sisi depan kartu dan pencarian kamus.</translation>
+    </message>
+    <message>
+        <source>Hangul and hanja word filters</source>
+        <translation>Filter kata hangul dan hanja</translation>
+    </message>
+    <message>
+        <source>Exclude hangul-only words, or words that contain hanja.</source>
+        <translation>Kecualikan kata yang hanya berisi hangul, atau kata yang mengandung hanja.</translation>
+    </message>
+    <message>
         <source>Simplified or traditional characters</source>
         <translation>Karakter sederhana atau tradisional</translation>
     </message>
@@ -2524,6 +2540,14 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
         <translation>Tampilkan pinyin kata pada kartu Anda, setiap suku kata dalam warna nadanya -- pewarnaan itu adalah Warnai bacaan berdasarkan nada, di Pengaturan -&gt; Penyaringan.</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>Warnai bacaan berdasarkan nada</translation>
+    </message>
+    <message>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
+        <translation>Warnai setiap suku kata bacaan pinyin atau jyutping berdasarkan nadanya, di Pengaturan -&gt; Penyaringan.</translation>
     </message>
     <message>
         <source>Measure word field</source>

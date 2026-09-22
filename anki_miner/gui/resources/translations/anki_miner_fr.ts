@@ -2330,6 +2330,22 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Considérez l'orthographe en kana d'un mot que vous connaissez en kanji comme connue aussi (activé par défaut).</translation>
     </message>
     <message>
+        <source>Brazilian or European Portuguese</source>
+        <translation>Portugais brésilien ou européen</translation>
+    </message>
+    <message>
+        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
+        <translation>Choisissez la variété de portugais que privilégient le recto de la carte et la recherche dans le dictionnaire.</translation>
+    </message>
+    <message>
+        <source>Hangul and hanja word filters</source>
+        <translation>Filtres de mots hangul et hanja</translation>
+    </message>
+    <message>
+        <source>Exclude hangul-only words, or words that contain hanja.</source>
+        <translation>Excluez les mots uniquement en hangul, ou ceux qui contiennent des hanja.</translation>
+    </message>
+    <message>
         <source>Simplified or traditional characters</source>
         <translation>Caractères simplifiés ou traditionnels</translation>
     </message>
@@ -2528,6 +2544,14 @@ Aucun fichier d'index n'est supprimé.</translation>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
         <translation>Placez le pinyin du mot sur vos cartes, chaque syllabe dans la couleur de son ton — la coloration s'active avec Colorer la lecture selon le ton, dans Paramètres -&gt; Filtrage.</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>Colorer la lecture selon le ton</translation>
+    </message>
+    <message>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
+        <translation>Colorez chaque syllabe de la lecture pinyin ou jyutping selon son ton, dans Paramètres -&gt; Filtrage.</translation>
     </message>
     <message>
         <source>Measure word field</source>

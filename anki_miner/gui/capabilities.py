@@ -683,6 +683,30 @@ CAPABILITIES: tuple[Capability, ...] = (
         requires="kana_filters",
     ),
     Capability(
+        id="regional-variety",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Brazilian or European Portuguese"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Choose which Portuguese variety the card front and the dictionary lookup prefer.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("portuguese", "brazilian", "european", "regional variety", "variant", "pt-br", "pt-pt"),
+        requires="regional_variants",
+    ),
+    Capability(
+        id="hangul-filters",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Hangul and hanja word filters"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Exclude hangul-only words, or words that contain hanja.",
+        ),
+        category=_CAT_FILTERING,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("hangul", "hanja", "korean", "script filter", "sino-korean"),
+        requires="hangul_filters",
+    ),
+    Capability(
         id="script-variant",
         title=QT_TRANSLATE_NOOP("Capabilities", "Simplified or traditional characters"),
         description=QT_TRANSLATE_NOOP(
@@ -982,6 +1006,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         target=CapabilityTarget("settings", "anki"),
         keywords=("pinyin", "tone", "tone colour", "tone color", "reading", "romanisation", "romanization"),
         requires="pinyin",
+    ),
+    Capability(
+        id="tone-colour",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Colour the reading by tone"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -> Filtering.",
+        ),
+        category=_CAT_CARDS,
+        target=CapabilityTarget("settings", "filtering"),
+        keywords=("tone", "tone colour", "tone color", "pinyin", "jyutping", "cantonese", "reading colour"),
+        requires="tone_color",
     ),
     Capability(
         id="measure-word",

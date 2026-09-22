@@ -2330,6 +2330,22 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Die Kana-Schreibweise eines Ihnen in Kanji bekannten Worts ebenfalls als bekannt behandeln (standardmäßig aktiviert).</translation>
     </message>
     <message>
+        <source>Brazilian or European Portuguese</source>
+        <translation>Brasilianisches oder Europäisches Portugiesisch</translation>
+    </message>
+    <message>
+        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
+        <translation>Wählen, welche portugiesische Sprachvariante Kartenvorderseite und Wörterbuchsuche bevorzugen.</translation>
+    </message>
+    <message>
+        <source>Hangul and hanja word filters</source>
+        <translation>Hangul- und Hanja-Wortfilter</translation>
+    </message>
+    <message>
+        <source>Exclude hangul-only words, or words that contain hanja.</source>
+        <translation>Reine Hangul-Wörter oder Wörter mit Hanja ausschließen.</translation>
+    </message>
+    <message>
         <source>Simplified or traditional characters</source>
         <translation>Vereinfachte oder traditionelle Zeichen</translation>
     </message>
@@ -2528,6 +2544,14 @@ Es werden keine Indexdateien gelöscht.</translation>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
         <translation>Das Pinyin des Wortes auf Ihre Karten bringen, jede Silbe in der Farbe ihres Tons -- die Einfärbung ist „Lesung nach Ton einfärben“, unter Einstellungen -&gt; Filterung.</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>Lesung nach Ton einfärben</translation>
+    </message>
+    <message>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
+        <translation>Jede Silbe der Pinyin- oder Jyutping-Lesung nach ihrem Ton einfärben, unter Einstellungen -&gt; Filterung.</translation>
     </message>
     <message>
         <source>Measure word field</source>

@@ -2330,6 +2330,22 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Trate la grafía en kana de una palabra que conoce en kanji también como conocida (activado por defecto).</translation>
     </message>
     <message>
+        <source>Brazilian or European Portuguese</source>
+        <translation>Portugués brasileño o europeo</translation>
+    </message>
+    <message>
+        <source>Choose which Portuguese variety the card front and the dictionary lookup prefer.</source>
+        <translation>Elija qué variedad del portugués prefieren el anverso de la tarjeta y la búsqueda en el diccionario.</translation>
+    </message>
+    <message>
+        <source>Hangul and hanja word filters</source>
+        <translation>Filtros de palabras en hangul y hanja</translation>
+    </message>
+    <message>
+        <source>Exclude hangul-only words, or words that contain hanja.</source>
+        <translation>Excluya las palabras solo en hangul o las que contengan hanja.</translation>
+    </message>
+    <message>
         <source>Simplified or traditional characters</source>
         <translation>Caracteres simplificados o tradicionales</translation>
     </message>
@@ -2528,6 +2544,14 @@ No se elimina ningún archivo de índice.</translation>
     <message>
         <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
         <translation>Ponga el pinyin de la palabra en sus tarjetas, cada sílaba con el color de su tono — el coloreado es Colorear la lectura por tono, en Ajustes -&gt; Filtrado.</translation>
+    </message>
+    <message>
+        <source>Colour the reading by tone</source>
+        <translation>Colorear la lectura por tono</translation>
+    </message>
+    <message>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
+        <translation>Colorea cada sílaba de la lectura en pinyin o jyutping según su tono, en Ajustes -&gt; Filtrado.</translation>
     </message>
     <message>
         <source>Measure word field</source>

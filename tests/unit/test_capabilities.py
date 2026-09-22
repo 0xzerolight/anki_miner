@@ -15,10 +15,18 @@ from anki_miner.gui.capabilities import (
 from anki_miner.languages.registry import get_profile
 from tests.unit.languages.test_language_contract import CAPABILITY_VOCABULARY
 
-#: The entries a Japanese session never lists (all three are Chinese gates;
-#: ``measure-word`` reaches Cantonese too). Everything else is what a Japanese
-#: session listed before the catalogue was gated, which the ja pin below fixes.
-_NON_JAPANESE_IDS = ("script-variant", "pinyin", "measure-word")
+#: The entries a Japanese session never lists: the Chinese gates (``measure-word``
+#: and ``tone-colour`` reach Cantonese too), Portuguese's variety and Korean's
+#: hangul filters. Everything else is what a Japanese session listed before the
+#: catalogue was gated, which the ja pin below fixes.
+_NON_JAPANESE_IDS = (
+    "script-variant",
+    "pinyin",
+    "measure-word",
+    "tone-colour",
+    "regional-variety",
+    "hangul-filters",
+)
 
 
 def test_ids_are_unique() -> None:
@@ -213,7 +221,7 @@ def test_chinese_lists_its_own_entries() -> None:
     chinese = get_profile("zh").capabilities
     shown = {cap.id for cap in search("", chinese)}
 
-    assert set(_NON_JAPANESE_IDS) <= shown
+    assert {"script-variant", "pinyin", "measure-word", "tone-colour"} <= shown
 
 
 def test_chinese_entries_are_findable_by_search() -> None:
@@ -280,3 +288,20 @@ def test_word_audio_entry_lists_edge_tts() -> None:
 
 def test_sentence_tts_names_the_languages_without_a_voice() -> None:
     assert "Persian or Slovenian" in _entry("sentence-tts").description
+
+
+@pytest.mark.parametrize(
+    ("cap_id", "code"),
+    [("tone-colour", "zh"), ("tone-colour", "yue"), ("regional-variety", "pt"), ("hangul-filters", "ko")],
+)
+def test_gated_setting_entry_is_listed_for_its_language(cap_id: str, code: str) -> None:
+    shown = {cap.id for cap in search("", get_profile(code).capabilities)}
+
+    assert cap_id in shown
+
+
+@pytest.mark.parametrize("cap_id", ["tone-colour", "regional-variety", "hangul-filters"])
+def test_gated_setting_entry_is_hidden_from_japanese(cap_id: str) -> None:
+    shown = {cap.id for cap in search("", get_profile("ja").capabilities)}
+
+    assert cap_id not in shown
