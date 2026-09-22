@@ -2090,8 +2090,8 @@ No index files are deleted.</source>
         <translation>從漫畫採集</translation>
     </message>
     <message>
-        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
-        <translation>從以 mokuro 處理的漫畫卷採集詞彙。</translation>
+        <source>Mine vocabulary from Japanese manga volumes processed with mokuro.</source>
+        <translation>從以 mokuro 處理的日文漫畫卷採集詞彙。</translation>
     </message>
     <message>
         <source>Mine from novels</source>
@@ -2154,8 +2154,8 @@ No index files are deleted.</source>
         <translation>將現成牌組篩選進新牌組</translation>
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type — into a new deck. The source deck is not modified.</source>
-        <translation>將現成 Anki 牌組中通過篩選條件——已知單字、頻率範圍、黑名單、文字類型——的筆記複製到新牌組。來源牌組不會被修改。</translation>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese) — into a new deck. The source deck is not modified.</source>
+        <translation>將現成 Anki 牌組中通過篩選條件——已知單字、頻率範圍、黑名單、文字類型（日文）——的筆記複製到新牌組。來源牌組不會被修改。</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
@@ -2218,8 +2218,8 @@ No index files are deleted.</source>
         <translation>採集另一種語言</translation>
     </message>
     <message>
-        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
-        <translation>切換你採集的語言；每種語言都保留各自的字典、篩選器、牌組與卡片欄位。</translation>
+        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields. Most languages download their engine here the first time.</source>
+        <translation>切換你採集的語言；每種語言都保留各自的字典、篩選器、牌組與卡片欄位。大多數語言首次選用時會在此下載其引擎。</translation>
     </message>
     <message>
         <source>i+1 sentence mining</source>
@@ -2350,12 +2350,12 @@ No index files are deleted.</source>
         <translation>將你自己的 Yomitan 格式字典 zip 加為釋義來源。</translation>
     </message>
     <message>
-        <source>Jisho.org online fallback</source>
-        <translation>Jisho.org 線上備援</translation>
+        <source>Jisho.org online fallback (Japanese)</source>
+        <translation>Jisho.org 線上備援（日文）</translation>
     </message>
     <message>
-        <source>Fall back to Jisho.org when your offline dictionaries have no entry.</source>
-        <translation>當你的離線字典沒有條目時，備援至 Jisho.org。</translation>
+        <source>For Japanese, fall back to Jisho.org when your offline dictionaries have no entry.</source>
+        <translation>日文在你的離線字典沒有條目時，備援至 Jisho.org。</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2378,8 +2378,8 @@ No index files are deleted.</source>
         <translation>填入現有筆記的缺失欄位</translation>
     </message>
     <message>
-        <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
-        <translation>為已挖掘的筆記補齊缺少的高低音調、頻率、釋義、讀音與單字發音欄位。</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
+        <translation>為已挖掘的筆記補齊缺少的頻率、釋義與單字發音欄位；日文另補高低音調與讀音，也會補齊你所用語言特有的卡片欄位。</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2418,8 +2418,8 @@ No index files are deleted.</source>
         <translation>單字發音音訊</translation>
     </message>
     <message>
-        <source>Attach native word audio to cards from audio packs, JPod101, or text-to-speech.</source>
-        <translation>從音訊包、JPod101 或文字轉語音，為卡片附上母語單字音訊。</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), or Google or Microsoft Edge text-to-speech.</source>
+        <translation>從音訊包、JPod101（日文）或 Google、Microsoft Edge 的文字轉語音，為卡片附上單字音訊。</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2442,8 +2442,8 @@ No index files are deleted.</source>
         <translation>閱讀用例句音訊（TTS）</translation>
     </message>
     <message>
-        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
-        <translation>為從書籍、漫畫及貼上文字採集的卡片合成語音例句音訊。</translation>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text. Not available for Persian or Slovenian.</source>
+        <translation>為從書籍、漫畫及貼上文字採集的卡片合成語音例句音訊。波斯語與斯洛維尼亞語無法使用。</translation>
     </message>
     <message>
         <source>Add a custom word-audio source</source>
@@ -2642,16 +2642,16 @@ No index files are deleted.</source>
         <translation>從漫畫圖片建立 .mokuro 檔案</translation>
     </message>
     <message>
-        <source>Run mokuro's OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation>對卷資料夾或整個系列執行 mokuro 的 OCR，讓閱讀 -&gt; 漫畫可以採集它。從設定 -&gt; 轉錄與對齊安裝 mokuro。</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
+        <translation>對卷資料夾或整個系列執行 mokuro 的日文 OCR，讓閱讀 -&gt; 漫畫可以採集它。從設定 -&gt; 轉錄與對齊安裝 mokuro。</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>將有聲書與其 EPUB 同步</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitles or a reader can use.</source>
-        <translation>轉錄有聲書，並將書籍本身的句子計時對應到其中，寫出「有聲書」分頁、閱讀 -&gt; 字幕或其他閱讀器可使用的 .srt 檔案。</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
+        <translation>轉錄有聲書，並將書籍本身的句子計時對應到其中，寫出「有聲書」分頁、閱讀 -&gt; 字幕檔案或其他閱讀器可使用的 .srt 檔案。</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -2682,8 +2682,8 @@ No index files are deleted.</source>
         <translation>下載建議資源</translation>
     </message>
     <message>
-        <source>Get a curated dictionary, frequency list and pitch-accent data in one click from the Tools menu.</source>
-        <translation>從「工具」選單一鍵取得精選字典、頻率清單與高低音調資料。</translation>
+        <source>Get the resources recommended for your mining language (dictionaries, frequency lists, and pitch-accent data for Japanese) in one click from the Tools menu.</source>
+        <translation>從「工具」選單一鍵取得為你的採集語言推薦的資源（字典、頻率清單，日文另有高低音調資料）。</translation>
     </message>
     <message>
         <source>Create a desktop shortcut</source>

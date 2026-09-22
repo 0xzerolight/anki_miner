@@ -249,3 +249,34 @@ def test_search_within_a_capability_set_drops_gated_hits() -> None:
     assert any(cap.id == "pitch-accent" for cap in search("pitch", japanese))
     assert not any(cap.id == "pitch-accent" for cap in search("pitch", chinese))
     assert not any(cap.id == "pinyin" for cap in search("pinyin", japanese))
+
+
+def _entry(cap_id: str) -> Capability:
+    return next(cap for cap in CAPABILITIES if cap.id == cap_id)
+
+
+@pytest.mark.parametrize(
+    "cap_id",
+    ["jisho-fallback", "manga-mining", "manga-ocr", "download-resources", "card-backfill", "deck-filter"],
+)
+def test_ungated_entries_name_their_japanese_only_part(cap_id: str) -> None:
+    # No profile capability gates these, so every language lists them; the
+    # text has to say which part only Japanese gets.
+    cap = _entry(cap_id)
+
+    assert "Japanese" in f"{cap.title} {cap.description}"
+
+
+def test_audiobook_sync_names_the_reading_subtab_by_its_label() -> None:
+    assert "Reading -> Subtitle Files" in _entry("audiobook-sync").description
+
+
+def test_word_audio_entry_lists_edge_tts() -> None:
+    cap = _entry("expression-audio")
+
+    assert "Microsoft Edge" in cap.description
+    assert "edge tts" in cap.keywords
+
+
+def test_sentence_tts_names_the_languages_without_a_voice() -> None:
+    assert "Persian or Slovenian" in _entry("sentence-tts").description

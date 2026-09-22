@@ -2090,8 +2090,8 @@ No index files are deleted.</source>
         <translation>マンガからマイニング</translation>
     </message>
     <message>
-        <source>Mine vocabulary from manga volumes processed with mokuro.</source>
-        <translation>mokuro で処理したマンガの巻から語彙をマイニングします。</translation>
+        <source>Mine vocabulary from Japanese manga volumes processed with mokuro.</source>
+        <translation>mokuro で処理した日本語マンガの巻から語彙をマイニングします。</translation>
     </message>
     <message>
         <source>Mine from novels</source>
@@ -2154,8 +2154,8 @@ No index files are deleted.</source>
         <translation>既存デッキをフィルターして新しいデッキへ</translation>
     </message>
     <message>
-        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type — into a new deck. The source deck is not modified.</source>
-        <translation>既存の Anki デッキのノートのうち、フィルター（既知単語、頻度帯、ブラックリスト、文字種）を通過したものを新しいデッキにコピーします。元のデッキは変更されません。</translation>
+        <source>Copy the notes of a premade Anki deck that survive your filters — known words, frequency band, blacklist, script type (Japanese) — into a new deck. The source deck is not modified.</source>
+        <translation>既存の Anki デッキのノートのうち、フィルター（既知単語、頻度帯、ブラックリスト、日本語の文字種）を通過したものを新しいデッキにコピーします。元のデッキは変更されません。</translation>
     </message>
     <message>
         <source>Condense: track pickers &amp; extra outputs</source>
@@ -2218,8 +2218,8 @@ No index files are deleted.</source>
         <translation>別の言語をマイニング</translation>
     </message>
     <message>
-        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.</source>
-        <translation>マイニングする言語を切り替えます。言語ごとに辞書、フィルター、デッキ、カードのフィールドを個別に保持します。</translation>
+        <source>Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields. Most languages download their engine here the first time.</source>
+        <translation>マイニングする言語を切り替えます。言語ごとに辞書、フィルター、デッキ、カードのフィールドを個別に保持します。多くの言語は初回にここでエンジンをダウンロードします。</translation>
     </message>
     <message>
         <source>i+1 sentence mining</source>
@@ -2350,12 +2350,12 @@ No index files are deleted.</source>
         <translation>Yomitan 形式の辞書 zip を語義の参照元として追加します。</translation>
     </message>
     <message>
-        <source>Jisho.org online fallback</source>
-        <translation>Jisho.org のオンラインフォールバック</translation>
+        <source>Jisho.org online fallback (Japanese)</source>
+        <translation>Jisho.org のオンラインフォールバック（日本語）</translation>
     </message>
     <message>
-        <source>Fall back to Jisho.org when your offline dictionaries have no entry.</source>
-        <translation>オフライン辞書に項目がない場合に Jisho.org にフォールバックします。</translation>
+        <source>For Japanese, fall back to Jisho.org when your offline dictionaries have no entry.</source>
+        <translation>日本語では、オフライン辞書に項目がない場合に Jisho.org にフォールバックします。</translation>
     </message>
     <message>
         <source>Add frequency lists</source>
@@ -2378,8 +2378,8 @@ No index files are deleted.</source>
         <translation>既存ノートの不足フィールドを補完</translation>
     </message>
     <message>
-        <source>Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.</source>
-        <translation>既に作成済みのノートに、ピッチ・頻度・定義・読み・単語音声の未入力フィールドを補完します。</translation>
+        <source>Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and reading for Japanese and your language's own card fields.</source>
+        <translation>既に作成済みのノートに、頻度・定義・単語音声の未入力フィールドを補完します。日本語ではピッチと読みも、また各言語独自のカードフィールドも補完します。</translation>
     </message>
     <message>
         <source>Speech-to-text (no subtitles needed)</source>
@@ -2418,8 +2418,8 @@ No index files are deleted.</source>
         <translation>単語の発音音声</translation>
     </message>
     <message>
-        <source>Attach native word audio to cards from audio packs, JPod101, or text-to-speech.</source>
-        <translation>音声パック、JPod101、または音声合成から、ネイティブの単語音声をカードに添付します。</translation>
+        <source>Attach word audio to cards from audio packs, JPod101 (Japanese), or Google or Microsoft Edge text-to-speech.</source>
+        <translation>音声パック、JPod101（日本語）、または Google や Microsoft Edge の音声合成から、単語音声をカードに添付します。</translation>
     </message>
     <message>
         <source>Import local audio packs</source>
@@ -2442,8 +2442,8 @@ No index files are deleted.</source>
         <translation>読み物用の文章音声（TTS）</translation>
     </message>
     <message>
-        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text.</source>
-        <translation>書籍・マンガ・貼り付けたテキストからマイニングしたカード向けに、読み上げ文章音声を合成します。</translation>
+        <source>Synthesize spoken sentence audio for cards mined from books, manga and pasted text. Not available for Persian or Slovenian.</source>
+        <translation>書籍・マンガ・貼り付けたテキストからマイニングしたカード向けに、読み上げ文章音声を合成します。ペルシア語とスロベニア語では利用できません。</translation>
     </message>
     <message>
         <source>Add a custom word-audio source</source>
@@ -2642,16 +2642,16 @@ No index files are deleted.</source>
         <translation>マンガ画像から .mokuro ファイルを作成</translation>
     </message>
     <message>
-        <source>Run mokuro's OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation>巻フォルダまたはシリーズ全体に対して mokuro の OCR を実行すると、読み -&gt; マンガでマイニングできるようになります。mokuro は設定 -&gt; 文字起こしとアラインメントからインストールしてください。</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
+        <translation>巻フォルダまたはシリーズ全体に対して mokuro の日本語 OCR を実行すると、読み -&gt; マンガでマイニングできるようになります。mokuro は設定 -&gt; 文字起こしとアラインメントからインストールしてください。</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
         <translation>オーディオブックを EPUB に同期</translation>
     </message>
     <message>
-        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitles or a reader can use.</source>
-        <translation>オーディオブックを文字起こしし、書籍自体の文をそれに合わせてタイミング調整して、「オーディオブック」タブ、読み -&gt; 字幕、またはリーダーアプリで使える .srt を書き出します。</translation>
+        <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
+        <translation>オーディオブックを文字起こしし、書籍自体の文をそれに合わせてタイミング調整して、「オーディオブック」タブ、読み -&gt; 字幕ファイル、またはリーダーアプリで使える .srt を書き出します。</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -2682,8 +2682,8 @@ No index files are deleted.</source>
         <translation>推奨リソースをダウンロード</translation>
     </message>
     <message>
-        <source>Get a curated dictionary, frequency list and pitch-accent data in one click from the Tools menu.</source>
-        <translation>ツールメニューからワンクリックで、厳選された辞書・頻度リスト・ピッチアクセントデータを取得できます。</translation>
+        <source>Get the resources recommended for your mining language (dictionaries, frequency lists, and pitch-accent data for Japanese) in one click from the Tools menu.</source>
+        <translation>ツールメニューからワンクリックで、マイニング言語向けの推奨リソース（辞書・頻度リスト、日本語ではピッチアクセントデータも）を取得できます。</translation>
     </message>
     <message>
         <source>Create a desktop shortcut</source>

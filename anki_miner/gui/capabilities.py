@@ -237,7 +237,9 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         id="manga-mining",
         title=QT_TRANSLATE_NOOP("Capabilities", "Mine from manga"),
-        description=QT_TRANSLATE_NOOP("Capabilities", "Mine vocabulary from manga volumes processed with mokuro."),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities", "Mine vocabulary from Japanese manga volumes processed with mokuro."
+        ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("reading", "manga"),
         keywords=("manga", "mokuro", "reading", "cbz", "comic"),
@@ -320,7 +322,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Copy the notes of a premade Anki deck that survive your filters — known words, "
-            "frequency band, blacklist, script type — into a new deck. The source deck is not modified.",
+            "frequency band, blacklist, script type (Japanese) — into a new deck. The source deck is not modified.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("subtitles", "deckfilter"),
@@ -422,7 +424,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Mine another language"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields.",
+            "Switch the language you mine; each keeps its own dictionaries, filters, deck and card fields. "
+            "Most languages download their engine here the first time.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("settings", "mining_language"),
@@ -725,9 +728,9 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         id="jisho-fallback",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Jisho.org online fallback"),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Jisho.org online fallback (Japanese)"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Fall back to Jisho.org when your offline dictionaries have no entry."
+            "Capabilities", "For Japanese, fall back to Jisho.org when your offline dictionaries have no entry."
         ),
         category=_CAT_SOURCES,
         target=CapabilityTarget("settings", "dictionaries"),
@@ -759,7 +762,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Fill missing fields on existing notes"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Fill missing pitch, frequency, definition, reading and word-audio fields on already-mined notes.",
+            "Fill missing frequency, definition and word-audio fields on already-mined notes, plus pitch and "
+            "reading for Japanese and your language's own card fields.",
         ),
         category=_CAT_SOURCES,
         target=CapabilityTarget("subtitles", "backfill"),
@@ -831,11 +835,23 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Word pronunciation audio"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Attach native word audio to cards from audio packs, JPod101, or text-to-speech.",
+            "Attach word audio to cards from audio packs, JPod101 (Japanese), or Google or Microsoft Edge "
+            "text-to-speech.",
         ),
         category=_CAT_AUDIO,
         target=CapabilityTarget("settings", "audio"),
-        keywords=("word audio", "pronunciation", "jpod101", "tts", "expression audio", "vocab audio", "forvo"),
+        keywords=(
+            "word audio",
+            "pronunciation",
+            "jpod101",
+            "tts",
+            "expression audio",
+            "vocab audio",
+            "forvo",
+            "edge",
+            "edge tts",
+            "read aloud",
+        ),
     ),
     Capability(
         id="audio-packs",
@@ -862,7 +878,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Sentence audio for reading (TTS)"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Synthesize spoken sentence audio for cards mined from books, manga and pasted text.",
+            "Synthesize spoken sentence audio for cards mined from books, manga and pasted text. "
+            "Not available for Persian or Slovenian.",
         ),
         category=_CAT_AUDIO,
         target=CapabilityTarget("settings", "audio"),
@@ -1138,7 +1155,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Create .mokuro files from manga images"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Run mokuro's OCR on a volume folder or a whole series so Reading -> Manga can mine it. "
+            "Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -> Manga can mine it. "
             "Install mokuro from Settings -> Transcription & Alignment.",
         ),
         category=_CAT_TOOLS,
@@ -1151,7 +1168,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Transcribe an audiobook and time the book's own sentences to it, writing an .srt the "
-            "Audiobook tab, Reading -> Subtitles or a reader can use.",
+            "Audiobook tab, Reading -> Subtitle Files or a reader can use.",
         ),
         category=_CAT_TOOLS,
         target=CapabilityTarget("subtitles", "booksync"),
@@ -1191,7 +1208,8 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Download recommended resources"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Get a curated dictionary, frequency list and pitch-accent data in one click from the Tools menu.",
+            "Get the resources recommended for your mining language (dictionaries, frequency lists, and "
+            "pitch-accent data for Japanese) in one click from the Tools menu.",
         ),
         category=_CAT_TOOLS,
         keywords=("recommended", "download resources", "starter pack", "quick setup", "jitendex"),
