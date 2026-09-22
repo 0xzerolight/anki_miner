@@ -14,9 +14,9 @@ Anki Miner is maintained by a single person on a best-effort basis. You can expe
 In scope:
 
 - Code execution or path traversal in subtitle parsing, media extraction, or AnkiConnect interaction.
-- Network handling for dictionary providers (Jisho, Yomitan-imported dictionaries).
+- Network handling and integrity checks for everything the app downloads: dictionaries and other recommended resources, language, ASR and onnxruntime packs (sha256-pinned wheels extracted onto `sys.path`), the mokuro/uv, alass and yt-dlp binaries, update checks, and word and sentence audio sources (JapanesePod101, Google, Microsoft Edge, Naver Papago, custom URLs).
 - yt-dlp subprocess handling and the YouTube workspace lifecycle.
-- Bundled installers (PyInstaller, AppImage, `.deb`, Inno Setup).
+- Bundled installers (PyInstaller, AppImage, `.deb`, Inno Setup, macOS `.dmg`).
 
 Out of scope:
 
