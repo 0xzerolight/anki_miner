@@ -411,7 +411,7 @@ timeout_method = "thread"
 qt_api = "pyqt6"
 markers = [
     "youtube: requires network and yt-dlp real extractor",
-    "real_ytdlp: exercises the real _ytdlp_supports_js_runtimes (no autouse stub)",
+    "real_ytdlp: exercises the real ytdlp_supports_js_runtimes / ytdlp_supports_remote_components probes (no autouse stub)",
     "real_probe: exercises the real AnkiService._probe_duplicates (no autouse stub)",
     "e2e: real-service end-to-end GUI tests (require running Anki; excluded by default)",
     "soak: multi-session soak tests",
