@@ -114,16 +114,16 @@ New code should add tests where reasonable; refactors should not regress existin
 
 ## Adding a mining language
 
-Each language is a package plus a set of registration sites. A site you miss either breaks a test or fails quietly in the frozen build, so walk the whole list. The Hebrew and Slovenian commits are worked examples: `git log --oneline -- anki_miner/languages/he anki_miner/languages/sl`.
+Each language is a package plus a set of registration sites. A site you miss either breaks a test or fails quietly in the frozen build, so walk the whole list. The Hebrew and Slovenian commits are worked examples, including the ones outside the language package: `git log --oneline --grep='(he)' --grep='(sl)'`.
 
 1. **Package**: `anki_miner/languages/<code>/` with `build_profile()` in `__init__.py`, `tokenizer.py::build_tagger()`, a parser factory and `catalog.py` (recommended dictionary and frequency list). `registry.py` finds the package by its code, and `tagger_provider.py` builds the tagger without a per-language branch. Space-delimited languages build on `languages/_spaced/`.
 2. **Code tuples**: append the code to `AVAILABLE_LANGUAGES` (`languages/__init__.py`) and to its deliberate duplicate `_LANGUAGE_CODES` (`config/config.py`). A test pins the two identical. Don't pin the tuple's last element in a test; the next language breaks it.
-3. **Engine pack**: generate `languages/<code>/pack.py` with `scripts/pin_language_pack.py` (never by hand), which also writes `tests/fixtures/language_packs/<code>.resolved.json`. spaCy languages set `requires=("_spacy",)`. A language with no engine and no data (Indonesian, Hebrew) has no pack.
+3. **Engine pack**: generate a spaCy-model or PyPI-closure `languages/<code>/pack.py` with `scripts/pin_language_pack.py`, which also writes `tests/fixtures/language_packs/<code>.resolved.json`, and never hand-edit a generated one. A data-only or trimmed pack is hand-pinned instead, like those of Arabic, Persian, Vietnamese, Chinese and Korean. spaCy languages set `requires=("_spacy",)`. A language with no engine and no data (Indonesian, Hebrew) has no pack.
 4. **pip extra**: add a `[<code>]` extra to `pyproject.toml` and list it in the `languages` aggregate. Check the result by loading the file with `tomllib`, not by reading the diff.
 5. **Frozen build**: add every engine module to `excludes` in `anki_miner.spec`, add the licence-notice `datas` block, and ship the notice under `licenses/<component>/`.
 6. **CI and release**:
    - `ci.yml`: pin the spaCy model wheel, or add the code to the seed line for a data-only pack.
-   - `release.yml`: add the code to the seed line and to `BUNDLE_SMOKE_LANGS`.
+   - `release.yml`: add the code to `BUNDLE_SMOKE_LANGS`, and to the seed line if it has a pack.
    - Give the profile a `smoke_sentence` for the bundle smoke.
 7. **Capabilities and fields**:
    - Add any new profile capability to `CAPABILITY_VOCABULARY` (`tests/unit/languages/test_language_contract.py`).
