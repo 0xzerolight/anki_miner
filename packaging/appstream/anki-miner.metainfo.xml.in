@@ -34,8 +34,10 @@
     </p>
     <p>
       Words you already know are filtered out by reading your own Anki
-      collection, so a run only ever proposes something new. Japanese, Chinese,
-      Korean and eight European languages are supported.
+      collection, so a run only ever proposes something new. Thirty-two
+      mining languages are supported, including Japanese, Chinese, Cantonese,
+      Korean, Arabic, Hebrew, Persian, Thai, Vietnamese and twenty-one
+      European languages.
     </p>
   </description>
 
@@ -49,6 +51,7 @@
   <keywords>
     <keyword>Anki</keyword>
     <keyword>flashcards</keyword>
+    <keyword>language learning</keyword>
     <keyword>Japanese</keyword>
     <keyword>subtitles</keyword>
     <keyword>vocabulary</keyword>

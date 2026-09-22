@@ -56,7 +56,7 @@ license-files = [
 authors = [
     {name = "Anki Miner Contributors"}
 ]
-keywords = ["anki", "japanese", "vocabulary", "anime", "subtitles", "language-learning"]
+keywords = ["anki", "vocabulary", "language-learning", "sentence-mining", "flashcards", "subtitles", "yomitan", "japanese", "chinese", "korean", "anime", "manga"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Education",
@@ -279,8 +279,6 @@ ru = [
 vi = [
     "underthesea>=9.5,<9.6",
 ]
-# Bundle-all aggregate: the release matrix installs this, pip's default stays
-# JA-lean (same shape as the asr extras).
 # Thai mining engine: PyThaiNLP (Apache-2.0, pure Python) carries the newmm
 # dictionary tokenizer, the perceptron tagger and the TNC/TTC frequency lists.
 # Capped below 6 because the tokenizer and tagger APIs this code calls are 5.x.
@@ -307,7 +305,7 @@ uk = [
     "pymorphy3>=2.0.6",
     "pymorphy3-dicts-uk",
 ]
-# Bundle-all aggregate: the release matrix installs this, pip's default stays
+# Every engine extra at once (CI's test job installs it); pip's default stays
 # JA-lean (same shape as the asr extras).
 languages = ["anki-miner[zh]", "anki-miner[ko]", "anki-miner[en]", "anki-miner[ca]", "anki-miner[de]", "anki-miner[pt]", "anki-miner[fr]", "anki-miner[es]", "anki-miner[it]", "anki-miner[nl]", "anki-miner[nb]", "anki-miner[ro]", "anki-miner[el]", "anki-miner[fi]", "anki-miner[hu]", "anki-miner[hr]", "anki-miner[sv]", "anki-miner[pl]", "anki-miner[lt]", "anki-miner[da]", "anki-miner[tr]", "anki-miner[ru]", "anki-miner[th]", "anki-miner[sl]", "anki-miner[uk]", "anki-miner[vi]", "anki-miner[yue]"]
 dev = [

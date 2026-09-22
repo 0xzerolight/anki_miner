@@ -495,8 +495,7 @@ if platform.system() == "Windows":
                             StringStruct("CompanyName", "Anki Miner Contributors"),
                             StringStruct(
                                 "FileDescription",
-                                "Anki Miner - Japanese vocabulary mining from "
-                                "media",
+                                "Anki Miner - vocabulary mining from media",
                             ),
                             StringStruct("FileVersion", app_version),
                             StringStruct("InternalName", "AnkiMiner"),
