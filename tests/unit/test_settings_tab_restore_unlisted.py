@@ -327,7 +327,7 @@ def test_restore_unlisted_resource_without_reimport(tab_for_resource_restore, tm
     emissions: list[AnkiMinerConfig] = []
     tab.config_changed.connect(emissions.append)
 
-    panel._restore_btn.click()
+    panel._restore_btn.trigger()
 
     assert len(emissions) == 1
     restored_chain = getattr(emissions[0], chain_attr)
@@ -409,7 +409,7 @@ def test_delayed_restore_result_is_discarded_after_root_and_chain_change(
         )
         new_chain = (PitchSourceEntry(existing_id),)
 
-    panel._restore_btn.click()
+    panel._restore_btn.trigger()
     result = delayed["work"]()
     result_ids = [getattr(item, "pack_id", None) or getattr(item, "source_id", None) for item in result]
     assert result_ids == [source_id]
@@ -459,7 +459,7 @@ def test_restore_says_so_when_it_finds_nothing(
     emissions: list[AnkiMinerConfig] = []
     tab.config_changed.connect(emissions.append)
 
-    panel._restore_btn.click()
+    panel._restore_btn.trigger()
 
     assert len(info_calls) == 1, info_calls
     title, body = info_calls[0]

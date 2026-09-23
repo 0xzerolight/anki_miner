@@ -1619,6 +1619,6 @@ def test_reimport_all_button_emits_its_request(qapp, qtbot, tmp_path):
     fired: list[int] = []
     panel.reimport_all_requested.connect(lambda: fired.append(1))
 
-    panel._reimport_btn.click()
+    panel._reimport_btn.trigger()
 
     assert fired == [1]

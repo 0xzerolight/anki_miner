@@ -16,6 +16,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from PyQt6.QtCore import QPoint, pyqtSignal
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QMenu,
     QMessageBox,
@@ -23,7 +24,6 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import FreqEntry
 from anki_miner.gui.widgets.base import ScreenIssue
-from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels.chain_priority_list import ChainRowSpec, ChainSourceRow
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     ChainListLabels,
@@ -123,22 +123,22 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
 
     def _setup_fields(self) -> None:
         self.add_section(self.tr("Active Frequency Sources"))
-        self._restore_btn = ModernButton(self.tr("Restore from Disk"), variant="secondary")
+        self._restore_btn = QAction(self.tr("Restore from Disk"), self)
         self._restore_btn.setToolTip(
             self.tr(
                 "Re-add frequency sources found in the storage folder that aren't in the list above. "
                 "No re-import needed."
             )
         )
-        self._restore_btn.clicked.connect(self.restore_requested.emit)
-        self._reimport_btn = ModernButton(self.tr("Reimport All"), variant="secondary")
+        self._restore_btn.triggered.connect(lambda _checked=False: self.restore_requested.emit())
+        self._reimport_btn = QAction(self.tr("Reimport All"), self)
         self._reimport_btn.setToolTip(
             self.tr(
                 "Rebuild every frequency source in the list from the copy saved when it was imported. "
                 "Needed after an app upgrade changes the index format."
             )
         )
-        self._reimport_btn.clicked.connect(self.reimport_all_requested.emit)
+        self._reimport_btn.triggered.connect(lambda _checked=False: self.reimport_all_requested.emit())
         container = self._build_chain_container(
             ChainListLabels(
                 # Not the first-match sentence the other three chains carry:
@@ -155,6 +155,8 @@ class FrequencySettingsPanel(ChainSettingsPanelBase):
                 move_up_tooltip=self.tr("Move up in the card's source list"),
                 move_down=self.tr("Move down"),
                 move_down_tooltip=self.tr("Move down in the card's source list"),
+                more=self.tr("More"),
+                more_tooltip=self.tr("More actions"),
             ),
             extra_actions=(self._reimport_btn, self._restore_btn),
         )

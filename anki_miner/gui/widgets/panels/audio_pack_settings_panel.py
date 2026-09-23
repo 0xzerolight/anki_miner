@@ -27,7 +27,6 @@ from anki_miner.gui.utils.config_commit import ConfigCommitResult
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.widgets.base import ScreenIssue
-from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels.chain_priority_list import ChainRowSpec, ChainSourceRow
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     ChainListLabels,
@@ -238,9 +237,9 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         # Cache-hygiene: clear the record of words JPod101 had no audio for so
         # they are re-requested on the next run (replaces deleting the cache dir
         # by hand). The unlink sweep is dispatched by the settings tab.
-        self._retry_missing_btn = ModernButton(self.tr("Retry missing audio"), variant="secondary")
+        self._retry_missing_btn = QAction(self.tr("Retry missing audio"), self)
         self._retry_missing_btn.setToolTip(self.tr("Re-try words JapanesePod101 had no audio for on the next run"))
-        self._retry_missing_btn.clicked.connect(self.retry_missing_audio_requested.emit)
+        self._retry_missing_btn.triggered.connect(lambda _checked=False: self.retry_missing_audio_requested.emit())
         # _write_chain re-syncs the affordance for this panel's own writers, but
         # the base class writes _chain directly on a row toggle, a reorder and a
         # chain-only remove - all of which announce themselves here. Subscribing
@@ -248,22 +247,22 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         # setVisible is idempotent, so the double call on our own writes is free.
         self.chain_changed.connect(self._sync_retry_affordance)
 
-        self._restore_btn = ModernButton(self.tr("Restore from Disk"), variant="secondary")
+        self._restore_btn = QAction(self.tr("Restore from Disk"), self)
         self._restore_btn.setToolTip(
             self.tr(
                 "Re-add audio packs found in the storage folder that aren't in the list above. No re-import needed."
             )
         )
-        self._restore_btn.clicked.connect(self.restore_requested.emit)
+        self._restore_btn.triggered.connect(lambda _checked=False: self.restore_requested.emit())
 
-        self._reimport_btn = ModernButton(self.tr("Reimport All"), variant="secondary")
+        self._reimport_btn = QAction(self.tr("Reimport All"), self)
         self._reimport_btn.setToolTip(
             self.tr(
                 "Rebuild every audio pack in the list from the folder or database it was imported from. "
                 "Needed after an app upgrade changes the index format."
             )
         )
-        self._reimport_btn.clicked.connect(self.reimport_all_requested.emit)
+        self._reimport_btn.triggered.connect(lambda _checked=False: self.reimport_all_requested.emit())
 
         container = self._build_chain_container(
             ChainListLabels(
@@ -277,6 +276,8 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 move_up_tooltip=self.tr("Move up in priority"),
                 move_down=self.tr("Move down"),
                 move_down_tooltip=self.tr("Move down in priority"),
+                more=self.tr("More"),
+                more_tooltip=self.tr("More actions"),
             ),
             extra_actions=(self._reimport_btn, self._restore_btn, self._retry_missing_btn),
         )

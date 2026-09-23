@@ -517,7 +517,7 @@ def test_reimport_all_signal_fires_on_button_click(qapp, qtbot, tmp_path):
     all_fired: list[None] = []
     panel.reimport_all_requested.connect(lambda: all_fired.append(None))
 
-    panel._reimport_btn.click()
+    panel._reimport_btn.trigger()
     assert all_fired == [None]
 
 
