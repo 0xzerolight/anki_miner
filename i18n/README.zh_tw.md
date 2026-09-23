@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:d6de3b1fd803053b -->
+<!-- i18n-source: README.md sha256:ac281d2293267568 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -120,7 +120,7 @@ anki_miner_gui
 - **有聲書** - 採集有聲書、Podcast、廣播、歌曲（音訊 + 字幕／逐字稿組合）。
 - **閱讀** - 採集漫畫（mokuro）、小說（`.epub`、`.txt`；單本書或整個資料夾）、獨立字幕檔，或貼上的文字。
 - **分析** - 採集歷史、難度排名、里程碑。
-- **工具** - 生成字幕（本機 Whisper）、重新校時字幕（ffsubsync/alass）、把媒體濃縮成只有對話的音訊、從 yt-dlp 支援的任何網站下載影片/音訊/字幕、把現成牌組中值得學的部分複製到新牌組、為既有卡片補齊欄位、把漫畫頁面圖片 OCR 成 .mokuro 檔案（mokuro，可從設定安裝），以及讓有聲書對齊書本文字（有聲書同步）。
+- **工具** - 生成字幕（本機 Whisper）、重新校時字幕（ffsubsync/alass）、把媒體濃縮成只有對話的音訊、從 yt-dlp 支援的任何網站下載影片/音訊/字幕、把現成牌組中值得學的部分複製到新牌組、為既有卡片補齊欄位、把漫畫頁面圖片 OCR 成 .mokuro 檔案（mokuro），以及讓有聲書對齊書本文字（有聲書同步）。
 - **設定** - 所有可調整的項目。
 
 ## 其他功能
@@ -137,7 +137,7 @@ anki_miner_gui
 - 內嵌的 libmpv 影片預覽 - 整理單字時播放該單字的場景，或在即時播放中微調字幕時間。
 - 動態螢幕截圖（見上方的卡片範例）。
 - 設定檔 - 儲存具名設定組合，並從標題列切換。
-- 重新設定採集卡片樣式 - 把你目前的卡片樣式重新套用到已製作的卡片上（工具選單）。
+- 重新設定採集卡片樣式 - 把你目前的卡片樣式重新套用到已製作的卡片上（工具 → 卡片欄位回填）。
 
 <details>
 <summary><strong>內建主題（29 種）</strong></summary>

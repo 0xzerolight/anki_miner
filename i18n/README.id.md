@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:d6de3b1fd803053b -->
+<!-- i18n-source: README.md sha256:ac281d2293267568 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -120,7 +120,7 @@ Untuk pengaturan pengembangan lengkap, lihat [CONTRIBUTING.md](../CONTRIBUTING.m
 - **Buku Audio** - mining buku audio, podcast, radio, lagu (pasangan audio + subtitel/transkrip).
 - **Bacaan** - mining manga (mokuro), novel (`.epub`, `.txt`; satu buku atau seluruh folder), berkas subtitel mandiri, atau teks yang ditempel.
 - **Analitik** - riwayat mining, peringkat kesulitan, milestone.
-- **Utilitas** - membuat subtitel (Whisper lokal), mengatur ulang waktu subtitel (ffsubsync/alass), memadatkan media menjadi audio berisi dialog saja, mengunduh video/audio/subtitel dari situs mana pun yang didukung yt-dlp, menyalin bagian yang layak dipelajari dari dek siap pakai ke dek baru, mengisi ulang bidang pada kartu yang sudah ada, meng-OCR gambar halaman manga menjadi berkas .mokuro (mokuro, dapat dipasang dari Pengaturan), dan menyelaraskan buku audio dengan teks bukunya (Sinkronisasi Buku Audio).
+- **Utilitas** - membuat subtitel (Whisper lokal), mengatur ulang waktu subtitel (ffsubsync/alass), memadatkan media menjadi audio berisi dialog saja, mengunduh video/audio/subtitel dari situs mana pun yang didukung yt-dlp, menyalin bagian yang layak dipelajari dari dek siap pakai ke dek baru, mengisi ulang bidang pada kartu yang sudah ada, meng-OCR gambar halaman manga menjadi berkas .mokuro (mokuro), dan menyelaraskan buku audio dengan teks bukunya (Sinkronisasi Buku Audio).
 - **Pengaturan** - semua yang bisa dikonfigurasi.
 
 ## Fitur Lainnya
@@ -137,7 +137,7 @@ Untuk pengaturan pengembangan lengkap, lihat [CONTRIBUTING.md](../CONTRIBUTING.m
 - Pratinjau video libmpv tersemat - putar adegan sebuah kata saat mengkurasi, atau sesuaikan waktu subtitel dengan pemutaran langsung.
 - Tangkapan layar beranimasi (lihat contoh kartu di atas).
 - Profil pengaturan - simpan konfigurasi bernama dan beralih di antaranya dari header.
-- Tata Ulang Kartu Hasil Mining - terapkan ulang gaya kartu Anda saat ini ke kartu yang sudah Anda buat (menu Alat).
+- Tata Ulang Kartu Hasil Mining - terapkan ulang gaya kartu Anda saat ini ke kartu yang sudah Anda buat (Utilitas → Pengisian Bidang Kartu).
 
 <details>
 <summary><strong>Tema bawaan (29)</strong></summary>

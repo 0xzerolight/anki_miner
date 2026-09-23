@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:d6de3b1fd803053b -->
+<!-- i18n-source: README.md sha256:ac281d2293267568 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -120,7 +120,7 @@ anki_miner_gui
 - **Sách nói** - khai thác sách nói, podcast, radio, bài hát (cặp âm thanh + phụ đề/bản chép lời).
 - **Cách đọc** - khai thác manga (mokuro), tiểu thuyết (`.epub`, `.txt`; một cuốn sách hoặc cả thư mục), tệp phụ đề độc lập, hoặc văn bản dán vào.
 - **Phân tích** - lịch sử khai thác, xếp hạng độ khó, cột mốc.
-- **Tiện ích** - tạo phụ đề (Whisper cục bộ), căn lại thời gian phụ đề (ffsubsync/alass), cô đọng media thành âm thanh chỉ có hội thoại, tải video/âm thanh/phụ đề từ bất kỳ trang nào yt-dlp hỗ trợ, sao chép phần đáng học của một bộ thẻ dựng sẵn sang một bộ thẻ mới, điền bổ sung các trường trên thẻ đã có, OCR ảnh trang manga thành tệp .mokuro (mokuro, cài được từ Cài đặt), và căn thời gian một sách nói theo văn bản của cuốn sách (Đồng bộ sách nói).
+- **Tiện ích** - tạo phụ đề (Whisper cục bộ), căn lại thời gian phụ đề (ffsubsync/alass), cô đọng media thành âm thanh chỉ có hội thoại, tải video/âm thanh/phụ đề từ bất kỳ trang nào yt-dlp hỗ trợ, sao chép phần đáng học của một bộ thẻ dựng sẵn sang một bộ thẻ mới, điền bổ sung các trường trên thẻ đã có, OCR ảnh trang manga thành tệp .mokuro (mokuro), và căn thời gian một sách nói theo văn bản của cuốn sách (Đồng bộ sách nói).
 - **Cài đặt** - mọi thứ có thể cấu hình.
 
 ## Tính năng khác
@@ -137,7 +137,7 @@ anki_miner_gui
 - Xem trước video bằng libmpv nhúng - phát cảnh phim của một từ trong lúc chọn lọc, hoặc tinh chỉnh thời gian phụ đề với phát trực tiếp.
 - Ảnh chụp màn hình động (xem thẻ ví dụ ở trên).
 - Hồ sơ cài đặt - lưu các cấu hình có tên và chuyển đổi giữa chúng từ thanh tiêu đề.
-- Tạo lại kiểu cho thẻ đã khai thác - áp dụng lại kiểu thẻ hiện tại của bạn cho những thẻ bạn đã tạo (menu Công cụ).
+- Tạo lại kiểu cho thẻ đã khai thác - áp dụng lại kiểu thẻ hiện tại của bạn cho những thẻ bạn đã tạo (Tiện ích → Điền dữ liệu còn thiếu cho thẻ).
 
 <details>
 <summary><strong>Chủ đề tích hợp sẵn (29)</strong></summary>

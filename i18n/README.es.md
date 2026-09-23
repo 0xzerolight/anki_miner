@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:d6de3b1fd803053b -->
+<!-- i18n-source: README.md sha256:ac281d2293267568 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -120,7 +120,7 @@ Para la configuración completa de desarrollo, consulta [CONTRIBUTING.md](../CON
 - **Audiolibros** - minera audiolibros, pódcasts, radio, canciones (pares de audio + subtítulo/transcripción).
 - **Lectura** - minera manga (mokuro), novelas (`.epub`, `.txt`; un libro individual o una carpeta completa), archivos de subtítulos independientes o texto pegado.
 - **Analíticas** - historial de minería, clasificaciones de dificultad, hitos.
-- **Utilidades** - genera subtítulos (Whisper local), ajusta el tiempo de los subtítulos (ffsubsync/alass), condensa medios a audio solo de diálogos, descarga vídeo/audio/subtítulos de cualquier sitio compatible con yt-dlp, copia la parte que vale la pena aprender de un mazo prediseñado a uno nuevo, rellena campos en tarjetas existentes, aplica OCR a imágenes de páginas de manga para crear archivos .mokuro (mokuro, instalable desde Configuración) y sincroniza un audiolibro con el texto de su libro (Sincronizar audiolibro).
+- **Utilidades** - genera subtítulos (Whisper local), ajusta el tiempo de los subtítulos (ffsubsync/alass), condensa medios a audio solo de diálogos, descarga vídeo/audio/subtítulos de cualquier sitio compatible con yt-dlp, copia la parte que vale la pena aprender de un mazo prediseñado a uno nuevo, rellena campos en tarjetas existentes, aplica OCR a imágenes de páginas de manga para crear archivos .mokuro (mokuro) y sincroniza un audiolibro con el texto de su libro (Sincronizar audiolibro).
 - **Configuración** - todo lo configurable.
 
 ## Otras Características
@@ -137,7 +137,7 @@ Para la configuración completa de desarrollo, consulta [CONTRIBUTING.md](../CON
 - Vista previa de video integrada con libmpv - reproduce la escena de cada palabra mientras curas, o ajusta la temporización de los subtítulos con reproducción en vivo.
 - Capturas de pantalla animadas (ver ejemplos de tarjetas arriba).
 - Perfiles de configuración - guarda configuraciones con nombre y cambia entre ellas desde la cabecera.
-- Reestilizar tarjetas minadas - vuelve a aplicar tu estilo de tarjeta actual a las tarjetas que ya creaste (menú Herramientas).
+- Reestilizar tarjetas minadas - vuelve a aplicar tu estilo de tarjeta actual a las tarjetas que ya creaste (Utilidades → Completar tarjetas).
 
 <details>
 <summary><strong>Temas integrados (29)</strong></summary>
