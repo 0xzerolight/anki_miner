@@ -42,6 +42,10 @@ def test_dead_cross_episode_filter_is_not_advertised() -> None:
     assert search("recurring") == []
 
 
+def test_media_downloader_is_findable_by_subtitles_only() -> None:
+    assert any(cap.id == "media-downloader" for cap in search("subtitles only"))
+
+
 def test_registry_is_non_trivial() -> None:
     # Guards against an accidental truncation of the catalogue.
     assert len(CAPABILITIES) >= 75
