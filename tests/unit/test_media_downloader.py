@@ -764,6 +764,216 @@ class TestFfmpegPreflight:
         recorder.assert_called_once()
 
 
+class TestSubtitlesOnly:
+    """DownloadOptions.subtitles_only=True: --skip-download, no ffmpeg, its own error/status mapping."""
+
+    def test_skip_download_replaces_format_and_drops_extract_and_embed_flags(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        recorder, _ = _run_download(
+            monkeypatch,
+            service,
+            tmp_path,
+            _opts(write_subtitles=True, embed_thumbnail=True, embed_metadata=True, subtitles_only=True),
+            lines=["[info] Writing video subtitles to: video [abc].ja.srt"],
+        )
+        cmd = _cmd(recorder)
+        assert "--skip-download" in cmd
+        assert "--ignore-no-formats-error" in cmd
+        assert "--format" not in cmd
+        assert "-x" not in cmd
+        assert "--embed-thumbnail" not in cmd
+        assert "--embed-metadata" not in cmd
+        # Subtitle flags still ride along — that is the whole point of the mode.
+        assert "--write-subs" in cmd
+        assert "--write-auto-subs" in cmd
+        assert cmd[cmd.index("--sub-format") + 1] == "srt/best"
+
+    def test_ffmpeg_missing_does_not_block_a_subtitles_only_run(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr(md, "resolve_ffmpeg", lambda *a, **k: None)
+        monkeypatch.setattr(md.shutil, "which", lambda _name: None)
+        recorder, result = _run_download(
+            monkeypatch,
+            service,
+            tmp_path,
+            _opts(write_subtitles=True, subtitles_only=True),
+            lines=["[info] Writing video subtitles to: video [abc].ja.srt"],
+        )
+        recorder.assert_called_once()
+        assert result.status is DownloadStatus.DONE
+
+    def test_no_subtitles_in_requested_languages_raises(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        """The failure rule is "nothing written, nothing already present" —
+        not a scan for this specific line — but a real run says this, so it
+        is what a genuine failure looks like."""
+        with pytest.raises(MediaDownloadError, match="No subtitles"):
+            _run_download(
+                monkeypatch,
+                service,
+                tmp_path,
+                _opts(write_subtitles=True, subtitles_only=True),
+                lines=["[info] There are no subtitles for the requested languages"],
+            )
+
+    def test_bot_wall_hidden_behind_ignore_no_formats_error_is_still_diagnosed(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        """--ignore-no-formats-error (needed so an honest no-video-formats site
+        does not also fail a subtitles-only run) downgrades YouTube's bot-wall
+        "no formats" failure to a warning too (extractor/common.py's
+        raise_no_formats/raise_login_required both gate on that flag) — yt-dlp
+        then exits 0 having written nothing, and the tail must still be
+        classified so this reports the real cause, not a generic "no subtitles"
+        miss that hides the cookie remedy."""
+        with pytest.raises(BotDetectionError):
+            _run_download(
+                monkeypatch,
+                service,
+                tmp_path,
+                _opts(write_subtitles=True, subtitles_only=True),
+                lines=[
+                    "WARNING: [youtube] abc123: Sign in to confirm you're not a bot. "
+                    "This helps protect our community. Learn more",
+                    "[info] There are no subtitles for the requested languages",
+                ],
+            )
+
+    def test_no_subtitles_marker_alongside_a_written_language_is_done(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        """The marker line itself is not what the failure rule checks — only
+        whether anything was written or already present. This scripted
+        combination cannot happen from real yt-dlp output (the marker means
+        the whole requested-subtitles set was empty), but pins that a
+        leftover/stray marker line never overrides an actual write."""
+        _, result = _run_download(
+            monkeypatch,
+            service,
+            tmp_path,
+            _opts(write_subtitles=True, subtitles_only=True),
+            lines=[
+                "[info] There are no subtitles for the requested languages",
+                "[info] Writing video subtitles to: video [abc].ja.srt",
+            ],
+        )
+        assert result.status is DownloadStatus.DONE
+
+    def test_no_subtitles_marker_is_not_an_error_outside_subtitles_only_mode(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        """A video+subs download with no matching subs still succeeds (DECIDED)."""
+        _, result = _run_download(
+            monkeypatch,
+            service,
+            tmp_path,
+            _opts(write_subtitles=True),
+            lines=["[info] There are no subtitles for the requested languages"],
+        )
+        assert result.status is DownloadStatus.DONE
+
+    def test_rerun_reports_already_downloaded_not_done(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        _, result = _run_download(
+            monkeypatch,
+            service,
+            tmp_path,
+            _opts(write_subtitles=True, subtitles_only=True),
+            lines=["[info] Video subtitle ja.srt is already present"],
+        )
+        assert result.status is DownloadStatus.ALREADY_DOWNLOADED
+
+    def test_already_present_subtitle_marker_does_not_affect_a_video_subs_run(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        """A previous subtitles-only run left the subtitle on disk; a later
+        video+subs run for the same URL still downloads the (new) video and
+        must report DONE, not ALREADY_DOWNLOADED — the subtitle-already
+        marker only means something in subtitles-only mode."""
+        _, result = _run_download(
+            monkeypatch,
+            service,
+            tmp_path,
+            _opts(write_subtitles=True),
+            lines=[
+                "[info] Video subtitle ja.srt is already present",
+                "[download] Destination: video [abc].mp4",
+            ],
+        )
+        assert result.status is DownloadStatus.DONE
+
+    def test_subtitles_only_mixed_already_and_written_languages_is_done(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        """ja is already on disk, en is newly written: something new happened,
+        so the row must report DONE (with en's path), not ALREADY_DOWNLOADED."""
+        _, result = _run_download(
+            monkeypatch,
+            service,
+            tmp_path,
+            _opts(write_subtitles=True, subtitles_only=True, subtitle_langs="ja,en"),
+            lines=[
+                "[info] Video subtitle ja.srt is already present",
+                "[info] Writing video subtitles to: video [abc].en.srt",
+            ],
+        )
+        assert result.status is DownloadStatus.DONE
+        assert result.filepath == Path("video [abc].en.srt")
+
+    def test_video_destination_wins_over_an_earlier_subtitle_write_line(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        """Subtitles are written before the video downloads/merges
+        (YoutubeDL.py:3391 vs :3523), so the subtitle line always precedes the
+        video's own destination/merge lines — last-match-wins must still land
+        on the video's final path in an ordinary video+subs run."""
+        _, result = _run_download(
+            monkeypatch,
+            service,
+            tmp_path,
+            _opts(write_subtitles=True),
+            lines=[
+                "[info] Writing video subtitles to: video [abc].ja.srt",
+                "[download] Destination: video.f137.mp4",
+                "[download] Destination: audio.f140.m4a",
+                '[Merger] Merging formats into "video [abc].mp4"',
+            ],
+        )
+        assert result.filepath == Path("video [abc].mp4")
+
+    def test_inline_subtitle_write_is_captured_as_the_filepath(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        """The inline-data write path prints no '[download] Destination:' line."""
+        _, result = _run_download(
+            monkeypatch,
+            service,
+            tmp_path,
+            _opts(write_subtitles=True, subtitles_only=True),
+            lines=["[info] Writing video subtitles to: video [abc].ja.srt"],
+        )
+        assert result.filepath == Path("video [abc].ja.srt")
+
+    def test_last_subtitle_language_written_wins_the_filepath(
+        self, monkeypatch: pytest.MonkeyPatch, service: MediaDownloaderService, tmp_path: Path
+    ) -> None:
+        _, result = _run_download(
+            monkeypatch,
+            service,
+            tmp_path,
+            _opts(write_subtitles=True, subtitles_only=True, subtitle_langs="ja,en"),
+            lines=[
+                "[info] Writing video subtitles to: video [abc].ja.srt",
+                "[info] Writing video subtitles to: video [abc].en.srt",
+            ],
+        )
+        assert result.filepath == Path("video [abc].en.srt")
+
+
 # ---------------------------------------------------------------------------
 # Probes (track languages, playlist entries)
 # ---------------------------------------------------------------------------
