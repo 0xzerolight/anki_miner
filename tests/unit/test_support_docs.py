@@ -257,7 +257,7 @@ def test_resources_doc_marks_exactly_the_catalog_as_setup_wizard_rows(code: str)
 
 
 def test_resources_doc_points_portuguese_readers_at_the_variety_control() -> None:
-    # The variety combo lives in the Filtering panel, not under Mining Language.
+    # The variety combo lives on the Mining Language page (T10), not Filtering.
     assert "Settings -> Mining Language (Regional Variety)" in _resources_section("Portuguese")
 
 

@@ -3,8 +3,8 @@
 Moved off Filtering (now "Word Filters"): these rows shape what the example
 sentence itself looks like -- text cleanup, a second subtitle track, whole
 sentences instead of fragments, and bolding the mined word -- rather than
-which words get mined. "Colour the reading by tone" stays on Filtering for
-now; a later task moves it here too.
+which words get mined. "Colour the reading by tone" moved off Filtering too
+(T10), onto Cards & Anki, not here -- it colours a card field, not a sentence.
 """
 
 from __future__ import annotations
@@ -133,8 +133,8 @@ class SentencesSettingsPanel(FormPanel):
         )
 
         # Card Formatting section (Issue #20). Only the bold-target row lives
-        # here; "Colour the reading by tone" stays on Filtering until a later
-        # task moves it too.
+        # here; "Colour the reading by tone" moved to Cards & Anki instead
+        # (T10) -- it colours a card field, not a sentence.
         self.add_section(self.tr("Card Formatting"))
 
         self.bold_target_in_sentence_checkbox = QCheckBox(self.tr("Bold target word in sentence"))

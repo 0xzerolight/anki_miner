@@ -131,12 +131,22 @@ def test_the_panel_never_writes_the_language_field(qtbot, test_config):
     """The switch owns ``language``: it has to stash the outgoing language's
     scoped values first, and a second writer would race it. Since T10 the
     panel does have a ``contribute`` (it writes ``script_variant``), but it
-    must never touch ``language`` itself."""
-    panel = _panel(qtbot, test_config)
+    must never touch ``language`` itself.
 
-    result = panel.contribute(test_config)
+    Loaded under zh so the combo is visible and ``contribute`` actually takes
+    its ``replace()`` path (a ja load leaves ``config`` untouched and would
+    make this assertion pass trivially). ``contribute`` is then called with a
+    base config naming a DIFFERENT language, so a stray ``language=`` in that
+    ``replace()`` would fail this rather than agreeing with the loaded config
+    by coincidence.
+    """
+    config = dataclasses.replace(test_config, language="zh", script_variant="traditional")
+    panel = _panel(qtbot, config)
 
-    assert result.language == test_config.language
+    result = panel.contribute(dataclasses.replace(test_config, language="pt"))
+
+    assert result.script_variant == "traditional"
+    assert result.language == "pt"
 
 
 def test_the_panel_title_matches_its_navigator_label(qtbot):

@@ -1249,11 +1249,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     def _load_config(self) -> None:
         """Load current configuration into UI.
 
-        Save-path panels (Anki, Media, Filtering, Sentences, YouTube) are loaded via the
-        symmetric ``load_from_config`` contract so each panel owns its fields
-        in one place (OVH-019).  Dictionary/audio chain panels and the
-        top-level update checkbox persist via their own paths and are handled
-        directly here.
+        Save-path panels (Anki, Media, Mining Language, Filtering, Sentences,
+        YouTube, Subtitles) are loaded via the symmetric ``load_from_config``
+        contract so each panel owns its fields in one place (OVH-019).
+        Dictionary/audio chain panels and the top-level update checkbox
+        persist via their own paths and are handled directly here.
 
         Runs under the ``_loading`` guard: the setText/setChecked/setValue
         calls below fire the same change signals user edits do, and must not

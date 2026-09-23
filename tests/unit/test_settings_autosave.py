@@ -80,6 +80,14 @@ class TestDebounceWiring:
         box.setChecked(not box.isChecked())
         assert tab._debounce_timer.isActive()
 
+    def test_mining_language_combo_does_not_arm_debounce(self, tab):
+        # T10: the language selector proposes a guarded switch that commits
+        # its own config; only its two variant combos join the Save
+        # round-trip (see TestMiningLanguageVariantAutosave below).
+        combo = tab.mining_language_panel.mining_language_combo
+        combo.setCurrentIndex(1 if combo.currentIndex() == 0 else 0)
+        assert not tab._debounce_timer.isActive()
+
     def test_nested_file_selector_arms_debounce(self, tab, tmp_path):
         # Filtering panel's blacklist FileSelector only exposes edits through
         # its nested QLineEdit — recursion in the wiring is load-bearing.
@@ -128,6 +136,35 @@ class TestDebounceWiring:
         with qtbot.waitSignal(tab.config_changed, timeout=3000) as blocker:
             tab.dictionary_panel.release(token)
         assert blocker.args[0].anki_deck_name == "WaitForToken"
+
+
+class TestMiningLanguageVariantAutosave:
+    """T10: the two variant combos on the Mining Language panel join the Save
+    round-trip; the language selector combo itself must not (pinned above,
+    ``test_mining_language_combo_does_not_arm_debounce``).
+    """
+
+    def test_character_set_change_arms_debounce_and_commits(self, tab, qtbot):
+        tab.update_config(replace(tab.config, language="zh"))
+        combo = tab.mining_language_panel.script_variant_combo
+
+        combo.setCurrentIndex(combo.findData("traditional"))
+
+        assert tab._debounce_timer.isActive()
+        with qtbot.waitSignal(tab.config_changed, timeout=3000) as blocker:
+            tab.commit_settings()
+        assert blocker.args[0].script_variant == "traditional"
+
+    def test_regional_variety_change_arms_debounce_and_commits(self, tab, qtbot):
+        tab.update_config(replace(tab.config, language="pt"))
+        combo = tab.mining_language_panel.regional_variant_combo
+
+        combo.setCurrentIndex(combo.findData("pt"))
+
+        assert tab._debounce_timer.isActive()
+        with qtbot.waitSignal(tab.config_changed, timeout=3000) as blocker:
+            tab.commit_settings()
+        assert blocker.args[0].script_variant == "pt"
 
 
 class TestCommitSelfEcho:

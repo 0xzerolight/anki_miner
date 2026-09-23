@@ -212,8 +212,9 @@ class TestSavePathRoundTrip:
         qtbot.addWidget(media_panel)
         # T10: takes part in the Save round-trip (script_variant), like
         # SettingsTab._save_panels. The shared config below carries no
-        # language-gated value for it (see test_mining_language_panel_load_and_contribute),
-        # so its fold here is a no-op; present for structural parity with prod.
+        # language-gated value for it (see
+        # test_mining_language_panel_round_trips_the_variant), so its fold
+        # here is a no-op; present for structural parity with prod.
         mining_language_panel = MiningLanguageSettingsPanel()
         qtbot.addWidget(mining_language_panel)
         filtering_panel = FilteringSettingsPanel()

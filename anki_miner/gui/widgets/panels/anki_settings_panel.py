@@ -858,9 +858,9 @@ class AnkiSettingsPanel(FormPanel):
             anchor_text=lambda: (self.card_type_names_group.title(),),
         )
 
-        # Card creation section (T10, moved from Word Filters). Language-agnostic,
+        # Card Creation section (T10, moved from Word Filters). Language-agnostic,
         # so the row is never gated.
-        self.add_section(self.tr("Card creation"))
+        self.add_section(self.tr("Card Creation"))
 
         self.strict_card_order_checkbox = QCheckBox(self.tr("Create cards in order of appearance"))
         self.add_field(
@@ -1331,7 +1331,7 @@ class AnkiSettingsPanel(FormPanel):
         for key, widget in self._card_type_inputs.items():
             widget.setText(mapping.get(key, _CARD_TYPE_MARKER_DEFAULTS[key]))
 
-    # === Card creation (T10, moved from Word Filters) ===
+    # === Card Creation (T10, moved from Word Filters) ===
 
     def get_strict_card_order(self) -> bool:
         """Return whether strict card-creation order is enabled."""

@@ -44,7 +44,7 @@ ZH_SMOKE_SENTENCE = "我今天早上吃了三个苹果。"
 #: gui/widgets/panels/anki_settings_panel.py (``_language_gate_pairs``)
 #: verbatim — "pinyin" gates the expression_pinyin row there, not
 #: "tone_color" (which gates the separate reading_tone_color *checkbox* in
-#: filtering_settings_panel.py). ``raw_html=True`` matches
+#: anki_settings_panel.py). ``raw_html=True`` matches
 #: ``anki_note_builder._RAW_HTML_FIELD_KEYS`` membership exactly.
 ZH_EXTRA_CARD_FIELDS: tuple[CardFieldSpec, ...] = (
     CardFieldSpec(key="measure_word", capability="measure_word", placeholder="MeasureWord"),
