@@ -156,7 +156,7 @@ class TestRenamedDestinations:
         """Filtering kept its name, so the breadcrumb alone has to match it."""
         results = _ids(search(entries, "filtering"))
 
-        assert "filtering.use_i_plus_one_checkbox" in results
+        assert "filtering.sentence_rule_combo" in results
 
     def test_the_old_subtitles_tab_name_still_finds_its_page(self, entries):
         results = _ids(search(entries, "subtitles"))

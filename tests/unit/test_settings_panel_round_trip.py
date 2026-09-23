@@ -101,11 +101,14 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         subtitle_regex_filter=r"\([^)]*\)",
         subtitle_regex_replacement="",
         use_subtitle_regex_filter=True,
+        # The sentence_rule combo has 3 states, not 4: (True, True) collapses
+        # to "i_plus_one" (i+1 wins) same as (False, True), so it isn't
+        # round-trip-stable. dedup=True picks the "dedup" item instead.
         deduplicate_sentences=True,  # default is False
         strict_card_order=True,
         exclude_hiragana_only_words=True,
         exclude_katakana_only_words=True,
-        use_i_plus_one_filter=True,
+        use_i_plus_one_filter=False,
         merge_incomplete_cues=True,
         max_sentence_duration_seconds=8.0,
         max_sentence_chars=50,

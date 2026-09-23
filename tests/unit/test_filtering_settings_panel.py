@@ -9,10 +9,15 @@ restored to the i+1 and sentence-length tooltips.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
+from PyQt6.QtCore import Qt
+
+from anki_miner.config.defaults import create_default_config
 from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
 
 
@@ -44,7 +49,8 @@ def test_replacement_tooltip_contains_merged_fragments(qtbot):
 def test_i_plus_one_tooltip_mentions_dedup_override(qtbot):
     panel = FilteringSettingsPanel()
     qtbot.addWidget(panel)
-    tip = panel.use_i_plus_one_checkbox.toolTip()
+    index = panel.sentence_rule_combo.findData("i_plus_one")
+    tip = panel.sentence_rule_combo.itemData(index, Qt.ItemDataRole.ToolTipRole)
     assert "i+1" in tip
     assert "deduplication" in tip.lower()
 
@@ -273,3 +279,26 @@ def test_secondary_subtitle_toggle_round_trips(qtbot):
     panel.load_from_config(replace(AnkiMinerConfig(), secondary_subtitle_enabled=True))
     assert panel.secondary_subtitle_checkbox.isChecked()
     assert panel.contribute(AnkiMinerConfig()).secondary_subtitle_enabled is True
+
+
+@pytest.mark.parametrize(
+    "dedup, i1, index",
+    [(False, False, 0), (True, False, 1), (False, True, 2), (True, True, 2)],
+)
+def test_sentence_rule_loads(qtbot, dedup, i1, index):
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(replace(create_default_config(), deduplicate_sentences=dedup, use_i_plus_one_filter=i1))
+    assert panel.sentence_rule_combo.currentIndex() == index
+
+
+@pytest.mark.parametrize(
+    "index, expected",
+    [(0, (False, False)), (1, (True, False)), (2, (False, True))],
+)
+def test_sentence_rule_contributes(qtbot, index, expected):
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.sentence_rule_combo.setCurrentIndex(index)
+    out = panel.contribute(create_default_config())
+    assert (out.deduplicate_sentences, out.use_i_plus_one_filter) == expected

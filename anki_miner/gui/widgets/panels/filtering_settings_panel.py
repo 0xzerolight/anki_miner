@@ -4,7 +4,7 @@ import logging
 from dataclasses import replace
 from pathlib import Path
 
-from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, pyqtSignal
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -443,18 +443,32 @@ class FilteringSettingsPanel(FormPanel):
             ),
         )
 
-        # Deduplication section
-        self.add_section(self.tr("Deduplication"))
+        # Sentence Rule section. Folds the old separate "Deduplicate by
+        # Sentence" and "Only Mine i+1 Sentences" checkboxes into one choice --
+        # i+1 already overrode dedup in EpisodeProcessor, so the pair never
+        # expressed four independent states.
+        self.add_section(self.tr("Sentence Rule"))
 
-        self.deduplicate_sentences_checkbox = QCheckBox(self.tr("Deduplicate by Sentence"))
-        self.add_field(
-            "",
-            self.deduplicate_sentences_checkbox,
-            helper=self.tr(
+        self.sentence_rule_combo = QComboBox()
+        self.sentence_rule_combo.addItem(self.tr("Mine every unknown word"), "all")
+        self.sentence_rule_combo.addItem(self.tr("One card per sentence"), "dedup")
+        self.sentence_rule_combo.setItemData(
+            1,
+            self.tr(
                 "Mines at most one word per example sentence — the first one found in that sentence. "
                 "Every other word sharing it is skipped."
             ),
+            Qt.ItemDataRole.ToolTipRole,
         )
+        self.sentence_rule_combo.addItem(self.tr("Only i+1 sentences (exactly one unknown word)"), "i_plus_one")
+        self.sentence_rule_combo.setItemData(
+            2,
+            self.tr(
+                "Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication."
+            ),
+            Qt.ItemDataRole.ToolTipRole,
+        )
+        self.add_field("", self.sentence_rule_combo)
 
         # Script Type section (Issue #57)
         self.add_section(self.tr("Script Type"))
@@ -501,7 +515,7 @@ class FilteringSettingsPanel(FormPanel):
         # here: the panel and WordFilterService then read one source of truth.
         # It gets a heading of its own because "Script Type" above is gated on
         # kana_filters and hides here, which would leave these rows reading as
-        # part of "Deduplication".
+        # part of "Sentence Rule".
         self.add_section(self.tr("Script Type"))
         self._script_filter_section_label = self._active_section_label
 
@@ -524,7 +538,7 @@ class FilteringSettingsPanel(FormPanel):
         # Chinese script preference. Generic, language-scoped field - ja and ko
         # carry "" here and never see this row. It gets a heading of its own
         # because "Script Type" above is gated on kana_filters and hides under
-        # zh, which would leave this row reading as part of "Deduplication".
+        # zh, which would leave this row reading as part of "Sentence Rule".
         self.add_section(self.tr("Script Variants"))
         self._script_variants_section_label = self._active_section_label
 
@@ -561,17 +575,6 @@ class FilteringSettingsPanel(FormPanel):
                 "Which Google voice reads word and sentence audio, and which frequency list setup suggests."
             ),
         )
-
-        # i+1 Sentence Filter section
-        self.add_section(self.tr("i+1 Sentence Filter"))
-
-        self.use_i_plus_one_checkbox = QCheckBox(self.tr("Only Mine i+1 Sentences"))
-        self.use_i_plus_one_checkbox.setToolTip(
-            self.tr(
-                "Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication."
-            )
-        )
-        self.add_field("", self.use_i_plus_one_checkbox)
 
         # Sentence Length section (Issue #33). No master toggle: the filter is
         # active whenever either cap below is above 0.
@@ -948,15 +951,32 @@ class FilteringSettingsPanel(FormPanel):
     def set_secondary_subtitle_enabled(self, value: bool) -> None:
         self.secondary_subtitle_checkbox.setChecked(value)
 
-    # --- Deduplication ---
+    # --- Sentence rule (dedup / i+1) ---
 
-    def get_deduplicate_sentences(self) -> bool:
-        """Return whether sentence deduplication is enabled."""
-        return self.deduplicate_sentences_checkbox.isChecked()
+    #: combo item data -> (deduplicate_sentences, use_i_plus_one_filter). i+1
+    #: already overrides dedup in EpisodeProcessor, so a source config with
+    #: both booleans set selects "i_plus_one" same as one with only i+1 set.
+    _SENTENCE_RULE_VALUES: dict[str, tuple[bool, bool]] = {
+        "all": (False, False),
+        "dedup": (True, False),
+        "i_plus_one": (False, True),
+    }
 
-    def set_deduplicate_sentences(self, value: bool) -> None:
-        """Set the deduplicate-sentences checkbox."""
-        self.deduplicate_sentences_checkbox.setChecked(value)
+    def get_sentence_rule(self) -> tuple[bool, bool]:
+        """Return (deduplicate_sentences, use_i_plus_one_filter) for the current selection."""
+        return self._SENTENCE_RULE_VALUES[self.sentence_rule_combo.currentData()]
+
+    def set_sentence_rule(self, deduplicate_sentences: bool, use_i_plus_one_filter: bool) -> None:
+        """Select the combo item matching the two source booleans."""
+        if use_i_plus_one_filter:
+            value = "i_plus_one"
+        elif deduplicate_sentences:
+            value = "dedup"
+        else:
+            value = "all"
+        index = self.sentence_rule_combo.findData(value)
+        if index >= 0:
+            self.sentence_rule_combo.setCurrentIndex(index)
 
     # --- Card order ---
 
@@ -985,16 +1005,6 @@ class FilteringSettingsPanel(FormPanel):
     def set_exclude_katakana_only_words(self, value: bool) -> None:
         """Set the exclude-katakana-only checkbox."""
         self.exclude_katakana_only_checkbox.setChecked(value)
-
-    # --- i+1 filter ---
-
-    def get_use_i_plus_one_filter(self) -> bool:
-        """Return whether the i+1 sentence filter is enabled."""
-        return self.use_i_plus_one_checkbox.isChecked()
-
-    def set_use_i_plus_one_filter(self, value: bool) -> None:
-        """Set the i+1 filter checkbox."""
-        self.use_i_plus_one_checkbox.setChecked(value)
 
     # --- Full sentences ---
 
@@ -1103,14 +1113,13 @@ class FilteringSettingsPanel(FormPanel):
         self.set_subtitle_regex_replacement(config.subtitle_regex_replacement)
         self.set_use_subtitle_regex_filter(config.use_subtitle_regex_filter)
         self.set_secondary_subtitle_enabled(config.secondary_subtitle_enabled)
-        self.set_deduplicate_sentences(config.deduplicate_sentences)
+        self.set_sentence_rule(config.deduplicate_sentences, config.use_i_plus_one_filter)
         self.set_strict_card_order(config.strict_card_order)
         self.set_exclude_hiragana_only_words(config.exclude_hiragana_only_words)
         self.set_exclude_katakana_only_words(config.exclude_katakana_only_words)
         # Same two booleans, read through whichever language's option named them.
         for option_id, checkbox in self.script_filter_checkboxes.items():
             checkbox.setChecked(bool(getattr(config, self._script_filter_fields[option_id])))
-        self.set_use_i_plus_one_filter(config.use_i_plus_one_filter)
         self.set_merge_incomplete_cues(config.merge_incomplete_cues)
         self.set_max_sentence_duration_seconds(config.max_sentence_duration_seconds)
         self.set_max_sentence_chars(config.max_sentence_chars)
@@ -1136,6 +1145,7 @@ class FilteringSettingsPanel(FormPanel):
         stays in :meth:`SettingsTab.commit_settings` — it runs before the fold
         so any invalid pattern aborts Save before ``contribute`` is ever called.
         """
+        deduplicate_sentences, use_i_plus_one_filter = self.get_sentence_rule()
         updated = replace(
             config,
             min_frequency_rank=self.get_min_frequency_rank(),
@@ -1153,11 +1163,11 @@ class FilteringSettingsPanel(FormPanel):
             subtitle_regex_replacement=self.get_subtitle_regex_replacement(),
             use_subtitle_regex_filter=self.get_use_subtitle_regex_filter(),
             secondary_subtitle_enabled=self.get_secondary_subtitle_enabled(),
-            deduplicate_sentences=self.get_deduplicate_sentences(),
+            deduplicate_sentences=deduplicate_sentences,
             strict_card_order=self.get_strict_card_order(),
             exclude_hiragana_only_words=self.get_exclude_hiragana_only_words(),
             exclude_katakana_only_words=self.get_exclude_katakana_only_words(),
-            use_i_plus_one_filter=self.get_use_i_plus_one_filter(),
+            use_i_plus_one_filter=use_i_plus_one_filter,
             merge_incomplete_cues=self.get_merge_incomplete_cues(),
             max_sentence_duration_seconds=self.get_max_sentence_duration_seconds(),
             max_sentence_chars=self.get_max_sentence_chars(),

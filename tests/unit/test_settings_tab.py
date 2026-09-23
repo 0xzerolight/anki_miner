@@ -577,14 +577,14 @@ class TestImportResultFeedback:
 
 
 class TestIPlusOneFilterRoundTrip:
-    """Load/save round-trip for the i+1 sentence filter checkbox."""
+    """Load/save round-trip for the i+1 sentence rule combo item."""
 
     def test_loads_use_i_plus_one_filter_from_config(self, test_config: AnkiMinerConfig, qtbot):
         cfg_on = replace(test_config, use_i_plus_one_filter=True)
         widget = SettingsTab(cfg_on)
         qtbot.addWidget(widget)
         try:
-            assert widget.filtering_panel.use_i_plus_one_checkbox.isChecked() is True
+            assert widget.filtering_panel.sentence_rule_combo.currentData() == "i_plus_one"
         finally:
             widget.deleteLater()
 
@@ -592,7 +592,7 @@ class TestIPlusOneFilterRoundTrip:
         widget = SettingsTab(cfg_off)
         qtbot.addWidget(widget)
         try:
-            assert widget.filtering_panel.use_i_plus_one_checkbox.isChecked() is False
+            assert widget.filtering_panel.sentence_rule_combo.currentData() != "i_plus_one"
         finally:
             widget.deleteLater()
 
@@ -604,13 +604,15 @@ class TestIPlusOneFilterRoundTrip:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.filtering_panel.use_i_plus_one_checkbox.setChecked(True)
+        index = tab.filtering_panel.sentence_rule_combo.findData("i_plus_one")
+        tab.filtering_panel.sentence_rule_combo.setCurrentIndex(index)
         tab.commit_settings()
 
         assert len(received) == 1
         assert received[0].use_i_plus_one_filter is True
 
-        tab.filtering_panel.use_i_plus_one_checkbox.setChecked(False)
+        index = tab.filtering_panel.sentence_rule_combo.findData("all")
+        tab.filtering_panel.sentence_rule_combo.setCurrentIndex(index)
         tab.commit_settings()
 
         assert len(received) == 2

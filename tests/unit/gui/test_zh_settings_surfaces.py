@@ -115,7 +115,7 @@ def test_the_bold_tooltip_names_no_japanese_field_or_tagger(qtbot, test_config):
 def test_the_zh_script_rows_carry_their_own_heading(qtbot, test_config):
     """ "Script Type" above is gated on kana_filters and hides under zh.
 
-    Without a heading of their own the zh rows read as part of "Deduplication".
+    Without a heading of their own the zh rows read as part of "Sentence Rule".
     """
     panel = _filtering(qtbot, _zh(test_config))
     heading = panel._script_variants_section_label
