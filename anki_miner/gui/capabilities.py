@@ -1242,7 +1242,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -> Manga can mine it. "
-            "Install mokuro from the Manga OCR setup card on this tab.",
+            "Install mokuro from its setup card on Utilities -> Manga OCR.",
         ),
         category=_CAT_TOOLS,
         target=CapabilityTarget("subtitles", "mokuro"),

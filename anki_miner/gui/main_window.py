@@ -2198,6 +2198,16 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             if callable(flush):
                 flush()
 
+        # Same reason, same ordering constraint: a mokuro-executable path
+        # typed into the Manga OCR tab's setup card just before quitting is
+        # still debouncing (1000 ms) and must not be dropped by teardown.
+        subtitles_idx = self._main_tab_index("subtitles")
+        if subtitles_idx >= 0:
+            mokuro_tab = getattr(self.tabs.widget(subtitles_idx), "mokuro_tab", None)
+            flush_mokuro = getattr(mokuro_tab, "flush_pending_edits", None)
+            if callable(flush_mokuro):
+                flush_mokuro()
+
         # Stop the main-thread stall watchdog so its monitor thread and
         # heartbeat timer don't outlive shutdown. The monitor is daemon=True as
         # a backstop, but stopping it cleanly avoids a stray WARNING if a worker

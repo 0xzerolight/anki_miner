@@ -375,7 +375,7 @@ class BackgroundTaskController(QObject):
             uv_root: Directory the uv-managed mokuro environment is created in;
                 typically ``config.uv_root``.
             on_status: Slot for ``status(str)`` — typically
-                ``SettingsTab.set_mokuro_status``.
+                ``MokuroTab.set_mokuro_status`` (the Manga OCR tab's setup card).
             on_finished: Slot for ``result_ready(bool, str)`` — called with
                 ``(ok, message)`` when the install completes or fails.
         """

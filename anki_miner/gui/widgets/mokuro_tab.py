@@ -153,17 +153,46 @@ class MokuroTab(_ToolTabBase):
     # ------------------------------------------------------------------
 
     def update_config(self, config: AnkiMinerConfig) -> None:
-        """Adopt a new config; re-probe only when something other than the run option changed."""
+        """Adopt a new config; re-probe only when something other than the run option changed.
+
+        Reseeding the location field is skipped while an edit is still
+        debouncing (``_mokuro_location_timer.isActive()``): a same-tab
+        edit-then-toggle (e.g. type a path, tick GPU within the debounce
+        window) round-trips through ``config_changed`` -> ``window.update_config``
+        -> ``config_refreshed`` and lands back here carrying the GPU change
+        but the OLD location (the debounce hadn't committed it yet). Reseeding
+        on that echo would overwrite the selector with the stale location and
+        the pending edit would be lost when the timer then found nothing
+        changed. The selector stays the source of truth until the debounce
+        commits, and :meth:`_commit_mokuro_location` folds onto ``self.config``
+        as it stands then — which by that point already carries this echo's
+        GPU change.
+        """
         old_config, self.config = self.config, config
         idle = self.worker_thread is None or not self.worker_thread.isRunning()
-        if idle and (
-            self.config.mokuro_use_gpu != self.gpu_checkbox.isChecked()
-            or self.config.mokuro_location != self._current_mokuro_location()
+        if idle and self.config.mokuro_use_gpu != self.gpu_checkbox.isChecked():
+            self._apply_gpu_default()
+        if (
+            idle
+            and not self._mokuro_location_timer.isActive()
+            and self.config.mokuro_location != self._current_mokuro_location()
         ):
-            self._apply_config_defaults()
+            self._apply_mokuro_location_default()
         masked = dataclasses.replace(old_config, mokuro_use_gpu=config.mokuro_use_gpu)
         if masked != config:
             self._refresh_engine_state()
+
+    def flush_pending_edits(self) -> None:
+        """Stop the debounce and commit a pending mokuro-path edit immediately.
+
+        Called from the app's close path (alongside the Settings auto-save
+        flush) so a path typed just before quitting is not silently dropped —
+        without this, closing before the 1000 ms debounce lands would tear
+        down the tab with the edit never persisted.
+        """
+        if self._mokuro_location_timer.isActive():
+            self._mokuro_location_timer.stop()
+            self._commit_mokuro_location()
 
     def notify_install_finished(self, ok: bool) -> None:
         """Clear the in-flight guard and re-enable Install; re-probe only on success.
@@ -177,7 +206,9 @@ class MokuroTab(_ToolTabBase):
         milliseconds, so only a successful install re-runs the guard.
         """
         self._mokuro_install_active = False
-        self.install_mokuro_button.setEnabled(self._mokuro_supported)
+        self.install_mokuro_button.setEnabled(
+            self._mokuro_supported and not still_running(self.worker_thread) and not self._scan_pending_run
+        )
         if ok:
             self._refresh_engine_state()
 
@@ -187,9 +218,22 @@ class MokuroTab(_ToolTabBase):
         return Path(path) if path is not None else None
 
     def _apply_config_defaults(self) -> None:
+        """Seed both fields from ``self.config``. Construction-time only:
+        :meth:`update_config` seeds each independently so a pending location
+        edit can be left alone while the GPU checkbox still updates."""
+        self._apply_gpu_default()
+        self._apply_mokuro_location_default()
+
+    def _apply_gpu_default(self) -> None:
         self._seeding = True
         try:
             self.gpu_checkbox.setChecked(self.config.mokuro_use_gpu)
+        finally:
+            self._seeding = False
+
+    def _apply_mokuro_location_default(self) -> None:
+        self._seeding = True
+        try:
             self.mokuro_selector.set_path(str(self.config.mokuro_location) if self.config.mokuro_location else "")
         finally:
             self._seeding = False
@@ -310,14 +354,18 @@ class MokuroTab(_ToolTabBase):
             label_width=field_label_width(self.tr("mokuro executable:")),
             placeholder=self.tr("Optional: path to the mokuro executable"),
         )
-        self.mokuro_selector.setToolTip(
-            self.tr(
-                "Optional: your own mokuro (pip/pipx). Leave blank to use the in-app "
-                "install below or mokuro on your PATH."
-            )
+        mokuro_selector_helper = self.tr(
+            "Optional: your own mokuro (pip/pipx). Leave blank to use the in-app "
+            "install below or mokuro on your PATH."
         )
+        self.mokuro_selector.setToolTip(mokuro_selector_helper)
         self.mokuro_selector.path_changed.connect(self._on_mokuro_location_changed)
         layout.addWidget(self.mokuro_selector)
+
+        mokuro_selector_help_label = QLabel(mokuro_selector_helper)
+        mokuro_selector_help_label.setObjectName("helper-text")
+        mokuro_selector_help_label.setWordWrap(True)
+        layout.addWidget(mokuro_selector_help_label)
 
         # Unlike alass, the button exists on every platform: an unsupported
         # platform disables it and says so, because the path override above is
@@ -424,17 +472,34 @@ class MokuroTab(_ToolTabBase):
         "installed" covers the managed uv environment, an explicit path
         override, and the user's own pip/pipx mokuro on PATH — the same chain
         :meth:`_compute_mokuro_available` resolves, so the two can never
-        disagree. An install in flight, or an unsupported platform, keeps
-        Install disabled (the construction-time "Not available on this
-        platform" status is the only reason on screen for that then, and must
-        not be overwritten with "Not installed").
+        disagree. Install stays disabled while: an install is already in
+        flight; the platform is unsupported (the construction-time "Not
+        available on this platform" status is the only reason on screen for
+        that then, and must not be overwritten with "Not installed"); or an
+        OCR run/folder scan is in flight — reinstalling mid-run could pull the
+        executable out from under the running worker.
         """
-        if self._mokuro_install_active or not self._mokuro_supported:
+        if (
+            self._mokuro_install_active
+            or not self._mokuro_supported
+            or still_running(self.worker_thread)
+            or self._scan_pending_run
+        ):
             self.install_mokuro_button.setEnabled(False)
             return
         self.install_mokuro_button.setEnabled(True)
         self.install_mokuro_button.setText(self.tr("Reinstall mokuro") if installed else self.tr("Install mokuro"))
         self.set_mokuro_status(self.tr("Installed") if installed else self.tr("Not installed"))
+
+    def _refresh_mokuro_setup_state(self) -> None:
+        """Re-apply the setup card's Install gating after a run/scan state change.
+
+        Called at every point the run/scan-in-flight flags change without a
+        fresh availability probe landing (run start, scan end, worker end), so
+        Install disables for the run's duration and re-enables the moment it
+        is over.
+        """
+        self._apply_mokuro_setup_state(self._mokuro_is_available)
 
     def _on_mokuro_install_clicked(self) -> None:
         """Disable Install in flight, show a pending status, and request the install."""
@@ -524,12 +589,14 @@ class MokuroTab(_ToolTabBase):
 
         self._scan_pending_run = True
         self.run_button.setEnabled(False)
+        self._refresh_mokuro_setup_state()
 
         def _on_scanned(result: object) -> None:
             self._scan_pending_run = False
             volumes = cast("list[MokuroVolume]", result)
             if not volumes:
                 self.run_button.setEnabled(True)
+                self._refresh_mokuro_setup_state()
                 self.show_screen_issue(
                     ScreenIssue(
                         summary=self.tr("No manga volumes found in that folder."),
@@ -545,6 +612,7 @@ class MokuroTab(_ToolTabBase):
         def _on_error(msg: str) -> None:
             self._scan_pending_run = False
             self.run_button.setEnabled(True)
+            self._refresh_mokuro_setup_state()
             self.show_screen_issue(ScreenIssue(summary=self.tr("That folder could not be scanned."), details=msg))
 
         self._scan_worker = run_off_thread(self, lambda: scan_volumes(folder), _on_scanned, _on_error)
@@ -576,11 +644,26 @@ class MokuroTab(_ToolTabBase):
         self.run_button.setEnabled(False)
         self.cancel_button.show()
         worker.start()
+        # After start(), not before: still_running() reads worker.isRunning(),
+        # which is False until the thread has actually started.
+        self._refresh_mokuro_setup_state()
 
     def _on_file_started(self, idx: int) -> None:
         self.progress_widget.set_status(tr_format(self.tr("Volume %1 of %2"), str(idx + 1), str(self._total_volumes)))
         if 0 <= idx < len(self._run_volumes):
             self.log_widget.append_info(str(self._run_volumes[idx].source))
+
+    def _on_worker_finished(self) -> None:
+        """Release the QThread, then re-enable Install now the run is truly over.
+
+        ``queue_finished`` can land while ``QThread.isRunning()`` still
+        reports True (it fires from the worker thread just before the thread
+        actually exits); ``finished`` is the base class's own hook for "the
+        thread has actually exited", so it is the correct place to re-apply
+        the setup card's run-in-flight gate.
+        """
+        super()._on_worker_finished()
+        self._refresh_mokuro_setup_state()
 
     # ------------------------------------------------------------------
     # Close contract

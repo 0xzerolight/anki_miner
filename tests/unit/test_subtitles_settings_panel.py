@@ -1378,6 +1378,12 @@ def test_panel_has_no_mokuro_controls(qtbot):
     assert not hasattr(panel, "install_mokuro_button")
     assert not hasattr(panel, "mokuro_status_label")
     assert not hasattr(panel, "mokuro_install_requested")
+    # Not just the widgets: the anchor the old "mokuro install" row registered
+    # (and any other mokuro anchor) must not survive in the panel's own
+    # registered anchor ids either — that's what settings search indexes.
+    anchor_ids = {anchor.stable_id for anchor in panel.setting_anchors()}
+    assert "subtitles.mokuro_install" not in anchor_ids
+    assert not any("mokuro" in anchor_id for anchor_id in anchor_ids)
 
 
 def test_contribute_does_not_touch_mokuro_location(qtbot, tmp_path):
