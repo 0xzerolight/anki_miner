@@ -247,3 +247,11 @@ def test_resources_doc_lists_every_catalog_url_under_its_language(code: str) -> 
     profile = get_profile(code)
     section = _resources_section(profile.english_name)
     assert [spec.id for spec in profile.catalog if spec.url not in section] == []
+
+
+def test_readme_sends_readers_to_the_per_language_resources_doc() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    # Installed setup wizards still open README#recommended-resources, so the heading stays.
+    section = readme.split("\n## Recommended Resources\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
+    assert "[RESOURCES.md](RESOURCES.md)" in section
+    assert "| Type | Resource |" not in section

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:1f8a3147ec4f94c3 -->
+<!-- i18n-source: README.md sha256:d6de3b1fd803053b -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -171,21 +171,7 @@ anki_miner_gui
 
 ## 推奨リソース
 
-特に記載がなければ日本語向けです。セットアップウィザードがマイニング言語に応じた組み合わせを提示します。
-
-| 種類 | リソース | ダウンロード | 追加方法 |
-|------|----------|----------|---------|
-| 辞書 | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | 辞書 -> 辞書を追加… |
-| 辞書 | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | 辞書 -> 辞書を追加… |
-| 辞書 | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | サイト上で生成 | 辞書 -> 辞書を追加… |
-| ピッチ | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | ピッチアクセント -> ピッチソースを追加… |
-| ピッチ | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | ピッチアクセント -> ピッチソースを追加… |
-| 頻度 | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | 頻度 -> 頻度ソースを追加… |
-| 頻度 | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | 頻度 -> 頻度ソースを追加… |
-| 単語音声 | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | コレクションの torrent または生成した `android.db` | 音声 -> 音声ソースを追加… |
-| 辞書（中国語） | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | 辞書 -> 辞書を追加… |
-| 辞書（韓国語） | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | 辞書 -> 辞書を追加… |
-
+マイニング言語ごとの辞書と頻度リスト、そのダウンロードリンクは [RESOURCES.md](../RESOURCES.md) にあります。セットアップウィザードがマイニング言語に応じた組み合わせを提示します。
 
 <details>
 <summary><strong>JMnedict のライセンス</strong></summary>
