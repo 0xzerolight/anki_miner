@@ -8,10 +8,11 @@ Subtitles main tab:
   download. Where the pack cannot be offered the panel says so plainly, and a
   source install without the ``[asr]`` extra gets the pip command instead.
 - **Alignment (alass)** — optional binary-path override plus an in-app
-  "Download alass" button on the platforms that ship a binary (Linux/Windows),
-  and the three retiming knobs (split penalty, frame-rate correction,
-  single-offset) that used to be per-run controls on the Retime screen.
-  macOS has no upstream binary, so it shows Homebrew guidance instead.
+  "Download alass" button on the platforms that ship a binary (Linux/Windows).
+  macOS has no upstream binary, so it shows Homebrew guidance instead. The
+  three alignment knobs (split penalty, frame-rate correction, single-offset)
+  that used to live on the Retime screen are gone — the retime pipeline is
+  self-tuning now.
 - **Manga OCR (mokuro)** — optional executable-path override plus the in-app
   "Install mokuro" button, which builds a uv-managed environment under
   ``config.uv_root``. Not a subtitle tool, but it is the third external

@@ -455,11 +455,11 @@ class AnkiSettingsPanel(FormPanel):
 
         # AnkiConnect URL
         self.ankiconnect_url_input = QLineEdit()
-        self.ankiconnect_url_input.setPlaceholderText("http://localhost:8765")
+        self.ankiconnect_url_input.setPlaceholderText("http://127.0.0.1:8765")
         self.add_field(
             self.tr("AnkiConnect URL"),
             self.ankiconnect_url_input,
-            helper=self.tr("Default http://localhost:8765. Change if AnkiConnect uses a different port."),
+            helper=self.tr("Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port."),
         )
 
         # Card tags

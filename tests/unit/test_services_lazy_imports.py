@@ -47,12 +47,11 @@ def test_importing_services_does_not_import_requests(tmp_path: Path) -> None:
 
 
 def test_lazy_services_are_still_reachable(tmp_path: Path) -> None:
-    """AnkiService/ValidationService/ExportService stay importable, just deferred."""
+    """AnkiService/ValidationService stay importable, just deferred."""
     result = _run_probe(
         "import sys; import anki_miner.services as s; "
         "assert s.AnkiService.__name__ == 'AnkiService'; "
         "assert s.ValidationService.__name__ == 'ValidationService'; "
-        "assert s.ExportService.__name__ == 'ExportService'; "
         "assert 'requests' in sys.modules",
         _subprocess_env(tmp_path / "home"),
     )

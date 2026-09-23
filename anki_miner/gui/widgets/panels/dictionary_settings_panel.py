@@ -45,7 +45,6 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
     """Reorderable chain of dictionary providers."""
 
     add_dict_requested = pyqtSignal()
-    reimport_jmdict_requested = pyqtSignal()
     reimport_dict_requested = pyqtSignal(str)
     reimport_all_requested = pyqtSignal()
     rescan_requested = pyqtSignal()

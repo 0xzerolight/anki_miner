@@ -164,6 +164,11 @@ def test_word_curator_is_findable() -> None:
     assert any(c.id == "word-curator" for c in hits)
 
 
+def test_review_words_entry_targets_a_screen_that_has_the_checkbox():
+    entry = next(c for c in CAPABILITIES if c.id == "word-curator")
+    assert entry.target == CapabilityTarget("video", "batch")
+
+
 def test_secondary_subtitles_is_findable() -> None:
     hits = search("bilingual")
     assert hits and hits[0].id == "secondary-subtitles"

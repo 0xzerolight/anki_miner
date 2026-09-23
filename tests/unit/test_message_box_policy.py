@@ -103,7 +103,6 @@ LEDGER: dict[str, str] = {
     "gui/main_window.py::MainWindow.commit_boot": "notice",
     "gui/widgets/condense_tab.py::CondenseTab._on_audio_tracks_clicked._on_streams": "notice",
     "gui/widgets/condense_tab.py::CondenseTab._on_subtitle_tracks_clicked._on_streams": "notice",
-    "gui/widgets/dialogs/export_dialog.py::ExportDialog._on_export_done": "notice",
     "gui/widgets/dialogs/known_words_dialog.py::KnownWordsManagerDialog._on_export._on_picked": "notice",
     "gui/widgets/settings_tab.py::SettingsTab._on_export_settings._on_picked": "notice",
     "gui/widgets/settings_tab.py::SettingsTab._on_retry_missing_audio_done": "notice",

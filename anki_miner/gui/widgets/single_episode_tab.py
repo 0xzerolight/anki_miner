@@ -769,7 +769,7 @@ class SingleEpisodeTab(MiningTabBase):
                 "deck": self.config.anki_deck_name,
                 "note_type": self.config.anki_note_type,
                 "language": config_language(self.config),
-                "review_words": self.config.review_words_before_mining,
+                "review_words": True,  # Single always curates (see curation_cb below).
             },
         )
 

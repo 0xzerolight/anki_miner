@@ -307,9 +307,9 @@ class YouTubeTab(YtdlpAvailabilityMixin, _ListQueueMiningTabBase):
         self.review_words_checkbox.setToolTip(self.tr("Pick which words get cards, once per video."))
         queue_layout.addWidget(self.review_words_checkbox)
 
-        # Per-run subtitle source. Session-only like the checkbox above: it is a
-        # choice about this run, not a setting. Changing it re-decides every
-        # already-probed row (PlaylistAddController.set_subtitle_source).
+        # Subtitle source, persisted like any other setting (persist_run_options
+        # below). Changing it re-decides every already-probed row
+        # (PlaylistAddController.set_subtitle_source).
         source_row = QHBoxLayout()
         source_row.setSpacing(SPACING.xs)
         self.subtitle_source_label = QLabel(self.tr("Subtitles:"))

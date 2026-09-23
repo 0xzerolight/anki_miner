@@ -128,7 +128,8 @@ class _SavePathPanel(Protocol):
     """Structural interface for panels that participate in the Save round-trip.
 
     Implemented by :class:`AnkiSettingsPanel`, :class:`MediaSettingsPanel`,
-    :class:`FilteringSettingsPanel`, and :class:`YouTubeSettingsPanel`.
+    :class:`FilteringSettingsPanel`, :class:`YouTubeSettingsPanel`, and
+    :class:`SubtitlesSettingsPanel`.
     """
 
     def load_from_config(self, config: AnkiMinerConfig) -> None: ...
@@ -167,7 +168,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         manage_profiles_requested: Emitted by the footer's "Settings Profiles…"
             button. The window opens the dialog, not this tab: a profile switch
             reloads every panel here from the incoming config.
-        mining_language_requested: Re-emitted from the Filtering panel's mining
+        mining_language_requested: Re-emitted from the Mining Language panel's
             language selector. The window runs the guard and commits, because a
             switch clears queues and reloads every panel in this tab.
         language_pack_download_requested: Emitted with a language code when one
@@ -731,7 +732,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Dictionary panel signals — wire Add/Reimport to the import flow
         # controller, which owns the worker dialogs (T-66).
         self.dictionary_panel.add_dict_requested.connect(self._dict_import_flow.add_dict)
-        self.dictionary_panel.reimport_jmdict_requested.connect(self._dict_import_flow.reimport_jmdict)
         self.dictionary_panel.reimport_dict_requested.connect(self._dict_import_flow.reimport_dict)
         self.dictionary_panel.reimport_all_requested.connect(self._dict_import_flow.reimport_all)
         self.dictionary_panel.rescan_requested.connect(self._dict_import_flow.restore_unlisted)

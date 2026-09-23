@@ -190,7 +190,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created.",
         ),
         category=_CAT_WORKFLOWS,
-        target=CapabilityTarget("video", "single"),
+        target=CapabilityTarget("video", "batch"),
         keywords=(
             "curator",
             "review",
