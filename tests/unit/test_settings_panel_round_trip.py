@@ -21,6 +21,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.panels.anki_settings_panel import AnkiSettingsPanel
 from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
 from anki_miner.gui.widgets.panels.media_settings_panel import MediaSettingsPanel
+from anki_miner.gui.widgets.panels.mining_language_settings_panel import MiningLanguageSettingsPanel
 from anki_miner.gui.widgets.panels.sentences_settings_panel import SentencesSettingsPanel
 from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
 from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettingsPanel
@@ -74,6 +75,7 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
             "sentence": "SN",
             "audio": "AU",
         },
+        strict_card_order=True,  # T10: moved here from FilteringSettingsPanel
         # --- MediaSettingsPanel ---
         audio_format="opus",
         audio_bitrate=96,
@@ -103,7 +105,6 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         # to "i_plus_one" (i+1 wins) same as (False, True), so it isn't
         # round-trip-stable. dedup=True picks the "dedup" item instead.
         deduplicate_sentences=True,  # default is False
-        strict_card_order=True,
         exclude_hiragana_only_words=True,
         exclude_katakana_only_words=True,
         use_i_plus_one_filter=False,
@@ -140,6 +141,7 @@ _SAVE_PATH_FIELDS = frozenset(
         "pitch_category_format",
         "card_type",
         "card_type_marker_fields",
+        "strict_card_order",  # T10: moved here from FilteringSettingsPanel
         # MediaSettingsPanel
         "audio_format",
         "audio_bitrate",
@@ -166,7 +168,6 @@ _SAVE_PATH_FIELDS = frozenset(
         "whitelist_path",
         "use_whitelist",
         "deduplicate_sentences",
-        "strict_card_order",
         "exclude_hiragana_only_words",
         "exclude_katakana_only_words",
         "use_i_plus_one_filter",
@@ -209,6 +210,12 @@ class TestSavePathRoundTrip:
         qtbot.addWidget(anki_panel)
         media_panel = MediaSettingsPanel()
         qtbot.addWidget(media_panel)
+        # T10: takes part in the Save round-trip (script_variant), like
+        # SettingsTab._save_panels. The shared config below carries no
+        # language-gated value for it (see test_mining_language_panel_load_and_contribute),
+        # so its fold here is a no-op; present for structural parity with prod.
+        mining_language_panel = MiningLanguageSettingsPanel()
+        qtbot.addWidget(mining_language_panel)
         filtering_panel = FilteringSettingsPanel()
         qtbot.addWidget(filtering_panel)
         sentences_panel = SentencesSettingsPanel()
@@ -221,7 +228,15 @@ class TestSavePathRoundTrip:
         subtitles_panel = SubtitlesSettingsPanel(suppress_optional_startup=True)
         qtbot.addWidget(subtitles_panel)
 
-        panels = [anki_panel, media_panel, filtering_panel, sentences_panel, youtube_panel, subtitles_panel]
+        panels = [
+            anki_panel,
+            media_panel,
+            mining_language_panel,
+            filtering_panel,
+            sentences_panel,
+            youtube_panel,
+            subtitles_panel,
+        ]
 
         # Step 2: load.
         for panel in panels:
@@ -265,8 +280,29 @@ class TestSavePathRoundTrip:
             "pitch_category_format",
             "card_type",
             "card_type_marker_fields",
+            "strict_card_order",
         ):
             assert getattr(result, field_name) == getattr(original, field_name), field_name
+
+    def test_anki_panel_round_trips_the_tone_colour_row(self, qtbot):
+        """reading_tone_color is gated on tone_color (zh/yue); load under zh to show it."""
+        cfg = AnkiMinerConfig(language="zh", reading_tone_color=True)
+        panel = AnkiSettingsPanel()
+        qtbot.addWidget(panel)
+
+        panel.load_from_config(cfg)
+        result = panel.contribute(AnkiMinerConfig())
+
+        assert result.reading_tone_color is True
+
+    def test_a_ja_anki_panel_never_writes_reading_tone_color(self, qtbot):
+        panel = AnkiSettingsPanel()
+        qtbot.addWidget(panel)
+
+        panel.load_from_config(AnkiMinerConfig())
+        result = panel.contribute(AnkiMinerConfig(reading_tone_color=True))
+
+        assert result.reading_tone_color is True  # unchanged: the row was hidden
 
     def test_media_panel_load_and_contribute(self, tmp_path, qtbot):
         """MediaSettingsPanel round-trip in isolation."""
@@ -327,6 +363,31 @@ class TestSavePathRoundTrip:
             "reading_min_occurrence",
         ):
             assert getattr(result, field_name) == getattr(original, field_name), field_name
+
+    @pytest.mark.parametrize(
+        ("language", "value"),
+        [("zh", "traditional"), ("pt", "pt")],
+    )
+    def test_mining_language_panel_round_trips_the_variant(self, qtbot, language, value):
+        """script_variant is gated (script_variants/regional_variants); load
+        under a language that shows one of the two combos."""
+        cfg = AnkiMinerConfig(language=language, script_variant=value)
+        panel = MiningLanguageSettingsPanel()
+        qtbot.addWidget(panel)
+
+        panel.load_from_config(cfg)
+        result = panel.contribute(AnkiMinerConfig())
+
+        assert result.script_variant == value
+
+    def test_a_ja_mining_language_panel_never_writes_script_variant(self, qtbot):
+        panel = MiningLanguageSettingsPanel()
+        qtbot.addWidget(panel)
+
+        panel.load_from_config(AnkiMinerConfig())
+        result = panel.contribute(AnkiMinerConfig(script_variant="traditional"))
+
+        assert result.script_variant == "traditional"  # unchanged: both combos hidden
 
     def test_sentences_panel_load_and_contribute(self, tmp_path, qtbot):
         """SentencesSettingsPanel round-trip in isolation."""

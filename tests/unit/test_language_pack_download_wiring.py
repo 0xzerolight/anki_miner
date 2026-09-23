@@ -403,14 +403,23 @@ class TestSettingsTabForwarding:
         tab.set_language_pack_status("ko", "Installed")
         assert tab.mining_language_panel.language_pack_rows["ko"].status_label.text() == "Installed"
 
-    def test_the_panel_is_outside_the_save_path(self, test_config, qtbot) -> None:
-        """It writes no field; arming the debounce would re-save pre-switch state."""
+    def test_the_panel_joins_the_save_path_but_its_own_combo_stays_unwired(self, test_config, qtbot) -> None:
+        """T10: the variant combos write ``script_variant``, so the panel now
+        takes part in the Save round-trip. Its own ``mining_language_combo``
+        still proposes a guarded switch and must never arm the auto-save
+        debounce -- that would re-save the pre-switch panel state on top of
+        the switch's own commit.
+        """
         from anki_miner.gui.widgets.settings_tab import SettingsTab
 
         tab = SettingsTab(test_config)
         qtbot.addWidget(tab)
 
-        assert tab.mining_language_panel not in tab._save_panels
+        assert tab.mining_language_panel in tab._save_panels
+
+        assert tab._settings_dirty is False
+        tab.mining_language_panel.mining_language_combo.setCurrentIndex(1)
+        assert tab._settings_dirty is False
 
 
 class TestAppWiring:

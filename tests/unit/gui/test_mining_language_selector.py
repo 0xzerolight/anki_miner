@@ -127,12 +127,16 @@ def test_set_mining_language_repoints_without_re_requesting(qtbot, test_config):
     assert requested == []
 
 
-def test_the_panel_writes_no_config_field(qtbot, test_config):
+def test_the_panel_never_writes_the_language_field(qtbot, test_config):
     """The switch owns ``language``: it has to stash the outgoing language's
-    scoped values first, and a second writer would race it."""
+    scoped values first, and a second writer would race it. Since T10 the
+    panel does have a ``contribute`` (it writes ``script_variant``), but it
+    must never touch ``language`` itself."""
     panel = _panel(qtbot, test_config)
 
-    assert not hasattr(panel, "contribute")
+    result = panel.contribute(test_config)
+
+    assert result.language == test_config.language
 
 
 def test_the_panel_title_matches_its_navigator_label(qtbot):
@@ -151,6 +155,8 @@ def test_the_panel_anchors_the_selector_and_every_pack_row(qtbot):
 
     assert ids == {
         "mining_language.mining_language_combo",
+        "mining_language.script_variant_combo",
+        "mining_language.regional_variant_combo",
         "mining_language.language_pack_ko",
         "mining_language.language_pack_zh",
         "mining_language.language_pack_en",

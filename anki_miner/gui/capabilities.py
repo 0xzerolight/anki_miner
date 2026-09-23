@@ -737,7 +737,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.",
         ),
         category=_CAT_FILTERING,
-        target=CapabilityTarget("settings", "filtering"),
+        target=CapabilityTarget("settings", "mining_language"),
         keywords=("portuguese", "brazilian", "european", "regional variety", "variant", "pt-br", "pt-pt"),
         requires="regional_variants",
     ),
@@ -763,7 +763,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Settings -> Cards & Anki, carries the other spelling when it differs from the front.",
         ),
         category=_CAT_FILTERING,
-        target=CapabilityTarget("settings", "filtering"),
+        target=CapabilityTarget("settings", "mining_language"),
         keywords=(
             "character set",
             "simplified",
@@ -1047,7 +1047,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Put the word's pinyin on your cards, each syllable in its tone's colour -- "
-            "the colouring is Colour the reading by tone, under Settings -> Filtering.",
+            "the colouring is Colour the reading by tone, under Settings -> Cards & Anki.",
         ),
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),
@@ -1059,10 +1059,10 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Colour the reading by tone"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -> Filtering.",
+            "Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -> Cards & Anki.",
         ),
         category=_CAT_CARDS,
-        target=CapabilityTarget("settings", "filtering"),
+        target=CapabilityTarget("settings", "anki"),
         keywords=("tone", "tone colour", "tone color", "pinyin", "jyutping", "cantonese", "reading colour"),
         requires="tone_color",
     ),

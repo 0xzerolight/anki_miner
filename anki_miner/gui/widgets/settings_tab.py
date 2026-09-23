@@ -129,7 +129,8 @@ class _SavePathPanel(Protocol):
     """Structural interface for panels that participate in the Save round-trip.
 
     Implemented by :class:`AnkiSettingsPanel`, :class:`MediaSettingsPanel`,
-    :class:`FilteringSettingsPanel`, :class:`YouTubeSettingsPanel`, and
+    :class:`MiningLanguageSettingsPanel`, :class:`FilteringSettingsPanel`,
+    :class:`SentencesSettingsPanel`, :class:`YouTubeSettingsPanel`, and
     :class:`SubtitlesSettingsPanel`.
     """
 
@@ -325,6 +326,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._save_panels: list[_SavePathPanel] = [
             self.anki_panel,
             self.media_panel,
+            self.mining_language_panel,
             self.filtering_panel,
             self.sentences_panel,
             self.youtube_panel,
@@ -980,9 +982,12 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         """
         from PyQt6.QtWidgets import QComboBox, QDoubleSpinBox, QLineEdit, QListWidget, QSpinBox
 
-        # mining_language_panel is deliberately absent: its combo proposes a
-        # guarded switch which commits its own config, so arming the debounce
-        # would re-save the pre-switch panel state on top of it.
+        # mining_language_panel is deliberately absent from this whole-panel
+        # scan: its own mining_language_combo proposes a guarded switch which
+        # commits its own config, so arming the debounce on it would re-save
+        # the pre-switch panel state on top of it. Its two variant combos DO
+        # take part in the Save round-trip (T10) and are wired individually
+        # below instead.
         panels: tuple[QWidget, ...] = (
             self.anki_panel,
             self.media_panel,
@@ -1013,6 +1018,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Fields outside the save panels that commit through the same path.
         self.check_for_updates_checkbox.toggled.connect(self._on_settings_edited)
         self.dictionary_panel.dicts_root_selector.path_changed.connect(self._on_settings_edited)
+
+        # mining_language_panel's two variant combos, individually (see the
+        # comment above): only they participate in the Save round-trip.
+        self.mining_language_panel.script_variant_combo.currentIndexChanged.connect(self._on_settings_edited)
+        self.mining_language_panel.regional_variant_combo.currentIndexChanged.connect(self._on_settings_edited)
 
     def _on_settings_edited(self, *_args) -> None:
         """Restart the auto-save debounce on a user edit (no-op while loading)."""
@@ -1290,10 +1300,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
             # Update settings — standalone checkbox outside all panels.
             self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
-
-            # Also outside _save_panels — it writes no field, so its repaint is
-            # here rather than in the contribute fold.
-            self.mining_language_panel.load_from_config(self.config)
 
             # UI panel is outside _save_panels (it persists via its own signals),
             # so it owns its whole repaint here — signal-safe by construction.

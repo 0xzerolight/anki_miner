@@ -465,47 +465,6 @@ class FilteringSettingsPanel(FormPanel):
             self.script_filter_checkboxes[option.option_id] = checkbox
             self._script_filter_fields[option.option_id] = option.config_field
 
-        # Chinese script preference. Generic, language-scoped field - ja and ko
-        # carry "" here and never see this row. It gets a heading of its own
-        # because "Script Type" above is gated on kana_filters and hides under
-        # zh, which would leave this row reading as part of "Sentence Rule".
-        self.add_section(self.tr("Script Variants"))
-        self._script_variants_section_label = self._active_section_label
-
-        self.script_variant_combo = QComboBox()
-        # "" leads because it is the zh default. It must have an item of its
-        # own: findData returns -1 for a value the combo does not carry, the
-        # panel then shows item 0, and contribute() writes that item back on
-        # the next Save.
-        self.script_variant_combo.addItem(self.tr("As written"), "")
-        self.script_variant_combo.addItem(self.tr("Simplified (简体)"), "simplified")
-        self.script_variant_combo.addItem(self.tr("Traditional (繁體)"), "traditional")
-        self.add_field(
-            self.tr("Character Set"),
-            self.script_variant_combo,
-            helper=self.tr(
-                "Which spelling the card front and the dictionary lookup prefer; "
-                "As written keeps the source's own spelling."
-            ),
-        )
-
-        # Portuguese national variety (B.3): the same language-scoped field as
-        # the zh combo above, its own ids and capability, so at most one of the
-        # two is ever visible and contribute() writes only the visible one.
-        self.add_section(self.tr("Regional Variety"))
-        self._regional_variants_section_label = self._active_section_label
-
-        self.regional_variant_combo = QComboBox()
-        self.regional_variant_combo.addItem(self.tr("Brazilian Portuguese"), "br")
-        self.regional_variant_combo.addItem(self.tr("European Portuguese"), "pt")
-        self.add_field(
-            self.tr("Variety"),
-            self.regional_variant_combo,
-            helper=self.tr(
-                "Which Google voice reads word and sentence audio, and which frequency list setup suggests."
-            ),
-        )
-
         # Sentence Length section (Issue #33). No master toggle: the filter is
         # active whenever either cap below is above 0.
         self.add_section(self.tr("Sentence Length"))
@@ -553,31 +512,6 @@ class FilteringSettingsPanel(FormPanel):
             ),
         )
 
-        self.add_section(self.tr("Card Order"))
-
-        self.strict_card_order_checkbox = QCheckBox(self.tr("Create cards in order of appearance"))
-        self.add_field(
-            "",
-            self.strict_card_order_checkbox,
-            helper=self.tr(
-                "Adds cards to Anki in the order the words appear in the media, instead of "
-                "the order their media finished extracting. Overrides the whitelist's "
-                "force-include ordering and any column sort in the Word Curator."
-            ),
-        )
-
-        # Card Formatting section (Issue #20). The bold-target row moved to the
-        # Sentences panel (T9); this heading stays for T10, which moves the
-        # tone-colour row too and removes the heading.
-        self.add_section(self.tr("Card Formatting"))
-
-        self.reading_tone_color_checkbox = QCheckBox(self.tr("Colour the reading by tone"))
-        # The hook writes an inline style, never a class (languages/zh/render.py),
-        # so a tooltip promising a class sends the user off to write CSS that can
-        # neither match nor win.
-        self.reading_tone_color_checkbox.setToolTip(self.tr("Colours each syllable of the reading by its tone."))
-        self.add_field("", self.reading_tone_color_checkbox)
-
         # Language-gated rows. Each row contributes its label too, so a hidden
         # field never leaves a dangling caption behind.
         self._language_gate_pairs.extend(
@@ -601,8 +535,8 @@ class FilteringSettingsPanel(FormPanel):
         # every checkbox regardless of which capability actually supplied it.
         # Harmless today because there is exactly one entry. Before adding a
         # second, pair each option with its own capability at collection time
-        # instead of this cross product. EXTENDED, never assigned (see the zh
-        # note below).
+        # instead of this cross product. EXTENDED, never assigned, like every
+        # block in this method.
         self._language_gate_pairs.extend(
             (w, capability)
             for capability in _OPTION_DRIVEN_FILTER_CAPABILITIES
@@ -618,21 +552,6 @@ class FilteringSettingsPanel(FormPanel):
         )
         self._language_gate_pairs.extend(
             (w, "name_wordsets") for w in (self._wordset_section_label, self._wordsets_helper) if w is not None
-        )
-        # The zh rows join the same list. EXTENDED, never assigned: a plain
-        # assignment here would drop the kana and wordset pairs above.
-        self._language_gate_pairs.extend(
-            (w, "script_variants") for w in field_row_widgets(self, self.script_variant_combo)
-        )
-        if self._script_variants_section_label is not None:
-            self._language_gate_pairs.append((self._script_variants_section_label, "script_variants"))
-        self._language_gate_pairs.extend(
-            (w, "regional_variants") for w in field_row_widgets(self, self.regional_variant_combo)
-        )
-        if self._regional_variants_section_label is not None:
-            self._language_gate_pairs.append((self._regional_variants_section_label, "regional_variants"))
-        self._language_gate_pairs.extend(
-            (w, "tone_color") for w in field_row_widgets(self, self.reading_tone_color_checkbox)
         )
 
         self.add_stretch()
@@ -850,16 +769,6 @@ class FilteringSettingsPanel(FormPanel):
         if index >= 0:
             self.sentence_rule_combo.setCurrentIndex(index)
 
-    # --- Card order ---
-
-    def get_strict_card_order(self) -> bool:
-        """Return whether strict card-creation order is enabled."""
-        return self.strict_card_order_checkbox.isChecked()
-
-    def set_strict_card_order(self, value: bool) -> None:
-        """Set the strict card-order checkbox."""
-        self.strict_card_order_checkbox.setChecked(value)
-
     # --- Script type ---
 
     def get_exclude_hiragana_only_words(self) -> bool:
@@ -965,7 +874,6 @@ class FilteringSettingsPanel(FormPanel):
         self.set_whitelist_path(config.whitelist_path)
         self.set_use_whitelist(config.use_whitelist)
         self.set_sentence_rule(config.deduplicate_sentences, config.use_i_plus_one_filter)
-        self.set_strict_card_order(config.strict_card_order)
         self.set_exclude_hiragana_only_words(config.exclude_hiragana_only_words)
         self.set_exclude_katakana_only_words(config.exclude_katakana_only_words)
         # Same two booleans, read through whichever language's option named them.
@@ -974,13 +882,6 @@ class FilteringSettingsPanel(FormPanel):
         self.set_max_sentence_duration_seconds(config.max_sentence_duration_seconds)
         self.set_max_sentence_chars(config.max_sentence_chars)
         self.set_reading_min_occurrence(config.reading_min_occurrence)
-        index = self.script_variant_combo.findData(config.script_variant)
-        if index >= 0:
-            self.script_variant_combo.setCurrentIndex(index)
-        index = self.regional_variant_combo.findData(config.script_variant)
-        if index >= 0:
-            self.regional_variant_combo.setCurrentIndex(index)
-        self.reading_tone_color_checkbox.setChecked(config.reading_tone_color)
         apply_language_gate(self._language_gate_pairs, get_profile(config_language(config)).capabilities)
 
     def contribute(self, config):
@@ -1004,7 +905,6 @@ class FilteringSettingsPanel(FormPanel):
             whitelist_path=self.get_whitelist_path(),
             use_whitelist=self.get_use_whitelist(),
             deduplicate_sentences=deduplicate_sentences,
-            strict_card_order=self.get_strict_card_order(),
             exclude_hiragana_only_words=self.get_exclude_hiragana_only_words(),
             exclude_katakana_only_words=self.get_exclude_katakana_only_words(),
             use_i_plus_one_filter=use_i_plus_one_filter,
@@ -1025,10 +925,4 @@ class FilteringSettingsPanel(FormPanel):
         for option_id, checkbox in self.script_filter_checkboxes.items():
             if checkbox.isVisibleTo(self):
                 updated = replace(updated, **{self._script_filter_fields[option_id]: checkbox.isChecked()})
-        if self.script_variant_combo.isVisibleTo(self):
-            updated = replace(updated, script_variant=str(self.script_variant_combo.currentData()))
-        if self.regional_variant_combo.isVisibleTo(self):
-            updated = replace(updated, script_variant=str(self.regional_variant_combo.currentData()))
-        if self.reading_tone_color_checkbox.isVisibleTo(self):
-            updated = replace(updated, reading_tone_color=self.reading_tone_color_checkbox.isChecked())
         return updated

@@ -332,6 +332,30 @@ def test_sentence_tts_names_the_languages_without_a_voice() -> None:
     assert "Persian or Slovenian" in _entry("sentence-tts").description
 
 
+def test_regional_variety_targets_the_mining_language_page() -> None:
+    # Moved off Filtering onto Mining Language, beside the selector it varies
+    # with (T10).
+    assert _entry("regional-variety").target == CapabilityTarget("settings", "mining_language")
+
+
+def test_script_variant_targets_the_mining_language_page() -> None:
+    # The zh Character Set choice moved with the Portuguese variety (T10).
+    assert _entry("script-variant").target == CapabilityTarget("settings", "mining_language")
+
+
+def test_tone_colour_targets_cards_and_anki() -> None:
+    # Moved off Filtering onto Cards & Anki, beside the Pinyin/Jyutping rows it
+    # colours (T10).
+    assert _entry("tone-colour").target == CapabilityTarget("settings", "anki")
+    assert "Settings -> Cards & Anki" in _entry("tone-colour").description
+    assert "Filtering" not in _entry("tone-colour").description
+
+
+def test_pinyin_description_points_at_cards_and_anki() -> None:
+    assert "Settings -> Cards & Anki" in _entry("pinyin").description
+    assert "Filtering" not in _entry("pinyin").description
+
+
 @pytest.mark.parametrize(
     ("cap_id", "code"),
     [("tone-colour", "zh"), ("tone-colour", "yue"), ("regional-variety", "pt"), ("hangul-filters", "ko")],
