@@ -705,19 +705,20 @@ class TestExpressionAudioRoundTrip:
 
 
 class TestSentenceLengthFilterRoundTrip:
-    """Load/save round-trip for the sentence-length filter widgets (Issue #33)."""
+    """Load/save round-trip for the sentence-length filter widgets (Issue #33).
+
+    No master toggle: the filter is active whenever either cap is above 0.
+    """
 
     def test_loads_sentence_length_filter_from_config(self, test_config: AnkiMinerConfig, qtbot):
         cfg = replace(
             test_config,
-            use_sentence_length_filter=True,
             max_sentence_duration_seconds=7.5,
             max_sentence_chars=60,
         )
         widget = SettingsTab(cfg)
         qtbot.addWidget(widget)
         try:
-            assert widget.filtering_panel.use_sentence_length_checkbox.isChecked() is True
             assert widget.filtering_panel.max_sentence_duration_spinbox.value() == pytest.approx(7.5)
             assert widget.filtering_panel.max_sentence_chars_spinbox.value() == 60
         finally:
@@ -731,13 +732,11 @@ class TestSentenceLengthFilterRoundTrip:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.filtering_panel.use_sentence_length_checkbox.setChecked(True)
         tab.filtering_panel.max_sentence_duration_spinbox.setValue(7.5)
         tab.filtering_panel.max_sentence_chars_spinbox.setValue(60)
         tab.commit_settings()
 
         assert len(received) == 1
-        assert received[0].use_sentence_length_filter is True
         assert received[0].max_sentence_duration_seconds == pytest.approx(7.5)
         assert received[0].max_sentence_chars == 60
 

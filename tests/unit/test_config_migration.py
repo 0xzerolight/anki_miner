@@ -714,3 +714,30 @@ def test_removed_native_dialog_key_is_dropped(tmp_path):
     path.write_text(json.dumps({"config_schema_version": 4, "use_native_file_dialogs": False}))
     config = GUIConfigManager._parse_and_migrate(path)
     assert not hasattr(config, "use_native_file_dialogs")
+
+
+LEGACY = {"max_sentence_duration_seconds": 30.0, "max_sentence_chars": 80}
+
+
+@pytest.mark.parametrize("toggle, expected", [(False, (0.0, 0)), (True, (30.0, 80))])
+def test_sentence_length_toggle_folds_on_load(tmp_path, toggle, expected):
+    path = tmp_path / "gui_config.json"
+    path.write_text(json.dumps({"config_schema_version": 4, "use_sentence_length_filter": toggle, **LEGACY}))
+    config = GUIConfigManager._parse_and_migrate(path)
+    assert (config.max_sentence_duration_seconds, config.max_sentence_chars) == expected
+
+
+@pytest.mark.parametrize("marker", [{"config_schema_version": 4}, {}])  # {} = markerless raw config (Review Focus 1)
+@pytest.mark.parametrize("toggle, expected", [(False, (0.0, 0)), (True, (30.0, 80))])
+def test_sentence_length_toggle_folds_on_import(tmp_path, marker, toggle, expected):
+    path = tmp_path / "import.json"
+    path.write_text(json.dumps({**marker, "use_sentence_length_filter": toggle, **LEGACY}))
+    result = GUIConfigManager.import_config(path, create_default_config()).config
+    assert (result.max_sentence_duration_seconds, result.max_sentence_chars) == expected
+
+
+def test_caps_without_the_legacy_key_are_kept(tmp_path):
+    path = tmp_path / "gui_config.json"
+    path.write_text(json.dumps({"config_schema_version": 4, **LEGACY}))
+    config = GUIConfigManager._parse_and_migrate(path)
+    assert (config.max_sentence_duration_seconds, config.max_sentence_chars) == (30.0, 80)

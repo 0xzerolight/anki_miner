@@ -2481,8 +2481,8 @@ class TestWhitelistForceInclude:
         assert [w.mined_form for w in sent] == ["コーヒー"]
 
     def test_force_includes_past_sentence_length_filter(self, test_config, mock_services, tmp_path):
-        """Whitelisted word survives use_sentence_length_filter's char cap."""
-        config = replace(test_config, use_whitelist=True, use_sentence_length_filter=True, max_sentence_chars=1)
+        """Whitelisted word survives the sentence-length filter's char cap."""
+        config = replace(test_config, use_whitelist=True, max_sentence_chars=1)
         kept = _make_word("食べる")
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [kept]
@@ -5579,7 +5579,6 @@ class TestPhase2FilterOrdering:
         config = replace(
             test_config,
             use_i_plus_one_filter=True,
-            use_sentence_length_filter=True,
             max_sentence_chars=40,
         )
         word = _make_word("食べる")
@@ -5678,7 +5677,6 @@ class TestPhase2FilterOrdering:
         """bypass_optional_filters=True must skip the sentence-length filter too."""
         config = replace(
             test_config,
-            use_sentence_length_filter=True,
             max_sentence_chars=40,
             bypass_optional_filters=True,
         )
@@ -5694,6 +5692,40 @@ class TestPhase2FilterOrdering:
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         mock_services["word_filter"].filter_by_sentence_length.assert_not_called()
+
+    def test_sentence_length_filter_off_when_both_caps_are_zero(self, test_config, mock_services, tmp_path):
+        """No master toggle: caps (0, 0) is off, exactly like the old toggle-off state."""
+        config = replace(test_config, max_sentence_duration_seconds=0.0, max_sentence_chars=0)
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        processor = build_processor(config=config, presenter=NullPresenter(), **mock_services)
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].filter_by_sentence_length.assert_not_called()
+
+    def test_sentence_length_filter_on_when_one_cap_is_set(self, test_config, mock_services, tmp_path):
+        """No master toggle: caps (30, 0) alone turns the filter on."""
+        config = replace(test_config, max_sentence_duration_seconds=30.0, max_sentence_chars=0)
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        processor = build_processor(config=config, presenter=NullPresenter(), **mock_services)
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].filter_by_sentence_length.assert_called_once_with(
+            [word], max_duration=30.0, max_chars=0
+        )
 
 
 # ---------------------------------------------------------------------------

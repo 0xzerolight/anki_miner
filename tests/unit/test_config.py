@@ -358,11 +358,10 @@ def test_frequency_chain_replace():
 
 
 def test_sentence_length_filter_defaults():
-    """Sentence-length filter fields default to disabled / 0 (Issue #33)."""
+    """Sentence-length filter caps default to 0 (off) (Issue #33)."""
     from anki_miner.config import AnkiMinerConfig
 
     cfg = AnkiMinerConfig()
-    assert cfg.use_sentence_length_filter is False
     assert cfg.max_sentence_duration_seconds == 0.0
     assert cfg.max_sentence_chars == 0
 

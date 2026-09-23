@@ -1403,10 +1403,8 @@ class EpisodeProcessor:
         # Runs AFTER i+1 because filter_i_plus_one swaps each word's sentence
         # (and duration) to its chosen i+1 line — applying the cap before that
         # swap would be silently bypassed by the swap target.
-        if (
-            self.config.use_sentence_length_filter
-            and not self.config.bypass_optional_filters
-            and (self.config.max_sentence_duration_seconds > 0.0 or self.config.max_sentence_chars > 0)
+        if not self.config.bypass_optional_filters and (
+            self.config.max_sentence_duration_seconds > 0.0 or self.config.max_sentence_chars > 0
         ):
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_sentence_length(
@@ -2118,7 +2116,7 @@ class EpisodeProcessor:
             names.append("dedup")
         if config.use_i_plus_one_filter:
             names.append("i+1")
-        if config.use_sentence_length_filter:
+        if config.max_sentence_duration_seconds > 0.0 or config.max_sentence_chars > 0:
             names.append("sentence-length")
         return names
 

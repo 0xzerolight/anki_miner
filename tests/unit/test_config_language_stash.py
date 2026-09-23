@@ -22,7 +22,7 @@ PRE_CHANGE_CONFIG = Path(__file__).resolve().parents[1] / "fixtures" / "config" 
 #: the per-key equality check below skips these names; a load must migrate
 #: them away rather than round-trip them, which the final set-difference
 #: assertion in test_pre_change_config_loads_every_field_unchanged confirms.
-REMOVED_FIELDS = frozenset({"use_native_file_dialogs"})
+REMOVED_FIELDS = frozenset({"use_native_file_dialogs", "use_sentence_length_filter"})
 
 
 @pytest.fixture

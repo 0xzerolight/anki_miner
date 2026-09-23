@@ -573,14 +573,14 @@ class FilteringSettingsPanel(FormPanel):
         )
         self.add_field("", self.use_i_plus_one_checkbox)
 
-        # Sentence Length section (Issue #33)
+        # Sentence Length section (Issue #33). No master toggle: the filter is
+        # active whenever either cap below is above 0.
         self.add_section(self.tr("Sentence Length"))
 
-        self.use_sentence_length_checkbox = QCheckBox(self.tr("Enable Sentence Length Filter"))
-        self.use_sentence_length_checkbox.setToolTip(
-            self.tr("Drops words whose example sentence exceeds either cap below.")
-        )
-        self.add_field("", self.use_sentence_length_checkbox)
+        self.sentence_length_helper = QLabel(self.tr("Set either limit above 0 to turn the filter on."))
+        self.sentence_length_helper.setObjectName("helper-text")
+        self.sentence_length_helper.setWordWrap(True)
+        self.add_widget(self.sentence_length_helper)
 
         self.max_sentence_duration_spinbox = QDoubleSpinBox()
         self.max_sentence_duration_spinbox.setRange(0.0, 600.0)
@@ -996,16 +996,6 @@ class FilteringSettingsPanel(FormPanel):
         """Set the i+1 filter checkbox."""
         self.use_i_plus_one_checkbox.setChecked(value)
 
-    # --- Sentence length ---
-
-    def get_use_sentence_length_filter(self) -> bool:
-        """Return whether the sentence length filter is enabled."""
-        return self.use_sentence_length_checkbox.isChecked()
-
-    def set_use_sentence_length_filter(self, value: bool) -> None:
-        """Set the sentence length filter checkbox."""
-        self.use_sentence_length_checkbox.setChecked(value)
-
     # --- Full sentences ---
 
     def get_merge_incomplete_cues(self) -> bool:
@@ -1121,7 +1111,6 @@ class FilteringSettingsPanel(FormPanel):
         for option_id, checkbox in self.script_filter_checkboxes.items():
             checkbox.setChecked(bool(getattr(config, self._script_filter_fields[option_id])))
         self.set_use_i_plus_one_filter(config.use_i_plus_one_filter)
-        self.set_use_sentence_length_filter(config.use_sentence_length_filter)
         self.set_merge_incomplete_cues(config.merge_incomplete_cues)
         self.set_max_sentence_duration_seconds(config.max_sentence_duration_seconds)
         self.set_max_sentence_chars(config.max_sentence_chars)
@@ -1169,7 +1158,6 @@ class FilteringSettingsPanel(FormPanel):
             exclude_hiragana_only_words=self.get_exclude_hiragana_only_words(),
             exclude_katakana_only_words=self.get_exclude_katakana_only_words(),
             use_i_plus_one_filter=self.get_use_i_plus_one_filter(),
-            use_sentence_length_filter=self.get_use_sentence_length_filter(),
             merge_incomplete_cues=self.get_merge_incomplete_cues(),
             max_sentence_duration_seconds=self.get_max_sentence_duration_seconds(),
             max_sentence_chars=self.get_max_sentence_chars(),

@@ -518,6 +518,11 @@ class GUIConfigManager:
         config_dict.pop("active_profile_id", None)
         config_dict.pop("profile_name", None)
 
+        # Translate fields a later version removed into the fields that
+        # replaced them, before the unknown-key drop below discards the old
+        # key outright.
+        cls._fold_removed_fields(config_dict, shims)
+
         # Drop keys not in the current dataclass (e.g., removed fields from old
         # versions). Without this filter, AnkiMinerConfig(**config_dict) raises
         # TypeError and the except below would silently reset the entire user
@@ -540,6 +545,19 @@ class GUIConfigManager:
                 dropped_keys=capped(sorted(dropped), 20),
             )
         return {k: v for k, v in config_dict.items() if k in valid_keys}
+
+    @staticmethod
+    def _fold_removed_fields(config_dict: dict[str, Any], shims: list[str]) -> None:
+        """Translate fields this version removed into the ones that replaced them.
+
+        Gated on the removed key being present with its exact old type. No writer
+        since the removal emits it, so presence alone proves the old semantics —
+        including markerless raw imports, which carry no schema version.
+        """
+        if config_dict.get("use_sentence_length_filter") is False:
+            config_dict["max_sentence_duration_seconds"] = 0.0
+            config_dict["max_sentence_chars"] = 0
+            shims.append("fold_sentence_length_toggle")
 
     @classmethod
     def load_config(cls) -> AnkiMinerConfig:

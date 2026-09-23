@@ -49,13 +49,14 @@ def test_i_plus_one_tooltip_mentions_dedup_override(qtbot):
     assert "deduplication" in tip.lower()
 
 
-def test_sentence_length_tooltip_only_points_at_the_caps(qtbot):
-    # The "0 means no limit" half is each cap row's own helper, and the
-    # "speeds up reviews" half was an unrequested benefit claim.
+def test_sentence_length_helper_names_the_no_toggle_rule(qtbot):
+    # No master checkbox: the section helper is the only place that says the
+    # filter turns on by setting a cap.
     panel = FilteringSettingsPanel()
     qtbot.addWidget(panel)
-    tip = panel.use_sentence_length_checkbox.toolTip()
-    assert tip == "Drops words whose example sentence exceeds either cap below."
+    assert not hasattr(panel, "use_sentence_length_checkbox")
+    text = panel.sentence_length_helper.text()
+    assert text == "Set either limit above 0 to turn the filter on."
     assert "Set to 0 for no limit" in panel.max_sentence_duration_spinbox.toolTip()
     assert "Set to 0 for no limit" in panel.max_sentence_chars_spinbox.toolTip()
 

@@ -299,6 +299,24 @@ class TestRoundTrip:
 
         assert ProfileStore.read_profile("anime") == config
 
+    def test_removed_sentence_length_toggle_folds_on_profile_read(self):
+        """A pre-removal profile with the toggle off must migrate to caps=0
+        through ``ProfileStore.read_profile`` (``_parse_and_migrate``), the
+        same fold the gui_config.json load path applies (Review Focus 1)."""
+        _write_raw(
+            "old",
+            {
+                "config_schema_version": 4,
+                "use_sentence_length_filter": False,
+                "max_sentence_duration_seconds": 30.0,
+                "max_sentence_chars": 80,
+            },
+        )
+
+        config = ProfileStore.read_profile("old")
+
+        assert (config.max_sentence_duration_seconds, config.max_sentence_chars) == (0.0, 0)
+
     def test_write_profile_reports_its_display_name_in_the_listing(self):
         ProfileStore.write_profile("anime", create_default_config(), name="Anime")
 
