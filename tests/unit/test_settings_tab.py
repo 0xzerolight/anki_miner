@@ -412,9 +412,9 @@ class TestSubtitleRegexValidationRevert:
         qtbot.addWidget(widget)
         try:
             # User edits: an invalid pattern paired with a brand-new replacement.
-            widget.filtering_panel.set_subtitle_regex_filter("(")  # unbalanced → re.error
-            widget.filtering_panel.set_subtitle_regex_replacement("NEW")
-            widget.filtering_panel.set_use_subtitle_regex_filter(True)
+            widget.sentences_panel.set_subtitle_regex_filter("(")  # unbalanced → re.error
+            widget.sentences_panel.set_subtitle_regex_replacement("NEW")
+            widget.sentences_panel.set_use_subtitle_regex_filter(True)
 
             received: list[AnkiMinerConfig] = []
             widget.config_changed.connect(received.append)

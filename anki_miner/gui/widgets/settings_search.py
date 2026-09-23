@@ -62,6 +62,7 @@ LEGACY_DESTINATION_TERMS: dict[str, tuple[str, ...]] = {
     "media": ("media",),
     "audio": ("audio",),
     "filtering": ("filtering",),
+    "sentences": ("filtering",),
     "subtitles": ("subtitles", "asr"),
     "ui": ("ui",),
 }

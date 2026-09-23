@@ -100,7 +100,7 @@ class TestIndex:
         entry = _by_id(entries, "filtering.frequency_rank_range")
 
         assert entry.title == "Frequency Rank Range"
-        assert entry.breadcrumb == f"Mining{BREADCRUMB_SEPARATOR}Filtering"
+        assert entry.breadcrumb == f"Mining{BREADCRUMB_SEPARATOR}Word Filters"
 
     def test_a_tab_level_setting_belongs_to_no_page(self, entries):
         entry = _by_id(entries, "app.check_for_updates")
@@ -144,6 +144,10 @@ class TestMatching:
         """Neither end has a label of its own, so both names live in anchor_text."""
         assert _ids(search(entries, "Min Frequency Rank"))[0] == "filtering.frequency_rank_range"
 
+    def test_regex_finds_the_sentences_panel_field(self, entries):
+        """T9 moved subtitle text filtering off Filtering onto its own page."""
+        assert _ids(search(entries, "regex"))[0] == "sentences.subtitle_regex_edit"
+
 
 class TestRenamedDestinations:
     def test_the_old_asr_name_still_finds_transcription_settings(self, entries):
@@ -153,7 +157,8 @@ class TestRenamedDestinations:
         assert "subtitles.alass_selector" in results
 
     def test_the_filtering_destination_name_finds_its_settings(self, entries):
-        """Filtering kept its name, so the breadcrumb alone has to match it."""
+        """The old "Filtering" name still finds it (T9 renamed the label to
+        "Word Filters"; the legacy term keeps the vocabulary users typed)."""
         results = _ids(search(entries, "filtering"))
 
         assert "filtering.sentence_rule_combo" in results
@@ -177,7 +182,7 @@ class TestTranslatedIndex:
     _JA = {
         "Frequency Rank Range": "頻度ランク範囲",
         "Mining": "採掘",
-        "Filtering": "フィルタリング",
+        "Word Filters": "ワードフィルター",
     }
 
     @pytest.fixture
@@ -211,7 +216,7 @@ class TestTranslatedIndex:
         entry = _by_id(translated_tab.setting_search_entries(), "filtering.frequency_rank_range")
 
         assert entry.title == "頻度ランク範囲"
-        assert entry.breadcrumb == f"採掘{BREADCRUMB_SEPARATOR}フィルタリング"
+        assert entry.breadcrumb == f"採掘{BREADCRUMB_SEPARATOR}ワードフィルター"
 
 
 class TestSearchBox:
@@ -224,7 +229,7 @@ class TestSearchBox:
         item = tab.search_box.results.item(0)
         assert item is not None
         assert "Frequency Rank Range" in item.text()
-        assert f"Mining{BREADCRUMB_SEPARATOR}Filtering" in item.text()
+        assert f"Mining{BREADCRUMB_SEPARATOR}Word Filters" in item.text()
         assert item.data(Qt.ItemDataRole.UserRole) == "filtering.frequency_rank_range"
 
     def test_a_query_with_no_match_lists_no_jumpable_row(self, tab):

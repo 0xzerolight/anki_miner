@@ -80,7 +80,7 @@ class TestSubtitleRegexRejected:
     """A reverted regex names the pattern that was thrown away."""
 
     def test_commit_logs_the_rejected_pattern(self, tab, caplog):
-        tab.filtering_panel.set_subtitle_regex_filter("([unclosed")
+        tab.sentences_panel.set_subtitle_regex_filter("([unclosed")
         with caplog.at_level(logging.WARNING, logger="anki_miner.gui.widgets.settings_tab"):
             tab.commit_settings()
 

@@ -225,6 +225,17 @@ class TestRouteRoundTrip:
         assert window.tabs.currentIndex() == before
         assert window._current_subtab_keys()["video"] == "single"
 
+    def test_a_stale_settings_subtab_key_is_ignored(self, wired_window):
+        """A Settings subtab that no longer exists (a removed/renamed page)
+        must not crash the restore; Settings lands on its first destination."""
+        window, _titles, _tabs = wired_window
+        session_state.save_route("settings", {"settings": "no_such_page"})
+
+        window.restore_session_state()
+
+        assert window._current_main_tab_key() == "settings"
+        assert window._current_subtab_keys()["settings"] == "anki"
+
     def test_no_scroll_offset_is_ever_persisted(self, wired_window):
         """A three-day-old scroll position is not something to resume (D7)."""
         window, _titles, _tabs = wired_window

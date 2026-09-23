@@ -37,6 +37,7 @@ _KEY_TO_PANEL = {
     "pitch": "pitch_panel",
     "mining_language": "mining_language_panel",
     "filtering": "filtering_panel",
+    "sentences": "sentences_panel",
     "youtube": "youtube_panel",
     "subtitles": "subtitles_panel",
     "ui": "ui_panel",
@@ -55,7 +56,10 @@ _GROUPS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
             ("pitch", "Pitch Accent"),
         ),
     ),
-    ("Mining", (("mining_language", "Mining Language"), ("filtering", "Filtering"))),
+    (
+        "Mining",
+        (("mining_language", "Mining Language"), ("filtering", "Word Filters"), ("sentences", "Sentences")),
+    ),
     ("Integrations", (("youtube", "YouTube"), ("subtitles", "Transcription & Alignment"))),
     ("App", (("ui", "Appearance & Language"),)),
 )

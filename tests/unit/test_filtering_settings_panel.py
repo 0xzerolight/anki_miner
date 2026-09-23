@@ -1,10 +1,10 @@
 """Tooltip regression tests for FilteringSettingsPanel.
 
 The settings-density work deduped tooltips. These assertions lock in the
-load-bearing facts that must survive layout tightening: HTML-escaped markup
-in the bold-target tooltip (Qt QToolTip auto-renders raw <b> as bold), the
-distinct fragments merged into the regex/replacement helpers, and the facts
-restored to the i+1 and sentence-length tooltips.
+load-bearing facts that must survive layout tightening: the facts restored to
+the i+1 and sentence-length tooltips. (The bold-target and regex/replacement
+tooltip cases moved to ``test_sentences_settings_panel.py`` with the fields
+they cover, T9.)
 """
 
 from __future__ import annotations
@@ -19,31 +19,6 @@ from PyQt6.QtCore import Qt
 
 from anki_miner.config.defaults import create_default_config
 from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
-
-
-def test_bold_target_tooltip_escapes_markup(qtbot):
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    tip = panel.bold_target_in_sentence_checkbox.toolTip()
-    # Escaping is fragile and load-bearing: Qt QToolTip auto-renders raw <b>.
-    assert "&lt;b&gt;" in tip
-    assert "<b>" not in tip
-
-
-def test_regex_tooltip_contains_merged_fragments(qtbot):
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    tip = panel.subtitle_regex_edit.toolTip()
-    assert "speaker names" in tip
-    assert "regex101.com" in tip
-
-
-def test_replacement_tooltip_contains_merged_fragments(qtbot):
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    tip = panel.subtitle_replacement_edit.toolTip()
-    assert "backreferences" in tip
-    assert "asbplayer" in tip
 
 
 def test_i_plus_one_tooltip_mentions_dedup_override(qtbot):
@@ -266,19 +241,6 @@ def test_the_unranked_checkbox_is_disabled_while_no_bound_is_set(qtbot):
     panel.load_from_config(AnkiMinerConfig())
     panel.set_max_frequency_rank(15000)
     assert panel.keep_unranked_checkbox.isEnabled()
-
-
-def test_secondary_subtitle_toggle_round_trips(qtbot):
-    from dataclasses import replace
-
-    from anki_miner.config import AnkiMinerConfig
-
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    assert panel.secondary_subtitle_checkbox.isChecked() is False
-    panel.load_from_config(replace(AnkiMinerConfig(), secondary_subtitle_enabled=True))
-    assert panel.secondary_subtitle_checkbox.isChecked()
-    assert panel.contribute(AnkiMinerConfig()).secondary_subtitle_enabled is True
 
 
 @pytest.mark.parametrize(

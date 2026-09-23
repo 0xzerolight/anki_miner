@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import itertools
 
-from anki_miner.gui.widgets.panels.filtering_settings_panel import SUBTITLE_REGEX_PRESETS
+from anki_miner.gui.widgets.panels.sentences_settings_panel import SUBTITLE_REGEX_PRESETS
 from anki_miner.services.subtitle_parser import compile_subtitle_regex_filter
 
 PATTERNS = [pattern for _label, pattern in SUBTITLE_REGEX_PRESETS]

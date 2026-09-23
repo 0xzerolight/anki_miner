@@ -17,10 +17,18 @@ from PyQt6.QtWidgets import QLabel
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.panels.anki_settings_panel import AnkiSettingsPanel
 from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
+from anki_miner.gui.widgets.panels.sentences_settings_panel import SentencesSettingsPanel
 
 
 def _filtering(qtbot, config: AnkiMinerConfig) -> FilteringSettingsPanel:
     panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(config)
+    return panel
+
+
+def _sentences(qtbot, config: AnkiMinerConfig) -> SentencesSettingsPanel:
+    panel = SentencesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(config)
     return panel
@@ -103,7 +111,7 @@ def test_the_tone_colour_tooltip_describes_what_the_hook_emits(qtbot, test_confi
 
 def test_the_bold_tooltip_names_no_japanese_field_or_tagger(qtbot, test_config):
     """One string for every language: the row itself is not language-gated."""
-    panel = _filtering(qtbot, _zh(test_config))
+    panel = _sentences(qtbot, _zh(test_config))
     tooltip = panel.bold_target_in_sentence_checkbox.toolTip()
 
     assert "SentenceFurigana" not in tooltip

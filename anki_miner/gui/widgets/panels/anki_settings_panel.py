@@ -776,7 +776,7 @@ class AnkiSettingsPanel(FormPanel):
             self.sentence_translation_field_input,
             helper=self.tr(
                 "Stores the secondary-language subtitle line for the sentence "
-                "(Video -> Single, with secondary subtitles enabled under Filtering). Blank = skip."
+                "(Video -> Single, with secondary subtitles enabled under Sentences). Blank = skip."
             ),
         )
 

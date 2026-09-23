@@ -70,6 +70,7 @@ from anki_miner.gui.widgets.panels import (
     MediaSettingsPanel,
     MiningLanguageSettingsPanel,
     PitchSettingsPanel,
+    SentencesSettingsPanel,
     UISettingsPanel,
     YouTubeSettingsPanel,
 )
@@ -325,6 +326,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.anki_panel,
             self.media_panel,
             self.filtering_panel,
+            self.sentences_panel,
             self.youtube_panel,
             self.subtitles_panel,
         ]
@@ -381,6 +383,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.pitch_panel = PitchSettingsPanel(self.config.pitch_root)
         self.mining_language_panel = MiningLanguageSettingsPanel()
         self.filtering_panel = FilteringSettingsPanel()
+        self.sentences_panel = SentencesSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
         self.subtitles_panel = SubtitlesSettingsPanel(suppress_optional_startup=self._suppress_optional_startup)
         self.ui_panel = UISettingsPanel(
@@ -552,7 +555,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 self.tr("Mining"),
                 (
                     ("mining_language", self.tr("Mining Language"), self.mining_language_panel),
-                    ("filtering", self.tr("Filtering"), self.filtering_panel),
+                    ("filtering", self.tr("Word Filters"), self.filtering_panel),
+                    ("sentences", self.tr("Sentences"), self.sentences_panel),
                 ),
             ),
             (
@@ -983,6 +987,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.anki_panel,
             self.media_panel,
             self.filtering_panel,
+            self.sentences_panel,
             self.youtube_panel,
             self.subtitles_panel,
         )
@@ -1234,7 +1239,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     def _load_config(self) -> None:
         """Load current configuration into UI.
 
-        Save-path panels (Anki, Media, Filtering, YouTube) are loaded via the
+        Save-path panels (Anki, Media, Filtering, Sentences, YouTube) are loaded via the
         symmetric ``load_from_config`` contract so each panel owns its fields
         in one place (OVH-019).  Dictionary/audio chain panels and the
         top-level update checkbox persist via their own paths and are handled
@@ -1351,6 +1356,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.pitch_panel,
             self.mining_language_panel,
             self.filtering_panel,
+            self.sentences_panel,
             self.youtube_panel,
             self.subtitles_panel,
             self.ui_panel,
@@ -1771,11 +1777,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         # Validate subtitle regex filter before persistence, even while disabled.
         # The toggle, pattern AND replacement are kept back together — the
-        # replacement is folded in by the filtering panel's contribute(), so
+        # replacement is folded in by the sentences panel's contribute(), so
         # reverting only pattern+toggle would leave the last-good pattern paired
         # with a new replacement the user never previewed.
-        subtitle_regex = self.filtering_panel.get_subtitle_regex_filter()
-        subtitle_regex_replacement = self.filtering_panel.get_subtitle_regex_replacement()
+        subtitle_regex = self.sentences_panel.get_subtitle_regex_filter()
+        subtitle_regex_replacement = self.sentences_panel.get_subtitle_regex_replacement()
         if subtitle_regex or subtitle_regex_replacement:
             try:
                 compile_subtitle_regex_filter(subtitle_regex, subtitle_regex_replacement)
@@ -1792,7 +1798,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                     replacement=subtitle_regex_replacement,
                     error=f"{type(error).__name__}: {error}",
                 )
-                kept_back.append(self.tr("subtitle regex (Filtering)"))
+                kept_back.append(self.tr("subtitle regex (Sentences)"))
                 new_config = replace(
                     new_config,
                     subtitle_regex_filter=self.config.subtitle_regex_filter,

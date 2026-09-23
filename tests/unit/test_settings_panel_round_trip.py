@@ -21,6 +21,7 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.panels.anki_settings_panel import AnkiSettingsPanel
 from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
 from anki_miner.gui.widgets.panels.media_settings_panel import MediaSettingsPanel
+from anki_miner.gui.widgets.panels.sentences_settings_panel import SentencesSettingsPanel
 from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
 from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettingsPanel
 
@@ -98,9 +99,6 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         use_blacklist=True,
         whitelist_path=wl,
         use_whitelist=True,
-        subtitle_regex_filter=r"\([^)]*\)",
-        subtitle_regex_replacement="",
-        use_subtitle_regex_filter=True,
         # The sentence_rule combo has 3 states, not 4: (True, True) collapses
         # to "i_plus_one" (i+1 wins) same as (False, True), so it isn't
         # round-trip-stable. dedup=True picks the "dedup" item instead.
@@ -109,12 +107,16 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         exclude_hiragana_only_words=True,
         exclude_katakana_only_words=True,
         use_i_plus_one_filter=False,
-        merge_incomplete_cues=True,
         max_sentence_duration_seconds=8.0,
         max_sentence_chars=50,
         reading_min_occurrence=7,
-        bold_target_in_sentence=True,
+        # --- SentencesSettingsPanel ---
+        subtitle_regex_filter=r"\([^)]*\)",
+        subtitle_regex_replacement="",
+        use_subtitle_regex_filter=True,
         secondary_subtitle_enabled=True,
+        merge_incomplete_cues=True,
+        bold_target_in_sentence=True,
         # --- SubtitlesSettingsPanel ---
         mokuro_location=Path("/opt/mokuro/bin/mokuro"),
         # --- YouTubeSettingsPanel ---
@@ -163,20 +165,21 @@ _SAVE_PATH_FIELDS = frozenset(
         "use_blacklist",
         "whitelist_path",
         "use_whitelist",
-        "subtitle_regex_filter",
-        "subtitle_regex_replacement",
-        "use_subtitle_regex_filter",
         "deduplicate_sentences",
         "strict_card_order",
         "exclude_hiragana_only_words",
         "exclude_katakana_only_words",
         "use_i_plus_one_filter",
-        "merge_incomplete_cues",
         "max_sentence_duration_seconds",
         "max_sentence_chars",
         "reading_min_occurrence",
-        "bold_target_in_sentence",
+        # SentencesSettingsPanel
+        "subtitle_regex_filter",
+        "subtitle_regex_replacement",
+        "use_subtitle_regex_filter",
         "secondary_subtitle_enabled",
+        "merge_incomplete_cues",
+        "bold_target_in_sentence",
         # SubtitlesSettingsPanel
         "mokuro_location",
         # YouTubeSettingsPanel
@@ -208,6 +211,8 @@ class TestSavePathRoundTrip:
         qtbot.addWidget(media_panel)
         filtering_panel = FilteringSettingsPanel()
         qtbot.addWidget(filtering_panel)
+        sentences_panel = SentencesSettingsPanel()
+        qtbot.addWidget(sentences_panel)
         youtube_panel = YouTubeSettingsPanel()
         qtbot.addWidget(youtube_panel)
         # suppress_optional_startup: this panel's availability probes run
@@ -216,7 +221,7 @@ class TestSavePathRoundTrip:
         subtitles_panel = SubtitlesSettingsPanel(suppress_optional_startup=True)
         qtbot.addWidget(subtitles_panel)
 
-        panels = [anki_panel, media_panel, filtering_panel, youtube_panel, subtitles_panel]
+        panels = [anki_panel, media_panel, filtering_panel, sentences_panel, youtube_panel, subtitles_panel]
 
         # Step 2: load.
         for panel in panels:
@@ -313,17 +318,31 @@ class TestSavePathRoundTrip:
             "use_blacklist",
             "whitelist_path",
             "use_whitelist",
-            "subtitle_regex_filter",
-            "subtitle_regex_replacement",
-            "use_subtitle_regex_filter",
             "deduplicate_sentences",
             "exclude_hiragana_only_words",
             "exclude_katakana_only_words",
             "use_i_plus_one_filter",
-            "merge_incomplete_cues",
             "max_sentence_duration_seconds",
             "max_sentence_chars",
             "reading_min_occurrence",
+        ):
+            assert getattr(result, field_name) == getattr(original, field_name), field_name
+
+    def test_sentences_panel_load_and_contribute(self, tmp_path, qtbot):
+        """SentencesSettingsPanel round-trip in isolation."""
+        original = _non_default_save_config(tmp_path)
+        panel = SentencesSettingsPanel()
+        qtbot.addWidget(panel)
+
+        panel.load_from_config(original)
+        result = panel.contribute(AnkiMinerConfig())
+
+        for field_name in (
+            "subtitle_regex_filter",
+            "subtitle_regex_replacement",
+            "use_subtitle_regex_filter",
+            "secondary_subtitle_enabled",
+            "merge_incomplete_cues",
             "bold_target_in_sentence",
         ):
             assert getattr(result, field_name) == getattr(original, field_name), field_name

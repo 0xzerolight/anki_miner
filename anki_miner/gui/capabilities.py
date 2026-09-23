@@ -47,6 +47,7 @@ SETTINGS_SUBTABS: frozenset[str] = frozenset(
         "pitch",
         "mining_language",
         "filtering",
+        "sentences",
         "youtube",
         "subtitles",
         "ui",
@@ -214,7 +215,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Load a second subtitle file in your own language beside the mining-language one: it shows under "
             "the line in the Word Curator preview and can be saved to a Translation field. "
             "On Video -> Batch, point it at a folder of translation subtitles instead and they pair to the "
-            "videos by episode number. Turn it on under Settings -> Filtering.",
+            "videos by episode number. Turn it on under Settings -> Sentences.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("video", "single"),
@@ -690,7 +691,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Remove names, music notes, or bracketed text from subtitles before parsing.",
         ),
         category=_CAT_FILTERING,
-        target=CapabilityTarget("settings", "filtering"),
+        target=CapabilityTarget("settings", "sentences"),
         keywords=("regex", "brackets", "music notes", "speaker labels", "clean subtitles", "strip", "parentheses"),
     ),
     Capability(
@@ -1116,7 +1117,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Wrap the mined word in bold inside the sentence fields on your cards.",
         ),
         category=_CAT_CARDS,
-        target=CapabilityTarget("settings", "filtering"),
+        target=CapabilityTarget("settings", "sentences"),
         keywords=("bold", "highlight", "emphasize", "target word", "sentence formatting"),
     ),
     # --- Appearance & language ---------------------------------------------

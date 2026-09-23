@@ -151,10 +151,10 @@ def test_restyle_mined_cards_is_dialog_only() -> None:
     assert capability.target is None
 
 
-def test_subtitle_regex_targets_filtering() -> None:
-    # The regex presets live on the Filtering panel, not Transcription & Alignment.
+def test_subtitle_regex_targets_sentences() -> None:
+    # The regex presets live on the Sentences panel, not Transcription & Alignment.
     capability = next(c for c in CAPABILITIES if c.id == "subtitle-regex")
-    assert capability.target == CapabilityTarget("settings", "filtering")
+    assert capability.target == CapabilityTarget("settings", "sentences")
 
 
 def test_subtitle_file_mining_is_findable() -> None:

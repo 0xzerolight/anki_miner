@@ -227,8 +227,8 @@ class TestPerFieldValidation:
     def test_invalid_regex_keeps_last_good_and_commits_rest(self, tab, test_config, no_modals):
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
-        tab.filtering_panel.use_subtitle_regex_checkbox.setChecked(True)
-        tab.filtering_panel.subtitle_regex_edit.setText("[")
+        tab.sentences_panel.use_subtitle_regex_checkbox.setChecked(True)
+        tab.sentences_panel.subtitle_regex_edit.setText("[")
         tab.anki_panel.set_deck_name("StillSaves")
 
         tab.commit_settings()
@@ -243,9 +243,9 @@ class TestPerFieldValidation:
     def test_invalid_regex_is_rejected_when_filter_is_disabled(self, tab, test_config, no_modals):
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
-        tab.filtering_panel.set_subtitle_regex_filter("(")
-        tab.filtering_panel.set_subtitle_regex_replacement("NEW")
-        tab.filtering_panel.set_use_subtitle_regex_filter(False)
+        tab.sentences_panel.set_subtitle_regex_filter("(")
+        tab.sentences_panel.set_subtitle_regex_replacement("NEW")
+        tab.sentences_panel.set_use_subtitle_regex_filter(False)
 
         tab.commit_settings()
 
@@ -280,9 +280,9 @@ class TestPerFieldValidation:
     ):
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
-        tab.filtering_panel.set_subtitle_regex_filter(pattern)
-        tab.filtering_panel.set_subtitle_regex_replacement(replacement)
-        tab.filtering_panel.set_use_subtitle_regex_filter(True)
+        tab.sentences_panel.set_subtitle_regex_filter(pattern)
+        tab.sentences_panel.set_subtitle_regex_replacement(replacement)
+        tab.sentences_panel.set_use_subtitle_regex_filter(True)
 
         tab.commit_settings()
 
@@ -294,13 +294,13 @@ class TestPerFieldValidation:
         assert "⚠" in tab.save_status_label.text()
 
     def test_warning_is_sticky_until_next_valid_commit(self, tab, no_modals, qtbot):
-        tab.filtering_panel.use_subtitle_regex_checkbox.setChecked(True)
-        tab.filtering_panel.subtitle_regex_edit.setText("[")
+        tab.sentences_panel.use_subtitle_regex_checkbox.setChecked(True)
+        tab.sentences_panel.subtitle_regex_edit.setText("[")
         tab.commit_settings()
         assert "⚠" in tab.save_status_label.text()
         assert not tab._save_status_timer.isActive()
 
-        tab.filtering_panel.subtitle_regex_edit.setText(r"\d+")
+        tab.sentences_panel.subtitle_regex_edit.setText(r"\d+")
         tab.commit_settings()
         assert "✓" in tab.save_status_label.text()
 
