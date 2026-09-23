@@ -15,6 +15,7 @@ Qt-only (no Anki / no ffmpeg) → default suite, no pytest marker.
 from PyQt6.QtCore import QThread
 from PyQt6.QtTest import QTest
 
+from anki_miner.config import create_default_config
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from tests.e2e.curation import AutoCurationResponder
 
@@ -27,7 +28,7 @@ class _Bare(MiningTabBase):
     comes from ``_init_curation_bridge()``.
     """
 
-    config = None
+    config = create_default_config()
 
     def _commit_known_words(self, forms):  # pragma: no cover - not reached by these tests
         return 0

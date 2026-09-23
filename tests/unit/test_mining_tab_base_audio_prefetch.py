@@ -16,6 +16,7 @@ from PyQt6.QtCore import QThread
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QDialog
 
+from anki_miner.config import create_default_config
 from anki_miner.gui.utils.run_off_thread import join_all_off_thread_workers, still_running
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.models import TokenizedWord
@@ -24,7 +25,7 @@ MODULE = "anki_miner.gui.widgets._mining_tab_base"
 
 
 class _Bare(MiningTabBase):
-    config = None
+    config = create_default_config()
 
     def _commit_known_words(self, forms):
         return 0
