@@ -4,9 +4,9 @@
 ``daxida/wty-release``, 2,230,834 B). Wiktionary content extracted through kaikki.org, CC BY-SA 4.0. 188,425 of
 its 197,640 rows are form-of rows (``knygos`` -> ``knyga``), which is what carries the weakest model in the
 batch: an inflected front ``lt_core_news_sm`` failed to lemmatise still gets a definition naming its lemma.
-Manual imports, not rows (every catalogue row starts ticked in the setup wizard, and a second dictionary should
-not download by default): **wty-lt-lt**, the monolingual edition, and **wty-lt-en-gloss**, the gloss-only
-edition, both on the same host under ``latest/dict/lt/``.
+No second dictionary to offer as a manual import: wiktionary-to-yomitan builds no monolingual ``wty-lt-lt`` and
+no gloss-only ``wty-lt-en-gloss`` (``latest/dict/lt/en/`` holds only ``wty-lt-en`` and its ``-ipa`` twin,
+checked 2026-09-23).
 
 **Frequency — OpenSubtitles 2018** (``hermitdave/FrequencyWords``, ``content/2018/lt/lt_50k.txt``, 610,944 B),
 content CC BY-SA 4.0: headerless ``word count`` lines over lowercased surface forms, imported in occurrence mode

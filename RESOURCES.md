@@ -6,7 +6,7 @@ Dictionaries, frequency lists, pitch accent data and word audio for each mining 
 - **Add via** is a path under Settings. Add a resource while its language is the mining language (Settings -> Mining Language): it is filed under the language active when you add it.
 - Keep a Yomitan ZIP intact when adding it (do not unzip it).
 
-[Arabic](#arabic) · [Cantonese](#cantonese) · [Catalan](#catalan) · [Chinese](#chinese) · [Croatian](#croatian) · [Danish](#danish) · [Dutch](#dutch) · [English](#english) · [Finnish](#finnish) · [French](#french) · [German](#german) · [Greek](#greek) · [Hebrew](#hebrew) · [Hungarian](#hungarian) · [Indonesian](#indonesian) · [Italian](#italian) · [Japanese](#japanese) · [Korean](#korean) · [Lithuanian](#lithuanian) · [Norwegian](#norwegian) · [Persian](#persian) · [Polish](#polish) · [Portuguese](#portuguese) · [Romanian](#romanian) · [Russian](#russian) · [Slovenian](#slovenian) · [Spanish](#spanish) · [Swedish](#swedish) · [Thai](#thai) · [Turkish](#turkish) · [Ukrainian](#ukrainian) · [Vietnamese](#vietnamese)
+[Arabic](#arabic) · [Cantonese](#cantonese) · [Catalan](#catalan) · [Chinese](#chinese) · [Croatian](#croatian) · [Danish](#danish) · [Dutch](#dutch) · [English](#english) · [Finnish](#finnish) · [French](#french) · [German](#german) · [Greek](#greek) · [Hebrew](#hebrew) · [Hungarian](#hungarian) · [Indonesian](#indonesian) · [Italian](#italian) · [Japanese](#japanese) · [Korean](#korean) · [Lithuanian](#lithuanian) · [Norwegian](#norwegian) · [Persian](#persian) · [Polish](#polish) · [Portuguese](#portuguese) · [Romanian](#romanian) · [Russian](#russian) · [Slovenian](#slovenian) · [Spanish](#spanish) · [Swedish](#swedish) · [Thai](#thai) · [Turkish](#turkish) · [Ukrainian](#ukrainian) · [Vietnamese](#vietnamese) · [Note types](#note-types)
 
 ## Arabic
 
@@ -280,3 +280,12 @@ The Setup Wizard pre-selects the frequency list for the variety set in Settings 
 | Dictionary | [VNEDICT v4](https://github.com/thu-tram/viet-yomitan) | [Yomitan zip](https://raw.githubusercontent.com/thu-tram/viet-yomitan/main/dictionaries/vnedict-v4.zip) | Dictionaries -> Add dictionary… | No |
 | Dictionary | [Từ điển Tiếng Việt thông dụng (monolingual)](https://github.com/thu-tram/viet-yomitan) | [Yomitan zip](https://raw.githubusercontent.com/thu-tram/viet-yomitan/main/dictionaries/tu-dien-tieng-viet-thong-dung.zip) | Dictionaries -> Add dictionary… | No |
 | Frequency | [Leipzig Corpora (Vietnamese, mixed)](https://github.com/StefanVukovic99/leipzig-to-yomitan) - also ranks punctuation and names | [Yomitan zip](https://github.com/StefanVukovic99/leipzig-to-yomitan/releases/download/v2024-08-31-18-57-16-00-00/Leipzig.Vietnamese.Mixed.zip) | Frequency -> Add frequency source… | No |
+
+## Note types
+
+| Note type | Fields |
+|-----------|--------|
+| [Lapis](https://github.com/donkuri/lapis) (Japanese) | Settings -> Cards & Anki -> Preset |
+| [Kiku](https://github.com/youyoumu/kiku) (Japanese) | Settings -> Cards & Anki -> Preset |
+| [Senren](https://github.com/BrenoAqua/Senren) (Japanese) | Settings -> Cards & Anki -> Preset |
+| Any other note type with a word field and a sentence field | Settings -> Cards & Anki -> Auto-Map Fields from Note Type |

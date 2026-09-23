@@ -285,3 +285,17 @@ def test_wizard_resources_link_lands_on_its_language_section(code: str) -> None:
     slugs = {readme_i18n.slugify(line[3:]) for line in text.splitlines() if line.startswith("## ")}
     assert anchor in slugs
     assert f"](#{anchor})" in text  # the jump index links it
+
+
+def test_wizard_note_type_link_lands_on_a_section_naming_every_preset() -> None:
+    from anki_miner.gui.widgets.dialogs.setup_wizard.pages import NOTE_TYPE_HELP_URL, RESOURCES_HELP_URL
+    from anki_miner.services.note_presets import NOTE_PRESETS
+
+    base, _, anchor = NOTE_TYPE_HELP_URL.partition("#")
+    assert base == RESOURCES_HELP_URL
+    headings = {
+        readme_i18n.slugify(line[3:]): line[3:] for line in _resources_text().splitlines() if line.startswith("## ")
+    }
+    assert anchor in headings
+    section = _resources_section(headings[anchor])
+    assert [preset.name for preset in NOTE_PRESETS if preset.url not in section] == []

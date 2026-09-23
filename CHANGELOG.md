@@ -95,6 +95,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **A Chinese run no longer warns that words "have more than one reading".** A Japanese attestation pass compared each hanzi word against its pinyin readings, never matched, and raised the warning on every run for a result Chinese discards.
 - **Garbage characters no longer split a Chinese word.** A replacement or private-use character inside 电影 mined 电 and 影; it is deleted before segmentation. ㎡ and ㎞ are no longer rewritten to `m2` and `km` in a Chinese sentence.
 - **The Usage Guide no longer presents Japanese-only features as available in every language (F1).** Jisho, manga OCR and pitch-accent downloads say they are Japanese-only, the Deck Filter script type names Japanese and Korean, word audio names Microsoft Edge TTS for the four languages it serves, and Audiobook Sync names Reading → Subtitle Files.
+- **The setup wizard's "recommended note type" link opens a list of note types.** It pointed at a README section removed in June 2026 and landed on the top of the README. It now opens the Note types section of `RESOURCES.md`: Lapis, Kiku and Senren for Japanese, or any note type with a word field and a sentence field.
 
 ### Removed
 
