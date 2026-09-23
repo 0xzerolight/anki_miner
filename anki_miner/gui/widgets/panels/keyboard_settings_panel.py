@@ -4,9 +4,18 @@ from __future__ import annotations
 
 from functools import partial
 
-from PyQt6.QtCore import QCoreApplication, QKeyCombination, Qt, pyqtSignal
+from PyQt6.QtCore import QCoreApplication, QKeyCombination, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QKeySequence
-from PyQt6.QtWidgets import QHBoxLayout, QKeySequenceEdit, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import (
+    QHBoxLayout,
+    QKeySequenceEdit,
+    QLabel,
+    QLineEdit,
+    QStyle,
+    QStyleOptionFrame,
+    QVBoxLayout,
+    QWidget,
+)
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.utils.key_bindings import (
@@ -26,6 +35,61 @@ from anki_miner.gui.utils.keyboard_shortcuts import primary_action_display
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.utils.i18n import tr_format
+
+
+def _usable_text_width(line_edit: QLineEdit) -> int:
+    """The horizontal px ``line_edit`` actually has left for text right now.
+
+    Reproduces the ``SE_LineEditContents`` lookup ``QLineEdit`` makes internally to lay
+    its own text out (frame rect, minus its style's frame width, minus its own text
+    margins) so the answer tracks the *real* style/theme in force -- not a guessed
+    constant: the shipped QSS pads and borders every ``QLineEdit`` (``common.qss``),
+    which the bare Qt style alone does not, and only this call sees that. Built from
+    public state rather than through ``initStyleOption``: that method is protected,
+    and PyQt6 refuses it on a line edit built on the C++ side (``QKeySequenceEdit``'s
+    internal one, reached only via ``findChildren``).
+    """
+    style = line_edit.style()
+    if style is None:
+        return line_edit.width()
+    option = QStyleOptionFrame()
+    option.rect = line_edit.rect()
+    option.palette = line_edit.palette()
+    option.state = QStyle.StateFlag.State_Enabled
+    option.lineWidth = style.pixelMetric(QStyle.PixelMetric.PM_DefaultFrameWidth, option, line_edit)
+    contents = style.subElementRect(QStyle.SubElement.SE_LineEditContents, option, line_edit)
+    margins = line_edit.textMargins()
+    return contents.width() - margins.left() - margins.right()
+
+
+class _KeySequenceEdit(QKeySequenceEdit):
+    """A ``QKeySequenceEdit`` whose reported minimum width also covers its own
+    empty-state placeholder ("Press shortcut", longer once qtbase's own translator
+    is installed).
+
+    A plain ``setMinimumWidth()`` call does not reach this: when the Keyboard page
+    narrows, ``FormPanel._apply_field_cap`` (and the equivalent hand-built-row
+    ``sizing._RowCapKeeper``) shrink every field down to
+    ``field.minimumSizeHint().width()`` -- never to an externally set
+    ``minimumWidth()`` -- so a row can still be squeezed past a bare
+    ``setMinimumWidth()`` floor. Overriding the Qt-virtual ``minimumSizeHint()`` is
+    the one lever that floor actually reads, and every ordinary layout honours it
+    too, so this is also the correct (and only) fix under normal, unconstrained
+    layout.
+    """
+
+    def minimumSizeHint(self) -> QSize:
+        hint = super().minimumSizeHint()
+        line_edits = self.findChildren(QLineEdit)
+        if not line_edits:
+            return hint
+        line_edit = line_edits[0]
+        placeholder = line_edit.placeholderText()
+        if not placeholder:
+            return hint
+        overhead = max(line_edit.width() - _usable_text_width(line_edit), 0)
+        needed = line_edit.fontMetrics().horizontalAdvance(placeholder) + overhead
+        return QSize(max(hint.width(), needed), hint.height())
 
 
 class KeyboardSettingsPanel(FormPanel):
@@ -94,7 +158,7 @@ class KeyboardSettingsPanel(FormPanel):
     def _add_row(self, action_id: str) -> None:
         label = QCoreApplication.translate(TRANSLATION_CONTEXT, key_action(action_id).label)
 
-        editor = QKeySequenceEdit()
+        editor = _KeySequenceEdit()
         editor.setMaximumSequenceLength(1)
         # Tab/Backtab (Qt's defaults) move focus on; Esc cancels a recording
         # instead of being recorded as the key "Esc".
