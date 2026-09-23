@@ -102,11 +102,13 @@ class TestIndex:
         assert entry.title == "Frequency Rank Range"
         assert entry.breadcrumb == f"Mining{BREADCRUMB_SEPARATOR}Word Filters"
 
-    def test_a_tab_level_setting_belongs_to_no_page(self, entries):
-        entry = _by_id(entries, "app.check_for_updates")
+    def test_check_for_updates_belongs_to_the_general_page(self, entries):
+        # T11: moved off the tab itself onto the UI panel's App section, so it
+        # now belongs to a page like any other panel-owned setting.
+        entry = _by_id(entries, "ui.check_for_updates")
 
-        assert entry.page_key == ""
-        assert entry.breadcrumb == "Settings"
+        assert entry.page_key == "ui"
+        assert entry.breadcrumb == f"App{BREADCRUMB_SEPARATOR}General"
 
     def test_rebuilding_picks_up_a_newly_registered_anchor(self, tab):
         checkbox = QCheckBox("Synthetic later setting", tab.media_panel)
@@ -362,13 +364,13 @@ class TestJump:
         assert tab.search_box.input.text() == ""
         assert not tab.search_box.results.isVisibleTo(tab.search_box)
 
-    def test_a_tab_level_setting_needs_no_page_change(self, tab, qtbot):
+    def test_a_search_for_check_for_updates_jumps_to_general(self, tab, qtbot):
         tab.open_subtab("anki")
 
-        self._jump(tab, qtbot, "app.check_for_updates", "Check for updates on startup")
+        self._jump(tab, qtbot, "ui.check_for_updates", "Check for updates on startup")
 
-        assert tab.pages.currentIndex() == tab._subtab_index["anki"]
-        assert tab.focusWidget() is tab.check_for_updates_checkbox
+        assert tab.pages.currentIndex() == tab._subtab_index["ui"]
+        assert tab.focusWidget() is tab.ui_panel.check_for_updates_checkbox
 
     def test_an_unknown_id_is_ignored(self, tab, qtbot):
         tab.jump_to_setting("nope.not-a-setting")

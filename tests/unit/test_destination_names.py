@@ -117,6 +117,15 @@ def test_the_sentences_panel_matches_its_navigator_entry(qtbot):
     assert panel._title_label.text() == "Sentences"
 
 
+def test_the_audio_panel_matches_its_navigator_entry(qtbot, tmp_path):
+    """The panel title and the navigator label must be the same words (T11)."""
+    from anki_miner.gui.widgets.panels.audio_pack_settings_panel import AudioPackSettingsPanel
+
+    panel = AudioPackSettingsPanel(tmp_path)
+    qtbot.addWidget(panel)
+    assert panel._title_label.text() == "Word Audio"
+
+
 def test_stable_keys_did_not_move_with_the_labels():
     """A renamed label that shifts its key makes the destination unreachable."""
     assert set(MAIN_TABS) == {"video", "deckbuilder", "audiobook", "reading", "analytics", "subtitles", "settings"}

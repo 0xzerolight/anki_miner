@@ -409,8 +409,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # UI page; reading it from the map keeps a single source of truth.
         self._ui_subtab_index = self._subtab_index["ui"]
         # Reset the theme preview baseline when the user navigates away from
-        # Appearance & Language so a later visit reverts to their last-chosen
-        # theme, not session start. Connected after the navigator is populated,
+        # General so a later visit reverts to their last-chosen theme, not
+        # session start. Connected after the navigator is populated,
         # so selecting the first destination can't fire it during construction.
         self.pages.currentChanged.connect(self._on_settings_subtab_changed)
 
@@ -419,22 +419,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         body.addWidget(self.nav_list)
         body.addWidget(self.pages, 1)
         layout.addLayout(body)
-
-        # Updates row — single top-level toggle, no panel needed for one checkbox.
-        self.check_for_updates_checkbox = QCheckBox(self.tr("Check for updates on startup"))
-        self.check_for_updates_checkbox.setToolTip(
-            self.tr("When enabled, Anki Miner queries GitHub for new releases on launch.")
-        )
-        layout.addWidget(self.check_for_updates_checkbox)
-        # Lives on the tab, not in a panel, so it anchors here (D11).
-        self.register_setting(
-            "check_for_updates",
-            self.check_for_updates_checkbox,
-            lambda: (
-                self.check_for_updates_checkbox.text(),
-                self.check_for_updates_checkbox.toolTip(),
-            ),
-        )
 
         # Status row at bottom. The Save Settings button is gone — settings
         # auto-save (debounced) — but its inline "✓ Saved" confirmation stays
@@ -457,8 +441,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         button_layout.addStretch()
 
         # Settings Profiles sits with the other whole-config actions rather than
-        # at the foot of Appearance & Language, where the theme gallery pushed it
-        # below the fold and it read as a third theme button. This footer is
+        # at the foot of General, where the theme gallery pushed it below the
+        # fold and it read as a third theme button. This footer is
         # outside the panels' scroll area, so one button serves all ten pages.
         # Left of Export/Import because it is the same kind of action: a named
         # snapshot of every setting, kept in the app instead of in a file.
@@ -548,7 +532,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 self.tr("Resources"),
                 (
                     ("dictionaries", self.tr("Dictionaries"), self.dictionary_panel),
-                    ("audio", self.tr("Audio"), self.audio_panel),
+                    ("audio", self.tr("Word Audio"), self.audio_panel),
                     ("frequency", self.tr("Frequency"), self.frequency_panel),
                     ("pitch", self.tr("Pitch Accent"), self.pitch_panel),
                 ),
@@ -570,7 +554,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             ),
             (
                 self.tr("App"),
-                (("ui", self.tr("Appearance & Language"), self.ui_panel),),
+                (("ui", self.tr("General"), self.ui_panel),),
             ),
         )
 
@@ -757,8 +741,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Persist chain immediately after reorder/toggle.
         self.audio_panel.chain_changed.connect(lambda: self._persist_audio_chain_change(self.audio_panel.get_chain()))
         self.audio_panel.retry_missing_audio_requested.connect(self._on_retry_missing_audio)
-        # Sentence-TTS toggles persist immediately, like the chain above.
-        self.audio_panel.reading_tts_changed.connect(self._persist_reading_tts_change)
 
         # Frequency panel signals — wire Add/Reimport to the import flow.
         self.frequency_panel.add_source_requested.connect(self._frequency_import_flow.add_source)
@@ -1016,7 +998,12 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                     model.rowsRemoved.connect(self._on_settings_edited)
 
         # Fields outside the save panels that commit through the same path.
-        self.check_for_updates_checkbox.toggled.connect(self._on_settings_edited)
+        # check_for_updates_checkbox and max_workers_spinbox live on the UI
+        # panel (T11) but the panel itself stays out of _save_panels — it
+        # persists everything else via its own signals — so both are wired
+        # individually here, like the mining_language variant combos below.
+        self.ui_panel.check_for_updates_checkbox.toggled.connect(self._on_settings_edited)
+        self.ui_panel.max_workers_spinbox.valueChanged.connect(self._on_settings_edited)
         self.dictionary_panel.dicts_root_selector.path_changed.connect(self._on_settings_edited)
 
         # mining_language_panel's two variant combos, individually (see the
@@ -1252,8 +1239,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         Save-path panels (Anki, Media, Mining Language, Filtering, Sentences,
         YouTube, Subtitles) are loaded via the symmetric ``load_from_config``
         contract so each panel owns its fields in one place (OVH-019).
-        Dictionary/audio chain panels and the top-level update checkbox
-        persist via their own paths and are handled directly here.
+        Dictionary/audio chain panels and the UI panel (which owns Check for
+        updates and Max parallel workers, T11) persist via their own paths
+        and are handled directly here.
 
         Runs under the ``_loading`` guard: the setText/setChecked/setValue
         calls below fire the same change signals user edits do, and must not
@@ -1280,11 +1268,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             from anki_miner.languages.registry import config_language, get_profile
 
             self.audio_panel.set_edge_tts_available(bool(get_profile(config_language(self.config)).audio.edge_voice))
-            self.audio_panel.set_reading_tts(
-                self.config.reading_tts_enabled,
-                self.config.reading_tts_google_enabled,
-                self.config.reading_tts_papago_enabled,
-            )
 
             # Frequency source chain lives in the Frequency tab; the chain persists
             # immediately via its own signal. Frequency activation is derived from an
@@ -1298,11 +1281,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.pitch_panel.set_pitch_root(self.config.pitch_root)
             self.pitch_panel.set_chain(self.config.pitch_chain)
 
-            # Update settings — standalone checkbox outside all panels.
-            self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
-
             # UI panel is outside _save_panels (it persists via its own signals),
             # so it owns its whole repaint here — signal-safe by construction.
+            # It also owns Check for updates and Max parallel workers (T11,
+            # moved here from the tab and Media respectively); their values are
+            # part of this same repaint, not a separate step.
             self.ui_panel.load_from_config(self.config)
 
             # Last, and beside the panels' own gate: every page has been
@@ -1525,7 +1508,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.dictionary_panel.set_external_mutation_preflight(callback)
 
     def open_ui_subtab(self) -> None:
-        """Switch to Appearance & Language (language, zoom, themes).
+        """Switch to General (language, zoom, themes, updates, workers).
 
         Thin wrapper over :meth:`open_subtab` kept because MainWindow's
         ``_settings_tab_index`` uses this method name as the capability marker
@@ -1745,7 +1728,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # If the user just re-enabled startup checks (False -> True), clear any
         # previously skipped version so a fresh check runs next launch.
         was_enabled = self.config.check_for_updates
-        now_enabled = self.check_for_updates_checkbox.isChecked()
+        now_enabled = self.ui_panel.check_for_updates_checkbox.isChecked()
         skipped_update_version = self.config.skipped_update_version
         if now_enabled and not was_enabled:
             skipped_update_version = ""
@@ -1817,13 +1800,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # Dictionary storage folder (Issue #45). Validated above; reuse of
             # current value passes through unchanged.
             dicts_root=new_dicts_root,
-            # Sentence-TTS toggles — same immediate-persist + full-Save sync.
-            reading_tts_enabled=self.audio_panel.get_reading_tts()[0],
-            reading_tts_google_enabled=self.audio_panel.get_reading_tts()[1],
-            reading_tts_papago_enabled=self.audio_panel.get_reading_tts()[2],
-            # Update settings
+            # UI panel fields outside _save_panels (T11): Check for updates and
+            # Max parallel workers.
             check_for_updates=now_enabled,
             skipped_update_version=skipped_update_version,
+            max_parallel_workers=self.ui_panel.max_workers_spinbox.value(),
         )
 
         # Async import flows can complete between the start-of-Save snapshot
@@ -2283,17 +2264,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         """
         new_config = replace(self.config, expression_audio_chain=new_chain)
         self._commit_immediate_config(new_config, self._commit_config)
-
-    def _persist_reading_tts_change(self) -> None:
-        """Save the sentence-TTS toggles immediately (no Save click needed)."""
-        enabled, google_on, papago_on = self.audio_panel.get_reading_tts()
-        new_config = replace(
-            self.config,
-            reading_tts_enabled=enabled,
-            reading_tts_google_enabled=google_on,
-            reading_tts_papago_enabled=papago_on,
-        )
-        self._commit_immediate_config(new_config, self.config_changed.emit)
 
     def _on_retry_missing_audio(self) -> None:
         """Clear JPod101 ``.miss`` markers so absent words are re-tried next run.

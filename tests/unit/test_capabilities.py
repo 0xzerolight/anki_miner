@@ -356,6 +356,24 @@ def test_pinyin_description_points_at_cards_and_anki() -> None:
     assert "Filtering" not in _entry("pinyin").description
 
 
+def test_sentence_tts_targets_the_card_media_page() -> None:
+    # The reading-TTS block folded into Card Media's one combo (T11); it no
+    # longer lives on the Word Audio page.
+    assert _entry("sentence-tts").target == CapabilityTarget("settings", "media")
+
+
+def test_parallel_workers_targets_the_general_page() -> None:
+    # Moved off Card Media onto the UI panel's App section (T11).
+    assert _entry("parallel-workers").target == CapabilityTarget("settings", "ui")
+
+
+def test_update_check_targets_the_general_page() -> None:
+    # Moved off the tab itself onto the UI panel's App section (T11).
+    entry = _entry("update-check")
+    assert entry.target == CapabilityTarget("settings", "ui")
+    assert "Settings -> General" in entry.description
+
+
 @pytest.mark.parametrize(
     ("cap_id", "code"),
     [("tone-colour", "zh"), ("tone-colour", "yue"), ("regional-variety", "pt"), ("hangul-filters", "ko")],
@@ -374,7 +392,7 @@ def test_gated_setting_entry_is_hidden_from_japanese(cap_id: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# The Utilities tools (Settings -> Appearance & Language hides them)
+# The Utilities tools (Settings -> General hides them)
 # ---------------------------------------------------------------------------
 
 

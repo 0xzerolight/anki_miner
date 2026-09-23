@@ -611,7 +611,9 @@ class TestSettingAnchorsAreUnchanged:
 
     EXPECTED = {
         "dictionary": {"dictionaries.storage_folder", "dictionaries.chain"},
-        "audio": {"audio.chain", "audio.reading_tts"},
+        # T11: the sentence-TTS block (formerly audio.reading_tts) folded into
+        # the Card Media combo, media.reading_tts.
+        "audio": {"audio.chain"},
         "frequency": {"frequency.chain"},
         "pitch": {"pitch.chain"},
     }

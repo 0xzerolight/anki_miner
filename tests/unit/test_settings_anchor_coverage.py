@@ -182,10 +182,11 @@ def test_label_less_checkboxes_index_their_own_caption(tab):
     assert checkbox.text() in by_id["filtering.use_blacklist_checkbox"].search_text()
 
 
-def test_the_update_checkbox_is_anchored_on_the_tab_itself(tab):
+def test_the_update_checkbox_is_anchored_on_the_ui_panel(tab):
+    """T11: moved from the tab itself onto the UI panel's App section."""
     by_id = {anchor.stable_id: anchor for anchor in tab.setting_anchors()}
 
-    assert by_id["app.check_for_updates"].focus_widget is tab.check_for_updates_checkbox
+    assert by_id["ui.check_for_updates"].focus_widget is tab.ui_panel.check_for_updates_checkbox
 
 
 def test_ui_panel_controls_are_anchored(tab):
@@ -193,6 +194,7 @@ def test_ui_panel_controls_are_anchored(tab):
 
     assert by_id["ui.language"].focus_widget is tab.ui_panel.language_combo
     assert by_id["ui.theme"].focus_widget is tab.ui_panel.gallery
+    assert by_id["ui.max_parallel_workers"].focus_widget is tab.ui_panel.max_workers_spinbox
 
 
 def test_anchor_search_text_follows_a_relabelled_control(tab):

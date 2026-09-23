@@ -54,8 +54,8 @@ SETTINGS_SUBTABS: frozenset[str] = frozenset(
     }
 )
 # The Utilities tab's tools, in tab-bar order. SubtitlesTab builds its inner
-# tabs in this order and Settings -> Appearance & Language shows one checkbox
-# per key, so this tuple and SUBTAB_KEYS["subtitles"] are the same set.
+# tabs in this order and Settings -> General shows one checkbox per key, so
+# this tuple and SUBTAB_KEYS["subtitles"] are the same set.
 UTILITY_SUBTABS: tuple[str, ...] = (
     "generate",
     "retime",
@@ -953,7 +953,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Not available for Persian or Slovenian.",
         ),
         category=_CAT_AUDIO,
-        target=CapabilityTarget("settings", "audio"),
+        target=CapabilityTarget("settings", "media"),
         keywords=("tts", "text to speech", "sentence audio", "reading audio", "synthesized voice"),
     ),
     Capability(
@@ -1002,7 +1002,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Choose how many media-extraction jobs run at once to trade speed against CPU and memory use.",
         ),
         category=_CAT_MEDIA,
-        target=CapabilityTarget("settings", "media"),
+        target=CapabilityTarget("settings", "ui"),
         keywords=("parallel", "workers", "cpu", "ram", "performance", "speed", "slow extraction"),
     ),
     # --- Anki cards --------------------------------------------------------
@@ -1124,7 +1124,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     Capability(
         id="themes",
         title=QT_TRANSLATE_NOOP("Capabilities", "Themes, dark mode, fonts & zoom"),
-        description=QT_TRANSLATE_NOOP("Capabilities", "Switch light/dark themes and adjust font scale and UI zoom."),
+        description=QT_TRANSLATE_NOOP("Capabilities", "Switch light/dark themes and adjust UI zoom."),
         category=_CAT_APPEARANCE,
         target=CapabilityTarget("settings", "ui"),
         keywords=("theme", "dark mode", "light mode", "font", "zoom", "color", "appearance", "language"),
@@ -1173,7 +1173,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Choose the tools on the Utilities tab"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Hide the Utilities tools you do not use, or bring them back, under Settings -> Appearance & Language. "
+            "Hide the Utilities tools you do not use, or bring them back, under Settings -> General. "
             "A hidden tool keeps its entry here; its Open button leads to that checkbox.",
         ),
         category=_CAT_APPEARANCE,
@@ -1207,10 +1207,10 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Check for app updates"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in the Settings footer.",
+            "Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -> General.",
         ),
         category=_CAT_APPEARANCE,
-        target=CapabilityTarget("settings"),
+        target=CapabilityTarget("settings", "ui"),
         keywords=("update", "new version", "upgrade", "release", "check for updates"),
     ),
     # --- Tools & maintenance (standalone tools plus menu/dialog features) --

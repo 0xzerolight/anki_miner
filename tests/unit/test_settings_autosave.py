@@ -69,8 +69,15 @@ class TestDebounceWiring:
         assert tab._debounce_timer.isActive()
 
     def test_checkbox_arms_debounce(self, tab):
-        box = tab.check_for_updates_checkbox
+        box = tab.ui_panel.check_for_updates_checkbox
         box.setChecked(not box.isChecked())
+        assert tab._debounce_timer.isActive()
+
+    def test_max_workers_spinbox_arms_debounce(self, tab):
+        # T11: moved from Card Media to the UI panel's App section, wired
+        # individually since the UI panel stays out of _save_panels.
+        spinbox = tab.ui_panel.max_workers_spinbox
+        spinbox.setValue(spinbox.value() + 1)
         assert tab._debounce_timer.isActive()
 
     def test_sentences_panel_checkbox_arms_debounce(self, tab):
@@ -419,10 +426,19 @@ class TestCommitRetainsSaveSemantics:
         tab.update_config(replace(test_config, check_for_updates=False, skipped_update_version="9.9.9"))
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
-        tab.check_for_updates_checkbox.setChecked(True)
+        tab.ui_panel.check_for_updates_checkbox.setChecked(True)
         tab.commit_settings()
         assert received[-1].check_for_updates is True
         assert received[-1].skipped_update_version == ""
+
+    def test_max_workers_spinbox_commits(self, tab, test_config, no_modals):
+        # T11: moved from Card Media to the UI panel's App section; still
+        # contributed by commit_settings, just read straight off the panel.
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+        tab.ui_panel.max_workers_spinbox.setValue(9)
+        tab.commit_settings()
+        assert received[-1].max_parallel_workers == 9
 
 
 class TestManualControlsRemoved:

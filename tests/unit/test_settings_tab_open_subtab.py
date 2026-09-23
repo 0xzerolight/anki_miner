@@ -51,7 +51,7 @@ _GROUPS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
         "Resources",
         (
             ("dictionaries", "Dictionaries"),
-            ("audio", "Audio"),
+            ("audio", "Word Audio"),
             ("frequency", "Frequency"),
             ("pitch", "Pitch Accent"),
         ),
@@ -61,7 +61,7 @@ _GROUPS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
         (("mining_language", "Mining Language"), ("filtering", "Word Filters"), ("sentences", "Sentences")),
     ),
     ("Integrations", (("youtube", "YouTube"), ("subtitles", "Transcription & Alignment"))),
-    ("App", (("ui", "Appearance & Language"),)),
+    ("App", (("ui", "General"),)),
 )
 
 
@@ -264,7 +264,7 @@ class TestCurrentSubtabKey:
 
 
 class TestThemePreviewBaseline:
-    """Leaving Appearance & Language reverts an un-chosen theme preview."""
+    """Leaving General reverts an un-chosen theme preview."""
 
     def test_leaving_the_appearance_page_resets_the_baseline(self, tab, monkeypatch) -> None:
         calls: list[None] = []

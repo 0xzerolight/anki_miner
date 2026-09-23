@@ -1,17 +1,17 @@
-"""UI settings panel — language, zoom, and theme selection.
+"""UI settings panel — language, zoom, theme, and app-level selection.
 
-This is the "UI" Settings sub-tab. Top to bottom it offers:
+This is the "General" Settings page (stable key ``"ui"``). Hand-built, not a
+``FormPanel``, so its sections are plain DemiBold headings rather than
+``FormPanel.add_section``. Top to bottom:
 
-* UI language picker (restart-to-apply; merged in from the former
-  ``LanguagePanel``). Emits ``language_changed``.
-* Zoom (whole-UI scale) — the only interface-size control (Text size was
-  folded into it, ``GUIConfigManager._fold_removed_fields``). Restart-to-apply
-  (D39b-A): picking a preset offers *Restart now* / *Later*; changing it
-  relayouts the whole window, so unlike theme there is no instant path to have.
-* Which tools the Utilities tab shows: one checkbox per tool, committed at once.
-  Emits ``hidden_utilities_changed``.
-* The theme gallery (shipped + user-installed), rendered as preview cards by
-  ``ThemeGalleryWidget``, with:
+* **Language** — UI language picker (restart-to-apply; merged in from the
+  former ``LanguagePanel``). Emits ``language_changed``.
+* **Appearance** — Zoom (whole-UI scale), the only interface-size control
+  (Text size was folded into it, ``GUIConfigManager._fold_removed_fields``).
+  Restart-to-apply (D39b-A): picking a preset offers *Restart now* / *Later*;
+  changing it relayouts the whole window, so unlike theme there is no instant
+  path to have. Followed by the theme gallery (shipped + user-installed),
+  rendered as preview cards by ``ThemeGalleryWidget``, with:
   - Live preview when a card is clicked — the active theme actually changes so
     the user sees buttons, tables, scrollbars, banners react in real time.
   - A star toggle to add/remove the theme from the favorites list that drives
@@ -24,10 +24,18 @@ This is the "UI" Settings sub-tab. Top to bottom it offers:
   - A contrast note under the gallery, stating the measured ratio when the
     live theme is hard to read. Advisory only: the theme still renders
     exactly as its author wrote it (D43-A).
+* **Utilities tab** — which tools the Utilities tab shows: one checkbox per
+  tool, committed at once. Emits ``hidden_utilities_changed``.
+* **App** — Check for updates on startup and Max parallel workers (T11: moved
+  here from the tab and from Card Media respectively). Neither persists
+  through this panel's own signals; the settings tab reads them directly as
+  part of the ordinary debounced save path (``SettingsTab._wire_edit_signals``
+  wires them individually, since this panel stays out of ``_save_panels``).
 
-Persistence is handled by emitting ``state_changed`` / ``zoom_changed`` /
-``language_changed`` (re-uses the ``config_changed`` convention from other
-panels). The settings tab forwards to ``MainWindow.update_config`` which
+Persistence for this panel's own fields is handled by emitting
+``state_changed`` / ``zoom_changed`` / ``language_changed`` /
+``hidden_utilities_changed`` (re-uses the ``config_changed`` convention from
+other panels). The settings tab forwards to ``MainWindow.update_config`` which
 writes ``gui_config.json``.
 """
 
@@ -45,6 +53,7 @@ from PyQt6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QSpinBox,
     QVBoxLayout,
     QWidget,
 )
@@ -163,12 +172,23 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
 
     # ---- UI construction -------------------------------------------------
 
+    @staticmethod
+    def _section_heading(text: str) -> QLabel:
+        """A DemiBold section heading, matching the style the Utilities tab
+        heading originated (this panel is hand-built, not a ``FormPanel``, so
+        it has no ``add_section``)."""
+        heading = QLabel(text)
+        heading.setFont(make_scaled_font(FONT_SIZES.body_sm, QFont.Weight.DemiBold))
+        return heading
+
     def _setup_ui(self) -> None:
         layout = QVBoxLayout()
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
         layout.setSpacing(SPACING.sm)
 
         self.install_issue_banner(layout)
+
+        layout.addWidget(self._section_heading(self.tr("Language")))
 
         # Language row (restart-to-apply). Merged in from the former
         # LanguagePanel; Qt captures tr() strings at construction, so a language
@@ -198,6 +218,8 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.language_restart_note.setWordWrap(True)
         self.language_restart_note.setVisible(False)
         layout.addWidget(self.language_restart_note)
+
+        layout.addWidget(self._section_heading(self.tr("Appearance")))
 
         # Zoom (whole-UI scale) row — the only interface-size control (Text
         # size was folded into it, T4). Restart-to-apply (injected as
@@ -252,35 +274,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         zoom_note_row.addStretch(1)
         layout.addLayout(zoom_note_row)
 
-        # Which tools the Utilities tab shows: one box per tool, in tab order,
-        # labelled with the tab's own label, checked = shown. Commits at once.
-        # The last checked box is disabled so the tab always keeps a tool.
-        utilities_heading = QLabel(self.tr("Utilities tab"))
-        utilities_heading.setFont(make_scaled_font(FONT_SIZES.body_sm, QFont.Weight.DemiBold))
-        layout.addWidget(utilities_heading)
-        utilities_hint = QLabel(self.tr("Choose which tools the Utilities tab shows. At least one stays."))
-        utilities_hint.setObjectName("helper-text")
-        utilities_hint.setWordWrap(True)
-        layout.addWidget(utilities_hint)
-        utilities_grid = QGridLayout()
-        utilities_grid.setHorizontalSpacing(SPACING.md)
-        utilities_grid.setVerticalSpacing(SPACING.xs)
-        self.utility_checkboxes: dict[str, QCheckBox] = {}
-        for position, (key, label) in enumerate(utility_labels().items()):
-            box = QCheckBox(label)
-            box.setChecked(True)
-            box.toggled.connect(self._on_utility_toggled)
-            utilities_grid.addWidget(box, position // 2, position % 2)
-            self.utility_checkboxes[key] = box
-
-            def _search_text(box: QCheckBox = box) -> tuple[str, ...]:
-                return (box.text(), utilities_heading.text())
-
-            self.register_setting(f"utility_{key}", box, _search_text)
-        # Keeps the two columns left-aligned instead of spreading them apart.
-        utilities_grid.setColumnStretch(2, 1)
-        layout.addLayout(utilities_grid)
-
         # Theme selection. Same position in the panel as the list it replaces;
         # the intro explains the card behaviour, so it sits directly above.
         intro = QLabel(
@@ -329,6 +322,70 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         buttons.addStretch()
 
         layout.addLayout(buttons)
+
+        layout.addWidget(self._section_heading(self.tr("Utilities tab")))
+
+        # Which tools the Utilities tab shows: one box per tool, in tab order,
+        # labelled with the tab's own label, checked = shown. Commits at once.
+        # The last checked box is disabled so the tab always keeps a tool.
+        utilities_hint = QLabel(self.tr("Choose which tools the Utilities tab shows. At least one stays."))
+        utilities_hint.setObjectName("helper-text")
+        utilities_hint.setWordWrap(True)
+        layout.addWidget(utilities_hint)
+        utilities_grid = QGridLayout()
+        utilities_grid.setHorizontalSpacing(SPACING.md)
+        utilities_grid.setVerticalSpacing(SPACING.xs)
+        self.utility_checkboxes: dict[str, QCheckBox] = {}
+        for position, (key, label) in enumerate(utility_labels().items()):
+            box = QCheckBox(label)
+            box.setChecked(True)
+            box.toggled.connect(self._on_utility_toggled)
+            utilities_grid.addWidget(box, position // 2, position % 2)
+            self.utility_checkboxes[key] = box
+
+            def _search_text(box: QCheckBox = box) -> tuple[str, ...]:
+                return (box.text(), self.tr("Utilities tab"))
+
+            self.register_setting(f"utility_{key}", box, _search_text)
+        # Keeps the two columns left-aligned instead of spreading them apart.
+        utilities_grid.setColumnStretch(2, 1)
+        layout.addLayout(utilities_grid)
+
+        layout.addWidget(self._section_heading(self.tr("App")))
+
+        # Check for updates on startup (T11: moved here from the tab itself).
+        self.check_for_updates_checkbox = QCheckBox(self.tr("Check for updates on startup"))
+        self.check_for_updates_checkbox.setToolTip(
+            self.tr("When enabled, Anki Miner queries GitHub for new releases on launch.")
+        )
+        layout.addWidget(self.check_for_updates_checkbox)
+        self.register_setting(
+            "check_for_updates",
+            self.check_for_updates_checkbox,
+            lambda: (
+                self.check_for_updates_checkbox.text(),
+                self.check_for_updates_checkbox.toolTip(),
+            ),
+        )
+
+        # Max parallel workers (T11: moved here from Card Media).
+        workers_row = QHBoxLayout()
+        workers_row.setSpacing(SPACING.sm)
+        workers_tip = self.tr("Higher = faster, but uses more CPU and memory.")
+        workers_label = QLabel(self.tr("Max Parallel Workers"))
+        workers_label.setToolTip(workers_tip)
+        workers_row.addWidget(workers_label)
+        self.max_workers_spinbox = QSpinBox()
+        self.max_workers_spinbox.setRange(1, 20)
+        self.max_workers_spinbox.setToolTip(workers_tip)
+        workers_row.addWidget(self.max_workers_spinbox)
+        self.register_setting(
+            "max_parallel_workers",
+            self.max_workers_spinbox,
+            lambda: (workers_label.text(), workers_tip),
+        )
+        workers_row.addStretch(1)
+        layout.addLayout(workers_row)
 
         self.setLayout(layout)
 
@@ -750,3 +807,21 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         self.language_restart_note.setVisible(config.ui_language != self._boot_language)
         self._show_zoom_restart_note(config.ui_zoom != self._boot_zoom)
+
+        # App section (T11): Check for updates and Max parallel workers moved
+        # here from the tab and from Card Media respectively. Neither has a
+        # panel-level handler of its own — the settings tab reads them
+        # directly as part of the ordinary debounced save path — but signals
+        # are still blocked here to keep this method's "never emits" contract
+        # true for every control it repaints.
+        self.check_for_updates_checkbox.blockSignals(True)
+        try:
+            self.check_for_updates_checkbox.setChecked(config.check_for_updates)
+        finally:
+            self.check_for_updates_checkbox.blockSignals(False)
+
+        self.max_workers_spinbox.blockSignals(True)
+        try:
+            self.max_workers_spinbox.setValue(config.max_parallel_workers)
+        finally:
+            self.max_workers_spinbox.blockSignals(False)
