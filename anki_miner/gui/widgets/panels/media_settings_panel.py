@@ -5,6 +5,15 @@ from dataclasses import replace
 from PyQt6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QSpinBox
 
 from anki_miner.gui.widgets.base import FormPanel
+from anki_miner.utils.i18n import tr_format
+
+# Animated-screenshot size presets: fps, height (px), quality (0-100).
+# "balanced" == today's pre-preset defaults (config.py:286-288).
+ANIMATED_SIZE_PRESETS: dict[str, tuple[int, int, int]] = {
+    "small": (12, 480, 30),
+    "balanced": (20, 720, 30),
+    "high": (24, 1080, 50),
+}
 
 
 class MediaSettingsPanel(FormPanel):
@@ -118,28 +127,15 @@ class MediaSettingsPanel(FormPanel):
         )
         self.add_field(self.tr("Clip Duration"), self.animated_duration_spinbox)
 
-        # FPS
-        self.animated_fps_spinbox = QSpinBox()
-        self.animated_fps_spinbox.setRange(5, 30)
-        self.animated_fps_spinbox.setToolTip(self.tr("Frames per second for animated clips"))
-        self.add_field(self.tr("FPS"), self.animated_fps_spinbox)
-
-        # Height
-        self.animated_height_spinbox = QSpinBox()
-        self.animated_height_spinbox.setRange(240, 1080)
-        self.animated_height_spinbox.setSingleStep(120)
-        self.animated_height_spinbox.setSuffix(self.tr(" px"))
-        self.add_field(
-            self.tr("Height"),
-            self.animated_height_spinbox,
-            helper=self.tr("Output height; aspect ratio preserved"),
-        )
-
-        # Quality
-        self.animated_quality_spinbox = QSpinBox()
-        self.animated_quality_spinbox.setRange(0, 100)
-        self.animated_quality_spinbox.setToolTip(self.tr("0 = smallest file, 100 = best quality"))
-        self.add_field(self.tr("Quality"), self.animated_quality_spinbox)
+        # Size (fps / height / quality preset)
+        self._custom_animated_triple: tuple[int, int, int] = ANIMATED_SIZE_PRESETS["balanced"]
+        self.animated_size_combo = QComboBox()
+        self.animated_size_combo.addItem(self.tr("Small"), "small")
+        self.animated_size_combo.addItem(self.tr("Balanced"), "balanced")
+        self.animated_size_combo.addItem(self.tr("High"), "high")
+        self.animated_size_combo.setToolTip(self.tr("Frame rate, height and quality for the animated clip."))
+        self.animated_size_combo.activated.connect(self._on_animated_size_activated)
+        self.add_field(self.tr("Size"), self.animated_size_combo)
 
         self.animated_checkbox.toggled.connect(self._set_animated_enabled)
         self.animated_match_audio_checkbox.toggled.connect(self._set_match_audio)
@@ -153,9 +149,7 @@ class MediaSettingsPanel(FormPanel):
             self.animated_format_combo,
             self.animated_match_audio_checkbox,
             self.animated_duration_spinbox,
-            self.animated_fps_spinbox,
-            self.animated_height_spinbox,
-            self.animated_quality_spinbox,
+            self.animated_size_combo,
         ):
             widget.setEnabled(enabled)
         # Re-apply match-audio gating so the duration spinbox stays disabled
@@ -170,6 +164,49 @@ class MediaSettingsPanel(FormPanel):
         """
         feature_on = self.animated_checkbox.isChecked()
         self.animated_duration_spinbox.setEnabled(feature_on and not match)
+
+    def _on_animated_size_activated(self, index: int) -> None:
+        """Drop the Custom entry once the user picks a real preset.
+
+        Only ``activated`` (user interaction) fires this, never a
+        programmatic ``setCurrentIndex`` from :meth:`_set_animated_size` —
+        so loading a still-custom config never trips it. Once dropped,
+        Custom cannot be re-selected.
+        """
+        if self.animated_size_combo.itemData(index) == "custom":
+            return
+        custom_index = self.animated_size_combo.findData("custom")
+        if custom_index != -1:
+            self.animated_size_combo.removeItem(custom_index)
+
+    def _set_animated_size(self, fps: int, height: int, quality: int) -> None:
+        """Select the preset matching ``(fps, height, quality)``, or show Custom.
+
+        Replaces any existing Custom entry outright so a second load (a
+        different profile, a config reload) never leaves a stale label
+        behind.
+        """
+        current_custom_index = self.animated_size_combo.findData("custom")
+        if current_custom_index != -1:
+            self.animated_size_combo.removeItem(current_custom_index)
+
+        triple = (fps, height, quality)
+        for key, preset in ANIMATED_SIZE_PRESETS.items():
+            if preset == triple:
+                self.animated_size_combo.setCurrentIndex(self.animated_size_combo.findData(key))
+                return
+
+        self._custom_animated_triple = triple
+        label = tr_format(self.tr("Custom (%1 fps · %2 px · quality %3)"), fps, height, quality)
+        self.animated_size_combo.addItem(label, "custom")
+        self.animated_size_combo.setCurrentIndex(self.animated_size_combo.count() - 1)
+
+    def _current_animated_size_triple(self) -> tuple[int, int, int]:
+        """Return the (fps, height, quality) triple for the selected entry."""
+        key = self.animated_size_combo.currentData()
+        if key == "custom":
+            return self._custom_animated_triple
+        return ANIMATED_SIZE_PRESETS[key]
 
     # ------------------------------------------------------------------
     # Accessors (config <-> widget conversion)
@@ -249,30 +286,6 @@ class MediaSettingsPanel(FormPanel):
         self.animated_match_audio_checkbox.setChecked(value)
         self._set_match_audio(value)
 
-    def get_screenshot_animated_fps(self) -> int:
-        """Return the animated screenshot FPS."""
-        return self.animated_fps_spinbox.value()
-
-    def set_screenshot_animated_fps(self, value: int) -> None:
-        """Set the animated screenshot FPS spinbox."""
-        self.animated_fps_spinbox.setValue(value)
-
-    def get_screenshot_animated_height(self) -> int:
-        """Return the animated screenshot height (px)."""
-        return self.animated_height_spinbox.value()
-
-    def set_screenshot_animated_height(self, value: int) -> None:
-        """Set the animated screenshot height spinbox."""
-        self.animated_height_spinbox.setValue(value)
-
-    def get_screenshot_animated_quality(self) -> int:
-        """Return the animated screenshot quality (0-100)."""
-        return self.animated_quality_spinbox.value()
-
-    def set_screenshot_animated_quality(self, value: int) -> None:
-        """Set the animated screenshot quality spinbox."""
-        self.animated_quality_spinbox.setValue(value)
-
     # ------------------------------------------------------------------
     # Config marshalling contract (OVH-019)
     # ------------------------------------------------------------------
@@ -291,9 +304,11 @@ class MediaSettingsPanel(FormPanel):
         self.set_screenshot_animated_format(config.screenshot_animated_format)
         self.set_screenshot_animated_clip_duration(config.screenshot_animated_clip_duration)
         self.set_screenshot_animated_match_audio(config.screenshot_animated_match_audio)
-        self.set_screenshot_animated_fps(config.screenshot_animated_fps)
-        self.set_screenshot_animated_height(config.screenshot_animated_height)
-        self.set_screenshot_animated_quality(config.screenshot_animated_quality)
+        self._set_animated_size(
+            config.screenshot_animated_fps,
+            config.screenshot_animated_height,
+            config.screenshot_animated_quality,
+        )
 
     def contribute(self, config):
         """Return a new config with this panel's fields applied.
@@ -301,6 +316,7 @@ class MediaSettingsPanel(FormPanel):
         Uses ``dataclasses.replace`` so the frozen-config invariant is preserved.
         Called by :meth:`SettingsTab.commit_settings` as part of the contribute fold.
         """
+        fps, height, quality = self._current_animated_size_triple()
         return replace(
             config,
             audio_format=self.get_audio_format(),
@@ -312,7 +328,7 @@ class MediaSettingsPanel(FormPanel):
             screenshot_animated_format=self.get_screenshot_animated_format(),
             screenshot_animated_clip_duration=self.get_screenshot_animated_clip_duration(),
             screenshot_animated_match_audio=self.get_screenshot_animated_match_audio(),
-            screenshot_animated_fps=self.get_screenshot_animated_fps(),
-            screenshot_animated_height=self.get_screenshot_animated_height(),
-            screenshot_animated_quality=self.get_screenshot_animated_quality(),
+            screenshot_animated_fps=fps,
+            screenshot_animated_height=height,
+            screenshot_animated_quality=quality,
         )
