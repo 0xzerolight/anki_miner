@@ -464,10 +464,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         assert setup_wizard_action is not None
         setup_wizard_action.triggered.connect(self._run_setup_wizard_tool)
 
-        restyle_action = tools_menu.addAction(self.tr("Restyle Mined Cards..."))
-        assert restyle_action is not None
-        restyle_action.triggered.connect(self._restyle_mined_cards)
-
         # Help menu
         help_menu = menu_bar.addMenu(self.tr("&Help"))
         assert help_menu is not None
@@ -1458,12 +1454,14 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if outcome.open_video_mining:
             self.reveal_capability(CapabilityTarget("video", "single"))
 
-    def _restyle_mined_cards(self) -> None:
-        """Tools-menu handler: re-apply the built-in glossary styling to already-mined cards.
+    def restyle_mined_cards(self) -> None:
+        """Restyle entry point: re-apply the built-in glossary styling to already-mined cards.
 
-        Idempotent and content-preserving: prepends the self-contained ``<style>``
-        block to cards that lack the base sheet, and refreshes the embedded base
-        head in place on cards that already carry one — so a styling change reaches
+        Reached from the Restyle button on Utilities -> Card Backfill (the
+        backfill tab's ``restyle_requested`` signal). Idempotent and
+        content-preserving: prepends the self-contained ``<style>`` block to
+        cards that lack the base sheet, and refreshes the embedded base head
+        in place on cards that already carry one — so a styling change reaches
         existing cards (see :func:`card_restyler.restyle_mined_cards`). Runs
         off-thread via ``BackgroundTaskController`` (joined at close).
         """

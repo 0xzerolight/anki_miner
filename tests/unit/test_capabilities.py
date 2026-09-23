@@ -55,7 +55,7 @@ def test_dialog_only_entries_live_in_tools_category() -> None:
     # A target-less row shows no Open button, so its description must say where
     # the feature lives; the Tools & maintenance block groups them.
     target_less = [c for c in CAPABILITIES if c.target is None]
-    assert len(target_less) >= 10
+    assert len(target_less) >= 9
     assert {c.category for c in target_less} == {"Tools & maintenance"}
 
 
@@ -144,11 +144,12 @@ def test_pos_filter_is_not_advertised() -> None:
     assert all(cap.id != "pos-filter" for cap in CAPABILITIES)
 
 
-def test_restyle_mined_cards_is_dialog_only() -> None:
-    # It is a Tools-menu action; there is no tab that hosts a Restyle control.
+def test_restyle_mined_cards_targets_backfill() -> None:
+    # The Restyle button lives on Utilities -> Card Backfill (Task 14); it is
+    # no longer a Tools-menu-only dialog.
     hits = search("restyle mined cards")
     capability = next(c for c in hits if c.id == "restyle-mined-cards")
-    assert capability.target is None
+    assert capability.target == CapabilityTarget("subtitles", "backfill")
 
 
 def test_subtitle_regex_targets_sentences() -> None:

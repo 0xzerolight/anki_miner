@@ -1264,9 +1264,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         id="restyle-mined-cards",
         title=QT_TRANSLATE_NOOP("Capabilities", "Restyle mined cards"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Re-apply the latest Anki Miner styling to cards you mined earlier -- Tools menu."
+            "Capabilities",
+            "Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -> Card Backfill.",
         ),
         category=_CAT_TOOLS,
+        target=CapabilityTarget("subtitles", "backfill"),
         keywords=("restyle", "existing cards", "old cards", "card styling", "css", "update styles"),
     ),
     Capability(

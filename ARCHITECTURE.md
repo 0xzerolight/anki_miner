@@ -190,7 +190,7 @@ Stateless business logic classes in `services/`. Each receives the frozen `AnkiM
 **Card maintenance (existing notes):** two GUI-free, cancellable services that reach back into already-mined cards, both generalizing the same enumerate → chunk → `notesInfo` → compute → `updateNoteFields` loop.
 
 - **Card backfill** (`services/card_backfiller.py`, Utilities → Card Backfill): after the user installs pitch/frequency/dictionary sources, proposes values for the fields old cards are missing. `scan_backfill` is read-only and produces the `BackfillPlan` the user approves; `apply_backfill` writes the plan's **precomputed** values — what was previewed is exactly what is written, no recompute — with a per-chunk staleness recheck, then tags touched notes `anki-miner::backfill`. Field computation deliberately mirrors `EpisodeProcessor`'s recipes, keying included; changing one means changing the mirror.
-- **Card restyle** (`services/card_restyler.py`, Tools → Restyle Mined Cards): re-applies the current self-contained glossary styling to cards mined under an older format. Selection is markup-gated and idempotent, so a re-run is a no-op; it never touches note-type styling.
+- **Card restyle** (`services/card_restyler.py`, Utilities → Card Backfill → Restyle cards…): re-applies the current self-contained glossary styling to cards mined under an older format. Selection is markup-gated and idempotent, so a re-run is a no-op; it never touches note-type styling.
 
 **Resource acquisition and recovery:**
 
@@ -362,7 +362,7 @@ The rest of `gui/workers/` is one file per job and `ls` is the index. The shapes
 - **Unified installers and importers**: `ImportWorker` (dictionary, frequency, pitch, audio packs — per-domain `for_*` factories; user cancel routes to a distinct `cancelled` signal, never `failed`) and `InstallWorker` (ASR models, the ASR engine pack, CUDA/ONNX packs, external binaries).
 - **Standalone media download**: `DownloadWorker` (a `FileQueueWorker` over `MediaDownloaderService`), driving Utilities → Download.
 - **Manga OCR**: `MokuroWorker` (a `FileQueueWorker` over `MokuroRunnerService`), driving Utilities → Manga OCR; a missing mokuro executable stops the whole queue rather than failing item by item.
-- **Whole-collection rewrite**: `RestyleCardsWorker`, which re-applies current card styling to notes already in Anki (no tab; launched from the Tools menu).
+- **Whole-collection rewrite**: `RestyleCardsWorker`, which re-applies current card styling to notes already in Anki, launched from the Restyle cards… button on Utilities → Card Backfill.
 - **Short-lived AnkiConnect fetches**: `FetchDecksWorker` / `FetchNotetypesWorker` / `FetchFieldsWorker`, each a `SingleCallWorker` around one getter.
 - **Window-level background work**: `ValidationWorkerThread`, `UpdateWorkerThread`, `YtdlpUpdateWorker`, `PrewarmWorker` (warms the active language's tagger via `get_tagger(config.language)` and the dictionary indexes right after first paint, so the first Mine click does not build them on the GUI thread).
 

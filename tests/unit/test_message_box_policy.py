@@ -61,7 +61,7 @@ LEDGER: dict[str, str] = {
     # A language switch discards every queued row, on screen and in the copy
     # saved for the next launch. Irreversible, so the last moment to say no.
     "gui/controllers/language_switch.py::confirm_queue_flush": "confirm",
-    "gui/main_window.py::MainWindow._restyle_mined_cards": "confirm",
+    "gui/main_window.py::MainWindow.restyle_mined_cards": "confirm",
     "gui/main_window.py::MainWindow._on_stale_resources_scanned": "choice",
     "gui/widgets/analytics_tab.py::AnalyticsTab._on_reset_clicked": "confirm",
     "gui/widgets/backfill_tab.py::CardBackfillTab._start_apply": "confirm",
@@ -98,7 +98,7 @@ LEDGER: dict[str, str] = {
     "gui/controllers/source_chain_import_flow.py::SourceChainImportFlow._continue_reimport.on_success": "notice",
     "gui/controllers/source_chain_import_flow.py::SourceChainImportFlow.reimport_all": "notice",
     "gui/controllers/source_chain_import_flow.py::SourceChainImportFlow.reimport_all.on_finished": "notice",
-    "gui/main_window.py::MainWindow._restyle_mined_cards.on_result": "notice",
+    "gui/main_window.py::MainWindow.restyle_mined_cards.on_result": "notice",
     "gui/main_window.py::MainWindow._run_shortcut_work.on_done": "notice",
     "gui/main_window.py::MainWindow.commit_boot": "notice",
     "gui/widgets/condense_tab.py::CondenseTab._on_audio_tracks_clicked._on_streams": "notice",

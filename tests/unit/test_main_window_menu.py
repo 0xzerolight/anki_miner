@@ -152,6 +152,12 @@ def test_tools_menu_no_longer_lists_find_a_feature(main_window):
     assert not any("Usage Guide" in label for label in labels)
 
 
+def test_tools_menu_no_longer_lists_restyle(main_window):
+    """Restyle moved to a button on Utilities -> Card Backfill (Task 14)."""
+    labels = [a.text() for a in _tools_menu(main_window).actions()]
+    assert not any("Restyle" in label for label in labels)
+
+
 def test_usage_guide_action_opens_browser(main_window, monkeypatch):
     """Triggering the action runs the capability browser, parented to the window.
 

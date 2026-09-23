@@ -1851,6 +1851,9 @@ def compose_main_window(
     # Same pattern for the Manga OCR tab's mokuro_use_gpu option and its setup
     # card's (debounced) mokuro_location edits.
     subtitles_tab.mokuro_tab.config_changed.connect(window.update_config)
+    # Restyle moved off the Tools menu onto Card Backfill (Task 14); the
+    # button re-emits, and the window still owns the AnkiService + worker.
+    subtitles_tab.backfill_tab.restyle_requested.connect(window.restyle_mined_cards)
 
     # A validation sweep that reached Anki re-drives the three deck / note-type
     # fetches that failed while Anki was closed.
