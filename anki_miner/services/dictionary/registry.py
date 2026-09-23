@@ -260,14 +260,14 @@ def stale_enabled_dicts(config: AnkiMinerConfig) -> list[DictMeta]:
 def format_stale_reimport_message(metas: list[DictMeta]) -> str:
     """Actionable one-line error naming the schema-stale dictionaries.
 
-    Points the user at the one-click fix (Settings → Dictionaries → Reimport
-    All). Shared by the processor backstop and the queue-worker pre-loop gate so
-    every entry point speaks with one voice.
+    Points the user at the one-click fix (Settings → Dictionaries → More →
+    Reimport All). Shared by the processor backstop and the queue-worker
+    pre-loop gate so every entry point speaks with one voice.
     """
     names = ", ".join(f"'{m.source_name}'" for m in metas)
     verb = "need" if len(metas) != 1 else "needs"
     noun = "Dictionaries" if len(metas) != 1 else "Dictionary"
-    return f"{noun} {names} {verb} reimport (schema upgrade) — Settings → Dictionaries → Reimport All"
+    return f"{noun} {names} {verb} reimport (schema upgrade) — Settings → Dictionaries → More → Reimport All"
 
 
 def stale_dict_reimport_error(config: AnkiMinerConfig) -> str | None:

@@ -974,7 +974,7 @@ def test_stale_dict_aborts_build_before_preview(qapp):
 
     base = _fake_processor(collections.Counter({"a": 1}))
     base.check_resource_staleness.side_effect = SetupError(
-        "Dictionary 'X' needs reimport (schema upgrade) — Settings → Dictionaries → Reimport All"
+        "Dictionary 'X' needs reimport (schema upgrade) — Settings → Dictionaries → More → Reimport All"
     )
     worker, _ = _make_worker(qapp, _make_request([_make_pair("ep1")]), processors=[base])
     try:
