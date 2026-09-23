@@ -2630,6 +2630,14 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Beralih antara pemilih berkas bawaan Anki Miner dan pemilih bawaan sistem operasi Anda.</translation>
     </message>
     <message>
+        <source>Choose the tools on the Utilities tab</source>
+        <translation>Pilih alat pada tab Utilitas</translation>
+    </message>
+    <message>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Sembunyikan alat Utilitas yang tidak Anda pakai, atau tampilkan lagi, di Pengaturan -&gt; Tampilan &amp; Bahasa. Alat yang disembunyikan tetap memiliki entri di sini; tombol Buka-nya mengarah ke kotak centang itu.</translation>
+    </message>
+    <message>
         <source>Search the settings</source>
         <translation>Cari pengaturan</translation>
     </message>
@@ -2754,8 +2762,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Pintasan keyboard</translation>
     </message>
     <message>
-        <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
-        <translation>Ctrl+1..7 beralih tab, Ctrl+, membuka Pengaturan, Ctrl+Enter menjalankan aksi utama layar, F1 membuka panduan ini -- daftar lengkap di Bantuan -&gt; Tentang.</translation>
+        <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
+        <translation>Lihat dan ubah setiap pintasan keyboard: tombol-tombol Word Curator serta yang berlaku di seluruh aplikasi untuk Pengaturan, panduan ini, dan setiap tab.</translation>
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -4480,6 +4488,10 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Hanya audio (M4A)</translation>
     </message>
     <message>
+        <source>Subtitles only</source>
+        <translation>Hanya subtitel</translation>
+    </message>
+    <message>
         <source>Custom format:</source>
         <translation>Format khusus:</translation>
     </message>
@@ -5804,6 +5816,126 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Tutup</translation>
     </message>
 </context><context>
+    <name>KeyBindings</name>
+    <message>
+        <source>Include or exclude the highlighted words</source>
+        <translation>Sertakan atau kecualikan kata yang disorot</translation>
+    </message>
+    <message>
+        <source>Mark known</source>
+        <translation>Tandai sebagai dikenal</translation>
+    </message>
+    <message>
+        <source>Play or pause</source>
+        <translation>Putar atau jeda</translation>
+    </message>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation>Edit kata dan kalimat</translation>
+    </message>
+    <message>
+        <source>Include visible</source>
+        <translation>Sertakan yang terlihat</translation>
+    </message>
+    <message>
+        <source>Exclude visible</source>
+        <translation>Kecualikan yang terlihat</translation>
+    </message>
+    <message>
+        <source>Next word</source>
+        <translation>Kata berikutnya</translation>
+    </message>
+    <message>
+        <source>Previous word</source>
+        <translation>Kata sebelumnya</translation>
+    </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>Buka Pengaturan</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation>Panduan Penggunaan</translation>
+    </message>
+    <message>
+        <source>Go to Video</source>
+        <translation>Beralih ke Video</translation>
+    </message>
+    <message>
+        <source>Go to Deck Builder</source>
+        <translation>Beralih ke Pembuat Dek</translation>
+    </message>
+    <message>
+        <source>Go to Audiobooks</source>
+        <translation>Beralih ke Buku Audio</translation>
+    </message>
+    <message>
+        <source>Go to Reading</source>
+        <translation>Beralih ke Bacaan</translation>
+    </message>
+    <message>
+        <source>Go to Analytics</source>
+        <translation>Beralih ke Analitik</translation>
+    </message>
+    <message>
+        <source>Go to Utilities</source>
+        <translation>Beralih ke Utilitas</translation>
+    </message>
+    <message>
+        <source>Go to Settings</source>
+        <translation>Beralih ke Pengaturan</translation>
+    </message>
+</context><context>
+    <name>KeyboardSettingsPanel</name>
+    <message>
+        <source>Keyboard</source>
+        <translation>Pintasan Keyboard</translation>
+    </message>
+    <message>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. The arrow keys always move between words, and Ctrl+Enter always confirms.</source>
+        <translation>Klik kotak, lalu tekan tombol baru. Perubahan langsung berlaku. Jendela Word Curator yang sudah terbuka tetap memakai tombol lamanya hingga dibuka lagi. Tombol panah selalu berpindah antar kata, dan Ctrl+Enter selalu mengonfirmasi.</translation>
+    </message>
+    <message>
+        <source>Word Curator</source>
+        <translation>Word Curator</translation>
+    </message>
+    <message>
+        <source>Application</source>
+        <translation>Aplikasi</translation>
+    </message>
+    <message>
+        <source>Restore defaults</source>
+        <translation>Pulihkan default</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Bersihkan</translation>
+    </message>
+    <message>
+        <source>Leave this action without a key</source>
+        <translation>Biarkan tindakan ini tanpa tombol</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Setel Ulang</translation>
+    </message>
+    <message>
+        <source>Go back to this action's default key</source>
+        <translation>Kembalikan ke tombol default tindakan ini</translation>
+    </message>
+    <message>
+        <source>%1 is already used for “%2”.</source>
+        <translation>%1 sudah digunakan untuk “%2”.</translation>
+    </message>
+    <message>
+        <source>%1 would fire from anywhere in the window. Add Ctrl, Alt or Meta, or use an F key.</source>
+        <translation>%1 akan terpicu dari mana saja di jendela ini. Tambahkan Ctrl, Alt, atau Meta, atau gunakan tombol F.</translation>
+    </message>
+    <message>
+        <source>%1 already does something else here, so it cannot be used.</source>
+        <translation>%1 sudah dipakai untuk hal lain di sini, sehingga tidak dapat digunakan.</translation>
+    </message>
+</context><context>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Manage Known Words</source>
@@ -6206,6 +6338,38 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
         <translation>Pengaturan</translation>
     </message>
     <message>
+        <source>Generate</source>
+        <translation>Hasilkan</translation>
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation>Atur Ulang Waktu</translation>
+    </message>
+    <message>
+        <source>Condense</source>
+        <translation>Padatkan</translation>
+    </message>
+    <message>
+        <source>Card Backfill</source>
+        <translation>Pengisian Bidang Kartu</translation>
+    </message>
+    <message>
+        <source>Deck Filter</source>
+        <translation>Filter Dek</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>Unduhan</translation>
+    </message>
+    <message>
+        <source>Manga OCR</source>
+        <translation>Manga OCR</translation>
+    </message>
+    <message>
+        <source>Audiobook Sync</source>
+        <translation>Sinkronisasi Buku Audio</translation>
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner diperbarui</translation>
     </message>
@@ -6508,38 +6672,6 @@ Lanjutkan?</translation>
     <message>
         <source>Text</source>
         <translation>Teks</translation>
-    </message>
-    <message>
-        <source>Generate</source>
-        <translation>Hasilkan</translation>
-    </message>
-    <message>
-        <source>Retime</source>
-        <translation>Atur Ulang Waktu</translation>
-    </message>
-    <message>
-        <source>Condense</source>
-        <translation>Padatkan</translation>
-    </message>
-    <message>
-        <source>Card Backfill</source>
-        <translation>Pengisian Bidang Kartu</translation>
-    </message>
-    <message>
-        <source>Deck Filter</source>
-        <translation>Filter Dek</translation>
-    </message>
-    <message>
-        <source>Download</source>
-        <translation>Unduhan</translation>
-    </message>
-    <message>
-        <source>Manga OCR</source>
-        <translation>Manga OCR</translation>
-    </message>
-    <message>
-        <source>Audiobook Sync</source>
-        <translation>Sinkronisasi Buku Audio</translation>
     </message>
     <message>
         <source>Single</source>
@@ -8958,6 +9090,10 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Tampilan &amp; Bahasa</translation>
     </message>
     <message>
+        <source>Keyboard</source>
+        <translation>Pintasan Keyboard</translation>
+    </message>
+    <message>
         <source>Nothing to restore</source>
         <translation>Tidak ada yang perlu dipulihkan</translation>
     </message>
@@ -10504,6 +10640,14 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Gunakan pemilih berkas bawaan sistem operasi. Nonaktifkan ini untuk menggunakan pemilih bawaan aplikasi, yang mengikuti tema aplikasi dan tampak sama pada setiap platform.</translation>
     </message>
     <message>
+        <source>Utilities tab</source>
+        <translation>Tab Utilitas</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Pilih alat yang ditampilkan pada tab Utilitas. Setidaknya satu akan tetap ada.</translation>
+    </message>
+    <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
         <translation>Klik pratinjau tema untuk menerapkannya secara langsung; &lt;b&gt;Kembalikan&lt;/b&gt; membatalkannya. Beri bintang pada tema untuk menambahkannya ke pemilih di kanan atas.</translation>
     </message>
@@ -10730,12 +10874,36 @@ Sort by it to work through a long recording in order — then highlight the rows
 Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan — lalu sorot baris hingga tempat Anda berhenti dan sertakan baris-baris itu.</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S sertakan/kecualikan · Spasi putar/jeda · K tandai sebagai dikenal · Ctrl+A sertakan yang terlihat · Ctrl+D kecualikan yang terlihat · Ctrl+Enter konfirmasi</translation>
+        <source>%1 include/exclude</source>
+        <translation>%1 sertakan/kecualikan</translation>
     </message>
     <message>
-        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S sertakan/kecualikan · K tandai sebagai dikenal · Ctrl+A sertakan yang terlihat · Ctrl+D kecualikan yang terlihat · Ctrl+Enter konfirmasi</translation>
+        <source>%1 play/pause</source>
+        <translation>%1 putar/jeda</translation>
+    </message>
+    <message>
+        <source>%1 mark known</source>
+        <translation>%1 tandai sebagai dikenal</translation>
+    </message>
+    <message>
+        <source>%1 include visible</source>
+        <translation>%1 sertakan yang terlihat</translation>
+    </message>
+    <message>
+        <source>%1 exclude visible</source>
+        <translation>%1 kecualikan yang terlihat</translation>
+    </message>
+    <message>
+        <source>%1 next word</source>
+        <translation>%1 kata berikutnya</translation>
+    </message>
+    <message>
+        <source>%1 previous word</source>
+        <translation>%1 kata sebelumnya</translation>
+    </message>
+    <message>
+        <source>%1 confirm</source>
+        <translation>%1 konfirmasi</translation>
     </message>
     <message>
         <source>Reset columns</source>

@@ -2630,6 +2630,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Chuyển đổi giữa trình chọn tệp tích hợp sẵn của Anki Miner và trình chọn gốc của hệ điều hành.</translation>
     </message>
     <message>
+        <source>Choose the tools on the Utilities tab</source>
+        <translation>Chọn công cụ trên tab Tiện ích</translation>
+    </message>
+    <message>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Ẩn các công cụ Tiện ích không dùng đến, hoặc khôi phục lại, trong Cài đặt -&gt; Diện mạo &amp; Ngôn ngữ. Công cụ đã ẩn vẫn còn mục ở đây; nút Mở của mục dẫn đến hộp kiểm đó.</translation>
+    </message>
+    <message>
         <source>Search the settings</source>
         <translation>Tìm kiếm trong cài đặt</translation>
     </message>
@@ -2754,8 +2762,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Phím tắt</translation>
     </message>
     <message>
-        <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
-        <translation>Ctrl+1..7 chuyển tab, Ctrl+, mở Cài đặt, Ctrl+Enter chạy hành động chính của màn hình, F1 mở hướng dẫn này -- danh sách đầy đủ trong Trợ giúp -&gt; Giới thiệu.</translation>
+        <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
+        <translation>Xem và thay đổi mọi phím tắt: các phím của Word Curator và các phím toàn ứng dụng cho Cài đặt, hướng dẫn này và từng tab.</translation>
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -4480,6 +4488,10 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation>Chỉ âm thanh (M4A)</translation>
     </message>
     <message>
+        <source>Subtitles only</source>
+        <translation>Chỉ phụ đề</translation>
+    </message>
+    <message>
         <source>Custom format:</source>
         <translation>Định dạng tùy chỉnh:</translation>
     </message>
@@ -5804,6 +5816,126 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Đóng</translation>
     </message>
 </context><context>
+    <name>KeyBindings</name>
+    <message>
+        <source>Include or exclude the highlighted words</source>
+        <translation>Bao gồm hoặc loại trừ các từ được tô sáng</translation>
+    </message>
+    <message>
+        <source>Mark known</source>
+        <translation>Đánh dấu đã biết</translation>
+    </message>
+    <message>
+        <source>Play or pause</source>
+        <translation>Phát hoặc tạm dừng</translation>
+    </message>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation>Chỉnh sửa từ và câu</translation>
+    </message>
+    <message>
+        <source>Include visible</source>
+        <translation>Bao gồm phần hiển thị</translation>
+    </message>
+    <message>
+        <source>Exclude visible</source>
+        <translation>Loại trừ phần hiển thị</translation>
+    </message>
+    <message>
+        <source>Next word</source>
+        <translation>Từ tiếp theo</translation>
+    </message>
+    <message>
+        <source>Previous word</source>
+        <translation>Từ trước đó</translation>
+    </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>Mở Cài đặt</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation>Hướng dẫn sử dụng</translation>
+    </message>
+    <message>
+        <source>Go to Video</source>
+        <translation>Chuyển sang Video</translation>
+    </message>
+    <message>
+        <source>Go to Deck Builder</source>
+        <translation>Chuyển sang Trình dựng bộ thẻ</translation>
+    </message>
+    <message>
+        <source>Go to Audiobooks</source>
+        <translation>Chuyển sang Sách nói</translation>
+    </message>
+    <message>
+        <source>Go to Reading</source>
+        <translation>Chuyển sang Cách đọc</translation>
+    </message>
+    <message>
+        <source>Go to Analytics</source>
+        <translation>Chuyển sang Phân tích</translation>
+    </message>
+    <message>
+        <source>Go to Utilities</source>
+        <translation>Chuyển sang Tiện ích</translation>
+    </message>
+    <message>
+        <source>Go to Settings</source>
+        <translation>Chuyển sang Cài đặt</translation>
+    </message>
+</context><context>
+    <name>KeyboardSettingsPanel</name>
+    <message>
+        <source>Keyboard</source>
+        <translation>Phím tắt</translation>
+    </message>
+    <message>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. The arrow keys always move between words, and Ctrl+Enter always confirms.</source>
+        <translation>Nhấp vào một ô rồi nhấn phím mới. Thay đổi áp dụng ngay lập tức. Cửa sổ Word Curator đang mở sẽ giữ nguyên các phím cũ cho đến lần mở kế tiếp. Các phím mũi tên luôn di chuyển giữa các từ, và Ctrl+Enter luôn xác nhận.</translation>
+    </message>
+    <message>
+        <source>Word Curator</source>
+        <translation>Word Curator</translation>
+    </message>
+    <message>
+        <source>Application</source>
+        <translation>Ứng dụng</translation>
+    </message>
+    <message>
+        <source>Restore defaults</source>
+        <translation>Khôi phục mặc định</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Xóa</translation>
+    </message>
+    <message>
+        <source>Leave this action without a key</source>
+        <translation>Gỡ phím khỏi thao tác này</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Đặt lại</translation>
+    </message>
+    <message>
+        <source>Go back to this action's default key</source>
+        <translation>Đặt lại về phím mặc định của thao tác này</translation>
+    </message>
+    <message>
+        <source>%1 is already used for “%2”.</source>
+        <translation>%1 đã được dùng cho “%2”.</translation>
+    </message>
+    <message>
+        <source>%1 would fire from anywhere in the window. Add Ctrl, Alt or Meta, or use an F key.</source>
+        <translation>%1 sẽ kích hoạt từ bất kỳ đâu trong cửa sổ. Hãy thêm Ctrl, Alt hoặc Meta, hoặc dùng phím chức năng.</translation>
+    </message>
+    <message>
+        <source>%1 already does something else here, so it cannot be used.</source>
+        <translation>%1 đã được dùng cho việc khác ở đây nên không thể dùng.</translation>
+    </message>
+</context><context>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Manage Known Words</source>
@@ -6206,6 +6338,38 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
         <translation>Cài đặt</translation>
     </message>
     <message>
+        <source>Generate</source>
+        <translation>Tạo</translation>
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation>Định lại thời gian</translation>
+    </message>
+    <message>
+        <source>Condense</source>
+        <translation>Cô đọng</translation>
+    </message>
+    <message>
+        <source>Card Backfill</source>
+        <translation>Điền dữ liệu còn thiếu cho thẻ</translation>
+    </message>
+    <message>
+        <source>Deck Filter</source>
+        <translation>Lọc bộ thẻ</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>Tải về</translation>
+    </message>
+    <message>
+        <source>Manga OCR</source>
+        <translation>Manga OCR</translation>
+    </message>
+    <message>
+        <source>Audiobook Sync</source>
+        <translation>Đồng bộ sách nói</translation>
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner đã cập nhật</translation>
     </message>
@@ -6508,38 +6672,6 @@ Tiếp tục?</translation>
     <message>
         <source>Text</source>
         <translation>Văn bản</translation>
-    </message>
-    <message>
-        <source>Generate</source>
-        <translation>Tạo</translation>
-    </message>
-    <message>
-        <source>Retime</source>
-        <translation>Định lại thời gian</translation>
-    </message>
-    <message>
-        <source>Condense</source>
-        <translation>Cô đọng</translation>
-    </message>
-    <message>
-        <source>Card Backfill</source>
-        <translation>Điền dữ liệu còn thiếu cho thẻ</translation>
-    </message>
-    <message>
-        <source>Deck Filter</source>
-        <translation>Lọc bộ thẻ</translation>
-    </message>
-    <message>
-        <source>Download</source>
-        <translation>Tải về</translation>
-    </message>
-    <message>
-        <source>Manga OCR</source>
-        <translation>Manga OCR</translation>
-    </message>
-    <message>
-        <source>Audiobook Sync</source>
-        <translation>Đồng bộ sách nói</translation>
     </message>
     <message>
         <source>Single</source>
@@ -8958,6 +9090,10 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Diện mạo &amp; Ngôn ngữ</translation>
     </message>
     <message>
+        <source>Keyboard</source>
+        <translation>Phím tắt</translation>
+    </message>
+    <message>
         <source>Nothing to restore</source>
         <translation>Không có gì để khôi phục</translation>
     </message>
@@ -10504,6 +10640,14 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>Dùng trình chọn tệp gốc của hệ điều hành. Tắt tùy chọn này để thay bằng trình chọn tích hợp của ứng dụng, theo chủ đề ứng dụng và có cùng diện mạo trên mọi nền tảng.</translation>
     </message>
     <message>
+        <source>Utilities tab</source>
+        <translation>Tab Tiện ích</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Chọn các công cụ mà tab Tiện ích hiển thị. Luôn giữ lại ít nhất một công cụ.</translation>
+    </message>
+    <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
         <translation>Nhấp vào bản xem trước giao diện để áp dụng ngay; &lt;b&gt;Hoàn tác&lt;/b&gt; sẽ hủy áp dụng. Gắn sao cho giao diện để thêm chúng vào bộ chọn ở góc trên bên phải.</translation>
     </message>
@@ -10730,12 +10874,36 @@ Sort by it to work through a long recording in order — then highlight the rows
 Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ tự — sau đó tô sáng các hàng đến chỗ bạn dừng lại rồi bao gồm chúng.</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S bao gồm/loại trừ · Phím cách phát/tạm dừng · K đánh dấu đã biết · Ctrl+A bao gồm phần hiển thị · Ctrl+D loại trừ phần hiển thị · Ctrl+Enter xác nhận</translation>
+        <source>%1 include/exclude</source>
+        <translation>%1 bao gồm/loại trừ</translation>
     </message>
     <message>
-        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S bao gồm/loại trừ · K đánh dấu đã biết · Ctrl+A bao gồm phần hiển thị · Ctrl+D loại trừ phần hiển thị · Ctrl+Enter xác nhận</translation>
+        <source>%1 play/pause</source>
+        <translation>%1 phát/tạm dừng</translation>
+    </message>
+    <message>
+        <source>%1 mark known</source>
+        <translation>%1 đánh dấu đã biết</translation>
+    </message>
+    <message>
+        <source>%1 include visible</source>
+        <translation>%1 bao gồm phần hiển thị</translation>
+    </message>
+    <message>
+        <source>%1 exclude visible</source>
+        <translation>%1 loại trừ phần hiển thị</translation>
+    </message>
+    <message>
+        <source>%1 next word</source>
+        <translation>%1 từ tiếp theo</translation>
+    </message>
+    <message>
+        <source>%1 previous word</source>
+        <translation>%1 từ trước đó</translation>
+    </message>
+    <message>
+        <source>%1 confirm</source>
+        <translation>%1 xác nhận</translation>
     </message>
     <message>
         <source>Reset columns</source>

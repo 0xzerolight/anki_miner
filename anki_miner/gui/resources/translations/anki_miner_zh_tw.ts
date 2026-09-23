@@ -2630,6 +2630,14 @@ No index files are deleted.</source>
         <translation>在 Anki Miner 內建的檔案選擇器與作業系統原生的檔案選擇器之間切換。</translation>
     </message>
     <message>
+        <source>Choose the tools on the Utilities tab</source>
+        <translation>選擇「工具」分頁顯示的工具</translation>
+    </message>
+    <message>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>在設定 -&gt; 外觀與語言中，隱藏您用不到的「工具」分頁工具，或將它們重新顯示。已隱藏的工具在此仍保留項目；其「開啟」按鈕會前往該核取方塊。</translation>
+    </message>
+    <message>
         <source>Search the settings</source>
         <translation>搜尋設定</translation>
     </message>
@@ -2754,8 +2762,8 @@ No index files are deleted.</source>
         <translation>鍵盤快捷鍵</translation>
     </message>
     <message>
-        <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
-        <translation>Ctrl+1…7 可切換分頁，Ctrl+, 開啟「設定」，Ctrl+Enter 執行目前畫面的主要動作，F1 開啟此指南——完整列表請見「說明」→「關於」。</translation>
+        <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
+        <translation>檢視並變更每個鍵盤快捷鍵：單字整理工具的按鍵，以及用於設定、本指南和各分頁的全域按鍵。</translation>
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -4480,6 +4488,10 @@ No files on disk are deleted.</source>
         <translation>僅音訊 (M4A)</translation>
     </message>
     <message>
+        <source>Subtitles only</source>
+        <translation>僅字幕</translation>
+    </message>
+    <message>
         <source>Custom format:</source>
         <translation>自訂格式：</translation>
     </message>
@@ -5804,6 +5816,126 @@ No index files are deleted.</source>
         <translation>關閉</translation>
     </message>
 </context><context>
+    <name>KeyBindings</name>
+    <message>
+        <source>Include or exclude the highlighted words</source>
+        <translation>包含或排除醒目提示的單字</translation>
+    </message>
+    <message>
+        <source>Mark known</source>
+        <translation>標記為已知</translation>
+    </message>
+    <message>
+        <source>Play or pause</source>
+        <translation>播放或暫停</translation>
+    </message>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation>編輯單字與句子</translation>
+    </message>
+    <message>
+        <source>Include visible</source>
+        <translation>包含可見項目</translation>
+    </message>
+    <message>
+        <source>Exclude visible</source>
+        <translation>排除可見項目</translation>
+    </message>
+    <message>
+        <source>Next word</source>
+        <translation>下一個單字</translation>
+    </message>
+    <message>
+        <source>Previous word</source>
+        <translation>上一個單字</translation>
+    </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>開啟設定</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation>使用指南</translation>
+    </message>
+    <message>
+        <source>Go to Video</source>
+        <translation>前往影片</translation>
+    </message>
+    <message>
+        <source>Go to Deck Builder</source>
+        <translation>前往牌組建立器</translation>
+    </message>
+    <message>
+        <source>Go to Audiobooks</source>
+        <translation>前往有聲書</translation>
+    </message>
+    <message>
+        <source>Go to Reading</source>
+        <translation>前往閱讀</translation>
+    </message>
+    <message>
+        <source>Go to Analytics</source>
+        <translation>前往分析</translation>
+    </message>
+    <message>
+        <source>Go to Utilities</source>
+        <translation>前往工具</translation>
+    </message>
+    <message>
+        <source>Go to Settings</source>
+        <translation>前往設定</translation>
+    </message>
+</context><context>
+    <name>KeyboardSettingsPanel</name>
+    <message>
+        <source>Keyboard</source>
+        <translation>快捷鍵</translation>
+    </message>
+    <message>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. The arrow keys always move between words, and Ctrl+Enter always confirms.</source>
+        <translation>點擊欄位，然後按下新的按鍵。變更會立即套用。已開啟的單字整理工具視窗會維持原有按鍵，直到下次開啟才會套用新設定。方向鍵一律用於在單字之間移動，Ctrl+Enter 一律用於確認。</translation>
+    </message>
+    <message>
+        <source>Word Curator</source>
+        <translation>單字整理工具</translation>
+    </message>
+    <message>
+        <source>Application</source>
+        <translation>應用程式</translation>
+    </message>
+    <message>
+        <source>Restore defaults</source>
+        <translation>還原預設值</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>清除</translation>
+    </message>
+    <message>
+        <source>Leave this action without a key</source>
+        <translation>讓此動作不指定任何按鍵</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>重設</translation>
+    </message>
+    <message>
+        <source>Go back to this action's default key</source>
+        <translation>將此動作的按鍵改回預設值</translation>
+    </message>
+    <message>
+        <source>%1 is already used for “%2”.</source>
+        <translation>%1 已用於「%2」。</translation>
+    </message>
+    <message>
+        <source>%1 would fire from anywhere in the window. Add Ctrl, Alt or Meta, or use an F key.</source>
+        <translation>%1 會在視窗中任何位置觸發。請加上 Ctrl、Alt 或 Meta，或改用功能鍵。</translation>
+    </message>
+    <message>
+        <source>%1 already does something else here, so it cannot be used.</source>
+        <translation>%1 在此已保留給其他用途，因此無法使用。</translation>
+    </message>
+</context><context>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Manage Known Words</source>
@@ -6206,6 +6338,38 @@ Words to add: %3. Continue?</source>
         <translation>設定</translation>
     </message>
     <message>
+        <source>Generate</source>
+        <translation>產生</translation>
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation>重新計時</translation>
+    </message>
+    <message>
+        <source>Condense</source>
+        <translation>濃縮</translation>
+    </message>
+    <message>
+        <source>Card Backfill</source>
+        <translation>卡片欄位回填</translation>
+    </message>
+    <message>
+        <source>Deck Filter</source>
+        <translation>牌組篩選</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>下載</translation>
+    </message>
+    <message>
+        <source>Manga OCR</source>
+        <translation>漫畫 OCR</translation>
+    </message>
+    <message>
+        <source>Audiobook Sync</source>
+        <translation>有聲書同步</translation>
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner 已更新</translation>
     </message>
@@ -6508,38 +6672,6 @@ Continue?</source>
     <message>
         <source>Text</source>
         <translation>文字</translation>
-    </message>
-    <message>
-        <source>Generate</source>
-        <translation>產生</translation>
-    </message>
-    <message>
-        <source>Retime</source>
-        <translation>重新計時</translation>
-    </message>
-    <message>
-        <source>Condense</source>
-        <translation>濃縮</translation>
-    </message>
-    <message>
-        <source>Card Backfill</source>
-        <translation>卡片欄位回填</translation>
-    </message>
-    <message>
-        <source>Deck Filter</source>
-        <translation>牌組篩選</translation>
-    </message>
-    <message>
-        <source>Download</source>
-        <translation>下載</translation>
-    </message>
-    <message>
-        <source>Manga OCR</source>
-        <translation>漫畫 OCR</translation>
-    </message>
-    <message>
-        <source>Audiobook Sync</source>
-        <translation>有聲書同步</translation>
     </message>
     <message>
         <source>Single</source>
@@ -8958,6 +9090,10 @@ No index files are deleted.</source>
         <translation>外觀與語言</translation>
     </message>
     <message>
+        <source>Keyboard</source>
+        <translation>快捷鍵</translation>
+    </message>
+    <message>
         <source>Nothing to restore</source>
         <translation>無可還原的項目</translation>
     </message>
@@ -10504,6 +10640,14 @@ Your installed resources and your theme are kept.</source>
         <translation>使用作業系統的原生檔案選擇器。關閉此選項可改用應用程式內建選擇器，它會遵循應用程式主題，且在每個平台上外觀一致。</translation>
     </message>
     <message>
+        <source>Utilities tab</source>
+        <translation>工具分頁</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>選擇「工具」分頁要顯示哪些工具。至少會保留一項。</translation>
+    </message>
+    <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
         <translation>點選主題預覽即可即時套用；&lt;b&gt;還原&lt;/b&gt;可復原變更。將主題加上星號即可加入右上角的選擇器。</translation>
     </message>
@@ -10730,12 +10874,36 @@ Sort by it to work through a long recording in order — then highlight the rows
 依此欄位排序，即可按順序處理長篇素材 — 接著反白選取到你停下之處為止的列，並將這些列包含進來。</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S 包含／排除 · Space 播放／暫停 · K 標記為已知 · Ctrl+A 包含可見項目 · Ctrl+D 排除可見項目 · Ctrl+Enter 確認</translation>
+        <source>%1 include/exclude</source>
+        <translation>%1 包含／排除</translation>
     </message>
     <message>
-        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S 包含／排除 · K 標記為已知 · Ctrl+A 包含可見項目 · Ctrl+D 排除可見項目 · Ctrl+Enter 確認</translation>
+        <source>%1 play/pause</source>
+        <translation>%1 播放／暫停</translation>
+    </message>
+    <message>
+        <source>%1 mark known</source>
+        <translation>%1 標記為已知</translation>
+    </message>
+    <message>
+        <source>%1 include visible</source>
+        <translation>%1 包含可見項目</translation>
+    </message>
+    <message>
+        <source>%1 exclude visible</source>
+        <translation>%1 排除可見項目</translation>
+    </message>
+    <message>
+        <source>%1 next word</source>
+        <translation>%1 下一個單字</translation>
+    </message>
+    <message>
+        <source>%1 previous word</source>
+        <translation>%1 上一個單字</translation>
+    </message>
+    <message>
+        <source>%1 confirm</source>
+        <translation>%1 確認</translation>
     </message>
     <message>
         <source>Reset columns</source>

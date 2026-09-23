@@ -2634,6 +2634,14 @@ Nessun file indice viene eliminato.</translation>
         <translation>Passa dai selettori di file integrati di Anki Miner a quelli nativi del tuo sistema operativo.</translation>
     </message>
     <message>
+        <source>Choose the tools on the Utilities tab</source>
+        <translation>Scegli gli strumenti della scheda Utilità</translation>
+    </message>
+    <message>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Nascondi gli strumenti della scheda Utilità che non usi, oppure mostrali di nuovo, in Impostazioni -&gt; Aspetto e lingua. Uno strumento nascosto mantiene qui la propria voce; il suo pulsante Apri porta a quella casella.</translation>
+    </message>
+    <message>
         <source>Search the settings</source>
         <translation>Cerca nelle impostazioni</translation>
     </message>
@@ -2758,8 +2766,8 @@ Nessun file indice viene eliminato.</translation>
         <translation>Scorciatoie da tastiera</translation>
     </message>
     <message>
-        <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
-        <translation>Ctrl+1..7 passa da una scheda all'altra, Ctrl+, apre le Impostazioni, Ctrl+Invio esegue l'azione principale della schermata, F1 apre questa guida — elenco completo in Aiuto -&gt; Informazioni.</translation>
+        <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
+        <translation>Visualizza e modifica ogni scorciatoia da tastiera: i tasti del Curatore di parole e quelli validi in tutta l'app per Impostazioni, questa guida e ogni scheda.</translation>
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -4484,6 +4492,10 @@ Nessun file sul disco viene eliminato.</translation>
         <translation>Solo audio (M4A)</translation>
     </message>
     <message>
+        <source>Subtitles only</source>
+        <translation>Solo sottotitoli</translation>
+    </message>
+    <message>
         <source>Custom format:</source>
         <translation>Formato personalizzato:</translation>
     </message>
@@ -5819,6 +5831,126 @@ Nessun file indice viene eliminato.</translation>
         <translation>Chiudi</translation>
     </message>
 </context><context>
+    <name>KeyBindings</name>
+    <message>
+        <source>Include or exclude the highlighted words</source>
+        <translation>Includi o escludi le parole evidenziate</translation>
+    </message>
+    <message>
+        <source>Mark known</source>
+        <translation>Segna come conosciuta</translation>
+    </message>
+    <message>
+        <source>Play or pause</source>
+        <translation>Riproduci o metti in pausa</translation>
+    </message>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation>Modifica parola e frase</translation>
+    </message>
+    <message>
+        <source>Include visible</source>
+        <translation>Includi visibili</translation>
+    </message>
+    <message>
+        <source>Exclude visible</source>
+        <translation>Escludi visibili</translation>
+    </message>
+    <message>
+        <source>Next word</source>
+        <translation>Parola successiva</translation>
+    </message>
+    <message>
+        <source>Previous word</source>
+        <translation>Parola precedente</translation>
+    </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>Apri le impostazioni</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation>Guida all'uso</translation>
+    </message>
+    <message>
+        <source>Go to Video</source>
+        <translation>Vai alla scheda Video</translation>
+    </message>
+    <message>
+        <source>Go to Deck Builder</source>
+        <translation>Vai alla scheda Costruttore di mazzi</translation>
+    </message>
+    <message>
+        <source>Go to Audiobooks</source>
+        <translation>Vai alla scheda Audiolibri</translation>
+    </message>
+    <message>
+        <source>Go to Reading</source>
+        <translation>Vai alla scheda Lettura</translation>
+    </message>
+    <message>
+        <source>Go to Analytics</source>
+        <translation>Vai alla scheda Analisi</translation>
+    </message>
+    <message>
+        <source>Go to Utilities</source>
+        <translation>Vai alla scheda Utilità</translation>
+    </message>
+    <message>
+        <source>Go to Settings</source>
+        <translation>Vai alla scheda Impostazioni</translation>
+    </message>
+</context><context>
+    <name>KeyboardSettingsPanel</name>
+    <message>
+        <source>Keyboard</source>
+        <translation>Scorciatoie da tastiera</translation>
+    </message>
+    <message>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. The arrow keys always move between words, and Ctrl+Enter always confirms.</source>
+        <translation>Fai clic su una casella e premi il nuovo tasto. Le modifiche si applicano subito. Una finestra del Curatore di parole già aperta mantiene i propri tasti fino alla prossima apertura. I tasti freccia permettono sempre di spostarsi tra le parole, e Ctrl+Enter conferma sempre.</translation>
+    </message>
+    <message>
+        <source>Word Curator</source>
+        <translation>Curatore di parole</translation>
+    </message>
+    <message>
+        <source>Application</source>
+        <translation>Applicazione</translation>
+    </message>
+    <message>
+        <source>Restore defaults</source>
+        <translation>Ripristina i valori predefiniti</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Svuota</translation>
+    </message>
+    <message>
+        <source>Leave this action without a key</source>
+        <translation>Lascia questa azione senza tasto</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Reimposta</translation>
+    </message>
+    <message>
+        <source>Go back to this action's default key</source>
+        <translation>Riporta questa azione al suo tasto predefinito</translation>
+    </message>
+    <message>
+        <source>%1 is already used for “%2”.</source>
+        <translation>%1 è già usato per “%2”.</translation>
+    </message>
+    <message>
+        <source>%1 would fire from anywhere in the window. Add Ctrl, Alt or Meta, or use an F key.</source>
+        <translation>%1 si attiverebbe da qualsiasi punto della finestra. Aggiungi Ctrl, Alt o Meta, oppure usa un tasto funzione.</translation>
+    </message>
+    <message>
+        <source>%1 already does something else here, so it cannot be used.</source>
+        <translation>%1 fa già qualcos'altro qui, quindi non può essere usato.</translation>
+    </message>
+</context><context>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Manage Known Words</source>
@@ -6222,6 +6354,38 @@ Parole da aggiungere: %3. Continuare?</translation>
         <translation>Impostazioni</translation>
     </message>
     <message>
+        <source>Generate</source>
+        <translation>Genera</translation>
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation>Ritempo</translation>
+    </message>
+    <message>
+        <source>Condense</source>
+        <translation>Condensa</translation>
+    </message>
+    <message>
+        <source>Card Backfill</source>
+        <translation>Completamento delle carte</translation>
+    </message>
+    <message>
+        <source>Deck Filter</source>
+        <translation>Filtro mazzo</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>Download</translation>
+    </message>
+    <message>
+        <source>Manga OCR</source>
+        <translation>OCR manga</translation>
+    </message>
+    <message>
+        <source>Audiobook Sync</source>
+        <translation>Sincronizzazione dell'audiolibro</translation>
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner aggiornato</translation>
     </message>
@@ -6524,38 +6688,6 @@ Continuare?</translation>
     <message>
         <source>Text</source>
         <translation>Testo</translation>
-    </message>
-    <message>
-        <source>Generate</source>
-        <translation>Genera</translation>
-    </message>
-    <message>
-        <source>Retime</source>
-        <translation>Ritempo</translation>
-    </message>
-    <message>
-        <source>Condense</source>
-        <translation>Condensa</translation>
-    </message>
-    <message>
-        <source>Card Backfill</source>
-        <translation>Completamento delle carte</translation>
-    </message>
-    <message>
-        <source>Deck Filter</source>
-        <translation>Filtro mazzo</translation>
-    </message>
-    <message>
-        <source>Download</source>
-        <translation>Download</translation>
-    </message>
-    <message>
-        <source>Manga OCR</source>
-        <translation>OCR manga</translation>
-    </message>
-    <message>
-        <source>Audiobook Sync</source>
-        <translation>Sincronizzazione dell'audiolibro</translation>
     </message>
     <message>
         <source>Single</source>
@@ -8975,6 +9107,10 @@ Nessun file indice viene eliminato.</translation>
         <translation>Aspetto e lingua</translation>
     </message>
     <message>
+        <source>Keyboard</source>
+        <translation>Scorciatoie da tastiera</translation>
+    </message>
+    <message>
         <source>Nothing to restore</source>
         <translation>Niente da ripristinare</translation>
     </message>
@@ -10523,6 +10659,14 @@ Le tue risorse installate e il tuo tema vengono mantenuti.</translation>
         <translation>Usare i selettori di file nativi del sistema operativo. Disattivare questa opzione per usare invece il selettore integrato dell'app, che segue il tema dell'app e appare uguale su ogni piattaforma.</translation>
     </message>
     <message>
+        <source>Utilities tab</source>
+        <translation>Scheda Utilità</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Scegli quali strumenti mostra la scheda Utilità. Ne resta sempre almeno uno.</translation>
+    </message>
+    <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
         <translation>Fare clic su un'anteprima di tema per applicarlo dal vivo; &lt;b&gt;Ripristina&lt;/b&gt; lo annulla. Contrassegnare con una stella i temi per aggiungerli al selettore in alto a destra.</translation>
     </message>
@@ -10749,12 +10893,36 @@ Sort by it to work through a long recording in order — then highlight the rows
 Ordina in base a questa colonna per affrontare in ordine una registrazione lunga — poi evidenzia le righe fino al punto in cui ti sei fermato e includile.</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S includi/escludi · Spazio riproduci/metti in pausa · K segna come conosciuta · Ctrl+A includi visibili · Ctrl+D escludi visibili · Ctrl+Invio conferma</translation>
+        <source>%1 include/exclude</source>
+        <translation>%1 includi/escludi</translation>
     </message>
     <message>
-        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S includi/escludi · K segna come conosciuta · Ctrl+A includi visibili · Ctrl+D escludi visibili · Ctrl+Invio conferma</translation>
+        <source>%1 play/pause</source>
+        <translation>%1 riproduci/metti in pausa</translation>
+    </message>
+    <message>
+        <source>%1 mark known</source>
+        <translation>%1 segna come conosciuta</translation>
+    </message>
+    <message>
+        <source>%1 include visible</source>
+        <translation>%1 includi visibili</translation>
+    </message>
+    <message>
+        <source>%1 exclude visible</source>
+        <translation>%1 escludi visibili</translation>
+    </message>
+    <message>
+        <source>%1 next word</source>
+        <translation>%1 parola successiva</translation>
+    </message>
+    <message>
+        <source>%1 previous word</source>
+        <translation>%1 parola precedente</translation>
+    </message>
+    <message>
+        <source>%1 confirm</source>
+        <translation>%1 conferma</translation>
     </message>
     <message>
         <source>Reset columns</source>

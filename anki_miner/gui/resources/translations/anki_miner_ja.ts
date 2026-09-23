@@ -2630,6 +2630,14 @@ No index files are deleted.</source>
         <translation>Anki Miner 内蔵のファイル選択ダイアログと、OS 標準のものを切り替えます。</translation>
     </message>
     <message>
+        <source>Choose the tools on the Utilities tab</source>
+        <translation>「ユーティリティ」タブのツールを選択</translation>
+    </message>
+    <message>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>使わないユーティリティのツールは、設定 -&gt; 外観と言語で非表示にしたり、元に戻したりできます。非表示にしたツールもここに項目が残り、その「開く」ボタンから該当のチェックボックスに移動します。</translation>
+    </message>
+    <message>
         <source>Search the settings</source>
         <translation>設定を検索</translation>
     </message>
@@ -2754,8 +2762,8 @@ No index files are deleted.</source>
         <translation>キーボードショートカット</translation>
     </message>
     <message>
-        <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
-        <translation>Ctrl+1〜7 でタブを切り替え、Ctrl+, で設定を開き、Ctrl+Enter で画面のメインアクションを実行し、F1 でこのガイドを開きます — 完全な一覧はヘルプ → 概要にあります。</translation>
+        <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
+        <translation>すべてのキーボードショートカットを確認・変更できます。単語キュレーターのキーと、設定・このガイド・各タブに使うアプリ全体のキーです。</translation>
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -4480,6 +4488,10 @@ No files on disk are deleted.</source>
         <translation>音声のみ (M4A)</translation>
     </message>
     <message>
+        <source>Subtitles only</source>
+        <translation>字幕のみ</translation>
+    </message>
+    <message>
         <source>Custom format:</source>
         <translation>カスタム形式:</translation>
     </message>
@@ -5804,6 +5816,126 @@ No index files are deleted.</source>
         <translation>閉じる</translation>
     </message>
 </context><context>
+    <name>KeyBindings</name>
+    <message>
+        <source>Include or exclude the highlighted words</source>
+        <translation>ハイライトした単語を含める／除外</translation>
+    </message>
+    <message>
+        <source>Mark known</source>
+        <translation>既知にする</translation>
+    </message>
+    <message>
+        <source>Play or pause</source>
+        <translation>再生／一時停止</translation>
+    </message>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation>単語と例文を編集</translation>
+    </message>
+    <message>
+        <source>Include visible</source>
+        <translation>表示中を含める</translation>
+    </message>
+    <message>
+        <source>Exclude visible</source>
+        <translation>表示中を除外</translation>
+    </message>
+    <message>
+        <source>Next word</source>
+        <translation>次の単語</translation>
+    </message>
+    <message>
+        <source>Previous word</source>
+        <translation>前の単語</translation>
+    </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>設定を開く</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation>使い方ガイド</translation>
+    </message>
+    <message>
+        <source>Go to Video</source>
+        <translation>動画に移動</translation>
+    </message>
+    <message>
+        <source>Go to Deck Builder</source>
+        <translation>デッキビルダーに移動</translation>
+    </message>
+    <message>
+        <source>Go to Audiobooks</source>
+        <translation>オーディオブックに移動</translation>
+    </message>
+    <message>
+        <source>Go to Reading</source>
+        <translation>読みに移動</translation>
+    </message>
+    <message>
+        <source>Go to Analytics</source>
+        <translation>分析に移動</translation>
+    </message>
+    <message>
+        <source>Go to Utilities</source>
+        <translation>ユーティリティに移動</translation>
+    </message>
+    <message>
+        <source>Go to Settings</source>
+        <translation>設定に移動</translation>
+    </message>
+</context><context>
+    <name>KeyboardSettingsPanel</name>
+    <message>
+        <source>Keyboard</source>
+        <translation>キー割り当て</translation>
+    </message>
+    <message>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. The arrow keys always move between words, and Ctrl+Enter always confirms.</source>
+        <translation>ボックスをクリックして新しいキーを押します。変更はすぐに反映されます。すでに開いている単語キュレーターのウィンドウは、次に開くまで元のキーのままです。矢印キーは常に単語間の移動に使われ、Ctrl+Enter は常に確認に使われます。</translation>
+    </message>
+    <message>
+        <source>Word Curator</source>
+        <translation>単語キュレーター</translation>
+    </message>
+    <message>
+        <source>Application</source>
+        <translation>アプリ</translation>
+    </message>
+    <message>
+        <source>Restore defaults</source>
+        <translation>すべて既定に戻す</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>クリア</translation>
+    </message>
+    <message>
+        <source>Leave this action without a key</source>
+        <translation>この操作のキー割り当てを解除</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>リセット</translation>
+    </message>
+    <message>
+        <source>Go back to this action's default key</source>
+        <translation>この操作の既定のキーに戻す</translation>
+    </message>
+    <message>
+        <source>%1 is already used for “%2”.</source>
+        <translation>%1 はすでに「%2」に使われています。</translation>
+    </message>
+    <message>
+        <source>%1 would fire from anywhere in the window. Add Ctrl, Alt or Meta, or use an F key.</source>
+        <translation>%1 はウィンドウ内のどこからでも反応してしまいます。Ctrl、Alt、Meta のいずれかを追加するか、Fキーを使ってください。</translation>
+    </message>
+    <message>
+        <source>%1 already does something else here, so it cannot be used.</source>
+        <translation>%1 はここではすでに別の操作に割り当てられているため、使用できません。</translation>
+    </message>
+</context><context>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Manage Known Words</source>
@@ -6206,6 +6338,38 @@ Words to add: %3. Continue?</source>
         <translation>設定</translation>
     </message>
     <message>
+        <source>Generate</source>
+        <translation>生成</translation>
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation>リタイミング</translation>
+    </message>
+    <message>
+        <source>Condense</source>
+        <translation>凝縮</translation>
+    </message>
+    <message>
+        <source>Card Backfill</source>
+        <translation>カードの一括補完</translation>
+    </message>
+    <message>
+        <source>Deck Filter</source>
+        <translation>デッキフィルター</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>ダウンロード</translation>
+    </message>
+    <message>
+        <source>Manga OCR</source>
+        <translation>マンガ OCR</translation>
+    </message>
+    <message>
+        <source>Audiobook Sync</source>
+        <translation>オーディオブック同期</translation>
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner が更新されました</translation>
     </message>
@@ -6508,38 +6672,6 @@ Continue?</source>
     <message>
         <source>Text</source>
         <translation>テキスト</translation>
-    </message>
-    <message>
-        <source>Generate</source>
-        <translation>生成</translation>
-    </message>
-    <message>
-        <source>Retime</source>
-        <translation>リタイミング</translation>
-    </message>
-    <message>
-        <source>Condense</source>
-        <translation>凝縮</translation>
-    </message>
-    <message>
-        <source>Card Backfill</source>
-        <translation>カードの一括補完</translation>
-    </message>
-    <message>
-        <source>Deck Filter</source>
-        <translation>デッキフィルター</translation>
-    </message>
-    <message>
-        <source>Download</source>
-        <translation>ダウンロード</translation>
-    </message>
-    <message>
-        <source>Manga OCR</source>
-        <translation>マンガ OCR</translation>
-    </message>
-    <message>
-        <source>Audiobook Sync</source>
-        <translation>オーディオブック同期</translation>
     </message>
     <message>
         <source>Single</source>
@@ -8958,6 +9090,10 @@ No index files are deleted.</source>
         <translation>外観と言語</translation>
     </message>
     <message>
+        <source>Keyboard</source>
+        <translation>キー割り当て</translation>
+    </message>
+    <message>
         <source>Nothing to restore</source>
         <translation>復元する内容はありません</translation>
     </message>
@@ -10504,6 +10640,14 @@ Your installed resources and your theme are kept.</source>
         <translation>オペレーティングシステム標準のファイル選択画面を使用します。オフにすると、アプリのテーマに従い、すべてのプラットフォームで同じ見た目の内蔵選択画面を使用します。</translation>
     </message>
     <message>
+        <source>Utilities tab</source>
+        <translation>ユーティリティタブ</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>「ユーティリティ」タブに表示するツールを選択します。少なくとも1つは残ります。</translation>
+    </message>
+    <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
         <translation>テーマのプレビューをクリックすると即座に適用され、&lt;b&gt;復元&lt;/b&gt;で元に戻せます。テーマにスターを付けると、右上のセレクターに追加されます。</translation>
     </message>
@@ -10730,12 +10874,36 @@ Sort by it to work through a long recording in order — then highlight the rows
 これで並べ替えると、長い録画を順番に処理できます — 中断した位置までの行を選択して、まとめて含めてください。</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S：含める／除外　Space：再生／一時停止　K：既知にする　Ctrl+A：表示中を含める　Ctrl+D：表示中を除外　Ctrl+Enter：確認</translation>
+        <source>%1 include/exclude</source>
+        <translation>%1：含める／除外</translation>
     </message>
     <message>
-        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S：含める／除外　K：既知にする　Ctrl+A：表示中を含める　Ctrl+D：表示中を除外　Ctrl+Enter：確認</translation>
+        <source>%1 play/pause</source>
+        <translation>%1：再生／一時停止</translation>
+    </message>
+    <message>
+        <source>%1 mark known</source>
+        <translation>%1：既知にする</translation>
+    </message>
+    <message>
+        <source>%1 include visible</source>
+        <translation>%1：表示中を含める</translation>
+    </message>
+    <message>
+        <source>%1 exclude visible</source>
+        <translation>%1：表示中を除外</translation>
+    </message>
+    <message>
+        <source>%1 next word</source>
+        <translation>%1：次の単語</translation>
+    </message>
+    <message>
+        <source>%1 previous word</source>
+        <translation>%1：前の単語</translation>
+    </message>
+    <message>
+        <source>%1 confirm</source>
+        <translation>%1：確認</translation>
     </message>
     <message>
         <source>Reset columns</source>

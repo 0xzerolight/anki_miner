@@ -2621,6 +2621,14 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Choose the tools on the Utilities tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Search the settings</source>
         <translation type="unfinished" />
     </message>
@@ -2745,7 +2753,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
+        <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4462,6 +4470,10 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitles only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Custom format:</source>
         <translation type="unfinished" />
     </message>
@@ -5781,6 +5793,126 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>KeyBindings</name>
+    <message>
+        <source>Include or exclude the highlighted words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mark known</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Play or pause</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Include visible</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Exclude visible</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go to Video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go to Deck Builder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go to Audiobooks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go to Reading</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go to Analytics</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go to Utilities</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go to Settings</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>KeyboardSettingsPanel</name>
+    <message>
+        <source>Keyboard</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. The arrow keys always move between words, and Ctrl+Enter always confirms.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Word Curator</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Application</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restore defaults</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Leave this action without a key</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go back to this action's default key</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 is already used for “%2”.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 would fire from anywhere in the window. Add Ctrl, Alt or Meta, or use an F key.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 already does something else here, so it cannot be used.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Manage Known Words</source>
@@ -6178,6 +6310,38 @@ Words to add: %3. Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Generate</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Condense</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card Backfill</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck Filter</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga OCR</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audiobook Sync</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation type="unfinished" />
     </message>
@@ -6475,38 +6639,6 @@ Continue?</source>
     </message>
     <message>
         <source>Text</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Generate</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Retime</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Condense</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Card Backfill</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Deck Filter</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Download</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Manga OCR</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Audiobook Sync</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8921,6 +9053,10 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Keyboard</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Nothing to restore</source>
         <translation type="unfinished" />
     </message>
@@ -10457,6 +10593,14 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Utilities tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
         <translation type="unfinished" />
     </message>
@@ -10675,11 +10819,35 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation type="unfinished" />
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <source>%1 include/exclude</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <source>%1 play/pause</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 mark known</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 include visible</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 exclude visible</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 next word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 previous word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 confirm</source>
         <translation type="unfinished" />
     </message>
     <message>

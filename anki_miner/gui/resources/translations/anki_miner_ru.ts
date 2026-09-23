@@ -2638,6 +2638,14 @@ No index files are deleted.</source>
         <translation>Переключайтесь между встроенными диалогами выбора файлов Anki Miner и системными диалогами вашей ОС.</translation>
     </message>
     <message>
+        <source>Choose the tools on the Utilities tab</source>
+        <translation>Выбрать инструменты на вкладке «Утилиты»</translation>
+    </message>
+    <message>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Скройте неиспользуемые инструменты вкладки «Утилиты» или верните их обратно в разделе Настройки -&gt; Внешний вид и язык. Скрытый инструмент сохраняет свою запись здесь; его кнопка «Открыть» ведёт к этому флажку.</translation>
+    </message>
+    <message>
         <source>Search the settings</source>
         <translation>Поиск по настройкам</translation>
     </message>
@@ -2762,8 +2770,8 @@ No index files are deleted.</source>
         <translation>Клавиатурные сочетания</translation>
     </message>
     <message>
-        <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
-        <translation>Ctrl+1…7 переключает вкладки, Ctrl+, открывает настройки, Ctrl+Enter выполняет основное действие экрана, F1 открывает это руководство — полный список в меню «Справка -&gt; О программе».</translation>
+        <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
+        <translation>Просматривайте и изменяйте любое сочетание клавиш: клавиши Куратора слов и общие для всего приложения — для настроек, этого руководства и каждой вкладки.</translation>
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -4488,6 +4496,10 @@ No files on disk are deleted.</source>
         <translation>Только аудио (M4A)</translation>
     </message>
     <message>
+        <source>Subtitles only</source>
+        <translation>Только субтитры</translation>
+    </message>
+    <message>
         <source>Custom format:</source>
         <translation>Свой формат:</translation>
     </message>
@@ -5834,6 +5846,126 @@ No index files are deleted.</source>
         <translation>Закрыть</translation>
     </message>
 </context><context>
+    <name>KeyBindings</name>
+    <message>
+        <source>Include or exclude the highlighted words</source>
+        <translation>Включить или исключить выделенные слова</translation>
+    </message>
+    <message>
+        <source>Mark known</source>
+        <translation>Отметить как известное</translation>
+    </message>
+    <message>
+        <source>Play or pause</source>
+        <translation>Воспроизвести или приостановить</translation>
+    </message>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation>Изменить слово и предложение</translation>
+    </message>
+    <message>
+        <source>Include visible</source>
+        <translation>Включить видимые</translation>
+    </message>
+    <message>
+        <source>Exclude visible</source>
+        <translation>Исключить видимые</translation>
+    </message>
+    <message>
+        <source>Next word</source>
+        <translation>Следующее слово</translation>
+    </message>
+    <message>
+        <source>Previous word</source>
+        <translation>Предыдущее слово</translation>
+    </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>Открыть настройки</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation>Руководство пользователя</translation>
+    </message>
+    <message>
+        <source>Go to Video</source>
+        <translation>Перейти на вкладку «Видео»</translation>
+    </message>
+    <message>
+        <source>Go to Deck Builder</source>
+        <translation>Перейти на вкладку «Конструктор колод»</translation>
+    </message>
+    <message>
+        <source>Go to Audiobooks</source>
+        <translation>Перейти на вкладку «Аудиокниги»</translation>
+    </message>
+    <message>
+        <source>Go to Reading</source>
+        <translation>Перейти на вкладку «Чтение»</translation>
+    </message>
+    <message>
+        <source>Go to Analytics</source>
+        <translation>Перейти на вкладку «Аналитика»</translation>
+    </message>
+    <message>
+        <source>Go to Utilities</source>
+        <translation>Перейти на вкладку «Утилиты»</translation>
+    </message>
+    <message>
+        <source>Go to Settings</source>
+        <translation>Перейти на вкладку «Настройки»</translation>
+    </message>
+</context><context>
+    <name>KeyboardSettingsPanel</name>
+    <message>
+        <source>Keyboard</source>
+        <translation>Сочетания клавиш</translation>
+    </message>
+    <message>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. The arrow keys always move between words, and Ctrl+Enter always confirms.</source>
+        <translation>Щёлкните по полю и нажмите нужную клавишу. Изменения применяются сразу же. Уже открытое окно Куратора слов сохраняет свои сочетания клавиш до следующего открытия. Клавиши со стрелками всегда служат для перехода между словами, а Ctrl+Enter всегда подтверждает выбор.</translation>
+    </message>
+    <message>
+        <source>Word Curator</source>
+        <translation>Куратор слов</translation>
+    </message>
+    <message>
+        <source>Application</source>
+        <translation>Приложение</translation>
+    </message>
+    <message>
+        <source>Restore defaults</source>
+        <translation>Восстановить значения по умолчанию</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Очистить</translation>
+    </message>
+    <message>
+        <source>Leave this action without a key</source>
+        <translation>Оставить это действие без клавиши</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Сбросить</translation>
+    </message>
+    <message>
+        <source>Go back to this action's default key</source>
+        <translation>Вернуть клавишу этого действия по умолчанию</translation>
+    </message>
+    <message>
+        <source>%1 is already used for “%2”.</source>
+        <translation>%1 уже используется для «%2».</translation>
+    </message>
+    <message>
+        <source>%1 would fire from anywhere in the window. Add Ctrl, Alt or Meta, or use an F key.</source>
+        <translation>%1 будет срабатывать из любого места этого окна. Добавьте Ctrl, Alt или Meta либо используйте функциональную клавишу.</translation>
+    </message>
+    <message>
+        <source>%1 already does something else here, so it cannot be used.</source>
+        <translation>%1 уже выполняет здесь другую задачу, поэтому её нельзя использовать.</translation>
+    </message>
+</context><context>
     <name>KnownWordsManagerDialog</name>
     <message>
         <source>Manage Known Words</source>
@@ -6238,6 +6370,38 @@ Words to add: %3. Continue?</source>
         <translation>Настройки</translation>
     </message>
     <message>
+        <source>Generate</source>
+        <translation>Создать</translation>
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation>Пересинхронизация</translation>
+    </message>
+    <message>
+        <source>Condense</source>
+        <translation>Сжать</translation>
+    </message>
+    <message>
+        <source>Card Backfill</source>
+        <translation>Дозаполнение карточек</translation>
+    </message>
+    <message>
+        <source>Deck Filter</source>
+        <translation>Фильтр колоды</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>Загрузки</translation>
+    </message>
+    <message>
+        <source>Manga OCR</source>
+        <translation>OCR манги</translation>
+    </message>
+    <message>
+        <source>Audiobook Sync</source>
+        <translation>Синхронизация аудиокниги</translation>
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner обновлён</translation>
     </message>
@@ -6540,38 +6704,6 @@ Continue?</source>
     <message>
         <source>Text</source>
         <translation>Текст</translation>
-    </message>
-    <message>
-        <source>Generate</source>
-        <translation>Создать</translation>
-    </message>
-    <message>
-        <source>Retime</source>
-        <translation>Пересинхронизация</translation>
-    </message>
-    <message>
-        <source>Condense</source>
-        <translation>Сжать</translation>
-    </message>
-    <message>
-        <source>Card Backfill</source>
-        <translation>Дозаполнение карточек</translation>
-    </message>
-    <message>
-        <source>Deck Filter</source>
-        <translation>Фильтр колоды</translation>
-    </message>
-    <message>
-        <source>Download</source>
-        <translation>Загрузки</translation>
-    </message>
-    <message>
-        <source>Manga OCR</source>
-        <translation>OCR манги</translation>
-    </message>
-    <message>
-        <source>Audiobook Sync</source>
-        <translation>Синхронизация аудиокниги</translation>
     </message>
     <message>
         <source>Single</source>
@@ -8992,6 +9124,10 @@ No index files are deleted.</source>
         <translation>Внешний вид и язык</translation>
     </message>
     <message>
+        <source>Keyboard</source>
+        <translation>Сочетания клавиш</translation>
+    </message>
+    <message>
         <source>Nothing to restore</source>
         <translation>Нечего восстанавливать</translation>
     </message>
@@ -10542,6 +10678,14 @@ Your installed resources and your theme are kept.</source>
         <translation>Использовать системные диалоги выбора файлов. Выключите, чтобы использовать встроенный диалог приложения, который следует теме приложения и выглядит одинаково на всех платформах.</translation>
     </message>
     <message>
+        <source>Utilities tab</source>
+        <translation>Вкладка «Утилиты»</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Выберите, какие инструменты показывает вкладка «Утилиты». Хотя бы один остаётся.</translation>
+    </message>
+    <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
         <translation>Нажмите на превью темы, чтобы применить её сразу; &lt;b&gt;Вернуть&lt;/b&gt; отменяет применение. Отмечайте темы звёздочкой, чтобы добавить их в селектор в правом верхнем углу.</translation>
     </message>
@@ -10768,12 +10912,36 @@ Sort by it to work through a long recording in order — then highlight the rows
 Сортируйте по этому столбцу, чтобы проходить длинную запись по порядку — затем выделите строки до места, на котором вы остановились, и включите их.</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S — включить/исключить · Пробел — воспроизведение/пауза · K — отметить как известное · Ctrl+A — включить видимые · Ctrl+D — исключить видимые · Ctrl+Enter — подтвердить</translation>
+        <source>%1 include/exclude</source>
+        <translation>%1 — включить/исключить</translation>
     </message>
     <message>
-        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S — включить/исключить · K — отметить как известное · Ctrl+A — включить видимые · Ctrl+D — исключить видимые · Ctrl+Enter — подтвердить</translation>
+        <source>%1 play/pause</source>
+        <translation>%1 — воспроизведение/пауза</translation>
+    </message>
+    <message>
+        <source>%1 mark known</source>
+        <translation>%1 — отметить как известное</translation>
+    </message>
+    <message>
+        <source>%1 include visible</source>
+        <translation>%1 — включить видимые</translation>
+    </message>
+    <message>
+        <source>%1 exclude visible</source>
+        <translation>%1 — исключить видимые</translation>
+    </message>
+    <message>
+        <source>%1 next word</source>
+        <translation>%1 — следующее слово</translation>
+    </message>
+    <message>
+        <source>%1 previous word</source>
+        <translation>%1 — предыдущее слово</translation>
+    </message>
+    <message>
+        <source>%1 confirm</source>
+        <translation>%1 — подтвердить</translation>
     </message>
     <message>
         <source>Reset columns</source>
