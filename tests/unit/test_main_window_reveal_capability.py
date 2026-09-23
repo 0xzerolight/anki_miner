@@ -11,6 +11,7 @@ that owns the run — through the same stable-key lookup, never a tab index.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from unittest.mock import Mock
 
 import pytest
@@ -36,11 +37,18 @@ class ReadingTab(QWidget):
 class AnalyticsTab(QWidget): ...  # deliberately no open_subtab
 
 
+class SubtitlesTab(QWidget):
+    def __init__(self) -> None:
+        super().__init__()
+        self.open_subtab = Mock()
+
+
 class SettingsTab(QWidget):
     def __init__(self) -> None:
         super().__init__()
         self.open_ui_subtab = Mock()  # capability marker for _settings_tab_index
         self.open_subtab = Mock()
+        self.jump_to_setting = Mock()
 
 
 @pytest.fixture
@@ -55,11 +63,13 @@ def window(qtbot, patch_heavy_init, test_config):
         "video": VideoTab(),
         "reading": ReadingTab(),
         "analytics": AnalyticsTab(),
+        "subtitles": SubtitlesTab(),
         "settings": SettingsTab(),
     }
     win.tabs.addTab(win._tabs["video"], "Video")
     win.tabs.addTab(win._tabs["reading"], "Reading")
     win.tabs.addTab(win._tabs["analytics"], "Analytics")
+    win.tabs.addTab(win._tabs["subtitles"], "Utilities")
     win.tabs.addTab(win._tabs["settings"], "Settings")
     yield win
     win.task_registry.shutdown()  # stop the one-second ticker before teardown
@@ -112,6 +122,39 @@ def test_missing_tab_is_a_silent_noop(window):
 
 def test_main_tab_index_unknown_key(window):
     assert window._main_tab_index("nonsense") == -1
+
+
+# ---------------------------------------------------------------------------
+# A tool hidden in Settings -> Appearance & Language
+# ---------------------------------------------------------------------------
+
+
+def test_a_hidden_utility_opens_its_settings_checkbox(window):
+    window.config = replace(window.config, hidden_utilities=("retime",))
+
+    window.reveal_capability(CapabilityTarget("subtitles", "retime"))
+
+    assert window.tabs.currentWidget() is window._tabs["settings"]
+    window._tabs["settings"].jump_to_setting.assert_called_once_with("ui.utility_retime")
+    window._tabs["subtitles"].open_subtab.assert_not_called()
+
+
+def test_a_shown_utility_opens_as_before(window):
+    window.config = replace(window.config, hidden_utilities=("retime",))
+
+    window.reveal_capability(CapabilityTarget("subtitles", "condense"))
+
+    assert window.tabs.currentWidget() is window._tabs["subtitles"]
+    window._tabs["subtitles"].open_subtab.assert_called_once_with("condense")
+    window._tabs["settings"].jump_to_setting.assert_not_called()
+
+
+def test_the_utilities_tab_itself_is_never_redirected(window):
+    window.config = replace(window.config, hidden_utilities=("retime",))
+
+    window.reveal_capability(CapabilityTarget("subtitles"))
+
+    assert window.tabs.currentWidget() is window._tabs["subtitles"]
 
 
 def test_the_status_strip_renders_the_window_registry(window):
