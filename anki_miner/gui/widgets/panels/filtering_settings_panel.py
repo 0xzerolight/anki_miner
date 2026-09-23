@@ -251,7 +251,7 @@ class FilteringSettingsPanel(FormPanel):
                 "excluded deck. Rebuild forgets them."
             )
         )
-        self.use_known_words_db_checkbox.toggled.connect(self._sync_rebuild_known_words_button_state)
+        self.use_known_words_db_checkbox.toggled.connect(self.sync_rebuild_known_words_button_state)
         self.add_field("", self.use_known_words_db_checkbox)
 
         # Rebuild button: clears the local cache so deck exclusions take effect.
@@ -271,7 +271,7 @@ class FilteringSettingsPanel(FormPanel):
         # sync the initial state now that the button exists — construction
         # leaves the checkbox unchecked, and setChecked(False) below fires no
         # signal for a value that was already False.
-        self._sync_rebuild_known_words_button_state()
+        self.sync_rebuild_known_words_button_state()
         rebuild_row.addWidget(self.rebuild_known_words_button)
 
         # Manage the user-curated known/ignore list (Issue #42): view, remove,
@@ -897,8 +897,14 @@ class FilteringSettingsPanel(FormPanel):
         """Set the kana-variant fold checkbox."""
         self.match_kana_variants_checkbox.setChecked(value)
 
-    def _sync_rebuild_known_words_button_state(self) -> None:
-        """Rebuild only means anything while the cache the checkbox names is on."""
+    def sync_rebuild_known_words_button_state(self) -> None:
+        """Rebuild only means anything while the cache the checkbox names is on.
+
+        Public: also called by ``SettingsTab`` when a background rebuild finishes,
+        so the button lands back in step with the checkbox instead of being
+        force-enabled regardless of it (the checkbox can be toggled off while a
+        rebuild is still running off-thread).
+        """
         self.rebuild_known_words_button.setEnabled(self.use_known_words_db_checkbox.isChecked())
 
     # --- Word lists ---
@@ -1117,7 +1123,7 @@ class FilteringSettingsPanel(FormPanel):
                 max_frequency_rank=config.max_frequency_rank,
             )
         self.set_use_known_words_db(config.use_known_words_db)
-        self._sync_rebuild_known_words_button_state()
+        self.sync_rebuild_known_words_button_state()
         self.set_match_kana_variants(config.known_words_match_kana_variants)
         self.set_excluded_decks(config.excluded_decks)
         self.set_excluded_wordsets(config.excluded_wordsets)

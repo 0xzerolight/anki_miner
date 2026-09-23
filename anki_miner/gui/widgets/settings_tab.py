@@ -2418,7 +2418,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         )
 
     def _on_rebuild_known_words_finished(self) -> None:
-        self.filtering_panel.rebuild_known_words_button.setEnabled(True)
+        # Not an unconditional re-enable: the checkbox may have been toggled off
+        # while the rebuild ran off-thread, and the button must land back in
+        # step with it rather than staying enabled regardless (Task 7).
+        self.filtering_panel.sync_rebuild_known_words_button_state()
 
     def _on_manage_known_words(self) -> None:
         """Open the Manage Known Words dialog (Issue #42)."""

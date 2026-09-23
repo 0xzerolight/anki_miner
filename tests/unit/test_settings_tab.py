@@ -1226,6 +1226,9 @@ def test_rebuild_known_words_does_not_block_gui_and_reenables_action(tab, tmp_pa
     db.initialize()
     db.add_words({"食べる"}, source="anki")
     tab.config = replace(tab.config, known_words_db_path=db_path)
+    # Rebuild only means anything (and is only reachable in the real UI) while
+    # the checkbox is on; the finish handler now re-syncs from it (Task 7).
+    tab.filtering_panel.use_known_words_db_checkbox.setChecked(True)
     monkeypatch.setattr(QMessageBox, "question", lambda *args, **kwargs: QMessageBox.StandardButton.Yes)
     monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: QMessageBox.StandardButton.Ok)
 
@@ -1251,6 +1254,29 @@ def test_rebuild_known_words_does_not_block_gui_and_reenables_action(tab, tmp_pa
             worker.wait(6000)
 
     qtbot.waitUntil(lambda: tab.filtering_panel.rebuild_known_words_button.isEnabled(), timeout=1000)
+
+
+def test_rebuild_finish_handler_leaves_the_button_disabled_when_unchecked_mid_run(tab):
+    """The checkbox can be toggled off while a rebuild runs off-thread; the
+    finish handler must not force the button back on regardless of it."""
+    panel = tab.filtering_panel
+    panel.use_known_words_db_checkbox.setChecked(True)
+    panel.rebuild_known_words_button.setEnabled(False)  # simulates the in-flight disable
+
+    panel.use_known_words_db_checkbox.setChecked(False)
+    tab._on_rebuild_known_words_finished()
+
+    assert panel.rebuild_known_words_button.isEnabled() is False
+
+
+def test_rebuild_finish_handler_reenables_the_button_when_still_checked(tab):
+    panel = tab.filtering_panel
+    panel.use_known_words_db_checkbox.setChecked(True)
+    panel.rebuild_known_words_button.setEnabled(False)  # simulates the in-flight disable
+
+    tab._on_rebuild_known_words_finished()
+
+    assert panel.rebuild_known_words_button.isEnabled() is True
 
 
 def test_a_completed_install_turns_the_button_back_into_an_update(tab):
