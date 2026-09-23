@@ -10,6 +10,8 @@ Covers:
 
 from __future__ import annotations
 
+import threading
+import time
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -23,6 +25,7 @@ from anki_miner.gui.capabilities import UTILITY_SUBTABS
 from anki_miner.gui.widgets.base import AnimatedTabBar
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.workers.backfill_worker import BackfillApplyWorker, BackfillScanWorker
+from anki_miner.gui.workers.base_worker import CancellableWorker
 
 # ---------------------------------------------------------------------------
 # Patch targets (suppress ASR engine + alass I/O during construction)
@@ -581,8 +584,13 @@ def test_hiding_the_default_tool_opens_on_the_next_visible_one(qtbot, tmp_path):
     assert tab.current_subtab_key() == "retime"
 
 
+@pytest.mark.motion
 def test_hiding_the_open_tool_moves_to_the_next_and_the_underline_follows(qtbot, tmp_path):
-    """Review Focus 1: never a hidden page on show, and the underline under the new tab."""
+    """Review Focus 1: never a hidden page on show, and the underline under the new tab.
+
+    Real motion: the underline has to settle through the animated path the user
+    sees, not the instant one the suite uses by default.
+    """
     config = _make_config(tmp_path)
     tab = _make_tab(config, qtbot)
     tab.resize(1000, 700)
@@ -639,14 +647,40 @@ def test_update_config_applies_a_new_hidden_set(qtbot, tmp_path):
     assert "download" not in _visible_keys(tab)
 
 
+class _SpinningWorker(CancellableWorker):
+    """A real thread that runs until released or cancelled."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.release = threading.Event()
+
+    def run(self) -> None:
+        while not self.release.is_set() and not self.check_cancelled():
+            time.sleep(0.005)
+
+
 def test_hiding_a_tool_leaves_its_running_work_alone(qtbot, tmp_path):
-    """Review Focus 4 (container half): hidden is not closed; close still joins the run."""
+    """Review Focus 4 (container half): hiding the page on show stops nothing.
+
+    The Retime page is on show when it is hidden, so its hideEvent really fires;
+    a tool that cancelled its run on hide would fail here.
+    """
     tab = _make_tab(_make_config(tmp_path), qtbot)
-    running = MagicMock(name="retime_worker")
-    tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([running]))
+    tab.show()
+    qtbot.waitExposed(tab)
+    tab.open_subtab("retime")
+    worker = _SpinningWorker()
+    tab.retime_tab.worker_thread = worker
+    worker.start()
+    try:
+        tab.apply_hidden(("retime",))
+        qtbot.wait(50)
 
-    tab.apply_hidden(("retime",))
-
-    assert tab._inner_tabs.indexOf(tab.retime_tab) == tab._subtab_index["retime"]
-    assert list(tab.iter_close_workers()) == [running]
-    running.cancel.assert_not_called()
+        assert tab.retime_tab.isHidden()
+        assert worker.isRunning()
+        assert not worker.is_cancelled
+        assert worker in list(tab.iter_close_workers())
+    finally:
+        worker.release.set()
+        assert worker.wait(3000)
+        tab.retime_tab.worker_thread = None
