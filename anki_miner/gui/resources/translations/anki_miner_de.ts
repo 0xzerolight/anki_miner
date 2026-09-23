@@ -2679,7 +2679,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation>Führt mokuros japanische OCR auf einem Band-Ordner oder einer ganzen Serie aus, damit Lesung -&gt; Manga es sammeln kann. Installieren Sie mokuro unter Einstellungen -&gt; Transkription &amp; Ausrichtung.</translation>
+        <translation>Führt mokuros japanische OCR auf einem Band-Ordner oder einer ganzen Serie aus, damit Lesen -&gt; Manga es sammeln kann. Installieren Sie mokuro unter Einstellungen -&gt; Transkription &amp; Ausrichtung.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -2687,7 +2687,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
-        <translation>Transkribiert ein Hörbuch und ordnet ihm die eigenen Sätze des Buches zeitlich zu, wodurch eine .srt-Datei entsteht, die der Tab Hörbücher, Lesung -&gt; Untertiteldateien oder eine Lese-App nutzen kann.</translation>
+        <translation>Transkribiert ein Hörbuch und ordnet ihm die eigenen Sätze des Buches zeitlich zu, wodurch eine .srt-Datei entsteht, die der Tab Hörbücher, Lesen -&gt; Untertiteldateien oder eine Lese-App nutzen kann.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -2768,6 +2768,22 @@ Es werden keine Indexdateien gelöscht.</translation>
     <message>
         <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
         <translation>Alle Tastenkombinationen ansehen und ändern: die Tasten des Wort-Kurators sowie die anwendungsweiten Tasten für Einstellungen, diese Bedienungsanleitung und jeden Tab.</translation>
+    </message>
+    <message>
+        <source>Anki Miner Usage Guide</source>
+        <translation>Anki-Miner-Bedienungsanleitung</translation>
+    </message>
+    <message>
+        <source>Search features, e.g. "i+1", "pitch", "youtube"</source>
+        <translation>Funktionen durchsuchen, z. B. "i+1", "pitch", "youtube"</translation>
+    </message>
+    <message>
+        <source>No matching features.</source>
+        <translation>Keine passenden Funktionen.</translation>
+    </message>
+    <message>
+        <source>Open ▸</source>
+        <translation>Öffnen ▸</translation>
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -5552,7 +5568,7 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     </message>
     <message>
         <source>Reading</source>
-        <translation>Lesung</translation>
+        <translation>Lesen</translation>
     </message>
     <message>
         <source>Off</source>
@@ -5605,6 +5621,154 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Stapel, der von der Erkennung bekannter Wörter ausgeschlossen wird:</translation>
+    </message>
+</context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source>Choose frequency source</source>
+        <translation>Häufigkeitsquelle auswählen</translation>
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation>Häufigkeitsquelle für erneuten Import auswählen</translation>
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>Häufigkeitsquelle (%1);;Alle Dateien (*)</translation>
+    </message>
+    <message>
+        <source>Installed frequency sources could not be checked.</source>
+        <translation>Installierte Häufigkeitsquellen konnten nicht geprüft werden.</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Eine andere Aufgabe verwendet gerade die indizierten Ressourcen — versuchen Sie es erneut, sobald sie abgeschlossen ist.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>Der Import wurde abgeschlossen, aber die Einstellungen konnten nicht aktualisiert werden.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Ein anderer Import läuft noch. Warten Sie, bis er abgeschlossen ist, und versuchen Sie es erneut.</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>Der Import wurde vor Abschluss gestoppt. Versuchen Sie es erneut.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Wird abgebrochen…</translation>
+    </message>
+    <message>
+        <source>Importing frequency source…</source>
+        <translation>Häufigkeitsquelle wird importiert…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be imported.</source>
+        <translation>Die Häufigkeitsquelle konnte nicht importiert werden.</translation>
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation>Häufigkeitsquelle hinzugefügt</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>%1 Einträge aus „%2“ importiert.</translation>
+    </message>
+    <message>
+        <source>Choose frequency sources</source>
+        <translation>Häufigkeitsquellen auswählen</translation>
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation>Häufigkeitsquellen hinzugefügt</translation>
+    </message>
+    <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation>%1 Häufigkeitsquellen importiert:</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>Es wurde nichts importiert.</translation>
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation>Häufigkeitsquelle wird erneut importiert…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be re-imported.</source>
+        <translation>Die Häufigkeitsquelle konnte nicht erneut importiert werden.</translation>
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation>Häufigkeitsquelle erneut importiert</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>%1 erneut importiert.</translation>
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation>Häufigkeitsquelle %1 von %2: %3</translation>
+    </message>
+    <message>
+        <source>The frequency sources could not be re-imported.</source>
+        <translation>Die Häufigkeitsquellen konnten nicht erneut importiert werden.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Alle erneut importieren</translation>
+    </message>
+    <message>
+        <source>Reimported %1 frequency source(s):</source>
+        <translation>%1 Häufigkeitsquelle(n) erneut importiert:</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>Übersprungen (keine gespeicherte Kopie zum Wiederaufbau vorhanden; zeilenweise Erneut importieren… verwenden):</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Fehlgeschlagen:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining frequency sources.</source>
+        <translation>Vor den verbleibenden Häufigkeitsquellen abgebrochen.</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>Es wurde nichts erneut importiert.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Nichts zum erneuten Importieren</translation>
+    </message>
+    <message>
+        <source>No frequency sources in the chain.</source>
+        <translation>Keine Häufigkeitsquellen in der Kette.</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>Übersprungen (keine gespeicherte Kopie zum Wiederaufbau vorhanden; zeilenweise Erneut importieren… verwenden):
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (%1 fehlerhafte Einträge übersprungen)</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> Dies ist eine vorkommensbasierte Quelle; ihre Zählwerte wurden in Ränge umgewandelt.</translation>
+    </message>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation> Dies ist eine wortbasierte Quelle; ihre Stufenbezeichnungen werden auf der Karte angezeigt, wirken sich aber nicht auf die Filterung nach Häufigkeitsrang aus.</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5886,7 +6050,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Go to Reading</source>
-        <translation>Zum Tab Lesung wechseln</translation>
+        <translation>Zum Tab Lesen wechseln</translation>
     </message>
     <message>
         <source>Go to Analytics</source>
@@ -5907,8 +6071,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Tastenkürzel</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. The arrow keys always move between words, and Ctrl+Enter always confirms.</source>
-        <translation>Klicken Sie auf ein Feld und drücken Sie die neue Taste. Änderungen wirken sofort. Ein bereits geöffnetes Wort-Kurator-Fenster behält seine Tasten, bis es das nächste Mal geöffnet wird. Mit den Pfeiltasten wechseln Sie immer zwischen den Wörtern, und Ctrl+Enter bestätigt immer.</translation>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Klicken Sie auf ein Feld und drücken Sie die neue Taste. Änderungen wirken sofort. Ein bereits geöffnetes Wort-Kurator-Fenster behält seine Tasten, bis es das nächste Mal geöffnet wird. Mit Oben und Unten wechseln Sie immer zwischen den Wörtern, mit Links und Rechts zwischen den Spalten, und %1 bestätigt immer.</translation>
     </message>
     <message>
         <source>Word Curator</source>
@@ -6339,7 +6503,7 @@ Hinzuzufügende Wörter: %3. Fortfahren?</translation>
     </message>
     <message>
         <source>Reading</source>
-        <translation>Lesung</translation>
+        <translation>Lesen</translation>
     </message>
     <message>
         <source>Analytics</source>
@@ -7065,7 +7229,7 @@ Fortfahren?</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
-        <translation>Führt mokuros OCR auf einem Ordner mit Seitenbildern oder einem Serienordner mit Bänden aus. Jeder Band erhält dabei eine .mokuro-Datei daneben für Lesung → Manga.</translation>
+        <translation>Führt mokuros OCR auf einem Ordner mit Seitenbildern oder einem Serienordner mit Bänden aus. Jeder Band erhält dabei eine .mokuro-Datei daneben für Lesen → Manga.</translation>
     </message>
     <message>
         <source>Folder:</source>
@@ -7224,6 +7388,146 @@ Fortfahren?</translation>
     <message>
         <source>Silence-removal library installed.</source>
         <translation>Bibliothek zur Stille-Entfernung installiert.</translation>
+    </message>
+</context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent source</source>
+        <translation>Quelle für Tonhöhenakzent auswählen</translation>
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation>Tonhöhenquelle für erneuten Import auswählen</translation>
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation>Quelle für Tonhöhenakzent (%1);;Alle Dateien (*)</translation>
+    </message>
+    <message>
+        <source>Installed pitch accent sources could not be checked.</source>
+        <translation>Installierte Quellen für Tonhöhenakzente konnten nicht geprüft werden.</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Eine andere Aufgabe verwendet gerade die indizierten Ressourcen — versuchen Sie es erneut, sobald sie abgeschlossen ist.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>Der Import wurde abgeschlossen, aber die Einstellungen konnten nicht aktualisiert werden.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Ein anderer Import läuft noch. Warten Sie, bis er abgeschlossen ist, und versuchen Sie es erneut.</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>Der Import wurde vor Abschluss gestoppt. Versuchen Sie es erneut.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Wird abgebrochen…</translation>
+    </message>
+    <message>
+        <source>Importing pitch source…</source>
+        <translation>Tonhöhenquelle wird importiert…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation>Die Tonhöhenquelle konnte nicht importiert werden.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation>Tonhöhenquelle hinzugefügt</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>%1 Einträge aus „%2“ importiert.</translation>
+    </message>
+    <message>
+        <source>Choose pitch accent sources</source>
+        <translation>Quellen für Tonhöhenakzent auswählen</translation>
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation>Tonhöhenquellen hinzugefügt</translation>
+    </message>
+    <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation>%1 Tonhöhenquellen importiert:</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>Es wurde nichts importiert.</translation>
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation>Tonhöhenquelle wird erneut importiert…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be re-imported.</source>
+        <translation>Die Tonhöhenquelle konnte nicht erneut importiert werden.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation>Tonhöhenquelle erneut importiert</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>%1 erneut importiert.</translation>
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation>Tonhöhenquelle %1 von %2: %3</translation>
+    </message>
+    <message>
+        <source>The pitch sources could not be re-imported.</source>
+        <translation>Die Tonhöhenquellen konnten nicht erneut importiert werden.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Alle erneut importieren</translation>
+    </message>
+    <message>
+        <source>Reimported %1 pitch source(s):</source>
+        <translation>%1 Tonhöhenquelle(n) erneut importiert:</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>Übersprungen (keine gespeicherte Kopie zum Wiederaufbau vorhanden; zeilenweise Erneut importieren… verwenden):</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Fehlgeschlagen:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining pitch sources.</source>
+        <translation>Vor den verbleibenden Tonhöhenquellen abgebrochen.</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>Es wurde nichts erneut importiert.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Nichts zum erneuten Importieren</translation>
+    </message>
+    <message>
+        <source>No pitch sources in the chain.</source>
+        <translation>Keine Tonhöhenquellen in der Kette.</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>Übersprungen (keine gespeicherte Kopie zum Wiederaufbau vorhanden; zeilenweise Erneut importieren… verwenden):
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (%1 fehlerhafte Einträge übersprungen)</translation>
     </message>
 </context><context>
     <name>PitchSettingsPanel</name>
@@ -7642,6 +7946,28 @@ Es werden keine Indexdateien gelöscht.</translation>
     <message>
         <source>The profile could not be deleted.</source>
         <translation>Das Profil konnte nicht gelöscht werden.</translation>
+    </message>
+</context><context>
+    <name>ProgressTelemetry</name>
+    <message>
+        <source>%1 downloaded</source>
+        <translation>%1 heruntergeladen</translation>
+    </message>
+    <message>
+        <source>Elapsed %1</source>
+        <translation>Verstrichen %1</translation>
+    </message>
+    <message>
+        <source>Resumed</source>
+        <translation>Fortgesetzt</translation>
+    </message>
+    <message>
+        <source>About %1 remaining</source>
+        <translation>Etwa %1 verbleibend</translation>
+    </message>
+    <message>
+        <source>No update for %1 s</source>
+        <translation>Keine Aktualisierung seit %1 s</translation>
     </message>
 </context><context>
     <name>ProgressWidget</name>
@@ -8989,6 +9315,80 @@ Es werden keine Indexdateien gelöscht.</translation>
     <message>
         <source>Could not parse this sentence.</source>
         <translation>Dieser Satz konnte nicht analysiert werden.</translation>
+    </message>
+</context><context>
+    <name>ServiceFactory</name>
+    <message>
+        <source>Couldn't scan dictionaries folder: %1</source>
+        <translation>Der Wörterbuchordner konnte nicht gescannt werden: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't load dictionary chain: %1</source>
+        <translation>Die Wörterbuchkette konnte nicht geladen werden: %1</translation>
+    </message>
+    <message>
+        <source>Dictionary chain loaded: %1</source>
+        <translation>Wörterbuchkette geladen: %1</translation>
+    </message>
+    <message>
+        <source>Skipping unavailable provider(s): %1</source>
+        <translation>Nicht verfügbare Anbieter werden übersprungen: %1</translation>
+    </message>
+    <message>
+        <source>No offline dictionary — definitions will come from Jisho.org only</source>
+        <translation>Kein Offline-Wörterbuch — Definitionen kommen nur von Jisho.org</translation>
+    </message>
+    <message>
+        <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
+        <translation>Karten haben keine Definitionen, bis Sie ein Wörterbuch unter Einstellungen → Wörterbücher hinzufügen.</translation>
+    </message>
+    <message>
+        <source>Pitch accent source '%1' unavailable; skipped</source>
+        <translation>Quelle für Tonhöhenakzent „%1“ nicht verfügbar; übersprungen</translation>
+    </message>
+    <message>
+        <source>Pitch accent data loaded: %1 source(s), %2 entries</source>
+        <translation>Tonhöhenakzent-Daten geladen: %1 Quelle(n), %2 Einträge</translation>
+    </message>
+    <message>
+        <source>Couldn't load pitch accent data: %1</source>
+        <translation>Tonhöhenakzent-Daten konnten nicht geladen werden: %1</translation>
+    </message>
+    <message>
+        <source>Frequency data loaded: %1 source(s), %2 entries</source>
+        <translation>Häufigkeitsdaten geladen: %1 Quelle(n), %2 Einträge</translation>
+    </message>
+    <message>
+        <source>Couldn't load frequency data: %1</source>
+        <translation>Häufigkeitsdaten konnten nicht geladen werden: %1</translation>
+    </message>
+    <message>
+        <source>Skipping %1 audio entry with no URL</source>
+        <translation>Audioeintrag %1 ohne URL wird übersprungen</translation>
+    </message>
+    <message>
+        <source>Skipping audio pack entry with no pack ID</source>
+        <translation>Audiopaket-Eintrag ohne Paket-ID wird übersprungen</translation>
+    </message>
+    <message>
+        <source>Audio pack '%1' unavailable; skipped</source>
+        <translation>Audiopaket „%1“ nicht verfügbar; übersprungen</translation>
+    </message>
+    <message>
+        <source>Name wordsets loaded: %1 set(s) enabled</source>
+        <translation>Namens-Wortsets geladen: %1 Set(s) aktiviert</translation>
+    </message>
+    <message>
+        <source>Couldn't load name wordsets: %1</source>
+        <translation>Namens-Wortsets konnten nicht geladen werden: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation>Datenbank bekannter Wörter konnte nicht initialisiert werden: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't load word lists: %1</source>
+        <translation>Wortlisten konnten nicht geladen werden: %1</translation>
     </message>
 </context><context>
     <name>SettingsSearchBox</name>

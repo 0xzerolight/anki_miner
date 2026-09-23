@@ -1241,7 +1241,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Sentence Audio (Reading Sources)</source>
-        <translation>文章音声（読みソース）</translation>
+        <translation>文章音声（読み物ソース）</translation>
     </message>
     <message>
         <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
@@ -2675,7 +2675,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation>巻フォルダまたはシリーズ全体に対して mokuro の日本語 OCR を実行すると、読み -&gt; マンガでマイニングできるようになります。mokuro は設定 -&gt; 文字起こしとアラインメントからインストールしてください。</translation>
+        <translation>巻フォルダまたはシリーズ全体に対して mokuro の日本語 OCR を実行すると、リーディング -&gt; マンガでマイニングできるようになります。mokuro は設定 -&gt; 文字起こしとアラインメントからインストールしてください。</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -2683,7 +2683,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
-        <translation>オーディオブックを文字起こしし、書籍自体の文をそれに合わせてタイミング調整して、「オーディオブック」タブ、読み -&gt; 字幕ファイル、またはリーダーアプリで使える .srt を書き出します。</translation>
+        <translation>オーディオブックを文字起こしし、書籍自体の文をそれに合わせてタイミング調整して、「オーディオブック」タブ、リーディング -&gt; 字幕ファイル、またはリーダーアプリで使える .srt を書き出します。</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -2764,6 +2764,22 @@ No index files are deleted.</source>
     <message>
         <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
         <translation>すべてのキーボードショートカットを確認・変更できます。単語キュレーターのキーと、設定・このガイド・各タブに使うアプリ全体のキーです。</translation>
+    </message>
+    <message>
+        <source>Anki Miner Usage Guide</source>
+        <translation>Anki Miner 使い方ガイド</translation>
+    </message>
+    <message>
+        <source>Search features, e.g. "i+1", "pitch", "youtube"</source>
+        <translation>機能を検索（例："i+1"、"pitch"、"youtube"）</translation>
+    </message>
+    <message>
+        <source>No matching features.</source>
+        <translation>一致する機能はありません。</translation>
+    </message>
+    <message>
+        <source>Open ▸</source>
+        <translation>開く ▸</translation>
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -5537,7 +5553,7 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Reading</source>
-        <translation>読み</translation>
+        <translation>リーディング</translation>
     </message>
     <message>
         <source>Off</source>
@@ -5590,6 +5606,154 @@ No files on disk are deleted.</source>
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>既知単語の検出から除外するデッキ:</translation>
+    </message>
+</context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source>Choose frequency source</source>
+        <translation>頻度ソースを選択</translation>
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation>再インポートする頻度ソースを選択</translation>
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>頻度ソース (%1);;すべてのファイル (*)</translation>
+    </message>
+    <message>
+        <source>Installed frequency sources could not be checked.</source>
+        <translation>インストール済みの頻度ソースを確認できませんでした。</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>別のタスクがインデックス済みリソースを使用しています — 完了後に再試行してください。</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>インポートは完了しましたが、設定を更新できませんでした。</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>別のインポートがまだ完了していません。完了してから再度お試しください。</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>インポートが完了する前に停止しました。再試行してください。</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Importing frequency source…</source>
+        <translation>頻度ソースをインポートしています…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be imported.</source>
+        <translation>頻度ソースをインポートできませんでした。</translation>
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation>頻度ソースを追加しました</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>「%2」から %1 件のエントリをインポートしました。</translation>
+    </message>
+    <message>
+        <source>Choose frequency sources</source>
+        <translation>頻度ソースを選択</translation>
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation>頻度ソースを追加しました</translation>
+    </message>
+    <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation>%1 件の頻度ソースをインポートしました:</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>何もインポートされませんでした。</translation>
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation>頻度ソースを再インポートしています…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be re-imported.</source>
+        <translation>頻度ソースを再インポートできませんでした。</translation>
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation>頻度ソースを再インポートしました</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>%1 を再インポートしました。</translation>
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation>頻度ソース %1/%2: %3</translation>
+    </message>
+    <message>
+        <source>The frequency sources could not be re-imported.</source>
+        <translation>頻度ソースを再インポートできませんでした。</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>すべて再インポート</translation>
+    </message>
+    <message>
+        <source>Reimported %1 frequency source(s):</source>
+        <translation>%1 件の頻度ソースを再インポートしました:</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>スキップ（再構築用の保存済みコピーがありません。行ごとの「再インポート…」を使用してください）:</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>失敗:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining frequency sources.</source>
+        <translation>残りの頻度ソースのインポートはキャンセルされました。</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>何も再インポートされませんでした。</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>再インポートする頻度ソースがありません</translation>
+    </message>
+    <message>
+        <source>No frequency sources in the chain.</source>
+        <translation>チェーンに頻度ソースがありません。</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>スキップ（再構築用の保存済みコピーがありません。行ごとの「再インポート…」を使用してください）:
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> （不正な形式のエントリを %1 件スキップ）</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> これは出現回数ベースのソースです。そのカウントはランクに変換されました。</translation>
+    </message>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation> これは単語ベースのソースです。そのレベルラベルはカードに表示されますが、頻度ランクによるフィルタリングには影響しません。</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5871,7 +6035,7 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Go to Reading</source>
-        <translation>読みに移動</translation>
+        <translation>リーディングに移動</translation>
     </message>
     <message>
         <source>Go to Analytics</source>
@@ -5892,8 +6056,8 @@ No index files are deleted.</source>
         <translation>キー割り当て</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. The arrow keys always move between words, and Ctrl+Enter always confirms.</source>
-        <translation>ボックスをクリックして新しいキーを押します。変更はすぐに反映されます。すでに開いている単語キュレーターのウィンドウは、次に開くまで元のキーのままです。矢印キーは常に単語間の移動に使われ、Ctrl+Enter は常に確認に使われます。</translation>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>ボックスをクリックして新しいキーを押します。変更はすぐに反映されます。すでに開いている単語キュレーターのウィンドウは、次に開くまで元のキーのままです。上下キーは常に単語間の移動に使われ、左右キーは列間の移動に使われ、%1 は常に確認に使われます。</translation>
     </message>
     <message>
         <source>Word Curator</source>
@@ -6323,7 +6487,7 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Reading</source>
-        <translation>読み</translation>
+        <translation>リーディング</translation>
     </message>
     <message>
         <source>Analytics</source>
@@ -7049,7 +7213,7 @@ Continue?</source>
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
-        <translation>ページ画像のフォルダ、または巻が入ったシリーズフォルダに対して mokuro の OCR を実行します。各巻には、読み → マンガ用の .mokuro ファイルがその隣に作成されます。</translation>
+        <translation>ページ画像のフォルダ、または巻が入ったシリーズフォルダに対して mokuro の OCR を実行します。各巻には、リーディング → マンガ用の .mokuro ファイルがその隣に作成されます。</translation>
     </message>
     <message>
         <source>Folder:</source>
@@ -7208,6 +7372,146 @@ Continue?</source>
     <message>
         <source>Silence-removal library installed.</source>
         <translation>無音除去ライブラリをインストールしました。</translation>
+    </message>
+</context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent source</source>
+        <translation>ピッチアクセントソースを選択</translation>
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation>再インポートするピッチソースを選択</translation>
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation>ピッチアクセントソース (%1);;すべてのファイル (*)</translation>
+    </message>
+    <message>
+        <source>Installed pitch accent sources could not be checked.</source>
+        <translation>インストール済みのピッチアクセントソースを確認できませんでした。</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>別のタスクがインデックス済みリソースを使用しています — 完了後に再試行してください。</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>インポートは完了しましたが、設定を更新できませんでした。</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>別のインポートがまだ完了していません。完了してから再度お試しください。</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>インポートが完了する前に停止しました。再試行してください。</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>キャンセル</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>キャンセル中…</translation>
+    </message>
+    <message>
+        <source>Importing pitch source…</source>
+        <translation>ピッチソースをインポートしています…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation>ピッチソースをインポートできませんでした。</translation>
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation>ピッチソースを追加しました</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>「%2」から %1 件のエントリをインポートしました。</translation>
+    </message>
+    <message>
+        <source>Choose pitch accent sources</source>
+        <translation>ピッチアクセントソースを選択</translation>
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation>ピッチソースを追加しました</translation>
+    </message>
+    <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation>%1 件のピッチソースをインポートしました:</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>何もインポートされませんでした。</translation>
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation>ピッチソースを再インポートしています…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be re-imported.</source>
+        <translation>ピッチソースを再インポートできませんでした。</translation>
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation>ピッチソースを再インポートしました</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>%1 を再インポートしました。</translation>
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation>ピッチソース %1/%2: %3</translation>
+    </message>
+    <message>
+        <source>The pitch sources could not be re-imported.</source>
+        <translation>ピッチソースを再インポートできませんでした。</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>すべて再インポート</translation>
+    </message>
+    <message>
+        <source>Reimported %1 pitch source(s):</source>
+        <translation>%1 件のピッチソースを再インポートしました:</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>スキップ（再構築用の保存済みコピーがありません。行ごとの「再インポート…」を使用してください）:</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>失敗:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining pitch sources.</source>
+        <translation>残りのピッチソースのインポートはキャンセルされました。</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>何も再インポートされませんでした。</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>再インポートするピッチソースがありません</translation>
+    </message>
+    <message>
+        <source>No pitch sources in the chain.</source>
+        <translation>チェーンにピッチソースがありません。</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>スキップ（再構築用の保存済みコピーがありません。行ごとの「再インポート…」を使用してください）:
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> （不正な形式のエントリを %1 件スキップ）</translation>
     </message>
 </context><context>
     <name>PitchSettingsPanel</name>
@@ -7626,6 +7930,28 @@ No index files are deleted.</source>
     <message>
         <source>The profile could not be deleted.</source>
         <translation>プロファイルを削除できませんでした。</translation>
+    </message>
+</context><context>
+    <name>ProgressTelemetry</name>
+    <message>
+        <source>%1 downloaded</source>
+        <translation>%1 をダウンロード済み</translation>
+    </message>
+    <message>
+        <source>Elapsed %1</source>
+        <translation>経過時間: %1</translation>
+    </message>
+    <message>
+        <source>Resumed</source>
+        <translation>再開済み</translation>
+    </message>
+    <message>
+        <source>About %1 remaining</source>
+        <translation>残り約 %1</translation>
+    </message>
+    <message>
+        <source>No update for %1 s</source>
+        <translation>%1 秒間更新なし</translation>
     </message>
 </context><context>
     <name>ProgressWidget</name>
@@ -8972,6 +9298,80 @@ No index files are deleted.</source>
     <message>
         <source>Could not parse this sentence.</source>
         <translation>この例文を解析できませんでした。</translation>
+    </message>
+</context><context>
+    <name>ServiceFactory</name>
+    <message>
+        <source>Couldn't scan dictionaries folder: %1</source>
+        <translation>辞書フォルダをスキャンできませんでした: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't load dictionary chain: %1</source>
+        <translation>辞書チェーンを読み込めませんでした: %1</translation>
+    </message>
+    <message>
+        <source>Dictionary chain loaded: %1</source>
+        <translation>辞書チェーンを読み込みました: %1</translation>
+    </message>
+    <message>
+        <source>Skipping unavailable provider(s): %1</source>
+        <translation>利用できないプロバイダーをスキップしました: %1</translation>
+    </message>
+    <message>
+        <source>No offline dictionary — definitions will come from Jisho.org only</source>
+        <translation>オフライン辞書がありません — 語義は Jisho.org のみから取得されます</translation>
+    </message>
+    <message>
+        <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
+        <translation>設定 → 辞書で辞書を追加するまで、カードに語義は表示されません。</translation>
+    </message>
+    <message>
+        <source>Pitch accent source '%1' unavailable; skipped</source>
+        <translation>ピッチアクセントソース「%1」は利用できません — スキップされました</translation>
+    </message>
+    <message>
+        <source>Pitch accent data loaded: %1 source(s), %2 entries</source>
+        <translation>ピッチアクセントデータを読み込みました: %1 件のソース、%2 件のエントリ</translation>
+    </message>
+    <message>
+        <source>Couldn't load pitch accent data: %1</source>
+        <translation>ピッチアクセントデータを読み込めませんでした: %1</translation>
+    </message>
+    <message>
+        <source>Frequency data loaded: %1 source(s), %2 entries</source>
+        <translation>頻度データを読み込みました: %1 件のソース、%2 件のエントリ</translation>
+    </message>
+    <message>
+        <source>Couldn't load frequency data: %1</source>
+        <translation>頻度データを読み込めませんでした: %1</translation>
+    </message>
+    <message>
+        <source>Skipping %1 audio entry with no URL</source>
+        <translation>URLのない %1 音声エントリをスキップしました</translation>
+    </message>
+    <message>
+        <source>Skipping audio pack entry with no pack ID</source>
+        <translation>パックIDのない音声パックエントリをスキップしました</translation>
+    </message>
+    <message>
+        <source>Audio pack '%1' unavailable; skipped</source>
+        <translation>音声パック「%1」は利用できません — スキップされました</translation>
+    </message>
+    <message>
+        <source>Name wordsets loaded: %1 set(s) enabled</source>
+        <translation>固有名詞ワードセットを読み込みました: %1 件有効</translation>
+    </message>
+    <message>
+        <source>Couldn't load name wordsets: %1</source>
+        <translation>固有名詞ワードセットを読み込めませんでした: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation>既知単語DBを初期化できませんでした: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't load word lists: %1</source>
+        <translation>単語リストを読み込めませんでした: %1</translation>
     </message>
 </context><context>
     <name>SettingsSearchBox</name>
