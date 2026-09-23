@@ -765,6 +765,7 @@ class TestExpandPlaylist:
         with patch(_PLAYLIST_DIALOG_CLS, return_value=_accepting_dialog(["https://example.com/1"])) as dialog_cls:
             tab._on_playlist_resolved(DownloadPlaylist("L", (), 1))
         dialog_cls.assert_not_called()
+        assert tab.url_input.toPlainText() == "https://example.com/other"
 
 
 # ---------------------------------------------------------------------------
