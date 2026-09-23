@@ -36,9 +36,9 @@ if TYPE_CHECKING:
 #: Family key -> (plural noun, singular noun, Settings path). The Settings path
 #: is the one-click fix each family's message points at.
 _FAMILY_LABELS: dict[str, tuple[str, str, str]] = {
-    "dictionary": ("Dictionaries", "Dictionary", "Settings → Dictionaries → Reimport All"),
-    "frequency": ("Frequency sources", "Frequency source", "Settings → Frequency → Reimport All"),
-    "pitch": ("Pitch sources", "Pitch source", "Settings → Pitch Accent → Reimport All"),
+    "dictionary": ("Dictionaries", "Dictionary", "Settings → Dictionaries → More → Reimport All"),
+    "frequency": ("Frequency sources", "Frequency source", "Settings → Frequency → More → Reimport All"),
+    "pitch": ("Pitch sources", "Pitch source", "Settings → Pitch Accent → More → Reimport All"),
     "audio": ("Audio packs", "Audio pack", "Settings → Word Audio → More → Reimport All"),
 }
 

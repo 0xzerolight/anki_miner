@@ -94,7 +94,7 @@ def test_stale_optional_resource_warns_and_can_be_repaired():
                 component="Frequency Sources",
                 severity="WARNING",
                 message="Frequency source(s) need reimporting after an upgrade: JPDB. "
-                "Use Settings → Frequency → Reimport All.",
+                "Use Settings → Frequency → More → Reimport All.",
             )
         ]
     )

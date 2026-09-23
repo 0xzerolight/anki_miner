@@ -147,7 +147,7 @@ class TestReporting:
 
         assert message is not None
         assert "JPDB" in message
-        assert "Settings → Frequency → Reimport All" in message
+        assert "Settings → Frequency → More → Reimport All" in message
 
     def test_stale_pitch_names_its_own_settings_page(self, config: AnkiMinerConfig) -> None:
         _build_pitch(config.pitch_root, "nhk", stale=True, name="NHK")
@@ -157,7 +157,7 @@ class TestReporting:
 
         assert message is not None
         assert "NHK" in message
-        assert "Settings → Pitch Accent → Reimport All" in message
+        assert "Settings → Pitch Accent → More → Reimport All" in message
 
     def test_two_stale_families_report_together(self, config: AnkiMinerConfig) -> None:
         """One error naming everything, not one error per run."""
@@ -173,8 +173,8 @@ class TestReporting:
 
         assert message is not None
         assert message.splitlines() == [
-            "Frequency source 'JPDB' needs reimport after the app upgrade — Settings → Frequency → Reimport All",
-            "Pitch source 'NHK' needs reimport after the app upgrade — Settings → Pitch Accent → Reimport All",
+            "Frequency source 'JPDB' needs reimport after the app upgrade — Settings → Frequency → More → Reimport All",
+            "Pitch source 'NHK' needs reimport after the app upgrade — Settings → Pitch Accent → More → Reimport All",
         ]
 
     def test_stale_audio_pack_names_the_pack_and_the_fix(self, config: AnkiMinerConfig) -> None:

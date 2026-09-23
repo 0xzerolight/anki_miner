@@ -1640,7 +1640,7 @@ class TestOptionalIndexedResourceChecks:
 
         assert ok is False
         assert "JPDB" in message
-        assert "Settings → Frequency → Reimport All" in message
+        assert "Settings → Frequency → More → Reimport All" in message
 
     def test_empty_source_warns(self, test_config, tmp_path):
         from anki_miner.config import PitchSourceEntry
