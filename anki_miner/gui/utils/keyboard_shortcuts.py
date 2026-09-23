@@ -26,10 +26,6 @@ from PyQt6.QtCore import QEvent, QObject, Qt
 from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import QPushButton, QWidget
 
-#: How the dual primary-action binding is written for a human. The two real
-#: sequences are in ``_PRIMARY_ACTION_KEYS``; nobody thinks of them as two keys.
-PRIMARY_ACTION_DISPLAY = "Ctrl+Enter"
-
 #: Confirmation is Ctrl-modified so a bare Enter stays available to input methods.
 #: "Return" is the main-block key and "Enter" is the keypad's; Qt reports them as
 #: distinct keys and users hit either, so both are bound. Spelled as strings
@@ -39,6 +35,17 @@ _PRIMARY_ACTION_KEYS = (
     QKeySequence("Ctrl+Return"),
     QKeySequence("Ctrl+Enter"),
 )
+
+
+def primary_action_display() -> str:
+    """How the dual primary-action binding reads for a human, in the platform's own spelling.
+
+    A function, not a module-level constant: ``NativeText`` reads through whatever Qt
+    translator is installed when it is *called*. A constant would freeze in whatever
+    translator (or none) was installed at import time, which is before ``i18n.py``
+    installs ``qtbase_<lang>.qm``.
+    """
+    return _PRIMARY_ACTION_KEYS[1].toString(QKeySequence.SequenceFormat.NativeText)
 
 
 def scoped_shortcut(

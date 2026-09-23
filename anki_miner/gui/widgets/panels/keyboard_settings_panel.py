@@ -22,6 +22,7 @@ from anki_miner.gui.utils.key_bindings import (
     overrides_for,
     resolve_bindings,
 )
+from anki_miner.gui.utils.keyboard_shortcuts import primary_action_display
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.utils.i18n import tr_format
@@ -63,10 +64,13 @@ class KeyboardSettingsPanel(FormPanel):
 
     def _setup_fields(self) -> None:
         self.helper_label = QLabel(
-            self.tr(
-                "Click a box and press the new key. Changes apply at once. A Word Curator window that is "
-                "already open keeps its keys until it next opens. The arrow keys always move between words, "
-                "and Ctrl+Enter always confirms."
+            tr_format(
+                self.tr(
+                    "Click a box and press the new key. Changes apply at once. A Word Curator window that is "
+                    "already open keeps its keys until it next opens. Up and Down always move between words, "
+                    "Left and Right move between columns, and %1 always confirms."
+                ),
+                primary_action_display(),
             )
         )
         self.helper_label.setObjectName("helper-text")

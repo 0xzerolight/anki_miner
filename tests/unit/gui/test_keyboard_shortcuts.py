@@ -8,11 +8,18 @@ is ``Ctrl+Return`` (plus the keypad ``Ctrl+Enter``) and every shortcut is scoped
 the widget that owns it.
 """
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QKeySequence
-from PyQt6.QtWidgets import QLineEdit, QVBoxLayout, QWidget
+import os
 
-from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut, scoped_shortcut
+import pytest
+from PyQt6.QtCore import QLibraryInfo, QLocale, Qt, QTranslator
+from PyQt6.QtGui import QKeySequence
+from PyQt6.QtWidgets import QApplication, QLineEdit, QVBoxLayout, QWidget
+
+from anki_miner.gui.utils.keyboard_shortcuts import (
+    primary_action_display,
+    primary_action_shortcut,
+    scoped_shortcut,
+)
 
 
 class _Host(QWidget):
@@ -149,3 +156,26 @@ class TestPrimaryActionShortcut:
         qtbot.keyClick(host.edit, Qt.Key.Key_Return, Qt.KeyboardModifier.ControlModifier)
 
         assert fired == []
+
+
+class TestPrimaryActionDisplay:
+    """FIX 1: the confirm key must localize like every other displayed key."""
+
+    def test_matches_ctrl_enters_own_native_text(self, qapp):
+        # Locale-agnostic: whatever NativeText says for Ctrl+Enter right now
+        # (default English in the plain test suite) is what this must return.
+        assert primary_action_display() == QKeySequence("Ctrl+Enter").toString(QKeySequence.SequenceFormat.NativeText)
+
+    def test_german_qtbase_translator_yields_strg_enter(self, qapp):
+        translations_path = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+        qm_path = os.path.join(translations_path, "qtbase_de.qm")
+        if not os.path.exists(qm_path):
+            pytest.skip("qtbase_de.qm not present in this Qt install")
+        translator = QTranslator()
+        assert translator.load(QLocale("de"), "qtbase", "_", translations_path)
+        app = QApplication.instance()
+        app.installTranslator(translator)
+        try:
+            assert primary_action_display() == "Strg+Enter"
+        finally:
+            app.removeTranslator(translator)

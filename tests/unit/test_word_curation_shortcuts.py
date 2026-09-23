@@ -9,6 +9,8 @@ import pytest
 from PyQt6.QtCore import QItemSelection, QItemSelectionModel, Qt
 from PyQt6.QtWidgets import QApplication, QDialog, QTableWidget
 
+from anki_miner.gui.utils.keyboard_shortcuts import primary_action_display
+
 
 @pytest.fixture
 def dialog(qtbot, make_tokenized_words):
@@ -312,9 +314,11 @@ class TestKeyHints:
     """
 
     def test_the_shipped_hint_line(self, dialog):
-        assert dialog.key_hint_label.text() == (
-            "S include/exclude · D mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm"
-        )
+        # Locale-agnostic: the confirm piece is NativeText, so it reads "Strg+Enter"
+        # under a German qtbase translator, not the literal "Ctrl+Enter".
+        text = dialog.key_hint_label.text()
+        assert text.startswith("S include/exclude · D mark known · Ctrl+A include visible · Ctrl+D exclude visible · ")
+        assert text.endswith(f"{primary_action_display()} confirm")
 
     def test_the_known_key_is_described_in_the_buttons_vocabulary(self, dialog):
         """D IS the Add to Known Words button, so the hint borrows its noun.

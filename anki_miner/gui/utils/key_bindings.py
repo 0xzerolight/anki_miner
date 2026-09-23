@@ -32,7 +32,7 @@ from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt
 from PyQt6.QtGui import QKeySequence
 
 from anki_miner.gui.capabilities import MAIN_TAB_ORDER
-from anki_miner.gui.utils.keyboard_shortcuts import PRIMARY_ACTION_DISPLAY
+from anki_miner.gui.utils.keyboard_shortcuts import primary_action_display
 
 #: Context every action label is extracted and translated under.
 TRANSLATION_CONTEXT = "KeyBindings"
@@ -261,7 +261,7 @@ def about_rows(keys: Mapping[str, QKeySequence]) -> list[tuple[str, str]]:
         open_settings = QCoreApplication.translate("AboutDialog", "Open Settings")
         rows.append((display_text(keys["app.open_settings"]), open_settings))
     main_action = QCoreApplication.translate("AboutDialog", "Run this screen's main action")
-    rows.append((PRIMARY_ACTION_DISPLAY, main_action))
+    rows.append((primary_action_display(), main_action))
     if not keys["app.usage_guide"].isEmpty():
         usage_guide = QCoreApplication.translate("AboutDialog", "Usage Guide")
         rows.append((display_text(keys["app.usage_guide"]), usage_guide))

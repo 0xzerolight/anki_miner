@@ -11,6 +11,7 @@ from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.utils.key_bindings import KEY_ACTIONS
+from anki_miner.gui.utils.keyboard_shortcuts import primary_action_display
 from anki_miner.gui.widgets.panels import KeyboardSettingsPanel
 
 PORTABLE = QKeySequence.SequenceFormat.PortableText
@@ -153,3 +154,15 @@ def test_esc_cancels_a_recording_and_keeps_the_binding(panel, qtbot):
 
 def test_the_page_says_an_open_curator_keeps_its_keys(panel):
     assert "already open" in panel.helper_label.text()
+
+
+def test_the_helper_text_states_the_true_arrow_key_split(panel):
+    """Up/Down move between words; Left/Right move between columns -- not "the arrow keys"."""
+    text = panel.helper_label.text()
+    assert "Up and Down" in text
+    assert "Left and Right" in text
+
+
+def test_the_helper_text_confirm_key_is_localized(panel):
+    """FIX 1: the confirm key in the helper prose is NativeText, not a literal "Ctrl+Enter"."""
+    assert primary_action_display() in panel.helper_label.text()

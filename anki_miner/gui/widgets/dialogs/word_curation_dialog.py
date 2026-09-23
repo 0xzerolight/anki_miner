@@ -52,8 +52,8 @@ from anki_miner.gui.utils.content_text import content_cell_font, content_phrase_
 from anki_miner.gui.utils.fonts import make_scaled_font
 from anki_miner.gui.utils.key_bindings import display_text, resolve_bindings
 from anki_miner.gui.utils.keyboard_shortcuts import (
-    PRIMARY_ACTION_DISPLAY,
     disown_default_buttons,
+    primary_action_display,
     primary_action_shortcut,
     scoped_shortcut,
 )
@@ -759,7 +759,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             pieces.append(tr_format(self.tr("%1 next word"), key))
         if key := self._key_text("curator.previous_word"):
             pieces.append(tr_format(self.tr("%1 previous word"), key))
-        pieces.append(tr_format(self.tr("%1 confirm"), PRIMARY_ACTION_DISPLAY))
+        pieces.append(tr_format(self.tr("%1 confirm"), primary_action_display()))
         self.key_hint_label = QLabel(" · ".join(pieces))
         self.key_hint_label.setObjectName("curator-key-hints")
         self.key_hint_label.setFont(self._make_font(11))
