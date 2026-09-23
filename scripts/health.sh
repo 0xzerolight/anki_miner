@@ -49,8 +49,11 @@ run_hard     "ruff"       "${BIN}ruff" check .
 run_hard     "mypy"       "${BIN}mypy" anki_miner
 # "and not e2e" is load-bearing: a CLI -m REPLACES the addopts -m "not e2e",
 # so omitting it here re-included the explicit-activation-only e2e tests,
-# which need a live Anki and mutate a real (test) deck.
-run_hard     "pytest"     "${BIN}pytest" -m "not youtube and not asr and not e2e and not golden"
+# which need a live Anki and mutate a real (test) deck. "and not golden" keeps
+# the Android engine-parity exporter tests out: they clone the pinned engine
+# revision and run real exports, deliberately decoupled from desktop CI (ci.yml
+# excludes them too). Don't re-gate them onto this step.
+run_hard     "pytest"    "${BIN}pytest" -m "not youtube and not asr and not e2e and not golden"
 # Mirrors CI's dedicated `test-asr` job (ci.yml): the asr-marked suite runs
 # separately from the main pytest step above, which excludes it. Needs the
 # [asr]/[asr-vulkan] extras in the venv; without them the asr tests skip via

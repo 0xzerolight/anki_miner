@@ -305,6 +305,13 @@ class FilePairMatcher:
         - S01E05.mkv ↔ 05.srt (both episode 5)
         - video_1.mp4 ↔ episode_01.ass (both episode 1, different padding)
 
+        The show name is discarded, so a folder holds one show (Issue #39):
+        two shows sharing episode numbers in one folder is unsupported by
+        design. Name-based matching was deleted; every batch path routes
+        through here (batch_processing_tab, batch_queue_worker, queue_panel,
+        deck_builder_tab, subtitle_retime_tab, condense_tab), so don't bring
+        it back without rewiring all six.
+
         Args:
             video_folder: Folder containing video files
             subtitle_folder: Folder containing subtitle files

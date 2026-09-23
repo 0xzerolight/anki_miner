@@ -24,6 +24,11 @@ from anki_miner.services._sqlite_index import open_readonly as open_readonly
 from anki_miner.services._sqlite_index import read_meta as read_meta
 from anki_miner.services._sqlite_index import write_meta as write_meta
 
+# v2 = NFC-normalized expression/reading keys (a forced-reimport bump).
+# Unlike the dict/pitch/freq families, no ``source.<ext>`` copy is kept in the
+# slot (packs are gigabytes of audio): Reimport All rebuilds from the absolute
+# path recorded in meta (``pack_dir``, or ``source_db`` for android_db) and
+# reports, never prompts for, a pack whose source has moved.
 SCHEMA_VERSION = 2
 
 _SCHEMA_SQL = """

@@ -60,6 +60,12 @@ def select(
     ``card_count`` in the preview — it does NOT shrink the returned candidate set.
     Pass an empty set to model "mine everything".
 
+    Coverage % is ``sum(counts[lemma] for candidate) / total_tokens`` over the
+    corpus's own mineable-word token counts (from ``count_lemmas``), NOT over
+    ``frequency.csv``. The build must reproduce this raw-lemma preview, which
+    is why ``DeckBuilderWorker`` bypasses the optional filters; diverging here
+    is the "promised 2,401, built 51" bug (see ``deck_builder_worker.py``).
+
     Args:
         counts: Lemma → occurrence count for the full corpus.
         mode: Selection strategy (:class:`~anki_miner.models.deck_build.DeckSelectionMode`).

@@ -30,6 +30,11 @@ CORPUS_PATH = REPOSITORY_ROOT / "tests" / "fixtures" / "goldens" / "tokenizer-v1
 V2_INPUT_PATH = REPOSITORY_ROOT / "tests" / "fixtures" / "goldens" / "engine-v2-input.json"
 V2_SCHEMA_PATH = REPOSITORY_ROOT / "tests" / "fixtures" / "goldens" / "engine-v2.schema.json"
 PREPARE_UNIDIC_PATH = REPOSITORY_ROOT / "scripts" / "prepare_golden_unidic.py"
+# Mirrors the same line in scripts/engine_golden_contract_v2.py, a regex seam
+# that engine-sync in anki_miner_android substitutes; keep this exact form.
+# That file and the other two exporter scripts are sha256-attested on the
+# Android side, so editing them (even a comment) breaks engine-sync until the
+# attestations there are refreshed.
 PINNED_ENGINE_REVISION = "ba3b3cfbcc53e57a440c8b9f157209851408c62a"
 
 

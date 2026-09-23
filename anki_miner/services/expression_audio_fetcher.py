@@ -1,4 +1,14 @@
-"""Expression audio fetchers: JPod101 and chained composite."""
+"""Expression audio fetchers: JPod101 and chained composite.
+
+Word audio (Issue #73) is on iff ``anki_fields["expression_audio"]`` is
+mapped; there is no separate config flag, as with frequency and pitch. The
+fetcher is always a :class:`ChainedExpressionAudioFetcher` over
+``config.expression_audio_chain`` (kinds: pack, jpod101, googletts, edgetts,
+custom, custom_json), priority order, disabled entries skipped. The default
+chain is per language (``AudioDefaults.default_chain``): Japanese is JPod101
+only, the pre-#73 behaviour. Every fetcher keys on ``mined_form`` + the
+expression reading, never the lemma.
+"""
 
 import contextlib
 import hashlib
