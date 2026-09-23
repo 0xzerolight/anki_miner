@@ -73,6 +73,13 @@ class TestDebounceWiring:
         box.setChecked(not box.isChecked())
         assert tab._debounce_timer.isActive()
 
+    def test_sentences_panel_checkbox_arms_debounce(self, tab):
+        # Sentences panel joined _wire_edit_signals' explicit tuple in T9;
+        # this pins that it wasn't left out.
+        box = tab.sentences_panel.bold_target_in_sentence_checkbox
+        box.setChecked(not box.isChecked())
+        assert tab._debounce_timer.isActive()
+
     def test_nested_file_selector_arms_debounce(self, tab, tmp_path):
         # Filtering panel's blacklist FileSelector only exposes edits through
         # its nested QLineEdit — recursion in the wiring is load-bearing.

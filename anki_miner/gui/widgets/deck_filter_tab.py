@@ -137,7 +137,7 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
         hint = QLabel(
             self.tr(
                 "Copy the worth-learning part of a premade deck into a new deck. "
-                "Filters come from Settings → Filtering; the source deck is not modified."
+                "Filters come from Settings → Word Filters; the source deck is not modified."
             )
         )
         hint.setWordWrap(True)

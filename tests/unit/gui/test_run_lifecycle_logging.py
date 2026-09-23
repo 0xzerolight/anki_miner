@@ -335,7 +335,7 @@ class TestSingleEpisodeRunFields:
         assert f"deck={single_tab.config.anki_deck_name}" in line
         assert f"note_type={single_tab.config.anki_note_type}" in line
         assert "language=ja" in line
-        assert "review_words=False" in line
+        assert "review_words=True" in line  # Single always curates.
 
     def test_cancel_is_recorded_as_a_run_control(self, single_tab, lifecycle_log, tmp_path):
         _start_single_run(single_tab, tmp_path)

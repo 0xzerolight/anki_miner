@@ -106,13 +106,13 @@ class KnownWordsManagerDialog(ScreenIssueHost, QDialog):
         # only thing that keeps another language's deck out of its known words.
         if self._excluded_decks:
             exclusions_text = tr_format(
-                self.tr("Decks this language's known-words scan skips: %1. Change them in Settings → Filtering."),
+                self.tr("Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters."),
                 ", ".join(self._excluded_decks),
             )
         else:
             exclusions_text = self.tr(
                 "Every deck is scanned for this language, including decks in another language written in the same "
-                "script. Exclude them in Settings → Filtering."
+                "script. Exclude them in Settings → Word Filters."
             )
         self.exclusions_label = QLabel(exclusions_text)
         self.exclusions_label.setObjectName("helper-text")

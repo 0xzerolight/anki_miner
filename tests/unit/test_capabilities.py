@@ -157,6 +157,12 @@ def test_subtitle_regex_targets_sentences() -> None:
     assert capability.target == CapabilityTarget("settings", "sentences")
 
 
+def test_bold_target_word_targets_sentences() -> None:
+    # Moved off Filtering with the rest of the sentence-content settings (T9).
+    capability = next(c for c in CAPABILITIES if c.id == "bold-target-word")
+    assert capability.target == CapabilityTarget("settings", "sentences")
+
+
 def test_subtitle_file_mining_is_findable() -> None:
     hits = search("srt")
     capability = next(c for c in hits if c.id == "subtitle-file-mining")

@@ -163,6 +163,13 @@ class TestRenamedDestinations:
 
         assert "filtering.sentence_rule_combo" in results
 
+    def test_the_filtering_destination_name_also_finds_the_sentences_page(self, entries):
+        """These settings used to live on Filtering; the old name still reaches
+        them on the Sentences page they moved to (T9)."""
+        results = _ids(search(entries, "filtering"))
+
+        assert any(result.startswith("sentences.") for result in results)
+
     def test_the_old_subtitles_tab_name_still_finds_its_page(self, entries):
         results = _ids(search(entries, "subtitles"))
 

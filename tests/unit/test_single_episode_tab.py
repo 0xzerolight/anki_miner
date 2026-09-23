@@ -1084,7 +1084,7 @@ def test_timing_no_lines_reports_an_issue_and_reenables(tab, tmp_path, qtbot):
 
     mock_info.assert_not_called()
     issue = tab.issue_banner().current_issue()
-    assert issue.summary == "No subtitle lines to preview — check the filter in Settings → Filtering."
+    assert issue.summary == "No subtitle lines to preview — check the filter in Settings → Sentences."
     assert tab.timing_button.isEnabled()
 
 
