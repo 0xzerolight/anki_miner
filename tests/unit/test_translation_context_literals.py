@@ -74,3 +74,50 @@ def test_every_extractable_string_has_a_literal_context():
         "pylupdate6 drops these strings: the context must be a string literal at "
         "the call, not a module constant. Spell the context out."
     )
+
+
+def _wrapper_literal_call_sites() -> list[str]:
+    """Sites calling a local ``_tr``-style wrapper with a bare string literal.
+
+    A wrapper whose own ``translate``/``QT_TRANSLATE_NOOP`` call passes its text
+    parameter through unchanged (e.g. ``_tr`` in ``capability_browser.py``,
+    ``frequency_import_flow.py``, ``pitch_import_flow.py``,
+    ``progress_telemetry.py``, ``service_factory.py``) is invisible to
+    ``pylupdate6`` -- neither argument at that inner call is a literal. Calling
+    it with a literal at the *use* site (not a registry value declared with
+    ``QT_TRANSLATE_NOOP`` elsewhere) is therefore the same silent drop.
+    """
+    dropped: list[str] = []
+    for path in sorted(GUI_ROOT.rglob("*.py")):
+        source = path.read_text(encoding="utf-8")
+        if "translate" not in source and "QT_TRANSLATE_NOOP" not in source:
+            continue
+        tree = ast.parse(source)
+        relpath = path.relative_to(REPO_ROOT).as_posix()
+        wrapper_names: set[str] = set()
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            params = {a.arg for a in (*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs)}
+            for sub in ast.walk(node):
+                if not isinstance(sub, ast.Call) or len(sub.args) < 2 or _call_name(sub.func) not in _EXTRACTED_CALLS:
+                    continue
+                text = sub.args[1]
+                if isinstance(text, ast.Name) and text.id in params:
+                    wrapper_names.add(node.name)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+                continue
+            if node.func.id in wrapper_names and node.args and _is_str_literal(node.args[0]):
+                dropped.append(f"{relpath}:{node.lineno}")
+    return dropped
+
+
+def test_tr_wrapper_helpers_reject_bare_literal_arguments():
+    dropped = _wrapper_literal_call_sites()
+    assert dropped == [], (
+        "these call a local translate()-wrapper (e.g. _tr) with a bare string "
+        "literal, which pylupdate6 cannot see through: call "
+        "QCoreApplication.translate('Context', '...') directly instead. "
+        f"Sites: {dropped}"
+    )
