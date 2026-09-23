@@ -1,3 +1,4 @@
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -255,3 +256,21 @@ def test_readme_sends_readers_to_the_per_language_resources_doc() -> None:
     section = readme.split("\n## Recommended Resources\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
     assert "[RESOURCES.md](RESOURCES.md)" in section
     assert "| Type | Resource |" not in section
+
+
+_READMEI18N = importlib.util.spec_from_file_location("readme_i18n", ROOT / "scripts" / "readme_i18n.py")
+assert _READMEI18N is not None and _READMEI18N.loader is not None
+readme_i18n = importlib.util.module_from_spec(_READMEI18N)
+_READMEI18N.loader.exec_module(readme_i18n)
+
+
+@pytest.mark.parametrize("code", available_languages())
+def test_wizard_resources_link_lands_on_its_language_section(code: str) -> None:
+    from anki_miner.gui.widgets.dialogs.setup_wizard.pages import RESOURCES_HELP_URL, resources_help_url
+
+    base, _, anchor = resources_help_url(code).partition("#")
+    assert base == RESOURCES_HELP_URL
+    text = _resources_text()
+    slugs = {readme_i18n.slugify(line[3:]) for line in text.splitlines() if line.startswith("## ")}
+    assert anchor in slugs
+    assert f"](#{anchor})" in text  # the jump index links it
