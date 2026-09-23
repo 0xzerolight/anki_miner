@@ -25,6 +25,7 @@ untranslated on purpose -- they preserve English/romaji jargon users type (like
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication
@@ -51,16 +52,60 @@ SETTINGS_SUBTABS: frozenset[str] = frozenset(
         "ui",
     }
 )
+# The Utilities tab's tools, in tab-bar order. SubtitlesTab builds its inner
+# tabs in this order and Settings -> Appearance & Language shows one checkbox
+# per key, so this tuple and SUBTAB_KEYS["subtitles"] are the same set.
+UTILITY_SUBTABS: tuple[str, ...] = (
+    "generate",
+    "retime",
+    "condense",
+    "backfill",
+    "deckfilter",
+    "download",
+    "mokuro",
+    "booksync",
+)
 # Valid sub-tab keys per container main tab (resolved by the container's
 # duck-typed ``open_subtab``). Main tabs absent here have no sub-tabs.
 SUBTAB_KEYS: dict[str, frozenset[str]] = {
     "settings": SETTINGS_SUBTABS,
     "video": frozenset({"single", "batch", "youtube"}),
     "reading": frozenset({"manga", "novels", "subtitles", "text"}),
-    "subtitles": frozenset(
-        {"generate", "retime", "condense", "backfill", "deckfilter", "download", "mokuro", "booksync"}
-    ),
+    "subtitles": frozenset(UTILITY_SUBTABS),
 }
+
+
+def utility_labels() -> dict[str, str]:
+    """Each Utilities tool's translated tab label, keyed, in tab-bar order.
+
+    One table for the tab bar and the Settings checkboxes, so the two always
+    name a tool the same way. The strings keep the ``MainWindow`` context they
+    have always had, and each stays a literal ``translate`` call: pylupdate
+    reads the source, so a label built any other way is never extracted.
+    """
+    return {
+        "generate": QCoreApplication.translate("MainWindow", "Generate"),
+        "retime": QCoreApplication.translate("MainWindow", "Retime"),
+        "condense": QCoreApplication.translate("MainWindow", "Condense"),
+        "backfill": QCoreApplication.translate("MainWindow", "Card Backfill"),
+        "deckfilter": QCoreApplication.translate("MainWindow", "Deck Filter"),
+        "download": QCoreApplication.translate("MainWindow", "Download"),
+        "mokuro": QCoreApplication.translate("MainWindow", "Manga OCR"),
+        "booksync": QCoreApplication.translate("MainWindow", "Audiobook Sync"),
+    }
+
+
+def effective_hidden_utilities(stored: Iterable[str]) -> frozenset[str]:
+    """The Utilities tools to leave off the tab, from ``config.hidden_utilities``.
+
+    Keys no tool answers to (a hand edit, a tool from another version) are
+    dropped. A stored list naming every tool hides none: the tab always shows
+    at least one tool, and Settings will not uncheck the last box, so only a
+    hand-edited file gets here.
+    """
+    hidden = frozenset(stored) & frozenset(UTILITY_SUBTABS)
+    return frozenset() if len(hidden) == len(UTILITY_SUBTABS) else hidden
+
 
 # Display categories (deduped; translated at display time).
 _CAT_WORKFLOWS = QT_TRANSLATE_NOOP("Capabilities", "Mining workflows")
@@ -1132,6 +1177,18 @@ CAPABILITIES: tuple[Capability, ...] = (
         category=_CAT_APPEARANCE,
         target=CapabilityTarget("settings", "ui"),
         keywords=("file dialog", "native picker", "browse window", "file chooser"),
+    ),
+    Capability(
+        id="utilities-visibility",
+        title=QT_TRANSLATE_NOOP("Capabilities", "Choose the tools on the Utilities tab"),
+        description=QT_TRANSLATE_NOOP(
+            "Capabilities",
+            "Hide the Utilities tools you do not use, or bring them back, under Settings -> Appearance & Language. "
+            "A hidden tool keeps its entry here; its Open button leads to that checkbox.",
+        ),
+        category=_CAT_APPEARANCE,
+        target=CapabilityTarget("settings", "ui"),
+        keywords=("hide tools", "show tools", "utilities", "tools tab", "declutter", "customize tabs"),
     ),
     Capability(
         id="settings-search",
