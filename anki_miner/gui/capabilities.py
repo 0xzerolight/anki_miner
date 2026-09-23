@@ -60,6 +60,7 @@ SETTINGS_SUBTABS: frozenset[str] = frozenset(
         "youtube",
         "subtitles",
         "ui",
+        "keyboard",
     }
 )
 # The Utilities tab's tools, in tab-bar order. SubtitlesTab builds its inner
@@ -1375,10 +1376,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Keyboard shortcuts"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -> About.",
+            "See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.",
         ),
         category=_CAT_TOOLS,
-        keywords=("shortcuts", "hotkeys", "keybindings", "keyboard", "f1"),
+        target=CapabilityTarget("settings", "keyboard"),
+        keywords=("shortcuts", "hotkeys", "keybindings", "key bindings", "keyboard", "remap", "rebind", "f1"),
     ),
 )
 
