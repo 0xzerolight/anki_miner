@@ -45,7 +45,14 @@ class _RevealTarget(Protocol):
 
 
 def _tr(text: str) -> str:
-    """Localise a registry string under the shared Capabilities context."""
+    """Localise a registry value already declared with ``QT_TRANSLATE_NOOP``.
+
+    Only for category/title/description values registered in
+    ``gui/capabilities.py``. Never call this with a string literal here:
+    ``pylupdate6`` cannot see through the wrapper, so a literal argument would
+    never reach the catalogues. Use ``QCoreApplication.translate("Capabilities",
+    "...")`` directly for those instead.
+    """
     return QCoreApplication.translate(TRANSLATION_CONTEXT, text)
 
 
@@ -54,7 +61,7 @@ class CapabilityBrowser(QDialog):
 
     def __init__(self, parent: QWidget | None = None, capabilities: frozenset[str] | None = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle(_tr("Anki Miner Usage Guide"))
+        self.setWindowTitle(QCoreApplication.translate("Capabilities", "Anki Miner Usage Guide"))
         self.setObjectName("capability-browser")
         self.resize(560, 600)
 
@@ -71,7 +78,9 @@ class CapabilityBrowser(QDialog):
 
         self.search_box = QLineEdit()
         self.search_box.setObjectName("capability-search")
-        self.search_box.setPlaceholderText(_tr('Search features, e.g. "i+1", "pitch", "youtube"'))
+        self.search_box.setPlaceholderText(
+            QCoreApplication.translate("Capabilities", 'Search features, e.g. "i+1", "pitch", "youtube"')
+        )
         self.search_box.setClearButtonEnabled(True)
         self.search_box.textChanged.connect(self._apply_filter)
         layout.addWidget(self.search_box)
@@ -85,7 +94,7 @@ class CapabilityBrowser(QDialog):
         self._scroll.setWidget(self._list_container)
         layout.addWidget(self._scroll, stretch=1)
 
-        self._empty_label = QLabel(_tr("No matching features."))
+        self._empty_label = QLabel(QCoreApplication.translate("Capabilities", "No matching features."))
         self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._empty_label.hide()
         layout.addWidget(self._empty_label)
@@ -148,7 +157,7 @@ class CapabilityBrowser(QDialog):
         row_layout.addLayout(text_col, stretch=1)
 
         if cap.target is not None:
-            open_button = QPushButton(_tr("Open ▸"))
+            open_button = QPushButton(QCoreApplication.translate("Capabilities", "Open ▸"))
             open_button.setObjectName("capability-open")
             # default=False so Enter in the search box doesn't fire a random row.
             open_button.setAutoDefault(False)
