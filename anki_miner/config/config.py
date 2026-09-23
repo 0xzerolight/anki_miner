@@ -685,6 +685,13 @@ class AnkiMinerConfig:
     # switches to Qt's built-in dialog, which also follows the app's QSS theme.
     # Consumed via gui/utils/file_dialogs.set_use_native.
     use_native_file_dialogs: bool = True
+    # Utilities tools the user took off the Utilities tab (Settings -> Appearance
+    # & Language), by stable sub-tab key (gui/capabilities.UTILITY_SUBTABS).
+    # Hidden keys only, so a tool added in a later release shows by default.
+    # Read through capabilities.effective_hidden_utilities: unknown keys are
+    # ignored and a list naming every tool hides none. Global and portable:
+    # not language-scoped, not machine-specific.
+    hidden_utilities: tuple[str, ...] = ()
 
     # Monotonic identity for committed GUI settings. Not user-editable.
     config_version: int = 0
@@ -808,6 +815,9 @@ class AnkiMinerConfig:
         # so the frozen dataclass stays internally immutable.
         if isinstance(self.theme_favorites, list):
             object.__setattr__(self, "theme_favorites", tuple(self.theme_favorites))
+        # JSON round-trip yields a list for hidden_utilities; coerce to tuple.
+        if isinstance(self.hidden_utilities, list):
+            object.__setattr__(self, "hidden_utilities", tuple(self.hidden_utilities))
         # JSON round-trip yields a list for excluded_decks; coerce to tuple.
         if isinstance(self.excluded_decks, list):
             object.__setattr__(self, "excluded_decks", tuple(self.excluded_decks))

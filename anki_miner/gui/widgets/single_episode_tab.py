@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
 )
 
 from anki_miner.config import AnkiMinerConfig
-from anki_miner.gui.capabilities import CapabilityTarget
+from anki_miner.gui.capabilities import CapabilityTarget, effective_hidden_utilities
 from anki_miner.gui.constants import (
     SUBTITLE_FILE_FILTER,
     SUBTITLE_OFFSET_MAX,
@@ -631,6 +631,7 @@ class SingleEpisodeTab(MiningTabBase):
                     audio_track_override=self._audio_track_override,
                     audio_track_codes=get_profile(config_language(self.config)).audio_track_codes,
                     content_style=get_profile(config_language(self.config)).content_style,
+                    offer_align="retime" not in effective_hidden_utilities(self.config.hidden_utilities),
                 )
                 # Nothing happens until exec() returns: the viewer holds a live mpv
                 # core and releases it on the way out, so navigating (or writing the

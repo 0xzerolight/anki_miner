@@ -7,6 +7,8 @@ This is the "UI" Settings sub-tab. Top to bottom it offers:
 * Zoom (whole-UI scale) and Text size, both restart-to-apply (D39b-A). Text size
   commits instantly and offers *Restart now* / *Later*; changing it relayouts the
   whole window, so unlike theme there is no instant path to have.
+* Which tools the Utilities tab shows: one checkbox per tool, committed at once.
+  Emits ``hidden_utilities_changed``.
 * The theme gallery (shipped + user-installed), rendered as preview cards by
   ``ThemeGalleryWidget``, with:
   - Live preview when a card is clicked — the active theme actually changes so
@@ -34,11 +36,12 @@ import logging
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, QUrl, pyqtSignal
-from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtGui import QDesktopServices, QFont
 from PyQt6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QVBoxLayout,
@@ -47,8 +50,9 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui import restart
+from anki_miner.gui.capabilities import effective_hidden_utilities, utility_labels
 from anki_miner.gui.i18n import available_languages
-from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
 from anki_miner.gui.resources.styles.theme import (
     CONTRAST_ROLE_MUTED_TEXT,
     CONTRAST_ROLE_PRIMARY_LABEL,
@@ -57,6 +61,7 @@ from anki_miner.gui.resources.styles.theme import (
     Theme,
     assess_theme_contrast,
 )
+from anki_miner.gui.utils.fonts import make_scaled_font
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, SettingAnchorHost
 from anki_miner.gui.widgets.enhanced import ModernButton, ThemeGalleryWidget
 from anki_miner.gui.widgets.enhanced.theme_preview import clear_thumbnail_cache
@@ -107,6 +112,8 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         zoom_changed: Emitted with the new whole-UI zoom factor.
         language_changed: Emitted with the selected language code when the user
             picks a new UI language (not on programmatic ``set_language``).
+        hidden_utilities_changed: Emitted with the tuple of hidden Utilities
+            tool keys, in tab order, after the user toggles a tool.
     """
 
     ANCHOR_NAMESPACE = "ui"
@@ -117,6 +124,7 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
     zoom_changed = pyqtSignal(float)
     language_changed = pyqtSignal(str)
     native_dialogs_changed = pyqtSignal(bool)
+    hidden_utilities_changed = pyqtSignal(tuple)
 
     def __init__(
         self,
@@ -337,6 +345,36 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.native_dialogs_checkbox,
             lambda: (self.native_dialogs_checkbox.text(), self.native_dialogs_checkbox.toolTip()),
         )
+
+        # Which tools the Utilities tab shows: one box per tool, in tab order,
+        # labelled with the tab's own label, checked = shown. Commits at once
+        # like the file-dialog box above. The last checked box is disabled so
+        # the tab always keeps a tool.
+        utilities_heading = QLabel(self.tr("Utilities tab"))
+        utilities_heading.setFont(make_scaled_font(FONT_SIZES.body_sm, QFont.Weight.DemiBold))
+        layout.addWidget(utilities_heading)
+        utilities_hint = QLabel(self.tr("Choose which tools the Utilities tab shows. At least one stays."))
+        utilities_hint.setObjectName("helper-text")
+        utilities_hint.setWordWrap(True)
+        layout.addWidget(utilities_hint)
+        utilities_grid = QGridLayout()
+        utilities_grid.setHorizontalSpacing(SPACING.md)
+        utilities_grid.setVerticalSpacing(SPACING.xs)
+        self.utility_checkboxes: dict[str, QCheckBox] = {}
+        for position, (key, label) in enumerate(utility_labels().items()):
+            box = QCheckBox(label)
+            box.setChecked(True)
+            box.toggled.connect(self._on_utility_toggled)
+            utilities_grid.addWidget(box, position // 2, position % 2)
+            self.utility_checkboxes[key] = box
+
+            def _search_text(box: QCheckBox = box) -> tuple[str, ...]:
+                return (box.text(), utilities_heading.text())
+
+            self.register_setting(f"utility_{key}", box, _search_text)
+        # Keeps the two columns left-aligned instead of spreading them apart.
+        utilities_grid.setColumnStretch(2, 1)
+        layout.addLayout(utilities_grid)
 
         # Theme selection. Same position in the panel as the list it replaces;
         # the intro explains the card behaviour, so it sits directly above.
@@ -665,6 +703,19 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._use_native_file_dialogs = checked
         self.native_dialogs_changed.emit(checked)
 
+    def _on_utility_toggled(self, _checked: bool) -> None:
+        """Persist which Utilities tools are hidden (applies at once)."""
+        self._sync_utility_lock()
+        self.hidden_utilities_changed.emit(
+            tuple(key for key, box in self.utility_checkboxes.items() if not box.isChecked())
+        )
+
+    def _sync_utility_lock(self) -> None:
+        """Disable the only checked box, so the Utilities tab always keeps a tool."""
+        checked = sum(box.isChecked() for box in self.utility_checkboxes.values())
+        for box in self.utility_checkboxes.values():
+            box.setEnabled(checked > 1 or not box.isChecked())
+
     def _on_font_scale_selected(self, index: int) -> None:
         """Persist the preset the user picked and reveal the restart note.
 
@@ -792,6 +843,17 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.native_dialogs_checkbox.setChecked(config.use_native_file_dialogs)
         finally:
             self.native_dialogs_checkbox.blockSignals(False)
+
+        # Read through the same rule SubtitlesTab applies, so the boxes show
+        # what the tab shows: unknown keys ignored, "every tool hidden" = none.
+        hidden = effective_hidden_utilities(config.hidden_utilities)
+        for key, box in self.utility_checkboxes.items():
+            box.blockSignals(True)
+            try:
+                box.setChecked(key not in hidden)
+            finally:
+                box.blockSignals(False)
+        self._sync_utility_lock()
 
         # The themes folder button and its tooltip must name the config's root;
         # left alone it would open (and create) the PREVIOUS config's directory.

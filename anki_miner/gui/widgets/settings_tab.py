@@ -790,6 +790,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.ui_panel.font_scale_changed.connect(self._on_font_scale_changed)
         self.ui_panel.zoom_changed.connect(self._on_zoom_changed)
         self.ui_panel.native_dialogs_changed.connect(self._on_native_dialogs_changed)
+        self.ui_panel.hidden_utilities_changed.connect(self._on_hidden_utilities_changed)
         self.ui_panel.language_changed.connect(self._on_language_changed)
         # YouTube panel: manual "Update yt-dlp now" → re-emit to MainWindow
         # (app.py routes it to background_tasks.start_ytdlp_update(force=True)).
@@ -1591,6 +1592,16 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         the committed config, so no direct ``file_dialogs`` call here.
         """
         new_config = replace(self.config, use_native_file_dialogs=use_native)
+        self._commit_immediate_config(new_config, self.config_changed.emit)
+
+    def _on_hidden_utilities_changed(self, hidden: tuple) -> None:
+        """Persist which Utilities tools are hidden (applies at once).
+
+        The Utilities tab follows the committed config through
+        ``config_refreshed`` → ``SubtitlesTab.update_config``, so nothing here
+        touches it directly.
+        """
+        new_config = replace(self.config, hidden_utilities=tuple(hidden))
         self._commit_immediate_config(new_config, self.config_changed.emit)
 
     def commit_settings(self) -> None:

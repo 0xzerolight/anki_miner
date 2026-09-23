@@ -399,6 +399,15 @@ class TestSubtitleViewerAlign:
             QDialog.DialogCode.Rejected.value,
         )
 
+    def test_align_is_offered_by_default(self, qtbot, fake_mpv):
+        viewer = _viewer(qtbot)
+        assert not viewer.align_button.isHidden()
+
+    def test_align_is_withheld_when_there_is_no_retime_to_hand_to(self, qtbot, fake_mpv):
+        viewer = SubtitleViewer(Path("/tmp/fake.mkv"), ENTRIES, 0.0, offer_align=False)
+        qtbot.addWidget(viewer)
+        assert viewer.align_button.isHidden()
+
     def test_align_releases_the_player_before_the_dialog_closes(self, qtbot, fake_mpv):
         """The core must already be down when the caller is told to navigate."""
         viewer = _viewer(qtbot)

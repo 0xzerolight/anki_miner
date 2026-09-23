@@ -1328,6 +1328,7 @@ def _run_timing_with(tab, qtbot, viewer):
     ):
         tab._on_timing_clicked()
         qtbot.waitUntil(lambda: viewer_cls.called, timeout=3000)
+    return viewer_cls
 
 
 def test_timing_align_result_hands_the_pair_to_retime(tab, tmp_path, qtbot):
@@ -1388,3 +1389,23 @@ def test_timing_align_does_not_apply_the_offset(tab, tmp_path, qtbot):
     _run_timing_with(tab, qtbot, viewer)
 
     assert tab.offset_spinbox.value() == 0.5
+
+
+@pytest.mark.parametrize(
+    ("hidden", "offered"),
+    [((), True), (("retime",), False), (("condense",), True)],
+)
+def test_timing_viewer_offers_align_only_while_retime_is_shown(tab, tmp_path, qtbot, hidden, offered):
+    """No Retime on the Utilities tab means nowhere to hand the pair to."""
+    from dataclasses import replace
+
+    from anki_miner.gui.widgets.subtitle_viewer import SubtitleViewer
+
+    tab.update_config(replace(tab.config, hidden_utilities=hidden))
+    _prime_timing_inputs(tab, tmp_path)
+    viewer = MagicMock()
+    viewer.exec.return_value = SubtitleViewer.DialogCode.Rejected
+
+    viewer_cls = _run_timing_with(tab, qtbot, viewer)
+
+    assert viewer_cls.call_args.kwargs["offer_align"] is offered

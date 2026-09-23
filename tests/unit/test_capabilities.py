@@ -8,9 +8,12 @@ from anki_miner.gui.capabilities import (
     CAPABILITIES,
     MAIN_TABS,
     SUBTAB_KEYS,
+    UTILITY_SUBTABS,
     Capability,
     CapabilityTarget,
+    effective_hidden_utilities,
     search,
+    utility_labels,
 )
 from anki_miner.languages.registry import get_profile
 from tests.unit.languages.test_language_contract import CAPABILITY_VOCABULARY
@@ -329,3 +332,41 @@ def test_gated_setting_entry_is_hidden_from_japanese(cap_id: str) -> None:
     shown = {cap.id for cap in search("", get_profile("ja").capabilities)}
 
     assert cap_id not in shown
+
+
+# ---------------------------------------------------------------------------
+# The Utilities tools (Settings -> Appearance & Language hides them)
+# ---------------------------------------------------------------------------
+
+
+def test_utility_subtabs_are_the_subtitles_container_keys() -> None:
+    assert frozenset(UTILITY_SUBTABS) == SUBTAB_KEYS["subtitles"]
+    assert len(UTILITY_SUBTABS) == len(set(UTILITY_SUBTABS))
+
+
+def test_utility_labels_follow_the_tab_order() -> None:
+    labels = utility_labels()
+
+    assert tuple(labels) == UTILITY_SUBTABS
+    assert labels["mokuro"] == "Manga OCR"
+    assert labels["booksync"] == "Audiobook Sync"
+
+
+def test_unknown_hidden_keys_are_dropped() -> None:
+    assert effective_hidden_utilities(("retime", "no-such-tool")) == frozenset({"retime"})
+
+
+def test_hiding_every_tool_hides_none() -> None:
+    assert effective_hidden_utilities(UTILITY_SUBTABS) == frozenset()
+    assert effective_hidden_utilities((*UTILITY_SUBTABS, "no-such-tool")) == frozenset()
+
+
+def test_hiding_all_but_one_is_honoured() -> None:
+    assert effective_hidden_utilities(UTILITY_SUBTABS[1:]) == frozenset(UTILITY_SUBTABS[1:])
+
+
+def test_the_visibility_setting_has_a_guide_entry() -> None:
+    entry = _entry("utilities-visibility")
+
+    assert entry.target == CapabilityTarget("settings", "ui")
+    assert "tools" in " ".join(entry.keywords)
