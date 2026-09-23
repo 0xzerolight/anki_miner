@@ -103,7 +103,6 @@ class SubtitlesTab(QWidget):
         self._subtab_index: dict[str, int] = {
             key: self._inner_tabs.addTab(tools[key], labels[key]) for key in UTILITY_SUBTABS
         }
-        self._hidden: frozenset[str] = frozenset()
         self.apply_hidden(config.hidden_utilities)
 
         layout = QVBoxLayout()
@@ -130,7 +129,7 @@ class SubtitlesTab(QWidget):
         index = self._subtab_index.get(key)
         if index is None:
             return
-        if key in self._hidden:
+        if not self._inner_tabs.isTabVisible(index):
             # Refused here, not by Qt: setCurrentIndex on a hidden tab switches
             # to its page anyway and shows it with no tab selected.
             logger.debug("Utilities subtab hidden, not opened: key=%s", key)
@@ -173,9 +172,9 @@ class SubtitlesTab(QWidget):
         on show moves the tab to the next visible one — Qt does that inside
         ``setTabVisible``, and the underline follows ``currentChanged``.
         """
-        self._hidden = effective_hidden_utilities(stored)
+        hidden = effective_hidden_utilities(stored)
         for key, index in self._subtab_index.items():
-            self._inner_tabs.setTabVisible(index, key not in self._hidden)
+            self._inner_tabs.setTabVisible(index, key not in hidden)
 
     # ------------------------------------------------------------------
     # Config refresh
