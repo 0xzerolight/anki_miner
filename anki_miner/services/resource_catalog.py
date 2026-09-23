@@ -1,7 +1,8 @@
 """Recommended downloadable resources — single source of truth.
 
-Pure data, no I/O. The URLs here mirror README's "Recommended Resources"
-table; keep the two in sync. A later Qt worker iterates
+Pure data, no I/O. RESOURCES.md lists these URLs, and every language
+catalog's, under that language's heading; tests/unit/test_support_docs.py
+fails when one is missing. A later Qt worker iterates
 :data:`RECOMMENDED_DEFAULT_SET`, downloads each ``url`` via
 ``resource_downloader.download_to_temp``, then routes the temp file to the
 right importer based on ``kind`` (``dict`` → Yomitan importer, ``freq`` →

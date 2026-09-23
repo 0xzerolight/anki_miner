@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:1f8a3147ec4f94c3 -->
+<!-- i18n-source: README.md sha256:d6de3b1fd803053b -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -171,21 +171,7 @@ Licencias de temas: [LICENSE-THEMES.md](../LICENSE-THEMES.md).
 
 ## Recursos Recomendados
 
-Japonés salvo que se indique otra cosa. El asistente de configuración ofrece el conjunto adecuado para tu idioma de minería.
-
-| Tipo | Recurso | Descarga | Añadir vía |
-|------|----------|----------|---------|
-| Diccionario | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Diccionarios -> Añadir diccionario… |
-| Diccionario | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Diccionarios -> Añadir diccionario… |
-| Diccionario | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Generado en el sitio | Diccionarios -> Añadir diccionario… |
-| Acento tonal | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Acento tonal -> Añadir fuente de acento tonal… |
-| Acento tonal | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Acento tonal -> Añadir fuente de acento tonal… |
-| Frecuencia | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Frecuencia -> Añadir fuente de frecuencia… |
-| Frecuencia | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Frecuencia -> Añadir fuente de frecuencia… |
-| Audio de palabras | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | Torrent de la colección o `android.db` generado | Audio -> Añadir fuente de audio… |
-| Diccionario (chino) | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | Diccionarios -> Añadir diccionario… |
-| Diccionario (coreano) | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | Diccionarios -> Añadir diccionario… |
-
+Diccionarios y listas de frecuencia para cada idioma de minería, con enlaces de descarga: [RESOURCES.md](../RESOURCES.md). El asistente de configuración ofrece el conjunto adecuado para tu idioma de minería.
 
 <details>
 <summary><strong>Licencia de JMnedict</strong></summary>

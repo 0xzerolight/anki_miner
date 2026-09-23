@@ -1301,6 +1301,27 @@ def test_notetype_page_empty_fieldlist_shows_unreachable_guidance(qtbot, wiz_con
 # ---------------------------------------------------------------------------
 
 
+def test_resources_help_link_opens_the_active_languages_section(qtbot, wiz_config, monkeypatch):
+    """Read at click time: the wizard's language step runs after this page is built."""
+    from anki_miner.gui.widgets.dialogs.setup_wizard import SetupWizard  # noqa: PLC0415
+    from anki_miner.gui.widgets.dialogs.setup_wizard import pages as pages_mod  # noqa: PLC0415
+
+    wiz = SetupWizard(wiz_config, offer_mining_language=True)
+    qtbot.addWidget(wiz)
+    opened = MagicMock()
+    monkeypatch.setattr(pages_mod, "_open_url", opened)
+    link = wiz.resources_page.help_link
+
+    link.linkActivated.emit(pages_mod.RESOURCES_HELP_URL)
+    opened.assert_called_once_with(f"{pages_mod.RESOURCES_HELP_URL}#japanese")
+
+    assert wiz.language_page is not None
+    wiz.language_page.language_combo.setCurrentIndex(wiz.language_page.language_combo.findData("zh"))
+    assert wiz.language_page.validatePage() is True  # Next commits the pick
+    link.linkActivated.emit(pages_mod.RESOURCES_HELP_URL)
+    assert opened.call_args.args == (f"{pages_mod.RESOURCES_HELP_URL}#chinese",)
+
+
 @pytest.mark.parametrize(
     ("state", "expected_status"),
     [
