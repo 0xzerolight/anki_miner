@@ -130,7 +130,7 @@ Each language is a package plus a set of registration sites. A site you miss eit
    - Add any new card field to its settings row in `gui/widgets/panels/anki_settings_panel.py`.
    - Add a new language-varying config field to `LANGUAGE_SCOPED_FIELDS` (`languages/switching.py`).
 8. **Findability**: add the language's names to the `mining-language` keywords in `gui/capabilities.py`, and its frequency probe terms to `MORE_COMMON_TERMS` / `LESS_COMMON_TERMS` (`services/frequency/mode_probe.py`).
-9. **Docs**: add a CHANGELOG entry, update the README language list and the eleven translations (then `python scripts/readme_i18n.py stamp`), and update [ARCHITECTURE.md](ARCHITECTURE.md#mining-languages).
+9. **Docs**: add a CHANGELOG entry, add the language's section to [RESOURCES.md](RESOURCES.md) (a test checks it against `catalog.py`), update the README language list and the eleven translations (then `python scripts/readme_i18n.py stamp`), and update [ARCHITECTURE.md](ARCHITECTURE.md#mining-languages).
 
 ## Logging
 

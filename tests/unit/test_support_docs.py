@@ -1,7 +1,10 @@
 from pathlib import Path
 
+import pytest
 import yaml
 from PyQt6.QtWidgets import QLabel, QLineEdit
+
+from anki_miner.languages.registry import available_languages, get_profile
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -225,3 +228,22 @@ def test_readme_no_longer_promises_a_pipx_remedy_for_intel_mac() -> None:
     assert "Whisper subtitle generation" not in visible
     assert "pipx install" not in visible
     assert "¹ Excludes AVIF screenshots" in visible
+
+
+def _resources_text() -> str:
+    return (ROOT / "RESOURCES.md").read_text(encoding="utf-8")
+
+
+def _resources_section(heading: str) -> str:
+    text = _resources_text()
+    marker = f"\n## {heading}\n"
+    assert marker in text, f"RESOURCES.md has no '## {heading}' section"
+    return text.split(marker, maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
+
+
+@pytest.mark.parametrize("code", available_languages())
+def test_resources_doc_lists_every_catalog_url_under_its_language(code: str) -> None:
+    """What the setup wizard downloads for a language is what RESOURCES.md lists for it."""
+    profile = get_profile(code)
+    section = _resources_section(profile.english_name)
+    assert [spec.id for spec in profile.catalog if spec.url not in section] == []
