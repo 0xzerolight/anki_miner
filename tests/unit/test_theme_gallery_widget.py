@@ -153,7 +153,7 @@ def _font_px(style_sheet: str) -> int:
 
 
 class TestStarSizing:
-    """The favorite star's box and glyph must track ``ui_font_scale``.
+    """The favorite star's box and glyph must track the text scale.
 
     The deleted tree panel's ``_apply_tree_metrics`` existed for exactly this;
     ``theme_gallery._star_geometry`` is its replacement. A flat pixel constant

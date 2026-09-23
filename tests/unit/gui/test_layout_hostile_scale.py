@@ -1,14 +1,16 @@
 """Layout regressions found by driving the real GUI at a hostile cell.
 
-"Hostile" = 1024x768 (the app's own WINDOW_MIN_* contract) with ui_font_scale 1.5.
+"Hostile" = 1024x768 (the app's own WINDOW_MIN_* contract) with the text scale at 1.5.
 Every assertion here was RED before its fix and is the falsifiable oracle for it --
 the audit's mechanical checkers are throwaway, these are not.
 
-Why font scale and not ui_zoom: QT_SCALE_FACTOR is layout-INERT (measured -- sizeHints
+Why text scale and not ui_zoom: QT_SCALE_FACTOR is layout-INERT (measured -- sizeHints
 are byte-identical at 1.0 and 1.5, only the device-pixel ratio changes). The knob that
-actually stresses layout is the font-only ui_font_scale, and because
-gui/utils/fonts.py bakes pixel_size * Theme.get_font_scale() at widget construction, it
-must be set BEFORE the widget is built.
+actually stresses layout is the font-only text scale (``Theme.set_font_scale`` --
+``ui_font_scale`` was the config field that used to drive it; zoom is the only
+interface-size config field now), and because gui/utils/fonts.py bakes
+pixel_size * Theme.get_font_scale() at widget construction, it must be set BEFORE the
+widget is built.
 """
 
 from __future__ import annotations
@@ -307,7 +309,7 @@ class TestAnalyticsTablesShowUsableRowCount:
 class TestHeaderProfileBlockFitsTheWindowMinimum:
     """Once a second settings profile exists the header carries TWO captions and
     TWO combos beside the branding, and it -- not the tab stack -- is what sets
-    ``MainWindow.minimumSizeHint()``. Measured at ui_font_scale 1.5: header 836px
+    ``MainWindow.minimumSizeHint()``. Measured at a text scale of 1.5: header 836px
     vs tabs 718px, against the app's own ``WINDOW_MIN_WIDTH`` contract of 1024,
     and 718px vs 836px is the profile block's own 118px share of that budget.
 
@@ -580,7 +582,7 @@ class TestSettingsFooterFitsTheWindowMinimum:
     minimum is a hard floor on the tab's width -- the profiles button moved here
     out of Appearance & Language, which could absorb it by scrolling.
 
-    Measured at ui_font_scale 1.5 in the REAL locale against the app's own
+    Measured at a text scale of 1.5 in the REAL locale against the app's own
     ``WINDOW_MIN_WIDTH`` contract. The +25-character pseudo-locale is
     deliberately not stacked on here, for the reason spelled out in
     ``TestHeaderProfileBlockFitsTheWindowMinimum``: applied to four button

@@ -403,7 +403,6 @@ def test_ui_facts_are_collected_on_the_gui_thread(main_window, monkeypatch, tmp_
     assert "dpi=" in facts["screen.0"]
     assert "geometry=" in facts["screen.0"]
     assert facts["ui_language"] == main_window.config.ui_language
-    assert facts["ui_font_scale"] == str(main_window.config.ui_font_scale)
     assert facts["ui_zoom"] == str(main_window.config.ui_zoom)
     assert facts["theme"]
     assert "qt_scale_factor" in facts

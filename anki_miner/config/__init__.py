@@ -1,6 +1,7 @@
 """Configuration management for Anki Miner."""
 
 from .config import (
+    ZOOM_PRESETS,
     AnkiMinerConfig,
     AudioSourceEntry,
     ChainEntry,
@@ -11,6 +12,7 @@ from .config import (
 from .defaults import create_default_config
 
 __all__ = [
+    "ZOOM_PRESETS",
     "AnkiMinerConfig",
     "AudioSourceEntry",
     "ChainEntry",

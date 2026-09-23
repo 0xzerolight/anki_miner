@@ -741,3 +741,32 @@ def test_caps_without_the_legacy_key_are_kept(tmp_path):
     path.write_text(json.dumps({"config_schema_version": 4, **LEGACY}))
     config = GUIConfigManager._parse_and_migrate(path)
     assert (config.max_sentence_duration_seconds, config.max_sentence_chars) == (30.0, 80)
+
+
+@pytest.mark.parametrize(
+    "font, zoom, expected",
+    [(1.5, 1.0, 1.5), (1.3, 1.0, 1.25), (0.5, 1.0, 0.75), (1.5, 1.25, 1.25), (1.0, 1.0, 1.0)],
+)
+def test_text_size_folds_into_zoom_on_load(tmp_path, font, zoom, expected):
+    path = tmp_path / "gui_config.json"
+    path.write_text(json.dumps({"config_schema_version": 4, "ui_font_scale": font, "ui_zoom": zoom}))
+    assert GUIConfigManager._parse_and_migrate(path).ui_zoom == expected
+
+
+@pytest.mark.parametrize("marker", [{"config_schema_version": 4}, {}])  # {} = markerless raw config (Review Focus 1)
+@pytest.mark.parametrize(
+    "font, zoom, expected",
+    [(1.5, 1.0, 1.5), (1.3, 1.0, 1.25), (0.5, 1.0, 0.75), (1.5, 1.25, 1.25), (1.0, 1.0, 1.0)],
+)
+def test_text_size_folds_into_zoom_on_import(tmp_path, marker, font, zoom, expected):
+    path = tmp_path / "import.json"
+    path.write_text(json.dumps({**marker, "ui_font_scale": font, "ui_zoom": zoom}))
+    result = GUIConfigManager.import_config(path, create_default_config()).config
+    assert result.ui_zoom == expected
+
+
+def test_removed_font_scale_key_is_dropped(tmp_path):
+    path = tmp_path / "gui_config.json"
+    path.write_text(json.dumps({"config_schema_version": 4, "ui_font_scale": 1.5}))
+    config = GUIConfigManager._parse_and_migrate(path)
+    assert not hasattr(config, "ui_font_scale")

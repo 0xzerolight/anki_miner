@@ -163,6 +163,13 @@ class TestRenamedDestinations:
 
         assert "subtitles.model_combo" in results
 
+    def test_text_size_still_finds_zoom(self, entries):
+        """T4 folded the removed Text size control into Zoom; the old vocabulary
+        must still resolve to it."""
+        results = _ids(search(entries, "text size"))
+
+        assert "ui.zoom" in results
+
 
 class TestTranslatedIndex:
     """The index must be built from what the translator produced, not literals."""

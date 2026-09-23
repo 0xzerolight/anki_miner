@@ -1151,7 +1151,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         facts["qt_scale_factor"] = os.environ.get("QT_SCALE_FACTOR", "-")
         facts["theme"] = Theme.get_current_mode()
         facts["ui_language"] = self.config.ui_language
-        facts["ui_font_scale"] = str(self.config.ui_font_scale)
         facts["ui_zoom"] = str(self.config.ui_zoom)
         return facts
 

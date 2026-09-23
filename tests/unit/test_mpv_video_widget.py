@@ -163,7 +163,7 @@ class TestSizeFloor:
         qtbot.addWidget(widget)
         assert (widget.minimumWidth(), widget.minimumHeight()) == (320, 180)
 
-    def test_the_floor_does_not_track_the_ui_font_scale(self, qtbot):
+    def test_the_floor_does_not_track_the_text_scale(self, qtbot):
         """Video pixels are not text -- the one place a literal is correct."""
         widget = MpvVideoWidget()
         qtbot.addWidget(widget)

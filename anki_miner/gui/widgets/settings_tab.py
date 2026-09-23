@@ -202,7 +202,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         {
             "theme",
             "theme_favorites",
-            "ui_font_scale",
             "ui_language",
             "skipped_update_version",
             "last_known_version",
@@ -225,9 +224,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     # and therefore preserved, so resetting `language` out from under it would
     # leave the stash holding a parked snapshot for the language now active —
     # the one thing that field's invariant forbids.
-    _RESET_PRESERVE_UI: frozenset[str] = frozenset(
-        {"theme", "theme_favorites", "ui_font_scale", "ui_zoom", "ui_language", "language"}
-    )
+    _RESET_PRESERVE_UI: frozenset[str] = frozenset({"theme", "theme_favorites", "ui_zoom", "ui_language", "language"})
 
     def __init__(
         self,
@@ -390,7 +387,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.config.themes_root,
             self.config.ui_zoom,
             self.config.ui_language,
-            self.config.ui_font_scale,
         )
 
         self._build_navigator()
@@ -786,7 +782,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         # UI panel persists immediately on any change (live-preview model).
         self.ui_panel.state_changed.connect(self._on_theme_state_changed)
-        self.ui_panel.font_scale_changed.connect(self._on_font_scale_changed)
         self.ui_panel.zoom_changed.connect(self._on_zoom_changed)
         self.ui_panel.hidden_utilities_changed.connect(self._on_hidden_utilities_changed)
         self.ui_panel.language_changed.connect(self._on_language_changed)
@@ -1554,18 +1549,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         persists to ``gui_config.json`` without duplicate logic.
         """
         new_config = replace(self.config, theme=active, theme_favorites=tuple(favorites))
-        self._commit_immediate_config(new_config, self.config_changed.emit)
-
-    def _on_font_scale_changed(self, scale: float) -> None:
-        """Fold the UI panel's text-size change into the config and persist.
-
-        Text size is restart-to-apply (D39b-A), so unlike theme nothing is made
-        live here: the panel reveals its restart note and this slot only folds
-        ``ui_font_scale`` into the config so the existing ``config_changed`` →
-        ``MainWindow.update_config`` chain writes it to ``gui_config.json``.
-        The running process keeps the boot scale until it is relaunched.
-        """
-        new_config = replace(self.config, ui_font_scale=scale)
         self._commit_immediate_config(new_config, self.config_changed.emit)
 
     def _on_zoom_changed(self, zoom: float) -> None:

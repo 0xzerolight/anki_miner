@@ -181,32 +181,3 @@ class TestAudioPacksRootRoundTrip:
 
         assert isinstance(loaded.audio_packs_root, Path)
         assert loaded.audio_packs_root.name == "audio_packs"
-
-
-class TestUiFontScaleRoundTrip:
-    """Persistence of the Issue #63 ui_font_scale field through save/load."""
-
-    def test_save_and_load_preserves_non_default_value(self, tmp_path, monkeypatch):
-        """A non-default ui_font_scale must survive a save/load cycle."""
-        cfg_file = tmp_path / "gui_config.json"
-        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
-
-        config = replace(create_default_config(), ui_font_scale=1.5)
-        GUIConfigManager.save_config(config)
-
-        loaded = GUIConfigManager.load_config()
-
-        assert loaded.ui_font_scale == 1.5
-
-    def test_legacy_config_missing_key_loads_to_default(self, tmp_path, monkeypatch):
-        """A JSON file without ui_font_scale must fall back to the dataclass default of 1.0."""
-        cfg_file = tmp_path / "gui_config.json"
-        cfg_file.write_text(
-            json.dumps({"anki_deck_name": "Legacy Deck"}),
-            encoding="utf-8",
-        )
-        monkeypatch.setattr(GUIConfigManager, "CONFIG_FILE", cfg_file)
-
-        loaded = GUIConfigManager.load_config()
-
-        assert loaded.ui_font_scale == 1.0

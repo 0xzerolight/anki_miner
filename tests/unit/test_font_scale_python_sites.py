@@ -1,4 +1,4 @@
-"""Tests for Issue #63 Task 5: Python-side font/row-height sites honoring ui_font_scale.
+"""Tests for Issue #63 Task 5: Python-side font/row-height sites honoring the text scale.
 
 Covers the few spots that bypass QSS-driven scaling and were previously hardcoded:
 - WordCurationDialog table row height + label fonts

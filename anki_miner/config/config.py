@@ -49,6 +49,13 @@ _LANGUAGE_CODES: tuple[str, ...] = (
 # reason as _LANGUAGE_CODES; test_stage_s_contract.py pins the two identical.
 _SCRIPT_VARIANT_IDS: tuple[str, ...] = ("", "simplified", "traditional", "br", "pt")
 
+# Discrete whole-UI zoom presets (whole percents) offered in the Zoom dropdown
+# (gui/widgets/panels/ui_settings_panel.py) and used to snap a folded legacy
+# ui_font_scale value onto the nearest preset (GUIConfigManager._fold_removed_fields).
+# All values sit inside the [0.5, 2.0] ui_zoom clamp range. Qt-free so the config
+# manager can import it without pulling in a widget module.
+ZOOM_PRESETS: tuple[int, ...] = (75, 100, 125, 150, 175, 200)
+
 
 @dataclass(frozen=True)
 class ChainEntry:
@@ -663,14 +670,13 @@ class AnkiMinerConfig:
     theme: str = "light"
     theme_favorites: tuple[str, ...] = ("light", "dark")
     themes_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "themes")
-    # Global UI font scale factor. Applied to all QSS ${font-size-*} variables.
-    # Clamped to [0.5, 2.0] in __post_init__; values outside the range are silently clamped.
-    ui_font_scale: float = 1.0
-    # Whole-UI zoom factor. Injected as QT_SCALE_FACTOR before QApplication is
-    # constructed (gui/app.py), so it scales everything uniformly — fonts,
-    # spacing, fixed-size widgets, pixmaps — unlike the font-only ui_font_scale.
-    # Restart-to-apply (Qt reads QT_SCALE_FACTOR once at startup). Clamped to
-    # [0.5, 2.0] in __post_init__.
+    # Whole-UI zoom factor — the only interface-size control (a removed
+    # ui_font_scale field used to be a second one; GUIConfigManager folds a
+    # saved value into this on load). Injected as QT_SCALE_FACTOR before
+    # QApplication is constructed (gui/app.py), so it scales everything
+    # uniformly — fonts, spacing, fixed-size widgets, pixmaps. Restart-to-apply
+    # (Qt reads QT_SCALE_FACTOR once at startup). Clamped to [0.5, 2.0] in
+    # __post_init__.
     ui_zoom: float = 1.0
     # UI language code (BCP-47-ish short code, e.g. "en", "fr", "ru"). "en" is
     # the source language: no translator is installed for it. Persisted via
@@ -846,9 +852,6 @@ class AnkiMinerConfig:
                     }
                 ),
             )
-
-        # Clamp ui_font_scale to [0.5, 2.0]
-        object.__setattr__(self, "ui_font_scale", max(0.5, min(2.0, float(self.ui_font_scale))))
 
         # Clamp ui_zoom to [0.5, 2.0]
         object.__setattr__(self, "ui_zoom", max(0.5, min(2.0, float(self.ui_zoom))))

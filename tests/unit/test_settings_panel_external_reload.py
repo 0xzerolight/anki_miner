@@ -54,7 +54,6 @@ def swapped_config(test_config: AnkiMinerConfig) -> AnkiMinerConfig:
         ui_zoom=1.5,
         ui_language="ja",
         theme="dark",
-        ui_font_scale=1.25,
     )
 
 
@@ -91,9 +90,7 @@ class TestUIPanelLoadFromConfig:
     """Every UI-panel widget follows an external config swap."""
 
     def test_all_widgets_follow_the_swapped_config(self, ui_panel, swapped_config):
-        # The caller re-seeds Theme before reloading; do the same here. Text
-        # size is NOT re-seeded: it is restart-to-apply (D39b-A), so the combo
-        # has to follow the incoming config rather than the running Theme.
+        # The caller re-seeds Theme before reloading; do the same here.
         Theme.set_mode(swapped_config.theme)
 
         ui_panel.load_from_config(swapped_config)
@@ -101,16 +98,13 @@ class TestUIPanelLoadFromConfig:
         assert ui_panel.language_combo.currentData(Qt.ItemDataRole.UserRole) == "ja"
         assert ui_panel._ui_zoom == 1.5
         assert ui_panel.zoom_combo.currentData() == 150
-        assert ui_panel.font_scale_combo.currentData() == 125
         assert _active_theme_key(ui_panel) == "dark"
 
     def test_emits_nothing(self, ui_panel, swapped_config):
         """The regression that would silently corrupt the config being loaded."""
         Theme.set_mode(swapped_config.theme)
-        Theme.set_font_scale(1.25)
         seen = _record(
             ui_panel.zoom_changed,
-            ui_panel.font_scale_changed,
             ui_panel.language_changed,
             ui_panel.state_changed,
             ui_panel.favorites_changed,

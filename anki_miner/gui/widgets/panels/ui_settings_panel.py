@@ -1,12 +1,13 @@
-"""UI settings panel — language, zoom, text size, and theme selection.
+"""UI settings panel — language, zoom, and theme selection.
 
 This is the "UI" Settings sub-tab. Top to bottom it offers:
 
 * UI language picker (restart-to-apply; merged in from the former
   ``LanguagePanel``). Emits ``language_changed``.
-* Zoom (whole-UI scale) and Text size, both restart-to-apply (D39b-A). Text size
-  commits instantly and offers *Restart now* / *Later*; changing it relayouts the
-  whole window, so unlike theme there is no instant path to have.
+* Zoom (whole-UI scale) — the only interface-size control (Text size was
+  folded into it, ``GUIConfigManager._fold_removed_fields``). Restart-to-apply
+  (D39b-A): picking a preset offers *Restart now* / *Later*; changing it
+  relayouts the whole window, so unlike theme there is no instant path to have.
 * Which tools the Utilities tab shows: one checkbox per tool, committed at once.
   Emits ``hidden_utilities_changed``.
 * The theme gallery (shipped + user-installed), rendered as preview cards by
@@ -24,10 +25,10 @@ This is the "UI" Settings sub-tab. Top to bottom it offers:
     live theme is hard to read. Advisory only: the theme still renders
     exactly as its author wrote it (D43-A).
 
-Persistence is handled by emitting ``state_changed`` / ``font_scale_changed`` /
-``zoom_changed`` / ``language_changed`` (re-uses the ``config_changed``
-convention from other panels). The settings tab forwards to
-``MainWindow.update_config`` which writes ``gui_config.json``.
+Persistence is handled by emitting ``state_changed`` / ``zoom_changed`` /
+``language_changed`` (re-uses the ``config_changed`` convention from other
+panels). The settings tab forwards to ``MainWindow.update_config`` which
+writes ``gui_config.json``.
 """
 
 from __future__ import annotations
@@ -48,7 +49,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from anki_miner.config import AnkiMinerConfig
+from anki_miner.config import ZOOM_PRESETS, AnkiMinerConfig
 from anki_miner.gui import restart
 from anki_miner.gui.capabilities import effective_hidden_utilities, utility_labels
 from anki_miner.gui.i18n import available_languages
@@ -68,22 +69,6 @@ from anki_miner.gui.widgets.enhanced.theme_preview import clear_thumbnail_cache
 from anki_miner.utils.i18n import tr_format
 
 logger = logging.getLogger(__name__)
-
-
-# Discrete UI font-scale presets (whole percents) offered in the Text size
-# dropdown. All values sit inside the [0.5, 2.0] clamp range. A dropdown is
-# used instead of a slider because QComboBox is styled (common.qss) and clearly
-# visible, whereas the bare QSlider had no QSS and rendered near-invisible
-# (Issue #63).
-FONT_SCALE_PRESETS = (50, 75, 100, 125, 150, 175, 200)
-
-# Discrete whole-UI zoom presets (whole percents) offered in the Zoom dropdown.
-# All values sit inside the [0.5, 2.0] clamp range. Unlike Text size, zoom is
-# restart-to-apply (injected as QT_SCALE_FACTOR before QApplication is built),
-# so there is no live preview — only a restart note. 50% is omitted because a
-# half-size whole UI is cramped to the point of unusable; the font-only Text
-# size still goes down to 50% for users who only need smaller text.
-ZOOM_PRESETS = (75, 100, 125, 150, 175, 200)
 
 
 def _window_is_shutting_down(window: QWidget) -> bool:
@@ -108,7 +93,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
             the config and saving.
         favorites_changed: Emitted whenever favorites change so the header
             combo can refresh without an extra config round-trip.
-        font_scale_changed: Emitted with the new UI font scale (Text size).
         zoom_changed: Emitted with the new whole-UI zoom factor.
         language_changed: Emitted with the selected language code when the user
             picks a new UI language (not on programmatic ``set_language``).
@@ -120,7 +104,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
 
     state_changed = pyqtSignal(str, tuple)
     favorites_changed = pyqtSignal()
-    font_scale_changed = pyqtSignal(float)
     zoom_changed = pyqtSignal(float)
     language_changed = pyqtSignal(str)
     hidden_utilities_changed = pyqtSignal(tuple)
@@ -130,7 +113,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         themes_root: Path,
         ui_zoom: float = 1.0,
         ui_language: str = "en",
-        ui_font_scale: float = 1.0,
         parent: QWidget | None = None,
     ) -> None:
         """Initialize the panel.
@@ -143,31 +125,18 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
                 is no live Theme state to read it from — it is passed in.
             ui_language: The persisted UI language code, used to seed the
                 Language dropdown. Restart-to-apply, so it is passed in.
-            ui_font_scale: The persisted UI font scale, used to seed the Text
-                size dropdown. Restart-to-apply (D39b-A), so the *pending*
-                config value is what the combo shows — never the running
-                ``Theme.get_font_scale()``, which stays on the boot value for
-                the life of the process.
             parent: Optional parent widget.
         """
         super().__init__(parent)
         self._themes_root = themes_root
         self._ui_zoom = ui_zoom
-        self._ui_font_scale = ui_font_scale
         # Construction-time values = what Qt is actually running with: the panel
-        # is built once at app boot from the boot config, and language, zoom and
-        # text size only take effect at startup. ``load_from_config`` compares
-        # against these so an A → B → A round trip clears the restart note again
-        # instead of latching it on for the rest of the session.
+        # is built once at app boot from the boot config, and language and zoom
+        # only take effect at startup. ``load_from_config`` compares against
+        # these so an A → B → A round trip clears the restart note again instead
+        # of latching it on for the rest of the session.
         self._boot_language = ui_language
         self._boot_zoom = ui_zoom
-        # Read from Theme, not from the argument: this is what the running
-        # process was actually styled with, which is the only honest baseline
-        # for "will change after restart".
-        self._boot_font_scale = Theme.get_font_scale()
-        # `Later` hides the note for the session without touching the persisted
-        # value; a fresh selection reveals it again.
-        self._font_scale_note_dismissed = False
         self._preview_baseline: str | None = None
         # The theme this panel last *saw*: the previous load's ``config.theme``,
         # or whatever the panel itself made live since. ``load_from_config``
@@ -190,7 +159,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         # self.language_combo); does not emit.
         self.set_language(ui_language)
         self._populate()
-        self._sync_font_scale_combo()
         self._sync_zoom_combo()
 
     # ---- UI construction -------------------------------------------------
@@ -231,13 +199,19 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.language_restart_note.setVisible(False)
         layout.addWidget(self.language_restart_note)
 
-        # Zoom (whole-UI scale) row. Restart-to-apply (injected as
+        # Zoom (whole-UI scale) row — the only interface-size control (Text
+        # size was folded into it, T4). Restart-to-apply (injected as
         # QT_SCALE_FACTOR at startup), so picking a value only persists +
         # reveals the restart note below — no live restyle.
         zoom_row = QHBoxLayout()
         zoom_row.setSpacing(SPACING.sm)
 
-        zoom_tip = self.tr("Scale the entire interface — text, spacing, and controls. Applies after restart.")
+        # Names "text size" and "font" too (words the removed Text size control
+        # used to answer to) so settings search still finds this row under them.
+        zoom_tip = self.tr(
+            "Scale the entire interface, including text size and font, plus spacing and controls. "
+            "Applies after restart."
+        )
         zoom_label = QLabel(self.tr("Zoom"))
         zoom_label.setToolTip(zoom_tip)
         zoom_row.addWidget(zoom_label)
@@ -257,69 +231,26 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         layout.addLayout(zoom_row)
 
-        # Hidden until the user changes zoom; restart-to-apply hint (mirrors the
-        # language note above).
+        # Hidden until the user changes zoom. Carries actions (formerly the Text
+        # size row's) because the reward is worth offering rather than leaving
+        # the user to find the window button themselves — a quiet variant, so a
+        # settings note must not become the primary action on the screen (D41).
+        zoom_note_row = QHBoxLayout()
+        zoom_note_row.setSpacing(SPACING.sm)
         self.zoom_restart_note = QLabel(self.tr("Restart to apply."))
         self.zoom_restart_note.setWordWrap(True)
         self.zoom_restart_note.setVisible(False)
-        layout.addWidget(self.zoom_restart_note)
-
-        # Text size (global UI font scale) row. A styled QComboBox of discrete
-        # percent presets; the selected percent maps to a float scale.
-        # Restart-to-apply (D39b-A): the scale is baked into the one-time
-        # structural stylesheet at boot, and changing it relayouts every widget
-        # in the window, so there is no instant path the way there is for theme.
-        font_row = QHBoxLayout()
-        font_row.setSpacing(SPACING.sm)
-
-        font_tip = self.tr("Scale all UI text. Applies after restart.")
-        font_label = QLabel(self.tr("Text size"))
-        font_label.setToolTip(font_tip)
-        font_row.addWidget(font_label)
-
-        self.font_scale_combo = QComboBox()
-        self.font_scale_combo.setObjectName("fontScaleCombo")
-        self.font_scale_combo.setToolTip(font_tip)
-        for p in FONT_SCALE_PRESETS:
-            self.font_scale_combo.addItem(tr_format(self.tr("%1%"), p), p)
-        # `activated` fires only on user interaction; `currentIndexChanged`
-        # would also fire on the programmatic setCurrentIndex in
-        # _sync_font_scale_combo, falsely revealing the restart note.
-        self.font_scale_combo.activated.connect(self._on_font_scale_selected)
-        font_row.addWidget(self.font_scale_combo)
-        self.register_setting(
-            "text_size",
-            self.font_scale_combo,
-            lambda: (font_label.text(), self.font_scale_combo.toolTip()),
-        )
-
-        # Trailing stretch keeps the combo left-aligned next to its label
-        # rather than spanning the full row width.
-        font_row.addStretch(1)
-
-        layout.addLayout(font_row)
-
-        # Hidden until the user changes text size. Unlike the language/zoom
-        # notes this one carries actions, because the reward is worth offering
-        # rather than leaving the user to find the window button themselves.
-        # Both are quiet variants: a settings note must not become the primary
-        # action on the screen (D41).
-        self.font_scale_restart_row = QWidget()
-        font_note_layout = QHBoxLayout(self.font_scale_restart_row)
-        font_note_layout.setContentsMargins(0, 0, 0, 0)
-        font_note_layout.setSpacing(SPACING.sm)
-        self.font_scale_restart_note = QLabel(self.tr("Restart to apply."))
-        self.font_scale_restart_note.setWordWrap(True)
-        font_note_layout.addWidget(self.font_scale_restart_note)
+        zoom_note_row.addWidget(self.zoom_restart_note)
         self.restart_now_btn = ModernButton(self.tr("Restart now"), variant="secondary")
         self.restart_now_btn.clicked.connect(self._on_restart_now)
-        font_note_layout.addWidget(self.restart_now_btn)
+        self.restart_now_btn.setVisible(False)
+        zoom_note_row.addWidget(self.restart_now_btn)
         self.restart_later_btn = ModernButton(self.tr("Later"), variant="ghost")
         self.restart_later_btn.clicked.connect(self._on_restart_later)
-        font_note_layout.addWidget(self.restart_later_btn)
-        font_note_layout.addStretch(1)
-        self.font_scale_restart_row.setVisible(False)
-        layout.addWidget(self.font_scale_restart_row)
+        self.restart_later_btn.setVisible(False)
+        zoom_note_row.addWidget(self.restart_later_btn)
+        zoom_note_row.addStretch(1)
+        layout.addLayout(zoom_note_row)
 
         # Which tools the Utilities tab shows: one box per tool, in tab order,
         # labelled with the tab's own label, checked = shown. Commits at once.
@@ -617,31 +548,7 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         if isinstance(app, QApplication):
             Theme.apply_to_app(app, mode)
 
-    # ---- Text size (font scale) -----------------------------------------
-
-    def _sync_font_scale_combo(self) -> None:
-        """Select the combo entry matching the *pending* config font scale.
-
-        Deliberately not ``Theme.get_font_scale()``: text size is
-        restart-to-apply, so the running Theme keeps the boot value all session
-        while the combo has to show what the user chose and what was persisted.
-
-        Signals are blocked so syncing from config state never emits and falsely
-        reveals the restart note (belt-and-suspenders given ``activated`` is
-        user-only). A legacy custom scale that is not one of
-        ``FONT_SCALE_PRESETS`` snaps the display to the nearest preset.
-        """
-        value = round(self._ui_font_scale * 100)
-        idx = self._nearest_preset_index(value)
-        self.font_scale_combo.blockSignals(True)
-        try:
-            self.font_scale_combo.setCurrentIndex(idx)
-        finally:
-            self.font_scale_combo.blockSignals(False)
-
-    def _nearest_preset_index(self, value: int) -> int:
-        """Return the index of the font-scale preset closest to ``value`` percent."""
-        return min(range(len(FONT_SCALE_PRESETS)), key=lambda i: abs(FONT_SCALE_PRESETS[i] - value))
+    # ---- Zoom --------------------------------------------------------------
 
     def _sync_zoom_combo(self) -> None:
         """Select the combo entry matching the persisted ``ui_zoom``.
@@ -669,8 +576,14 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         if percent is None:
             return
         self._ui_zoom = int(percent) / 100.0
-        self.zoom_restart_note.setVisible(True)
+        self._show_zoom_restart_note(True)
         self.zoom_changed.emit(self._ui_zoom)
+
+    def _show_zoom_restart_note(self, visible: bool) -> None:
+        """Toggle the restart note and its *Restart now* / *Later* actions together."""
+        self.zoom_restart_note.setVisible(visible)
+        self.restart_now_btn.setVisible(visible)
+        self.restart_later_btn.setVisible(visible)
 
     def _on_utility_toggled(self, _checked: bool) -> None:
         """Persist which Utilities tools are hidden (applies at once)."""
@@ -685,35 +598,12 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         for box in self.utility_checkboxes.values():
             box.setEnabled(checked > 1 or not box.isChecked())
 
-    def _on_font_scale_selected(self, index: int) -> None:
-        """Persist the preset the user picked and reveal the restart note.
-
-        No live restyle (D39b-A). The old path called ``Theme.set_font_scale``
-        and repolished the whole widget tree behind a wait cursor, which is the
-        ~900 ms dead window this decision exists to remove; the scale is baked
-        into the structural stylesheet compiled once at boot instead.
-        """
-        percent = self.font_scale_combo.itemData(index)
-        if percent is None:
-            return
-        self._ui_font_scale = int(percent) / 100.0
-        # A new choice always speaks up again, even after a previous `Later`.
-        self._font_scale_note_dismissed = False
-        self._refresh_font_scale_note()
-        self.font_scale_changed.emit(self._ui_font_scale)
-
-    def _refresh_font_scale_note(self) -> None:
-        """Show the restart note exactly while the pending scale differs."""
-        pending = self._ui_font_scale != self._boot_font_scale
-        self.font_scale_restart_row.setVisible(pending and not self._font_scale_note_dismissed)
-
     def _on_restart_later(self) -> None:
         """Dismiss the note for this session; the choice stays persisted."""
-        self._font_scale_note_dismissed = True
-        self._refresh_font_scale_note()
+        self._show_zoom_restart_note(False)
 
     def _on_restart_now(self) -> None:
-        """Relaunch the app so the new text size takes effect.
+        """Relaunch the app so the new zoom takes effect.
 
         The executable is resolved *first*: if we cannot name what to launch,
         nothing closes and the panel says so inline. Recoverable failures never
@@ -776,9 +666,9 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         persists through its own signals, not the Save round-trip), so nothing
         else repaints it when the whole config is replaced from the outside —
         Reset to Defaults, Import Settings, or any other ``update_config`` →
-        ``config_refreshed`` fan-out. Without this the zoom/text-size combos
-        and the theme gallery keep showing the previous config's values and
-        the user's next edit starts from a stale baseline.
+        ``config_refreshed`` fan-out. Without this the zoom combo and the theme
+        gallery keep showing the previous config's values and the user's next
+        edit starts from a stale baseline.
 
         Every mutation here is signal-safe. The panel's change handlers feed
         ``config_changed`` → ``MainWindow.update_config``, so one unguarded
@@ -788,9 +678,7 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         The active theme lives on the ``Theme`` singleton (the panel writes
         through it for live preview), so it is re-read from there rather than
         set here — callers that swap the whole config re-seed ``Theme`` before
-        calling. Text size does not: it is restart-to-apply, so the running
-        ``Theme`` scale is the *boot* value and the config carries the pending
-        one.
+        calling.
         """
         # Blocks signals internally.
         self.set_language(config.ui_language)
@@ -799,11 +687,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         # QApplication exists), so the backing field is the source of truth.
         self._ui_zoom = config.ui_zoom
         self._sync_zoom_combo()  # blocks signals internally
-
-        # Same shape as zoom: the pending config value drives the combo, and the
-        # process keeps running at the boot scale until it is relaunched.
-        self._ui_font_scale = config.ui_font_scale
-        self._sync_font_scale_combo()  # blocks signals internally
 
         # Read through the same rule SubtitlesTab applies, so the boxes show
         # what the tab shows: unknown keys ignored, "every tool hidden" = none.
@@ -858,5 +741,4 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._last_seen_theme = config.theme
 
         self.language_restart_note.setVisible(config.ui_language != self._boot_language)
-        self.zoom_restart_note.setVisible(config.ui_zoom != self._boot_zoom)
-        self._refresh_font_scale_note()
+        self._show_zoom_restart_note(config.ui_zoom != self._boot_zoom)

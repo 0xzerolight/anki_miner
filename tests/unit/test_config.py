@@ -478,45 +478,6 @@ class TestExpressionAudioChainConfig:
         assert len(cfg.expression_audio_chain) == 2
 
 
-class TestUiFontScale:
-    """Tests for the ui_font_scale config field (Issue #63)."""
-
-    def test_default_is_1_0(self):
-        """ui_font_scale must default to 1.0."""
-        cfg = AnkiMinerConfig()
-        assert cfg.ui_font_scale == 1.0
-
-    def test_below_min_clamps_to_0_5(self):
-        """Values below 0.5 must be clamped to 0.5."""
-        cfg = AnkiMinerConfig(ui_font_scale=0.3)
-        assert cfg.ui_font_scale == 0.5
-
-    def test_above_max_clamps_to_2_0(self):
-        """Values above 2.0 must be clamped to 2.0."""
-        cfg = AnkiMinerConfig(ui_font_scale=3.0)
-        assert cfg.ui_font_scale == 2.0
-
-    def test_in_range_value_unchanged(self):
-        """A value within [0.5, 2.0] must be stored as-is."""
-        cfg = AnkiMinerConfig(ui_font_scale=1.5)
-        assert cfg.ui_font_scale == 1.5
-
-    def test_sub_one_value_unchanged(self):
-        """A value between 0.5 and 1.0 (e.g. 0.75) must be stored as-is."""
-        cfg = AnkiMinerConfig(ui_font_scale=0.75)
-        assert cfg.ui_font_scale == 0.75
-
-    def test_min_boundary_unchanged(self):
-        """Exactly 0.5 must not be altered."""
-        cfg = AnkiMinerConfig(ui_font_scale=0.5)
-        assert cfg.ui_font_scale == 0.5
-
-    def test_max_boundary_unchanged(self):
-        """Exactly 2.0 must not be altered."""
-        cfg = AnkiMinerConfig(ui_font_scale=2.0)
-        assert cfg.ui_font_scale == 2.0
-
-
 class TestUiZoom:
     """Tests for the ui_zoom config field (whole-UI zoom / QT_SCALE_FACTOR)."""
 

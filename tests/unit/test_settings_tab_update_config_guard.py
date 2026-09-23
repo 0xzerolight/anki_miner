@@ -1,7 +1,7 @@
 """Tests for OVH-007: update_config dirty-state guard.
 
-A config refresh that differs ONLY in externally-managed fields (theme, font
-scale, first-run flags, update-banner fields) must NOT call _load_config() and
+A config refresh that differs ONLY in externally-managed fields (theme,
+first-run flags, update-banner fields) must NOT call _load_config() and
 therefore must NOT clobber in-progress widget edits.  A refresh that touches a
 panel-relevant field (e.g. dicts_root) must call _load_config() as before.
 """
@@ -46,12 +46,6 @@ class TestUpdateConfigGuard:
         tab.update_config(new_config)
         assert tab.anki_panel.get_deck_name() == "UNSAVED"
 
-    def test_ui_font_scale_only_preserves_unsaved_edit(self, tab):
-        tab.anki_panel.set_deck_name("UNSAVED")
-        new_config = replace(tab.config, ui_font_scale=1.5)
-        tab.update_config(new_config)
-        assert tab.anki_panel.get_deck_name() == "UNSAVED"
-
     def test_skipped_update_version_only_preserves_unsaved_edit(self, tab):
         tab.anki_panel.set_deck_name("UNSAVED")
         new_config = replace(tab.config, skipped_update_version="1.2.3")
@@ -82,7 +76,6 @@ class TestUpdateConfigGuard:
         new_config = replace(
             tab.config,
             theme="dark",
-            ui_font_scale=1.2,
             skipped_update_version="9.9.9",
             first_run_shortcut_done=True,
         )

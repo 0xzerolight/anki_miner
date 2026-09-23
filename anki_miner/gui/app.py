@@ -62,7 +62,7 @@ from anki_miner.gui.main_window import MainWindow, open_log_folder
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.qt_log_bridge import install_qt_message_handler
 from anki_miner.gui.resources import get_resource_dir
-from anki_miner.gui.resources.styles.theme import Theme
+from anki_miner.gui.resources.styles.theme import Theme, _clamp_font_scale
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.focus_ring import install_keyboard_focus_ring
 from anki_miner.gui.utils.fonts import initialize_application_fonts
@@ -828,6 +828,26 @@ def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:
         return
     if config.ui_zoom != 1.0:
         os.environ["QT_SCALE_FACTOR"] = repr(float(config.ui_zoom))
+
+
+def _dev_text_scale() -> float:
+    """Read the dev-only text-scale override from ``ANKI_MINER_TEXT_SCALE``.
+
+    Zoom is the only user-facing interface-size control (the removed
+    ``ui_font_scale`` config field had no setting left to drive it from). This
+    env var is what is left for tooling that still needs to stress text at a
+    scale independent of Zoom — the UI atlas hostile cell renders at 1.5x text
+    (``scripts/ui_atlas/isolation.py``). Absent or malformed values fall back
+    to 1.0; the result is clamped the same way ``Theme.set_font_scale`` clamps.
+    """
+    raw = os.environ.get("ANKI_MINER_TEXT_SCALE")
+    if raw is None:
+        return 1.0
+    try:
+        value = float(raw)
+    except ValueError:
+        return 1.0
+    return _clamp_font_scale(value)
 
 
 def _configure_qt_application_policy() -> None:
@@ -2271,7 +2291,7 @@ def main():
             active=_early_config.theme,
             favorites=_early_config.theme_favorites,
             user_dir=_early_config.themes_root,
-            font_scale=_early_config.ui_font_scale,
+            font_scale=_dev_text_scale(),
         )
         Theme.apply_to_app(app)
     except Exception:  # noqa: BLE001 — bucket A: boot continues with Qt's default theme.

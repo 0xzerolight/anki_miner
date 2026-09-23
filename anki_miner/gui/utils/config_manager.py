@@ -12,7 +12,7 @@ from dataclasses import fields
 from pathlib import Path
 from typing import Any, ClassVar
 
-from anki_miner.config import AnkiMinerConfig, create_default_config
+from anki_miner.config import ZOOM_PRESETS, AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.services.startup_store_recovery import backup_config_repair_is_safe
 from anki_miner.utils.atomic_io import atomic_write_path
@@ -558,6 +558,17 @@ class GUIConfigManager:
             config_dict["max_sentence_duration_seconds"] = 0.0
             config_dict["max_sentence_chars"] = 0
             shims.append("fold_sentence_length_toggle")
+
+        font = config_dict.get("ui_font_scale")
+        if (
+            isinstance(font, (int, float))
+            and not isinstance(font, bool)
+            and font != 1.0
+            and config_dict.get("ui_zoom", 1.0) == 1.0
+        ):
+            presets = tuple(p / 100 for p in ZOOM_PRESETS)
+            config_dict["ui_zoom"] = min(presets, key=lambda p: (abs(p - font), p))
+            shims.append("fold_text_size_into_zoom")
 
     @classmethod
     def load_config(cls) -> AnkiMinerConfig:
