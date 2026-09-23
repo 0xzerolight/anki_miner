@@ -206,7 +206,7 @@ The dialect dictionaries import with a note that their language is not Arabic; t
 | Frequency | [Leipzig Corpora (Brazilian Portuguese, news)](https://github.com/StefanVukovic99/leipzig-to-yomitan) | [Yomitan zip](https://github.com/StefanVukovic99/leipzig-to-yomitan/releases/download/v2024-08-31-18-57-16-00-00/Leipzig.Portuguese.Brazil.Newscrawl.Rank.zip) | Frequency -> Add frequency source… | No |
 | Frequency | [Leipzig Corpora (European Portuguese, news)](https://github.com/StefanVukovic99/leipzig-to-yomitan) | [Yomitan zip](https://github.com/StefanVukovic99/leipzig-to-yomitan/releases/download/v2024-08-31-18-57-16-00-00/Leipzig.Portuguese.Portugal.Newscrawl.Rank.zip) | Frequency -> Add frequency source… | No |
 
-The Setup Wizard pre-selects the frequency list for the variety set in Settings -> Mining Language.
+The Setup Wizard pre-selects the frequency list for the variety set in Settings -> Filtering (Regional Variety).
 
 ## Romanian
 

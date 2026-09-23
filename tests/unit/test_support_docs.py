@@ -1,4 +1,5 @@
 import importlib.util
+import re
 from pathlib import Path
 
 import pytest
@@ -243,11 +244,21 @@ def _resources_section(heading: str) -> str:
 
 
 @pytest.mark.parametrize("code", available_languages())
-def test_resources_doc_lists_every_catalog_url_under_its_language(code: str) -> None:
-    """What the setup wizard downloads for a language is what RESOURCES.md lists for it."""
+def test_resources_doc_marks_exactly_the_catalog_as_setup_wizard_rows(code: str) -> None:
+    """What the setup wizard downloads for a language is what RESOURCES.md marks "Yes" for it."""
     profile = get_profile(code)
     section = _resources_section(profile.english_name)
-    assert [spec.id for spec in profile.catalog if spec.url not in section] == []
+    marked: set[str] = set()
+    for line in section.splitlines():
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if line.startswith("|") and cells[-1] == "Yes":
+            marked.update(re.findall(r"\]\((https?://[^)]+)\)", cells[2]))  # the Download cell
+    assert marked == {spec.url for spec in profile.catalog}
+
+
+def test_resources_doc_points_portuguese_readers_at_the_variety_control() -> None:
+    # The variety combo lives in the Filtering panel, not under Mining Language.
+    assert "Settings -> Filtering (Regional Variety)" in _resources_section("Portuguese")
 
 
 def test_readme_sends_readers_to_the_per_language_resources_doc() -> None:
