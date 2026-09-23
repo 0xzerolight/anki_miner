@@ -12,19 +12,21 @@ bridge guards.
 import contextlib
 import threading
 import time
+from dataclasses import replace
 from unittest.mock import Mock, patch
 
 from PyQt6.QtCore import Qt, QThread
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QDialog
 
+from anki_miner.config import create_default_config
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 
 MODULE = "anki_miner.gui.widgets._mining_tab_base"
 
 
 class _Bare(MiningTabBase):
-    config = None
+    config = create_default_config()
 
     def _commit_known_words(self, forms):
         return 0
@@ -349,7 +351,7 @@ def test_build_curation_context_runs_off_gui_thread(qapp, qtbot):
     build_thread: dict = {}
 
     class _RecordingTab(MiningTabBase):
-        config = None
+        config = create_default_config()
 
         def _commit_known_words(self, forms):
             return 0
@@ -382,7 +384,7 @@ def test_cancel_during_off_thread_build_releases_worker_without_dialog(qapp, qtb
     release_build = threading.Event()
 
     class _SlowTab(MiningTabBase):
-        config = None
+        config = create_default_config()
 
         def _commit_known_words(self, forms):
             return 0
@@ -715,3 +717,35 @@ def test_worker_that_owns_no_processor_yields_no_parser(qapp, qtbot):
     tab.worker_thread = _Owner()
 
     assert tab._curation_parse_fn() is None
+
+
+def test_curator_gets_the_configs_key_bindings(qapp, qtbot):
+    """Settings -> Keyboard reaches the curator through the tab's config."""
+    tab = _Bare()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+    tab.worker_thread = _fake_worker()
+    tab.config = replace(create_default_config(), key_bindings={"curator.mark_known": "J"})
+
+    cls, created = _fake_dialog_cls(decision="accept")
+    with patch(f"{MODULE}.WordCurationDialog", cls):
+        tab._show_curation_dialog(["w1"], None, None)
+
+    assert created[0].kwargs["key_bindings"] == {"curator.mark_known": "J"}
+
+
+def test_a_rebinding_reaches_the_next_curator_not_the_open_one(qapp, qtbot):
+    """The Keyboard page promises that an open curator keeps its keys until it next opens."""
+    tab = _Bare()
+    qtbot.addWidget(tab)
+    tab._init_curation_bridge()
+    tab.worker_thread = _fake_worker()
+
+    cls, created = _fake_dialog_cls(decision="accept")
+    with patch(f"{MODULE}.WordCurationDialog", cls):
+        tab._show_curation_dialog(["w1"], None, None)
+        tab.config = replace(tab.config, key_bindings={"curator.mark_known": "J"})
+        tab._show_curation_dialog(["w2"], None, None)
+
+    assert created[0].kwargs["key_bindings"] == {}
+    assert created[1].kwargs["key_bindings"] == {"curator.mark_known": "J"}

@@ -305,21 +305,25 @@ class TestCurationCounter:
 
 
 class TestKeyHints:
-    """D32 — the keyboard contract is stated on the screen, not only in docs."""
+    """D32 — the keyboard contract is stated on the screen, not only in docs.
 
-    def test_key_hint_line_is_present(self, dialog):
-        text = dialog.key_hint_label.text()
-        for key in ("S", "K", "Ctrl+A", "Ctrl+D", "Ctrl+Enter"):
-            assert key in text
+    The line is generated from the live bindings (Settings -> Keyboard), so it
+    cannot advertise a key the table does not answer to.
+    """
+
+    def test_the_shipped_hint_line(self, dialog):
+        assert dialog.key_hint_label.text() == (
+            "S include/exclude · D mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm"
+        )
 
     def test_the_known_key_is_described_in_the_buttons_vocabulary(self, dialog):
-        """K IS the Add to Known Words button, so the hint borrows its noun.
+        """D IS the Add to Known Words button, so the hint borrows its noun.
 
         "mark known" matches the row mark the key produces ("Known · pending")
-        and stays direction-neutral, which is the button's own rule: K adds on
+        and stays direction-neutral, which is the button's own rule: D adds on
         a mixed selection and only removes when every target row is staged.
         """
-        assert "K mark known" in dialog.key_hint_label.text()
+        assert "D mark known" in dialog.key_hint_label.text()
 
     def test_the_bulk_keys_are_described_in_the_buttons_vocabulary(self, dialog):
         """Ctrl+A/Ctrl+D ARE the bulk buttons, so they must be named the same way.
@@ -332,6 +336,33 @@ class TestKeyHints:
         assert "Ctrl+D exclude visible" in text
         assert "visible" in dialog.select_all_button.text()
         assert "visible" in dialog.deselect_all_button.text()
+
+    def test_the_hint_follows_a_rebinding(self, qtbot, make_tokenized_words):
+        from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+
+        dlg = WordCurationDialog(make_tokenized_words(3), key_bindings={"curator.mark_known": "J"})
+        qtbot.addWidget(dlg)
+        text = dlg.key_hint_label.text()
+        assert "J mark known" in text
+        assert "D mark known" not in text
+
+    def test_an_unbound_action_leaves_the_hint(self, qtbot, make_tokenized_words):
+        from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+
+        dlg = WordCurationDialog(make_tokenized_words(3), key_bindings={"curator.toggle_include": ""})
+        qtbot.addWidget(dlg)
+        assert "include/exclude" not in dlg.key_hint_label.text()
+
+    def test_next_and_previous_appear_once_bound(self, qtbot, make_tokenized_words):
+        from anki_miner.gui.widgets.dialogs.word_curation_dialog import WordCurationDialog
+
+        dlg = WordCurationDialog(
+            make_tokenized_words(3), key_bindings={"curator.next_word": "J", "curator.previous_word": "K"}
+        )
+        qtbot.addWidget(dlg)
+        text = dlg.key_hint_label.text()
+        assert "J next word" in text
+        assert "K previous word" in text
 
 
 class TestBulkShortcutsExist:
@@ -879,9 +910,9 @@ class TestRemoveFromKnownWords(TestAddToKnownWords):
 
 
 class TestKnownWordsShortcut:
-    """The user-asked-for K key — the toolbar verb, on a key.
+    """The mark-known key: D since the keymap change (K fought the arrow keys for the right hand).
 
-    K routes straight to ``_on_add_to_known``, so it inherits the button's
+    D routes straight to ``_on_add_to_known``, so it inherits the button's
     whole contract: highlighted rows else the current row, add-unless-every-
     target-is-already-staged, dead without a commit callback, and inert while
     a commit is in flight. Nothing here re-tests that contract; these tests
@@ -901,31 +932,31 @@ class TestKnownWordsShortcut:
         qtbot.addWidget(dlg)
         return dlg, captured
 
-    def test_k_shortcut_is_registered_on_the_table(self, dialog):
-        assert _find_table_shortcut(dialog, "K") is not None
+    def test_d_shortcut_is_registered_on_the_table(self, dialog):
+        assert _find_table_shortcut(dialog, "D") is not None
 
-    def test_k_is_scoped_to_the_table_not_the_window(self, dialog):
+    def test_d_is_scoped_to_the_table_not_the_window(self, dialog):
         """Window scope would fire it from the Search box (Issue #55's lesson)."""
-        shortcut = _find_table_shortcut(dialog, "K")
+        shortcut = _find_table_shortcut(dialog, "D")
         assert shortcut is not None
         assert shortcut.context() == Qt.ShortcutContext.WidgetWithChildrenShortcut
 
-    def test_k_stages_the_highlighted_rows(self, qtbot, make_tokenized_words):
+    def test_d_stages_the_highlighted_rows(self, qtbot, make_tokenized_words):
         dlg, captured = self._dialog_with_callback(qtbot, make_tokenized_words)
         mined = {dlg.table.item(row, 1).text() for row in (0, 2)}
         _select_rows(dlg, [0, 2])
 
-        shortcut = _find_table_shortcut(dlg, "K")
+        shortcut = _find_table_shortcut(dlg, "D")
         assert shortcut is not None
         shortcut.activated.emit()
 
         assert dlg.pending_known_forms() == mined
-        assert captured == [], "K must stage only; Confirm writes"
+        assert captured == [], "D must stage only; Confirm writes"
 
-    def test_k_again_unstages_the_same_rows(self, qtbot, make_tokenized_words):
+    def test_d_again_unstages_the_same_rows(self, qtbot, make_tokenized_words):
         dlg, _ = self._dialog_with_callback(qtbot, make_tokenized_words)
         _select_rows(dlg, [0])
-        shortcut = _find_table_shortcut(dlg, "K")
+        shortcut = _find_table_shortcut(dlg, "D")
         assert shortcut is not None
         shortcut.activated.emit()
         assert dlg.pending_known_forms()
@@ -933,19 +964,19 @@ class TestKnownWordsShortcut:
         shortcut.activated.emit()
         assert dlg.pending_known_forms() == set()
 
-    def test_k_without_a_commit_callback_does_nothing(self, dialog):
+    def test_d_without_a_commit_callback_does_nothing(self, dialog):
         """The verb is a dead control without a callback; so is its key."""
         _select_rows(dialog, [0])
-        shortcut = _find_table_shortcut(dialog, "K")
+        shortcut = _find_table_shortcut(dialog, "D")
         assert shortcut is not None
         shortcut.activated.emit()
         assert dialog.pending_known_forms() == set()
 
-    def test_typing_k_in_search_filters_and_stages_nothing(self, qtbot, make_tokenized_words):
+    def test_typing_d_in_search_filters_and_stages_nothing(self, qtbot, make_tokenized_words):
         """A real keypress in the Search box must reach the box as a letter.
 
         Non-vacuous by construction: the same assertion proves the key was
-        delivered (the field holds "k") and that the shortcut did not eat it
+        delivered (the field holds "d") and that the shortcut did not eat it
         (nothing staged). A window-scoped shortcut fails both halves at once.
         """
         from PyQt6.QtTest import QTest
@@ -958,7 +989,10 @@ class TestKnownWordsShortcut:
         dlg.search_input.setFocus()
         qtbot.waitUntil(lambda: dlg.search_input.hasFocus(), timeout=1000)
 
-        QTest.keyClick(dlg.search_input, Qt.Key.Key_K)
+        QTest.keyClick(dlg.search_input, Qt.Key.Key_D)
 
-        assert dlg.search_input.text() == "k"
+        assert dlg.search_input.text() == "d"
         assert dlg.pending_known_forms() == set()
+
+    def test_k_is_bound_to_nothing(self, dialog):
+        assert _find_table_shortcut(dialog, "K") is None

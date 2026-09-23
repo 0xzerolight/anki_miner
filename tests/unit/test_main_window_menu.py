@@ -175,10 +175,9 @@ def test_usage_guide_action_opens_browser(main_window, monkeypatch):
 def test_native_menu_bar_gets_one_action_menu(qtbot, patch_heavy_init, test_config, monkeypatch):
     """On a native menu bar (macOS, Linux global menu) a menu-less top-level
     QAction is silently dropped, so the Usage Guide becomes a one-action menu."""
-    from PyQt6.QtGui import QKeySequence
     from PyQt6.QtWidgets import QMenuBar
 
-    from anki_miner.gui.utils.keyboard_shortcuts import HELP_SEQUENCE
+    from anki_miner.gui.utils.key_bindings import default_sequence
 
     monkeypatch.setattr(QMenuBar, "isNativeMenuBar", lambda self: True)
     patch_heavy_init(test_config)
@@ -195,7 +194,7 @@ def test_native_menu_bar_gets_one_action_menu(qtbot, patch_heavy_init, test_conf
         assert menu is not None
         inner = menu.actions()
         assert [a.text() for a in inner] == ["Open Usage Guide..."]
-        assert inner[0].shortcut() == QKeySequence(HELP_SEQUENCE)
+        assert inner[0].shortcut() == default_sequence("app.usage_guide")
         assert window.usage_guide_action is inner[0]
     finally:
         window.deleteLater()
@@ -271,9 +270,10 @@ def test_about_dialog_builds_and_shows_version(qtbot):
     """AboutDialog constructs headless and renders the version."""
     from PyQt6.QtWidgets import QLabel
 
+    from anki_miner.gui.utils.key_bindings import about_rows, resolve_bindings
     from anki_miner.gui.widgets.dialogs.about_dialog import AboutDialog
 
-    dialog = AboutDialog("9.9.9")
+    dialog = AboutDialog("9.9.9", about_rows(resolve_bindings({})))
     qtbot.addWidget(dialog)
     try:
         texts = [label.text() for label in dialog.findChildren(QLabel)]

@@ -17,16 +17,14 @@ if TYPE_CHECKING:
     from anki_miner.gui.widgets.subtitle_player_widget import SubtitlePlayerWidget
     from anki_miner.models.reading import ImageRef, ReadingUnit
 
-from PyQt6.QtCore import QByteArray, QPoint, Qt, QTimer
+from PyQt6.QtCore import QByteArray, QItemSelectionModel, QPoint, Qt, QTimer
 from PyQt6.QtGui import (
     QAction,
     QCloseEvent,
     QColor,
     QFont,
     QImage,
-    QKeySequence,
     QPixmap,
-    QShortcut,
     QShowEvent,
 )
 from PyQt6.QtWidgets import (
@@ -52,7 +50,13 @@ from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import session_state
 from anki_miner.gui.utils.content_text import content_cell_font, content_phrase_wrap
 from anki_miner.gui.utils.fonts import make_scaled_font
-from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut, scoped_shortcut
+from anki_miner.gui.utils.key_bindings import display_text, resolve_bindings
+from anki_miner.gui.utils.keyboard_shortcuts import (
+    PRIMARY_ACTION_DISPLAY,
+    disown_default_buttons,
+    primary_action_shortcut,
+    scoped_shortcut,
+)
 from anki_miner.gui.utils.qt_helpers import (
     COPY_ROLE,
     CellRole,
@@ -197,6 +201,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         content_style: ContentTextStyle | None = None,
         parse_sentence_fn: Callable[[str], list[TokenizedWord]] | None = None,
         expression_audio_fetch_fn: Callable[[TokenizedWord, Callable[[], bool] | None], bool] | None = None,
+        key_bindings: Mapping[str, str] | None = None,
     ):
         super().__init__(parent)
         self._words = words
@@ -204,6 +209,11 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # soft-wrap both come from the mining language's profile. None keeps
         # today's Japanese face and BudouX phrase wrapping.
         self._content_style = content_style or get_profile("ja").content_style
+        # Keys from Settings -> Keyboard (config.key_bindings, overrides only),
+        # resolved ONCE: the curator is rebuilt for every queue item, so a
+        # rebinding applies from the next one and an open window keeps the keys
+        # it was built with -- the Keyboard page says so.
+        self._keys = resolve_bindings(key_bindings or {})
         # Known Words are STAGED, not written (D34-B). Add to Known Words marks
         # rows "Known · pending"; only a successful Confirm calls this callback,
         # and it is called ON A WORKER THREAD. Cancel, Esc, the window X, the
@@ -528,7 +538,8 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # Three bulk verbs, each with ONE fixed target named in its own label and
         # counted live by _refresh_bulk_labels. Nothing here changes meaning with
         # the selection, so no tooltip is needed to disambiguate — and the
-        # "Exclude highlighted" verb is the S key, which is on the hint line.
+        # "Exclude highlighted" verb is the include/exclude key (S by default),
+        # which is on the hint line.
         self.select_all_button = ModernButton(variant="secondary")
         self.select_all_button.clicked.connect(self._select_all)
         controls_layout.addWidget(self.select_all_button)
@@ -730,18 +741,26 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # on the focused one. A bare "include/exclude" read as a per-row verb and
         # went outright false once Search narrowed the list. Keep the two in step.
         #
-        # One unsplit literal per variant even past the line limit: pylupdate6
-        # extracts the tr() argument as written, so a concatenation reaches the
-        # catalogs in pieces. E501 is off project-wide and black leaves strings be.
-        if self._show_player:
-            text = self.tr(
-                "S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm"
-            )
-        else:
-            text = self.tr(
-                "S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm"
-            )
-        self.key_hint_label = QLabel(text)
+        # One literal tr() per action: pylupdate6 extracts only a literal
+        # argument, so the template can never be built or passed through a
+        # helper. An unbound action is left out rather than printed keyless.
+        pieces: list[str] = []
+        if key := self._key_text("curator.toggle_include"):
+            pieces.append(tr_format(self.tr("%1 include/exclude"), key))
+        if self._show_player and (key := self._key_text("curator.play_pause")):
+            pieces.append(tr_format(self.tr("%1 play/pause"), key))
+        if key := self._key_text("curator.mark_known"):
+            pieces.append(tr_format(self.tr("%1 mark known"), key))
+        if key := self._key_text("curator.include_visible"):
+            pieces.append(tr_format(self.tr("%1 include visible"), key))
+        if key := self._key_text("curator.exclude_visible"):
+            pieces.append(tr_format(self.tr("%1 exclude visible"), key))
+        if key := self._key_text("curator.next_word"):
+            pieces.append(tr_format(self.tr("%1 next word"), key))
+        if key := self._key_text("curator.previous_word"):
+            pieces.append(tr_format(self.tr("%1 previous word"), key))
+        pieces.append(tr_format(self.tr("%1 confirm"), PRIMARY_ACTION_DISPLAY))
+        self.key_hint_label = QLabel(" · ".join(pieces))
         self.key_hint_label.setObjectName("curator-key-hints")
         self.key_hint_label.setFont(self._make_font(11))
         # Wraps because an unwrapped QLabel demands its full text width as a
@@ -750,6 +769,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         # is the same defect that kept the media column at 200px.
         self.key_hint_label.setWordWrap(True)
         return self.key_hint_label
+
+    def _key_text(self, action_id: str) -> str:
+        """The key bound to ``action_id`` as the user reads it; "" when unbound."""
+        return display_text(self._keys[action_id])
 
     def showEvent(self, a0: QShowEvent | None) -> None:  # noqa: N802 - Qt override
         """Set the opening split ratios once, against real geometry.
@@ -1590,14 +1613,14 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
     # ------------------------------------------------------------------
 
     def _install_play_pause_shortcut(self, widget: QWidget) -> None:
-        """Install a widget-scoped Space play/pause shortcut on ``widget``.
+        """Install the widget-scoped play/pause key (Space unless rebound) on ``widget``.
 
         ``WidgetWithChildrenShortcut`` so it only fires when ``widget`` (or one of
         its children) has focus — never the Search box. Installed on the table and
         on each preview pane the user clicks into (the player PANE, the sentence
-        picker, and the dictionary), so Space keeps reaching the player after focus
-        leaves the table. A window-scoped shortcut can't be used: it would swallow
-        spaces typed in the Search box (Issue #55).
+        picker, and the dictionary), so the key keeps reaching the player after
+        focus leaves the table. A window-scoped shortcut can't be used: it would
+        swallow the key typed in the Search box (Issue #55).
 
         For the player it must be the pane container, never ``self.player_widget``:
         the clip strip and the prev/next line buttons are the player's siblings, and
@@ -1606,66 +1629,93 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         WidgetWithChildren shortcuts in one ancestry chain fire
         ``activatedAmbiguously`` and nothing happens at all.
         """
-        shortcut = QShortcut(QKeySequence(Qt.Key.Key_Space), widget)
-        shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        shortcut.activated.connect(self._toggle_play_pause)
+        self._bind("curator.play_pause", widget, self._toggle_play_pause)
 
     def _setup_shortcuts(self) -> None:
-        """Set up keyboard shortcuts for word curation."""
-        # Space: Play/pause the player (Issue #55). Scoped per widget (not the
-        # window) so it doesn't swallow spaces typed in the Search box. Installed
-        # on the table and on each interactive preview pane — focus leaves the
-        # table the moment a sentence/scene is clicked, so the table alone isn't
-        # enough.
+        """Install the curator's keys from ``self._keys`` (Settings -> Keyboard).
+
+        Every key but confirm is scoped to the table (WidgetWithChildren), so
+        none fires from the Search box: a window-scoped letter would stage words
+        while the user types (Issue #55). Play/pause is the one key installed on
+        more than one pane; see _install_play_pause_shortcut. An unbound action
+        installs nothing. The arrow keys stay the table's own navigation and
+        cannot be rebound (key_bindings reserves them).
+        """
+        # Play/pause (Issue #55), on the table and on each interactive preview
+        # pane: focus leaves the table the moment a sentence or scene is
+        # clicked, so the table alone isn't enough.
         self._install_play_pause_shortcut(self.table)
         if self._show_player and hasattr(self, "player_pane"):
             # The PANE, not self.player_widget. Installing on both would put two
-            # WidgetWithChildren Space shortcuts in one ancestry chain, which Qt
-            # resolves as activatedAmbiguously — neither fires and Space dies.
+            # WidgetWithChildren shortcuts for one key in one ancestry chain,
+            # which Qt resolves as activatedAmbiguously — neither fires.
             self._install_play_pause_shortcut(self.player_pane)
         if self._has_candidates and hasattr(self, "sentence_list"):
             self._install_play_pause_shortcut(self.sentence_list)
         if self._show_dict and hasattr(self, "definition_view"):
             self._install_play_pause_shortcut(self.definition_view)
 
-        # S: Toggle checkbox of selected rows (or current row if none selected).
-        # Relocated off Space, which is now play/pause (Issue #55).
-        toggle_shortcut = QShortcut(QKeySequence(Qt.Key.Key_S), self.table)
-        toggle_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        toggle_shortcut.activated.connect(self._toggle_selected_rows)
-
-        # Ctrl+A: include every visible word — the same verb as the "Include
-        # visible" button, so the two can never disagree. (Scoped to the table so
-        # it doesn't override text selection in Search.)
-        select_all_shortcut = QShortcut(QKeySequence("Ctrl+A"), self.table)
-        select_all_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        select_all_shortcut.activated.connect(self._select_all)
-
-        # Ctrl+D: exclude every visible word (scoped to table)
-        deselect_all_shortcut = QShortcut(QKeySequence("Ctrl+D"), self.table)
-        deselect_all_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
-        deselect_all_shortcut.activated.connect(self._deselect_all)
-
-        # K: stage/unstage the highlighted rows for the known list — the same
-        # verb as the "Add to Known Words" button, which already decides the
-        # direction and no-ops without a commit callback. Table-scoped like the
-        # rest: a window-scoped K would stage words while the user types into
-        # Search.
-        scoped_shortcut(self.table, QKeySequence(Qt.Key.Key_K), self._on_add_to_known)
-
-        # F2: Qt's edit key — open the sentence editor for the focused word.
-        # Table-scoped like the rest, so it cannot fire from Search.
-        scoped_shortcut(self.table, QKeySequence(Qt.Key.Key_F2), self._edit_focused_word)
+        # Toggle the highlighted rows (or the current row when none). Moved off
+        # Space, which became play/pause (Issue #55).
+        self._bind("curator.toggle_include", self.table, self._toggle_selected_rows)
+        # The same verbs as the "Include/Exclude visible" buttons, so the two can
+        # never disagree. Table-scoped so Ctrl+A still selects text in Search.
+        self._bind("curator.include_visible", self.table, self._select_all)
+        self._bind("curator.exclude_visible", self.table, self._deselect_all)
+        # The "Add to Known Words" button's verb, which already decides the
+        # direction and no-ops without a commit callback.
+        self._bind("curator.mark_known", self.table, self._on_add_to_known)
+        # Open the sentence editor for the focused word (F2 is Qt's edit key).
+        self._bind("curator.edit_sentence", self.table, self._edit_focused_word)
+        # What the arrow keys do, for a user who wants it on a left-hand key.
+        self._bind("curator.next_word", self.table, lambda: self._move_focus(1))
+        self._bind("curator.previous_word", self.table, lambda: self._move_focus(-1))
 
         # Ctrl+Return (and the keypad's Ctrl+Enter): confirm the selection.
-        # A bare Return can NOT be used here: this dialog owns a Search field, and
-        # a Japanese input method commits a composition with Return — the old
-        # window-scoped Return shortcut turned "accept this kana" into "accept the
-        # entire review". Scoped to the dialog so it also works from Search.
+        # Fixed, not remappable. A bare Return can NOT be used here: this dialog
+        # owns a Search field, and a Japanese input method commits a composition
+        # with Return — the old window-scoped Return shortcut turned "accept this
+        # kana" into "accept the entire review". Scoped to the dialog so it also
+        # works from Search.
         primary_action_shortcut(self, self.accept)
 
+    def _bind(self, action_id: str, owner: QWidget, slot: Callable[[], None]) -> None:
+        """Scope ``action_id``'s key to ``owner``; nothing when the action is unbound."""
+        key = self._keys[action_id]
+        if not key.isEmpty():
+            scoped_shortcut(owner, key, slot)
+
+    def _move_focus(self, step: int) -> None:
+        """Move the cursor ``step`` visible rows down (negative: up), as the arrow keys do.
+
+        The selection flags are explicit because ``setCurrentCell`` derives them
+        from the modifiers held at the time: with a Ctrl-bound key it would
+        toggle rows into the highlight instead of moving it. Stops at either end
+        like the arrows; with no focused row it starts at the first (or last)
+        visible one.
+        """
+        rows = self._visible_rows()
+        model = self.table.model()
+        selection = self.table.selectionModel()
+        if not rows or model is None or selection is None:
+            return
+        current = self.table.currentRow()
+        if current in rows:
+            position = rows.index(current) + step
+            if not 0 <= position < len(rows):
+                return
+            target = rows[position]
+        else:
+            target = rows[0] if step > 0 else rows[-1]
+        index = model.index(target, max(self.table.currentColumn(), 0))
+        selection.setCurrentIndex(
+            index,
+            QItemSelectionModel.SelectionFlag.ClearAndSelect | QItemSelectionModel.SelectionFlag.Rows,
+        )
+        self.table.scrollTo(index)
+
     def _toggle_play_pause(self) -> None:
-        """Space: toggle player play/pause (no-op when the player pane is hidden,
+        """The play/pause key: toggle player play/pause (no-op when the player pane is hidden,
         or while a season-curation source swap is still in flight)."""
         if self._show_player and hasattr(self, "player_widget") and self._chosen_episode_displayed():
             self.player_widget.toggle_play_pause()
@@ -2848,10 +2898,10 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         menu.addSeparator()
         edit_action = menu.addAction(self.tr("Edit word and sentence…"))
         if edit_action is not None:
-            # Display-only shortcut hint: the table's own F2 binding does the
-            # work, and a live QAction shortcut would be a second F2 in the
+            # Display-only shortcut hint: the table's own edit binding does the
+            # work, and a live QAction shortcut would be a second key in the
             # same chain.
-            edit_action.setShortcut(QKeySequence(Qt.Key.Key_F2))
+            edit_action.setShortcut(self._keys["curator.edit_sentence"])
             edit_action.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
             edit_action.setEnabled(self._can_edit_sentences)
         reset_action = menu.addAction(self.tr("Reset word and sentence"))
@@ -2926,9 +2976,9 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
     def _include_highlighted(self) -> None:
         """Include exactly the highlighted rows.
 
-        The mirror verb — exclude the highlight — is the S key, which toggles it;
-        with every row checked by default, that IS the exclude gesture, so a
-        fourth button would only restate it.
+        The mirror verb — exclude the highlight — is the include/exclude key (S
+        by default), which toggles it; with every row checked by default, that
+        IS the exclude gesture, so a fourth button would only restate it.
         """
         self._set_check_state(self._highlighted_rows(), Qt.CheckState.Checked)
 
@@ -2946,7 +2996,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         """Whether a checkbox item still accepts toggling.
 
         Rows added to the known/ignore list have their checkable flag stripped so
-        bulk actions and the S toggle key can't re-include them (Issue #42).
+        bulk actions and the include/exclude key can't re-include them (Issue #42).
         """
         return bool(item.flags() & Qt.ItemFlag.ItemIsUserCheckable)
 
@@ -2955,7 +3005,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
 
         If any target row is unchecked, all flip to Checked; otherwise all flip
         to Unchecked. Falls back to the focused row when the selection is empty
-        so the S key on a single-cursor view still toggles that one row
+        so the include/exclude key on a single-cursor view still toggles that one row
         (Space is now play/pause — Issue #55).
         """
         rows = self._highlighted_rows()
@@ -3164,7 +3214,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
             # what the user chose instead of a default.
             self._known_prior_check[check_item.data(Qt.ItemDataRole.UserRole)] = check_item.checkState()
             check_item.setCheckState(Qt.CheckState.Unchecked)
-            # Strip the checkable flag so bulk actions / the S toggle key can't re-include it.
+            # Strip the checkable flag so bulk actions / the include/exclude key can't re-include it.
             check_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             # "pending" is the whole point: nothing has been written yet, and
             # Cancel will discard this. The include column is ResizeToContents,
@@ -3183,7 +3233,7 @@ class WordCurationDialog(ScreenIssueHost, QDialog):
         """Undo :meth:`_mark_row_known` — the row rejoins the review.
 
         The exact inverse, cell for cell. The checkable flag comes back, so the
-        bulk verbs and the S key can reach the row again; the "Known · pending"
+        bulk verbs and the include/exclude key can reach the row again; the "Known · pending"
         label goes, and column 0's ResizeToContents rule shrinks the column back
         on its own.
 

@@ -4,9 +4,6 @@ Verifies:
 - A registered tab gets all six presenter signals connected to the correct
   MainWindow handlers.
 - ``window.config_refreshed`` is connected to ``tab.update_config``.
-- After all tabs are registered and ``setup_tab_shortcuts()`` is called,
-  Ctrl+1..N each switch to the correct tab index, with exactly one shortcut
-  per tab and no gaps.
 """
 
 from __future__ import annotations
@@ -14,7 +11,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtGui import QKeySequence, QShortcut
 from PyQt6.QtWidgets import QWidget
 
 
@@ -28,20 +24,6 @@ def bare_window(qtbot, patch_heavy_init, test_config):
     qtbot.addWidget(window)
     yield window
     window.deleteLater()
-
-
-def _tab_shortcut_keys(window) -> list[str]:
-    """Return portable-text keys for Ctrl+<digit> shortcuts only."""
-    return [
-        sc.key().toString(QKeySequence.SequenceFormat.PortableText)
-        for sc in window.findChildren(QShortcut)
-        if sc.key().toString(QKeySequence.SequenceFormat.PortableText).startswith("Ctrl+")
-        and sc.key().toString(QKeySequence.SequenceFormat.PortableText)[5:].isdigit()
-    ]
-
-
-def _all_shortcut_keys(window) -> set[str]:
-    return {sc.key().toString(QKeySequence.SequenceFormat.PortableText) for sc in window.findChildren(QShortcut)}
 
 
 class TestRegisterMiningTabPresenterConnections:
@@ -159,78 +141,3 @@ class TestRegisterMiningTabExtraPresenters:
         cfg = window.get_config()
         window.config_refreshed.emit(cfg)
         tab.update_config.assert_called_once_with(cfg)
-
-
-class TestSetupTabShortcutsAfterRegistration:
-    """Ctrl+N shortcuts are count-driven, one per tab, no gaps, no duplicates."""
-
-    @pytest.fixture
-    def window_with_7_tabs(self, bare_window, qtbot):
-        from anki_miner.gui import app as app_module
-        from anki_miner.gui.presenters import GUIPresenter
-
-        mining_labels = (
-            "Episode Mining",
-            "Batch Mining",
-            "Deck Builder",
-            "YouTube",
-            "Audiobook",
-        )
-        for label in mining_labels:
-            tab = QWidget()
-            tab.update_config = MagicMock()
-            qtbot.addWidget(tab)
-            presenter = GUIPresenter(bare_window)
-            app_module.register_mining_tab(bare_window, tab, presenter, label)
-
-        for label in ("Analytics", "Settings"):
-            tab = QWidget()
-            qtbot.addWidget(tab)
-            bare_window.tabs.addTab(tab, label)
-
-        bare_window.setup_tab_shortcuts()
-        return bare_window
-
-    def test_ctrl_1_through_n_all_present(self, window_with_7_tabs):
-        n = window_with_7_tabs.tabs.count()
-        keys = set(_tab_shortcut_keys(window_with_7_tabs))
-        for i in range(1, n + 1):
-            assert f"Ctrl+{i}" in keys, f"missing Ctrl+{i} for {n}-tab window"
-
-    def test_no_shortcut_beyond_tab_count(self, window_with_7_tabs):
-        n = window_with_7_tabs.tabs.count()
-        keys = set(_tab_shortcut_keys(window_with_7_tabs))
-        assert f"Ctrl+{n + 1}" not in keys, f"spurious Ctrl+{n + 1} shortcut beyond tab count {n}"
-
-    def test_exactly_one_shortcut_per_tab_no_duplicates(self, window_with_7_tabs):
-        n = window_with_7_tabs.tabs.count()
-        keys = _tab_shortcut_keys(window_with_7_tabs)
-        assert len(keys) == n, f"expected {n} tab shortcuts, got {len(keys)}: {keys}"
-        assert len(keys) == len(set(keys)), f"duplicate shortcuts: {keys}"
-
-    def test_ctrl_1_switches_to_tab_0(self, window_with_7_tabs):
-        window_with_7_tabs.tabs.setCurrentIndex(3)
-        window_with_7_tabs._switch_to_tab(0)
-        assert window_with_7_tabs.tabs.currentIndex() == 0
-
-    def test_ctrl_n_switches_to_last_tab(self, window_with_7_tabs):
-        n = window_with_7_tabs.tabs.count()
-        window_with_7_tabs.tabs.setCurrentIndex(0)
-        window_with_7_tabs._switch_to_tab(n - 1)
-        assert window_with_7_tabs.tabs.currentIndex() == n - 1
-
-    def test_init_does_not_create_tab_shortcuts(self, bare_window):
-        """No Ctrl+digit shortcuts before setup_tab_shortcuts() is called."""
-        keys = set(_tab_shortcut_keys(bare_window))
-        assert not keys, f"Tab shortcuts appeared in __init__: {keys}"
-
-    def test_non_tab_shortcuts_survive(self, window_with_7_tabs):
-        """Ctrl+, remains after setup_tab_shortcuts(), and adds no collisions.
-
-        D48-B retired Ctrl+T and Ctrl+Shift+V; registering the tabs must not
-        quietly bring either back.
-        """
-        keys = _all_shortcut_keys(window_with_7_tabs)
-        assert "Ctrl+," in keys
-        assert "Ctrl+T" not in keys
-        assert "Ctrl+Shift+V" not in keys
