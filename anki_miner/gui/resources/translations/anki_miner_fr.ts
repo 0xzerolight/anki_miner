@@ -2769,6 +2769,22 @@ Aucun fichier d'index n'est supprimé.</translation>
         <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
         <translation>Consultez et modifiez tous les raccourcis clavier : les touches du Curateur de mots, et celles communes à toute l'application pour les Paramètres, ce guide et chaque onglet.</translation>
     </message>
+    <message>
+        <source>Anki Miner Usage Guide</source>
+        <translation>Guide d'utilisation d'Anki Miner</translation>
+    </message>
+    <message>
+        <source>Search features, e.g. "i+1", "pitch", "youtube"</source>
+        <translation>Rechercher des fonctionnalités, p. ex. "i+1", "pitch", "youtube"</translation>
+    </message>
+    <message>
+        <source>No matching features.</source>
+        <translation>Aucune fonctionnalité correspondante.</translation>
+    </message>
+    <message>
+        <source>Open ▸</source>
+        <translation>Ouvrir ▸</translation>
+    </message>
 </context><context>
     <name>CardBackfillTab</name>
     <message>
@@ -5607,6 +5623,154 @@ Aucun fichier sur le disque n'est supprimé.</translation>
         <translation>Paquet à exclure de la détection des mots connus :</translation>
     </message>
 </context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source>Choose frequency source</source>
+        <translation>Choisir la source de fréquence</translation>
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation>Choisir la source de fréquence à réimporter</translation>
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>Source de fréquence (%1);;Tous les fichiers (*)</translation>
+    </message>
+    <message>
+        <source>Installed frequency sources could not be checked.</source>
+        <translation>Impossible de vérifier les sources de fréquence installées.</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Une autre tâche utilise les ressources indexées — réessayez une fois qu'elle est terminée.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>L’importation est terminée, mais les paramètres n’ont pas pu être mis à jour.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Une autre importation est en cours. Attendez qu'elle se termine, puis réessayez.</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>L'import s'est arrêté avant la fin. Réessayez.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Annuler</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Annulation…</translation>
+    </message>
+    <message>
+        <source>Importing frequency source…</source>
+        <translation>Importation de la source de fréquence…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be imported.</source>
+        <translation>Impossible d'importer la source de fréquence.</translation>
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation>Source de fréquence ajoutée</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>%1 entrées importées depuis « %2 ».</translation>
+    </message>
+    <message>
+        <source>Choose frequency sources</source>
+        <translation>Choisir les sources de fréquence</translation>
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation>Sources de fréquence ajoutées</translation>
+    </message>
+    <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation>%1 sources de fréquence importées :</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>Rien n'a été importé.</translation>
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation>Réimportation de la source de fréquence…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be re-imported.</source>
+        <translation>Impossible de réimporter la source de fréquence.</translation>
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation>Source de fréquence réimportée</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>%1 réimportée.</translation>
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation>Source de fréquence %1 sur %2 : %3</translation>
+    </message>
+    <message>
+        <source>The frequency sources could not be re-imported.</source>
+        <translation>Impossible de réimporter les sources de fréquence.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Tout réimporter</translation>
+    </message>
+    <message>
+        <source>Reimported %1 frequency source(s):</source>
+        <translation>%1 source(s) de fréquence réimportée(s) :</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>Ignorées (aucune copie enregistrée à partir de laquelle reconstruire ; utilisez Réimporter… pour chaque ligne) :</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Échecs :</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining frequency sources.</source>
+        <translation>Annulé avant les sources de fréquence restantes.</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>Rien n'a été réimporté.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Rien à réimporter</translation>
+    </message>
+    <message>
+        <source>No frequency sources in the chain.</source>
+        <translation>Aucune source de fréquence dans la chaîne.</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>Ignorées (aucune copie enregistrée à partir de laquelle reconstruire ; utilisez Réimporter… pour chaque ligne) :
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (%1 entrées mal formées ignorées)</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> Il s'agit d'une source basée sur les occurrences ; ses décomptes ont été convertis en rangs.</translation>
+    </message>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation> Il s'agit d'une source basée sur les mots ; ses étiquettes de niveau sont affichées sur la carte mais n'affectent pas le filtrage par rang de fréquence.</translation>
+    </message>
+</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
         <source>Frequency</source>
@@ -5907,8 +6071,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Raccourcis</translation>
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. The arrow keys always move between words, and Ctrl+Enter always confirms.</source>
-        <translation>Cliquez sur un champ, puis appuyez sur la nouvelle touche. Les changements s'appliquent aussitôt. Une fenêtre du Curateur de mots déjà ouverte conserve ses touches jusqu'à sa prochaine ouverture. Les touches fléchées permettent toujours de passer d'un mot à l'autre, et Ctrl+Enter confirme toujours.</translation>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Cliquez sur un champ, puis appuyez sur la nouvelle touche. Les changements s'appliquent aussitôt. Une fenêtre du Curateur de mots déjà ouverte conserve ses touches jusqu'à sa prochaine ouverture. Les touches Haut et Bas permettent toujours de passer d'un mot à l'autre, Gauche et Droite d'une colonne à l'autre, et %1 confirme toujours.</translation>
     </message>
     <message>
         <source>Word Curator</source>
@@ -7226,6 +7390,146 @@ Continuer ?</translation>
         <translation>Bibliothèque de suppression des silences installée.</translation>
     </message>
 </context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent source</source>
+        <translation>Choisir la source d'accent de hauteur</translation>
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation>Choisir la source d'accent de hauteur à réimporter</translation>
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation>Source d'accent de hauteur (%1);;Tous les fichiers (*)</translation>
+    </message>
+    <message>
+        <source>Installed pitch accent sources could not be checked.</source>
+        <translation>Les sources d'accent de hauteur installées n'ont pas pu être vérifiées.</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Une autre tâche utilise les ressources indexées — réessayez une fois qu'elle est terminée.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>L’importation est terminée, mais les paramètres n’ont pas pu être mis à jour.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Une autre importation est en cours. Attendez qu'elle se termine, puis réessayez.</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>L'import s'est arrêté avant la fin. Réessayez.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Annuler</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Annulation…</translation>
+    </message>
+    <message>
+        <source>Importing pitch source…</source>
+        <translation>Importation de la source d'accent de hauteur…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation>Impossible d'importer la source d'accent de hauteur.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation>Source d'accent de hauteur ajoutée</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>%1 entrées importées depuis « %2 ».</translation>
+    </message>
+    <message>
+        <source>Choose pitch accent sources</source>
+        <translation>Choisir les sources d'accent de hauteur</translation>
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation>Sources d'accent de hauteur ajoutées</translation>
+    </message>
+    <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation>%1 sources d'accent de hauteur importées :</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>Rien n'a été importé.</translation>
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation>Réimportation de la source d'accent de hauteur…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be re-imported.</source>
+        <translation>Impossible de réimporter la source d'accent de hauteur.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation>Source d'accent de hauteur réimportée</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>%1 réimportée.</translation>
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation>Source d'accent de hauteur %1 sur %2 : %3</translation>
+    </message>
+    <message>
+        <source>The pitch sources could not be re-imported.</source>
+        <translation>Impossible de réimporter les sources d'accent de hauteur.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Tout réimporter</translation>
+    </message>
+    <message>
+        <source>Reimported %1 pitch source(s):</source>
+        <translation>%1 source(s) d'accent de hauteur réimportée(s) :</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>Ignorées (aucune copie enregistrée à partir de laquelle reconstruire ; utilisez Réimporter… pour chaque ligne) :</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Échecs :</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining pitch sources.</source>
+        <translation>Annulé avant les sources d'accent de hauteur restantes.</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>Rien n'a été réimporté.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Rien à réimporter</translation>
+    </message>
+    <message>
+        <source>No pitch sources in the chain.</source>
+        <translation>Aucune source d'accent de hauteur dans la chaîne.</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>Ignorées (aucune copie enregistrée à partir de laquelle reconstruire ; utilisez Réimporter… pour chaque ligne) :
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (%1 entrées mal formées ignorées)</translation>
+    </message>
+</context><context>
     <name>PitchSettingsPanel</name>
     <message>
         <source>Pitch Accent</source>
@@ -7642,6 +7946,28 @@ Aucun fichier d'index n'est supprimé.</translation>
     <message>
         <source>The profile could not be deleted.</source>
         <translation>Le profil n'a pas pu être supprimé.</translation>
+    </message>
+</context><context>
+    <name>ProgressTelemetry</name>
+    <message>
+        <source>%1 downloaded</source>
+        <translation>%1 téléchargé</translation>
+    </message>
+    <message>
+        <source>Elapsed %1</source>
+        <translation>Écoulé : %1</translation>
+    </message>
+    <message>
+        <source>Resumed</source>
+        <translation>Reprise</translation>
+    </message>
+    <message>
+        <source>About %1 remaining</source>
+        <translation>Environ %1 restant</translation>
+    </message>
+    <message>
+        <source>No update for %1 s</source>
+        <translation>Aucune mise à jour depuis %1 s</translation>
     </message>
 </context><context>
     <name>ProgressWidget</name>
@@ -8989,6 +9315,80 @@ Aucun fichier d'index n'est supprimé.</translation>
     <message>
         <source>Could not parse this sentence.</source>
         <translation>Impossible d'analyser cette phrase.</translation>
+    </message>
+</context><context>
+    <name>ServiceFactory</name>
+    <message>
+        <source>Couldn't scan dictionaries folder: %1</source>
+        <translation>Impossible d'analyser le dossier des dictionnaires : %1</translation>
+    </message>
+    <message>
+        <source>Couldn't load dictionary chain: %1</source>
+        <translation>Impossible de charger la chaîne de dictionnaires : %1</translation>
+    </message>
+    <message>
+        <source>Dictionary chain loaded: %1</source>
+        <translation>Chaîne de dictionnaires chargée : %1</translation>
+    </message>
+    <message>
+        <source>Skipping unavailable provider(s): %1</source>
+        <translation>Fournisseur(s) indisponible(s) ignoré(s) : %1</translation>
+    </message>
+    <message>
+        <source>No offline dictionary — definitions will come from Jisho.org only</source>
+        <translation>Aucun dictionnaire hors ligne — les définitions proviendront uniquement de Jisho.org</translation>
+    </message>
+    <message>
+        <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
+        <translation>Les cartes n'auront aucune définition tant que vous n'aurez pas ajouté de dictionnaire dans Paramètres → Dictionnaires.</translation>
+    </message>
+    <message>
+        <source>Pitch accent source '%1' unavailable; skipped</source>
+        <translation>Source d'accent de hauteur « %1 » indisponible ; ignorée</translation>
+    </message>
+    <message>
+        <source>Pitch accent data loaded: %1 source(s), %2 entries</source>
+        <translation>Données d'accent de hauteur chargées : %1 source(s), %2 entrées</translation>
+    </message>
+    <message>
+        <source>Couldn't load pitch accent data: %1</source>
+        <translation>Impossible de charger les données d'accent de hauteur : %1</translation>
+    </message>
+    <message>
+        <source>Frequency data loaded: %1 source(s), %2 entries</source>
+        <translation>Données de fréquence chargées : %1 source(s), %2 entrées</translation>
+    </message>
+    <message>
+        <source>Couldn't load frequency data: %1</source>
+        <translation>Impossible de charger les données de fréquence : %1</translation>
+    </message>
+    <message>
+        <source>Skipping %1 audio entry with no URL</source>
+        <translation>Entrée audio %1 sans URL ignorée</translation>
+    </message>
+    <message>
+        <source>Skipping audio pack entry with no pack ID</source>
+        <translation>Entrée de pack audio ignorée, sans ID de pack</translation>
+    </message>
+    <message>
+        <source>Audio pack '%1' unavailable; skipped</source>
+        <translation>Pack audio « %1 » indisponible ; ignoré</translation>
+    </message>
+    <message>
+        <source>Name wordsets loaded: %1 set(s) enabled</source>
+        <translation>Ensembles de noms chargés : %1 ensemble(s) activé(s)</translation>
+    </message>
+    <message>
+        <source>Couldn't load name wordsets: %1</source>
+        <translation>Impossible de charger les ensembles de noms : %1</translation>
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation>Impossible d'initialiser la BD de mots connus : %1</translation>
+    </message>
+    <message>
+        <source>Couldn't load word lists: %1</source>
+        <translation>Impossible de charger les listes de mots : %1</translation>
     </message>
 </context><context>
     <name>SettingsSearchBox</name>

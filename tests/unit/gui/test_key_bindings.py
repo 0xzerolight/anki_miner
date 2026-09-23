@@ -17,6 +17,7 @@ from anki_miner.gui.utils.key_bindings import (
     resolve_bindings,
     tab_action_id,
 )
+from anki_miner.gui.utils.keyboard_shortcuts import primary_action_display
 
 PORTABLE = QKeySequence.SequenceFormat.PortableText
 
@@ -172,7 +173,7 @@ class TestAboutRows:
         assert about_rows(resolve_bindings({})) == [
             ("Ctrl+1..7", "Switch tabs"),
             ("Ctrl+,", "Open Settings"),
-            ("Ctrl+Enter", "Run this screen's main action"),
+            (primary_action_display(), "Run this screen's main action"),
             ("F1", "Usage Guide"),
         ]
 

@@ -2756,6 +2756,22 @@ No index files are deleted.</source>
         <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
         <translation type="unfinished" />
     </message>
+    <message>
+        <source>Anki Miner Usage Guide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Search features, e.g. "i+1", "pitch", "youtube"</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No matching features.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open ▸</source>
+        <translation type="unfinished" />
+    </message>
 </context><context>
     <name>CardBackfillTab</name>
     <message>
@@ -5573,6 +5589,153 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source>Choose frequency source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Installed frequency sources could not be checked.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Importing frequency source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The frequency source could not be imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose frequency sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The frequency source could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The frequency sources could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimported %1 frequency source(s):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled before remaining frequency sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No frequency sources in the chain.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
         <source>Frequency</source>
@@ -5869,7 +6032,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. The arrow keys always move between words, and Ctrl+Enter always confirms.</source>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7178,6 +7341,145 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Installed pitch accent sources could not be checked.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Importing pitch source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose pitch accent sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The pitch source could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The pitch sources could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimported %1 pitch source(s):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled before remaining pitch sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No pitch sources in the chain.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>PitchSettingsPanel</name>
     <message>
         <source>Pitch Accent</source>
@@ -7589,6 +7891,28 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>The profile could not be deleted.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ProgressTelemetry</name>
+    <message>
+        <source>%1 downloaded</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Elapsed %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resumed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>About %1 remaining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No update for %1 s</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -8934,6 +9258,80 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Could not parse this sentence.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ServiceFactory</name>
+    <message>
+        <source>Couldn't scan dictionaries folder: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't load dictionary chain: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary chain loaded: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipping unavailable provider(s): %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No offline dictionary — definitions will come from Jisho.org only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent source '%1' unavailable; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent data loaded: %1 source(s), %2 entries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't load pitch accent data: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency data loaded: %1 source(s), %2 entries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't load frequency data: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipping %1 audio entry with no URL</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipping audio pack entry with no pack ID</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio pack '%1' unavailable; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Name wordsets loaded: %1 set(s) enabled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't load name wordsets: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't load word lists: %1</source>
         <translation type="unfinished" />
     </message>
 </context><context>

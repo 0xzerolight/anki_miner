@@ -20,7 +20,7 @@ from PyQt6.QtWidgets import QApplication
 
 from anki_miner.gui.capabilities import CAPABILITIES, MAIN_TAB_ORDER
 from anki_miner.gui.utils.key_bindings import about_rows, resolve_bindings
-from anki_miner.gui.utils.keyboard_shortcuts import PRIMARY_ACTION_DISPLAY
+from anki_miner.gui.utils.keyboard_shortcuts import primary_action_display
 
 PORTABLE = QKeySequence.SequenceFormat.PortableText
 
@@ -139,7 +139,7 @@ def test_advertised_global_bindings_are_the_installed_ones(main_window):
     # Ctrl+1..7 is a range and Ctrl+Enter is per-screen, so neither is a literal
     # window binding; every other advertised row must be.
     for keys, _description in about_rows(resolve_bindings(main_window.config.key_bindings)):
-        if ".." in keys or keys == PRIMARY_ACTION_DISPLAY:
+        if ".." in keys or keys == primary_action_display():
             continue
         assert keys in reachable, f"About advertises {keys} but nothing binds it"
 

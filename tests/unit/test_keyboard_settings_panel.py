@@ -8,10 +8,12 @@ import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QKeySequence
 from PyQt6.QtTest import QTest
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QLineEdit
 
 from anki_miner.gui.utils.key_bindings import KEY_ACTIONS
+from anki_miner.gui.utils.keyboard_shortcuts import primary_action_display
 from anki_miner.gui.widgets.panels import KeyboardSettingsPanel
+from anki_miner.gui.widgets.panels.keyboard_settings_panel import _usable_text_width
 
 PORTABLE = QKeySequence.SequenceFormat.PortableText
 
@@ -153,3 +155,56 @@ def test_esc_cancels_a_recording_and_keeps_the_binding(panel, qtbot):
 
 def test_the_page_says_an_open_curator_keeps_its_keys(panel):
     assert "already open" in panel.helper_label.text()
+
+
+def test_the_helper_text_states_the_true_arrow_key_split(panel):
+    """Up/Down move between words; Left/Right move between columns -- not "the arrow keys"."""
+    text = panel.helper_label.text()
+    assert "Up and Down" in text
+    assert "Left and Right" in text
+
+
+def test_the_helper_text_confirm_key_is_localized(panel):
+    """FIX 1: the confirm key in the helper prose is NativeText, not a literal "Ctrl+Enter"."""
+    assert primary_action_display() in panel.helper_label.text()
+
+
+def test_every_empty_editor_fits_its_own_placeholder(panel, qtbot):
+    """FIX 2 (behavioural): render the page for real, squeeze each unbound row's
+    editor (Next/Previous word ship with no default key) down to the tightest
+    width Qt's layout contract ever allows it, and check the actual rendered
+    line edit still has room for the placeholder there.
+
+    At the panel's natural (unconstrained) width every row already gets far
+    more room than any placeholder needs -- ``FormPanel``'s field column and
+    the surrounding buttons see to that regardless of this fix -- and narrowing
+    the whole *panel* doesn't reliably force one specific row down to its own
+    floor either, because ``FormPanel._apply_field_cap`` gives each row a share
+    of whatever total width the window's OTHER rows leave available, not a
+    width tied to that row's own content. ``editor.minimumSizeHint()`` is the
+    one number every real layout is contractually forbidden to hand the editor
+    less than -- it is also exactly what ``_apply_field_cap`` and the
+    hand-built-row equivalent (``sizing._RowCapKeeper``) use as their own floor
+    (see ``_KeySequenceEdit``'s docstring) -- so resizing directly to it is the
+    deterministic way to reach "the tightest a user's window could ever
+    legally squeeze this row to", real narrowing included.
+
+    A bound row's editor shows its key, not the placeholder, so only an empty
+    one can truncate. Reuses ``_usable_text_width`` -- the same SE_LineEditContents
+    computation the fix uses -- rather than re-deriving the box model here, so
+    the test tracks the real fix instead of a second guess at its arithmetic.
+    """
+    panel.show()
+    qtbot.waitExposed(panel)
+    checked_an_empty_editor = False
+    for action_id, editor in panel._editors.items():
+        if not editor.keySequence().isEmpty():
+            continue
+        checked_an_empty_editor = True
+        editor.resize(editor.minimumSizeHint())
+        line_edit = editor.findChildren(QLineEdit)[0]
+        placeholder = line_edit.placeholderText()
+        needed = line_edit.fontMetrics().horizontalAdvance(placeholder)
+        assert _usable_text_width(line_edit) >= needed, action_id
+    assert checked_an_empty_editor, "no unbound row to exercise the placeholder on"
+    panel.hide()

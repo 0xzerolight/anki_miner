@@ -36,49 +36,75 @@ from anki_miner.services.frequency.source_importer import FREQUENCY_SOURCE_SUFFI
 from anki_miner.utils.i18n import tr_format
 
 
-def _tr(text: str) -> str:
-    return QCoreApplication.translate("FrequencyImportFlow", text)
-
-
 class FrequencyImportFlow(SourceChainImportFlow):
     """Drives frequency-source imports for the Settings → Frequency panel."""
 
     @property
     def _labels(self) -> SourceFlowLabels:
         return SourceFlowLabels(
-            picker_add_caption=_tr("Choose frequency source"),
-            picker_reimport_caption=_tr("Choose frequency source to re-import"),
-            picker_filter_template=_tr("Frequency source (%1);;All Files (*)"),
-            scan_failed=_tr("Installed frequency sources could not be checked."),
-            resources_in_use=_tr("Another task is using the indexed resources — try again when it finishes."),
-            settings_update_failed=_tr("The import finished, but the settings could not be updated."),
-            refusal=_tr("Another import is still finishing. Wait for it to finish and try again."),
-            missing_result=_tr("The import stopped before it finished. Try again."),
-            cancel=_tr("Cancel"),
-            cancelling=_tr("Cancelling…"),
-            add_progress=_tr("Importing frequency source…"),
-            add_failure_summary=_tr("The frequency source could not be imported."),
-            added_title=_tr("Frequency Source Added"),
-            added_body_template=_tr("Imported %1 entries from '%2'."),
-            picker_add_multi_caption=_tr("Choose frequency sources"),
-            added_batch_title=_tr("Frequency Sources Added"),
-            added_batch_header_template=_tr("Imported %1 frequency sources:"),
-            added_batch_done=_tr("Nothing was imported."),
-            reimport_progress=_tr("Re-importing frequency source…"),
-            reimport_failure_summary=_tr("The frequency source could not be re-imported."),
-            reimported_title=_tr("Frequency Source Re-imported"),
-            reimported_body_template=_tr("Re-imported %1."),
-            batch_progress_template=_tr("Frequency source %1 of %2: %3"),
-            batch_failure_summary=_tr("The frequency sources could not be re-imported."),
-            batch_title=_tr("Reimport All"),
-            batch_reimported_header_template=_tr("Reimported %1 frequency source(s):"),
-            batch_skipped_header=_tr("Skipped (no saved copy to rebuild from; use per-row Re-import…):"),
-            batch_failed_header=_tr("Failed:"),
-            batch_cancelled=_tr("Cancelled before remaining frequency sources."),
-            batch_done=_tr("Nothing was re-imported."),
-            nothing_title=_tr("Nothing to reimport"),
-            nothing_empty_chain=_tr("No frequency sources in the chain."),
-            nothing_skipped_header=_tr("Skipped (no saved copy to rebuild from; use per-row Re-import…):\n"),
+            picker_add_caption=QCoreApplication.translate("FrequencyImportFlow", "Choose frequency source"),
+            picker_reimport_caption=QCoreApplication.translate(
+                "FrequencyImportFlow", "Choose frequency source to re-import"
+            ),
+            picker_filter_template=QCoreApplication.translate(
+                "FrequencyImportFlow", "Frequency source (%1);;All Files (*)"
+            ),
+            scan_failed=QCoreApplication.translate(
+                "FrequencyImportFlow", "Installed frequency sources could not be checked."
+            ),
+            resources_in_use=QCoreApplication.translate(
+                "FrequencyImportFlow", "Another task is using the indexed resources — try again when it finishes."
+            ),
+            settings_update_failed=QCoreApplication.translate(
+                "FrequencyImportFlow", "The import finished, but the settings could not be updated."
+            ),
+            refusal=QCoreApplication.translate(
+                "FrequencyImportFlow", "Another import is still finishing. Wait for it to finish and try again."
+            ),
+            missing_result=QCoreApplication.translate(
+                "FrequencyImportFlow", "The import stopped before it finished. Try again."
+            ),
+            cancel=QCoreApplication.translate("FrequencyImportFlow", "Cancel"),
+            cancelling=QCoreApplication.translate("FrequencyImportFlow", "Cancelling…"),
+            add_progress=QCoreApplication.translate("FrequencyImportFlow", "Importing frequency source…"),
+            add_failure_summary=QCoreApplication.translate(
+                "FrequencyImportFlow", "The frequency source could not be imported."
+            ),
+            added_title=QCoreApplication.translate("FrequencyImportFlow", "Frequency Source Added"),
+            added_body_template=QCoreApplication.translate("FrequencyImportFlow", "Imported %1 entries from '%2'."),
+            picker_add_multi_caption=QCoreApplication.translate("FrequencyImportFlow", "Choose frequency sources"),
+            added_batch_title=QCoreApplication.translate("FrequencyImportFlow", "Frequency Sources Added"),
+            added_batch_header_template=QCoreApplication.translate(
+                "FrequencyImportFlow", "Imported %1 frequency sources:"
+            ),
+            added_batch_done=QCoreApplication.translate("FrequencyImportFlow", "Nothing was imported."),
+            reimport_progress=QCoreApplication.translate("FrequencyImportFlow", "Re-importing frequency source…"),
+            reimport_failure_summary=QCoreApplication.translate(
+                "FrequencyImportFlow", "The frequency source could not be re-imported."
+            ),
+            reimported_title=QCoreApplication.translate("FrequencyImportFlow", "Frequency Source Re-imported"),
+            reimported_body_template=QCoreApplication.translate("FrequencyImportFlow", "Re-imported %1."),
+            batch_progress_template=QCoreApplication.translate("FrequencyImportFlow", "Frequency source %1 of %2: %3"),
+            batch_failure_summary=QCoreApplication.translate(
+                "FrequencyImportFlow", "The frequency sources could not be re-imported."
+            ),
+            batch_title=QCoreApplication.translate("FrequencyImportFlow", "Reimport All"),
+            batch_reimported_header_template=QCoreApplication.translate(
+                "FrequencyImportFlow", "Reimported %1 frequency source(s):"
+            ),
+            batch_skipped_header=QCoreApplication.translate(
+                "FrequencyImportFlow", "Skipped (no saved copy to rebuild from; use per-row Re-import…):"
+            ),
+            batch_failed_header=QCoreApplication.translate("FrequencyImportFlow", "Failed:"),
+            batch_cancelled=QCoreApplication.translate(
+                "FrequencyImportFlow", "Cancelled before remaining frequency sources."
+            ),
+            batch_done=QCoreApplication.translate("FrequencyImportFlow", "Nothing was re-imported."),
+            nothing_title=QCoreApplication.translate("FrequencyImportFlow", "Nothing to reimport"),
+            nothing_empty_chain=QCoreApplication.translate("FrequencyImportFlow", "No frequency sources in the chain."),
+            nothing_skipped_header=QCoreApplication.translate(
+                "FrequencyImportFlow", "Skipped (no saved copy to rebuild from; use per-row Re-import…):\n"
+            ),
         )
 
     @property
@@ -141,9 +167,13 @@ class FrequencyImportFlow(SourceChainImportFlow):
         notes = ""
         skipped = meta.get("skipped_malformed", 0)
         if skipped:
-            notes += tr_format(_tr(" (skipped %1 malformed entries)"), f"{skipped:,}")
+            notes += tr_format(
+                QCoreApplication.translate("FrequencyImportFlow", " (skipped %1 malformed entries)"), f"{skipped:,}"
+            )
         if meta.get("converted_to_ranks"):
-            notes += _tr(" This is an occurrence-based source; its counts were converted to ranks.")
+            notes += QCoreApplication.translate(
+                "FrequencyImportFlow", " This is an occurrence-based source; its counts were converted to ranks."
+            )
         return notes + self._categorical_note(meta)
 
     def _extra_reimport_notes(self, meta: dict) -> str:
@@ -160,7 +190,8 @@ class FrequencyImportFlow(SourceChainImportFlow):
         """Note for a word-based source, whose levels are excluded from rank filtering."""
         if not meta.get("is_categorical"):
             return ""
-        return _tr(
+        return QCoreApplication.translate(
+            "FrequencyImportFlow",
             " This is a word-based source; its level labels show on the card but don't affect "
-            "frequency-rank filtering."
+            "frequency-rank filtering.",
         )
