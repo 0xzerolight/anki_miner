@@ -707,3 +707,10 @@ def test_migrate_pitch_chain_absent_falls_through_to_default(tmp_config: Path):
     assert "pitch_chain" not in data
     data = GUIConfigManager._migrate_pitch_chain({"pitch_chain": "garbage"})
     assert "pitch_chain" not in data
+
+
+def test_removed_native_dialog_key_is_dropped(tmp_path):
+    path = tmp_path / "gui_config.json"
+    path.write_text(json.dumps({"config_schema_version": 4, "use_native_file_dialogs": False}))
+    config = GUIConfigManager._parse_and_migrate(path)
+    assert not hasattr(config, "use_native_file_dialogs")

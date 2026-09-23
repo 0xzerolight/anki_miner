@@ -63,7 +63,6 @@ from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.qt_log_bridge import install_qt_message_handler
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles.theme import Theme
-from anki_miner.gui.utils import file_dialogs
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.focus_ring import install_keyboard_focus_ring
 from anki_miner.gui.utils.fonts import initialize_application_fonts
@@ -722,7 +721,6 @@ def _log_effective_config(config: Any) -> None:
             ankiconnect=config.ankiconnect_url,
             theme=config.theme,
             zoom=config.ui_zoom,
-            native_dialogs=config.use_native_file_dialogs,
             asr=f"{config.asr_model}/{config.asr_device}",
             log=config.log_path,
         )
@@ -964,17 +962,6 @@ def _run_store_recovery_if_locked(
         )
     except Exception:  # noqa: BLE001 — bucket A: recovery is skipped and startup continues.
         logger.exception("Startup store recovery failed; continuing startup")
-
-
-def _seed_file_dialog_mode(config: AnkiMinerConfig | None) -> None:
-    """Seed the app-wide file-dialog mode from config (Issue #100).
-
-    Non-native Qt dialogs are the default; ``use_native_file_dialogs`` restores
-    the OS pickers. A failed config load (``None``) keeps the safe default.
-    """
-    if config is None:
-        return
-    file_dialogs.set_use_native(config.use_native_file_dialogs)
 
 
 @runtime_checkable
@@ -2238,9 +2225,6 @@ def main():
     # Clean-install nicety: make the default dicts_root exist before any
     # settings UI validates it (Issue #100 red-border state).
     _ensure_default_dicts_root(_early_config)
-
-    # File pickers default to Qt's non-native dialogs (Issue #100 freeze).
-    _seed_file_dialog_mode(_early_config)
 
     # Whole-UI zoom: must be set before QApplication is constructed (Qt reads
     # QT_SCALE_FACTOR once, at construction). Restart-to-apply by nature.

@@ -115,7 +115,6 @@ class TestEffectiveConfig:
         assert "pitch=" in message
         assert "audio=" in message
         assert "zoom=" in message
-        assert "native_dialogs=" in message
         assert "asr=" in message
         assert records[0].levelno == logging.INFO
 

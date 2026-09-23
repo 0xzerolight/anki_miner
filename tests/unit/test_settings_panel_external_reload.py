@@ -5,8 +5,8 @@ Two families of settings used to survive a whole-config swap unrepainted
 ``config_refreshed`` fan-out):
 
 * ``UISettingsPanel`` — outside ``SettingsTab._save_panels``, so only its
-  language combo was re-synced; zoom, text size, native dialogs and the theme
-  tree kept the previous config's values.
+  language combo was re-synced; zoom, text size and the theme tree kept the
+  previous config's values.
 * ``FrequencySettingsPanel`` / ``PitchSettingsPanel`` /
   ``AudioPackSettingsPanel`` — captured their storage root at construction and
   never updated it, so a config with a different root left them scanning (and
@@ -41,7 +41,6 @@ def ui_panel(test_config: AnkiMinerConfig, qtbot) -> UISettingsPanel:
         test_config.themes_root,
         test_config.ui_zoom,
         test_config.ui_language,
-        test_config.use_native_file_dialogs,
     )
     qtbot.addWidget(panel)
     return panel
@@ -54,8 +53,6 @@ def swapped_config(test_config: AnkiMinerConfig) -> AnkiMinerConfig:
         test_config,
         ui_zoom=1.5,
         ui_language="ja",
-        # Native pickers are the default, so the differing value is False.
-        use_native_file_dialogs=False,
         theme="dark",
         ui_font_scale=1.25,
     )
@@ -105,8 +102,6 @@ class TestUIPanelLoadFromConfig:
         assert ui_panel._ui_zoom == 1.5
         assert ui_panel.zoom_combo.currentData() == 150
         assert ui_panel.font_scale_combo.currentData() == 125
-        assert ui_panel._use_native_file_dialogs is False
-        assert ui_panel.native_dialogs_checkbox.isChecked() is False
         assert _active_theme_key(ui_panel) == "dark"
 
     def test_emits_nothing(self, ui_panel, swapped_config):
@@ -116,7 +111,6 @@ class TestUIPanelLoadFromConfig:
         seen = _record(
             ui_panel.zoom_changed,
             ui_panel.font_scale_changed,
-            ui_panel.native_dialogs_changed,
             ui_panel.language_changed,
             ui_panel.state_changed,
             ui_panel.favorites_changed,
@@ -132,7 +126,6 @@ class TestUIPanelLoadFromConfig:
 
         assert ui_panel.language_combo.currentData(Qt.ItemDataRole.UserRole) == "en"
         assert ui_panel._ui_zoom == test_config.ui_zoom
-        assert ui_panel.native_dialogs_checkbox.isChecked() is True
 
 
 class TestUIPanelRestartNotes:
@@ -200,16 +193,16 @@ class TestUIPanelRevertBaseline:
         1. showEvent captures the baseline.
         2. The user previews another theme. ``theme`` is in
            ``_EXTERNAL_ONLY_FIELDS`` so this round trip does NOT reload.
-        3. The user toggles "Use system file dialogs" in the same panel.
-           ``use_native_file_dialogs`` is not external-only, so the config round
-           trip DOES reload the panel — carrying the previewed theme with it.
+        3. The user changes Zoom in the same panel. ``ui_zoom`` is not
+           external-only, so the config round trip DOES reload the panel —
+           carrying the previewed theme with it.
         4. Revert must still restore the theme from step 1.
         """
         # SettingsTab.config_changed → MainWindow.update_config →
         # config_refreshed → SettingsTab.update_config (app.py:950).
         tab.config_changed.connect(tab.update_config)
         Theme.set_mode("light")
-        tab.config = replace(test_config, theme="light", use_native_file_dialogs=False)
+        tab.config = replace(test_config, theme="light", ui_zoom=0.75)
         tab._load_config()
         panel = tab.ui_panel
 
@@ -221,9 +214,11 @@ class TestUIPanelRevertBaseline:
         assert tab.config.theme == "dark"  # persisted, but no reload
         assert panel._preview_baseline == "light"
 
-        panel.native_dialogs_checkbox.setChecked(True)
-        assert tab.config.use_native_file_dialogs is True  # this one DID reload
-        assert panel.native_dialogs_checkbox.isChecked() is True
+        zoom_index = panel.zoom_combo.findData(100)
+        panel.zoom_combo.setCurrentIndex(zoom_index)  # what a real click leaves behind
+        panel._on_zoom_selected(zoom_index)
+        assert tab.config.ui_zoom == 1.0  # this one DID reload
+        assert panel.zoom_combo.currentData() == 100
 
         assert panel._preview_baseline == "light"
         panel._revert_preview()
@@ -289,16 +284,15 @@ class TestUIPanelThemesRoot:
 
     def test_reload_on_an_unrelated_field_does_not_clear_the_thumbnail_cache(self, ui_panel, test_config, monkeypatch):
         """A reload fires on ANY non-external field (this panel's own docstring),
-        e.g. toggling "Use system file dialogs" — that must not discard every
-        cached thumbnail. Only a ``themes_root`` change can redefine what a
-        theme key means.
+        e.g. a Zoom change — that must not discard every cached thumbnail. Only
+        a ``themes_root`` change can redefine what a theme key means.
         """
         calls: list[None] = []
         monkeypatch.setattr(
             "anki_miner.gui.widgets.panels.ui_settings_panel.clear_thumbnail_cache",
             lambda: calls.append(None),
         )
-        reloaded = replace(test_config, use_native_file_dialogs=not test_config.use_native_file_dialogs)
+        reloaded = replace(test_config, ui_zoom=test_config.ui_zoom + 0.25)
 
         ui_panel.load_from_config(reloaded)
 
@@ -413,7 +407,6 @@ class TestSettingsTabLoadConfigFanOut:
         panel = tab.ui_panel
         assert panel.language_combo.currentData(Qt.ItemDataRole.UserRole) == "ja"
         assert panel.zoom_combo.currentData() == 150
-        assert panel.native_dialogs_checkbox.isChecked() is False
         assert _active_theme_key(panel) == "dark"
 
     def test_reload_does_not_write_the_stale_panel_state_back(self, tab, swapped_config):

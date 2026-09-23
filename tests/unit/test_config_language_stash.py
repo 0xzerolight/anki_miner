@@ -17,6 +17,13 @@ from anki_miner.gui.utils.config_manager import GUIConfigManager
 #: its whole purpose is to be older than every multi-language change.
 PRE_CHANGE_CONFIG = Path(__file__).resolve().parents[1] / "fixtures" / "config" / "gui_config_pre_multilanguage.json"
 
+#: Fields present in the pre-change fixture that later releases removed from
+#: AnkiMinerConfig. The fixture is a historical snapshot and stays as-is, so
+#: the per-key equality check below skips these names; a load must migrate
+#: them away rather than round-trip them, which the final set-difference
+#: assertion in test_pre_change_config_loads_every_field_unchanged confirms.
+REMOVED_FIELDS = frozenset({"use_native_file_dialogs"})
+
 
 @pytest.fixture
 def isolated_config_file(tmp_path: Path, monkeypatch) -> Path:
@@ -110,6 +117,8 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
     for key, value in recorded.items():
         if key == "config_schema_version":  # envelope key, not a dataclass field
             continue
+        if key in REMOVED_FIELDS:
+            continue
         if key == "anki_fields":
             # Keys added to the default mapping since the fixture are backfilled
             # on load (_backfill_anki_fields); every recorded one must be unchanged.
@@ -117,6 +126,7 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
             assert set(reserialized[key]) - set(value) == {"sentence_translation"}
             continue
         assert reserialized[key] == value, key
+    assert not (REMOVED_FIELDS & set(reserialized)), "removed field survived reload"
     assert set(reserialized) - set(recorded) == {
         "language",
         "language_stash",

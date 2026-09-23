@@ -10,9 +10,6 @@ easy to lose:
 * The Qt state each wrapper sets. ``getSaveFileName`` gave us ``AcceptSave``
   for free; a bare ``QFileDialog`` constructor defaults to ``AcceptOpen``, so
   without an explicit call the save pickers silently become open browsers.
-
-Module-global state discipline: tests flip the native flag ONLY via
-``monkeypatch.setattr`` so no value leaks across tests under xdist loadfile.
 """
 
 import ast
@@ -22,8 +19,6 @@ import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QFileDialog, QWidget
 
-from anki_miner.config import create_default_config
-from anki_miner.gui.app import _seed_file_dialog_mode
 from anki_miner.gui.utils import file_dialogs
 
 
@@ -112,48 +107,29 @@ def stub(monkeypatch):
     return _StubDialog
 
 
-def test_default_injects_dont_use_native(stub, monkeypatch):
-    monkeypatch.setattr(file_dialogs, "_use_native", False)
-
+def test_pickers_never_set_the_non_native_flag(stub):
+    # Native dialogs are unconditional — no wrapper may ever request Qt's own.
     file_dialogs.pick_open_file(None, "c", "d", "f", on_done=lambda _v: None)
     file_dialogs.pick_open_files(None, "c", "d", "f", on_done=lambda _v: None)
     file_dialogs.pick_save_file(None, "c", "d", "f", on_done=lambda _v: None)
 
     assert len(stub.instances) == 3
     for dialog in stub.instances:
-        assert dialog.opts & QFileDialog.Option.DontUseNativeDialog
-
-
-def test_native_mode_omits_the_flag(stub, monkeypatch):
-    monkeypatch.setattr(file_dialogs, "_use_native", True)
-
-    file_dialogs.pick_open_file(None, "c", "d", "f", on_done=lambda _v: None)
-    file_dialogs.pick_save_file(None, "c", "d", "f", on_done=lambda _v: None)
-
-    for dialog in stub.instances:
         assert not dialog.opts & QFileDialog.Option.DontUseNativeDialog
 
 
-def test_directory_preserves_show_dirs_only(stub, monkeypatch):
+def test_directory_preserves_show_dirs_only(stub):
     # Qt's default for a directory dialog is ShowDirsOnly; an explicit
-    # setOptions REPLACES that default, so the wrapper must re-add it in BOTH
-    # modes or folder pickers silently start listing files.
-    monkeypatch.setattr(file_dialogs, "_use_native", False)
-    file_dialogs.pick_directory(None, "c", "d", on_done=lambda _v: None)
-    monkeypatch.setattr(file_dialogs, "_use_native", True)
+    # setOptions REPLACES that default, so the wrapper must re-add it.
     file_dialogs.pick_directory(None, "c", "d", on_done=lambda _v: None)
 
-    non_native, native = stub.instances
-    assert non_native.opts & QFileDialog.Option.ShowDirsOnly
-    assert non_native.opts & QFileDialog.Option.DontUseNativeDialog
-    assert native.opts & QFileDialog.Option.ShowDirsOnly
-    assert not native.opts & QFileDialog.Option.DontUseNativeDialog
-    assert native.file_mode == QFileDialog.FileMode.Directory
+    (folder,) = stub.instances
+    assert folder.opts & QFileDialog.Option.ShowDirsOnly
+    assert not folder.opts & QFileDialog.Option.DontUseNativeDialog
+    assert folder.file_mode == QFileDialog.FileMode.Directory
 
 
-def test_each_wrapper_sets_its_qt_modes(stub, monkeypatch):
-    monkeypatch.setattr(file_dialogs, "_use_native", True)
-
+def test_each_wrapper_sets_its_qt_modes(stub):
     file_dialogs.pick_open_file(None, on_done=lambda _v: None)
     file_dialogs.pick_open_files(None, on_done=lambda _v: None)
     file_dialogs.pick_save_file(None, on_done=lambda _v: None)
@@ -169,11 +145,9 @@ def test_each_wrapper_sets_its_qt_modes(stub, monkeypatch):
     assert save.accept_mode == QFileDialog.AcceptMode.AcceptSave
 
 
-def test_pickers_never_call_exec(stub, monkeypatch):
+def test_pickers_never_call_exec(stub):
     # The whole point of the change: exec() is what ran the native Windows
     # dialog on the GUI thread (Issue #100).
-    monkeypatch.setattr(file_dialogs, "_use_native", True)
-
     file_dialogs.pick_open_file(None, on_done=lambda _v: None)
     file_dialogs.pick_open_files(None, on_done=lambda _v: None)
     file_dialogs.pick_save_file(None, on_done=lambda _v: None)
@@ -183,14 +157,12 @@ def test_pickers_never_call_exec(stub, monkeypatch):
     assert all(d.opened for d in stub.instances)
 
 
-def test_pickers_decline_quit_on_close(stub, monkeypatch):
-    monkeypatch.setattr(file_dialogs, "_use_native", True)
+def test_pickers_decline_quit_on_close(stub):
     file_dialogs.pick_open_file(None, on_done=lambda _v: None)
     assert stub.instances[0].testAttribute(Qt.WidgetAttribute.WA_QuitOnClose) is False
 
 
-def test_accept_delivers_the_selection_once(stub, monkeypatch):
-    monkeypatch.setattr(file_dialogs, "_use_native", True)
+def test_accept_delivers_the_selection_once(stub):
     seen: list = []
     file_dialogs.pick_open_file(None, on_done=seen.append)
 
@@ -201,8 +173,7 @@ def test_accept_delivers_the_selection_once(stub, monkeypatch):
     assert stub.instances[0].deleted
 
 
-def test_cancel_delivers_the_empty_value(stub, monkeypatch):
-    monkeypatch.setattr(file_dialogs, "_use_native", True)
+def test_cancel_delivers_the_empty_value(stub):
     single: list = []
     multi: list = []
     file_dialogs.pick_open_file(None, on_done=single.append)
@@ -217,8 +188,7 @@ def test_cancel_delivers_the_empty_value(stub, monkeypatch):
     assert multi == [[]]
 
 
-def test_cancel_all_pickers_runs_no_continuation(stub, monkeypatch):
-    monkeypatch.setattr(file_dialogs, "_use_native", True)
+def test_cancel_all_pickers_runs_no_continuation(stub):
     seen: list = []
     file_dialogs.pick_open_file(None, on_done=seen.append)
 
@@ -233,7 +203,6 @@ def test_parent_dialog_closing_cancels_its_picker(monkeypatch, qtbot):
     # be dismissed while its import picker is open, and the continuation would
     # then import into a screen the user already closed. Uses a real
     # QFileDialog so the parent's finished->cancel wiring is exercised for real.
-    monkeypatch.setattr(file_dialogs, "_use_native", False)
     monkeypatch.setattr(file_dialogs, "_live", [])
     parent = QDialog()
     qtbot.addWidget(parent)
@@ -249,7 +218,6 @@ def test_parent_dialog_closing_cancels_its_picker(monkeypatch, qtbot):
 
 
 def test_dead_parent_skips_the_continuation(stub, monkeypatch):
-    monkeypatch.setattr(file_dialogs, "_use_native", True)
     seen: list = []
 
     class _Dead:
@@ -264,11 +232,9 @@ def test_dead_parent_skips_the_continuation(stub, monkeypatch):
     assert seen == []
 
 
-def test_a_live_continuation_still_raises(stub, monkeypatch):
+def test_a_live_continuation_still_raises(stub):
     # The import flows re-raise deliberately after releasing their token. A
     # blanket suppress(RuntimeError) around on_done would swallow that.
-    monkeypatch.setattr(file_dialogs, "_use_native", True)
-
     def boom(_value):
         raise RuntimeError("worker construction failed")
 
@@ -276,30 +242,6 @@ def test_a_live_continuation_still_raises(stub, monkeypatch):
 
     with pytest.raises(RuntimeError, match="worker construction failed"):
         stub.instances[0].fire(QDialog.DialogCode.Accepted, ["/tmp/a.txt"])
-
-
-def test_seed_from_config(monkeypatch):
-    from dataclasses import replace
-
-    monkeypatch.setattr(file_dialogs, "_use_native", False)
-    _seed_file_dialog_mode(replace(create_default_config(), use_native_file_dialogs=True))
-    assert file_dialogs.use_native() is True
-
-    _seed_file_dialog_mode(replace(create_default_config(), use_native_file_dialogs=False))
-    assert file_dialogs.use_native() is False
-
-
-def test_seed_tolerates_none_config(monkeypatch):
-    monkeypatch.setattr(file_dialogs, "_use_native", True)
-    _seed_file_dialog_mode(None)
-    assert file_dialogs.use_native() is True
-
-
-def test_native_is_the_default():
-    # Deliberately unpatched: every other test in this file sets the flag by
-    # hand, so without this the flip would be invisible to the suite.
-    assert create_default_config().use_native_file_dialogs is True
-    assert file_dialogs.use_native() is True
 
 
 def test_no_direct_qfiledialog_call_sites_remain():

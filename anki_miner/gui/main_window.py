@@ -2032,9 +2032,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self.config = committed_config
         refresh_error: Exception | None = None
         try:
-            # Re-seed the app-wide file-dialog mode so a toggled setting applies to
-            # the very next dialog without restart (Issue #100).
-            file_dialogs.set_use_native(committed_config.use_native_file_dialogs)
             # Rebuild config-bound services so AnkiConnect URL/port edits take
             # effect: validation and the undo-delete AnkiService were frozen to the
             # startup config and would otherwise keep hitting the old endpoint.

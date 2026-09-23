@@ -123,7 +123,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
     font_scale_changed = pyqtSignal(float)
     zoom_changed = pyqtSignal(float)
     language_changed = pyqtSignal(str)
-    native_dialogs_changed = pyqtSignal(bool)
     hidden_utilities_changed = pyqtSignal(tuple)
 
     def __init__(
@@ -131,7 +130,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         themes_root: Path,
         ui_zoom: float = 1.0,
         ui_language: str = "en",
-        use_native_file_dialogs: bool = True,
         ui_font_scale: float = 1.0,
         parent: QWidget | None = None,
     ) -> None:
@@ -145,8 +143,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
                 is no live Theme state to read it from — it is passed in.
             ui_language: The persisted UI language code, used to seed the
                 Language dropdown. Restart-to-apply, so it is passed in.
-            use_native_file_dialogs: Seeds the "Use system file dialogs"
-                checkbox (native pickers are the default).
             ui_font_scale: The persisted UI font scale, used to seed the Text
                 size dropdown. Restart-to-apply (D39b-A), so the *pending*
                 config value is what the combo shows — never the running
@@ -158,7 +154,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._themes_root = themes_root
         self._ui_zoom = ui_zoom
         self._ui_font_scale = ui_font_scale
-        self._use_native_file_dialogs = use_native_file_dialogs
         # Construction-time values = what Qt is actually running with: the panel
         # is built once at app boot from the boot config, and language, zoom and
         # text size only take effect at startup. ``load_from_config`` compares
@@ -326,30 +321,9 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.font_scale_restart_row.setVisible(False)
         layout.addWidget(self.font_scale_restart_row)
 
-        # File-dialog mode. The OS-native picker is the default; the pickers are
-        # non-blocking, so the Issue #100 freeze that once forced Qt's own
-        # dialog can no longer happen (see gui/utils/file_dialogs).
-        self.native_dialogs_checkbox = QCheckBox(self.tr("Use system file dialogs"))
-        self.native_dialogs_checkbox.setToolTip(
-            self.tr(
-                "Use the operating system's native file pickers. Turn this off to use the app's "
-                "built-in picker instead, which follows the app's theme and looks the same on "
-                "every platform."
-            )
-        )
-        self.native_dialogs_checkbox.setChecked(self._use_native_file_dialogs)
-        self.native_dialogs_checkbox.toggled.connect(self._on_native_dialogs_toggled)
-        layout.addWidget(self.native_dialogs_checkbox)
-        self.register_setting(
-            "native_file_dialogs",
-            self.native_dialogs_checkbox,
-            lambda: (self.native_dialogs_checkbox.text(), self.native_dialogs_checkbox.toolTip()),
-        )
-
         # Which tools the Utilities tab shows: one box per tool, in tab order,
-        # labelled with the tab's own label, checked = shown. Commits at once
-        # like the file-dialog box above. The last checked box is disabled so
-        # the tab always keeps a tool.
+        # labelled with the tab's own label, checked = shown. Commits at once.
+        # The last checked box is disabled so the tab always keeps a tool.
         utilities_heading = QLabel(self.tr("Utilities tab"))
         utilities_heading.setFont(make_scaled_font(FONT_SIZES.body_sm, QFont.Weight.DemiBold))
         layout.addWidget(utilities_heading)
@@ -698,11 +672,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.zoom_restart_note.setVisible(True)
         self.zoom_changed.emit(self._ui_zoom)
 
-    def _on_native_dialogs_toggled(self, checked: bool) -> None:
-        """Persist the file-dialog mode change (applies immediately)."""
-        self._use_native_file_dialogs = checked
-        self.native_dialogs_changed.emit(checked)
-
     def _on_utility_toggled(self, _checked: bool) -> None:
         """Persist which Utilities tools are hidden (applies at once)."""
         self._sync_utility_lock()
@@ -807,10 +776,9 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         persists through its own signals, not the Save round-trip), so nothing
         else repaints it when the whole config is replaced from the outside —
         Reset to Defaults, Import Settings, or any other ``update_config`` →
-        ``config_refreshed`` fan-out. Without this the zoom/text-size combos,
-        the native-dialogs checkbox and the theme gallery keep showing the
-        previous config's values and the user's next edit starts from a stale
-        baseline.
+        ``config_refreshed`` fan-out. Without this the zoom/text-size combos
+        and the theme gallery keep showing the previous config's values and
+        the user's next edit starts from a stale baseline.
 
         Every mutation here is signal-safe. The panel's change handlers feed
         ``config_changed`` → ``MainWindow.update_config``, so one unguarded
@@ -836,13 +804,6 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         # process keeps running at the boot scale until it is relaunched.
         self._ui_font_scale = config.ui_font_scale
         self._sync_font_scale_combo()  # blocks signals internally
-
-        self._use_native_file_dialogs = config.use_native_file_dialogs
-        self.native_dialogs_checkbox.blockSignals(True)
-        try:
-            self.native_dialogs_checkbox.setChecked(config.use_native_file_dialogs)
-        finally:
-            self.native_dialogs_checkbox.blockSignals(False)
 
         # Read through the same rule SubtitlesTab applies, so the boxes show
         # what the tab shows: unknown keys ignored, "every tool hidden" = none.
@@ -872,9 +833,9 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         # key -- so a cached pixmap for that key may no longer be what the key
         # means. Scoped to an actual root change, not every reload: this method
         # also fires for wholly unrelated fields (this panel reloads on ANY
-        # non-external field, e.g. "Use system file dialogs" — see this
-        # docstring above), and those must not discard every cached thumbnail
-        # and force a full re-render of every visible card.
+        # non-external field, e.g. a Zoom change — see this docstring above),
+        # and those must not discard every cached thumbnail and force a full
+        # re-render of every visible card.
         if themes_root_changed:
             clear_thumbnail_cache()
 
@@ -888,10 +849,10 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         #   * never before the first show — showEvent owns that first capture,
         #     and SettingsTab._load_config also runs during construction;
         #   * only when the incoming theme is not one this panel itself made
-        #     live. A reload can be triggered by ANY non-external field (e.g.
-        #     toggling "Use system file dialogs"), and it carries the previewed
-        #     theme along with it; resetting there would silently destroy the
-        #     revert target mid-preview and leave Revert a no-op.
+        #     live. A reload can be triggered by ANY non-external field (e.g. a
+        #     Zoom change), and it carries the previewed theme along with it;
+        #     resetting there would silently destroy the revert target
+        #     mid-preview and leave Revert a no-op.
         if self._preview_baseline is not None and config.theme != self._last_seen_theme:
             self.reset_baseline()
         self._last_seen_theme = config.theme

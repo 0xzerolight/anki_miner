@@ -1,8 +1,8 @@
 """Settings -> Appearance & Language: which tools the Utilities tab shows.
 
-The checkboxes commit at once (like "Use system file dialogs"), the last
-checked one cannot be unchecked, and every box is a jump target, which is where
-a hidden tool's Usage Guide entry and task row lead.
+The checkboxes commit at once, the last checked one cannot be unchecked, and
+every box is a jump target, which is where a hidden tool's Usage Guide entry
+and task row lead.
 """
 
 from __future__ import annotations

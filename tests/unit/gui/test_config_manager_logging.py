@@ -102,7 +102,6 @@ class TestMigrationReceipt:
             "config_schema_version": 2,
             "anki_deck_name": "Deck",
             "auto_update_ytdlp": True,
-            "use_native_file_dialogs": False,
             "long_dead_field": 1,
         }
 
@@ -111,7 +110,6 @@ class TestMigrationReceipt:
                 raw,
                 seed_wordsets=True,
                 disable_legacy_ytdlp_update=True,
-                enable_native_file_dialogs=True,
                 seed_first_run_flags=True,
             )
 
@@ -119,7 +117,6 @@ class TestMigrationReceipt:
         assert "from=2" in line
         assert f"to={GUIConfigManager.CONFIG_SCHEMA_VERSION}" in line
         assert "disable_legacy_ytdlp_update" in line
-        assert "enable_native_file_dialogs" in line
         assert "seed_wordsets" not in line
         assert "dropped_keys=long_dead_field" in line
         assert migrated["auto_update_ytdlp"] is False

@@ -1168,17 +1168,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("custom theme", "theme json", "gallery", "install theme", "colors", "preview"),
     ),
     Capability(
-        id="native-file-dialogs",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Use system file dialogs"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities",
-            "Switch between Anki Miner's built-in file pickers and your operating system's native ones.",
-        ),
-        category=_CAT_APPEARANCE,
-        target=CapabilityTarget("settings", "ui"),
-        keywords=("file dialog", "native picker", "browse window", "file chooser"),
-    ),
-    Capability(
         id="utilities-visibility",
         title=QT_TRANSLATE_NOOP("Capabilities", "Choose the tools on the Utilities tab"),
         description=QT_TRANSLATE_NOOP(

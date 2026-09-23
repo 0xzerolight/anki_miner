@@ -286,7 +286,7 @@ Phase 2 — build: `AnkiService.ensure_deck` creates the target deck if it does 
 - **Downloader (Utilities → Download):** `downloader_format_preset`, `downloader_custom_format`, `downloader_write_subtitles`, `downloader_subtitle_langs`, `downloader_embed_thumbnail`, `downloader_embed_metadata`
 - **Manga OCR (Utilities → Manga OCR):** `mokuro_use_gpu` (persisted), `mokuro_location` (executable override), `uv_root` (the uv-managed Python + mokuro venv, default `ANKI_MINER_HOME/uv/`)
 - **yt-dlp:** `ytdlp_location`, `auto_update_ytdlp`, `ytdlp_prerelease` (selects the nightly channel in `services/ytdlp_updater.py`)
-- **Misc:** `excluded_decks` (negated into the vocab query, so a parent deck covers its subdecks), `bin_root`, `alass_location`, `use_native_file_dialogs`, `pitch_category_format`, `subtitle_regex_filter` / `subtitle_regex_replacement` / `use_subtitle_regex_filter`, and `config_version` — a staleness counter on the config object, not to be confused with the `config_schema_version` stamp `gui_config.json` carries
+- **Misc:** `excluded_decks` (negated into the vocab query, so a parent deck covers its subdecks), `bin_root`, `alass_location`, `pitch_category_format`, `subtitle_regex_filter` / `subtitle_regex_replacement` / `use_subtitle_regex_filter`, and `config_version` — a staleness counter on the config object, not to be confused with the `config_schema_version` stamp `gui_config.json` carries
 
 The `__post_init__` method uses `object.__setattr__` to convert string paths to `Path` objects (required because the dataclass is frozen). New config instances are created with `dataclasses.replace()`.
 

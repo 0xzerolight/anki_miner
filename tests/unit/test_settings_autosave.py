@@ -222,18 +222,6 @@ class TestCommitSelfEcho:
         assert tab.config.anki_tags != "pending-tag"
         assert tab._settings_dirty is True
 
-    def test_native_dialog_commit_preserves_pending_panel_edit(self, tab):
-        tab.config_changed.connect(tab.update_config)
-        tab.anki_panel.anki_tags_input.setText("pending-tag")
-        use_native = not tab.config.use_native_file_dialogs
-
-        tab._on_native_dialogs_changed(use_native)
-
-        assert tab.anki_panel.get_anki_tags() == "pending-tag"
-        assert tab.config.use_native_file_dialogs is use_native
-        assert tab.config.anki_tags != "pending-tag"
-        assert tab._settings_dirty is True
-
 
 class TestPerFieldValidation:
     def test_invalid_regex_keeps_last_good_and_commits_rest(self, tab, test_config, no_modals):

@@ -390,7 +390,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.config.themes_root,
             self.config.ui_zoom,
             self.config.ui_language,
-            self.config.use_native_file_dialogs,
             self.config.ui_font_scale,
         )
 
@@ -789,7 +788,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.ui_panel.state_changed.connect(self._on_theme_state_changed)
         self.ui_panel.font_scale_changed.connect(self._on_font_scale_changed)
         self.ui_panel.zoom_changed.connect(self._on_zoom_changed)
-        self.ui_panel.native_dialogs_changed.connect(self._on_native_dialogs_changed)
         self.ui_panel.hidden_utilities_changed.connect(self._on_hidden_utilities_changed)
         self.ui_panel.language_changed.connect(self._on_language_changed)
         # YouTube panel: manual "Update yt-dlp now" → re-emit to MainWindow
@@ -1583,15 +1581,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     def _on_language_changed(self, language: str) -> None:
         """Persist a UI-language change immediately (applies on next launch)."""
         new_config = replace(self.config, ui_language=language)
-        self._commit_immediate_config(new_config, self.config_changed.emit)
-
-    def _on_native_dialogs_changed(self, use_native: bool) -> None:
-        """Persist the file-dialog mode immediately (applies to the next dialog).
-
-        The live module state is re-seeded by ``MainWindow.update_config`` on
-        the committed config, so no direct ``file_dialogs`` call here.
-        """
-        new_config = replace(self.config, use_native_file_dialogs=use_native)
         self._commit_immediate_config(new_config, self.config_changed.emit)
 
     def _on_hidden_utilities_changed(self, hidden: tuple) -> None:

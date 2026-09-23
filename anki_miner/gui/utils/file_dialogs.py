@@ -18,9 +18,8 @@ That was the wrong culprit: the blocking *call shape* was.
 calling-thread path is unreachable. On Windows the platform helper instead runs
 the native dialog on its own ``QWindowsDialogThread`` and marshals the result
 back through a queued connection. A wedged shell call then parks that thread
-instead of the app. So native dialogs are the default again, on every platform,
-and ``config.use_native_file_dialogs`` turns them off for anyone who prefers
-Qt's own (it also follows the app's QSS themes).
+instead of the app. So native dialogs are unconditional again, on every
+platform.
 
 Two consequences of ``open()`` that every caller inherits:
 
@@ -42,11 +41,6 @@ the screen that owns it, the outcome, and the value. Because the result arrives
 by callback, a log otherwise records only what the continuation did with the
 file -- never which file the user chose, and never that a picker was silenced
 instead of answered.
-
-The native/non-native choice is module-level state rather than a parameter:
-many call sites (e.g. ``FileSelector``) have no config access, and the setting
-is a pure UI preference. Seeded at startup (``gui/app.py``) and re-seeded on
-every config commit (``MainWindow.update_config``).
 """
 
 from __future__ import annotations
@@ -63,27 +57,7 @@ from anki_miner.utils.logging_ext import capped, log_summary
 
 logger = logging.getLogger(__name__)
 
-_use_native = True
-
-
-def set_use_native(enabled: bool) -> None:
-    """Set whether native OS file dialogs are used (default True)."""
-    global _use_native
-    _use_native = bool(enabled)
-
-
-def use_native() -> bool:
-    """Return whether native OS file dialogs are enabled."""
-    return _use_native
-
-
 _NO_OPTIONS = QFileDialog.Option(0)
-
-
-def _options(base: QFileDialog.Option = _NO_OPTIONS) -> QFileDialog.Option:
-    if _use_native:
-        return base
-    return base | QFileDialog.Option.DontUseNativeDialog
 
 
 class _Picker:
@@ -214,7 +188,7 @@ def pick_open_file(
     """Ask for one existing file. ``on_done`` gets the path, or "" if cancelled."""
     dialog = QFileDialog(parent, caption, directory, filter)
     dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-    dialog.setOptions(_options())
+    dialog.setOptions(_NO_OPTIONS)
     return _launch(dialog, parent, on_done, "", caption)
 
 
@@ -229,7 +203,7 @@ def pick_open_files(
     """Ask for several existing files. ``on_done`` gets the list, or [] if cancelled."""
     dialog = QFileDialog(parent, caption, directory, filter)
     dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
-    dialog.setOptions(_options())
+    dialog.setOptions(_NO_OPTIONS)
     return _launch(dialog, parent, on_done, [], caption)
 
 
@@ -250,7 +224,7 @@ def pick_save_file(
     dialog = QFileDialog(parent, caption, directory, filter)
     dialog.setFileMode(QFileDialog.FileMode.AnyFile)
     dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
-    dialog.setOptions(_options())
+    dialog.setOptions(_NO_OPTIONS)
     return _launch(dialog, parent, on_done, "", caption)
 
 
@@ -269,5 +243,5 @@ def pick_directory(
     """
     dialog = QFileDialog(parent, caption, directory)
     dialog.setFileMode(QFileDialog.FileMode.Directory)
-    dialog.setOptions(_options(QFileDialog.Option.ShowDirsOnly))
+    dialog.setOptions(QFileDialog.Option.ShowDirsOnly)
     return _launch(dialog, parent, on_done, "", caption)
