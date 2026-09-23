@@ -10,6 +10,7 @@ Covers:
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -18,6 +19,7 @@ import pytest
 pytest.importorskip("PyQt6.QtWidgets")
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.capabilities import UTILITY_SUBTABS
 from anki_miner.gui.widgets.base import AnimatedTabBar
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
 from anki_miner.gui.workers.backfill_worker import BackfillApplyWorker, BackfillScanWorker
@@ -534,3 +536,117 @@ def test_open_retime_prefills_and_reveals_the_retime_subtab(qtbot, tmp_path):
     assert tab.current_subtab_key() == "retime"
     assert tab.retime_tab.video_file_selector.get_path() == str(video)
     assert tab.retime_tab.subtitle_file_selector.get_path() == str(subtitle)
+
+
+# ---------------------------------------------------------------------------
+# Hidden tools (Settings -> Appearance & Language)
+# ---------------------------------------------------------------------------
+
+
+def _visible_keys(tab: SubtitlesTab) -> list[str]:
+    return [key for key in UTILITY_SUBTABS if tab._inner_tabs.isTabVisible(tab._subtab_index[key])]
+
+
+def _refresh(tab: SubtitlesTab, config: AnkiMinerConfig, qtbot) -> None:
+    """The live path: update_config, with the availability re-probes it starts faked and joined."""
+    with (
+        patch(_ENGINE_AVAILABLE, return_value=True),
+        patch(_ALASS_RESOLVER, return_value="/fake/alass"),
+        patch(_FFMPEG_COMPUTE_AVAILABLE, return_value=True),
+        patch(_YTDLP_COMPUTE_AVAILABLE, return_value=True),
+        patch(_MOKURO_COMPUTE_AVAILABLE, return_value=True),
+    ):
+        tab.update_config(config)
+        for child in (
+            tab.generate_tab,
+            tab.retime_tab,
+            tab.condense_tab,
+            tab.download_tab,
+            tab.mokuro_tab,
+            tab.booksync_tab,
+        ):
+            assert child._availability_worker.wait(3000)
+    qtbot.wait(10)
+
+
+def test_a_hidden_tool_is_off_the_tab_from_construction(qtbot, tmp_path):
+    tab = _make_tab(replace(_make_config(tmp_path), hidden_utilities=("retime", "mokuro")), qtbot)
+
+    assert _visible_keys(tab) == ["generate", "condense", "backfill", "deckfilter", "download", "booksync"]
+
+
+def test_hiding_the_default_tool_opens_on_the_next_visible_one(qtbot, tmp_path):
+    tab = _make_tab(replace(_make_config(tmp_path), hidden_utilities=("generate",)), qtbot)
+
+    assert tab.current_subtab_key() == "retime"
+
+
+def test_hiding_the_open_tool_moves_to_the_next_and_the_underline_follows(qtbot, tmp_path):
+    """Review Focus 1: never a hidden page on show, and the underline under the new tab."""
+    config = _make_config(tmp_path)
+    tab = _make_tab(config, qtbot)
+    tab.resize(1000, 700)
+    tab.show()
+    qtbot.waitExposed(tab)
+    tab.open_subtab("retime")
+    bar = tab._inner_tabs.tabBar()
+
+    _refresh(tab, replace(config, hidden_utilities=("retime",)), qtbot)
+
+    assert tab.current_subtab_key() == "condense"
+    expected = bar.tabRect(tab._subtab_index["condense"])
+    qtbot.waitUntil(
+        lambda: bar.property("underlineRect").x() == expected.x()
+        and bar.property("underlineRect").width() == expected.width(),
+        timeout=2000,
+    )
+
+
+def test_showing_a_tool_again_puts_it_back_in_its_place(qtbot, tmp_path):
+    """Review Focus 5: a hidden tab keeps its index, so it returns where it was."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+
+    tab.apply_hidden(("retime",))
+    tab.apply_hidden(())
+
+    assert _visible_keys(tab) == list(UTILITY_SUBTABS)
+    assert tab._inner_tabs.widget(1) is tab.retime_tab
+    assert tab._inner_tabs.tabText(1) == "Retime"
+
+
+def test_open_subtab_refuses_a_hidden_tool(qtbot, tmp_path):
+    """Qt would switch to a hidden tab's page; the container must say no itself."""
+    tab = _make_tab(replace(_make_config(tmp_path), hidden_utilities=("retime",)), qtbot)
+    tab.open_subtab("condense")
+
+    tab.open_subtab("retime")
+
+    assert tab.current_subtab_key() == "condense"
+
+
+def test_a_config_hiding_every_tool_shows_them_all(qtbot, tmp_path):
+    tab = _make_tab(replace(_make_config(tmp_path), hidden_utilities=UTILITY_SUBTABS), qtbot)
+
+    assert _visible_keys(tab) == list(UTILITY_SUBTABS)
+
+
+def test_update_config_applies_a_new_hidden_set(qtbot, tmp_path):
+    config = _make_config(tmp_path)
+    tab = _make_tab(config, qtbot)
+
+    _refresh(tab, replace(config, hidden_utilities=("download",)), qtbot)
+
+    assert "download" not in _visible_keys(tab)
+
+
+def test_hiding_a_tool_leaves_its_running_work_alone(qtbot, tmp_path):
+    """Review Focus 4 (container half): hidden is not closed; close still joins the run."""
+    tab = _make_tab(_make_config(tmp_path), qtbot)
+    running = MagicMock(name="retime_worker")
+    tab.retime_tab.iter_close_workers = MagicMock(return_value=iter([running]))
+
+    tab.apply_hidden(("retime",))
+
+    assert tab._inner_tabs.indexOf(tab.retime_tab) == tab._subtab_index["retime"]
+    assert list(tab.iter_close_workers()) == [running]
+    running.cancel.assert_not_called()

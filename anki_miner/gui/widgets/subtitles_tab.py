@@ -11,6 +11,9 @@ Wraps :class:`~anki_miner.gui.widgets.subtitle_creation_tab.SubtitleCreationTab`
 and :class:`~anki_miner.gui.widgets.booksync_tab.BookSyncTab` (Audiobook Sync)
 inside a single top-level tab so the main tab bar stays uncluttered.
 
+Settings → Appearance & Language can hide any of the eight but not all of them
+(``config.hidden_utilities``, :meth:`SubtitlesTab.apply_hidden`).
+
 Close contract:
 - ``iter_close_workers()`` fans out to all children so
   :class:`~anki_miner.gui.controllers.background_tasks.BackgroundTaskController`
@@ -25,13 +28,14 @@ Close contract:
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator
 
-from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtWidgets import QTabWidget, QVBoxLayout, QWidget
 
 from anki_miner.config import AnkiMinerConfig
+from anki_miner.gui.capabilities import UTILITY_SUBTABS, effective_hidden_utilities, utility_labels
 from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.widgets.base import install_animated_tab_bar
@@ -69,61 +73,38 @@ class SubtitlesTab(QWidget):
         super().__init__(parent)
         self.config = config
 
+        self._inner_tabs = QTabWidget()
+        install_animated_tab_bar(self._inner_tabs)
+
         self.generate_tab = SubtitleCreationTab(config, suppress_optional_startup=suppress_optional_startup)
         self.retime_tab = SubtitleRetimeTab(config, suppress_optional_startup=suppress_optional_startup)
         self.condense_tab = CondenseTab(config, suppress_optional_startup=suppress_optional_startup)
-
-        self._inner_tabs = QTabWidget()
-        install_animated_tab_bar(self._inner_tabs)
-        self._inner_tabs.addTab(
-            self.generate_tab,
-            QCoreApplication.translate("MainWindow", "Generate"),
-        )
-        self._inner_tabs.addTab(
-            self.retime_tab,
-            QCoreApplication.translate("MainWindow", "Retime"),
-        )
-        self._inner_tabs.addTab(
-            self.condense_tab,
-            QCoreApplication.translate("MainWindow", "Condense"),
-        )
         self.backfill_tab = CardBackfillTab(config)
-        self._inner_tabs.addTab(
-            self.backfill_tab,
-            QCoreApplication.translate("MainWindow", "Card Backfill"),
-        )
         self.deck_filter_tab = DeckFilterTab(config)
-        self._inner_tabs.addTab(
-            self.deck_filter_tab,
-            QCoreApplication.translate("MainWindow", "Deck Filter"),
-        )
         self.download_tab = DownloadTab(config, suppress_optional_startup=suppress_optional_startup)
-        self._inner_tabs.addTab(
-            self.download_tab,
-            QCoreApplication.translate("MainWindow", "Download"),
-        )
         self.mokuro_tab = MokuroTab(config, suppress_optional_startup=suppress_optional_startup)
-        self._inner_tabs.addTab(
-            self.mokuro_tab,
-            QCoreApplication.translate("MainWindow", "Manga OCR"),
-        )
         self.booksync_tab = BookSyncTab(config, suppress_optional_startup=suppress_optional_startup)
-        self._inner_tabs.addTab(
-            self.booksync_tab,
-            QCoreApplication.translate("MainWindow", "Audiobook Sync"),
-        )
 
-        # Stable sub-tab keys for reveal_capability (see capabilities.SUBTAB_KEYS).
-        self._subtab_index = {
-            "generate": 0,
-            "retime": 1,
-            "condense": 2,
-            "backfill": 3,
-            "deckfilter": 4,
-            "download": 5,
-            "mokuro": 6,
-            "booksync": 7,
+        tools: dict[str, QWidget] = {
+            "generate": self.generate_tab,
+            "retime": self.retime_tab,
+            "condense": self.condense_tab,
+            "backfill": self.backfill_tab,
+            "deckfilter": self.deck_filter_tab,
+            "download": self.download_tab,
+            "mokuro": self.mokuro_tab,
+            "booksync": self.booksync_tab,
         }
+        labels = utility_labels()
+        # Stable sub-tab keys for reveal_capability (see capabilities.SUBTAB_KEYS).
+        # Every tool is added, hidden or not: a hidden tab keeps its index, so
+        # showing it again puts it back where it was, and app.py wires the tools
+        # by attribute whatever the user hides.
+        self._subtab_index: dict[str, int] = {
+            key: self._inner_tabs.addTab(tools[key], labels[key]) for key in UTILITY_SUBTABS
+        }
+        self._hidden: frozenset[str] = frozenset()
+        self.apply_hidden(config.hidden_utilities)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -141,12 +122,21 @@ class SubtitlesTab(QWidget):
         :data:`anki_miner.gui.capabilities.SUBTAB_KEYS` (``"generate"``,
         ``"retime"``, ``"condense"``, ``"backfill"``, ``"deckfilter"``,
         ``"download"``, ``"mokuro"``, ``"booksync"``). Unknown keys are
-        ignored so a stale caller can't crash the UI.
+        ignored so a stale caller can't crash the UI. A tool hidden in
+        Settings → Appearance & Language is refused the same way, so a deep
+        link or a restored route never lands on a page the tab bar does not
+        show.
         """
         index = self._subtab_index.get(key)
-        if index is not None:
-            logger.debug("Utilities subtab opened: key=%s index=%d", key, index)
-            self._inner_tabs.setCurrentIndex(index)
+        if index is None:
+            return
+        if key in self._hidden:
+            # Refused here, not by Qt: setCurrentIndex on a hidden tab switches
+            # to its page anyway and shows it with no tab selected.
+            logger.debug("Utilities subtab hidden, not opened: key=%s", key)
+            return
+        logger.debug("Utilities subtab opened: key=%s index=%d", key, index)
+        self._inner_tabs.setCurrentIndex(index)
 
     def open_retime(self, video_path: Path, subtitle_path: Path) -> None:
         """Reveal Retime with a single-file pair already loaded (D35 hand-off).
@@ -172,13 +162,29 @@ class SubtitlesTab(QWidget):
                 return key
         return None
 
+    def apply_hidden(self, stored: Iterable[str]) -> None:
+        """Show every tool except the ones ``stored`` hides.
+
+        ``stored`` is ``config.hidden_utilities``, read through
+        :func:`~anki_miner.gui.capabilities.effective_hidden_utilities`, so an
+        unknown key is ignored and a list naming every tool hides none. A
+        hidden tool stays built and keeps its index: a run it started keeps
+        going, and showing it again puts it back in its place. Hiding the tool
+        on show moves the tab to the next visible one — Qt does that inside
+        ``setTabVisible``, and the underline follows ``currentChanged``.
+        """
+        self._hidden = effective_hidden_utilities(stored)
+        for key, index in self._subtab_index.items():
+            self._inner_tabs.setTabVisible(index, key not in self._hidden)
+
     # ------------------------------------------------------------------
     # Config refresh
     # ------------------------------------------------------------------
 
     def update_config(self, config: AnkiMinerConfig) -> None:
-        """Fan out a new config to all child tabs."""
+        """Fan out a new config to all child tabs and re-apply the hidden tools."""
         self.config = config
+        self.apply_hidden(config.hidden_utilities)
         self.generate_tab.update_config(config)
         self.retime_tab.update_config(config)
         self.condense_tab.update_config(config)
