@@ -32,10 +32,20 @@ from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication
 
 TRANSLATION_CONTEXT = "Capabilities"
 
-# Stable main-tab keys (resolved by MainWindow._main_tab_index, never indices).
-MAIN_TABS: frozenset[str] = frozenset(
-    {"video", "deckbuilder", "audiobook", "reading", "analytics", "subtitles", "settings"}
+# Stable main-tab keys in tab-bar order: app.compose_main_window registers the
+# tabs in this order and MainWindow._MAIN_TAB_CLASSES lists them the same way.
+# The default Ctrl+1..7 bindings follow it (gui/utils/key_bindings.py).
+MAIN_TAB_ORDER: tuple[str, ...] = (
+    "video",
+    "deckbuilder",
+    "audiobook",
+    "reading",
+    "analytics",
+    "subtitles",
+    "settings",
 )
+# Stable main-tab keys (resolved by MainWindow._main_tab_index, never indices).
+MAIN_TABS: frozenset[str] = frozenset(MAIN_TAB_ORDER)
 # Stable settings sub-tab keys (resolved by SettingsTab.open_subtab).
 SETTINGS_SUBTABS: frozenset[str] = frozenset(
     {
