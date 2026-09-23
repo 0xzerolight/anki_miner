@@ -302,3 +302,54 @@ def test_sentence_rule_contributes(qtbot, index, expected):
     panel.sentence_rule_combo.setCurrentIndex(index)
     out = panel.contribute(create_default_config())
     assert (out.deduplicate_sentences, out.use_i_plus_one_filter) == expected
+
+
+def test_known_words_db_checkbox_names_the_effect(qtbot):
+    # "Use Local Known Words Database" told the user nothing about what turning
+    # it on actually does; the label now names the effect directly.
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.use_known_words_db_checkbox.text() == "Keep words known after their cards are deleted"
+    tip = panel.use_known_words_db_checkbox.toolTip()
+    expected_tip = (
+        "Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild forgets them."
+    )
+    assert tip == expected_tip
+
+
+def test_rebuild_known_words_button_follows_the_checkbox(qtbot):
+    from anki_miner.config import AnkiMinerConfig
+
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    # Construction leaves the checkbox unchecked; the button must start in step.
+    assert not panel.rebuild_known_words_button.isEnabled()
+
+    panel.load_from_config(replace(AnkiMinerConfig(), use_known_words_db=True))
+    assert panel.rebuild_known_words_button.isEnabled()
+
+    panel.load_from_config(AnkiMinerConfig())
+    assert not panel.rebuild_known_words_button.isEnabled()
+
+    # And toggling without a reload keeps the button in step.
+    panel.use_known_words_db_checkbox.setChecked(True)
+    assert panel.rebuild_known_words_button.isEnabled()
+    panel.use_known_words_db_checkbox.setChecked(False)
+    assert not panel.rebuild_known_words_button.isEnabled()
+
+    # "Manage Known Words..." is unaffected: the user list works either way.
+    assert panel.manage_known_words_button.isEnabled()
+
+
+def test_kana_variant_row_lives_in_the_known_words_section(qtbot):
+    # FormPanel.add_section opens a new QFormLayout per section (form_panel.py),
+    # so the two widgets sharing one layout is the proof the row moved.
+    from PyQt6.QtWidgets import QFormLayout
+
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    layouts = panel.findChildren(QFormLayout)
+    home = next(layout for layout in layouts if layout.indexOf(panel.use_known_words_db_checkbox) >= 0)
+    assert home.indexOf(panel.match_kana_variants_checkbox) >= 0

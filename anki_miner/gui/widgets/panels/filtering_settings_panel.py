@@ -244,7 +244,14 @@ class FilteringSettingsPanel(FormPanel):
         # Known Words Database section
         self.add_section(self.tr("Known Words Database"))
 
-        self.use_known_words_db_checkbox = QCheckBox(self.tr("Use Local Known Words Database"))
+        self.use_known_words_db_checkbox = QCheckBox(self.tr("Keep words known after their cards are deleted"))
+        self.use_known_words_db_checkbox.setToolTip(
+            self.tr(
+                "Words stay known after their Anki cards are deleted or moved to an "
+                "excluded deck. Rebuild forgets them."
+            )
+        )
+        self.use_known_words_db_checkbox.toggled.connect(self._sync_rebuild_known_words_button_state)
         self.add_field("", self.use_known_words_db_checkbox)
 
         # Rebuild button: clears the local cache so deck exclusions take effect.
@@ -260,6 +267,11 @@ class FilteringSettingsPanel(FormPanel):
             )
         )
         self.rebuild_known_words_button.clicked.connect(self.rebuild_known_words_requested.emit)
+        # Rebuild has nothing to clear while the cache itself is off (Task 7);
+        # sync the initial state now that the button exists — construction
+        # leaves the checkbox unchecked, and setChecked(False) below fires no
+        # signal for a value that was already False.
+        self._sync_rebuild_known_words_button_state()
         rebuild_row.addWidget(self.rebuild_known_words_button)
 
         # Manage the user-curated known/ignore list (Issue #42): view, remove,
@@ -275,6 +287,22 @@ class FilteringSettingsPanel(FormPanel):
         rebuild_row.addWidget(self.manage_known_words_button)
         rebuild_row.addStretch()
         self.add_layout(rebuild_row)
+
+        # Kana-variant fold: a kana-spelled word (うなずく) counts as known when
+        # the kanji dictionary form (頷く) is already carded. Script-gated in
+        # WordFilterService.filter_unknown; kanji variants never fold. Lives here
+        # rather than under Script Type because it is a known-words rule, not a
+        # script-exclusion filter.
+        self.match_kana_variants_checkbox = QCheckBox(self.tr("Treat Kana Spellings of Known Words as Known"))
+        self.match_kana_variants_checkbox.setToolTip(
+            self.tr(
+                "When a subtitle spells a word in kana (e.g. うなずく) and the kanji "
+                "dictionary form (頷く) is already in your collection or known list, "
+                "skip it instead of creating a second card. Kanji spellings are "
+                "never merged this way."
+            )
+        )
+        self.add_field("", self.match_kana_variants_checkbox)
 
         # Excluded decks (Issue #38)
         self.add_section(self.tr("Excluded Decks"))
@@ -493,20 +521,6 @@ class FilteringSettingsPanel(FormPanel):
                 "to also skip words mixing the two kana scripts (サボる, ヤバい)."
             ),
         )
-
-        # Kana-variant fold: a kana-spelled word (うなずく) counts as known when
-        # the kanji dictionary form (頷く) is already carded. Script-gated in
-        # WordFilterService.filter_unknown; kanji variants never fold.
-        self.match_kana_variants_checkbox = QCheckBox(self.tr("Treat Kana Spellings of Known Words as Known"))
-        self.match_kana_variants_checkbox.setToolTip(
-            self.tr(
-                "When a subtitle spells a word in kana (e.g. うなずく) and the kanji "
-                "dictionary form (頷く) is already in your collection or known list, "
-                "skip it instead of creating a second card. Kanji spellings are "
-                "never merged this way."
-            )
-        )
-        self.add_field("", self.match_kana_variants_checkbox)
 
         # Option-driven script filters. The Korean pair binds to the SAME two
         # language-scoped booleans the kana rows above use, and the mapping is
@@ -883,6 +897,10 @@ class FilteringSettingsPanel(FormPanel):
         """Set the kana-variant fold checkbox."""
         self.match_kana_variants_checkbox.setChecked(value)
 
+    def _sync_rebuild_known_words_button_state(self) -> None:
+        """Rebuild only means anything while the cache the checkbox names is on."""
+        self.rebuild_known_words_button.setEnabled(self.use_known_words_db_checkbox.isChecked())
+
     # --- Word lists ---
 
     def get_blacklist_path(self) -> Path | None:
@@ -1099,6 +1117,7 @@ class FilteringSettingsPanel(FormPanel):
                 max_frequency_rank=config.max_frequency_rank,
             )
         self.set_use_known_words_db(config.use_known_words_db)
+        self._sync_rebuild_known_words_button_state()
         self.set_match_kana_variants(config.known_words_match_kana_variants)
         self.set_excluded_decks(config.excluded_decks)
         self.set_excluded_wordsets(config.excluded_wordsets)
