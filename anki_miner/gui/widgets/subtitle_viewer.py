@@ -111,6 +111,9 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
             auto-detecting Japanese. None preserves auto-detect (mpv metadata).
         audio_track_codes: The mining language's audio-track language codes,
             used for that auto-detect. None keeps the player's ja default.
+        offer_align: Show "Align automatically". False while the Retime tool
+            is hidden in Settings, since there is then no tool to hand the
+            pair to.
     """
 
     #: ``exec()`` result meaning "hand this pair to the automatic aligner".
@@ -128,6 +131,7 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
         audio_track_override: int | None = None,
         audio_track_codes: frozenset[str] | None = None,
         content_style: ContentTextStyle | None = None,
+        offer_align: bool = True,
     ):
         super().__init__(parent)
         # The cue list and the player's strip are mined content (D45-B); None
@@ -146,6 +150,8 @@ class SubtitleViewer(ScreenIssueHost, QDialog):
         self.resize(960, 660)
 
         self._setup_ui(initial_offset)
+        # Nothing to hand the pair to while Retime is off the Utilities tab.
+        self.align_button.setVisible(offer_align)
         self._setup_shortcuts()
         add_min_max_buttons(self)
 
