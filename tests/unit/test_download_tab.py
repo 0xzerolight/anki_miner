@@ -229,7 +229,7 @@ class TestWorkerConstruction:
     def test_quality_presets_offered_in_descending_order(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
         keys = [tab.preset_combo.itemData(i) for i in range(tab.preset_combo.count())]
-        assert keys == ["best", "1440p", "1080p", "720p", "audio_mp3", "audio_m4a"]
+        assert keys == ["best", "1440p", "1080p", "720p", "audio_mp3", "audio_m4a", "subtitles"]
 
     def test_1440p_preset_maps_to_height_capped_selector(self, qtbot, tmp_path: Path) -> None:
         tab = _make_tab(_make_config(tmp_path), qtbot)
@@ -766,3 +766,109 @@ class TestExpandPlaylist:
             tab._on_playlist_resolved(DownloadPlaylist("L", (), 1))
         dialog_cls.assert_not_called()
         assert tab.url_input.toPlainText() == "https://example.com/other"
+
+
+# ---------------------------------------------------------------------------
+# Subtitles-only preset
+# ---------------------------------------------------------------------------
+
+
+class TestSubtitlesOnlyPreset:
+    def test_selecting_it_builds_skip_download_options(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/v")
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("subtitles"))
+        worker_cls = _start_download(tab, _FakeWorker())
+        options = worker_cls.call_args.kwargs["options"]
+        assert options.subtitles_only is True
+        assert options.write_subtitles is True
+        assert options.embed_thumbnail is False
+        assert options.embed_metadata is False
+        assert options.audio_lang == ""
+
+    def test_selecting_it_disables_the_controls_it_makes_moot(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("subtitles"))
+        assert tab.write_subs_checkbox.isChecked() is True
+        assert not tab.write_subs_checkbox.isEnabled()
+        assert not tab.custom_format_edit.isEnabled()
+        assert not tab.audio_lang_combo.isEnabled()
+        assert not tab.embed_thumbnail_checkbox.isEnabled()
+        assert not tab.embed_metadata_checkbox.isEnabled()
+        # The language picker stays usable — it is how you choose which
+        # subtitles to fetch.
+        assert tab.sub_langs_button.isEnabled()
+
+    def test_switching_to_subtitles_only_and_back_leaves_custom_format_intact(self, qtbot, tmp_path: Path) -> None:
+        """The field is disabled, never cleared — clearing it would silently
+        discard a saved yt-dlp format string the moment the user glances at
+        this preset (a data-loss regression an earlier draft of this feature
+        had)."""
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.custom_format_edit.setText("bestvideo[height<=480]+bestaudio")
+        tab.custom_format_edit.editingFinished.emit()
+        assert tab.config.downloader_custom_format == "bestvideo[height<=480]+bestaudio"
+
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("subtitles"))
+        assert tab.custom_format_edit.text() == "bestvideo[height<=480]+bestaudio"
+        assert not tab.custom_format_edit.isEnabled()
+        assert tab.config.downloader_custom_format == "bestvideo[height<=480]+bestaudio"
+
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("best"))
+        assert tab.custom_format_edit.text() == "bestvideo[height<=480]+bestaudio"
+        assert tab.custom_format_edit.isEnabled()
+        assert tab.config.downloader_custom_format == "bestvideo[height<=480]+bestaudio"
+
+    def test_subtitles_only_run_ignores_leftover_custom_format_text(self, qtbot, tmp_path: Path) -> None:
+        """'Subtitles only' wins over a leftover custom string outright — the
+        run never sends the custom selector, even though the field still
+        displays it (disabled)."""
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.url_input.setPlainText("https://example.com/v")
+        tab.custom_format_edit.setText("bestvideo[height<=480]+bestaudio")
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("subtitles"))
+        worker_cls = _start_download(tab, _FakeWorker())
+        options = worker_cls.call_args.kwargs["options"]
+        assert options.subtitles_only is True
+        assert options.format_selector == ""
+
+    def test_switching_back_restores_the_download_subtitles_checkbox_and_every_control(
+        self, qtbot, tmp_path: Path
+    ) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        assert tab.write_subs_checkbox.isChecked() is False  # config default
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("subtitles"))
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("best"))
+        assert tab.write_subs_checkbox.isChecked() is False
+        assert tab.write_subs_checkbox.isEnabled()
+        assert tab.custom_format_edit.isEnabled()
+        assert tab.audio_lang_combo.isEnabled()
+        assert tab.embed_thumbnail_checkbox.isEnabled()
+        assert tab.embed_metadata_checkbox.isEnabled()
+        assert not tab.sub_langs_button.isEnabled()
+
+    def test_switching_back_restores_a_true_checkbox_too(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        tab.write_subs_checkbox.setChecked(True)
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("subtitles"))
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("best"))
+        assert tab.write_subs_checkbox.isChecked() is True
+        assert tab.sub_langs_button.isEnabled()
+
+    def test_selecting_it_does_not_persist_a_forced_checkbox_state(self, qtbot, tmp_path: Path) -> None:
+        """DECIDED: downloader_write_subtitles keeps its own value while this preset is active."""
+        tab = _make_tab(_make_config(tmp_path), qtbot)
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+        tab.preset_combo.setCurrentIndex(tab.preset_combo.findData("subtitles"))
+        assert received
+        assert received[-1].downloader_write_subtitles is False
+        assert received[-1].downloader_format_preset == "subtitles"
+
+    def test_reloading_a_persisted_subtitles_preset_shows_it_disabled(self, qtbot, tmp_path: Path) -> None:
+        tab = _make_tab(_make_config(tmp_path, downloader_format_preset="subtitles"), qtbot)
+        assert tab.preset_combo.currentData() == "subtitles"
+        assert tab.write_subs_checkbox.isChecked() is True
+        assert not tab.write_subs_checkbox.isEnabled()
+        assert not tab.custom_format_edit.isEnabled()
+        assert not tab.embed_thumbnail_checkbox.isEnabled()

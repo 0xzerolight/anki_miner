@@ -70,6 +70,7 @@ from anki_miner.services.audio_fetch_common import redact_url_for_log
 from anki_miner.services.media_downloader import (
     FORMAT_PRESETS,
     PLAYLIST_PROBE_MAX,
+    SUBTITLES_ONLY_PRESET,
     DownloadOptions,
     DownloadPlaylist,
     MediaDownloaderService,
@@ -233,26 +234,35 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
             idx = self.preset_combo.findData(self.config.downloader_format_preset)
             self.preset_combo.setCurrentIndex(idx if idx >= 0 else 0)
             self.custom_format_edit.setText(self.config.downloader_custom_format)
-            self.write_subs_checkbox.setChecked(self.config.downloader_write_subtitles)
             self._sub_langs = self.config.downloader_subtitle_langs
             self._refresh_sub_langs_button()
-            self.sub_langs_button.setEnabled(self.config.downloader_write_subtitles)
             self._ensure_audio_lang_item(self.config.downloader_audio_lang)
             audio_idx = self.audio_lang_combo.findData(self.config.downloader_audio_lang)
             self.audio_lang_combo.setCurrentIndex(audio_idx if audio_idx >= 0 else 0)
             self.embed_thumbnail_checkbox.setChecked(self.config.downloader_embed_thumbnail)
             self.embed_metadata_checkbox.setChecked(self.config.downloader_embed_metadata)
+            # Must run last: it reads self.config.downloader_write_subtitles for
+            # the non-subtitles-only branch, and overrides the checkbox itself
+            # for the subtitles-only one.
+            self._apply_preset_controls(str(self.preset_combo.currentData()))
         finally:
             self._seeding = False
 
     def _options_differ_from_widgets(self) -> bool:
         """Whether the config's downloader_* values differ from the live
         widgets, compared post-normalization (the form `_on_option_changed`
-        writes), so uncommitted whitespace never counts as a difference."""
+        writes), so uncommitted whitespace never counts as a difference.
+
+        While the 'Subtitles only' preset is selected, the checkbox is forced
+        checked for display only — its real, persisted value never changes —
+        so it is excluded from the comparison the same way `_on_option_changed`
+        excludes it from what it persists.
+        """
+        is_subs_only = self.preset_combo.currentData() == SUBTITLES_ONLY_PRESET
         return (
             self.config.downloader_format_preset != self.preset_combo.currentData()
             or self.config.downloader_custom_format != self.custom_format_edit.text().strip()
-            or self.config.downloader_write_subtitles != self.write_subs_checkbox.isChecked()
+            or (not is_subs_only and self.config.downloader_write_subtitles != self.write_subs_checkbox.isChecked())
             or self.config.downloader_subtitle_langs != self._normalized_sub_langs()
             or self.config.downloader_audio_lang != self._selected_audio_lang()
             or self.config.downloader_embed_thumbnail != self.embed_thumbnail_checkbox.isChecked()
@@ -273,14 +283,26 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
         return str(self.audio_lang_combo.currentData() or "")
 
     def _on_option_changed(self, *_: object) -> None:
-        """Persist an edited run option to config so it survives restart."""
+        """Persist an edited run option to config so it survives restart.
+
+        While the 'Subtitles only' preset is selected, the "Download
+        subtitles" checkbox is forced checked for display only (see
+        ``_apply_preset_controls``) — persisting that forced value would
+        overwrite what the user actually had, so this reuses the config's
+        current value instead, and it comes back untouched when another
+        preset is chosen.
+        """
         if self._seeding:
             return
+        is_subs_only = self.preset_combo.currentData() == SUBTITLES_ONLY_PRESET
+        write_subtitles = (
+            self.config.downloader_write_subtitles if is_subs_only else self.write_subs_checkbox.isChecked()
+        )
         new_config = replace(
             self.config,
             downloader_format_preset=str(self.preset_combo.currentData()),
             downloader_custom_format=self.custom_format_edit.text().strip(),
-            downloader_write_subtitles=self.write_subs_checkbox.isChecked(),
+            downloader_write_subtitles=write_subtitles,
             downloader_subtitle_langs=self._normalized_sub_langs(),
             downloader_audio_lang=self._selected_audio_lang(),
             downloader_embed_thumbnail=self.embed_thumbnail_checkbox.isChecked(),
@@ -380,6 +402,8 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
         self.preset_combo.addItem(self.tr("Up to 720p"), "720p")
         self.preset_combo.addItem(self.tr("Audio only (MP3)"), "audio_mp3")
         self.preset_combo.addItem(self.tr("Audio only (M4A)"), "audio_m4a")
+        self.preset_combo.addItem(self.tr("Subtitles only"), SUBTITLES_ONLY_PRESET)
+        self.preset_combo.currentIndexChanged.connect(self._on_preset_changed)
         self.preset_combo.currentIndexChanged.connect(self._on_option_changed)
         quality_row.addWidget(self.preset_combo)
         quality_row.addStretch()
@@ -449,6 +473,43 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
         return group
 
     def _on_write_subs_toggled(self, checked: bool) -> None:
+        self.sub_langs_button.setEnabled(checked)
+
+    def _on_preset_changed(self, _index: int) -> None:
+        """Show/hide the controls the 'Subtitles only' preset makes moot.
+
+        Runs before ``_on_option_changed`` (connected second on the same
+        signal), so persistence always sees the freshly-applied widget state.
+        """
+        was_seeding = self._seeding
+        self._seeding = True
+        try:
+            self._apply_preset_controls(str(self.preset_combo.currentData()))
+        finally:
+            self._seeding = was_seeding
+
+    def _apply_preset_controls(self, preset_key: str) -> None:
+        """Enable/disable the controls 'Subtitles only' makes moot.
+
+        Subtitles-only forces "Download subtitles" checked for display, but
+        never through the value ``_on_option_changed`` persists — that method
+        skips ``downloader_write_subtitles`` while this preset is active, so
+        switching to another preset restores exactly what the user had.
+
+        The custom-format text is left untouched (merely disabled), not
+        cleared: clearing it would silently discard a saved yt-dlp format
+        string. ``_build_options`` checks ``subtitles_only`` before the
+        custom-format override, so a leftover string is never silently
+        applied either — the disabled, greyed field is display only.
+        """
+        is_subs_only = preset_key == SUBTITLES_ONLY_PRESET
+        self.custom_format_edit.setEnabled(not is_subs_only)
+        self.audio_lang_combo.setEnabled(not is_subs_only)
+        self.embed_thumbnail_checkbox.setEnabled(not is_subs_only)
+        self.embed_metadata_checkbox.setEnabled(not is_subs_only)
+        self.write_subs_checkbox.setEnabled(not is_subs_only)
+        checked = True if is_subs_only else self.config.downloader_write_subtitles
+        self.write_subs_checkbox.setChecked(checked)
         self.sub_langs_button.setEnabled(checked)
 
     def _create_output_section(self) -> QFrame:
@@ -621,26 +682,35 @@ class DownloadTab(YtdlpAvailabilityMixin, _ToolTabBase):
     def _build_options(self) -> DownloadOptions:
         """Map the option widgets to DownloadOptions.
 
-        A non-empty custom format string replaces the preset entirely,
-        including audio extraction — raw mode, the user controls everything.
+        'Subtitles only' wins over everything else, including a saved custom
+        format string — checked first, before the custom-format override, so
+        a leftover string from a previous run is never silently applied (the
+        field stays disabled-but-populated; see ``_apply_preset_controls``).
+        Outside this preset, a non-empty custom format string replaces the
+        preset entirely, including audio extraction — raw mode, the user
+        controls everything.
         """
-        custom = self.custom_format_edit.text().strip()
+        key = str(self.preset_combo.currentData())
+        subtitles_only = key == SUBTITLES_ONLY_PRESET
+        custom = "" if subtitles_only else self.custom_format_edit.text().strip()
         if custom:
             selector, audio_format = custom, None
+        elif subtitles_only:
+            selector, audio_format = "", None
         else:
-            key = str(self.preset_combo.currentData())
             selector, audio_format = FORMAT_PRESETS.get(key, FORMAT_PRESETS["best"])
         return DownloadOptions(
             format_selector=selector,
-            extract_audio_format=audio_format,
-            write_subtitles=self.write_subs_checkbox.isChecked(),
+            extract_audio_format=None if subtitles_only else audio_format,
+            write_subtitles=True if subtitles_only else self.write_subs_checkbox.isChecked(),
             subtitle_langs=self._normalized_sub_langs(),
             # Raw mode owns the whole selector, audio included: composing a
             # language filter into a string the user hand-wrote would break the
             # contract the custom-format field advertises.
-            audio_lang="" if custom else self._selected_audio_lang(),
-            embed_thumbnail=self.embed_thumbnail_checkbox.isChecked(),
-            embed_metadata=self.embed_metadata_checkbox.isChecked(),
+            audio_lang="" if (custom or subtitles_only) else self._selected_audio_lang(),
+            embed_thumbnail=False if subtitles_only else self.embed_thumbnail_checkbox.isChecked(),
+            embed_metadata=False if subtitles_only else self.embed_metadata_checkbox.isChecked(),
+            subtitles_only=subtitles_only,
         )
 
     # ------------------------------------------------------------------

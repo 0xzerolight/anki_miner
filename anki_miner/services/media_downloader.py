@@ -71,15 +71,37 @@ FORMAT_PRESETS: dict[str, tuple[str, str | None]] = {
     "audio_m4a": ("bestaudio/best", "m4a"),
 }
 
+#: Preset value for a subtitles-only run (Utilities → Download's Quality
+#: dropdown, next to the audio-only presets). Deliberately NOT a FORMAT_PRESETS
+#: key: its (selector, audio-format) tuple shape doesn't fit a download that
+#: skips video and audio entirely — DownloadOptions.subtitles_only carries the
+#: mode instead, and the tab maps this string onto that flag.
+SUBTITLES_ONLY_PRESET = "subtitles"
+
+# YoutubeDL.py:4476 — printed for EVERY subtitle write (inline-data AND
+# HTTP-fetched: it runs before self.dl(), which then ALSO prints its own
+# "[download] Destination:" line for the HTTP case). In video+subs mode this
+# always precedes the video's own destination/merge lines (subtitles are
+# written at YoutubeDL.py:3391, before the video download/merge at :3523), so
+# _FILENAME_RES's last-match-wins still lands on the video's final path.
+_SUBTITLE_WRITTEN_RE = re.compile(r"^\[info\] Writing video subtitles to: (.+)$")
+
 # Final-filename discovery from yt-dlp's own output lines (version-stable
 # phrasings; --print would change quiet-mode semantics). Last match wins, so a
-# merged/extracted output supersedes the per-stream destinations.
+# merged/extracted output supersedes the per-stream destinations, and the last
+# subtitle language written supersedes an earlier one.
 _FILENAME_RES = (
     re.compile(r"^\[download\] Destination: (.+)$"),
     re.compile(r"^\[Merger\] Merging formats into \"(.+)\"$"),
     re.compile(r"^\[ExtractAudio\] Destination: (.+)$"),
+    _SUBTITLE_WRITTEN_RE,
 )
 _ALREADY_RE = re.compile(r"^\[download\] (.+) has already been downloaded")
+# YoutubeDL.py:4471 — a subtitle already on disk; the media-file _ALREADY_RE
+# above never matches a subtitle line. Only meaningful in subtitles-only mode
+# (see download()'s status logic) — in a video+subs run the video's own
+# already/DONE marker decides the status, never this one.
+_SUBTITLE_ALREADY_RE = re.compile(r"^\[info\] Video subtitle (.+) is already present$")
 
 #: A language code safe to interpolate into a yt-dlp format filter. Anything
 #: else is dropped rather than escaped — the picker only ever produces codes, so
@@ -136,6 +158,9 @@ class DownloadOptions:
     embed_thumbnail: bool = False
     embed_metadata: bool = False
     audio_lang: str = ""  # preferred audio-track language; "" = whatever the site serves
+    # --skip-download + --ignore-no-formats-error; no --format/-x/embed flags.
+    # format_selector/extract_audio_format/audio_lang/embed_* are ignored when True.
+    subtitles_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -209,12 +234,12 @@ class MediaDownloaderService:
             BotDetectionError / CookieDatabaseLockedError: well-known yt-dlp
                 failure modes detected in the output tail.
             MediaDownloadError: ffmpeg preflight failure (merge, audio-extract,
-                or thumbnail/metadata embedding), timeout, or any other
-                non-zero exit.
+                or thumbnail/metadata embedding), timeout, no subtitles found
+                in subtitles-only mode, or any other non-zero exit.
         """
         logger.info("media download starting: %s -> %s", redact_url_for_log(url), dest_dir)
 
-        needs_ffmpeg = (
+        needs_ffmpeg = not options.subtitles_only and (
             "+" in options.format_selector
             or options.extract_audio_format is not None
             or options.embed_thumbnail
@@ -230,6 +255,11 @@ class MediaDownloaderService:
         tail: collections.deque[str] = collections.deque(maxlen=50)
         captured: dict[str, Path | None] = {"filepath": None}
         already = {"seen": False}
+        # subtitles-only mode's own already/DONE/failure bookkeeping.
+        # Multi-language runs need both keys: one language can already be on
+        # disk while another is newly written, and that is DONE, not
+        # ALREADY_DOWNLOADED (and not a failure either).
+        subtitle_state = {"already": False, "written": False}
         postprocessing_seen = False
 
         def handle_line(line: str) -> None:
@@ -256,6 +286,9 @@ class MediaDownloaderService:
                 already["seen"] = True
                 captured["filepath"] = Path(already_m.group(1))
                 return
+            if _SUBTITLE_ALREADY_RE.match(line) is not None:
+                subtitle_state["already"] = True
+                return
             # A line can be both a filename source and a postprocess marker
             # ("[Merger] Merging formats into ...") — never early-return between
             # the two checks.
@@ -263,6 +296,8 @@ class MediaDownloaderService:
                 name_m = filename_re.match(line)
                 if name_m is not None:
                     captured["filepath"] = Path(name_m.group(1))
+                    if filename_re is _SUBTITLE_WRITTEN_RE:
+                        subtitle_state["written"] = True
                     break
             if not postprocessing_seen and any(marker in line for marker in ytdlp_invocation.POSTPROCESS_MARKERS):
                 postprocessing_seen = True
@@ -300,9 +335,32 @@ class MediaDownloaderService:
         if result.state is SupervisedState.FAILED:
             if result.returncode is None and result.error is not None:
                 raise MediaDownloadError(f"yt-dlp process failed: {result.error}") from result.error
-            self._raise_for_error(tail)
+            self._raise_for_error(tail, subtitles_only=options.subtitles_only)
 
-        status = DownloadStatus.ALREADY_DOWNLOADED if already["seen"] else DownloadStatus.DONE
+        if options.subtitles_only and not subtitle_state["written"] and not subtitle_state["already"]:
+            # Nothing came down, and yt-dlp still exited 0. --ignore-no-formats-error
+            # is needed so a site that legitimately has no video formats doesn't
+            # also fail a subtitles-only run — but it ALSO downgrades YouTube's
+            # bot-wall/sign-in "no formats" failure to a warning
+            # (extractor/common.py's raise_no_formats/raise_login_required both
+            # check it), so a real bot wall must be diagnosed from the tail
+            # rather than assumed away as an honest "no subtitles" miss.
+            classification = ytdlp_invocation.classify_error_tail("\n".join(tail).lower())
+            if classification == "bot" or classification in ytdlp_invocation.COOKIE_TAGS:
+                self._raise_for_error(tail, subtitles_only=True)
+            raise MediaDownloadError("No subtitles were found for the requested language(s).")
+
+        if options.subtitles_only:
+            # The video-level ``already`` marker never fires here (no --format,
+            # no video download), and the subtitle-level one must not decide a
+            # video+subs run's status either — see _SUBTITLE_ALREADY_RE.
+            status = (
+                DownloadStatus.ALREADY_DOWNLOADED
+                if subtitle_state["already"] and not subtitle_state["written"]
+                else DownloadStatus.DONE
+            )
+        else:
+            status = DownloadStatus.ALREADY_DOWNLOADED if already["seen"] else DownloadStatus.DONE
         logger.info("media download complete: status=%s file=%s", status.value, captured["filepath"])
         return DownloadResult(status, captured["filepath"])
 
@@ -533,11 +591,18 @@ class MediaDownloaderService:
             self._ytdlp(),
             "--ignore-config",
             "--no-playlist",
-            "--format",
-            apply_audio_language(options.format_selector, options.audio_lang),
         ]
-        if options.extract_audio_format:
-            cmd.extend(["-x", "--audio-format", options.extract_audio_format])
+        if options.subtitles_only:
+            # No --format: yt-dlp still runs format selection under
+            # --skip-download and can fail "Requested format is not
+            # available" on a site with unusual formats; this flag makes that
+            # non-fatal — subtitles are the whole point of this mode, a
+            # video-format miss is not this run's problem.
+            cmd.extend(["--skip-download", "--ignore-no-formats-error"])
+        else:
+            cmd.extend(["--format", apply_audio_language(options.format_selector, options.audio_lang)])
+            if options.extract_audio_format:
+                cmd.extend(["-x", "--audio-format", options.extract_audio_format])
         if options.write_subtitles:
             # Both flags: yt-dlp loads manual subs first and lets auto captions
             # only fill languages not already present — manual-preferred fallback.
@@ -560,10 +625,11 @@ class MediaDownloaderService:
                     "srt/best",
                 ]
             )
-        if options.embed_thumbnail:
-            cmd.append("--embed-thumbnail")
-        if options.embed_metadata:
-            cmd.append("--embed-metadata")
+        if not options.subtitles_only:
+            if options.embed_thumbnail:
+                cmd.append("--embed-thumbnail")
+            if options.embed_metadata:
+                cmd.append("--embed-metadata")
         cmd.extend(
             [
                 # "home:" prefix so a Windows drive letter is never read as a
@@ -596,7 +662,7 @@ class MediaDownloaderService:
         cmd.append(url)
         return cmd
 
-    def _raise_for_error(self, tail: collections.deque[str]) -> None:
+    def _raise_for_error(self, tail: collections.deque[str], *, subtitles_only: bool = False) -> None:
         joined_lower = "\n".join(tail).lower()
         classification = ytdlp_invocation.classify_error_tail(joined_lower)
 
@@ -619,9 +685,12 @@ class MediaDownloaderService:
                 )
             )
 
-        if classification == "format_missing":
+        if classification == "format_missing" and not subtitles_only:
             # A generic downloader with a raw-format field cannot blame extractor
-            # staleness alone — name both remedies.
+            # staleness alone — name both remedies. Skipped in subtitles-only
+            # mode: --ignore-no-formats-error means this tail marker is a
+            # leftover non-fatal warning, not the failure, and the remedy names
+            # a custom-format field this mode disables.
             raise MediaDownloadError(
                 "The site served no matching format. Update yt-dlp (Settings → "
                 "YouTube → Update yt-dlp now) or, if you set a custom format "

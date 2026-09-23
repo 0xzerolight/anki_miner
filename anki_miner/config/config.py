@@ -239,7 +239,7 @@ class AnkiMinerConfig:
     # scalars (auto-persist; no __post_init__ coercion). The destination folder
     # is deliberately NOT config — it is session state (ui_state.ini), like the
     # other tool tabs' output folders.
-    downloader_format_preset: str = "best"  # key into services.media_downloader.FORMAT_PRESETS
+    downloader_format_preset: str = "best"  # key into media_downloader's FORMAT_PRESETS or SUBTITLES_ONLY_PRESET
     downloader_custom_format: str = ""  # raw yt-dlp -f string; non-empty overrides the preset
     downloader_write_subtitles: bool = False  # --write-subs/--write-auto-subs (manual preferred)
     downloader_subtitle_langs: str = "ja"  # --sub-langs value

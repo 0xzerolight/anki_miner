@@ -1241,6 +1241,8 @@ CAPABILITIES: tuple[Capability, ...] = (
             "save video",
             "mp3",
             "audio only",
+            "subtitles only",
+            "subtitle download",
             "url",
         ),
     ),
