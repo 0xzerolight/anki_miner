@@ -748,6 +748,15 @@ class TestRoundTripImmutabilityAndPaths:
         assert loaded.downloader_embed_thumbnail is True
         assert loaded.downloader_embed_metadata is True
 
+    def test_downloader_subtitles_only_preset_round_trips(self, tmp_config: Path):
+        """The 'Subtitles only' preset is a plain value of the existing
+        downloader_format_preset field (no new config field) — pin it surviving
+        save→load like every other preset value."""
+        cfg = replace(create_default_config(), downloader_format_preset="subtitles")
+        GUIConfigManager.save_config(cfg)
+        loaded = GUIConfigManager.load_config()
+        assert loaded.downloader_format_preset == "subtitles"
+
     def test_mokuro_use_gpu_round_trips(self, tmp_config: Path):
         """The one persisted AND portable Manga OCR option (the two roots are Path
         fields, stripped from exports) must survive save→load; default is True,

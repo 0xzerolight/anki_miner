@@ -1,7 +1,12 @@
+import importlib.util
+import re
 from pathlib import Path
 
+import pytest
 import yaml
 from PyQt6.QtWidgets import QLabel, QLineEdit
+
+from anki_miner.languages.registry import available_languages, get_profile
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -225,3 +230,58 @@ def test_readme_no_longer_promises_a_pipx_remedy_for_intel_mac() -> None:
     assert "Whisper subtitle generation" not in visible
     assert "pipx install" not in visible
     assert "¹ Excludes AVIF screenshots" in visible
+
+
+def _resources_text() -> str:
+    return (ROOT / "RESOURCES.md").read_text(encoding="utf-8")
+
+
+def _resources_section(heading: str) -> str:
+    text = _resources_text()
+    marker = f"\n## {heading}\n"
+    assert marker in text, f"RESOURCES.md has no '## {heading}' section"
+    return text.split(marker, maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
+
+
+@pytest.mark.parametrize("code", available_languages())
+def test_resources_doc_marks_exactly_the_catalog_as_setup_wizard_rows(code: str) -> None:
+    """What the setup wizard downloads for a language is what RESOURCES.md marks "Yes" for it."""
+    profile = get_profile(code)
+    section = _resources_section(profile.english_name)
+    marked: set[str] = set()
+    for line in section.splitlines():
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if line.startswith("|") and cells[-1] == "Yes":
+            marked.update(re.findall(r"\]\((https?://[^)]+)\)", cells[2]))  # the Download cell
+    assert marked == {spec.url for spec in profile.catalog}
+
+
+def test_resources_doc_points_portuguese_readers_at_the_variety_control() -> None:
+    # The variety combo lives in the Filtering panel, not under Mining Language.
+    assert "Settings -> Filtering (Regional Variety)" in _resources_section("Portuguese")
+
+
+def test_readme_sends_readers_to_the_per_language_resources_doc() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    # Installed setup wizards still open README#recommended-resources, so the heading stays.
+    section = readme.split("\n## Recommended Resources\n", maxsplit=1)[1].split("\n## ", maxsplit=1)[0]
+    assert "[RESOURCES.md](RESOURCES.md)" in section
+    assert "| Type | Resource |" not in section
+
+
+_READMEI18N = importlib.util.spec_from_file_location("readme_i18n", ROOT / "scripts" / "readme_i18n.py")
+assert _READMEI18N is not None and _READMEI18N.loader is not None
+readme_i18n = importlib.util.module_from_spec(_READMEI18N)
+_READMEI18N.loader.exec_module(readme_i18n)
+
+
+@pytest.mark.parametrize("code", available_languages())
+def test_wizard_resources_link_lands_on_its_language_section(code: str) -> None:
+    from anki_miner.gui.widgets.dialogs.setup_wizard.pages import RESOURCES_HELP_URL, resources_help_url
+
+    base, _, anchor = resources_help_url(code).partition("#")
+    assert base == RESOURCES_HELP_URL
+    text = _resources_text()
+    slugs = {readme_i18n.slugify(line[3:]) for line in text.splitlines() if line.startswith("## ")}
+    assert anchor in slugs
+    assert f"](#{anchor})" in text  # the jump index links it

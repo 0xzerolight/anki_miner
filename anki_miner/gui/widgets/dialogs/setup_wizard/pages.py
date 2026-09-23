@@ -66,7 +66,15 @@ ANKICONNECT_URL = "https://ankiweb.net/shared/info/2055492159"
 # Recommended Japanese-mining note type guidance (Lapis is the default note type).
 NOTE_TYPE_HELP_URL = "https://github.com/0xzerolight/anki_miner#recommended-note-type"
 
-RESOURCES_HELP_URL = "https://github.com/0xzerolight/anki_miner#recommended-resources"
+RESOURCES_HELP_URL = "https://github.com/0xzerolight/anki_miner/blob/main/RESOURCES.md"
+
+
+def resources_help_url(language: str) -> str:
+    """RESOURCES.md at *language*'s section; each heading there is a profile's English name."""
+    from anki_miner.languages.registry import get_profile  # noqa: PLC0415
+
+    return f"{RESOURCES_HELP_URL}#{get_profile(language).english_name.lower()}"
+
 
 #: Family noun per catalog ``kind``, so a checkbox says what a resource *is*
 #: rather than only what it is called. Keyed by ``ResourceSpec.kind``; a kind
@@ -1041,10 +1049,13 @@ class ResourcesPage(_LiveCheckPage):
 
         layout = QVBoxLayout(self)
 
-        link = QLabel(f'<a href="{RESOURCES_HELP_URL}">{self.tr("What are these resources?")}</a>')
-        link.setOpenExternalLinks(False)
-        link.linkActivated.connect(lambda: _open_url(RESOURCES_HELP_URL))
-        layout.addWidget(link)
+        self.help_link = QLabel(f'<a href="{RESOURCES_HELP_URL}">{self.tr("What are these resources?")}</a>')
+        self.help_link.setOpenExternalLinks(False)
+        # Resolved on click: the wizard's language step can change the language after this page is built.
+        self.help_link.linkActivated.connect(
+            lambda: _open_url(resources_help_url(config_language(self._wizard.working_config())))
+        )
+        layout.addWidget(self.help_link)
 
         # _sync_download_button reads _download_running, so it is set before any
         # checkbox exists to toggle.

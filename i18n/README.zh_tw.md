@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:1f8a3147ec4f94c3 -->
+<!-- i18n-source: README.md sha256:d6de3b1fd803053b -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -171,21 +171,7 @@ anki_miner_gui
 
 ## 推薦資源
 
-未特別標註者為日語。設定精靈會依你的採集語言推薦對應的組合。
-
-| 類型 | 資源 | 下載 | 加入方式 |
-|------|----------|----------|---------|
-| 字典 | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | 字典 -> 新增字典… |
-| 字典 | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | 字典 -> 新增字典… |
-| 字典 | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | 於網站上產生 | 字典 -> 新增字典… |
-| 高低音調 | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | 高低音調 -> 新增高低音調來源… |
-| 高低音調 | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | 高低音調 -> 新增高低音調來源… |
-| 頻率 | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | 頻率 -> 新增頻率來源… |
-| 頻率 | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | 頻率 -> 新增頻率來源… |
-| 單字音訊 | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | 合集種子或產生的 `android.db` | 音訊 -> 新增音訊來源… |
-| 字典（中文） | [CC-CEDICT](https://github.com/MarvNC/cc-cedict-yomitan) | [Yomitan zip](https://github.com/MarvNC/cc-cedict-yomitan/releases/latest/download/CC-CEDICT.zip) | 字典 -> 新增字典… |
-| 字典（韓文） | [KRDICT](https://github.com/Lyroxide/yomitan-ko-dic) | [Yomitan zip](https://github.com/Lyroxide/yomitan-ko-dic/releases/latest/download/KO-EN.KRDICT.No.Examples.zip) | 字典 -> 新增字典… |
-
+各採集語言的辭典、詞頻清單及下載連結見 [RESOURCES.md](../RESOURCES.md)。設定精靈會依你的採集語言推薦對應的組合。
 
 <details>
 <summary><strong>JMnedict 授權</strong></summary>
