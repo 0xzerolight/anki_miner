@@ -178,14 +178,13 @@ def _reserved(group: str) -> list[QKeySequence]:
     if group == CURATOR:
         # The table's own navigation (bare, and Shift-extending the highlight
         # that S and D act on), the window's Esc, confirm, and the table's Copy
-        # shortcut (install_copy_rows). Tab/Backtab are NOT here: the Settings
-        # page's QKeySequenceEdit uses them as finishing keys, so they can
-        # never be recorded as an override in the first place. Left/Right are
-        # here even though the table doesn't scroll horizontally: play/pause
-        # installs on the player pane, and rebinding it to an arrow there would
-        # pre-empt the audio clip editor's Left/Right nudges. A second shortcut
-        # on a key already bound in the same focus chain is activatedAmbiguously
-        # to Qt, and then neither fires.
+        # shortcut (install_copy_rows). A shortcut on a key the table or the
+        # audio clip editor handles itself (arrows, PgUp/PgDown) would pre-empt
+        # that handling -- play/pause also sits on the player pane, where
+        # Left/Right nudge the clip -- and a second shortcut on the Copy key is
+        # activatedAmbiguously to Qt, so neither fires. Tab/Backtab are NOT
+        # here: the Settings page's QKeySequenceEdit uses them as finishing
+        # keys, so they can never be recorded.
         return [
             *_sequences(*_NAVIGATION_KEYS, *(f"Shift+{key}" for key in _NAVIGATION_KEYS)),
             *_sequences("Esc", "Return", "Enter", "Ctrl+Return", "Ctrl+Enter"),
