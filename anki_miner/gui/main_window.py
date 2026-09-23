@@ -2259,10 +2259,15 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         """
         window = self._system_health_window
         if window is None:
+            from anki_miner.gui.capabilities import CapabilityTarget
+
             window = SystemHealthWindow(self)
             window.recheck_requested.connect(self._run_validation)
             window.export_requested.connect(self._export_diagnostics)
             window.fix_requested.connect(self.reveal_setting)
+            # A HEALTH_FIX_ROUTES row's fix is a whole tab, not a Settings
+            # anchor (mokuro's setup card lives on Utilities -> Manga OCR now).
+            window.route_requested.connect(lambda m, s: self.reveal_capability(CapabilityTarget(m, s)))
             window.set_export_enabled(not self._diagnostics_export_running)
             self._system_health_window = window
             window.show_health(self._health_report)

@@ -25,6 +25,7 @@ from anki_miner.gui.resources.styles import Theme
 from anki_miner.gui.widgets.dialogs.system_health_window import (
     HEALTH_FAIL,
     HEALTH_FIX_ANCHORS,
+    HEALTH_FIX_ROUTES,
     HEALTH_KEYS,
     HEALTH_OK,
     HEALTH_UNKNOWN,
@@ -197,9 +198,11 @@ def test_only_the_first_message_per_component_is_shown():
 
 
 def test_mokuro_row_exists_and_has_a_repair_route():
-    """The row and its Fix anchor point at the (later-added) Settings control."""
+    """The row's Fix routes to the Manga OCR tab, not a Settings anchor: mokuro's
+    setup card lives on Utilities → Manga OCR itself."""
     assert "tools.mokuro" in HEALTH_KEYS
-    assert HEALTH_FIX_ANCHORS["tools.mokuro"] == "subtitles.mokuro_install"
+    assert "tools.mokuro" not in HEALTH_FIX_ANCHORS
+    assert HEALTH_FIX_ROUTES["tools.mokuro"] == ("subtitles", "mokuro")
 
 
 def test_mokuro_missing_warns_on_its_own_row():
@@ -312,6 +315,26 @@ def test_fix_emits_the_stable_setting_anchor_id(health_window, qtbot):
         health_window._rows["anki.connect"].fix_button.click()
 
     assert blocker.args == [HEALTH_FIX_ANCHORS["anki.connect"]]
+
+
+def test_mokuro_fix_button_shows_for_a_routed_row(health_window):
+    """A HEALTH_FIX_ROUTES row (no Settings anchor) still offers a Fix button."""
+    result = _result(issues=[ValidationIssue(component="mokuro", severity="WARNING", message="mokuro not found")])
+    health_window.show()
+
+    health_window.show_health(HealthReport.unknown().with_validation(result, CHECKED_AT))
+
+    assert health_window._rows["tools.mokuro"].fix_button.isVisible()
+
+
+def test_mokuro_fix_emits_the_manga_ocr_route(health_window, qtbot):
+    result = _result(issues=[ValidationIssue(component="mokuro", severity="WARNING", message="mokuro not found")])
+    health_window.show_health(HealthReport.unknown().with_validation(result, CHECKED_AT))
+
+    with qtbot.waitSignal(health_window.route_requested) as blocker:
+        health_window._rows["tools.mokuro"].fix_button.click()
+
+    assert blocker.args == list(HEALTH_FIX_ROUTES["tools.mokuro"])
 
 
 def test_row_shows_when_it_was_checked(health_window):
@@ -618,6 +641,25 @@ def test_reveal_setting_asks_settings_to_jump(main_window, qtbot):
 
 def test_reveal_setting_is_a_no_op_without_a_settings_tab(main_window):
     main_window.reveal_setting("dictionaries.chain")  # must not raise
+
+
+def test_mokuro_fix_routes_to_the_manga_ocr_tab(main_window, qtbot, monkeypatch):
+    """The window's route_requested (HEALTH_FIX_ROUTES rows) is wired to
+    reveal_capability, not reveal_setting: mokuro's setup card is a whole tab,
+    not a Settings anchor."""
+    from anki_miner.gui.capabilities import CapabilityTarget
+
+    captured: list = []
+    monkeypatch.setattr(main_window, "reveal_capability", captured.append)
+
+    main_window.open_system_health()
+    window = main_window._system_health_window
+    assert window is not None
+    qtbot.addWidget(window)
+
+    window.route_requested.emit("subtitles", "mokuro")
+
+    assert captured == [CapabilityTarget("subtitles", "mokuro")]
 
 
 def test_every_fix_button_lands_on_a_real_control(qtbot, test_config):

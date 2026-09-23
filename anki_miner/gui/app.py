@@ -1306,8 +1306,8 @@ def _connect_alass_download(window: MainWindow, settings_tab: SettingsTab) -> No
     )
 
 
-def _connect_mokuro_install(window: MainWindow, settings_tab: SettingsTab, subtitles_tab: SubtitlesTab) -> None:
-    """Wire the Subtitles panel's "Install mokuro" button to the install worker.
+def _connect_mokuro_install(window: MainWindow, subtitles_tab: SubtitlesTab) -> None:
+    """Wire the Manga OCR tab's "Install mokuro" button to the install worker.
 
     Unlike ``_connect_alass_download`` this does NOT re-emit ``config_refreshed``:
     an install changes no config value and ``MokuroTab.update_config`` masks a
@@ -1316,22 +1316,20 @@ def _connect_mokuro_install(window: MainWindow, settings_tab: SettingsTab, subti
 
     def _tail(request_arg: object, ok: bool, message: str) -> None:
         if ok:
-            # Cleared BEFORE both notifies, which each dispatch an off-thread
-            # re-probe that calls the resolver: a cached pre-install miss read
-            # by that probe would settle on "Not installed" right after a
-            # successful install.
+            # Cleared BEFORE the notify, which (on success) dispatches an
+            # off-thread re-probe that calls the resolver: a cached
+            # pre-install miss read by that probe would settle on "Not
+            # installed" right after a successful install.
             mokuro_resolver._clear_cache()
-        settings_tab.subtitles_panel.notify_mokuro_install_finished()
-        if ok:
-            subtitles_tab.mokuro_tab.notify_install_finished()
+        subtitles_tab.mokuro_tab.notify_install_finished(ok)
 
     def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
         config = window.get_config()
         window.background_tasks.start_mokuro_install(config.bin_root, config.uv_root, on_status, on_finished)
 
     _connect_download(
-        settings_tab.mokuro_install_requested,
-        set_status=settings_tab.set_mokuro_status,
+        subtitles_tab.mokuro_tab.mokuro_install_requested,
+        set_status=subtitles_tab.mokuro_tab.set_mokuro_status,
         start=_start,
         on_finished_tail=_tail,
     )
@@ -1790,12 +1788,14 @@ def compose_main_window(
     )
     window.background_tasks.ytdlp_update_result.connect(settings_tab.set_ytdlp_status_from_result)
 
-    # Resource download buttons (ASR model, alass, mokuro, CUDA pack, VAD pack,
-    # ASR engine pack, Vulkan model, language packs): each button hands off to a
-    # background worker and refreshes its panel on finish. The seven
+    # Resource download buttons (ASR model, alass, CUDA pack, VAD pack, ASR
+    # engine pack, Vulkan model, language packs): each button hands off to a
+    # background worker and refreshes its panel on finish. The six
     # Subtitles-panel ones share the connect skeleton in _connect_download; the
     # per-tool builders carry the differences. The language packs sit on Mining
     # Language, beside the selector they unlock, and wire per language code.
+    # mokuro's own install button lives on the Manga OCR tab, not Settings, so
+    # it is wired separately below (_connect_mokuro_install).
     for _connect in (
         _connect_asr_download,
         _connect_alass_download,
@@ -1806,8 +1806,8 @@ def compose_main_window(
         _connect_language_pack_download,
     ):
         _connect(window, settings_tab)
-    # mokuro needs the Manga OCR tab too (see _connect_mokuro_install).
-    _connect_mokuro_install(window, settings_tab, subtitles_tab)
+    # mokuro install lives on the Manga OCR tab itself (see _connect_mokuro_install).
+    _connect_mokuro_install(window, subtitles_tab)
     # Utilities -> Download and Video -> YouTube offer the same repair when
     # yt-dlp is missing; both route to the updater the Settings button uses.
     _connect_ytdlp_download(window, video_tab, subtitles_tab)
@@ -1848,7 +1848,8 @@ def compose_main_window(
     subtitles_tab.condense_tab.config_changed.connect(window.update_config)
     # Same pattern for the Download tab's downloader_* options.
     subtitles_tab.download_tab.config_changed.connect(window.update_config)
-    # Same pattern for the Manga OCR tab's mokuro_use_gpu option.
+    # Same pattern for the Manga OCR tab's mokuro_use_gpu option and its setup
+    # card's (debounced) mokuro_location edits.
     subtitles_tab.mokuro_tab.config_changed.connect(window.update_config)
 
     # A validation sweep that reached Anki re-drives the three deck / note-type

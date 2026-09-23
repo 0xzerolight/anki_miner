@@ -118,7 +118,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - **Audiobooks** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
 - **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), standalone subtitle files, or pasted text.
 - **Analytics** - mining history, difficulty rankings, milestones.
-- **Utilities** - generate subtitles (local Whisper), retime subtitles (ffsubsync/alass), condense media to dialogue-only audio, download video/audio/subtitles from any site yt-dlp supports, copy the worth-learning part of a premade deck into a new one, backfill fields on existing cards, OCR manga page images into .mokuro files (mokuro, installable from Settings), and time an audiobook to its book's text (Audiobook Sync).
+- **Utilities** - generate subtitles (local Whisper), retime subtitles (ffsubsync/alass), condense media to dialogue-only audio, download video/audio/subtitles from any site yt-dlp supports, copy the worth-learning part of a premade deck into a new one, backfill fields on existing cards, OCR manga page images into .mokuro files (mokuro), and time an audiobook to its book's text (Audiobook Sync).
 - **Settings** - everything configurable.
 
 ## Other Features

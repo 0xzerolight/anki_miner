@@ -18,7 +18,10 @@ Three rules shape it.
   still there when it reopens, because the report lives on the main window.
 * **Fix is a deep link, not a re-implementation.** A row knows one stable
   setting-anchor id (D11) and emits it. Resolving that to a tab, a page, a
-  scroll position and a focused widget stays entirely in ``SettingsTab``.
+  scroll position and a focused widget stays entirely in ``SettingsTab``. A
+  row whose fix is not a Settings control but a whole tab (``HEALTH_FIX_ROUTES``,
+  e.g. mokuro's Manga OCR tab) emits a ``(main_tab, subtab)`` route instead,
+  resolved by ``MainWindow.reveal_capability``.
 """
 
 from __future__ import annotations
@@ -39,6 +42,7 @@ from anki_miner.utils.i18n import tr_format
 __all__ = [
     "HEALTH_FAIL",
     "HEALTH_FIX_ANCHORS",
+    "HEALTH_FIX_ROUTES",
     "HEALTH_GROUPS",
     "HEALTH_KEYS",
     "HEALTH_OK",
@@ -94,7 +98,15 @@ HEALTH_FIX_ANCHORS: dict[str, str] = {
     "resources.audio": "audio.chain",
     "tools.ytdlp": "youtube.ytdlp_update",
     "tools.alass": "subtitles.alass_download",
-    "tools.mokuro": "subtitles.mokuro_install",
+}
+
+#: Where a broken row is repaired when the fix is not a Settings anchor but a
+#: whole tab — a ``(main_tab, subtab)`` pair fed to ``MainWindow.reveal_capability``
+#: via ``CapabilityTarget``. mokuro's setup (path override + Install button)
+#: lives on Utilities → Manga OCR itself now, not Settings, so its row's Fix
+#: routes there instead of into ``HEALTH_FIX_ANCHORS``.
+HEALTH_FIX_ROUTES: dict[str, tuple[str, str]] = {
+    "tools.mokuro": ("subtitles", "mokuro"),
 }
 
 #: ``ValidationIssue.component`` → row key. Components with no row here (the
@@ -384,9 +396,11 @@ class _HealthRow(QFrame):
         self.detail_label.setText(check.detail)
         self.detail_label.setVisible(bool(check.detail))
         # Nothing to repair while a row is healthy or unreported, and no route
-        # to offer for a row with no in-app control behind it.
+        # to offer for a row with no in-app control behind it — a Settings
+        # anchor or a whole-tab route (mokuro's Manga OCR tab) both count.
         self.fix_button.setVisible(
-            check.state in (HEALTH_WARN, HEALTH_FAIL) and self._key in HEALTH_FIX_ANCHORS,
+            check.state in (HEALTH_WARN, HEALTH_FAIL)
+            and (self._key in HEALTH_FIX_ANCHORS or self._key in HEALTH_FIX_ROUTES),
         )
 
 
@@ -401,11 +415,15 @@ class SystemHealthWindow(EnhancedDialog):
         recheck_requested: The user asked for a fresh sweep.
         export_requested: The user asked to export the current diagnostics.
         fix_requested: Emitted with the stable setting-anchor id to reveal.
+        route_requested: Emitted with ``(main_tab, subtab)`` for a row whose
+            fix is a whole tab (``HEALTH_FIX_ROUTES``) rather than a Settings
+            anchor.
     """
 
     recheck_requested = pyqtSignal()
     export_requested = pyqtSignal()
     fix_requested = pyqtSignal(str)
+    route_requested = pyqtSignal(str, str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -570,17 +588,22 @@ class SystemHealthWindow(EnhancedDialog):
             row.set_detail_indent(detail_indent)
 
     def _on_fix_requested(self, key: str) -> None:
-        """Translate a row into the setting id that repairs it.
+        """Translate a row into the repair it names — a Settings anchor, or a tab route.
 
         The row does not learn the anchor and the window does not learn the tab:
-        the id goes to the owner, which asks Settings to reveal it. A top-level
-        window cannot use the ``reveal_settings`` duck-typing helper — its own
+        the id goes to the owner, which asks Settings to reveal it (or, for a
+        ``HEALTH_FIX_ROUTES`` row, opens the tab directly). A top-level window
+        cannot use the ``reveal_settings`` duck-typing helper — its own
         ``window()`` is itself, not the main window — so the route out is a
-        signal.
+        signal either way.
         """
         anchor = HEALTH_FIX_ANCHORS.get(key)
         if anchor:
             self.fix_requested.emit(anchor)
+            return
+        route = HEALTH_FIX_ROUTES.get(key)
+        if route:
+            self.route_requested.emit(*route)
 
     # ------------------------------------------------------------------
     # Rendering

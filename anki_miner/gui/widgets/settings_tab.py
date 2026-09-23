@@ -156,8 +156,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             model" button is clicked. Carries the selected model name.
         alass_download_requested: Emitted when the Subtitles panel's "Download
             alass" button is clicked.
-        mokuro_install_requested: Emitted when the Subtitles panel's "Install
-            mokuro" button is clicked.
         cuda_pack_download_requested: Emitted when the Subtitles panel's
             "Download GPU acceleration" button is clicked.
         vad_pack_download_requested: Emitted when the Subtitles panel's
@@ -187,7 +185,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     ytdlp_update_requested = pyqtSignal()
     asr_download_requested = pyqtSignal(str)  # Emits model name
     alass_download_requested = pyqtSignal()
-    mokuro_install_requested = pyqtSignal()
     cuda_pack_download_requested = pyqtSignal()
     vad_pack_download_requested = pyqtSignal()
     asr_pack_download_requested = pyqtSignal()
@@ -781,7 +778,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # MainWindow (or caller), which owns the background download workers.
         self.subtitles_panel.asr_download_requested.connect(self._on_asr_download_clicked)
         self.subtitles_panel.alass_download_requested.connect(self._on_alass_download_clicked)
-        self.subtitles_panel.mokuro_install_requested.connect(self._on_mokuro_install_clicked)
         self.subtitles_panel.cuda_pack_download_requested.connect(self._on_cuda_pack_download_clicked)
         self.subtitles_panel.vad_pack_download_requested.connect(self._on_vad_pack_download_clicked)
         self.subtitles_panel.asr_pack_download_requested.connect(self._on_asr_pack_download_clicked)
@@ -1049,15 +1045,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.subtitles_panel.set_alass_status(self.tr("Downloading…"))
         self.alass_download_requested.emit()
 
-    def _on_mokuro_install_clicked(self) -> None:
-        """Set a pending status and re-emit so the caller can start the install.
-
-        Mirrors :meth:`_on_alass_download_clicked`: the install itself is owned
-        by the caller (MainWindow / background_tasks).
-        """
-        self.subtitles_panel.set_mokuro_status(self.tr("Installing…"))
-        self.mokuro_install_requested.emit()
-
     def _on_cuda_pack_download_clicked(self) -> None:
         """Set a pending status and re-emit so the caller can start the download.
 
@@ -1132,10 +1119,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     def set_alass_status(self, text: str) -> None:
         """Forward an alass download status line to the Subtitles panel."""
         self.subtitles_panel.set_alass_status(text)
-
-    def set_mokuro_status(self, text: str) -> None:
-        """Forward a mokuro install status line to the Subtitles panel."""
-        self.subtitles_panel.set_mokuro_status(text)
 
     def set_cuda_pack_status(self, text: str) -> None:
         """Forward a GPU-pack download status line to the Subtitles panel."""

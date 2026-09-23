@@ -48,9 +48,7 @@ _VOLUME_TIMEOUT_S = 6 * 60 * 60
 
 # Stays a plain module constant: a module-level QCoreApplication.translate would
 # evaluate at import, before the app installs the translator, and cache English.
-MOKURO_MISSING_HINT = (
-    "mokuro is not installed." " Install it in Settings → Transcription & Alignment → Manga OCR, or set its path there."
-)
+MOKURO_MISSING_HINT = "mokuro is not installed. Install it or set its path on Utilities → Manga OCR."
 
 _PAGES_RE = re.compile(r"Processing pages\.\.\.:\s*\d+%\|[^|]*\|\s*(\d+)/(\d+)")
 _PROCESSED_RE = re.compile(r"Processed successfully: (\d+)/(\d+)")

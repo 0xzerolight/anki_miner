@@ -1366,96 +1366,25 @@ def test_cuda_guidance_shares_row_with_label(qtbot):
 
 
 # ---------------------------------------------------------------------------
-# Manga OCR (mokuro) section
+# Manga OCR (mokuro) moved off this panel entirely (Task 13): it now sets up
+# from its own tab, Utilities → Manga OCR. This panel keeps no trace of it.
 # ---------------------------------------------------------------------------
 
 
-def test_panel_has_mokuro_section(qtbot):
+def test_panel_has_no_mokuro_controls(qtbot):
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
-    assert panel.mokuro_selector is not None
-    assert panel.install_mokuro_button.text() == "Install mokuro"
+    assert not hasattr(panel, "mokuro_selector")
+    assert not hasattr(panel, "install_mokuro_button")
+    assert not hasattr(panel, "mokuro_status_label")
+    assert not hasattr(panel, "mokuro_install_requested")
 
 
-def test_contribute_round_trips_mokuro_location(qtbot, tmp_path):
+def test_contribute_does_not_touch_mokuro_location(qtbot, tmp_path):
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
-    exe = tmp_path / "mokuro"
-    exe.write_text("")
-    panel.mokuro_selector.set_path(str(exe))
-    cfg = panel.contribute(AnkiMinerConfig())
-    assert cfg.mokuro_location == exe
-    panel.mokuro_selector.set_path("")
-    assert panel.contribute(cfg).mokuro_location is None
-
-
-def test_install_mokuro_button_emits_and_disables(qtbot):
-    panel = SubtitlesSettingsPanel()
-    qtbot.addWidget(panel)
-    fired: list = []
-    panel.mokuro_install_requested.connect(lambda: fired.append(True))
-    panel.install_mokuro_button.setEnabled(True)
-    panel.install_mokuro_button.click()
-    assert fired and not panel.install_mokuro_button.isEnabled()
-
-
-def test_mokuro_status_reflects_resolver(qtbot, tmp_path, monkeypatch):
-    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_resolver.mokuro_available", lambda loc, root: True)
-    panel = SubtitlesSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.load_from_config(AnkiMinerConfig(uv_root=tmp_path / "uv"))
-    _wait_state_settled(qtbot, panel)
-    assert panel.mokuro_status_label.text() == "Installed"
-    assert panel.install_mokuro_button.text() == "Reinstall mokuro"
-
-
-def test_notify_mokuro_install_finished_reprobes(qtbot, tmp_path, monkeypatch):
-    """The in-flight guard clears and the label follows the new on-disk state."""
-    state = {"installed": False}
-    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_resolver.mokuro_available", lambda loc, root: state["installed"])
-    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_installer.mokuro_install_supported", lambda: True)
-
-    panel = SubtitlesSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.load_from_config(AnkiMinerConfig(uv_root=tmp_path / "uv"))
-    _wait_state_settled(qtbot, panel)
-    assert panel.mokuro_status_label.text() == "Not installed"
-
-    panel.install_mokuro_button.click()
-    assert panel._mokuro_install_active
-    state["installed"] = True
-    panel.notify_mokuro_install_finished()
-    _wait_state_settled(qtbot, panel)
-
-    assert not panel._mokuro_install_active
-    assert panel.mokuro_status_label.text() == "Installed"
-    assert panel.install_mokuro_button.isEnabled()
-
-
-def test_mokuro_button_disabled_when_platform_unsupported(qtbot, monkeypatch):
-    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_installer.mokuro_install_supported", lambda: False)
-    panel = SubtitlesSettingsPanel()
-    qtbot.addWidget(panel)
-    assert not panel.install_mokuro_button.isEnabled()
-    assert panel.mokuro_status_label.text() == "Not available on this platform"
-
-
-def test_the_probe_keeps_the_unsupported_platform_status(qtbot, tmp_path, monkeypatch):
-    """A probe must not relabel an unsupported platform "Not installed".
-
-    The construction-time status is the only reason on screen for a
-    permanently disabled Install button, and the probe used to overwrite it.
-    """
-    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_installer.mokuro_install_supported", lambda: False)
-    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_resolver.mokuro_available", lambda loc, root: False)
-    panel = SubtitlesSettingsPanel()
-    qtbot.addWidget(panel)
-
-    panel.load_from_config(AnkiMinerConfig(uv_root=tmp_path / "uv"))
-    _wait_state_settled(qtbot, panel)
-
-    assert panel.mokuro_status_label.text() == "Not available on this platform"
-    assert not panel.install_mokuro_button.isEnabled()
+    original = AnkiMinerConfig(mokuro_location=tmp_path / "mokuro")
+    assert panel.contribute(original).mokuro_location == tmp_path / "mokuro"
 
 
 # ---------------------------------------------------------------------------

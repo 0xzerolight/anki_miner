@@ -108,6 +108,43 @@ class TestConstruction:
         assert tab.redo_checkbox.isChecked() is False
 
 
+class TestSetupCard:
+    """The Manga OCR setup card: mokuro path override + in-app Install."""
+
+    def test_install_button_present_when_mokuro_unresolved(self, qtbot, tmp_path):
+        with patch(_COMPUTE_AVAILABLE, return_value=False):
+            tab = MokuroTab(_config(tmp_path))
+            qtbot.addWidget(tab)
+        assert tab.mokuro_selector is not None
+        assert tab.install_mokuro_button.text() == "Install mokuro"
+
+    def test_install_button_click_emits_request_and_disables(self, qtbot, tmp_path):
+        with patch(_COMPUTE_AVAILABLE, return_value=False):
+            tab = MokuroTab(_config(tmp_path))
+            qtbot.addWidget(tab)
+        fired: list = []
+        tab.mokuro_install_requested.connect(lambda: fired.append(True))
+        tab.install_mokuro_button.setEnabled(True)
+        tab.install_mokuro_button.click()
+        assert fired and not tab.install_mokuro_button.isEnabled()
+
+    def test_failed_install_reenables_button_and_keeps_the_failure_message(self, qtbot, tmp_path):
+        with patch(_COMPUTE_AVAILABLE, return_value=False):
+            tab = MokuroTab(_config(tmp_path))
+            qtbot.addWidget(tab)
+        tab.install_mokuro_button.click()
+        assert tab._mokuro_install_active
+        # What the app.py wiring's set_status writes on a failed install,
+        # BEFORE notify_install_finished(False) runs.
+        tab.set_mokuro_status("boom")
+
+        tab.notify_install_finished(False)
+
+        assert not tab._mokuro_install_active
+        assert tab.install_mokuro_button.isEnabled()
+        assert tab.mokuro_status_label.text() == "boom"
+
+
 class TestRun:
     def test_scan_then_worker_with_volumes_and_options(self, qtbot, tmp_path):
         tab = _make_tab(_config(tmp_path), qtbot)
@@ -215,6 +252,22 @@ class TestPreviewAndPersistence:
         tab.gpu_checkbox.setChecked(False)
         assert seen and seen[-1].mokuro_use_gpu is False
 
+    def test_mokuro_location_edit_debounces_to_one_config_changed(self, qtbot, tmp_path):
+        """FileSelector's path_changed fires per keystroke; the setup card must
+        coalesce a burst of edits into exactly one persisted config_changed."""
+        tab = _make_tab(_config(tmp_path), qtbot)
+        tab._mokuro_location_debounce_ms = 0
+        seen: list = []
+        tab.config_changed.connect(seen.append)
+
+        text = "12345678901234567890"
+        assert len(text) == 20
+        for i in range(1, len(text) + 1):
+            tab.mokuro_selector.set_path(text[:i])
+
+        qtbot.waitUntil(lambda: len(seen) == 1, timeout=3000)
+        assert seen[0].mokuro_location == Path(text)
+
     def test_redo_toggle_is_transient(self, qtbot, tmp_path):
         tab = _make_tab(_config(tmp_path), qtbot)
         seen: list = []
@@ -244,7 +297,7 @@ class TestPreviewAndPersistence:
         assert not tab.run_button.isEnabled()
 
         with patch(_COMPUTE_AVAILABLE, return_value=True) as compute:
-            tab.notify_install_finished()
+            tab.notify_install_finished(True)
             assert tab._availability_worker.wait(3000)
             qtbot.waitUntil(tab.run_button.isEnabled, timeout=3000)
         assert compute.call_count == 1

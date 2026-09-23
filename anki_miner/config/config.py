@@ -659,9 +659,9 @@ class AnkiMinerConfig:
     # user-configurable directly.
     bin_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "bin")
 
-    # Root of the in-app uv installs (Settings → Transcription & Alignment →
-    # Manga OCR): uv_root/python (managed CPython), uv_root/mokuro (the venv).
-    # The uv binary itself lives in bin_root beside alass.
+    # Root of the in-app uv installs (Utilities → Manga OCR's setup card):
+    # uv_root/python (managed CPython), uv_root/mokuro (the venv). The uv
+    # binary itself lives in bin_root beside alass.
     uv_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "uv")
 
     # Theme settings (UI state — persisted via gui_config.json).

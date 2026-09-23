@@ -120,8 +120,6 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         secondary_subtitle_enabled=True,
         merge_incomplete_cues=True,
         bold_target_in_sentence=True,
-        # --- SubtitlesSettingsPanel ---
-        mokuro_location=Path("/opt/mokuro/bin/mokuro"),
         # --- YouTubeSettingsPanel ---
         youtube_cookies_from_browser="firefox",
         youtube_cookies_file=cookies_txt,
@@ -185,8 +183,6 @@ _SAVE_PATH_FIELDS = frozenset(
         "secondary_subtitle_enabled",
         "merge_incomplete_cues",
         "bold_target_in_sentence",
-        # SubtitlesSettingsPanel
-        "mokuro_location",
         # YouTubeSettingsPanel
         "youtube_cookies_from_browser",
         "youtube_cookies_file",

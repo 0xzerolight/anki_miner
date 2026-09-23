@@ -11,5 +11,5 @@ class MokuroNotFoundError(MokuroError):
     """The mokuro executable cannot be located/run.
 
     A specific subclass so the queue worker can stop the whole run and steer
-    the user to Settings → Transcription & Alignment → Manga OCR.
+    the user to the Manga OCR setup card on Utilities → Manga OCR.
     """
