@@ -1184,6 +1184,54 @@ def test_addons_section_heading_present(qtbot):
     assert "Transcription add-ons (optional)" in headings
 
 
+def test_gpu_download_rows_sit_directly_under_the_device_row(qtbot, monkeypatch):
+    """CUDA pack + Vulkan model downloads move under the device choice (T12).
+
+    FormPanel.add_section opens a new QFormLayout per section, so both rows
+    living in the SAME layout as the device row (not the addons section's own
+    layout) plus contiguous row indices is the proof they moved, not just that
+    the widgets exist somewhere on the page.
+    """
+    from PyQt6.QtWidgets import QFormLayout
+
+    _enable_vulkan(monkeypatch)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+
+    layouts = panel.findChildren(QFormLayout)
+    home = next(layout for layout in layouts if layout.indexOf(panel.device_combo) >= 0)
+
+    device_row, _ = home.getWidgetPosition(panel.device_combo)
+    cuda_row, _ = home.getWidgetPosition(panel.download_cuda_button.parentWidget())
+    assert cuda_row == device_row + 1
+
+    # The CUDA help line (_cuda_help_label) is its own full-width row right
+    # after the CUDA row (see _add_help); Vulkan follows that, still with no
+    # unrelated row (e.g. the whisper-model download) between the device row
+    # and Vulkan.
+    cuda_help_row, _ = home.getWidgetPosition(panel._cuda_help_label)
+    assert cuda_help_row == cuda_row + 1
+
+    assert panel.download_vulkan_button is not None
+    vulkan_row, _ = home.getWidgetPosition(panel.download_vulkan_button.parentWidget())
+    assert vulkan_row == cuda_help_row + 1
+
+
+def test_addons_section_holds_only_silence_removal(qtbot, monkeypatch):
+    """The "Transcription add-ons (optional)" heading keeps just VAD (T12):
+    CUDA and Vulkan moved out to sit under the device row instead."""
+    from PyQt6.QtWidgets import QFormLayout
+
+    _enable_vulkan(monkeypatch)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+
+    layouts = panel.findChildren(QFormLayout)
+    addons_layout = next(layout for layout in layouts if layout.indexOf(panel.download_vad_button.parentWidget()) >= 0)
+    assert addons_layout.indexOf(panel.download_cuda_button.parentWidget()) == -1
+    assert addons_layout.indexOf(panel.download_vulkan_button.parentWidget()) == -1
+
+
 def test_help_lines_present(qtbot, monkeypatch):
     """The CUDA/VAD state-carrier description lines render as helper-text; the
     section intros and the pure tooltip-duplicate rows were removed."""

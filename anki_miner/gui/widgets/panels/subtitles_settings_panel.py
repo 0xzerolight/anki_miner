@@ -271,7 +271,7 @@ class SubtitlesSettingsPanel(FormPanel):
         return label
 
     def _setup_asr_section(self) -> None:
-        """Engine download row, Whisper model dropdown, download button, and engine guidance."""
+        """Engine download row, model/device dropdowns, their GPU downloads, and engine guidance."""
         self.add_section(self.tr("Speech-to-text"))
 
         # The engine itself. Bundled installs download it here — it is an
@@ -339,49 +339,10 @@ class SubtitlesSettingsPanel(FormPanel):
             helper=self.tr("Auto uses the GPU when available, else CPU. Each GPU option needs its own download below."),
         )
 
-        self.download_model_button = ModernButton(self.tr("Download model"), variant="secondary")
-        self.download_model_button.setToolTip(
-            self.tr(
-                "Download the selected Whisper model weights into Anki Miner's ASR models folder. "
-                "Required before subtitle generation can run."
-            )
-        )
-        self.download_model_button.clicked.connect(self._on_download_clicked)
-
-        self.model_status_label = QLabel("")
-        self.model_status_label.setObjectName("settings-save-status")
-
-        download_container = QWidget()
-        download_row = QHBoxLayout(download_container)
-        download_row.setContentsMargins(0, 0, 0, 0)
-        download_row.addWidget(self.download_model_button)
-        download_row.addWidget(self.model_status_label)
-        download_row.addStretch()
-        self.add_field(
-            self.tr("Model download"),
-            download_container,
-            anchor="model_download",
-            anchor_focus=self.download_model_button,
-            anchor_text=lambda: (self.download_model_button.text(), self.download_model_button.toolTip()),
-        )
-
-        # Guidance shown only when faster-whisper is not installed AND the engine
-        # pack cannot be offered here (a source install on a Python the pack does
-        # not pin) — point them at the pip extra instead of surfacing a cryptic
-        # ImportError after a dead "Download model" click.
-        self._asr_engine_guidance = self._build_engine_guidance()
-        self.add_field(
-            "",
-            self._asr_engine_guidance,
-            anchor_ignore="conditional install instructions, not a setting",
-        )
-
-    def _setup_addons_section(self) -> None:
-        """Optional transcription accelerators/quality packs (CUDA / VAD / Vulkan)."""
-        self.add_section(self.tr("Transcription add-ons (optional)"))
-
         # GPU acceleration pack download. Mirrors the model-download row; gated by
         # _refresh_cuda_pack_status on platform support + NVIDIA-GPU presence.
+        # Sits directly under the device row, as the device choice's own
+        # CUDA-specific download, rather than in the general add-ons section below.
         self.download_cuda_button = ModernButton(self.tr("Download GPU acceleration"), variant="secondary")
         self.download_cuda_button.setToolTip(
             self.tr(
@@ -420,6 +381,89 @@ class SubtitlesSettingsPanel(FormPanel):
         )
         # Shown in lockstep with (the inverse of) its guidance label; see _apply_cuda_pack_state.
         self._cuda_help_label = self._add_help(self.tr("Faster transcription on NVIDIA GPUs (CUDA)."))
+
+        # Vulkan model download. One action fetches BOTH the ggml acoustic model
+        # and the Silero VAD the whisper.cpp (Vulkan/CPU) backend loads off disk.
+        # The button + its row are omitted unless Vulkan is offerable (non-macOS
+        # AND the backend lib is installed) — downloading the ggml weights is
+        # pointless when the engine can't load them; the attributes stay set to
+        # None so set_vulkan_status/notify can no-op safely. Sits directly under
+        # the CUDA row: both are device-specific downloads for the choice above.
+        self.download_vulkan_button: ModernButton | None = None
+        self.vulkan_status_label: QLabel | None = None
+        if self._vulkan_offerable:
+            self.download_vulkan_button = ModernButton(self.tr("Download Vulkan model"), variant="secondary")
+            self.download_vulkan_button.setToolTip(
+                self.tr(
+                    "Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. "
+                    "Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards."
+                )
+            )
+            self.download_vulkan_button.clicked.connect(self._on_vulkan_download_clicked)
+
+            self.vulkan_status_label = QLabel("")
+            self.vulkan_status_label.setObjectName("settings-save-status")
+
+            vulkan_container = QWidget()
+            vulkan_row = QHBoxLayout(vulkan_container)
+            vulkan_row.setContentsMargins(0, 0, 0, 0)
+            vulkan_row.addWidget(self.download_vulkan_button)
+            vulkan_row.addWidget(self.vulkan_status_label)
+            vulkan_row.addStretch()
+            vulkan_button = self.download_vulkan_button
+            self.add_field(
+                self.tr("Vulkan model"),
+                vulkan_container,
+                anchor="vulkan_model",
+                anchor_focus=vulkan_button,
+                anchor_text=lambda: (vulkan_button.text(), vulkan_button.toolTip()),
+            )
+
+        self.download_model_button = ModernButton(self.tr("Download model"), variant="secondary")
+        self.download_model_button.setToolTip(
+            self.tr(
+                "Download the selected Whisper model weights into Anki Miner's ASR models folder. "
+                "Required before subtitle generation can run."
+            )
+        )
+        self.download_model_button.clicked.connect(self._on_download_clicked)
+
+        self.model_status_label = QLabel("")
+        self.model_status_label.setObjectName("settings-save-status")
+
+        download_container = QWidget()
+        download_row = QHBoxLayout(download_container)
+        download_row.setContentsMargins(0, 0, 0, 0)
+        download_row.addWidget(self.download_model_button)
+        download_row.addWidget(self.model_status_label)
+        download_row.addStretch()
+        self.add_field(
+            self.tr("Model download"),
+            download_container,
+            anchor="model_download",
+            anchor_focus=self.download_model_button,
+            anchor_text=lambda: (self.download_model_button.text(), self.download_model_button.toolTip()),
+        )
+
+        # Guidance shown only when faster-whisper is not installed AND the engine
+        # pack cannot be offered here (a source install on a Python the pack does
+        # not pin) — point them at the pip extra instead of surfacing a cryptic
+        # ImportError after a dead "Download model" click.
+        self._asr_engine_guidance = self._build_engine_guidance()
+        self.add_field(
+            "",
+            self._asr_engine_guidance,
+            anchor_ignore="conditional install instructions, not a setting",
+        )
+
+    def _setup_addons_section(self) -> None:
+        """Optional transcription quality pack: silence removal (VAD).
+
+        The GPU-specific downloads (CUDA pack, Vulkan model) live under the
+        device row in the Speech-to-text section instead — they're the device
+        choice's own downloads, not a general add-on.
+        """
+        self.add_section(self.tr("Transcription add-ons (optional)"))
 
         # Silence removal (VAD) pack download. onnxruntime powers Whisper's VAD,
         # which strips silence/music so it is not transcribed as hallucinated
@@ -465,42 +509,6 @@ class SubtitlesSettingsPanel(FormPanel):
         self._vad_help_label = self._add_help(
             self.tr("Skips music and silence so they are not transcribed as garbage.")
         )
-
-        # Vulkan model download. One action fetches BOTH the ggml acoustic model
-        # and the Silero VAD the whisper.cpp (Vulkan/CPU) backend loads off disk.
-        # The button + its row are omitted unless Vulkan is offerable (non-macOS
-        # AND the backend lib is installed) — downloading the ggml weights is
-        # pointless when the engine can't load them; the attributes stay set to
-        # None so set_vulkan_status/notify can no-op safely.
-        self.download_vulkan_button: ModernButton | None = None
-        self.vulkan_status_label: QLabel | None = None
-        if self._vulkan_offerable:
-            self.download_vulkan_button = ModernButton(self.tr("Download Vulkan model"), variant="secondary")
-            self.download_vulkan_button.setToolTip(
-                self.tr(
-                    "Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. "
-                    "Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards."
-                )
-            )
-            self.download_vulkan_button.clicked.connect(self._on_vulkan_download_clicked)
-
-            self.vulkan_status_label = QLabel("")
-            self.vulkan_status_label.setObjectName("settings-save-status")
-
-            vulkan_container = QWidget()
-            vulkan_row = QHBoxLayout(vulkan_container)
-            vulkan_row.setContentsMargins(0, 0, 0, 0)
-            vulkan_row.addWidget(self.download_vulkan_button)
-            vulkan_row.addWidget(self.vulkan_status_label)
-            vulkan_row.addStretch()
-            vulkan_button = self.download_vulkan_button
-            self.add_field(
-                self.tr("Vulkan model"),
-                vulkan_container,
-                anchor="vulkan_model",
-                anchor_focus=vulkan_button,
-                anchor_text=lambda: (vulkan_button.text(), vulkan_button.toolTip()),
-            )
 
     def _setup_alass_section(self) -> None:
         """alass path override plus in-app download (or Homebrew guidance)."""
