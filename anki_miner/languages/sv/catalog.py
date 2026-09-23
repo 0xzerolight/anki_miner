@@ -6,8 +6,9 @@ English Wiktionary's Swedish entries extracted through kaikki.org, CC BY-SA 4.0;
 the zip's ``index.json`` carries ``attribution: https://kaikki.org/`` and
 ``sourceLanguage: sv``. Its noun rows carry the gender chips and the
 ``Grammar-content`` head line (``apa c (plural apor)``) the en/ett hook reads.
-Rejected: SAOL/SO (no redistributable machine-readable form), ``wty-sv-sv``
-(monolingual; a manual import for advanced learners).
+Rejected: SAOL/SO (no redistributable machine-readable form). There is no
+monolingual ``wty-sv-sv`` to offer as a manual import: wiktionary-to-yomitan
+builds none (``latest/dict/sv/`` has no ``sv`` target, checked 2026-09-23).
 
 **Frequency — OpenSubtitles 2018** (``hermitdave/FrequencyWords``,
 ``content/2018/sv/sv_50k.txt``, 623,913 bytes), content CC BY-SA 4.0: headerless
