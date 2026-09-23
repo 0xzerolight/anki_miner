@@ -152,7 +152,7 @@ class MiningLanguageSettingsPanel(FormPanel):
             helper=self.tr(
                 "Switching swaps dictionaries, filters, deck and card fields to that "
                 "language's own settings. The interface language is separate "
-                "(Settings → Appearance & Language)."
+                "(Settings → General)."
             ),
         )
 

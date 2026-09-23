@@ -39,7 +39,7 @@ _FAMILY_LABELS: dict[str, tuple[str, str, str]] = {
     "dictionary": ("Dictionaries", "Dictionary", "Settings → Dictionaries → Reimport All"),
     "frequency": ("Frequency sources", "Frequency source", "Settings → Frequency → Reimport All"),
     "pitch": ("Pitch sources", "Pitch source", "Settings → Pitch Accent → Reimport All"),
-    "audio": ("Audio packs", "Audio pack", "Settings → Audio → Reimport All"),
+    "audio": ("Audio packs", "Audio pack", "Settings → Word Audio → More → Reimport All"),
 }
 
 

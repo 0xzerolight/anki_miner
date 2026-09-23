@@ -150,6 +150,14 @@ class TestMatching:
         """T9 moved subtitle text filtering off Filtering onto its own page."""
         assert _ids(search(entries, "regex"))[0] == "sentences.subtitle_regex_edit"
 
+    def test_papago_finds_the_sentence_tts_combo(self, entries):
+        """T11 folded the master + two provider checkboxes into one combo; its
+        anchor_text lists every item so a provider name still finds it, even
+        though "Papago" never appears in the combo's current selection."""
+        results = _ids(search(entries, "Papago"))
+
+        assert "media.reading_tts" in results
+
 
 class TestRenamedDestinations:
     def test_the_old_asr_name_still_finds_transcription_settings(self, entries):
@@ -183,6 +191,13 @@ class TestRenamedDestinations:
         results = _ids(search(entries, "text size"))
 
         assert "ui.zoom" in results
+
+    def test_the_appearance_destination_name_still_finds_the_general_page(self, entries):
+        """T11 renamed "Appearance & Language" to "General"; the old name still
+        reaches it (same pattern as the "filtering" legacy term for Word Filters)."""
+        results = _ids(search(entries, "appearance"))
+
+        assert any(result.startswith("ui.") for result in results)
 
 
 class TestTranslatedIndex:

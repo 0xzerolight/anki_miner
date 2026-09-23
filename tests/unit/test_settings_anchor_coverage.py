@@ -204,3 +204,26 @@ def test_anchor_search_text_follows_a_relabelled_control(tab):
     tab.filtering_panel.use_blacklist_checkbox.setText("ブラックリストを有効にする")
 
     assert "ブラックリストを有効にする" in anchor.search_text()
+
+
+def test_moved_capability_targets_track_the_anchor_that_owns_the_control(tab):
+    """T11 fix round 1: a hardcoded target string in capabilities.py can drift
+    from the control silently — cross-check each moved control's Usage Guide
+    target against the namespace of the anchor that actually owns it now,
+    not a second copy of the same literal.
+    """
+    from anki_miner.gui.capabilities import CAPABILITIES
+
+    by_id = {anchor.stable_id: anchor for anchor in tab.setting_anchors()}
+    caps_by_id = {cap.id: cap for cap in CAPABILITIES}
+
+    for cap_id, anchor_id in (
+        ("sentence-tts", "media.reading_tts"),
+        ("parallel-workers", "ui.max_parallel_workers"),
+        ("update-check", "ui.check_for_updates"),
+    ):
+        assert anchor_id in by_id, f"{cap_id}: anchor {anchor_id!r} no longer exists"
+        namespace = by_id[anchor_id].stable_id.split(".", 1)[0]
+        target = caps_by_id[cap_id].target
+        assert target is not None, cap_id
+        assert target.subtab == namespace, cap_id

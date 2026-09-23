@@ -1352,12 +1352,16 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         )
 
     def setting_anchors(self) -> tuple[SettingAnchor, ...]:
-        """Every addressable setting: this tab's own, then each panel's (D11).
+        """Every addressable setting, aggregated across every panel (D11).
+
+        The tab itself registers no anchors of its own (T11 moved the last
+        one, Check for updates, onto the UI panel) — every setting lives on a
+        panel now, so this is purely the panel loop.
 
         Collected on demand rather than at import, so a search index built by
         the caller sees whatever translator ``app.py`` installed.
         """
-        anchors = list(super().setting_anchors())
+        anchors: list[SettingAnchor] = []
         for host in self.setting_anchor_hosts():
             anchors.extend(host.setting_anchors())
         return tuple(anchors)
@@ -1382,22 +1386,17 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         A panel's ``ANCHOR_NAMESPACE`` is its navigator key, which is what makes
         an anchor id self-locating: ``filtering.max_frequency_spinbox`` names
-        both the page to open and the control to focus. This tab's own anchors
-        get no page — they sit below the navigator and are always on screen.
+        both the page to open and the control to focus. The tab itself
+        registers no anchors of its own (see :meth:`setting_anchors`), so
+        every source here is panel-owned — there is no separate
+        no-page/always-visible source to carry.
 
         Each source names the surface its anchors are laid out on, which is what
         the index resolves visibility against: the language gate hides rows on
         the panel, and only a panel-relative check sees that while the tab is
         still unshown.
         """
-        sources = [
-            SettingSearchSource(
-                page_key="",
-                breadcrumb=self.tr("Settings"),
-                anchors=super().setting_anchors(),
-                host=self,
-            )
-        ]
+        sources: list[SettingSearchSource] = []
         for host in self.setting_anchor_hosts():
             key = host.ANCHOR_NAMESPACE
             sources.append(

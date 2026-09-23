@@ -189,7 +189,8 @@ class TestReporting:
 
         assert message is not None
         assert message == (
-            "Audio pack 'NHK 2016' needs reimport after the app upgrade — Settings → Audio → Reimport All"
+            "Audio pack 'NHK 2016' needs reimport after the app upgrade — "
+            "Settings → Word Audio → More → Reimport All"
         )
 
     def test_stale_audio_pack_with_unmapped_field_does_not_gate(self, config: AnkiMinerConfig) -> None:

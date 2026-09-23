@@ -298,7 +298,7 @@ def test_audiobook_sync_names_the_reading_subtab_by_its_label() -> None:
 
 
 def test_word_audio_entry_scopes_edge_tts_to_the_languages_that_offer_it() -> None:
-    # Settings -> Audio offers Edge only where the profile names an Edge voice;
+    # Settings -> Word Audio offers Edge only where the profile names an Edge voice;
     # a fifth language gaining one has to be added to the entry's text too.
     from anki_miner.languages import AVAILABLE_LANGUAGES
 

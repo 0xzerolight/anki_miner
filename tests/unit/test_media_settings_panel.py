@@ -201,6 +201,38 @@ class TestReadingTtsCombo:
             out.reading_tts_papago_enabled,
         ) == (False, False, True)
 
+    def test_a_reload_resets_the_touched_flag(self, qtbot):
+        """A later load_from_config re-establishes a fresh untouched baseline,
+        even after the user already touched the combo once this session."""
+        panel = MediaSettingsPanel()
+        qtbot.addWidget(panel)
+        panel.load_from_config(create_default_config())
+
+        # Touch the combo (user picks Off).
+        idx = panel.reading_tts_combo.findData("off")
+        panel.reading_tts_combo.setCurrentIndex(idx)
+        panel.reading_tts_combo.activated.emit(idx)
+        assert panel._tts_touched is True
+
+        # A reload (e.g. a profile switch) must reset the touched flag, so the
+        # freshly loaded triple round-trips unchanged until touched again.
+        panel.load_from_config(
+            replace(
+                create_default_config(),
+                reading_tts_enabled=True,
+                reading_tts_google_enabled=False,
+                reading_tts_papago_enabled=False,
+            )
+        )
+        assert panel._tts_touched is False
+
+        out = panel.contribute(create_default_config())
+        assert (
+            out.reading_tts_enabled,
+            out.reading_tts_google_enabled,
+            out.reading_tts_papago_enabled,
+        ) == (True, False, False)
+
     def test_programmatic_load_never_marks_the_combo_touched(self, qtbot):
         """``activated`` is user-only; ``setCurrentIndex`` from a load must not arm it."""
         panel = MediaSettingsPanel()

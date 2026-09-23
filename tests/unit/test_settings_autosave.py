@@ -440,6 +440,24 @@ class TestCommitRetainsSaveSemantics:
         tab.commit_settings()
         assert received[-1].max_parallel_workers == 9
 
+    def test_loaded_app_section_values_survive_an_unrelated_commit(self, tab, test_config, no_modals):
+        """Regression net for a silently-deleted UISettingsPanel.load_from_config.
+
+        Without that load, the panel's freshly-constructed widgets (unchecked,
+        spinbox at its floor) would win an unrelated commit and clobber a real
+        user's saved values with check_for_updates=False,
+        max_parallel_workers=1 — with the suite otherwise green, since nothing
+        else exercises this load path end to end.
+        """
+        tab.update_config(replace(test_config, max_parallel_workers=7, check_for_updates=False))
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+
+        tab.commit_settings()
+
+        assert received[-1].max_parallel_workers == 7
+        assert received[-1].check_for_updates is False
+
 
 class TestManualControlsRemoved:
     """Auto-save replaces the Save button; the destructive Reset button dies

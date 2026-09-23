@@ -894,7 +894,7 @@ class TestSlowPackDiagnosis:
         msg = _audio_failure_diagnosis(_counts(slow=6), attempts=10)
         assert msg is not None
         assert "Word-audio source is too slow" in msg
-        assert "Settings → Audio" in msg
+        assert "Settings → Word Audio" in msg
 
     def test_pack_name_is_ignored_when_slow_is_not_dominant(self):
         msg = _audio_failure_diagnosis(_counts(ssl=8, slow=1), attempts=10, slow_pack="forvo")

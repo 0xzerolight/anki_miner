@@ -387,6 +387,14 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
         workers_row.addStretch(1)
         layout.addLayout(workers_row)
 
+        # Visible, not just a hover tooltip — matches the panel's other helper
+        # labels (utilities_hint, intro) and the line this text showed as on
+        # Card Media before the field moved here (T11 fix round 1).
+        workers_hint = QLabel(workers_tip)
+        workers_hint.setObjectName("helper-text")
+        workers_hint.setWordWrap(True)
+        layout.addWidget(workers_hint)
+
         self.setLayout(layout)
 
     # ---- Population ------------------------------------------------------

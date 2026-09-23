@@ -118,7 +118,7 @@ def test_stale_audio_pack_warns_on_its_own_row():
                 component="Audio Packs",
                 severity="WARNING",
                 message="Audio pack(s) need reimporting after an upgrade: NHK 2016. "
-                "Use Settings → Audio → Reimport All.",
+                "Use Settings → Word Audio → More → Reimport All.",
             )
         ]
     )

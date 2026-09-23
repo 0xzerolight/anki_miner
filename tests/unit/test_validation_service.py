@@ -1778,7 +1778,7 @@ class TestOptionalIndexedResourceChecks:
 
         assert ok is False
         assert "NHK 2016" in message
-        assert "Settings → Audio → Reimport All" in message
+        assert "Settings → Word Audio → More → Reimport All" in message
 
     def test_audio_packs_report_not_configured_when_field_unmapped(self, test_config, tmp_path):
         """A pack is only ever consulted when expression_audio is mapped too.
