@@ -1,7 +1,8 @@
 """Restart intent for settings that only take effect at boot (decision D39b).
 
-Text size joins Language and whole-UI zoom as restart-to-apply: the choice is
-persisted the moment it is made, and the panel offers *Restart now* / *Later*.
+Whole-UI zoom is restart-to-apply alongside Language: the choice is persisted
+the moment it is made, and the panel offers *Restart now* / *Later* (Zoom is
+the only interface-size control — a saved Text size folds into it on load).
 
 This module is deliberately three functions and one flag — not a state machine.
 The whole sequence is:

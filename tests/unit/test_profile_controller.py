@@ -607,7 +607,7 @@ class TestComposedWindowSwitch:
     Everywhere else in this file the window is ``_FakeWindow``, which cannot
     show that the Settings panels actually repaint or that the header combo
     actually moves. This is the seam where a switch whose diff is entirely
-    appearance — theme, favorites, font scale, language — is exercised against
+    appearance — theme, favorites, language — is exercised against
     the collaborators that decide whether it is drawn, and it is the one that
     catches ``SettingsTab.update_config`` short-circuiting on
     ``_EXTERNAL_ONLY_FIELDS``.
@@ -681,7 +681,6 @@ class TestComposedWindowSwitch:
         # The panels repainted.
         ui_panel = settings_tab.ui_panel
         assert settings_tab.config is window.config
-        assert ui_panel.zoom_combo.currentData() == 100
         assert self._drawn_favorites(ui_panel) == {"dark", "light"}
         # The stars and the singleton the next star click writes through agree.
         assert self._drawn_favorites(ui_panel) == set(Theme.get_favorites()) & set(ui_panel.gallery.card_keys())
@@ -987,8 +986,9 @@ class TestCommitBoundary:
         saved = json.loads(GUIConfigManager.CONFIG_FILE.read_text(encoding="utf-8"))
         assert saved["active_profile_id"] == "b"
         assert saved["anki_deck_name"] == "Deck B"
-        # Font scale stays on the process's boot value: text size is
-        # restart-to-apply (D39b-A), so a switch persists it without restyling.
+        # Font scale stays on the process's boot value: it is not a per-profile
+        # config field, only a dev/tooling env-var override applied once at
+        # boot, so a switch never touches it.
         assert (Theme.get_current_mode(), Theme.get_favorites(), Theme.get_font_scale()) == (
             "dark",
             ("dark", "light"),
@@ -1106,7 +1106,7 @@ class TestSettingsRepaint:
     Its ``_EXTERNAL_ONLY_FIELDS`` allowlist protects unsaved panel edits during
     unrelated commits (OVH-007) and stays as it is; a profile switch is the case
     it gets wrong, because two profiles differing only in theme / favorites /
-    font scale / language produce a diff entirely inside that allowlist. So the
+    language produce a diff entirely inside that allowlist. So the
     controller forces the redraw itself.
     """
 

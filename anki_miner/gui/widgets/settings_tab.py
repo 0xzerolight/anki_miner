@@ -1513,7 +1513,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.dictionary_panel.set_external_mutation_preflight(callback)
 
     def open_ui_subtab(self) -> None:
-        """Switch to Appearance & Language (language, zoom, text size, themes).
+        """Switch to Appearance & Language (language, zoom, themes).
 
         Thin wrapper over :meth:`open_subtab` kept because MainWindow's
         ``_settings_tab_index`` uses this method name as the capability marker
@@ -1555,7 +1555,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         """Persist a whole-UI zoom change immediately (applies on next launch).
 
         Zoom is injected as QT_SCALE_FACTOR before QApplication is built, so
-        unlike font scale there is no live restyle — the Themes panel reveals a
+        unlike theme there is no live restyle — the Themes panel reveals a
         restart note and this slot only folds ``ui_zoom`` into the config.
         """
         new_config = replace(self.config, ui_zoom=zoom)
@@ -2088,8 +2088,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         refreshes still follow the field-diff rules below.
 
         Skips reloading the panel widgets when the incoming config differs from
-        the current one ONLY in externally-managed fields (theme, font scale,
-        first-run flags, update-banner fields — see ``_EXTERNAL_ONLY_FIELDS``).
+        the current one ONLY in externally-managed fields (theme, first-run
+        flags, update-banner fields — see ``_EXTERNAL_ONLY_FIELDS``).
         This preserves unsaved edits the user has made in the Settings tab when,
         for example, a theme change arrives via config_refreshed (OVH-007).
 
@@ -2123,7 +2123,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         ``_EXTERNAL_ONLY_FIELDS`` short-circuit exists to protect unsaved panel
         edits during unrelated commits (OVH-007) and must stay exactly as it is.
         A settings-profile switch is the case that gate gets wrong: two profiles
-        differing only in theme / favorites / font scale / language produce a
+        differing only in theme / favorites / language produce a
         diff that lies ENTIRELY inside the allowlist (the version stamps ride in
         it too), so the panels would keep rendering the profile the user just
         left — a stale language and zoom combo, a hidden restart note, and a

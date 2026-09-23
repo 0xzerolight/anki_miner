@@ -812,6 +812,17 @@ def _log_session_boundary() -> None:
     _log_home_fallback()
 
 
+# Whether THIS process's _apply_ui_zoom is the one that put QT_SCALE_FACTOR
+# into os.environ, as opposed to inheriting a user's own external override.
+# _relaunch_if_requested reads this: QProcess.startDetached hands the child our
+# whole os.environ verbatim, so an app-set value would otherwise freeze every
+# restarted child at the zoom THIS process booted with — the child's own
+# _apply_ui_zoom sees the var already present and returns early, never reading
+# the freshly-saved ui_zoom the user just picked. A genuine user override has
+# no such source to re-derive from, so it must still be inherited.
+_qt_scale_factor_set_by_app = False
+
+
 def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:
     """Inject the whole-UI zoom factor as ``QT_SCALE_FACTOR``.
 
@@ -820,6 +831,7 @@ def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:
     restart-to-apply. An explicit user-set env override wins (we never clobber
     it), and the no-op 1.0 case is left unset so the env stays clean.
     """
+    global _qt_scale_factor_set_by_app
     if config is None:
         # Config failed to load at startup — leave the env untouched so Qt uses
         # its default 1.0 scale rather than crashing the whole app over zoom.
@@ -828,6 +840,7 @@ def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:
         return
     if config.ui_zoom != 1.0:
         os.environ["QT_SCALE_FACTOR"] = repr(float(config.ui_zoom))
+        _qt_scale_factor_set_by_app = True
 
 
 def _dev_text_scale() -> float:
@@ -939,6 +952,14 @@ def _relaunch_if_requested(app: QApplication) -> None:
     lock = getattr(app, "_instance_lock", None)
     if lock is not None:
         lock.unlock()
+    if _qt_scale_factor_set_by_app:
+        # QProcess.startDetached inherits this process's environment verbatim,
+        # so a value THIS process's own _apply_ui_zoom wrote must not ride
+        # along — it would freeze the child at the zoom we booted with instead
+        # of the freshly-saved one it re-derives on its own. A genuine user
+        # override never reaches this branch (the flag is only set when
+        # _apply_ui_zoom itself wrote the var) and is inherited untouched.
+        os.environ.pop("QT_SCALE_FACTOR", None)
     if not QProcess.startDetached(str(program), []):
         logger.warning("Restart was requested but launching %s failed", program)
 

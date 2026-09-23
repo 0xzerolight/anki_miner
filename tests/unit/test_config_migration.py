@@ -765,8 +765,14 @@ def test_text_size_folds_into_zoom_on_import(tmp_path, marker, font, zoom, expec
     assert result.ui_zoom == expected
 
 
-def test_removed_font_scale_key_is_dropped(tmp_path):
-    path = tmp_path / "gui_config.json"
-    path.write_text(json.dumps({"config_schema_version": 4, "ui_font_scale": 1.5}))
-    config = GUIConfigManager._parse_and_migrate(path)
-    assert not hasattr(config, "ui_font_scale")
+def test_removed_font_scale_key_is_dropped(tmp_config: Path):
+    tmp_config.write_text(json.dumps({"config_schema_version": 4, "ui_font_scale": 1.5, "anki_deck_name": "Kept Deck"}))
+
+    config = GUIConfigManager._parse_and_migrate(tmp_config)
+
+    # The file was not rejected wholesale over the unknown key.
+    assert config.anki_deck_name == "Kept Deck"
+    # And the drop is durable: a re-save never re-emits the removed key.
+    GUIConfigManager.save_config(config)
+    resaved = json.loads(tmp_config.read_text(encoding="utf-8"))
+    assert "ui_font_scale" not in resaved

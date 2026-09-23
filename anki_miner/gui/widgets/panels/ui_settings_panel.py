@@ -85,7 +85,7 @@ def _window_is_shutting_down(window: QWidget) -> bool:
 
 
 class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
-    """Settings panel for UI language, zoom, text size, and theme selection.
+    """Settings panel for UI language, zoom, and theme selection.
 
     Signals:
         state_changed: Emitted with ``(active_theme, favorites_tuple)`` after
@@ -599,7 +599,15 @@ class UISettingsPanel(ScreenIssueHost, SettingAnchorHost, QWidget):
             box.setEnabled(checked > 1 or not box.isChecked())
 
     def _on_restart_later(self) -> None:
-        """Dismiss the note for this session; the choice stays persisted."""
+        """Hide the note and its actions for now; the choice stays persisted.
+
+        Not a session-sticky dismissal: the note is a plain function of
+        ``config.ui_zoom != self._boot_zoom`` (see ``_on_zoom_selected`` and
+        ``load_from_config``), so it reappears on the next explicit selection
+        or the next external config reload while zoom is still pending —
+        exactly the behaviour Zoom already had before *Restart now* / *Later*
+        moved here from the removed Text size row.
+        """
         self._show_zoom_restart_note(False)
 
     def _on_restart_now(self) -> None:

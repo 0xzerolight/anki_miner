@@ -994,8 +994,8 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     def _open_theme_settings(self) -> None:
         """Switch to Settings → UI (triggered by 'All themes…' sentinel).
 
-        The theme list now lives on the UI sub-tab (alongside language/zoom/
-        text size), so this lands there.
+        The theme list now lives on the UI sub-tab (alongside language/zoom),
+        so this lands there.
         """
         idx = self._settings_tab_index()
         if idx < 0:

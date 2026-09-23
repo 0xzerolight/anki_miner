@@ -8,6 +8,8 @@ never launches anything.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from anki_miner.gui import app as app_module
@@ -19,6 +21,13 @@ def _clean_intent():
     restart.clear_restart_request()
     yield
     restart.clear_restart_request()
+
+
+@pytest.fixture(autouse=True)
+def _clean_qt_scale_factor_env(monkeypatch):
+    """Isolate QT_SCALE_FACTOR and the app-set flag from the real environment."""
+    monkeypatch.delenv("QT_SCALE_FACTOR", raising=False)
+    monkeypatch.setattr(app_module, "_qt_scale_factor_set_by_app", False)
 
 
 class _FakeLock:
@@ -134,6 +143,44 @@ class TestRequestedRestart:
         app_module._relaunch_if_requested(_FakeApp(None))
 
         assert len(seen) == 1
+
+
+class TestQtScaleFactorAcrossRestart:
+    """QProcess.startDetached inherits this process's os.environ verbatim.
+
+    A QT_SCALE_FACTOR value THIS process derived from ``ui_zoom`` must not
+    ride along into the child: the child would see the var already present,
+    skip its own ``_apply_ui_zoom``, and stay frozen at the zoom this process
+    booted with instead of applying whatever the user just picked and saved.
+    A genuine user-set override has no config to re-derive from, so it must
+    still reach the child.
+    """
+
+    def test_an_app_set_var_is_removed_before_the_child_launches(self, launches, tmp_path, monkeypatch) -> None:
+        seen, holder = launches
+        monkeypatch.setattr(restart, "resolve_relaunch_target", lambda: tmp_path / "anki_miner_gui")
+        holder["lock"] = _FakeLock()
+        monkeypatch.setenv("QT_SCALE_FACTOR", "1.5")
+        monkeypatch.setattr(app_module, "_qt_scale_factor_set_by_app", True)
+        restart.request_restart()
+
+        app_module._relaunch_if_requested(_FakeApp(holder["lock"]))
+
+        assert seen  # the launch still happened
+        assert "QT_SCALE_FACTOR" not in os.environ
+
+    def test_a_user_set_var_is_kept_for_the_child(self, launches, tmp_path, monkeypatch) -> None:
+        seen, holder = launches
+        monkeypatch.setattr(restart, "resolve_relaunch_target", lambda: tmp_path / "anki_miner_gui")
+        holder["lock"] = _FakeLock()
+        monkeypatch.setenv("QT_SCALE_FACTOR", "2.0")
+        # _qt_scale_factor_set_by_app stays False: this process never wrote it.
+        restart.request_restart()
+
+        app_module._relaunch_if_requested(_FakeApp(holder["lock"]))
+
+        assert seen
+        assert os.environ["QT_SCALE_FACTOR"] == "2.0"
 
 
 class TestResolver:
