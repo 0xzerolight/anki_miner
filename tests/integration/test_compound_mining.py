@@ -126,7 +126,7 @@ def test_full_parse_mines_compounds_not_fragments(tmp_path: Path) -> None:
 
 
 def test_count_lemmas_agrees_with_parse(tmp_path: Path) -> None:
-    """T-38 Deck Builder parity: the counting path sees the same compounds."""
+    """T-38 count-vs-mine parity: the counting path sees the same compounds."""
     parser, _definition_service = _build_service(tmp_path)
     srt_file = _write_srt(tmp_path)
 

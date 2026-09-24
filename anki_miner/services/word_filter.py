@@ -922,10 +922,10 @@ class WordFilterService:
         same double count one step further out — so it goes to neither.
 
         Folding happens HERE and never at the count site
-        (``count_lemmas``/``parse_text_units``): ``corpus_aggregator.select``
-        derives the Deck Builder candidate set and its coverage % straight from
-        those Counter keys. A language with no fold (ja/ko) gets its own
-        mapping back untouched.
+        (``count_lemmas``/``parse_text_units``): callers that build a
+        candidate set straight from those Counter keys rely on the raw,
+        unfolded key. A language with no fold (ja/ko) gets its own mapping
+        back untouched.
         """
         fold = self._dedup_fold
         if fold is None:

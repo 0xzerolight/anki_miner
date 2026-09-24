@@ -585,7 +585,7 @@ class ReadingMangaTab(_ReadingMiningTabBase):
         # composed fill correct when a volume errors mid-sweep. Count-unit
         # writes (set_progress) are banned on the composition-driven widget.
         done = sum(1 for i in self._run_items if i.status in (ReadyItemStatus.COMPLETED, ReadyItemStatus.ERROR))
-        self.overall_progress_widget.set_composed(done, 0, len(self._run_items))
+        self.overall_progress_widget.set_composed(done, len(self._run_items))
 
     def _on_queue_finished(self) -> None:
         """Run summary log over the run snapshot. Cleanup is elsewhere.

@@ -136,12 +136,12 @@ def test_tab_switch_shortcut_activates_correct_tab(main_window, qtbot):
     assert main_window.tabs.currentIndex() == 2
 
 
-def test_about_dialog_lists_seven_tab_shortcuts():
-    """The About card advertises Ctrl+1..7, matching the seven wired tab shortcuts."""
+def test_about_dialog_lists_six_tab_shortcuts():
+    """The About card advertises Ctrl+1..6, matching the six wired tab shortcuts."""
     from anki_miner.gui.utils.keyboard_shortcuts import SHORTCUT_HELP
 
     labels = dict(SHORTCUT_HELP)
-    assert labels.get("Ctrl+1..7") == "Switch tabs"
+    assert labels.get("Ctrl+1..6") == "Switch tabs"
 
 
 def test_about_reads_its_rows_from_the_shortcut_constants():
@@ -167,7 +167,7 @@ def test_advertised_global_bindings_are_the_installed_ones(main_window):
         if not action.shortcut().isEmpty()
     }
     reachable = installed | menu_keys
-    # Ctrl+1..7 is a range and Ctrl+Enter is per-screen, so neither is a literal
+    # Ctrl+1..6 is a range and Ctrl+Enter is per-screen, so neither is a literal
     # window binding; every other advertised row must be.
     for keys, _description in SHORTCUT_HELP:
         if ".." in keys or keys == PRIMARY_ACTION_DISPLAY:

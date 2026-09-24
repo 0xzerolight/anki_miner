@@ -952,7 +952,7 @@ class BatchProcessingTab(MiningTabBase):
         self._items_done = completed
         # Bar-only advance (no status): keeps the fill correct when a pair
         # errors mid-sweep; monotone with the composed per-episode updates.
-        self.overall_progress_widget.set_composed(completed, 0, total)
+        self.overall_progress_widget.set_composed(completed, total)
         self._publish_task_count(current=completed, total=total or None, detail="")
 
     def _on_item_started(self, item_id: str, display_name: str) -> None:
@@ -1054,7 +1054,7 @@ class BatchProcessingTab(MiningTabBase):
         """
         self._run_terminal_ids.add(item_id)
         self._items_done = len(self._run_terminal_ids)
-        self.overall_progress_widget.set_composed(self._items_done, 0, self._items_total)
+        self.overall_progress_widget.set_composed(self._items_done, self._items_total)
         self._publish_task_count(current=self._items_done, total=self._items_total or None, detail="")
 
     def _on_queue_finished(self, total_cards: int, whitelist: object = None) -> None:

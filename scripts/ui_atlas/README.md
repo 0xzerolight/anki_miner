@@ -53,8 +53,7 @@ event-loop gap, per-theme apply times, tab-switch times, and idle CPU/RSS.
 * **`10_primary_action_hidden` has two severities.** `unreachable` means the
   primary action is off the window or inside the pinned bar (which never
   scrolls) — that is a D6 regression. `below_fold` means it is inside ordinary
-  page scroll and a scroll reaches it; Settings pages and Deck Builder
-  legitimately scroll.
+  page scroll and a scroll reaches it; Settings pages legitimately scroll.
 * **`11_tabbar_overflow` is the D10 oracle.** Settings is a grouped list
   navigator, not a tab strip, so it cannot appear here at all. Any hit is a
   different strip.

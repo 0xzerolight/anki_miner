@@ -135,7 +135,7 @@ class TestRunStart:
         assert "first=aaa,bbb" in line
 
     def test_a_screen_without_a_receipt_widget_still_records_the_start(self, youtube_tab, lifecycle_log):
-        """Deck Builder installs no receipt; the run still has to be in the log."""
+        """A screen with no receipt widget; the run still has to be in the log."""
         youtube_tab._receipt_widget = None
 
         youtube_tab._begin_receipt(3, run_fields={"deck": "Mining"})

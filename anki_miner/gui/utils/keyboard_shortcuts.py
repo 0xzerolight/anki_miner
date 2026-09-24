@@ -51,7 +51,7 @@ PRIMARY_ACTION_DISPLAY = "Ctrl+Enter"
 #: D48-B is essentials only, with no palette and no generated command list.
 SHORTCUT_HELP: tuple[tuple[str, str], ...] = (
     (
-        f"{TAB_SEQUENCE_TEMPLATE.format(number=1)}..7",
+        f"{TAB_SEQUENCE_TEMPLATE.format(number=1)}..6",
         QT_TRANSLATE_NOOP("AboutDialog", "Switch tabs"),
     ),
     (SETTINGS_SEQUENCE, QT_TRANSLATE_NOOP("AboutDialog", "Open Settings")),

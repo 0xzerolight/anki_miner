@@ -33,9 +33,7 @@ from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication
 TRANSLATION_CONTEXT = "Capabilities"
 
 # Stable main-tab keys (resolved by MainWindow._main_tab_index, never indices).
-MAIN_TABS: frozenset[str] = frozenset(
-    {"video", "deckbuilder", "audiobook", "reading", "analytics", "subtitles", "settings"}
-)
+MAIN_TABS: frozenset[str] = frozenset({"video", "audiobook", "reading", "analytics", "subtitles", "settings"})
 # Stable settings sub-tab keys (resolved by SettingsTab.open_subtab).
 SETTINGS_SUBTABS: frozenset[str] = frozenset(
     {
@@ -228,36 +226,6 @@ CAPABILITIES: tuple[Capability, ...] = (
             "dual subtitles",
             "batch",
             "folder",
-        ),
-    ),
-    Capability(
-        id="deck-builder",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Build a deck by coverage %"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities",
-            "Build a frequency-ordered deck that covers a chosen percentage of a whole corpus.",
-        ),
-        category=_CAT_WORKFLOWS,
-        target=CapabilityTarget("deckbuilder"),
-        keywords=("deck builder", "corpus", "coverage", "frequency deck", "premade", "premine", "top words"),
-    ),
-    Capability(
-        id="deck-builder-modes",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Deck Builder modes (all / top N / coverage %)"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities",
-            "Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.",
-        ),
-        category=_CAT_WORKFLOWS,
-        target=CapabilityTarget("deckbuilder"),
-        keywords=(
-            "bypass filters",
-            "include known",
-            "allow duplicates",
-            "complete deck",
-            "top n",
-            "coverage target",
-            "everything",
         ),
     ),
     Capability(
@@ -1357,7 +1325,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Keyboard shortcuts"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -> About.",
+            "Ctrl+1..6 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -> About.",
         ),
         category=_CAT_TOOLS,
         keywords=("shortcuts", "hotkeys", "keybindings", "keyboard", "f1"),

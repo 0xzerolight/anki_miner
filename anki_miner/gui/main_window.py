@@ -111,7 +111,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
     This window provides a tabbed interface for:
     - Video (container: Single episode / Batch folder / YouTube sub-tabs)
-    - Deck Builder (corpus-driven deck assembly)
     - Audiobooks (audio + subtitle pair queue)
     - Reading (container: Manga / Novels sub-tabs)
     - Analytics (mining statistics dashboard)
@@ -431,7 +430,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # Set accessible names for main components
         self.tabs.setAccessibleName(self.tr("Main Tabs"))
         self.tabs.setAccessibleDescription(
-            self.tr("Navigate between Video, Deck Builder, Audiobooks, Reading, Analytics, Utilities, and Settings")
+            self.tr("Navigate between Video, Audiobooks, Reading, Analytics, Utilities, and Settings")
         )
 
         self.header.setAccessibleName(self.tr("Application Header"))
@@ -672,7 +671,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     # Matched by class name (not index/label) so it survives tab reorder and i18n.
     _MAIN_TAB_CLASSES = {
         "video": "VideoTab",
-        "deckbuilder": "DeckBuilderTab",
         "audiobook": "AudiobookTab",
         "reading": "ReadingTab",
         "analytics": "AnalyticsTab",
@@ -1937,17 +1935,8 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         originating_run_receipt = originating_receipt.receipt if originating_receipt is not None else None
         # known_words rows have no run identity. The modal dialog blocks new
         # starts; this gate covers mining tasks that were already running.
-        # Deck Builder owns its workers directly and does not publish to the
-        # task registry, so every current or retained QThread is authoritative.
-        deck_builder_index = self._main_tab_index("deckbuilder")
-        deck_builder_workers = []
-        if deck_builder_index >= 0:
-            deck_builder_tab = self.tabs.widget(deck_builder_index)
-            deck_builder_workers.append(getattr(deck_builder_tab, "worker_thread", None))
-            deck_builder_workers.extend(worker for worker, _processor in getattr(deck_builder_tab, "_leaked_runs", ()))
-        mining_task_active = any(still_running(worker) for worker in deck_builder_workers) or any(
-            snapshot.owner.main_tab in {"video", "deckbuilder", "audiobook", "reading"}
-            for snapshot in self.task_registry.running()
+        mining_task_active = any(
+            snapshot.owner.main_tab in {"video", "audiobook", "reading"} for snapshot in self.task_registry.running()
         )
 
         # Create undo callback. This is the BLOCKING work handed to

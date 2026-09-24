@@ -636,7 +636,7 @@ class ReadingSubtitlesTab(_ReadingMiningTabBase):
         # out of files in the run. It used to advance from within-file progress
         # as well, which is where the fabricated fraction came in.
         done = sum(1 for i in self._run_items if i.status in (ReadyItemStatus.COMPLETED, ReadyItemStatus.ERROR))
-        self.overall_progress_widget.set_composed(done, 0, len(self._run_items))
+        self.overall_progress_widget.set_composed(done, len(self._run_items))
 
     def _on_queue_finished(self) -> None:
         """Log the whole-run outcome for a multi-file run.

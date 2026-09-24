@@ -440,7 +440,7 @@ class ReadingTextTab(_ReadingMiningTabBase):
         # The bar's only honest denominator: items that reached a terminal state
         # out of items in the run.
         done = sum(1 for i in self._run_items if i.status in (ReadyItemStatus.COMPLETED, ReadyItemStatus.ERROR))
-        self.overall_progress_widget.set_composed(done, 0, len(self._run_items))
+        self.overall_progress_widget.set_composed(done, len(self._run_items))
 
     def _on_queue_finished(self) -> None:
         """Single-item runs are already logged by ``_on_item_finished``."""

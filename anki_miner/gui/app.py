@@ -77,7 +77,6 @@ from anki_miner.gui.utils.stall_watchdog import (
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.gui.widgets.base import ScreenIssue
-from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.reading_tab import ReadingTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
@@ -1694,18 +1693,6 @@ def compose_main_window(
         extra_presenters=(batch_presenter, youtube_presenter),
     )
 
-    deck_builder_presenter = GUIPresenter(window)
-    deck_builder_progress = GUIProgressCallback(window)
-    deck_builder_tab = DeckBuilderTab(
-        window.get_config(),
-        deck_builder_presenter,
-        deck_builder_progress,
-        stats_service=stats_service,
-    )
-    register_mining_tab(
-        window, deck_builder_tab, deck_builder_presenter, QCoreApplication.translate("MainWindow", "Deck Builder")
-    )
-
     # Audiobook tab (Issue #71). Same lazy-processor pattern as YouTube:
     # processor=None defers the dictionary-chain build to the first Mine
     # click; stats_service is threaded through so sessions land in analytics.
@@ -1889,8 +1876,8 @@ def compose_main_window(
     # This must come AFTER all addTab calls so self.tabs.count() is final.
     window.setup_tab_shortcuts()
 
-    # Inline run options (the curation checkbox, Deck Builder's mode, Card
-    # Backfill's field groups) persist by folding themselves into the config and
+    # Inline run options (the curation checkbox, Card Backfill's field groups)
+    # persist by folding themselves into the config and
     # emitting run_options_changed; route it through window.update_config so the
     # value lands in gui_config.json and survives restart. Same contract as
     # condense_tab/download_tab's config_changed, but discovered rather than
@@ -2078,7 +2065,6 @@ def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
 
             expected_titles = [
                 QCoreApplication.translate("MainWindow", "Video"),
-                QCoreApplication.translate("MainWindow", "Deck Builder"),
                 QCoreApplication.translate("MainWindow", "Audiobooks"),
                 QCoreApplication.translate("MainWindow", "Reading"),
                 QCoreApplication.translate("MainWindow", "Analytics"),

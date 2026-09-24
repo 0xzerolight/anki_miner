@@ -75,9 +75,9 @@ def _build_tabs(patch_heavy_init, test_config):
 def wired_window(patch_heavy_init, test_config, qtbot):
     """A fully tab-wired ``MainWindow`` built the way ``app.main`` builds it.
 
-    Yields ``(window, tab_titles, tabs_by_title)``. Shared by
-    ``test_app_deck_builder_tab`` and the video/audio(book)/reading tab-order
-    tests that assert against the real tab layout.
+    Yields ``(window, tab_titles, tabs_by_title)``. Shared by the
+    video/audio(book)/reading tab-order tests that assert against the real
+    tab layout.
     """
     window, titles, tabs = _build_tabs(patch_heavy_init, test_config)
     qtbot.addWidget(window)

@@ -204,7 +204,7 @@ def test_tone_colour_paints_the_word_s_own_reading(monkeypatch):
 
 
 def test_a_word_without_a_reading_still_paints_from_the_front(monkeypatch):
-    """Deck Builder words with no dictionary entry reach the hook carrying no reading at all."""
+    """A word with no dictionary entry reaches the hook carrying no reading at all."""
     monkeypatch.setattr(
         "anki_miner.languages.zh.render.pinyin_syllables",
         lambda text: [("yín", 2), ("háng", 2)],

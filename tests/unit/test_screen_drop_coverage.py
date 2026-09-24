@@ -8,9 +8,6 @@ with no drop support at all now either take the payload or say why they cannot:
 * Audio, Generate, Condense and Retime validate the file kind at the selector.
 * Text refuses a dragged file instead of inserting its path as text.
 * Card Backfill refuses everything, and points at the deck control it reads.
-
-Deck Builder is deliberately absent: D3 (whether that screen exists at all) is
-unresolved, so W5-T12 leaves it untouched.
 """
 
 from __future__ import annotations

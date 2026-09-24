@@ -255,11 +255,10 @@ class ProgressWidget(QWidget):
     def set_composed(
         self,
         items_done: int,
-        _item_pct: int,
         items_total: int,
         status: str | None = None,
     ) -> None:
-        """Show finished items out of total. The item's own progress is ignored.
+        """Show finished items out of total. No per-item progress is drawn.
 
         This used to be ``((items_done + item_pct/100) / items_total) * 100``,
         which meant the bar's position depended on how far through the current
@@ -269,14 +268,8 @@ class ProgressWidget(QWidget):
         actually known, so only that is drawn; what the current item is doing is
         said in words instead.
 
-        ``_item_pct`` is kept in the signature because Deck Builder (D3, frozen)
-        still passes it, and dropping it silently at this one place is what
-        stops it fabricating a fill. The underscore says the ignoring is
-        deliberate rather than an oversight.
-
         Args:
             items_done: Items fully finished so far
-            _item_pct: Ignored. See above.
             items_total: Total items in the run; ``<= 0`` is a no-op
             status: Optional status text (falsy leaves the label alone)
         """

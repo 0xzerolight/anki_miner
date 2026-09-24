@@ -224,11 +224,12 @@ class AnkiService:
         self.last_created_note_ids: list[int] = []
         # Positionally aligned mined forms for the confirmed IDs above. Unlike
         # ProcessingResult.mined_forms, this is not a known_words.db undo
-        # receipt; Deck Builder consumes it to promote only cards Anki created.
+        # receipt; EpisodeProcessor consumes it to promote only cards Anki
+        # created.
         self.last_created_mined_forms: list[str] = []
-        # Positionally aligned source lemmas for the same IDs. Deck Builder's
-        # cross-episode dedup keys on corpus lemmas, which need not map
-        # one-to-one to mined forms.
+        # Positionally aligned source lemmas for the same IDs. Cross-episode
+        # dedup keys on corpus lemmas, which need not map one-to-one to mined
+        # forms.
         self.last_created_lemmas: list[str] = []
         self._cancelled_check: Callable[[], bool] | None = None
         # Number of notes not created during the last create_cards_batch call.
@@ -410,9 +411,9 @@ class AnkiService:
         mining path: the Settings → Anki deck dropdown only offers decks that
         really exist, so a configured deck that is missing is a user-visible
         error rather than a silently-created stray deck. ``ensure_deck`` is
-        still used by Deck Builder, which builds a genuinely new deck and calls
-        it BEFORE its per-pair process_episode loop — that ordering is what
-        makes this check pass there (see deck_builder_worker.py).
+        still used by Deck Filter, which builds a genuinely new deck and calls
+        it BEFORE running its filtered export — that ordering is what makes
+        this check pass there (see services/deck_filter.py).
 
         Raises:
             SetupError: note type missing, field mapping invalid, or the
@@ -1320,7 +1321,8 @@ class AnkiService:
         # Flip allowDuplicate off (Yomitan notesNoDuplicatesAllowed) so a
         # duplicate reports canAdd=false with the duplicate error; keep the note's
         # own options otherwise. Normal-path notes carry no options, so this is
-        # AnkiConnect's default anyway; Deck Builder notes keep duplicateScope.
+        # AnkiConnect's default anyway; an allow_duplicate_cards note keeps
+        # duplicateScope.
         no_dup = [{**note, "options": {**note.get("options", {}), "allowDuplicate": False}} for note in stripped]
 
         try:

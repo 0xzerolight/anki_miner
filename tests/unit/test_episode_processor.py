@@ -1199,7 +1199,7 @@ class TestOptionalServices:
         )
 
     def test_bypass_optional_filters_skips_frequency(self, test_config, mock_services, tmp_path):
-        """Deck Builder: bypass_optional_filters=True skips the frequency cutoff."""
+        """bypass_optional_filters=True skips the frequency cutoff."""
         config = replace(test_config, max_frequency_rank=1000, bypass_optional_filters=True)
 
         word1 = _make_word("食べる")
@@ -2176,7 +2176,7 @@ class TestKnownWordDBIntegration:
 
 
 class TestIncludeKnownWordsFlag:
-    """Tests for the include_known_words config flag (Deck Builder bypass)."""
+    """Tests for the include_known_words config flag."""
 
     @pytest.fixture
     def mock_services(self):
@@ -2398,7 +2398,7 @@ class TestWordsetServiceIntegration:
         assert result.cards_created == 1
 
     def test_bypass_optional_filters_skips_wordset_filter(self, test_config, mock_services, tmp_path):
-        """Deck Builder bypass_optional_filters=True must skip the wordset filter."""
+        """bypass_optional_filters=True must skip the wordset filter."""
         config = replace(test_config, bypass_optional_filters=True)
 
         word1 = _make_word("食べる")
@@ -4631,7 +4631,7 @@ class TestIPlusOneFilter:
         assert "kept 1/2 words (50%)" in matched[0]
 
     def test_bypass_optional_filters_skips_i_plus_one(self, test_config, mock_services, tmp_path):
-        """Deck Builder: bypass_optional_filters=True skips i+1 even when its flag is on."""
+        """bypass_optional_filters=True skips i+1 even when its flag is on."""
         config = replace(test_config, use_i_plus_one_filter=True, bypass_optional_filters=True)
         word = _make_word("食べる")
         line = _make_line_lemmas(lemmas=("食べる",))
@@ -5270,7 +5270,7 @@ class TestPreflightCardTarget:
         assert result.errors == []
         mock_services["definition_service"].has_usable_offline_provider.assert_called_once_with()
 
-    def test_deck_builder_bypass_does_not_require_offline_provider(self, test_config, mock_services, tmp_path):
+    def test_bypass_optional_filters_does_not_require_offline_provider(self, test_config, mock_services, tmp_path):
         config = replace(test_config, bypass_optional_filters=True)
         mock_services["definition_service"].has_usable_offline_provider.return_value = False
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = []
@@ -5654,7 +5654,7 @@ class TestPhase2FilterOrdering:
         assert mock_services["media_extractor"].extract_media_batch.call_args[0][1] == [word1]
 
     def test_script_type_filter_bypassed_by_optional_filters_flag(self, test_config, mock_services, tmp_path):
-        """Deck Builder bypass_optional_filters=True must skip the script-type filter."""
+        """bypass_optional_filters=True must skip the script-type filter."""
         config = replace(
             test_config,
             exclude_hiragana_only_words=True,
@@ -6352,8 +6352,8 @@ class TestWithinRunDuplicateCollapse:
         assert captured["mined_forms"] == ["出でる", "いでる"]
 
     def test_duplicates_preserved_when_allow_duplicate_cards(self, test_config, mock_services, tmp_path):
-        # Deck Builder parity: allow_duplicate_cards=True ⇒ Anki creates both, so
-        # showing both is correct and the collapse must be skipped.
+        # allow_duplicate_cards=True ⇒ Anki creates both, so showing both is
+        # correct and the collapse must be skipped.
         config = replace(test_config, allow_duplicate_cards=True)
         dup_a, dup_b = _make_word("食べる", start_time=1.0), _make_word("食べる", start_time=9.0)
         self._prime(mock_services, [dup_a, dup_b])

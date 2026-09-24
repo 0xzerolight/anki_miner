@@ -207,13 +207,15 @@ class TestRouteRoundTrip:
         assert window._current_subtab_keys()["video"] == "batch"
         assert window._current_subtab_keys()["subtitles"] == "retime"
 
-    def test_a_deck_builder_route_survives_although_it_has_no_subtabs(self, wired_window):
+    def test_a_stale_deckbuilder_route_opens_the_first_tab(self, wired_window):
+        """A route saved before the Deck Builder tab was removed must not crash
+        the restore; it lands on the first tab like any other unknown key."""
         window, _titles, _tabs = wired_window
         session_state.save_route("deckbuilder", {})
 
         window.restore_session_state()
 
-        assert window._current_main_tab_key() == "deckbuilder"
+        assert window.tabs.currentIndex() == 0
 
     def test_unknown_keys_are_ignored(self, wired_window):
         window, _titles, _tabs = wired_window

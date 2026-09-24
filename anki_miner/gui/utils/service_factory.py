@@ -767,9 +767,10 @@ def create_services(
     Args:
         config: Mining configuration
         subtitle_parser: Optional pre-built parser to reuse instead of
-            constructing a fresh one. The Deck Builder injects its Phase-1
-            parser here so Phase-2 mining hits the already-filled per-file
-            tokenization cache. The caller owns ensuring the parser's
+            constructing a fresh one. A caller that already ran a Phase-1
+            parse injects that parser here so Phase-2 mining hits the
+            already-filled per-file tokenization cache. The caller owns
+            ensuring the parser's
             parse-relevant config matches ``config`` (bold target / allowed POS
             / excluded subtypes / excluded wordsets / subtitle-filter fields —
             ``PARSE_RELEVANT_CONFIG_FIELDS``); the parser reads only those, so
@@ -782,8 +783,8 @@ def create_services(
             When provided the existing instance (and its populated vocab cache)
             is reused rather than constructing a fresh one. The batch queue
             worker passes a single shared instance so the cache survives across
-            all items in the run. Default ``None`` preserves single-episode and
-            deck-builder behaviour (a fresh instance per call).
+            all items in the run. Default ``None`` preserves single-episode
+            behaviour (a fresh instance per call).
         shared_lookup: Optional pre-built :class:`SharedLookupServices` bundle.
             When provided, the dictionary registry scan, eager dictionary load,
             pitch CSV parse, frequency registry load, and audio pack registry
@@ -843,11 +844,11 @@ def create_services(
         # — it borrows the DefinitionService's offline_terms_exist seam, so a
         # Jisho-only config stays I/O-free and behaves exactly as before.
         #
-        # Deck Builder parity note: the Deck Builder's base processor flows
-        # through THIS fresh-parser branch (it never pre-builds a parser), so
-        # preview (count_lemmas) and build share the same probe via the parser's
-        # line cache. If a future change pre-builds that parser elsewhere, it
-        # must wire term_lookup the same way or preview and build diverge.
+        # A caller whose processor flows through THIS fresh-parser branch (it
+        # never pre-builds a parser) gets count_lemmas and its later parse
+        # sharing the same probe via the parser's line cache. If a future
+        # change pre-builds that parser elsewhere, it must wire term_lookup
+        # the same way or the two diverge.
         has_indexed_dict = any(e.kind == "indexed" and e.enabled for e in config.dictionary_chain)
         term_lookup = definition_service.offline_terms_exist if has_indexed_dict else None
         # Attested-readings probe (merged-compound reading fix, audit F2):
@@ -1010,8 +1011,8 @@ def create_episode_processor(
         presenter: Output presenter for messages
         stats_service: Optional statistics recording service
         subtitle_parser: Optional pre-built parser to reuse (see
-            :func:`create_services`); the Deck Builder passes its Phase-1 parser
-            here to reuse the filled tokenization cache in Phase 2.
+            :func:`create_services`); a caller with its own Phase-1 parser
+            passes it here to reuse the filled tokenization cache in Phase 2.
         anki_service: Optional pre-built :class:`AnkiService` to reuse across
             multiple calls (see :func:`create_services`). The batch queue worker
             passes a single shared instance to preserve the populated vocab

@@ -120,25 +120,20 @@ def test_set_percent_falsy_status_does_not_blank_label(widget):
 
 
 def test_set_composed_counts_finished_items(widget):
-    """D18: the bar is finished items over total, nothing else."""
-    widget.set_composed(2, 0, 4, "Episode 3/4")
+    """D18: the bar is finished items over total, nothing else.
+
+    Only ``items_done / items_total`` is drawn; there is no per-item progress
+    argument to weight it with, which is what stopped a queue racing through
+    five short files and then looking frozen for an hour on a long one.
+    """
+    widget.set_composed(2, 4, "Episode 3/4")
     assert widget.progress_bar.value() == 50
     assert widget.status_label.text() == "Episode 3/4"
 
 
-def test_set_composed_ignores_the_current_items_own_progress(widget):
-    """A part-done item is not a part-done run: only whole items count.
-
-    Believing otherwise is what made a queue race through five short files and
-    then look frozen for an hour on a long one.
-    """
-    widget.set_composed(2, 99, 4)
-    assert widget.progress_bar.value() == 50
-
-
 def test_set_composed_zero_total_is_noop(widget):
     widget.set_percent(37)
-    widget.set_composed(0, 50, 0, "nope")
+    widget.set_composed(0, 0, "nope")
     assert widget.progress_bar.value() == 37
     assert widget.status_label.text() != "nope"
 
@@ -159,7 +154,7 @@ def test_a_frozen_bar_ignores_later_progress(widget):
     widget.freeze()
 
     widget.set_percent(90)
-    widget.set_composed(9, 0, 10)
+    widget.set_composed(9, 10)
     widget.set_progress(9, 10)
     widget.set_value(95)
 
@@ -501,6 +496,6 @@ class TestTheFillCatchesUp:
 
 def test_the_fill_never_animates_past_a_number_nobody_reported(widget):
     """W1-T6 deleted the fabricated denominators; motion must not restore one."""
-    widget.set_composed(items_done=1, _item_pct=99, items_total=4, status="")
+    widget.set_composed(items_done=1, items_total=4, status="")
 
     assert widget.progress_bar.value() == 25

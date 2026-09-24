@@ -15,7 +15,6 @@ _SWEPT_GUI_MODULES = (
     "anki_miner/gui/widgets/audiobook_tab.py",
     "anki_miner/gui/widgets/youtube_tab.py",
     "anki_miner/gui/widgets/panels/filtering_settings_panel.py",
-    "anki_miner/gui/workers/deck_builder_worker.py",
     "anki_miner/gui/workers/episode_worker.py",
     "anki_miner/gui/workers/install_worker.py",
     "anki_miner/gui/workers/restyle_cards_worker.py",
@@ -26,7 +25,6 @@ _SWEPT_GUI_MODULES = (
 )
 
 _WORKER_RUN_CLASSES = {
-    "anki_miner/gui/workers/deck_builder_worker.py": "DeckBuilderWorker",
     "anki_miner/gui/workers/episode_worker.py": "EpisodeWorkerThread",
     "anki_miner/gui/workers/install_worker.py": "InstallWorker",
     "anki_miner/gui/workers/restyle_cards_worker.py": "RestyleCardsWorker",

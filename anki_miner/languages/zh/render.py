@@ -144,7 +144,7 @@ class ZhToneColorHook:
     reading of the front: the two fields sit next to each other on the card and
     a dictionary-reconciled reading would otherwise be coloured as the reading
     it replaced. Recomputing is the fallback for a word that carries none —
-    a Deck Builder front with no entry, or any caller that is not a mined word.
+    a front with no entry, or any caller that is not a mined word.
     """
 
     def field_names(self) -> tuple[str, ...]:

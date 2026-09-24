@@ -997,7 +997,7 @@ class _ListQueueMiningTabBase(_QueueMiningTabBase):
 
         self._refresh_row(item)
         self._items_done = getattr(self, "_items_done", 0) + 1
-        self.progress_widget.set_composed(self._items_done, 0, getattr(self, "_items_total", 0))
+        self.progress_widget.set_composed(self._items_done, getattr(self, "_items_total", 0))
         self._publish_task_position(label)
         self._recompute_buttons()
 

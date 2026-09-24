@@ -421,7 +421,7 @@ def build_note(
         "fields": fields,
         "tags": config.anki_tags.split(),
     }
-    # Deck Builder: re-card words that already exist elsewhere in the
+    # allow_duplicate_cards: re-card words that already exist elsewhere in the
     # collection. duplicateScope="deck" keeps cross-episode curation's
     # single-carding meaningful within the new deck. Normal mining emits NO
     # options object, so AnkiConnect applies its implicit default (whole

@@ -1,7 +1,7 @@
 """Persist a workflow screen's inline run options into the saved config.
 
 An inline run option is a control the user sets on the screen that runs the
-work -- "Review words before mining", Deck Builder's word-selection mode --
+work -- "Review words before mining", Card Backfill's field groups --
 rather than in Settings. They are ordinary preferences, so they belong in
 ``AnkiMinerConfig`` and travel with a settings profile or an export, exactly
 as the Condense and Download tabs' options already do.

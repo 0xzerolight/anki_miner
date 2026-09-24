@@ -6,7 +6,7 @@ parser-side join is ``SeparableVerbPass`` with ``dutch_particle_candidates``
 as written, ``’t`` is a NOUN that would mine. The model's lemmatiser drops a
 compound's hyphen (``auto-ongeluk`` → ``autoongeluk``), so the tokenizer
 post-pass ``restore_compound_hyphens`` repairs every lemma, where the frequency
-lemmatizer, Deck Builder counts and Card Backfill see it too. The same S8
+lemmatizer, count_lemmas and Card Backfill see it too. The same S8
 abbreviation set the splitter uses trims spaCy's dotted exceptions, so a
 sentence-final ``hand.`` or ``kon.`` is two tokens. nl's tokenizer has no
 letter-hyphen-letter infix, so hyphen compounds already stay whole.

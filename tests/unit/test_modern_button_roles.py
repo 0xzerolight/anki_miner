@@ -39,10 +39,6 @@ THEME = "dark"
 #: Source root scanned by the static role tests.
 GUI_ROOT = Path(__file__).resolve().parents[2] / "anki_miner" / "gui"
 
-#: Deck Builder's fate is unresolved (D3), so its Cancel was left untouched and
-#: simply inherits the new outlined ``danger`` rule instead of the solid fill.
-D3_FROZEN = "deck_builder_tab.py"
-
 
 @pytest.fixture(autouse=True)
 def _themed(qapp):
@@ -356,7 +352,7 @@ class TestCallSiteRoles:
         red = _roles_by_module()["danger"] | _roles_by_module()["critical"]
         stops = {(module, label) for module, label in red if label in {"Cancel", "Stop All"}}
 
-        assert stops == {(D3_FROZEN, "Cancel")}
+        assert stops == set()
 
     @pytest.mark.parametrize(
         "module",

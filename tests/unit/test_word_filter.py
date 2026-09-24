@@ -1555,7 +1555,7 @@ class TestOccurrenceCountsFoldToWordIdentity:
         assert any(word is self._hair(words) for word in kept)
 
     def test_the_corpus_counter_itself_stays_unfolded(self, test_config):
-        """Deck Builder's candidate set and coverage % read these keys straight."""
+        """A candidate set built straight from these keys must read them unfolded."""
         _config, _words, counts = self._parse(test_config, "simplified")
 
         assert counts["頭髮"] == 3

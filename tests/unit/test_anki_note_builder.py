@@ -167,7 +167,7 @@ class TestDuplicateOptions:
         note = build_note(_payload(_word()), AnkiMinerConfig(), set()).note
         assert "options" not in note
 
-    def test_deck_builder_object_unchanged(self):
+    def test_allow_duplicate_cards_object_unchanged(self):
         # allow_duplicate_cards takes precedence and keeps the pre-7.3 hardcoded
         # object byte-for-byte.
         config = AnkiMinerConfig(allow_duplicate_cards=True)

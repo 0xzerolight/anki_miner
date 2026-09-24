@@ -82,7 +82,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Config fields SubtitleParserService actually reads. Callers that reuse a
-# parser instance across configs (e.g. Deck Builder Phase 2 reusing Phase 1's
+# parser instance across configs (e.g. a later pass reusing an earlier pass's
 # filled per-file tokenization cache) must assert every one of these is
 # untouched, or cached tokenization silently goes stale.
 # ``subtitle_offset`` is deliberately absent: it is a per-CALL argument on the
@@ -111,15 +111,15 @@ COMPOUND_MATCHING = True
 
 # Maximum number of files held simultaneously in the per-instance per-file
 # tokenization cache.  When the cap is hit the least-recently-used entry
-# is evicted so the dict stays bounded while still covering the Deck Builder's
-# Phase-1 → Phase-2 cross-file reuse pattern for any corpus up to this size.
+# is evicted so the dict stays bounded while still covering the Phase-1 →
+# Phase-2 cross-file reuse pattern for any corpus up to this size.
 _LINE_CACHE_MAX_FILES: int = 256
 
 # Bound for the verb-front resolver memo (_front_cache). Each entry is one tiny
 # resolved-form string keyed by (inflected_surface, orth_base, cType); the set
 # of distinct verb/adjective forms in any corpus is small, but a clear-on-cap
-# keeps a whole-corpus Deck Builder run from growing without limit (mirrors the
-# compound matcher's existence cache).
+# keeps a whole-corpus run from growing without limit (mirrors the compound
+# matcher's existence cache).
 _FRONT_CACHE_CAP: int = 200_000
 
 
@@ -588,8 +588,8 @@ class SubtitleParserService:
         self._term_rules_lookup = term_rules_lookup
         # Per-instance MEMOIZED existence probe shared by the compound-merge gate
         # (morphology.merge_compound_suffixes) AND the compound matcher: caches
-        # existence per surface so a repeated corpus (count_lemmas / Deck Builder
-        # coverage hot path) probes each distinct surface through the underlying
+        # existence per surface so a repeated corpus (count_lemmas's hot path)
+        # probes each distinct surface through the underlying
         # offline dictionary at most once. None when no dict is wired — the merge
         # passes then run UNGATED, so the no-dict output is byte-identical to the
         # pre-gate behavior (exactly like the matcher's term_lookup gating).
@@ -653,14 +653,15 @@ class SubtitleParserService:
         # Per-FILE tokenization cache (distinct lifetime from the per-parse memo
         # caches above): resolved path -> (stat fingerprint, line-state tuples).
         # Filled on the first _iter_parsed_lines pass over a file and reused by
-        # any later pass over the SAME path+mtime_ns+ctime_ns+size (e.g. the
-        # Deck Builder's count_lemmas → parse_subtitle_file double-parse).
+        # any later pass over the SAME path+mtime_ns+ctime_ns+size (e.g. every
+        # mining run's own count_lemmas → parse_subtitle_file double-parse, see
+        # EpisodeProcessor._phase1_parse).
         # Survives across parse_* calls; a fingerprint change invalidates the
         # entry. _reset_caches() does NOT touch this — it is not a per-parse cache.
         #
         # Size-bounded: capped at _LINE_CACHE_MAX_FILES entries via LRU
         # eviction (pop the oldest key when full). Prevents unbounded growth during
-        # large Deck Builder builds while still caching all files touched in Phase 1
+        # a large whole-corpus run while still caching all files touched in Phase 1
         # for Phase 2 reuse when the corpus fits within the cap.
         self._line_cache: dict[
             Path,
@@ -1037,7 +1038,7 @@ class SubtitleParserService:
         with this call's offset applied.
         A fingerprint mismatch (file edited or replaced between passes)
         invalidates the entry and forces a fresh load + tokenize. The multi-entry
-        cache supports the Deck Builder's Phase-1 (``count_lemmas``) → Phase-2
+        cache supports a Phase-1 (``count_lemmas``) → Phase-2
         (``parse_subtitle_file``) cross-file reuse pattern: every file visited in
         Phase 1 remains cached for Phase 2, eliminating a second full MeCab pass
         over the corpus.
@@ -1962,10 +1963,10 @@ class SubtitleParserService:
         for text, _raw_tokens, merged_tokens, *_ in self._iter_parsed_lines(subtitle_file):
             # Spans come from the SAME locator as the mining loops in
             # parse_subtitle_file* — a token mining drops (find == -1),
-            # counting drops too, or the count-vs-mine sets diverge and the
-            # Deck Builder preview over-promises (T-38). The cursor+find and
-            # drop-rule rationale lives on _iter_token_spans; do not inline a
-            # divergent copy here.
+            # counting drops too, or the count-vs-mine sets diverge and a
+            # reported occurrence count over-promises (T-38). The cursor+find
+            # and drop-rule rationale lives on _iter_token_spans; do not
+            # inline a divergent copy here.
             for token, tok_start, tok_end in self._iter_token_spans(text, merged_tokens):
                 if self._mine_token(token, text, tok_start, tok_end, merged_tokens):
                     counts[self._extract_lemma(token)] += 1
@@ -1987,8 +1988,8 @@ class SubtitleParserService:
         ``self._exist_memo`` so a repeated corpus probes each distinct surface at
         most once, and returns the attested subset of ``surfaces``. Shared by the
         morphology compound-merge gate and the compound matcher. Clear-on-cap
-        bounds the memo on whole-corpus Deck Builder runs (mirrors _front_cache /
-        the matcher's existence cache). Only bound to ``self._attest`` when a
+        bounds the memo on whole-corpus runs (mirrors _front_cache / the
+        matcher's existence cache). Only bound to ``self._attest`` when a
         ``term_lookup`` exists; the ``None`` guard is defensive. The returned
         subset comes from a per-call verdict snapshot so a cap clear cannot drop
         a cached hit requested by the current batch.

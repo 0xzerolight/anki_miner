@@ -88,8 +88,7 @@ def _build(name: str, config: AnkiMinerConfig) -> QWidget:
     return reading(config, MagicMock(name="Processor"), MagicMock())
 
 
-#: Every screen that pins a primary action. Deck Builder is deliberately absent:
-#: under D3 it is blocked and installs no bar, so it gains no binding here.
+#: Every screen that pins a primary action.
 SCREENS = [
     "single",
     "batch",

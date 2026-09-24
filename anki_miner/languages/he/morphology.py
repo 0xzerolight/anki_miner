@@ -60,7 +60,7 @@ _TAG_RE = re.compile(r"<[^>]+>")
 _BULLET = "\N{BULLET}"
 _NON_LEMMA = "non-lemma"
 #: One line's worth of surfaces is small; the cache exists so a repeated word in a long corpus
-#: (count_lemmas, the Deck Builder preview) is resolved once per parser, not once per occurrence.
+#: (count_lemmas) is resolved once per parser, not once per occurrence.
 _CACHE_MAX = 4096
 
 

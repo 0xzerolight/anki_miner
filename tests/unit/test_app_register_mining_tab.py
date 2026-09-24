@@ -165,14 +165,13 @@ class TestSetupTabShortcutsAfterRegistration:
     """Ctrl+N shortcuts are count-driven, one per tab, no gaps, no duplicates."""
 
     @pytest.fixture
-    def window_with_7_tabs(self, bare_window, qtbot):
+    def window_with_6_tabs(self, bare_window, qtbot):
         from anki_miner.gui import app as app_module
         from anki_miner.gui.presenters import GUIPresenter
 
         mining_labels = (
             "Episode Mining",
             "Batch Mining",
-            "Deck Builder",
             "YouTube",
             "Audiobook",
         )
@@ -191,46 +190,46 @@ class TestSetupTabShortcutsAfterRegistration:
         bare_window.setup_tab_shortcuts()
         return bare_window
 
-    def test_ctrl_1_through_n_all_present(self, window_with_7_tabs):
-        n = window_with_7_tabs.tabs.count()
-        keys = set(_tab_shortcut_keys(window_with_7_tabs))
+    def test_ctrl_1_through_n_all_present(self, window_with_6_tabs):
+        n = window_with_6_tabs.tabs.count()
+        keys = set(_tab_shortcut_keys(window_with_6_tabs))
         for i in range(1, n + 1):
             assert f"Ctrl+{i}" in keys, f"missing Ctrl+{i} for {n}-tab window"
 
-    def test_no_shortcut_beyond_tab_count(self, window_with_7_tabs):
-        n = window_with_7_tabs.tabs.count()
-        keys = set(_tab_shortcut_keys(window_with_7_tabs))
+    def test_no_shortcut_beyond_tab_count(self, window_with_6_tabs):
+        n = window_with_6_tabs.tabs.count()
+        keys = set(_tab_shortcut_keys(window_with_6_tabs))
         assert f"Ctrl+{n + 1}" not in keys, f"spurious Ctrl+{n + 1} shortcut beyond tab count {n}"
 
-    def test_exactly_one_shortcut_per_tab_no_duplicates(self, window_with_7_tabs):
-        n = window_with_7_tabs.tabs.count()
-        keys = _tab_shortcut_keys(window_with_7_tabs)
+    def test_exactly_one_shortcut_per_tab_no_duplicates(self, window_with_6_tabs):
+        n = window_with_6_tabs.tabs.count()
+        keys = _tab_shortcut_keys(window_with_6_tabs)
         assert len(keys) == n, f"expected {n} tab shortcuts, got {len(keys)}: {keys}"
         assert len(keys) == len(set(keys)), f"duplicate shortcuts: {keys}"
 
-    def test_ctrl_1_switches_to_tab_0(self, window_with_7_tabs):
-        window_with_7_tabs.tabs.setCurrentIndex(3)
-        window_with_7_tabs._switch_to_tab(0)
-        assert window_with_7_tabs.tabs.currentIndex() == 0
+    def test_ctrl_1_switches_to_tab_0(self, window_with_6_tabs):
+        window_with_6_tabs.tabs.setCurrentIndex(3)
+        window_with_6_tabs._switch_to_tab(0)
+        assert window_with_6_tabs.tabs.currentIndex() == 0
 
-    def test_ctrl_n_switches_to_last_tab(self, window_with_7_tabs):
-        n = window_with_7_tabs.tabs.count()
-        window_with_7_tabs.tabs.setCurrentIndex(0)
-        window_with_7_tabs._switch_to_tab(n - 1)
-        assert window_with_7_tabs.tabs.currentIndex() == n - 1
+    def test_ctrl_n_switches_to_last_tab(self, window_with_6_tabs):
+        n = window_with_6_tabs.tabs.count()
+        window_with_6_tabs.tabs.setCurrentIndex(0)
+        window_with_6_tabs._switch_to_tab(n - 1)
+        assert window_with_6_tabs.tabs.currentIndex() == n - 1
 
     def test_init_does_not_create_tab_shortcuts(self, bare_window):
         """No Ctrl+digit shortcuts before setup_tab_shortcuts() is called."""
         keys = set(_tab_shortcut_keys(bare_window))
         assert not keys, f"Tab shortcuts appeared in __init__: {keys}"
 
-    def test_non_tab_shortcuts_survive(self, window_with_7_tabs):
+    def test_non_tab_shortcuts_survive(self, window_with_6_tabs):
         """Ctrl+, remains after setup_tab_shortcuts(), and adds no collisions.
 
         D48-B retired Ctrl+T and Ctrl+Shift+V; registering the tabs must not
         quietly bring either back.
         """
-        keys = _all_shortcut_keys(window_with_7_tabs)
+        keys = _all_shortcut_keys(window_with_6_tabs)
         assert "Ctrl+," in keys
         assert "Ctrl+T" not in keys
         assert "Ctrl+Shift+V" not in keys

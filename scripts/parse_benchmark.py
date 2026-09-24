@@ -24,8 +24,8 @@ strategy as another function). Today there is exactly one:
   re-implement ``_emit_word`` / ``mining_base``. No optional coverage filters
   (i+1 / frequency / word-list / dedup / sentence-length) run on this path —
   those live downstream in the orchestrator, not in the parser — so the output
-  is the raw pre-filter mined set, exactly the raw-lemma view the Deck Builder
-  gets with ``bypass_optional_filters=True``.
+  is the raw pre-filter mined set, exactly the raw-lemma view a run gets with
+  ``bypass_optional_filters=True``.
 
 Aggregation is **micro-averaged**: within a category (and overall) we sum the
 per-record set-intersection counts and divide once, rather than averaging

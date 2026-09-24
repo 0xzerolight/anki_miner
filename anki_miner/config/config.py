@@ -268,10 +268,6 @@ class AnkiMinerConfig:
     review_words_before_mining: bool = False  # The word curator popup, all 7 mining screens
     youtube_align_captions: bool = False  # Align downloaded captions to the audio
     youtube_subtitle_source: str = "auto"  # "auto" | "transcribe" | "captions"
-    deck_builder_mode: str = "all"  # DeckSelectionMode value: "all" | "top_n" | "coverage_pct"
-    deck_builder_top_n: int = 1000
-    deck_builder_coverage_pct: float = 90.0
-    deck_builder_skip_known: bool = True  # "Skip words already in my Anki collection"
     # Ticked backfill group keys: card_backfiller.FIELD_GROUPS plus one per
     # profile-declared card field (measure_word, expression_pinyin, hanja, …).
     backfill_field_groups: tuple[str, ...] = ()
@@ -438,20 +434,25 @@ class AnkiMinerConfig:
     # (殺る→遣る, Issue #19/#5) keep the exact mined_form match.
     known_words_match_kana_variants: bool = True
     # When True, the known-words subtraction in Phase 2 is skipped so ALL
-    # mineable words are mined regardless of Anki collection state. Used by
-    # the Deck Builder's "include everything" mode. Default False preserves
-    # the standard filter-against-known-vocab behaviour.
+    # mineable words are mined regardless of Anki collection state. Set by
+    # the Android golden-contract fixtures and the e2e harness's
+    # collection-filter-off scenario (scripts/engine_golden_contract_v2.py,
+    # tests/e2e/app_config.py). Default False preserves the standard
+    # filter-against-known-vocab behaviour.
     include_known_words: bool = False
-    # Deck Builder "complete deck" mode. When True, the per-episode reduction
-    # filters (frequency rank, word lists, sentence dedup, cross-episode,
-    # i+1, sentence length) are skipped so the build matches the corpus
-    # preview exactly. Known-words subtraction is unaffected (see
-    # include_known_words). Default False preserves normal mining.
+    # When True, the per-episode reduction filters (frequency rank, word
+    # lists, sentence dedup, cross-episode, i+1, sentence length) are
+    # skipped. Known-words subtraction is unaffected (see
+    # include_known_words). Set by the Android golden-contract fixtures and
+    # the e2e harness (same call sites as include_known_words). Default
+    # False preserves normal mining.
     bypass_optional_filters: bool = False
     # When True, notes are posted to AnkiConnect with
     # options={"allowDuplicate": True, "duplicateScope": "deck"} so words
-    # already present elsewhere in the collection are still carded. Used by
-    # the Deck Builder. Default False preserves the standard dedup behaviour.
+    # already present elsewhere in the collection are still carded. Set by
+    # the Android golden-contract fixtures and the e2e harness (same call
+    # sites as include_known_words). Default False preserves the standard
+    # dedup behaviour.
     allow_duplicate_cards: bool = False
 
     # Script-type filters (Issue #57). When set, words whose card form
@@ -537,7 +538,7 @@ class AnkiMinerConfig:
     # language's profile (SentenceRules), which is why this is deliberately NOT
     # in LANGUAGE_SCOPED_FIELDS: the preference is the same decision in every
     # language, only the punctuation differs. Every subtitle-timed run inherits
-    # it (video, YouTube, batch, audiobook, Deck Builder — they all go through
+    # it (video, YouTube, batch, audiobook — they all go through
     # process_episode); the reading sources have no cue timeline and ignore it.
     # The sentence-length filter above is unaffected and still measures the raw
     # cue in phase 2, so a merged card can be longer than the cap its fragment
@@ -860,19 +861,9 @@ class AnkiMinerConfig:
         if isinstance(self.backfill_field_groups, list):
             object.__setattr__(self, "backfill_field_groups", tuple(self.backfill_field_groups))
 
-        # Clamp the Deck Builder inputs to their spinbox ranges. A config value
-        # outside them would otherwise be silently re-clamped by the widget at
-        # seed time, so the saved value and the shown value would disagree.
-        object.__setattr__(self, "deck_builder_top_n", max(1, min(100_000, int(self.deck_builder_top_n))))
-        object.__setattr__(
-            self, "deck_builder_coverage_pct", max(1.0, min(100.0, float(self.deck_builder_coverage_pct)))
-        )
-
         # Reset an unrecognised enumerated value rather than carrying it into a
         # combo lookup, which would silently leave the widget on whatever index
         # it happened to hold (mirrors the asr_model / asr_device resets).
-        if self.deck_builder_mode not in {"all", "top_n", "coverage_pct"}:
-            object.__setattr__(self, "deck_builder_mode", "all")
         if self.youtube_subtitle_source not in {"auto", "transcribe", "captions"}:
             object.__setattr__(self, "youtube_subtitle_source", "auto")
 

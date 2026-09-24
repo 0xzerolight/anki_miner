@@ -174,8 +174,7 @@ class CancellableWorker(QThread):
                 the user abandoned the run and does not need a dialog for it.
                 Pass False where the terminal signal drives UI state that would
                 otherwise hang, so a genuine failure still surfaces after a
-                cancel (ImportWorker, DeckBuilderWorker). The log record is
-                written either way.
+                cancel (ImportWorker). The log record is written either way.
         """
         # Per-instance logger so records keep the subclass's own module name
         # rather than collapsing onto base_worker.

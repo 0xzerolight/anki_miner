@@ -104,8 +104,8 @@ class FileSelector(QWidget):
                 selector serves (e.g. ``"reading.manga.inputs"``). When set,
                 Browse reopens in the folder last ACCEPTED under that key and
                 records each new acceptance there (D7). Selectors without a key
-                behave exactly as before, which is how Settings, profiles and
-                Deck Builder stay out of the history.
+                behave exactly as before, which is how Settings and profiles
+                stay out of the history.
             drop_validator: Decides whether a dragged path may land here, and
                 supplies the sentence shown when it may not (D50). The kind
                 check -- file versus folder, one local path -- is already done

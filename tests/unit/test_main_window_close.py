@@ -18,7 +18,6 @@ from PyQt6.QtCore import QEvent
 
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
-from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.video_tab import VideoTab
@@ -155,17 +154,6 @@ class _FakeBatchTab(BatchProcessingTab):
 
         QWidget.__init__(self)
         self.worker_thread = _FakeWorker(running=worker_running)
-        self._processor = None  # needed by inherited release_dictionary_resources
-
-
-class _FakeDeckBuilderTab(DeckBuilderTab):
-    """Real DeckBuilderTab subclass that skips the heavy ``__init__``."""
-
-    def __init__(self, *, worker_running: bool = False) -> None:
-        from PyQt6.QtWidgets import QWidget
-
-        QWidget.__init__(self)
-        self.worker_thread: _FakeWorker | None = _FakeWorker(running=worker_running)
         self._processor = None  # needed by inherited release_dictionary_resources
 
 
@@ -316,29 +304,6 @@ class TestCloseEventOtherTabs:
 
         assert tab.worker_thread.cancel_called
         assert tab.worker_thread.wait_called_with == 2000
-
-
-class TestCloseEventDeckBuilderTab:
-    """Deck builder worker (held on ``worker_thread``) must also be torn down."""
-
-    def test_running_deck_builder_worker_cancelled(self, main_window):
-        tab = _FakeDeckBuilderTab(worker_running=True)
-        main_window.tabs.addTab(tab, "Deck Builder")
-
-        _trigger_close(main_window)
-
-        # cancel() also opens the confirm gate, so a worker blocked awaiting
-        # Build unblocks and exits cleanly before the window closes.
-        assert tab.worker_thread.cancel_called
-        assert tab.worker_thread.wait_called_with == 2000
-
-    def test_idle_deck_builder_worker_not_cancelled(self, main_window):
-        tab = _FakeDeckBuilderTab(worker_running=False)
-        main_window.tabs.addTab(tab, "Deck Builder")
-
-        _trigger_close(main_window)
-
-        assert not tab.worker_thread.cancel_called
 
 
 class TestCloseEventSettingsTab:

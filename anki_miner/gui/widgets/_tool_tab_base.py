@@ -287,7 +287,7 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         # The bar counts finished files; the intra-file percentage a tool
         # reports is shown in the message instead of being folded into the bar,
         # where it made a long file look like a stalled run.
-        self.progress_widget.set_composed(idx, 0, self._item_total(), message)
+        self.progress_widget.set_composed(idx, self._item_total(), message)
         self._publish_task_count(current=idx, total=self._item_total(), detail=message)
 
     def _on_file_finished(self, idx: int, out_path: object, error_str: object) -> None:
