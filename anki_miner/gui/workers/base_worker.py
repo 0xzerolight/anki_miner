@@ -224,11 +224,11 @@ class ProcessorOwningWorker(CancellableWorker):
     ) -> None:
         """Enforce the exactly-one-of processor/factory constructor contract.
 
-        Shared by all processor-owning workers (episode, manual, and the three
-        sequential queue workers): either a pre-built processor or a
+        Shared by every processor-owning worker (episode, batch queue, and the
+        three sequential queue workers): either a pre-built processor or a
         ``processor_factory`` is supplied, never both and never neither.
-        ``param_name`` names the processor parameter in the message so
-        :class:`ManualPairWorkerThread` keeps its ``episode_processor`` wording.
+        ``param_name`` lets a caller whose own parameter is not called
+        ``processor`` keep that wording in the raised message.
         """
         if processor is not None and processor_factory is not None:
             raise ValueError(f"Provide either {param_name} or processor_factory, not both")

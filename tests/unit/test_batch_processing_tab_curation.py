@@ -22,48 +22,6 @@ def test_checkbox_default_unchecked(tab):
     assert tab.review_words_checkbox.isChecked() is False
 
 
-def test_pairs_worker_callback_follows_checkbox(tab):
-    pairs = [SimpleNamespace(video="v", subtitle="s", secondary=None)]
-    with (
-        patch("anki_miner.gui.widgets.batch_processing_tab.create_episode_processor"),
-        patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread") as worker_cls,
-    ):
-        tab.review_words_checkbox.setChecked(True)
-        tab._start_processing_with_pairs(pairs)
-        # Bound methods compare by ``==`` (each attribute access makes a fresh wrapper),
-        # matching the existing youtube_tab curation test convention.
-        assert worker_cls.call_args.kwargs["curation_callback"] == tab._curation_bridge
-
-        tab._is_processing = False
-        tab.review_words_checkbox.setChecked(False)
-        tab._start_processing_with_pairs(pairs)
-        assert worker_cls.call_args.kwargs["curation_callback"] is None
-
-
-def test_pairs_worker_built_with_factory_not_prebuilt(tab):
-    """The manual-pairs path defers EpisodeProcessor construction to the worker
-    via a processor_factory; create_episode_processor is NOT called on the GUI
-    thread (that build moved off the GUI thread to stop the freeze)."""
-    pairs = [SimpleNamespace(video="v", subtitle="s", secondary=None)]
-    with (
-        patch("anki_miner.gui.widgets.batch_processing_tab.create_episode_processor") as mock_create,
-        patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread") as worker_cls,
-    ):
-        tab._start_processing_with_pairs(pairs)
-
-        # No GUI-thread build.
-        mock_create.assert_not_called()
-        # Worker got the factory + a None processor (positional arg 0).
-        assert worker_cls.call_args.args[0] is None
-        factory = worker_cls.call_args.kwargs["processor_factory"]
-        assert factory is not None
-
-        # Invoking the factory (as the worker's run() would) builds via the
-        # service factory.
-        factory()
-        mock_create.assert_called_once()
-
-
 def test_queue_worker_callback_follows_checkbox(tab):
     with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread") as worker_cls:
         tab.review_words_checkbox.setChecked(True)

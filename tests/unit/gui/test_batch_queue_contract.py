@@ -183,7 +183,12 @@ def test_locking_freezes_every_queue_verb(panel, tmp_path):
     # And the verbs themselves refuse rather than merely looking disabled.
     panel._remove_selected()
     panel._move_selection(-1)
-    panel._add_series()
+    panel.add_series(
+        display_name="b",
+        video_folder=tmp_path / "b-video",
+        subtitle_folder=tmp_path / "b-subs",
+        subtitle_offset=0.0,
+    )
     assert panel.queue_item_widgets == [widget]
     assert len(panel.queue.get_all_items()) == 1
 

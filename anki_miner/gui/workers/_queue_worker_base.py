@@ -105,11 +105,11 @@ _PAUSE_POLL_S = 0.1
 class CurationEpisode:
     """One episode's media inputs, as published to the curator's season map.
 
-    Both batch workers (``ManualPairWorkerThread``, ``BatchQueueWorkerThread``)
-    park in the curator holding a snapshot of every episode in the run, so
-    cross-episode word focus can rebuild the player's context without touching
-    the worker after it unparks. Frozen, and read off the GUI thread — never a
-    live worker attribute.
+    The batch queue worker (``BatchQueueWorkerThread``) parks in the curator
+    holding a snapshot of every episode in the run, so cross-episode word focus
+    can rebuild the player's context without touching the worker after it
+    unparks. Frozen, and read off the GUI thread — never a live worker
+    attribute.
     """
 
     subtitle: Path

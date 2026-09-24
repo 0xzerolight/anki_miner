@@ -153,7 +153,7 @@ def _surviving_summary(tab) -> str | None:
 #: tells replacement and clearing apart.
 RUN_ENTRY_POINTS = [
     ("batch: process queue", "batch_tab", "_process_queue", lambda t: t.queue_panel, "runnable_items", []),
-    ("batch: process pairs", "batch_tab", "_process_pairs", lambda t: t, "_get_validated_folders", None),
+    ("batch: add series", "batch_tab", "_add_series_from_pickers", lambda t: t, "_get_validated_folders", None),
     ("single: mine", "single_tab", "_start_processing", lambda t: t.video_selector, "path_or_none", None),
     ("condense: condense", "condense_tab", "_on_condense", lambda t: t.log_widget, "clear_log", None),
     ("retime: retime", "retime_tab", "_on_retime", lambda t: t.log_widget, "clear_log", None),

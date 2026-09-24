@@ -121,19 +121,19 @@ def test_batch_cancel_becomes_a_disabled_waiting_state(batch):
 
 
 def test_batch_cancel_freezes_the_bar_against_late_progress(batch):
-    batch._on_batch_started(4)
-    batch._on_pair_finished(1, 4)
+    batch._on_queue_started(4)
+    batch._on_item_completed("a", 1)
     assert batch.overall_progress_widget.progress_bar.value() == 25
 
     batch._on_cancel_clicked()
-    batch._on_pair_finished(3, 4)
+    batch._on_item_completed("b", 1)
 
     assert batch.overall_progress_widget.progress_bar.value() == 25
 
 
 def test_batch_cancelled_run_keeps_the_frozen_bar(batch):
-    batch._on_batch_started(4)
-    batch._on_pair_finished(1, 4)
+    batch._on_queue_started(4)
+    batch._on_item_completed("a", 1)
     batch._on_cancel_clicked()
 
     batch._restore_buttons()
@@ -164,7 +164,7 @@ def test_retrying_two_failures_after_eight_successes_counts_zero_of_two(batch):
         item.status = QueueItemStatus.COMPLETED
     assert batch.batch_queue.completed_count == 8
 
-    batch._begin_run(queue_mode=True)
+    batch._begin_run()
     batch._items_total = 2
 
     batch._on_item_completed("retry-a", 3)
@@ -192,16 +192,16 @@ def test_a_cancelled_batch_reports_its_cards_without_a_dialog(batch, monkeypatch
             name,
             MagicMock(side_effect=AssertionError(f"QMessageBox.{name} after Cancel")),
         )
-    batch._begin_receipt(4, item_noun="episodes")
-    batch._on_batch_started(4)
+    batch._begin_receipt(4, item_noun="series")
+    batch._on_queue_started(4)
     batch._on_cancel_clicked()
 
-    batch._on_processing_finished([MagicMock(cards_created=7, success=True)])
+    batch._on_item_completed("a", 7)
     batch._finish_receipt(cancelled=True)
 
     summary = batch._receipt_widget.summary_label.text()
     assert "Cancelled" in summary
-    assert "1 of 4 episodes" in summary
+    assert "1 of 4 series" in summary
     assert "7 notes added" in summary
     assert "Complete" not in batch.overall_progress_widget.status_label.text()
 
@@ -210,7 +210,7 @@ def test_the_same_item_reported_twice_is_counted_once(batch):
     batch.queue_panel.set_item_status = lambda item_id, status: None
     batch.queue_panel.set_processing_item_complete = lambda item_id, cards: None
 
-    batch._begin_run(queue_mode=True)
+    batch._begin_run()
     batch._items_total = 2
     batch._on_item_completed("a", 1)
     batch._on_item_completed("a", 1)

@@ -1,11 +1,11 @@
 """Tests for BatchProcessingTab.release_dictionary_resources (Issue #30 follow-up).
 
-BatchProcessingTab can host either ``ManualPairWorkerThread`` or
-``BatchQueueWorkerThread``. Both expose their retained processor through
-the typed ``curation_processor`` property (T-60), so the release path no
-longer reaches across worker-specific attribute names; it closes the
-sqlite handles through the ``EpisodeProcessor.release_dictionary_resources``
-facade before Settings → Remove / Re-import on Windows.
+BatchProcessingTab hosts ``BatchQueueWorkerThread``, which exposes its
+retained processor through the typed ``curation_processor`` property (T-60),
+so the release path never reaches across worker-specific attribute names; it
+closes the sqlite handles through the
+``EpisodeProcessor.release_dictionary_resources`` facade before Settings →
+Remove / Re-import on Windows.
 """
 
 from __future__ import annotations
