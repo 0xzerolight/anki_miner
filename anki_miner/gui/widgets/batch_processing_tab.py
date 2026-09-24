@@ -139,8 +139,8 @@ class BatchProcessingTab(MiningTabBase):
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
         # Add Series card: the folder pickers that used to run their own quick
-        # pass now just add a row to the queue below (T16).
-        add_series_section = self._create_quick_processing_section()
+        # pass now just add a row to the queue below.
+        add_series_section = self._create_add_series_section()
         layout.addWidget(add_series_section)
 
         # Multi-Series Queue Panel (extracted component). It binds its rows to
@@ -241,10 +241,12 @@ class BatchProcessingTab(MiningTabBase):
         )
 
         # Ctrl+Shift+A: jump to the Add Series card's video folder picker. The
-        # panel no longer owns a naming dialog to bind this to (T16).
-        scoped_shortcut(self, QKeySequence("Ctrl+Shift+A"), self.video_folder_selector.setFocus)
+        # panel no longer owns a naming dialog to bind this to; FileSelector
+        # itself is NoFocus with no focus proxy, so the shortcut has to reach
+        # past it to the line edit it wraps.
+        scoped_shortcut(self, QKeySequence("Ctrl+Shift+A"), self.video_folder_selector.input.setFocus)
 
-    def _create_quick_processing_section(self) -> QFrame:
+    def _create_add_series_section(self) -> QFrame:
         """Create the "Add Series" card: the pickers that add a row to the queue.
 
         Returns:
@@ -499,6 +501,50 @@ class BatchProcessingTab(MiningTabBase):
             n += 1
         return f"{base} ({n})"
 
+    def _has_runnable_duplicate(self, video_folder: Path, subtitle_folder: Path) -> bool:
+        """Whether a pending or errored row already mines this exact folder pair.
+
+        Checked before folding the Add Series card into the queue, so pressing
+        Process with the same folders still sitting in the card mines that row
+        again instead of adding a second, identical one beside it. A completed
+        row is not a match: re-mining one on purpose already goes through
+        selecting it and running it, not through this card.
+        """
+        return any(
+            item.video_folder == video_folder and item.subtitle_folder == subtitle_folder
+            for item in self.batch_queue.get_all_items()
+            if item.status in (QueueItemStatus.PENDING, QueueItemStatus.ERROR)
+        )
+
+    def _fold_pickers_into_queue(self) -> bool:
+        """Add the Add Series card's folders to the queue before a run.
+
+        Filling either picker is always intent: pressing Process must never
+        quietly mine whatever is already queued while ignoring what is sitting
+        in the card. Both pickers empty is the plain "run what is already
+        queued" case, and this is then a no-op.
+
+        Returns:
+            ``False`` when the run must stop here (a screen issue was already
+            raised, or the fold itself failed); ``True`` to proceed to the run.
+        """
+        if self.video_folder_selector.path_or_none() is None and self.subtitle_folder_selector.path_or_none() is None:
+            return True
+
+        folders = self._get_validated_folders()
+        if folders is None:
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose existing video and subtitle folders.")))
+            return False
+
+        video_folder, subtitle_folder = folders
+        ok, _secondary_folder = self._validated_secondary_folder(subtitle_folder)
+        if not ok:
+            return False
+
+        if self._has_runnable_duplicate(video_folder, subtitle_folder):
+            return True
+        return self._add_series_from_pickers() is not None
+
     def _warn_incomplete_items(self) -> None:
         """Report every series this run skipped, in ONE banner.
 
@@ -661,19 +707,17 @@ class BatchProcessingTab(MiningTabBase):
         # and before the checks below, which re-raise whatever is still wrong.
         self.clear_screen_issue()
 
+        # Filled pickers are folded into the queue before it is read, so a
+        # picker issue is the one thing on screen -- never overwritten by the
+        # empty-queue refusal below.
+        if not self._fold_pickers_into_queue():
+            return
+
         # The rows themselves are the model now: each one bound to a persistent
         # QueueItem when its folders validated. The queue is NOT rebuilt here --
         # doing so would mint new identities and lose the episode receipts that
         # stop a retry re-mining pairs already in Anki (D28, D30).
         self._run_selection = self.queue_panel.runnable_items()
-
-        # Muscle memory (Review Focus 4): filling both pickers and pressing
-        # Process on an empty queue used to mine that folder directly. It still
-        # does -- the folders are added as a series first, then the run
-        # proceeds exactly as if that row had always been there.
-        if not self._run_selection and self._get_validated_folders() is not None:
-            self._add_series_from_pickers()
-            self._run_selection = self.queue_panel.runnable_items()
 
         if not self._run_selection:
             self.show_screen_issue(ScreenIssue(summary=self._empty_run_summary()))

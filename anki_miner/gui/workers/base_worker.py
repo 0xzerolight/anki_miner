@@ -219,21 +219,17 @@ class ProcessorOwningWorker(CancellableWorker):
     def _validate_processor_xor_factory(
         processor: EpisodeProcessor | None,
         processor_factory: Callable[[], EpisodeProcessor] | None,
-        *,
-        param_name: str = "processor",
     ) -> None:
         """Enforce the exactly-one-of processor/factory constructor contract.
 
         Shared by every processor-owning worker (episode, batch queue, and the
         three sequential queue workers): either a pre-built processor or a
         ``processor_factory`` is supplied, never both and never neither.
-        ``param_name`` lets a caller whose own parameter is not called
-        ``processor`` keep that wording in the raised message.
         """
         if processor is not None and processor_factory is not None:
-            raise ValueError(f"Provide either {param_name} or processor_factory, not both")
+            raise ValueError("Provide either processor or processor_factory, not both")
         if processor is None and processor_factory is None:
-            raise ValueError(f"Either {param_name} or processor_factory must be provided")
+            raise ValueError("Either processor or processor_factory must be provided")
 
     @property
     def curation_processor(self) -> EpisodeProcessor | None:

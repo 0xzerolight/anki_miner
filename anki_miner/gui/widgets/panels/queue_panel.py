@@ -810,8 +810,9 @@ class QueuePanel(QFrame):
         building a ``QueueItemWidget`` its own way.
 
         Returns:
-            The bound ``QueueItem``, or ``None`` when nothing was added (the
-            queue is locked for a run, or the folders did not validate).
+            The bound ``QueueItem``, or ``None`` when the queue is locked for
+            a run. ``video_folder``/``subtitle_folder`` are required Paths, so
+            a call that reaches ``register_widget`` always binds.
         """
         if self._locked:
             return None
@@ -847,8 +848,8 @@ class QueuePanel(QFrame):
         different row wearing the same name.
 
         Returns:
-            The bound ``QueueItem``, or ``None`` when the row could not be bound
-            (its folders no longer validate).
+            The bound ``QueueItem``, or ``None`` when the queue is locked (see
+            :meth:`add_series`).
         """
         item = self.add_series(
             display_name=display_name,

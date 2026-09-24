@@ -317,8 +317,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                 from anki_miner.utils.file_pairing import FilePairMatcher
 
                 # The setting is global and the row is not: a folder chosen while
-                # it was on stays on the row, but only mines while it is on --
-                # the same gate the quick path applies before pairing.
+                # it was on stays on the row, but only mines while it is on.
                 pairs = FilePairMatcher.find_pairs_by_episode_number(
                     item.video_folder,
                     item.subtitle_folder,
@@ -326,9 +325,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                 )
 
                 if not pairs:
-                    # Byte-identical to the quick path's banner in
-                    # batch_processing_tab: one pairing miss, one sentence,
-                    # whichever path hit it.
+                    # One pairing miss, one sentence naming it.
                     raise ValueError(
                         QCoreApplication.translate(
                             "BatchQueueWorkerThread",

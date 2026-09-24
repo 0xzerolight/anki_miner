@@ -1076,8 +1076,8 @@ class AnkiService:
             self.last_media_store_failures = media_store_failures
             # Incremental merge: if the cache is already populated, union the
             # mined_forms of cards actually CREATED this run into it so subsequent
-            # episodes (within the same batch run or the same manual-pair session)
-            # get a cheap cache hit instead of a full collection re-scan.
+            # episodes (within the same batch run) get a cheap cache hit instead
+            # of a full collection re-scan.
             # Only created words are merged — NOT every attempted word: a null
             # addNotes slot is usually a duplicate (already in the collection, and
             # thus already in the cache from the initial scan), but it can also be

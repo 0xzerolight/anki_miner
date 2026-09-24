@@ -3348,7 +3348,7 @@ class EpisodeProcessor:
 
         Queue workers front-run this with their own pre-loop check so a batch
         aborts once rather than per item; this covers the direct single-episode
-        callers (episode / manual-pair).
+        caller (the Single Episode tab), which has no such pre-loop gate.
 
         A family whose registry was not injected is skipped — for frequency,
         pitch and audio packs that is the normal state when the user has not
