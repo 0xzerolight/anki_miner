@@ -2,7 +2,7 @@
 
 Replaces the old ``QMessageBox.about`` HTML blob with a themed
 :class:`EnhancedDialog`: logo + name + version, a short blurb, the
-keyboard-shortcut list, and a GitHub link.
+keyboard-shortcut list it is handed, and a GitHub link.
 
 Bundled-FFmpeg (GPLv3) attribution lives in ``licenses/ffmpeg/`` in the repo,
 not in this dialog.
@@ -10,13 +10,14 @@ not in this dialog.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, Qt, QUrl
 from PyQt6.QtGui import QDesktopServices, QIcon
 from PyQt6.QtWidgets import QGridLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from anki_miner.gui.resources import get_resource_dir
 from anki_miner.gui.resources.styles import FONT_SIZES, SPACING
-from anki_miner.gui.utils.keyboard_shortcuts import SHORTCUT_HELP
 from anki_miner.gui.widgets.base import EnhancedDialog
 from anki_miner.utils.i18n import tr_format
 
@@ -27,19 +28,24 @@ ABOUT_BLURB = QT_TRANSLATE_NOOP(
     "Mine vocabulary cards from video, audio and books into Anki.",
 )
 
-#: The keyboard table, re-exported from the module that also supplies the
-#: sequences ``MainWindow`` installs. Two independent literals are what let this
-#: card keep advertising F1 for itself long after F1 had become Help.
-ABOUT_SHORTCUTS = SHORTCUT_HELP
-
 
 class AboutDialog(EnhancedDialog):
     """Compact, themed About card built on :class:`EnhancedDialog`."""
 
-    def __init__(self, version: str, parent=None):
-        """Build the dialog for the given version string."""
+    def __init__(self, version: str, shortcuts: Sequence[tuple[str, str]], parent=None):
+        """Build the dialog for ``version``.
+
+        Args:
+            version: The version string shown under the name.
+            shortcuts: The keyboard table as (key, translated description) rows,
+                from ``key_bindings.about_rows`` over the live bindings -- never
+                a copy of them, which is how About once kept advertising F1 for
+                itself after F1 had become Help.
+            parent: The owning window.
+        """
         super().__init__(parent, title=self.tr("About Anki Miner"))
         self.setMinimumWidth(440)
+        self._shortcuts = tuple(shortcuts)
         self._build(version)
 
     def _build(self, version: str) -> None:
@@ -99,14 +105,14 @@ class AboutDialog(EnhancedDialog):
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setHorizontalSpacing(SPACING.md)
         grid.setVerticalSpacing(SPACING.xxs)
-        for r, (key, desc) in enumerate(ABOUT_SHORTCUTS):
+        for r, (key, desc) in enumerate(self._shortcuts):
             key_label = QLabel(key)
             key_font = key_label.font()
             key_font.setBold(True)
             key_font.setPixelSize(FONT_SIZES.body_sm)
             key_label.setFont(key_font)
             grid.addWidget(key_label, r, 0, Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-            grid.addWidget(QLabel(self.tr(desc)), r, 1)
+            grid.addWidget(QLabel(desc), r, 1)
         grid.setColumnStretch(1, 1)
         layout.addLayout(grid)
 

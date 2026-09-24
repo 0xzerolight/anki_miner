@@ -2630,6 +2630,14 @@ No index files are deleted.</source>
         <translation>在 Anki Miner 内置的文件选择器和操作系统原生文件选择器之间切换。</translation>
     </message>
     <message>
+        <source>Choose the tools on the Utilities tab</source>
+        <translation>选择“工具”标签页中的工具</translation>
+    </message>
+    <message>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>在设置 -&gt; 外观和语言中，隐藏“工具”标签页中你不用的工具，或将其恢复。隐藏的工具仍保留在本指南中；其“打开”按钮会跳转到该复选框。</translation>
+    </message>
+    <message>
         <source>Search the settings</source>
         <translation>搜索设置项</translation>
     </message>
@@ -2754,8 +2762,24 @@ No index files are deleted.</source>
         <translation>键盘快捷键</translation>
     </message>
     <message>
-        <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
-        <translation>Ctrl+1..7 切换标签页，Ctrl+, 打开设置，Ctrl+Enter 运行当前屏幕的主要操作，F1 打开本指南 -- 完整列表见帮助 -&gt; 关于。</translation>
+        <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
+        <translation>查看并更改每一个键盘快捷键：包括单词整理器的按键，以及用于设置、本指南和各个标签页的应用全局按键。</translation>
+    </message>
+    <message>
+        <source>Anki Miner Usage Guide</source>
+        <translation>Anki Miner 使用指南</translation>
+    </message>
+    <message>
+        <source>Search features, e.g. "i+1", "pitch", "youtube"</source>
+        <translation>搜索功能，例如 "i+1"、"pitch"、"youtube"</translation>
+    </message>
+    <message>
+        <source>No matching features.</source>
+        <translation>没有匹配的功能。</translation>
+    </message>
+    <message>
+        <source>Open ▸</source>
+        <translation>打开 ▸</translation>
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -4480,6 +4504,10 @@ No files on disk are deleted.</source>
         <translation>仅音频 (M4A)</translation>
     </message>
     <message>
+        <source>Subtitles only</source>
+        <translation>仅字幕</translation>
+    </message>
+    <message>
         <source>Custom format:</source>
         <translation>自定义格式：</translation>
     </message>
@@ -5580,6 +5608,154 @@ No files on disk are deleted.</source>
         <translation>从已知单词检测中排除的牌组：</translation>
     </message>
 </context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source>Choose frequency source</source>
+        <translation>选择词频来源</translation>
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation>选择要重新导入的词频来源</translation>
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>词频来源 (%1);;所有文件 (*)</translation>
+    </message>
+    <message>
+        <source>Installed frequency sources could not be checked.</source>
+        <translation>无法检查已安装的词频来源。</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>另一个任务正在使用已建立索引的资源——请等它完成后再试。</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>导入已完成，但无法更新设置。</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>另一个导入任务尚未完成，请等待其完成后重试。</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>导入在完成前中止。请重试。</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
+    </message>
+    <message>
+        <source>Importing frequency source…</source>
+        <translation>正在导入词频来源…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be imported.</source>
+        <translation>无法导入词频来源。</translation>
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation>已添加词频来源</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>已从“%2”导入 %1 个条目。</translation>
+    </message>
+    <message>
+        <source>Choose frequency sources</source>
+        <translation>选择词频来源</translation>
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation>已添加词频来源</translation>
+    </message>
+    <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation>已导入 %1 个词频来源：</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>未导入任何内容。</translation>
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation>正在重新导入词频来源…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be re-imported.</source>
+        <translation>无法重新导入词频来源。</translation>
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation>词频来源已重新导入</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>已重新导入 %1。</translation>
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation>词频来源 %1 / %2：%3</translation>
+    </message>
+    <message>
+        <source>The frequency sources could not be re-imported.</source>
+        <translation>无法重新导入词频来源。</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>重新导入全部</translation>
+    </message>
+    <message>
+        <source>Reimported %1 frequency source(s):</source>
+        <translation>已重新导入 %1 个词频来源：</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>已跳过（没有可用于重建的已保存副本；请使用各行的“重新导入…”）：</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>失败：</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining frequency sources.</source>
+        <translation>在处理剩余词频来源前已取消。</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>未重新导入任何内容。</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>无需重新导入</translation>
+    </message>
+    <message>
+        <source>No frequency sources in the chain.</source>
+        <translation>链中没有词频来源。</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>已跳过（没有可用于重建的已保存副本；请使用各行的“重新导入…”）：
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> （已跳过 %1 个格式错误的条目）</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> 这是基于出现次数的来源；其计数已转换为排名。</translation>
+    </message>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation> 这是基于单词的来源；其级别标签显示在卡片上，但不影响词频排名过滤。</translation>
+    </message>
+</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
         <source>Frequency</source>
@@ -5802,6 +5978,126 @@ No index files are deleted.</source>
     <message>
         <source>Dismiss</source>
         <translation>关闭</translation>
+    </message>
+</context><context>
+    <name>KeyBindings</name>
+    <message>
+        <source>Include or exclude the highlighted words</source>
+        <translation>包含或排除高亮单词</translation>
+    </message>
+    <message>
+        <source>Mark known</source>
+        <translation>标记为已知</translation>
+    </message>
+    <message>
+        <source>Play or pause</source>
+        <translation>播放或暂停</translation>
+    </message>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation>编辑单词和句子</translation>
+    </message>
+    <message>
+        <source>Include visible</source>
+        <translation>包含可见项</translation>
+    </message>
+    <message>
+        <source>Exclude visible</source>
+        <translation>排除可见项</translation>
+    </message>
+    <message>
+        <source>Next word</source>
+        <translation>下一个单词</translation>
+    </message>
+    <message>
+        <source>Previous word</source>
+        <translation>上一个单词</translation>
+    </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>打开设置</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation>使用指南</translation>
+    </message>
+    <message>
+        <source>Go to Video</source>
+        <translation>切换到视频</translation>
+    </message>
+    <message>
+        <source>Go to Deck Builder</source>
+        <translation>切换到牌组构建器</translation>
+    </message>
+    <message>
+        <source>Go to Audiobooks</source>
+        <translation>切换到有声书</translation>
+    </message>
+    <message>
+        <source>Go to Reading</source>
+        <translation>切换到阅读</translation>
+    </message>
+    <message>
+        <source>Go to Analytics</source>
+        <translation>切换到分析</translation>
+    </message>
+    <message>
+        <source>Go to Utilities</source>
+        <translation>切换到工具</translation>
+    </message>
+    <message>
+        <source>Go to Settings</source>
+        <translation>切换到设置</translation>
+    </message>
+</context><context>
+    <name>KeyboardSettingsPanel</name>
+    <message>
+        <source>Keyboard</source>
+        <translation>快捷键</translation>
+    </message>
+    <message>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>点击按键框，然后按下新的按键。更改会立即生效。已经打开的单词整理器窗口会保留原有的按键，直到下次打开时才更新。上下键始终用于在单词间移动，左右键用于在列间移动，%1 始终用于确认。</translation>
+    </message>
+    <message>
+        <source>Word Curator</source>
+        <translation>单词整理器</translation>
+    </message>
+    <message>
+        <source>Application</source>
+        <translation>应用程序</translation>
+    </message>
+    <message>
+        <source>Restore defaults</source>
+        <translation>全部恢复默认</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>清空</translation>
+    </message>
+    <message>
+        <source>Leave this action without a key</source>
+        <translation>使此操作不绑定按键</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>重置</translation>
+    </message>
+    <message>
+        <source>Go back to this action's default key</source>
+        <translation>恢复此操作的默认按键</translation>
+    </message>
+    <message>
+        <source>%1 is already used for “%2”.</source>
+        <translation>%1 已用于“%2”。</translation>
+    </message>
+    <message>
+        <source>%1 would fire from anywhere in the window. Add Ctrl, Alt or Meta, or use an F key.</source>
+        <translation>%1 会在窗口内的任意位置触发。请添加 Ctrl、Alt 或 Meta，或使用功能键。</translation>
+    </message>
+    <message>
+        <source>%1 already does something else here, so it cannot be used.</source>
+        <translation>%1 在此处已用于其他操作，因此无法使用。</translation>
     </message>
 </context><context>
     <name>KnownWordsManagerDialog</name>
@@ -6206,6 +6502,38 @@ Words to add: %3. Continue?</source>
         <translation>设置</translation>
     </message>
     <message>
+        <source>Generate</source>
+        <translation>生成</translation>
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation>重新计时</translation>
+    </message>
+    <message>
+        <source>Condense</source>
+        <translation>压缩</translation>
+    </message>
+    <message>
+        <source>Card Backfill</source>
+        <translation>卡片字段补全</translation>
+    </message>
+    <message>
+        <source>Deck Filter</source>
+        <translation>牌组过滤</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>下载</translation>
+    </message>
+    <message>
+        <source>Manga OCR</source>
+        <translation>漫画 OCR</translation>
+    </message>
+    <message>
+        <source>Audiobook Sync</source>
+        <translation>有声书同步</translation>
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner 已更新</translation>
     </message>
@@ -6508,38 +6836,6 @@ Continue?</source>
     <message>
         <source>Text</source>
         <translation>文本</translation>
-    </message>
-    <message>
-        <source>Generate</source>
-        <translation>生成</translation>
-    </message>
-    <message>
-        <source>Retime</source>
-        <translation>重新计时</translation>
-    </message>
-    <message>
-        <source>Condense</source>
-        <translation>压缩</translation>
-    </message>
-    <message>
-        <source>Card Backfill</source>
-        <translation>卡片字段补全</translation>
-    </message>
-    <message>
-        <source>Deck Filter</source>
-        <translation>牌组过滤</translation>
-    </message>
-    <message>
-        <source>Download</source>
-        <translation>下载</translation>
-    </message>
-    <message>
-        <source>Manga OCR</source>
-        <translation>漫画 OCR</translation>
-    </message>
-    <message>
-        <source>Audiobook Sync</source>
-        <translation>有声书同步</translation>
     </message>
     <message>
         <source>Single</source>
@@ -7078,6 +7374,146 @@ Continue?</source>
         <translation>静音移除库已安装。</translation>
     </message>
 </context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent source</source>
+        <translation>选择音调来源</translation>
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation>选择要重新导入的音调来源</translation>
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation>音调来源 (%1);;所有文件 (*)</translation>
+    </message>
+    <message>
+        <source>Installed pitch accent sources could not be checked.</source>
+        <translation>无法检查已安装的音调来源。</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>另一个任务正在使用已建立索引的资源——请等它完成后再试。</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>导入已完成，但无法更新设置。</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>另一个导入任务尚未完成，请等待其完成后重试。</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>导入在完成前中止。请重试。</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>正在取消…</translation>
+    </message>
+    <message>
+        <source>Importing pitch source…</source>
+        <translation>正在导入音调来源…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation>无法导入音调来源。</translation>
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation>已添加音调来源</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>已从“%2”导入 %1 个条目。</translation>
+    </message>
+    <message>
+        <source>Choose pitch accent sources</source>
+        <translation>选择音调来源</translation>
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation>已添加音调来源</translation>
+    </message>
+    <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation>已导入 %1 个音调来源：</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>未导入任何内容。</translation>
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation>正在重新导入音调来源…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be re-imported.</source>
+        <translation>无法重新导入音调来源。</translation>
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation>音调来源已重新导入</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>已重新导入 %1。</translation>
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation>音调来源 %1 / %2：%3</translation>
+    </message>
+    <message>
+        <source>The pitch sources could not be re-imported.</source>
+        <translation>无法重新导入音调来源。</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>重新导入全部</translation>
+    </message>
+    <message>
+        <source>Reimported %1 pitch source(s):</source>
+        <translation>已重新导入 %1 个音调来源：</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>已跳过（没有可用于重建的已保存副本；请使用各行的“重新导入…”）：</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>失败：</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining pitch sources.</source>
+        <translation>在处理剩余音调来源前已取消。</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>未重新导入任何内容。</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>无需重新导入</translation>
+    </message>
+    <message>
+        <source>No pitch sources in the chain.</source>
+        <translation>链中没有音调来源。</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>已跳过（没有可用于重建的已保存副本；请使用各行的“重新导入…”）：
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> （已跳过 %1 个格式错误的条目）</translation>
+    </message>
+</context><context>
     <name>PitchSettingsPanel</name>
     <message>
         <source>Pitch Accent</source>
@@ -7494,6 +7930,28 @@ No index files are deleted.</source>
     <message>
         <source>The profile could not be deleted.</source>
         <translation>无法删除配置文件。</translation>
+    </message>
+</context><context>
+    <name>ProgressTelemetry</name>
+    <message>
+        <source>%1 downloaded</source>
+        <translation>已下载 %1</translation>
+    </message>
+    <message>
+        <source>Elapsed %1</source>
+        <translation>已用时 %1</translation>
+    </message>
+    <message>
+        <source>Resumed</source>
+        <translation>已续传</translation>
+    </message>
+    <message>
+        <source>About %1 remaining</source>
+        <translation>剩余约 %1</translation>
+    </message>
+    <message>
+        <source>No update for %1 s</source>
+        <translation>%1 秒内无更新</translation>
     </message>
 </context><context>
     <name>ProgressWidget</name>
@@ -8842,6 +9300,80 @@ No index files are deleted.</source>
         <translation>无法解析此句子。</translation>
     </message>
 </context><context>
+    <name>ServiceFactory</name>
+    <message>
+        <source>Couldn't scan dictionaries folder: %1</source>
+        <translation>无法扫描词典文件夹：%1</translation>
+    </message>
+    <message>
+        <source>Couldn't load dictionary chain: %1</source>
+        <translation>无法加载词典链：%1</translation>
+    </message>
+    <message>
+        <source>Dictionary chain loaded: %1</source>
+        <translation>词典链已加载：%1</translation>
+    </message>
+    <message>
+        <source>Skipping unavailable provider(s): %1</source>
+        <translation>已跳过不可用的词典提供方：%1</translation>
+    </message>
+    <message>
+        <source>No offline dictionary — definitions will come from Jisho.org only</source>
+        <translation>没有离线词典——释义将仅来自 Jisho.org</translation>
+    </message>
+    <message>
+        <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
+        <translation>在“设置 → 词典”中添加词典之前，卡片将没有释义。</translation>
+    </message>
+    <message>
+        <source>Pitch accent source '%1' unavailable; skipped</source>
+        <translation>音调来源“%1”不可用；已跳过</translation>
+    </message>
+    <message>
+        <source>Pitch accent data loaded: %1 source(s), %2 entries</source>
+        <translation>音调数据已加载：%1 个来源，%2 个条目</translation>
+    </message>
+    <message>
+        <source>Couldn't load pitch accent data: %1</source>
+        <translation>无法加载音调数据：%1</translation>
+    </message>
+    <message>
+        <source>Frequency data loaded: %1 source(s), %2 entries</source>
+        <translation>词频数据已加载：%1 个来源，%2 个条目</translation>
+    </message>
+    <message>
+        <source>Couldn't load frequency data: %1</source>
+        <translation>无法加载词频数据：%1</translation>
+    </message>
+    <message>
+        <source>Skipping %1 audio entry with no URL</source>
+        <translation>已跳过没有 URL 的 %1 音频条目</translation>
+    </message>
+    <message>
+        <source>Skipping audio pack entry with no pack ID</source>
+        <translation>已跳过没有包 ID 的音频包条目</translation>
+    </message>
+    <message>
+        <source>Audio pack '%1' unavailable; skipped</source>
+        <translation>音频包“%1”不可用；已跳过</translation>
+    </message>
+    <message>
+        <source>Name wordsets loaded: %1 set(s) enabled</source>
+        <translation>人名词集已加载：%1 个已启用</translation>
+    </message>
+    <message>
+        <source>Couldn't load name wordsets: %1</source>
+        <translation>无法加载人名词集：%1</translation>
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation>无法初始化已知单词数据库：%1</translation>
+    </message>
+    <message>
+        <source>Couldn't load word lists: %1</source>
+        <translation>无法加载单词列表：%1</translation>
+    </message>
+</context><context>
     <name>SettingsSearchBox</name>
     <message>
         <source>Search settings</source>
@@ -8956,6 +9488,10 @@ No index files are deleted.</source>
     <message>
         <source>Appearance &amp; Language</source>
         <translation>外观和语言</translation>
+    </message>
+    <message>
+        <source>Keyboard</source>
+        <translation>快捷键</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -10504,6 +11040,14 @@ Your installed resources and your theme are kept.</source>
         <translation>使用操作系统的原生文件选择器。关闭此选项可改用应用内置选择器，它遵循应用主题，且在所有平台上外观一致。</translation>
     </message>
     <message>
+        <source>Utilities tab</source>
+        <translation>工具标签页</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>选择“工具”标签页显示哪些工具。至少保留一个。</translation>
+    </message>
+    <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
         <translation>点击主题预览即可实时应用；&lt;b&gt;还原&lt;/b&gt;可撤销更改。为主题加星标可将其加入右上角选择器。</translation>
     </message>
@@ -10730,12 +11274,36 @@ Sort by it to work through a long recording in order — then highlight the rows
 按此列排序，可按顺序处理长录音——然后选中你停下之前的所有行并将其包含。</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S 包含/排除 · 空格播放/暂停 · K 标记为已知 · Ctrl+A 包含可见项 · Ctrl+D 排除可见项 · Ctrl+Enter 确认</translation>
+        <source>%1 include/exclude</source>
+        <translation>%1 包含/排除</translation>
     </message>
     <message>
-        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S 包含/排除 · K 标记为已知 · Ctrl+A 包含可见项 · Ctrl+D 排除可见项 · Ctrl+Enter 确认</translation>
+        <source>%1 play/pause</source>
+        <translation>%1 播放/暂停</translation>
+    </message>
+    <message>
+        <source>%1 mark known</source>
+        <translation>%1 标记为已知</translation>
+    </message>
+    <message>
+        <source>%1 include visible</source>
+        <translation>%1 包含可见项</translation>
+    </message>
+    <message>
+        <source>%1 exclude visible</source>
+        <translation>%1 排除可见项</translation>
+    </message>
+    <message>
+        <source>%1 next word</source>
+        <translation>%1 下一个单词</translation>
+    </message>
+    <message>
+        <source>%1 previous word</source>
+        <translation>%1 上一个单词</translation>
+    </message>
+    <message>
+        <source>%1 confirm</source>
+        <translation>%1 确认</translation>
     </message>
     <message>
         <source>Reset columns</source>

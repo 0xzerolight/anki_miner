@@ -458,6 +458,10 @@ class GUIConfigManager:
         if backfill_anki_fields:
             config_dict = cls._backfill_anki_fields(config_dict)
 
+        # One unreadable shortcut override costs that override, not the map:
+        # _decode_field_types rejects a Mapping wholesale on one bad value.
+        config_dict = cls._drop_non_string_key_bindings(config_dict)
+
         # Migrate legacy dictionary fields → dictionary_chain
         config_dict = cls._migrate_dictionary_chain(config_dict)
 
@@ -1058,6 +1062,23 @@ class GUIConfigManager:
 
         for key, default_value in defaults.items():
             saved.setdefault(key, default_value)
+        return data
+
+    @staticmethod
+    def _drop_non_string_key_bindings(data: dict[str, Any]) -> dict[str, Any]:
+        """Keep only the text entries of a hand-edited ``key_bindings`` map.
+
+        A value that is not a map at all is left for ``_decode_field_types``,
+        which replaces it with the default (no overrides) and logs it, like any
+        wrong-typed field.
+        """
+        saved = data.get("key_bindings")
+        if not isinstance(saved, dict):
+            return data
+        kept = {key: value for key, value in saved.items() if isinstance(key, str) and isinstance(value, str)}
+        if len(kept) != len(saved):
+            logger.warning("Ignored %d key binding(s) that were not text", len(saved) - len(kept))
+        data["key_bindings"] = kept
         return data
 
     @staticmethod

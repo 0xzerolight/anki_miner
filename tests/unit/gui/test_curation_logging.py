@@ -18,6 +18,7 @@ from unittest.mock import Mock, patch
 import pytest
 from PyQt6.QtWidgets import QDialog
 
+from anki_miner.config import create_default_config
 from anki_miner.exceptions import AnkiMinerException
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 
@@ -26,7 +27,7 @@ MODULE = "anki_miner.gui.widgets._mining_tab_base"
 
 class _Bare(MiningTabBase):
     TASK_ID = "screen.test"
-    config = None
+    config = create_default_config()
 
     def _commit_known_words(self, forms):
         return 0

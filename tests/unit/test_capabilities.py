@@ -55,7 +55,7 @@ def test_dialog_only_entries_live_in_tools_category() -> None:
     # A target-less row shows no Open button, so its description must say where
     # the feature lives; the Tools & maintenance block groups them.
     target_less = [c for c in CAPABILITIES if c.target is None]
-    assert len(target_less) >= 9
+    assert len(target_less) >= 8
     assert {c.category for c in target_less} == {"Tools & maintenance"}
 
 
@@ -428,3 +428,15 @@ def test_the_visibility_setting_has_a_guide_entry() -> None:
 
     assert entry.target == CapabilityTarget("settings", "ui")
     assert "tools" in " ".join(entry.keywords)
+
+
+def test_keyboard_shortcuts_opens_the_keyboard_page() -> None:
+    entry = next(c for c in CAPABILITIES if c.id == "keyboard-shortcuts")
+    assert entry.target == CapabilityTarget("settings", "keyboard")
+
+
+def test_keyboard_shortcuts_prints_no_key() -> None:
+    """Keys are rebindable; the entry opens the page that shows the live ones instead."""
+    entry = next(c for c in CAPABILITIES if c.id == "keyboard-shortcuts")
+    for printed in ("Ctrl+", "F1", "F2"):
+        assert printed not in entry.description

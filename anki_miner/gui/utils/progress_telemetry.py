@@ -49,11 +49,6 @@ STALL_AFTER_S = 2.0
 SUSPEND_GAP_S = 30.0
 
 
-def _tr(text: str) -> str:
-    """Translate a telemetry fragment (this module owns no QObject)."""
-    return QCoreApplication.translate("ProgressTelemetry", text)
-
-
 @dataclass(frozen=True)
 class ActiveDuration:
     """How long a run actually worked, and how much of the span it slept through."""
@@ -260,20 +255,29 @@ def format_transfer(locale: QLocale, stats: TransferStats) -> str:
     if stats.total:
         parts = [f"{amount} / {format_data_size(locale, stats.total)}"]
     else:
-        parts = [tr_format(_tr("%1 downloaded"), amount)]
+        parts = [tr_format(QCoreApplication.translate("ProgressTelemetry", "%1 downloaded"), amount)]
 
     if stats.rate_bytes_per_s:
         parts.append(f"{format_data_size(locale, int(stats.rate_bytes_per_s))}/s")
 
-    elapsed = tr_format(_tr("Elapsed %1"), format_clock(stats.active_elapsed_s))
+    elapsed = tr_format(
+        QCoreApplication.translate("ProgressTelemetry", "Elapsed %1"), format_clock(stats.active_elapsed_s)
+    )
     if stats.resumed:
-        elapsed = f"{elapsed} · {_tr('Resumed')}"
+        resumed = QCoreApplication.translate("ProgressTelemetry", "Resumed")
+        elapsed = f"{elapsed} · {resumed}"
     parts.append(elapsed)
 
     if stats.eta_s is not None:
-        parts.append(tr_format(_tr("About %1 remaining"), format_clock(stats.eta_s)))
+        parts.append(
+            tr_format(QCoreApplication.translate("ProgressTelemetry", "About %1 remaining"), format_clock(stats.eta_s))
+        )
 
     if stats.no_update_age_s >= STALL_AFTER_S:
-        parts.append(tr_format(_tr("No update for %1 s"), str(int(stats.no_update_age_s))))
+        parts.append(
+            tr_format(
+                QCoreApplication.translate("ProgressTelemetry", "No update for %1 s"), str(int(stats.no_update_age_s))
+            )
+        )
 
     return " · ".join(parts)

@@ -28,13 +28,14 @@ from PyQt6.QtGui import QGuiApplication
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import QApplication, QDialog
 
+from anki_miner.config import create_default_config
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 
 MODULE = "anki_miner.gui.widgets._mining_tab_base"
 
 
 class _Bare(MiningTabBase):
-    config = None
+    config = create_default_config()
 
     def _commit_known_words(self, forms):
         return 0

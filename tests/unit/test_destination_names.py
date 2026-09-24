@@ -135,6 +135,16 @@ def test_stable_keys_did_not_move_with_the_labels():
     )
     assert "audio" in SETTINGS_SUBTABS
     assert "subtitles" in SETTINGS_SUBTABS
+    assert "keyboard" in SETTINGS_SUBTABS
+
+
+def test_the_keyboard_panel_matches_its_navigator_entry(qtbot):
+    """The panel title and the navigator label must be the same words."""
+    from anki_miner.gui.widgets.panels import KeyboardSettingsPanel
+
+    panel = KeyboardSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel._title_label.text() == "Keyboard"
 
 
 def test_condense_destination_reserves_fixed_suffix_bytes(tmp_path):

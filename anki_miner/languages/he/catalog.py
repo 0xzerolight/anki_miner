@@ -17,7 +17,7 @@ the list WITH -- it stays surface-keyed, and ``lemmatised_frequency`` is deliber
 
 Not rows, because every catalogue row starts ticked in the setup wizard and a second dictionary
 should not download by default: **wty-he-en-ipa** (the same build with IPA on the head line) and
-the larger non-English targets ``wty-he-ru`` and ``wty-he-zh``, all under ``latest/dict/he/`` on
+the non-English targets ``wty-he-ru`` and ``wty-he-zh``, all under ``latest/dict/he/`` on
 the same host; and the Leipzig corpora builds
 (``StefanVukovic99/leipzig-to-yomitan``, Newscrawl / Wikipedia / News, CC BY 4.0). There is no
 he-he monolingual: he.wiktionary is not a wty source edition.

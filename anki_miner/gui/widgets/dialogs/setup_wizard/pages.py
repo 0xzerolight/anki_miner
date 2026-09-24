@@ -63,10 +63,9 @@ if TYPE_CHECKING:
 # AnkiConnect is an Anki add-on; this is its add-on code on AnkiWeb.
 ANKICONNECT_ADDON_CODE = "2055492159"
 ANKICONNECT_URL = "https://ankiweb.net/shared/info/2055492159"
-# Recommended Japanese-mining note type guidance (Lapis is the default note type).
-NOTE_TYPE_HELP_URL = "https://github.com/0xzerolight/anki_miner#recommended-note-type"
-
 RESOURCES_HELP_URL = "https://github.com/0xzerolight/anki_miner/blob/main/RESOURCES.md"
+# Note types that map cleanly (the Lapis/Kiku/Senren presets, or any word + sentence field list).
+NOTE_TYPE_HELP_URL = f"{RESOURCES_HELP_URL}#note-types"
 
 
 def resources_help_url(language: str) -> str:

@@ -41,6 +41,7 @@ _KEY_TO_PANEL = {
     "youtube": "youtube_panel",
     "subtitles": "subtitles_panel",
     "ui": "ui_panel",
+    "keyboard": "keyboard_panel",
 }
 
 # The navigator as the user reads it: five headings, each over the destinations
@@ -61,7 +62,7 @@ _GROUPS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
         (("mining_language", "Mining Language"), ("filtering", "Word Filters"), ("sentences", "Sentences")),
     ),
     ("Integrations", (("youtube", "YouTube"), ("subtitles", "Transcription & Alignment"))),
-    ("App", (("ui", "General"),)),
+    ("App", (("ui", "General"), ("keyboard", "Keyboard"))),
 )
 
 

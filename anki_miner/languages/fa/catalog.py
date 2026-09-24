@@ -13,7 +13,9 @@ all, which is why the lookup ladder has a ZWNJ-stripped rung.
 
 Manual imports, not rows (every catalogue row starts ticked in the setup wizard, and a second
 dictionary should not download by default): **wty-fa-en-ipa**, the same build with IPA on the head
-line, and the legacy **kty-fa-en** r2 build, both under ``latest/dict/fa/`` on the same host.
+line, under ``latest/dict/fa/en/`` on the same host, and the legacy **kty-fa-en** r2 build, which is
+not on that host: its last copy is the ``kty-fa-en.zip`` asset of the ``yomidevs/wiktionary-to-yomitan``
+GitHub release ``v2025-04-08-10-54-36-00-00``.
 
 **Frequency — OpenSubtitles 2018** (``hermitdave/FrequencyWords``, ``content/2018/fa/fa_50k.txt``),
 content CC BY-SA 4.0: headerless ``word count`` lines over surface forms, imported in occurrence

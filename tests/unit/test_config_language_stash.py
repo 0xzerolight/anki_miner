@@ -145,5 +145,6 @@ def test_pre_change_config_loads_every_field_unchanged(isolated_config_file):
         "uv_root",
         "merge_incomplete_cues",
         "hidden_utilities",
+        "key_bindings",
     }
     assert loaded.script_variant == "" and loaded.reading_tone_color is False

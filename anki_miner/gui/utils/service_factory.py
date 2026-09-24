@@ -59,11 +59,6 @@ from anki_miner.utils.subtitle_encoding import script_check_kwarg
 logger = logging.getLogger(__name__)
 
 
-def _tr(text: str) -> str:
-    """Translate a user-facing service-load message under the ServiceFactory context."""
-    return QCoreApplication.translate("ServiceFactory", text)
-
-
 @dataclass
 class ServiceLoadResult:
     """Result of loading optional services, including any warnings."""
@@ -134,7 +129,9 @@ def _load_dict_registry(
         msg = f"Could not scan dictionaries folder: {e}"
         logger.warning(msg)
         if load_result is not None:
-            load_result.warnings.append(tr_format(_tr("Couldn't scan dictionaries folder: %1"), e))
+            load_result.warnings.append(
+                tr_format(QCoreApplication.translate("ServiceFactory", "Couldn't scan dictionaries folder: %1"), e)
+            )
     return registry
 
 
@@ -253,16 +250,26 @@ def build_definition_service(
             if load_result is None:
                 raise
             logger.warning("Could not load dictionary chain: %s", e)
-            load_result.warnings.append(tr_format(_tr("Couldn't load dictionary chain: %1"), e))
+            load_result.warnings.append(
+                tr_format(QCoreApplication.translate("ServiceFactory", "Couldn't load dictionary chain: %1"), e)
+            )
         else:
             if load_result is not None:
                 available = [p.name for p in providers if p.is_available()]
                 failed = [p.name for p in providers if not p.is_available()]
                 if available:
-                    load_result.info.append(tr_format(_tr("Dictionary chain loaded: %1"), ", ".join(available)))
+                    load_result.info.append(
+                        tr_format(
+                            QCoreApplication.translate("ServiceFactory", "Dictionary chain loaded: %1"),
+                            ", ".join(available),
+                        )
+                    )
                 if failed:
                     load_result.warnings.append(
-                        tr_format(_tr("Skipping unavailable provider(s): %1"), ", ".join(failed))
+                        tr_format(
+                            QCoreApplication.translate("ServiceFactory", "Skipping unavailable provider(s): %1"),
+                            ", ".join(failed),
+                        )
                     )
                 # Key the empty-definitions outcome on OFFLINE availability:
                 # JishoProvider.is_available() is hard-True and Jisho sits in
@@ -275,7 +282,9 @@ def build_definition_service(
                     jisho_enabled = any(e.kind == "jisho" and e.enabled for e in config.dictionary_chain)
                     if jisho_enabled:
                         load_result.warnings.append(
-                            _tr("No offline dictionary — definitions will come from Jisho.org only")
+                            QCoreApplication.translate(
+                                "ServiceFactory", "No offline dictionary — definitions will come from Jisho.org only"
+                            )
                         )
                     else:
                         load_result.warnings.append(_no_dictionary_warning())
@@ -285,7 +294,9 @@ def build_definition_service(
 
 def _no_dictionary_warning() -> str:
     """The actionable no-definition-source warning (Issue #100)."""
-    return _tr("Cards will have no definitions until you add a dictionary in Settings → Dictionaries.")
+    return QCoreApplication.translate(
+        "ServiceFactory", "Cards will have no definitions until you add a dictionary in Settings → Dictionaries."
+    )
 
 
 def _build_pitch_service(
@@ -321,7 +332,10 @@ def _build_pitch_service(
             available = providers_by_id.get(entry.source_id, [])
             if not available:
                 load_result.warnings.append(
-                    tr_format(_tr("Pitch accent source '%1' unavailable; skipped"), entry.source_id)
+                    tr_format(
+                        QCoreApplication.translate("ServiceFactory", "Pitch accent source '%1' unavailable; skipped"),
+                        entry.source_id,
+                    )
                 )
             else:
                 providers.append(available.pop(0))
@@ -335,7 +349,7 @@ def _build_pitch_service(
         total_entries = sum(meta.entry_count for p in providers if (meta := registry.get(p.source_id)) is not None)
         load_result.info.append(
             tr_format(
-                _tr("Pitch accent data loaded: %1 source(s), %2 entries"),
+                QCoreApplication.translate("ServiceFactory", "Pitch accent data loaded: %1 source(s), %2 entries"),
                 len(providers),
                 f"{total_entries:,}",
             )
@@ -345,7 +359,9 @@ def _build_pitch_service(
         raise  # never an optional-source miss; see the module note
     except Exception as e:
         logger.warning("Could not load pitch accent data: %s", e)
-        load_result.warnings.append(tr_format(_tr("Couldn't load pitch accent data: %1"), e))
+        load_result.warnings.append(
+            tr_format(QCoreApplication.translate("ServiceFactory", "Couldn't load pitch accent data: %1"), e)
+        )
         return None, None
 
 
@@ -379,7 +395,7 @@ def _build_frequency_service(
         total_entries = sum(meta.entry_count for p in providers if (meta := registry.get(p.source_id)) is not None)
         load_result.info.append(
             tr_format(
-                _tr("Frequency data loaded: %1 source(s), %2 entries"),
+                QCoreApplication.translate("ServiceFactory", "Frequency data loaded: %1 source(s), %2 entries"),
                 len(providers),
                 f"{total_entries:,}",
             )
@@ -389,7 +405,9 @@ def _build_frequency_service(
         raise  # never an optional-source miss; see the module note
     except Exception as e:
         logger.warning("Could not load frequency data: %s", e)
-        load_result.warnings.append(tr_format(_tr("Couldn't load frequency data: %1"), e))
+        load_result.warnings.append(
+            tr_format(QCoreApplication.translate("ServiceFactory", "Couldn't load frequency data: %1"), e)
+        )
         return None, None
 
 
@@ -599,7 +617,12 @@ def _build_expression_audio_fetcher(
                 msg = f"Skipping {entry.kind} audio chain entry with no URL"
                 logger.warning(msg)
                 if load_result is not None:
-                    load_result.warnings.append(tr_format(_tr("Skipping %1 audio entry with no URL"), entry.kind))
+                    load_result.warnings.append(
+                        tr_format(
+                            QCoreApplication.translate("ServiceFactory", "Skipping %1 audio entry with no URL"),
+                            entry.kind,
+                        )
+                    )
                 continue
             slug = custom_audio_slug(entry.url)
             fetchers.append(
@@ -621,14 +644,21 @@ def _build_expression_audio_fetcher(
             if entry.pack_id is None:
                 # warning already logged by registry.build_fetcher_chain
                 if load_result is not None:
-                    load_result.warnings.append(_tr("Skipping audio pack entry with no pack ID"))
+                    load_result.warnings.append(
+                        QCoreApplication.translate("ServiceFactory", "Skipping audio pack entry with no pack ID")
+                    )
                 continue
             resolved_pack = pack_fetchers_by_id.get(entry.pack_id)
             if resolved_pack is None:
                 # Registry skipped it (unknown/missing); warning already logged
                 # there — add to load_result for UI surfacing.
                 if load_result is not None:
-                    load_result.warnings.append(tr_format(_tr("Audio pack '%1' unavailable; skipped"), entry.pack_id))
+                    load_result.warnings.append(
+                        tr_format(
+                            QCoreApplication.translate("ServiceFactory", "Audio pack '%1' unavailable; skipped"),
+                            entry.pack_id,
+                        )
+                    )
                 continue
             fetchers.append(resolved_pack)  # duplicate pack_ids pass through (same object queried twice)
 
@@ -826,7 +856,10 @@ def create_services(
             wordset_service.load()
             if wordset_service.is_available():
                 load_result.info.append(
-                    tr_format(_tr("Name wordsets loaded: %1 set(s) enabled"), len(config.excluded_wordsets))
+                    tr_format(
+                        QCoreApplication.translate("ServiceFactory", "Name wordsets loaded: %1 set(s) enabled"),
+                        len(config.excluded_wordsets),
+                    )
                 )
             else:
                 wordset_service = None
@@ -834,7 +867,9 @@ def create_services(
             raise  # never an optional-source miss; see the module note
         except Exception as e:
             logger.warning("Could not load name wordsets: %s", e)
-            load_result.warnings.append(tr_format(_tr("Couldn't load name wordsets: %1"), e))
+            load_result.warnings.append(
+                tr_format(QCoreApplication.translate("ServiceFactory", "Couldn't load name wordsets: %1"), e)
+            )
             wordset_service = None
 
     if subtitle_parser is None:
@@ -951,7 +986,9 @@ def create_services(
         raise  # never an optional-source miss; see the module note
     except Exception as e:
         logger.warning("Could not initialize known word database: %s", e)
-        load_result.warnings.append(tr_format(_tr("Couldn't initialize known word database: %1"), e))
+        load_result.warnings.append(
+            tr_format(QCoreApplication.translate("ServiceFactory", "Couldn't initialize known word database: %1"), e)
+        )
         known_word_db = None
 
     word_list_service = None
@@ -970,7 +1007,9 @@ def create_services(
             raise  # never an optional-source miss; see the module note
         except Exception as e:
             logger.warning("Could not load word lists: %s", e)
-            load_result.warnings.append(tr_format(_tr("Couldn't load word lists: %1"), e))
+            load_result.warnings.append(
+                tr_format(QCoreApplication.translate("ServiceFactory", "Couldn't load word lists: %1"), e)
+            )
             word_list_service = None
 
     return Services(

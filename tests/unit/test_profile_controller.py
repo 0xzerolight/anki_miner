@@ -149,6 +149,9 @@ class _FakeWindow:
         if self.build_services_error is not None:
             raise self.build_services_error
 
+    def _apply_key_bindings(self) -> None:
+        """The real ``update_config`` re-keys the window's shortcuts; this window has none."""
+
 
 # ---------------------------------------------------------------------------
 # Fixtures / helpers

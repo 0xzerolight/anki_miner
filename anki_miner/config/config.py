@@ -690,6 +690,14 @@ class AnkiMinerConfig:
     # not language-scoped, not machine-specific.
     hidden_utilities: tuple[str, ...] = ()
 
+    # Keyboard shortcut overrides (Settings -> Keyboard): action id ->
+    # QKeySequence PortableText, "" = unbound. Overrides only: an action the
+    # user never touched follows its code default (gui/utils/key_bindings.py),
+    # so a changed default reaches existing users with no migration. Unknown ids
+    # and unreadable sequences are ignored when resolved. Global and portable:
+    # not language-scoped, not machine-specific.
+    key_bindings: Mapping[str, str] = field(default_factory=dict)
+
     # Monotonic identity for committed GUI settings. Not user-editable.
     config_version: int = 0
 
@@ -837,6 +845,9 @@ class AnkiMinerConfig:
             object.__setattr__(
                 self, "card_type_marker_fields", types.MappingProxyType(dict(self.card_type_marker_fields))
             )
+        # Same immutability wrap for the shortcut overrides.
+        if not isinstance(self.key_bindings, types.MappingProxyType):
+            object.__setattr__(self, "key_bindings", types.MappingProxyType(dict(self.key_bindings)))
         if not isinstance(self.language_stash, types.MappingProxyType) or any(
             not isinstance(value, types.MappingProxyType) for value in self.language_stash.values()
         ):

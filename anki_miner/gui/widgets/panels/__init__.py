@@ -5,6 +5,7 @@ from .audio_pack_settings_panel import AudioPackSettingsPanel
 from .dictionary_settings_panel import DictionarySettingsPanel
 from .filtering_settings_panel import FilteringSettingsPanel
 from .frequency_settings_panel import FrequencySettingsPanel
+from .keyboard_settings_panel import KeyboardSettingsPanel
 from .media_settings_panel import MediaSettingsPanel
 from .mining_language_settings_panel import MiningLanguageSettingsPanel
 from .pitch_settings_panel import PitchSettingsPanel
@@ -21,6 +22,7 @@ __all__ = [
     "DictionarySettingsPanel",
     "FilteringSettingsPanel",
     "FrequencySettingsPanel",
+    "KeyboardSettingsPanel",
     "MiningLanguageSettingsPanel",
     "PitchSettingsPanel",
     "QueuePanel",

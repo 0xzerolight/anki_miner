@@ -2630,6 +2630,14 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Chuyển đổi giữa trình chọn tệp tích hợp sẵn của Anki Miner và trình chọn gốc của hệ điều hành.</translation>
     </message>
     <message>
+        <source>Choose the tools on the Utilities tab</source>
+        <translation>Chọn công cụ trên tab Tiện ích</translation>
+    </message>
+    <message>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Ẩn các công cụ Tiện ích không dùng đến, hoặc khôi phục lại, trong Cài đặt -&gt; Diện mạo &amp; Ngôn ngữ. Công cụ đã ẩn vẫn còn mục ở đây; nút Mở của mục dẫn đến hộp kiểm đó.</translation>
+    </message>
+    <message>
         <source>Search the settings</source>
         <translation>Tìm kiếm trong cài đặt</translation>
     </message>
@@ -2754,8 +2762,24 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Phím tắt</translation>
     </message>
     <message>
-        <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
-        <translation>Ctrl+1..7 chuyển tab, Ctrl+, mở Cài đặt, Ctrl+Enter chạy hành động chính của màn hình, F1 mở hướng dẫn này -- danh sách đầy đủ trong Trợ giúp -&gt; Giới thiệu.</translation>
+        <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
+        <translation>Xem và thay đổi mọi phím tắt: các phím của Word Curator và các phím toàn ứng dụng cho Cài đặt, hướng dẫn này và từng tab.</translation>
+    </message>
+    <message>
+        <source>Anki Miner Usage Guide</source>
+        <translation>Hướng dẫn sử dụng Anki Miner</translation>
+    </message>
+    <message>
+        <source>Search features, e.g. "i+1", "pitch", "youtube"</source>
+        <translation>Tìm tính năng, ví dụ "i+1", "pitch", "youtube"</translation>
+    </message>
+    <message>
+        <source>No matching features.</source>
+        <translation>Không có tính năng phù hợp.</translation>
+    </message>
+    <message>
+        <source>Open ▸</source>
+        <translation>Mở ▸</translation>
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -4480,6 +4504,10 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
         <translation>Chỉ âm thanh (M4A)</translation>
     </message>
     <message>
+        <source>Subtitles only</source>
+        <translation>Chỉ phụ đề</translation>
+    </message>
+    <message>
         <source>Custom format:</source>
         <translation>Định dạng tùy chỉnh:</translation>
     </message>
@@ -5525,7 +5553,7 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     </message>
     <message>
         <source>Reading</source>
-        <translation>Cách đọc</translation>
+        <translation>Đọc</translation>
     </message>
     <message>
         <source>Off</source>
@@ -5578,6 +5606,154 @@ Không có tệp nào trên ổ đĩa bị xóa.</translation>
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Bộ thẻ loại trừ khỏi việc phát hiện từ đã biết:</translation>
+    </message>
+</context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source>Choose frequency source</source>
+        <translation>Chọn nguồn tần suất</translation>
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation>Chọn nguồn tần suất để nhập lại</translation>
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>Nguồn tần suất (%1);;Tất cả tệp (*)</translation>
+    </message>
+    <message>
+        <source>Installed frequency sources could not be checked.</source>
+        <translation>Không thể kiểm tra các nguồn tần suất đã cài đặt.</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Một tác vụ khác đang dùng tài nguyên đã lập chỉ mục — hãy thử lại khi tác vụ đó hoàn tất.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>Đã hoàn tất nhập, nhưng không thể cập nhật cài đặt.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Một lượt nhập khác vẫn đang hoàn tất. Vui lòng đợi rồi thử lại.</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>Quá trình nhập đã dừng trước khi hoàn tất. Hãy thử lại.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Importing frequency source…</source>
+        <translation>Đang nhập nguồn tần suất…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be imported.</source>
+        <translation>Không thể nhập nguồn tần suất.</translation>
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation>Đã thêm nguồn tần suất</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>Đã nhập %1 mục từ '%2'.</translation>
+    </message>
+    <message>
+        <source>Choose frequency sources</source>
+        <translation>Chọn các nguồn tần suất</translation>
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation>Đã thêm nguồn tần suất</translation>
+    </message>
+    <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation>Đã nhập %1 nguồn tần suất:</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>Không có gì được nhập.</translation>
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation>Đang nhập lại nguồn tần suất…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be re-imported.</source>
+        <translation>Không thể nhập lại nguồn tần suất.</translation>
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation>Đã nhập lại nguồn tần suất</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>Đã nhập lại %1.</translation>
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation>Nguồn tần suất %1 trên %2: %3</translation>
+    </message>
+    <message>
+        <source>The frequency sources could not be re-imported.</source>
+        <translation>Không thể nhập lại các nguồn tần suất.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Nhập lại tất cả</translation>
+    </message>
+    <message>
+        <source>Reimported %1 frequency source(s):</source>
+        <translation>Đã nhập lại %1 nguồn tần suất:</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>Đã bỏ qua (không có bản sao đã lưu để xây dựng lại; hãy dùng Nhập lại… theo từng dòng):</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Thất bại:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining frequency sources.</source>
+        <translation>Đã hủy trước khi xử lý các nguồn tần suất còn lại.</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>Không có gì được nhập lại.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Không có gì để nhập lại</translation>
+    </message>
+    <message>
+        <source>No frequency sources in the chain.</source>
+        <translation>Không có nguồn tần suất nào trong chuỗi.</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>Đã bỏ qua (không có bản sao đã lưu để xây dựng lại; hãy dùng Nhập lại… theo từng dòng):
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (đã bỏ qua %1 mục sai định dạng)</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> Đây là nguồn dựa trên số lần xuất hiện; số liệu đã được quy đổi thành hạng.</translation>
+    </message>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation> Đây là nguồn dựa trên từ; nhãn cấp độ của nguồn được hiển thị trên thẻ nhưng không ảnh hưởng đến việc lọc theo hạng tần suất.</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5802,6 +5978,126 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Dismiss</source>
         <translation>Đóng</translation>
+    </message>
+</context><context>
+    <name>KeyBindings</name>
+    <message>
+        <source>Include or exclude the highlighted words</source>
+        <translation>Bao gồm hoặc loại trừ các từ được tô sáng</translation>
+    </message>
+    <message>
+        <source>Mark known</source>
+        <translation>Đánh dấu đã biết</translation>
+    </message>
+    <message>
+        <source>Play or pause</source>
+        <translation>Phát hoặc tạm dừng</translation>
+    </message>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation>Chỉnh sửa từ và câu</translation>
+    </message>
+    <message>
+        <source>Include visible</source>
+        <translation>Bao gồm phần hiển thị</translation>
+    </message>
+    <message>
+        <source>Exclude visible</source>
+        <translation>Loại trừ phần hiển thị</translation>
+    </message>
+    <message>
+        <source>Next word</source>
+        <translation>Từ tiếp theo</translation>
+    </message>
+    <message>
+        <source>Previous word</source>
+        <translation>Từ trước đó</translation>
+    </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>Mở Cài đặt</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation>Hướng dẫn sử dụng</translation>
+    </message>
+    <message>
+        <source>Go to Video</source>
+        <translation>Chuyển sang Video</translation>
+    </message>
+    <message>
+        <source>Go to Deck Builder</source>
+        <translation>Chuyển sang Trình dựng bộ thẻ</translation>
+    </message>
+    <message>
+        <source>Go to Audiobooks</source>
+        <translation>Chuyển sang Sách nói</translation>
+    </message>
+    <message>
+        <source>Go to Reading</source>
+        <translation>Chuyển sang Đọc</translation>
+    </message>
+    <message>
+        <source>Go to Analytics</source>
+        <translation>Chuyển sang Phân tích</translation>
+    </message>
+    <message>
+        <source>Go to Utilities</source>
+        <translation>Chuyển sang Tiện ích</translation>
+    </message>
+    <message>
+        <source>Go to Settings</source>
+        <translation>Chuyển sang Cài đặt</translation>
+    </message>
+</context><context>
+    <name>KeyboardSettingsPanel</name>
+    <message>
+        <source>Keyboard</source>
+        <translation>Phím tắt</translation>
+    </message>
+    <message>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Nhấp vào một ô rồi nhấn phím mới. Thay đổi áp dụng ngay lập tức. Cửa sổ Word Curator đang mở sẽ giữ nguyên các phím cũ cho đến lần mở kế tiếp. Lên và Xuống luôn di chuyển giữa các từ, Trái và Phải di chuyển giữa các cột, và %1 luôn xác nhận.</translation>
+    </message>
+    <message>
+        <source>Word Curator</source>
+        <translation>Word Curator</translation>
+    </message>
+    <message>
+        <source>Application</source>
+        <translation>Ứng dụng</translation>
+    </message>
+    <message>
+        <source>Restore defaults</source>
+        <translation>Khôi phục mặc định</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Xóa</translation>
+    </message>
+    <message>
+        <source>Leave this action without a key</source>
+        <translation>Gỡ phím khỏi thao tác này</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Đặt lại</translation>
+    </message>
+    <message>
+        <source>Go back to this action's default key</source>
+        <translation>Đặt lại về phím mặc định của thao tác này</translation>
+    </message>
+    <message>
+        <source>%1 is already used for “%2”.</source>
+        <translation>%1 đã được dùng cho “%2”.</translation>
+    </message>
+    <message>
+        <source>%1 would fire from anywhere in the window. Add Ctrl, Alt or Meta, or use an F key.</source>
+        <translation>%1 sẽ kích hoạt từ bất kỳ đâu trong cửa sổ. Hãy thêm Ctrl, Alt hoặc Meta, hoặc dùng phím chức năng.</translation>
+    </message>
+    <message>
+        <source>%1 already does something else here, so it cannot be used.</source>
+        <translation>%1 đã được dùng cho việc khác ở đây nên không thể dùng.</translation>
     </message>
 </context><context>
     <name>KnownWordsManagerDialog</name>
@@ -6191,7 +6487,7 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     </message>
     <message>
         <source>Reading</source>
-        <translation>Cách đọc</translation>
+        <translation>Đọc</translation>
     </message>
     <message>
         <source>Analytics</source>
@@ -6204,6 +6500,38 @@ Số từ sẽ thêm: %3. Tiếp tục?</translation>
     <message>
         <source>Settings</source>
         <translation>Cài đặt</translation>
+    </message>
+    <message>
+        <source>Generate</source>
+        <translation>Tạo</translation>
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation>Định lại thời gian</translation>
+    </message>
+    <message>
+        <source>Condense</source>
+        <translation>Cô đọng</translation>
+    </message>
+    <message>
+        <source>Card Backfill</source>
+        <translation>Điền dữ liệu còn thiếu cho thẻ</translation>
+    </message>
+    <message>
+        <source>Deck Filter</source>
+        <translation>Lọc bộ thẻ</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>Tải về</translation>
+    </message>
+    <message>
+        <source>Manga OCR</source>
+        <translation>Manga OCR</translation>
+    </message>
+    <message>
+        <source>Audiobook Sync</source>
+        <translation>Đồng bộ sách nói</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -6508,38 +6836,6 @@ Tiếp tục?</translation>
     <message>
         <source>Text</source>
         <translation>Văn bản</translation>
-    </message>
-    <message>
-        <source>Generate</source>
-        <translation>Tạo</translation>
-    </message>
-    <message>
-        <source>Retime</source>
-        <translation>Định lại thời gian</translation>
-    </message>
-    <message>
-        <source>Condense</source>
-        <translation>Cô đọng</translation>
-    </message>
-    <message>
-        <source>Card Backfill</source>
-        <translation>Điền dữ liệu còn thiếu cho thẻ</translation>
-    </message>
-    <message>
-        <source>Deck Filter</source>
-        <translation>Lọc bộ thẻ</translation>
-    </message>
-    <message>
-        <source>Download</source>
-        <translation>Tải về</translation>
-    </message>
-    <message>
-        <source>Manga OCR</source>
-        <translation>Manga OCR</translation>
-    </message>
-    <message>
-        <source>Audiobook Sync</source>
-        <translation>Đồng bộ sách nói</translation>
     </message>
     <message>
         <source>Single</source>
@@ -7078,6 +7374,146 @@ Tiếp tục?</translation>
         <translation>Đã cài đặt thư viện loại bỏ khoảng lặng.</translation>
     </message>
 </context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent source</source>
+        <translation>Chọn nguồn trọng âm cao độ</translation>
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation>Chọn nguồn trọng âm cao độ để nhập lại</translation>
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation>Nguồn trọng âm cao độ (%1);;Tất cả tệp (*)</translation>
+    </message>
+    <message>
+        <source>Installed pitch accent sources could not be checked.</source>
+        <translation>Không thể kiểm tra các nguồn trọng âm cao độ đã cài đặt.</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Một tác vụ khác đang dùng tài nguyên đã lập chỉ mục — hãy thử lại khi tác vụ đó hoàn tất.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>Đã hoàn tất nhập, nhưng không thể cập nhật cài đặt.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Một lượt nhập khác vẫn đang hoàn tất. Vui lòng đợi rồi thử lại.</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>Quá trình nhập đã dừng trước khi hoàn tất. Hãy thử lại.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Hủy</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Đang hủy…</translation>
+    </message>
+    <message>
+        <source>Importing pitch source…</source>
+        <translation>Đang nhập nguồn trọng âm cao độ…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation>Không thể nhập nguồn trọng âm cao độ.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation>Đã thêm nguồn trọng âm cao độ</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>Đã nhập %1 mục từ '%2'.</translation>
+    </message>
+    <message>
+        <source>Choose pitch accent sources</source>
+        <translation>Chọn các nguồn trọng âm cao độ</translation>
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation>Đã thêm nguồn trọng âm cao độ</translation>
+    </message>
+    <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation>Đã nhập %1 nguồn trọng âm cao độ:</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>Không có gì được nhập.</translation>
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation>Đang nhập lại nguồn trọng âm cao độ…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be re-imported.</source>
+        <translation>Không thể nhập lại nguồn trọng âm cao độ.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation>Đã nhập lại nguồn trọng âm cao độ</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>Đã nhập lại %1.</translation>
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation>Nguồn trọng âm cao độ %1 trên %2: %3</translation>
+    </message>
+    <message>
+        <source>The pitch sources could not be re-imported.</source>
+        <translation>Không thể nhập lại các nguồn trọng âm cao độ.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Nhập lại tất cả</translation>
+    </message>
+    <message>
+        <source>Reimported %1 pitch source(s):</source>
+        <translation>Đã nhập lại %1 nguồn trọng âm cao độ:</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>Đã bỏ qua (không có bản sao đã lưu để xây dựng lại; hãy dùng Nhập lại… theo từng dòng):</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Thất bại:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining pitch sources.</source>
+        <translation>Đã hủy trước khi xử lý các nguồn trọng âm cao độ còn lại.</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>Không có gì được nhập lại.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Không có gì để nhập lại</translation>
+    </message>
+    <message>
+        <source>No pitch sources in the chain.</source>
+        <translation>Không có nguồn trọng âm cao độ nào trong chuỗi.</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>Đã bỏ qua (không có bản sao đã lưu để xây dựng lại; hãy dùng Nhập lại… theo từng dòng):
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (đã bỏ qua %1 mục sai định dạng)</translation>
+    </message>
+</context><context>
     <name>PitchSettingsPanel</name>
     <message>
         <source>Pitch Accent</source>
@@ -7494,6 +7930,28 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>The profile could not be deleted.</source>
         <translation>Không thể xóa hồ sơ.</translation>
+    </message>
+</context><context>
+    <name>ProgressTelemetry</name>
+    <message>
+        <source>%1 downloaded</source>
+        <translation>Đã tải %1</translation>
+    </message>
+    <message>
+        <source>Elapsed %1</source>
+        <translation>Đã trôi qua %1</translation>
+    </message>
+    <message>
+        <source>Resumed</source>
+        <translation>Đã tiếp tục</translation>
+    </message>
+    <message>
+        <source>About %1 remaining</source>
+        <translation>Còn khoảng %1</translation>
+    </message>
+    <message>
+        <source>No update for %1 s</source>
+        <translation>Không có cập nhật trong %1 giây</translation>
     </message>
 </context><context>
     <name>ProgressWidget</name>
@@ -8842,6 +9300,80 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Không thể phân tích câu này.</translation>
     </message>
 </context><context>
+    <name>ServiceFactory</name>
+    <message>
+        <source>Couldn't scan dictionaries folder: %1</source>
+        <translation>Không thể quét thư mục từ điển: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't load dictionary chain: %1</source>
+        <translation>Không thể tải chuỗi từ điển: %1</translation>
+    </message>
+    <message>
+        <source>Dictionary chain loaded: %1</source>
+        <translation>Đã tải chuỗi từ điển: %1</translation>
+    </message>
+    <message>
+        <source>Skipping unavailable provider(s): %1</source>
+        <translation>Bỏ qua nhà cung cấp không khả dụng: %1</translation>
+    </message>
+    <message>
+        <source>No offline dictionary — definitions will come from Jisho.org only</source>
+        <translation>Không có từ điển ngoại tuyến — định nghĩa sẽ chỉ lấy từ Jisho.org</translation>
+    </message>
+    <message>
+        <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
+        <translation>Thẻ sẽ không có định nghĩa cho đến khi bạn thêm từ điển trong Cài đặt → Từ điển.</translation>
+    </message>
+    <message>
+        <source>Pitch accent source '%1' unavailable; skipped</source>
+        <translation>Nguồn trọng âm cao độ '%1' không khả dụng; đã bỏ qua</translation>
+    </message>
+    <message>
+        <source>Pitch accent data loaded: %1 source(s), %2 entries</source>
+        <translation>Đã tải dữ liệu trọng âm cao độ: %1 nguồn, %2 mục</translation>
+    </message>
+    <message>
+        <source>Couldn't load pitch accent data: %1</source>
+        <translation>Không thể tải dữ liệu trọng âm cao độ: %1</translation>
+    </message>
+    <message>
+        <source>Frequency data loaded: %1 source(s), %2 entries</source>
+        <translation>Đã tải dữ liệu tần suất: %1 nguồn, %2 mục</translation>
+    </message>
+    <message>
+        <source>Couldn't load frequency data: %1</source>
+        <translation>Không thể tải dữ liệu tần suất: %1</translation>
+    </message>
+    <message>
+        <source>Skipping %1 audio entry with no URL</source>
+        <translation>Bỏ qua mục âm thanh %1 không có URL</translation>
+    </message>
+    <message>
+        <source>Skipping audio pack entry with no pack ID</source>
+        <translation>Bỏ qua mục gói âm thanh không có mã gói</translation>
+    </message>
+    <message>
+        <source>Audio pack '%1' unavailable; skipped</source>
+        <translation>Gói âm thanh '%1' không khả dụng; đã bỏ qua</translation>
+    </message>
+    <message>
+        <source>Name wordsets loaded: %1 set(s) enabled</source>
+        <translation>Đã tải tập từ tên riêng: %1 tập đã bật</translation>
+    </message>
+    <message>
+        <source>Couldn't load name wordsets: %1</source>
+        <translation>Không thể tải tập từ tên riêng: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation>Không thể khởi tạo CSDL từ đã biết: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't load word lists: %1</source>
+        <translation>Không thể tải danh sách từ: %1</translation>
+    </message>
+</context><context>
     <name>SettingsSearchBox</name>
     <message>
         <source>Search settings</source>
@@ -8956,6 +9488,10 @@ Không có tệp chỉ mục nào bị xóa.</translation>
     <message>
         <source>Appearance &amp; Language</source>
         <translation>Diện mạo &amp; Ngôn ngữ</translation>
+    </message>
+    <message>
+        <source>Keyboard</source>
+        <translation>Phím tắt</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -10504,6 +11040,14 @@ Tài nguyên đã cài đặt và chủ đề của bạn được giữ nguyên
         <translation>Dùng trình chọn tệp gốc của hệ điều hành. Tắt tùy chọn này để thay bằng trình chọn tích hợp của ứng dụng, theo chủ đề ứng dụng và có cùng diện mạo trên mọi nền tảng.</translation>
     </message>
     <message>
+        <source>Utilities tab</source>
+        <translation>Tab Tiện ích</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Chọn các công cụ mà tab Tiện ích hiển thị. Luôn giữ lại ít nhất một công cụ.</translation>
+    </message>
+    <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
         <translation>Nhấp vào bản xem trước giao diện để áp dụng ngay; &lt;b&gt;Hoàn tác&lt;/b&gt; sẽ hủy áp dụng. Gắn sao cho giao diện để thêm chúng vào bộ chọn ở góc trên bên phải.</translation>
     </message>
@@ -10730,12 +11274,36 @@ Sort by it to work through a long recording in order — then highlight the rows
 Sắp xếp theo cột này để duyệt hết một bản thu dài theo thứ tự — sau đó tô sáng các hàng đến chỗ bạn dừng lại rồi bao gồm chúng.</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S bao gồm/loại trừ · Phím cách phát/tạm dừng · K đánh dấu đã biết · Ctrl+A bao gồm phần hiển thị · Ctrl+D loại trừ phần hiển thị · Ctrl+Enter xác nhận</translation>
+        <source>%1 include/exclude</source>
+        <translation>%1 bao gồm/loại trừ</translation>
     </message>
     <message>
-        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S bao gồm/loại trừ · K đánh dấu đã biết · Ctrl+A bao gồm phần hiển thị · Ctrl+D loại trừ phần hiển thị · Ctrl+Enter xác nhận</translation>
+        <source>%1 play/pause</source>
+        <translation>%1 phát/tạm dừng</translation>
+    </message>
+    <message>
+        <source>%1 mark known</source>
+        <translation>%1 đánh dấu đã biết</translation>
+    </message>
+    <message>
+        <source>%1 include visible</source>
+        <translation>%1 bao gồm phần hiển thị</translation>
+    </message>
+    <message>
+        <source>%1 exclude visible</source>
+        <translation>%1 loại trừ phần hiển thị</translation>
+    </message>
+    <message>
+        <source>%1 next word</source>
+        <translation>%1 từ tiếp theo</translation>
+    </message>
+    <message>
+        <source>%1 previous word</source>
+        <translation>%1 từ trước đó</translation>
+    </message>
+    <message>
+        <source>%1 confirm</source>
+        <translation>%1 xác nhận</translation>
     </message>
     <message>
         <source>Reset columns</source>

@@ -2630,6 +2630,14 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Beralih antara pemilih berkas bawaan Anki Miner dan pemilih bawaan sistem operasi Anda.</translation>
     </message>
     <message>
+        <source>Choose the tools on the Utilities tab</source>
+        <translation>Pilih alat pada tab Utilitas</translation>
+    </message>
+    <message>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Sembunyikan alat Utilitas yang tidak Anda pakai, atau tampilkan lagi, di Pengaturan -&gt; Tampilan &amp; Bahasa. Alat yang disembunyikan tetap memiliki entri di sini; tombol Buka-nya mengarah ke kotak centang itu.</translation>
+    </message>
+    <message>
         <source>Search the settings</source>
         <translation>Cari pengaturan</translation>
     </message>
@@ -2754,8 +2762,24 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Pintasan keyboard</translation>
     </message>
     <message>
-        <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
-        <translation>Ctrl+1..7 beralih tab, Ctrl+, membuka Pengaturan, Ctrl+Enter menjalankan aksi utama layar, F1 membuka panduan ini -- daftar lengkap di Bantuan -&gt; Tentang.</translation>
+        <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
+        <translation>Lihat dan ubah setiap pintasan keyboard: tombol-tombol Word Curator serta yang berlaku di seluruh aplikasi untuk Pengaturan, panduan ini, dan setiap tab.</translation>
+    </message>
+    <message>
+        <source>Anki Miner Usage Guide</source>
+        <translation>Panduan Penggunaan Anki Miner</translation>
+    </message>
+    <message>
+        <source>Search features, e.g. "i+1", "pitch", "youtube"</source>
+        <translation>Cari fitur, misalnya "i+1", "pitch", "youtube"</translation>
+    </message>
+    <message>
+        <source>No matching features.</source>
+        <translation>Tidak ada fitur yang cocok.</translation>
+    </message>
+    <message>
+        <source>Open ▸</source>
+        <translation>Buka ▸</translation>
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -4480,6 +4504,10 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Hanya audio (M4A)</translation>
     </message>
     <message>
+        <source>Subtitles only</source>
+        <translation>Hanya subtitel</translation>
+    </message>
+    <message>
         <source>Custom format:</source>
         <translation>Format khusus:</translation>
     </message>
@@ -5580,6 +5608,154 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Dek yang dikecualikan dari deteksi kata yang dikenal:</translation>
     </message>
 </context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source>Choose frequency source</source>
+        <translation>Pilih sumber frekuensi</translation>
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation>Pilih sumber frekuensi untuk diimpor ulang</translation>
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>Sumber frekuensi (%1);;Semua Berkas (*)</translation>
+    </message>
+    <message>
+        <source>Installed frequency sources could not be checked.</source>
+        <translation>Sumber frekuensi terpasang tidak dapat diperiksa.</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Tugas lain sedang menggunakan sumber daya terindeks — coba lagi setelah selesai.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>Impor selesai, tetapi pengaturan tidak dapat diperbarui.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>Impor berhenti sebelum selesai. Coba lagi.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Importing frequency source…</source>
+        <translation>Mengimpor sumber frekuensi…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be imported.</source>
+        <translation>Sumber frekuensi tidak dapat diimpor.</translation>
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation>Sumber Frekuensi Ditambahkan</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>Mengimpor %1 entri dari '%2'.</translation>
+    </message>
+    <message>
+        <source>Choose frequency sources</source>
+        <translation>Pilih sumber frekuensi</translation>
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation>Sumber Frekuensi Ditambahkan</translation>
+    </message>
+    <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation>Mengimpor %1 sumber frekuensi:</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>Tidak ada yang diimpor.</translation>
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation>Mengimpor ulang sumber frekuensi…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be re-imported.</source>
+        <translation>Sumber frekuensi tidak dapat diimpor ulang.</translation>
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation>Sumber Frekuensi Diimpor Ulang</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>%1 diimpor ulang.</translation>
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation>Sumber frekuensi %1 dari %2: %3</translation>
+    </message>
+    <message>
+        <source>The frequency sources could not be re-imported.</source>
+        <translation>Sumber frekuensi tidak dapat diimpor ulang.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Impor Ulang Semua</translation>
+    </message>
+    <message>
+        <source>Reimported %1 frequency source(s):</source>
+        <translation>Mengimpor ulang %1 sumber frekuensi:</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>Dilewati (tidak ada salinan tersimpan untuk membangun ulang; gunakan Impor Ulang… per baris):</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Gagal:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining frequency sources.</source>
+        <translation>Dibatalkan sebelum sumber frekuensi yang tersisa.</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>Tidak ada yang diimpor ulang.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Tidak ada yang perlu diimpor ulang</translation>
+    </message>
+    <message>
+        <source>No frequency sources in the chain.</source>
+        <translation>Tidak ada sumber frekuensi dalam rantai.</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>Dilewati (tidak ada salinan tersimpan untuk membangun ulang; gunakan Impor Ulang… per baris):
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (melewati %1 entri yang rusak)</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> Ini adalah sumber berbasis kemunculan; jumlahnya dikonversi menjadi peringkat.</translation>
+    </message>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation> Ini adalah sumber berbasis kata; label tingkatnya ditampilkan di kartu tetapi tidak memengaruhi pemfilteran peringkat frekuensi.</translation>
+    </message>
+</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
         <source>Frequency</source>
@@ -5802,6 +5978,126 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Dismiss</source>
         <translation>Tutup</translation>
+    </message>
+</context><context>
+    <name>KeyBindings</name>
+    <message>
+        <source>Include or exclude the highlighted words</source>
+        <translation>Sertakan atau kecualikan kata yang disorot</translation>
+    </message>
+    <message>
+        <source>Mark known</source>
+        <translation>Tandai sebagai dikenal</translation>
+    </message>
+    <message>
+        <source>Play or pause</source>
+        <translation>Putar atau jeda</translation>
+    </message>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation>Edit kata dan kalimat</translation>
+    </message>
+    <message>
+        <source>Include visible</source>
+        <translation>Sertakan yang terlihat</translation>
+    </message>
+    <message>
+        <source>Exclude visible</source>
+        <translation>Kecualikan yang terlihat</translation>
+    </message>
+    <message>
+        <source>Next word</source>
+        <translation>Kata berikutnya</translation>
+    </message>
+    <message>
+        <source>Previous word</source>
+        <translation>Kata sebelumnya</translation>
+    </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>Buka Pengaturan</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation>Panduan Penggunaan</translation>
+    </message>
+    <message>
+        <source>Go to Video</source>
+        <translation>Beralih ke Video</translation>
+    </message>
+    <message>
+        <source>Go to Deck Builder</source>
+        <translation>Beralih ke Pembuat Dek</translation>
+    </message>
+    <message>
+        <source>Go to Audiobooks</source>
+        <translation>Beralih ke Buku Audio</translation>
+    </message>
+    <message>
+        <source>Go to Reading</source>
+        <translation>Beralih ke Bacaan</translation>
+    </message>
+    <message>
+        <source>Go to Analytics</source>
+        <translation>Beralih ke Analitik</translation>
+    </message>
+    <message>
+        <source>Go to Utilities</source>
+        <translation>Beralih ke Utilitas</translation>
+    </message>
+    <message>
+        <source>Go to Settings</source>
+        <translation>Beralih ke Pengaturan</translation>
+    </message>
+</context><context>
+    <name>KeyboardSettingsPanel</name>
+    <message>
+        <source>Keyboard</source>
+        <translation>Pintasan Keyboard</translation>
+    </message>
+    <message>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Klik kotak, lalu tekan tombol baru. Perubahan langsung berlaku. Jendela Word Curator yang sudah terbuka tetap memakai tombol lamanya hingga dibuka lagi. Atas dan Bawah selalu berpindah antar kata, Kiri dan Kanan berpindah antar kolom, dan %1 selalu mengonfirmasi.</translation>
+    </message>
+    <message>
+        <source>Word Curator</source>
+        <translation>Word Curator</translation>
+    </message>
+    <message>
+        <source>Application</source>
+        <translation>Aplikasi</translation>
+    </message>
+    <message>
+        <source>Restore defaults</source>
+        <translation>Pulihkan default</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Bersihkan</translation>
+    </message>
+    <message>
+        <source>Leave this action without a key</source>
+        <translation>Biarkan tindakan ini tanpa tombol</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Setel Ulang</translation>
+    </message>
+    <message>
+        <source>Go back to this action's default key</source>
+        <translation>Kembalikan ke tombol default tindakan ini</translation>
+    </message>
+    <message>
+        <source>%1 is already used for “%2”.</source>
+        <translation>%1 sudah digunakan untuk “%2”.</translation>
+    </message>
+    <message>
+        <source>%1 would fire from anywhere in the window. Add Ctrl, Alt or Meta, or use an F key.</source>
+        <translation>%1 akan terpicu dari mana saja di jendela ini. Tambahkan Ctrl, Alt, atau Meta, atau gunakan tombol F.</translation>
+    </message>
+    <message>
+        <source>%1 already does something else here, so it cannot be used.</source>
+        <translation>%1 sudah dipakai untuk hal lain di sini, sehingga tidak dapat digunakan.</translation>
     </message>
 </context><context>
     <name>KnownWordsManagerDialog</name>
@@ -6206,6 +6502,38 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
         <translation>Pengaturan</translation>
     </message>
     <message>
+        <source>Generate</source>
+        <translation>Hasilkan</translation>
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation>Atur Ulang Waktu</translation>
+    </message>
+    <message>
+        <source>Condense</source>
+        <translation>Padatkan</translation>
+    </message>
+    <message>
+        <source>Card Backfill</source>
+        <translation>Pengisian Bidang Kartu</translation>
+    </message>
+    <message>
+        <source>Deck Filter</source>
+        <translation>Filter Dek</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>Unduhan</translation>
+    </message>
+    <message>
+        <source>Manga OCR</source>
+        <translation>Manga OCR</translation>
+    </message>
+    <message>
+        <source>Audiobook Sync</source>
+        <translation>Sinkronisasi Buku Audio</translation>
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner diperbarui</translation>
     </message>
@@ -6508,38 +6836,6 @@ Lanjutkan?</translation>
     <message>
         <source>Text</source>
         <translation>Teks</translation>
-    </message>
-    <message>
-        <source>Generate</source>
-        <translation>Hasilkan</translation>
-    </message>
-    <message>
-        <source>Retime</source>
-        <translation>Atur Ulang Waktu</translation>
-    </message>
-    <message>
-        <source>Condense</source>
-        <translation>Padatkan</translation>
-    </message>
-    <message>
-        <source>Card Backfill</source>
-        <translation>Pengisian Bidang Kartu</translation>
-    </message>
-    <message>
-        <source>Deck Filter</source>
-        <translation>Filter Dek</translation>
-    </message>
-    <message>
-        <source>Download</source>
-        <translation>Unduhan</translation>
-    </message>
-    <message>
-        <source>Manga OCR</source>
-        <translation>Manga OCR</translation>
-    </message>
-    <message>
-        <source>Audiobook Sync</source>
-        <translation>Sinkronisasi Buku Audio</translation>
     </message>
     <message>
         <source>Single</source>
@@ -7078,6 +7374,146 @@ Lanjutkan?</translation>
         <translation>Pustaka penghapusan keheningan terpasang.</translation>
     </message>
 </context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent source</source>
+        <translation>Pilih sumber aksen nada</translation>
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation>Pilih sumber aksen nada untuk diimpor ulang</translation>
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation>Sumber aksen nada (%1);;Semua Berkas (*)</translation>
+    </message>
+    <message>
+        <source>Installed pitch accent sources could not be checked.</source>
+        <translation>Sumber aksen nada terpasang tidak dapat diperiksa.</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Tugas lain sedang menggunakan sumber daya terindeks — coba lagi setelah selesai.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>Impor selesai, tetapi pengaturan tidak dapat diperbarui.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>Impor berhenti sebelum selesai. Coba lagi.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Batal</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Membatalkan…</translation>
+    </message>
+    <message>
+        <source>Importing pitch source…</source>
+        <translation>Mengimpor sumber aksen nada…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation>Sumber aksen nada tidak dapat diimpor.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation>Sumber Aksen Nada Ditambahkan</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>Mengimpor %1 entri dari '%2'.</translation>
+    </message>
+    <message>
+        <source>Choose pitch accent sources</source>
+        <translation>Pilih sumber aksen nada</translation>
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation>Sumber Aksen Nada Ditambahkan</translation>
+    </message>
+    <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation>Mengimpor %1 sumber aksen nada:</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>Tidak ada yang diimpor.</translation>
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation>Mengimpor ulang sumber aksen nada…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be re-imported.</source>
+        <translation>Sumber aksen nada tidak dapat diimpor ulang.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation>Sumber Aksen Nada Diimpor Ulang</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>%1 diimpor ulang.</translation>
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation>Sumber aksen nada %1 dari %2: %3</translation>
+    </message>
+    <message>
+        <source>The pitch sources could not be re-imported.</source>
+        <translation>Sumber aksen nada tidak dapat diimpor ulang.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Impor Ulang Semua</translation>
+    </message>
+    <message>
+        <source>Reimported %1 pitch source(s):</source>
+        <translation>Mengimpor ulang %1 sumber aksen nada:</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>Dilewati (tidak ada salinan tersimpan untuk membangun ulang; gunakan Impor Ulang… per baris):</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Gagal:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining pitch sources.</source>
+        <translation>Dibatalkan sebelum sumber aksen nada yang tersisa.</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>Tidak ada yang diimpor ulang.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Tidak ada yang perlu diimpor ulang</translation>
+    </message>
+    <message>
+        <source>No pitch sources in the chain.</source>
+        <translation>Tidak ada sumber aksen nada dalam rantai.</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>Dilewati (tidak ada salinan tersimpan untuk membangun ulang; gunakan Impor Ulang… per baris):
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (melewati %1 entri yang rusak)</translation>
+    </message>
+</context><context>
     <name>PitchSettingsPanel</name>
     <message>
         <source>Pitch Accent</source>
@@ -7494,6 +7930,28 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>The profile could not be deleted.</source>
         <translation>Profil tidak dapat dihapus.</translation>
+    </message>
+</context><context>
+    <name>ProgressTelemetry</name>
+    <message>
+        <source>%1 downloaded</source>
+        <translation>%1 diunduh</translation>
+    </message>
+    <message>
+        <source>Elapsed %1</source>
+        <translation>Berlalu %1</translation>
+    </message>
+    <message>
+        <source>Resumed</source>
+        <translation>Dilanjutkan</translation>
+    </message>
+    <message>
+        <source>About %1 remaining</source>
+        <translation>Sekitar %1 lagi</translation>
+    </message>
+    <message>
+        <source>No update for %1 s</source>
+        <translation>Tidak ada pembaruan selama %1 dtk</translation>
     </message>
 </context><context>
     <name>ProgressWidget</name>
@@ -8842,6 +9300,80 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Tidak dapat mengurai kalimat ini.</translation>
     </message>
 </context><context>
+    <name>ServiceFactory</name>
+    <message>
+        <source>Couldn't scan dictionaries folder: %1</source>
+        <translation>Folder kamus tidak dapat dipindai: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't load dictionary chain: %1</source>
+        <translation>Rantai kamus tidak dapat dimuat: %1</translation>
+    </message>
+    <message>
+        <source>Dictionary chain loaded: %1</source>
+        <translation>Rantai kamus dimuat: %1</translation>
+    </message>
+    <message>
+        <source>Skipping unavailable provider(s): %1</source>
+        <translation>Melewati penyedia yang tidak tersedia: %1</translation>
+    </message>
+    <message>
+        <source>No offline dictionary — definitions will come from Jisho.org only</source>
+        <translation>Tidak ada kamus luring — definisi hanya akan berasal dari Jisho.org</translation>
+    </message>
+    <message>
+        <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
+        <translation>Kartu tidak akan memiliki definisi hingga Anda menambahkan kamus di Pengaturan → Kamus.</translation>
+    </message>
+    <message>
+        <source>Pitch accent source '%1' unavailable; skipped</source>
+        <translation>Sumber aksen nada '%1' tidak tersedia; dilewati</translation>
+    </message>
+    <message>
+        <source>Pitch accent data loaded: %1 source(s), %2 entries</source>
+        <translation>Data aksen nada dimuat: %1 sumber, %2 entri</translation>
+    </message>
+    <message>
+        <source>Couldn't load pitch accent data: %1</source>
+        <translation>Data aksen nada tidak dapat dimuat: %1</translation>
+    </message>
+    <message>
+        <source>Frequency data loaded: %1 source(s), %2 entries</source>
+        <translation>Data frekuensi dimuat: %1 sumber, %2 entri</translation>
+    </message>
+    <message>
+        <source>Couldn't load frequency data: %1</source>
+        <translation>Data frekuensi tidak dapat dimuat: %1</translation>
+    </message>
+    <message>
+        <source>Skipping %1 audio entry with no URL</source>
+        <translation>Melewati entri audio %1 tanpa URL</translation>
+    </message>
+    <message>
+        <source>Skipping audio pack entry with no pack ID</source>
+        <translation>Melewati entri paket audio tanpa ID paket</translation>
+    </message>
+    <message>
+        <source>Audio pack '%1' unavailable; skipped</source>
+        <translation>Paket audio '%1' tidak tersedia; dilewati</translation>
+    </message>
+    <message>
+        <source>Name wordsets loaded: %1 set(s) enabled</source>
+        <translation>Kumpulan kata nama dimuat: %1 kumpulan diaktifkan</translation>
+    </message>
+    <message>
+        <source>Couldn't load name wordsets: %1</source>
+        <translation>Kumpulan kata nama tidak dapat dimuat: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation>Basis data kata yang dikenal tidak dapat diinisialisasi: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't load word lists: %1</source>
+        <translation>Daftar kata tidak dapat dimuat: %1</translation>
+    </message>
+</context><context>
     <name>SettingsSearchBox</name>
     <message>
         <source>Search settings</source>
@@ -8956,6 +9488,10 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Appearance &amp; Language</source>
         <translation>Tampilan &amp; Bahasa</translation>
+    </message>
+    <message>
+        <source>Keyboard</source>
+        <translation>Pintasan Keyboard</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -10504,6 +11040,14 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Gunakan pemilih berkas bawaan sistem operasi. Nonaktifkan ini untuk menggunakan pemilih bawaan aplikasi, yang mengikuti tema aplikasi dan tampak sama pada setiap platform.</translation>
     </message>
     <message>
+        <source>Utilities tab</source>
+        <translation>Tab Utilitas</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Pilih alat yang ditampilkan pada tab Utilitas. Setidaknya satu akan tetap ada.</translation>
+    </message>
+    <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
         <translation>Klik pratinjau tema untuk menerapkannya secara langsung; &lt;b&gt;Kembalikan&lt;/b&gt; membatalkannya. Beri bintang pada tema untuk menambahkannya ke pemilih di kanan atas.</translation>
     </message>
@@ -10730,12 +11274,36 @@ Sort by it to work through a long recording in order — then highlight the rows
 Urutkan berdasarkan kolom ini untuk menelusuri rekaman panjang secara berurutan — lalu sorot baris hingga tempat Anda berhenti dan sertakan baris-baris itu.</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S sertakan/kecualikan · Spasi putar/jeda · K tandai sebagai dikenal · Ctrl+A sertakan yang terlihat · Ctrl+D kecualikan yang terlihat · Ctrl+Enter konfirmasi</translation>
+        <source>%1 include/exclude</source>
+        <translation>%1 sertakan/kecualikan</translation>
     </message>
     <message>
-        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S sertakan/kecualikan · K tandai sebagai dikenal · Ctrl+A sertakan yang terlihat · Ctrl+D kecualikan yang terlihat · Ctrl+Enter konfirmasi</translation>
+        <source>%1 play/pause</source>
+        <translation>%1 putar/jeda</translation>
+    </message>
+    <message>
+        <source>%1 mark known</source>
+        <translation>%1 tandai sebagai dikenal</translation>
+    </message>
+    <message>
+        <source>%1 include visible</source>
+        <translation>%1 sertakan yang terlihat</translation>
+    </message>
+    <message>
+        <source>%1 exclude visible</source>
+        <translation>%1 kecualikan yang terlihat</translation>
+    </message>
+    <message>
+        <source>%1 next word</source>
+        <translation>%1 kata berikutnya</translation>
+    </message>
+    <message>
+        <source>%1 previous word</source>
+        <translation>%1 kata sebelumnya</translation>
+    </message>
+    <message>
+        <source>%1 confirm</source>
+        <translation>%1 konfirmasi</translation>
     </message>
     <message>
         <source>Reset columns</source>

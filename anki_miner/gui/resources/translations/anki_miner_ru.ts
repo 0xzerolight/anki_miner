@@ -2638,6 +2638,14 @@ No index files are deleted.</source>
         <translation>Переключайтесь между встроенными диалогами выбора файлов Anki Miner и системными диалогами вашей ОС.</translation>
     </message>
     <message>
+        <source>Choose the tools on the Utilities tab</source>
+        <translation>Выбрать инструменты на вкладке «Утилиты»</translation>
+    </message>
+    <message>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Скройте неиспользуемые инструменты вкладки «Утилиты» или верните их обратно в разделе Настройки -&gt; Внешний вид и язык. Скрытый инструмент сохраняет свою запись здесь; его кнопка «Открыть» ведёт к этому флажку.</translation>
+    </message>
+    <message>
         <source>Search the settings</source>
         <translation>Поиск по настройкам</translation>
     </message>
@@ -2762,8 +2770,24 @@ No index files are deleted.</source>
         <translation>Клавиатурные сочетания</translation>
     </message>
     <message>
-        <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
-        <translation>Ctrl+1…7 переключает вкладки, Ctrl+, открывает настройки, Ctrl+Enter выполняет основное действие экрана, F1 открывает это руководство — полный список в меню «Справка -&gt; О программе».</translation>
+        <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
+        <translation>Просматривайте и изменяйте любое сочетание клавиш: клавиши Куратора слов и общие для всего приложения — для настроек, этого руководства и каждой вкладки.</translation>
+    </message>
+    <message>
+        <source>Anki Miner Usage Guide</source>
+        <translation>Руководство пользователя Anki Miner</translation>
+    </message>
+    <message>
+        <source>Search features, e.g. "i+1", "pitch", "youtube"</source>
+        <translation>Поиск функций, например "i+1", "pitch", "youtube"</translation>
+    </message>
+    <message>
+        <source>No matching features.</source>
+        <translation>Подходящие функции не найдены.</translation>
+    </message>
+    <message>
+        <source>Open ▸</source>
+        <translation>Открыть ▸</translation>
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -4488,6 +4512,10 @@ No files on disk are deleted.</source>
         <translation>Только аудио (M4A)</translation>
     </message>
     <message>
+        <source>Subtitles only</source>
+        <translation>Только субтитры</translation>
+    </message>
+    <message>
         <source>Custom format:</source>
         <translation>Свой формат:</translation>
     </message>
@@ -5610,6 +5638,154 @@ No files on disk are deleted.</source>
         <translation>Колода, исключаемая из определения известных слов:</translation>
     </message>
 </context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source>Choose frequency source</source>
+        <translation>Выберите источник частотности</translation>
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation>Выберите источник частотности для повторного импорта</translation>
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>Источник частотности (%1);;Все файлы (*)</translation>
+    </message>
+    <message>
+        <source>Installed frequency sources could not be checked.</source>
+        <translation>Не удалось проверить установленные источники частотности.</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Другая задача сейчас использует индексированные ресурсы — попробуйте снова, когда она завершится.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>Импорт завершён, но не удалось обновить настройки.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>Импорт остановился, не завершившись. Попробуйте снова.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Отмена</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Importing frequency source…</source>
+        <translation>Импорт источника частотности…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be imported.</source>
+        <translation>Не удалось импортировать источник частотности.</translation>
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation>Источник частотности добавлен</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>Импортировано %1 записей из «%2».</translation>
+    </message>
+    <message>
+        <source>Choose frequency sources</source>
+        <translation>Выберите источники частотности</translation>
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation>Источники частотности добавлены</translation>
+    </message>
+    <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation>Импортировано источников частотности (%1):</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>Ничего не импортировано.</translation>
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation>Повторный импорт источника частотности…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be re-imported.</source>
+        <translation>Не удалось повторно импортировать источник частотности.</translation>
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation>Источник частотности повторно импортирован</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>Переимпортировано: %1.</translation>
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation>Источник частотности %1 из %2: %3</translation>
+    </message>
+    <message>
+        <source>The frequency sources could not be re-imported.</source>
+        <translation>Не удалось повторно импортировать источники частотности.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Повторно импортировать все</translation>
+    </message>
+    <message>
+        <source>Reimported %1 frequency source(s):</source>
+        <translation>Переимпортировано источников частотности (%1):</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>Пропущено (нет сохранённой копии для восстановления; используйте «Повторный импорт…» в соответствующей строке):</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Ошибка:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining frequency sources.</source>
+        <translation>Отменено до обработки оставшихся источников частотности.</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>Ничего не переимпортировано.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Нечего импортировать повторно</translation>
+    </message>
+    <message>
+        <source>No frequency sources in the chain.</source>
+        <translation>В цепочке нет источников частотности.</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>Пропущено (нет сохранённой копии для восстановления; используйте «Повторный импорт…» в соответствующей строке):
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (пропущено %1 некорректных записей)</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> Это источник на основе вхождений; его подсчёты были преобразованы в ранги.</translation>
+    </message>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation> Это источник на основе слов; его метки уровней показываются на карточке, но не используются для фильтрации по частотности.</translation>
+    </message>
+</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
         <source>Frequency</source>
@@ -5832,6 +6008,126 @@ No index files are deleted.</source>
     <message>
         <source>Dismiss</source>
         <translation>Закрыть</translation>
+    </message>
+</context><context>
+    <name>KeyBindings</name>
+    <message>
+        <source>Include or exclude the highlighted words</source>
+        <translation>Включить или исключить выделенные слова</translation>
+    </message>
+    <message>
+        <source>Mark known</source>
+        <translation>Отметить как известное</translation>
+    </message>
+    <message>
+        <source>Play or pause</source>
+        <translation>Воспроизвести или приостановить</translation>
+    </message>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation>Изменить слово и предложение</translation>
+    </message>
+    <message>
+        <source>Include visible</source>
+        <translation>Включить видимые</translation>
+    </message>
+    <message>
+        <source>Exclude visible</source>
+        <translation>Исключить видимые</translation>
+    </message>
+    <message>
+        <source>Next word</source>
+        <translation>Следующее слово</translation>
+    </message>
+    <message>
+        <source>Previous word</source>
+        <translation>Предыдущее слово</translation>
+    </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>Открыть настройки</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation>Руководство пользователя</translation>
+    </message>
+    <message>
+        <source>Go to Video</source>
+        <translation>Перейти на вкладку «Видео»</translation>
+    </message>
+    <message>
+        <source>Go to Deck Builder</source>
+        <translation>Перейти на вкладку «Конструктор колод»</translation>
+    </message>
+    <message>
+        <source>Go to Audiobooks</source>
+        <translation>Перейти на вкладку «Аудиокниги»</translation>
+    </message>
+    <message>
+        <source>Go to Reading</source>
+        <translation>Перейти на вкладку «Чтение»</translation>
+    </message>
+    <message>
+        <source>Go to Analytics</source>
+        <translation>Перейти на вкладку «Аналитика»</translation>
+    </message>
+    <message>
+        <source>Go to Utilities</source>
+        <translation>Перейти на вкладку «Утилиты»</translation>
+    </message>
+    <message>
+        <source>Go to Settings</source>
+        <translation>Перейти на вкладку «Настройки»</translation>
+    </message>
+</context><context>
+    <name>KeyboardSettingsPanel</name>
+    <message>
+        <source>Keyboard</source>
+        <translation>Сочетания клавиш</translation>
+    </message>
+    <message>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Щёлкните по полю и нажмите нужную клавишу. Изменения применяются сразу же. Уже открытое окно Куратора слов сохраняет свои сочетания клавиш до следующего открытия. Стрелки вверх и вниз всегда служат для перехода между словами, стрелки влево и вправо — для перехода между столбцами, а %1 всегда подтверждает выбор.</translation>
+    </message>
+    <message>
+        <source>Word Curator</source>
+        <translation>Куратор слов</translation>
+    </message>
+    <message>
+        <source>Application</source>
+        <translation>Приложение</translation>
+    </message>
+    <message>
+        <source>Restore defaults</source>
+        <translation>Восстановить значения по умолчанию</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Очистить</translation>
+    </message>
+    <message>
+        <source>Leave this action without a key</source>
+        <translation>Оставить это действие без клавиши</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Сбросить</translation>
+    </message>
+    <message>
+        <source>Go back to this action's default key</source>
+        <translation>Вернуть клавишу этого действия по умолчанию</translation>
+    </message>
+    <message>
+        <source>%1 is already used for “%2”.</source>
+        <translation>%1 уже используется для «%2».</translation>
+    </message>
+    <message>
+        <source>%1 would fire from anywhere in the window. Add Ctrl, Alt or Meta, or use an F key.</source>
+        <translation>%1 будет срабатывать из любого места этого окна. Добавьте Ctrl, Alt или Meta либо используйте функциональную клавишу.</translation>
+    </message>
+    <message>
+        <source>%1 already does something else here, so it cannot be used.</source>
+        <translation>%1 уже выполняет здесь другую задачу, поэтому её нельзя использовать.</translation>
     </message>
 </context><context>
     <name>KnownWordsManagerDialog</name>
@@ -6238,6 +6534,38 @@ Words to add: %3. Continue?</source>
         <translation>Настройки</translation>
     </message>
     <message>
+        <source>Generate</source>
+        <translation>Создать</translation>
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation>Пересинхронизация</translation>
+    </message>
+    <message>
+        <source>Condense</source>
+        <translation>Сжать</translation>
+    </message>
+    <message>
+        <source>Card Backfill</source>
+        <translation>Дозаполнение карточек</translation>
+    </message>
+    <message>
+        <source>Deck Filter</source>
+        <translation>Фильтр колоды</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>Загрузки</translation>
+    </message>
+    <message>
+        <source>Manga OCR</source>
+        <translation>OCR манги</translation>
+    </message>
+    <message>
+        <source>Audiobook Sync</source>
+        <translation>Синхронизация аудиокниги</translation>
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation>Anki Miner обновлён</translation>
     </message>
@@ -6540,38 +6868,6 @@ Continue?</source>
     <message>
         <source>Text</source>
         <translation>Текст</translation>
-    </message>
-    <message>
-        <source>Generate</source>
-        <translation>Создать</translation>
-    </message>
-    <message>
-        <source>Retime</source>
-        <translation>Пересинхронизация</translation>
-    </message>
-    <message>
-        <source>Condense</source>
-        <translation>Сжать</translation>
-    </message>
-    <message>
-        <source>Card Backfill</source>
-        <translation>Дозаполнение карточек</translation>
-    </message>
-    <message>
-        <source>Deck Filter</source>
-        <translation>Фильтр колоды</translation>
-    </message>
-    <message>
-        <source>Download</source>
-        <translation>Загрузки</translation>
-    </message>
-    <message>
-        <source>Manga OCR</source>
-        <translation>OCR манги</translation>
-    </message>
-    <message>
-        <source>Audiobook Sync</source>
-        <translation>Синхронизация аудиокниги</translation>
     </message>
     <message>
         <source>Single</source>
@@ -7110,6 +7406,146 @@ Continue?</source>
         <translation>Библиотека для удаления тишины установлена.</translation>
     </message>
 </context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent source</source>
+        <translation>Выберите источник тонального ударения</translation>
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation>Выберите источник тонального ударения для повторного импорта</translation>
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation>Источник тонального ударения (%1);;Все файлы (*)</translation>
+    </message>
+    <message>
+        <source>Installed pitch accent sources could not be checked.</source>
+        <translation>Не удалось проверить установленные источники тонального ударения.</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Другая задача сейчас использует индексированные ресурсы — попробуйте снова, когда она завершится.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>Импорт завершён, но не удалось обновить настройки.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>Импорт остановился, не завершившись. Попробуйте снова.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Отмена</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Отмена…</translation>
+    </message>
+    <message>
+        <source>Importing pitch source…</source>
+        <translation>Импорт источника тонального ударения…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation>Не удалось импортировать источник тонального ударения.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation>Источник тонального ударения добавлен</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>Импортировано %1 записей из «%2».</translation>
+    </message>
+    <message>
+        <source>Choose pitch accent sources</source>
+        <translation>Выберите источники тонального ударения</translation>
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation>Источники тонального ударения добавлены</translation>
+    </message>
+    <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation>Импортировано источников тонального ударения (%1):</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>Ничего не импортировано.</translation>
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation>Повторный импорт источника тонального ударения…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be re-imported.</source>
+        <translation>Не удалось повторно импортировать источник тонального ударения.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation>Источник тонального ударения повторно импортирован</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>Переимпортировано: %1.</translation>
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation>Источник тонального ударения %1 из %2: %3</translation>
+    </message>
+    <message>
+        <source>The pitch sources could not be re-imported.</source>
+        <translation>Не удалось повторно импортировать источники тонального ударения.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Повторно импортировать все</translation>
+    </message>
+    <message>
+        <source>Reimported %1 pitch source(s):</source>
+        <translation>Переимпортировано источников тонального ударения (%1):</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>Пропущено (нет сохранённой копии для восстановления; используйте «Повторный импорт…» в соответствующей строке):</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Ошибка:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining pitch sources.</source>
+        <translation>Отменено до обработки оставшихся источников тонального ударения.</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>Ничего не переимпортировано.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Нечего импортировать повторно</translation>
+    </message>
+    <message>
+        <source>No pitch sources in the chain.</source>
+        <translation>В цепочке нет источников тонального ударения.</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>Пропущено (нет сохранённой копии для восстановления; используйте «Повторный импорт…» в соответствующей строке):
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (пропущено %1 некорректных записей)</translation>
+    </message>
+</context><context>
     <name>PitchSettingsPanel</name>
     <message>
         <source>Pitch Accent</source>
@@ -7526,6 +7962,28 @@ No index files are deleted.</source>
     <message>
         <source>The profile could not be deleted.</source>
         <translation>Не удалось удалить профиль.</translation>
+    </message>
+</context><context>
+    <name>ProgressTelemetry</name>
+    <message>
+        <source>%1 downloaded</source>
+        <translation>Загружено: %1</translation>
+    </message>
+    <message>
+        <source>Elapsed %1</source>
+        <translation>Прошло %1</translation>
+    </message>
+    <message>
+        <source>Resumed</source>
+        <translation>Возобновлено</translation>
+    </message>
+    <message>
+        <source>About %1 remaining</source>
+        <translation>Осталось около %1</translation>
+    </message>
+    <message>
+        <source>No update for %1 s</source>
+        <translation>Нет обновлений в течение %1 с</translation>
     </message>
 </context><context>
     <name>ProgressWidget</name>
@@ -8876,6 +9334,80 @@ No index files are deleted.</source>
         <translation>Не удалось разобрать это предложение.</translation>
     </message>
 </context><context>
+    <name>ServiceFactory</name>
+    <message>
+        <source>Couldn't scan dictionaries folder: %1</source>
+        <translation>Не удалось просканировать папку словарей: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't load dictionary chain: %1</source>
+        <translation>Не удалось загрузить цепочку словарей: %1</translation>
+    </message>
+    <message>
+        <source>Dictionary chain loaded: %1</source>
+        <translation>Цепочка словарей загружена: %1</translation>
+    </message>
+    <message>
+        <source>Skipping unavailable provider(s): %1</source>
+        <translation>Пропускаются недоступные поставщики словарей: %1</translation>
+    </message>
+    <message>
+        <source>No offline dictionary — definitions will come from Jisho.org only</source>
+        <translation>Нет офлайн-словаря — определения будут поступать только с Jisho.org</translation>
+    </message>
+    <message>
+        <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
+        <translation>Определения на карточках не появятся, пока вы не добавите словарь в разделе Настройки → Словари.</translation>
+    </message>
+    <message>
+        <source>Pitch accent source '%1' unavailable; skipped</source>
+        <translation>Источник тонального ударения «%1» недоступен; пропущен</translation>
+    </message>
+    <message>
+        <source>Pitch accent data loaded: %1 source(s), %2 entries</source>
+        <translation>Данные тонального ударения загружены: %1 источников, %2 записей</translation>
+    </message>
+    <message>
+        <source>Couldn't load pitch accent data: %1</source>
+        <translation>Не удалось загрузить данные тонального ударения: %1</translation>
+    </message>
+    <message>
+        <source>Frequency data loaded: %1 source(s), %2 entries</source>
+        <translation>Данные частотности загружены: %1 источников, %2 записей</translation>
+    </message>
+    <message>
+        <source>Couldn't load frequency data: %1</source>
+        <translation>Не удалось загрузить данные частотности: %1</translation>
+    </message>
+    <message>
+        <source>Skipping %1 audio entry with no URL</source>
+        <translation>Пропускается аудиозапись «%1» без URL</translation>
+    </message>
+    <message>
+        <source>Skipping audio pack entry with no pack ID</source>
+        <translation>Пропускается запись аудиопакета без ID пакета</translation>
+    </message>
+    <message>
+        <source>Audio pack '%1' unavailable; skipped</source>
+        <translation>Аудиопакет «%1» недоступен; пропущен</translation>
+    </message>
+    <message>
+        <source>Name wordsets loaded: %1 set(s) enabled</source>
+        <translation>Наборы имён загружены: включено %1 наборов</translation>
+    </message>
+    <message>
+        <source>Couldn't load name wordsets: %1</source>
+        <translation>Не удалось загрузить наборы имён: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation>Не удалось инициализировать базу данных известных слов: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't load word lists: %1</source>
+        <translation>Не удалось загрузить списки слов: %1</translation>
+    </message>
+</context><context>
     <name>SettingsSearchBox</name>
     <message>
         <source>Search settings</source>
@@ -8990,6 +9522,10 @@ No index files are deleted.</source>
     <message>
         <source>Appearance &amp; Language</source>
         <translation>Внешний вид и язык</translation>
+    </message>
+    <message>
+        <source>Keyboard</source>
+        <translation>Сочетания клавиш</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -10542,6 +11078,14 @@ Your installed resources and your theme are kept.</source>
         <translation>Использовать системные диалоги выбора файлов. Выключите, чтобы использовать встроенный диалог приложения, который следует теме приложения и выглядит одинаково на всех платформах.</translation>
     </message>
     <message>
+        <source>Utilities tab</source>
+        <translation>Вкладка «Утилиты»</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Выберите, какие инструменты показывает вкладка «Утилиты». Хотя бы один остаётся.</translation>
+    </message>
+    <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
         <translation>Нажмите на превью темы, чтобы применить её сразу; &lt;b&gt;Вернуть&lt;/b&gt; отменяет применение. Отмечайте темы звёздочкой, чтобы добавить их в селектор в правом верхнем углу.</translation>
     </message>
@@ -10768,12 +11312,36 @@ Sort by it to work through a long recording in order — then highlight the rows
 Сортируйте по этому столбцу, чтобы проходить длинную запись по порядку — затем выделите строки до места, на котором вы остановились, и включите их.</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S — включить/исключить · Пробел — воспроизведение/пауза · K — отметить как известное · Ctrl+A — включить видимые · Ctrl+D — исключить видимые · Ctrl+Enter — подтвердить</translation>
+        <source>%1 include/exclude</source>
+        <translation>%1 — включить/исключить</translation>
     </message>
     <message>
-        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S — включить/исключить · K — отметить как известное · Ctrl+A — включить видимые · Ctrl+D — исключить видимые · Ctrl+Enter — подтвердить</translation>
+        <source>%1 play/pause</source>
+        <translation>%1 — воспроизведение/пауза</translation>
+    </message>
+    <message>
+        <source>%1 mark known</source>
+        <translation>%1 — отметить как известное</translation>
+    </message>
+    <message>
+        <source>%1 include visible</source>
+        <translation>%1 — включить видимые</translation>
+    </message>
+    <message>
+        <source>%1 exclude visible</source>
+        <translation>%1 — исключить видимые</translation>
+    </message>
+    <message>
+        <source>%1 next word</source>
+        <translation>%1 — следующее слово</translation>
+    </message>
+    <message>
+        <source>%1 previous word</source>
+        <translation>%1 — предыдущее слово</translation>
+    </message>
+    <message>
+        <source>%1 confirm</source>
+        <translation>%1 — подтвердить</translation>
     </message>
     <message>
         <source>Reset columns</source>

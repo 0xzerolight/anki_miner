@@ -17,7 +17,6 @@ from PyQt6.QtGui import (
     QAction,
     QGuiApplication,
     QIcon,
-    QKeySequence,
     QShortcut,
     QShowEvent,
     QWindowStateChangeEvent,
@@ -42,7 +41,7 @@ from anki_miner.diagnostics.environment import (
     format_environment_lines,
     format_health_lines,
 )
-from anki_miner.gui.capabilities import effective_hidden_utilities
+from anki_miner.gui.capabilities import MAIN_TAB_ORDER, effective_hidden_utilities
 from anki_miner.gui.constants import (
     WINDOW_DEFAULT_HEIGHT,
     WINDOW_DEFAULT_WIDTH,
@@ -60,11 +59,7 @@ from anki_miner.gui.utils import file_dialogs, queue_state_store, session_state
 from anki_miner.gui.utils.config_commit import ConfigCommitError, ConfigCommitResult
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.dialog_paths import resolve_start_dir
-from anki_miner.gui.utils.keyboard_shortcuts import (
-    HELP_SEQUENCE,
-    SETTINGS_SEQUENCE,
-    TAB_SEQUENCE_TEMPLATE,
-)
+from anki_miner.gui.utils.key_bindings import about_rows, resolve_bindings, tab_action_id
 from anki_miner.gui.utils.qt_helpers import fit_window_minimum, widget_alive
 from anki_miner.gui.utils.run_off_thread import run_off_thread, still_running
 from anki_miner.gui.widgets.base import ScreenIssue, ScreenIssueHost, install_animated_tab_bar
@@ -498,11 +493,11 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         help_menu.setToolTipsVisible(True)
 
         # Usage Guide -- a top-level menu-bar button, not a dropdown, placed
-        # after Help. F1 is help everywhere, and "which screen does this?" is
-        # the help question this application can actually answer (D48-B). A
-        # menu-less top-level QAction is silently dropped from native menu bars
-        # (macOS, Linux global menu), so those platforms get a one-action menu
-        # instead.
+        # after Help. F1 (by default) is help everywhere, and "which screen does
+        # this?" is the help question this application can actually answer
+        # (D48-B). A menu-less top-level QAction is silently dropped from native
+        # menu bars (macOS, Linux global menu), so those platforms get a
+        # one-action menu instead.
         if menu_bar.isNativeMenuBar():
             guide_menu = menu_bar.addMenu(self.tr("Usage Guide"))
             assert guide_menu is not None
@@ -512,7 +507,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         else:
             guide_action = menu_bar.addAction(self.tr("Usage Guide"))
             assert guide_action is not None
-        guide_action.setShortcut(QKeySequence(HELP_SEQUENCE))
         guide_action.triggered.connect(self._run_capability_browser_tool)
         self.usage_guide_action = guide_action
 
@@ -569,40 +563,42 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         menu_bar.setCornerWidget(corner_widget, Qt.Corner.TopRightCorner)
 
     def _setup_shortcuts(self) -> None:
-        """Set up global keyboard shortcuts.
+        """Create the window-wide shortcuts; ``_apply_key_bindings`` gives them their keys.
 
-        Per-tab Ctrl+N shortcuts are NOT created here — they depend on the live
-        tab count and are created by :meth:`setup_tab_shortcuts`, which app.py
-        calls once all tabs have been registered via :func:`register_mining_tab`.
+        One QShortcut per app action, kept on the window so a rebinding in
+        Settings -> Keyboard re-keys it in place. The tab shortcuts are keyed by
+        stable tab key and look their tab up when they fire, so they can exist
+        before compose_main_window adds the tabs. Ctrl+T (new tab) and
+        Ctrl+Shift+V (paste as plain text) were dropped under D48-B: both collide
+        with a binding every desktop already owns, and both had a visible control
+        doing the same job.
         """
-        # Settings (Ctrl+,). The only global binding left, and the only one that
-        # never meant something else first. Ctrl+T (new tab) and Ctrl+Shift+V
-        # (paste as plain text) were dropped under D48-B: both collide with a
-        # binding every desktop already owns, and both had a visible control
-        # doing the same job -- the header's favourites combo, and Settings'
-        # validation button, which still owns the validation run.
-        settings_shortcut = QShortcut(QKeySequence(SETTINGS_SEQUENCE), self)
-        settings_shortcut.activated.connect(self._open_settings)
+        self._settings_shortcut = QShortcut(self)
+        self._settings_shortcut.activated.connect(self._open_settings)
+        self._tab_shortcuts: dict[str, QShortcut] = {}
+        for tab_key in MAIN_TAB_ORDER:
+            shortcut = QShortcut(self)
+            shortcut.activated.connect(lambda key=tab_key: self._switch_to_main_tab(key))
+            self._tab_shortcuts[tab_key] = shortcut
+        self._apply_key_bindings()
 
-    def setup_tab_shortcuts(self) -> None:
-        """Create one Ctrl+N shortcut per registered tab, driven by the live tab count.
+    def _apply_key_bindings(self) -> None:
+        """Key every window-wide shortcut from ``self.config.key_bindings``.
 
-        Called by app.py after all tabs have been registered so the count is
-        final.  Creating these in :meth:`_setup_shortcuts` (which runs in
-        ``__init__``, before app.py adds any tabs) would under-count and leave
-        the later tabs unreachable.
+        Runs at construction and from every ``update_config``, so a change in
+        Settings -> Keyboard is live at once. An unbound action gets an empty
+        sequence, which Qt never matches.
         """
-        for i in range(1, self.tabs.count() + 1):
-            shortcut = QShortcut(QKeySequence(TAB_SEQUENCE_TEMPLATE.format(number=i)), self)
-            shortcut.activated.connect(lambda idx=i - 1: self._switch_to_tab(idx))
+        keys = resolve_bindings(self.config.key_bindings)
+        self._settings_shortcut.setKey(keys["app.open_settings"])
+        self.usage_guide_action.setShortcut(keys["app.usage_guide"])
+        for tab_key, shortcut in self._tab_shortcuts.items():
+            shortcut.setKey(keys[tab_action_id(tab_key)])
 
-    def _switch_to_tab(self, index: int) -> None:
-        """Switch to tab at given index.
-
-        Args:
-            index: Tab index (0-based)
-        """
-        if 0 <= index < self.tabs.count():
+    def _switch_to_main_tab(self, key: str) -> None:
+        """Bring main tab ``key`` to the front; a tab that is not registered is a no-op."""
+        index = self._main_tab_index(key)
+        if index >= 0:
             self.tabs.setCurrentIndex(index)
 
     def _settings_tab_index(self) -> int:
@@ -1712,10 +1708,10 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         _run_next()
 
     def _show_about(self) -> None:
-        """Show the About dialog."""
+        """Show the About dialog with the keys bound right now."""
         from anki_miner.gui.widgets.dialogs.about_dialog import AboutDialog
 
-        AboutDialog(__version__, self).exec()
+        AboutDialog(__version__, about_rows(resolve_bindings(self.config.key_bindings)), self).exec()
 
     def _connect_presenter_signals(self) -> None:
         """Connect presenter signals to UI update slots."""
@@ -2018,6 +2014,9 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self.config = committed_config
         refresh_error: Exception | None = None
         try:
+            # Re-key the window-wide shortcuts so a Settings -> Keyboard change
+            # is live without a restart.
+            self._apply_key_bindings()
             # Rebuild config-bound services so AnkiConnect URL/port edits take
             # effect: validation and the undo-delete AnkiService were frozen to the
             # startup config and would otherwise keep hitting the old endpoint.

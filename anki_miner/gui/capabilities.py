@@ -32,8 +32,19 @@ from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication
 
 TRANSLATION_CONTEXT = "Capabilities"
 
+# Stable main-tab keys in tab-bar order: app.compose_main_window registers the
+# tabs in this order and MainWindow._MAIN_TAB_CLASSES lists them the same way.
+# The default Ctrl+1..6 bindings follow it (gui/utils/key_bindings.py).
+MAIN_TAB_ORDER: tuple[str, ...] = (
+    "video",
+    "audiobook",
+    "reading",
+    "analytics",
+    "subtitles",
+    "settings",
+)
 # Stable main-tab keys (resolved by MainWindow._main_tab_index, never indices).
-MAIN_TABS: frozenset[str] = frozenset({"video", "audiobook", "reading", "analytics", "subtitles", "settings"})
+MAIN_TABS: frozenset[str] = frozenset(MAIN_TAB_ORDER)
 # Stable settings sub-tab keys (resolved by SettingsTab.open_subtab).
 SETTINGS_SUBTABS: frozenset[str] = frozenset(
     {
@@ -49,6 +60,7 @@ SETTINGS_SUBTABS: frozenset[str] = frozenset(
         "youtube",
         "subtitles",
         "ui",
+        "keyboard",
     }
 )
 # The Utilities tab's tools, in tab-bar order. SubtitlesTab builds its inner
@@ -1325,10 +1337,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Keyboard shortcuts"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Ctrl+1..6 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -> About.",
+            "See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.",
         ),
         category=_CAT_TOOLS,
-        keywords=("shortcuts", "hotkeys", "keybindings", "keyboard", "f1"),
+        target=CapabilityTarget("settings", "keyboard"),
+        keywords=("shortcuts", "hotkeys", "keybindings", "key bindings", "keyboard", "remap", "rebind", "f1"),
     ),
 )
 

@@ -2621,6 +2621,14 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Choose the tools on the Utilities tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Search the settings</source>
         <translation type="unfinished" />
     </message>
@@ -2745,7 +2753,23 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
+        <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Anki Miner Usage Guide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Search features, e.g. "i+1", "pitch", "youtube"</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No matching features.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open ▸</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -4462,6 +4486,10 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Subtitles only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Custom format:</source>
         <translation type="unfinished" />
     </message>
@@ -5561,6 +5589,153 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source>Choose frequency source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Installed frequency sources could not be checked.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Importing frequency source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The frequency source could not be imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose frequency sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The frequency source could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The frequency sources could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimported %1 frequency source(s):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled before remaining frequency sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No frequency sources in the chain.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>FrequencySettingsPanel</name>
     <message>
         <source>Frequency</source>
@@ -5778,6 +5953,126 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Dismiss</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>KeyBindings</name>
+    <message>
+        <source>Include or exclude the highlighted words</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mark known</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Play or pause</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Include visible</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Exclude visible</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Next word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Previous word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Open Settings</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go to Video</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go to Deck Builder</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go to Audiobooks</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go to Reading</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go to Analytics</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go to Utilities</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go to Settings</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>KeyboardSettingsPanel</name>
+    <message>
+        <source>Keyboard</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Word Curator</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Application</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restore defaults</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Leave this action without a key</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Go back to this action's default key</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 is already used for “%2”.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 would fire from anywhere in the window. Add Ctrl, Alt or Meta, or use an F key.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 already does something else here, so it cannot be used.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -6178,6 +6473,38 @@ Words to add: %3. Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Generate</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Condense</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card Backfill</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Deck Filter</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga OCR</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audiobook Sync</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Anki Miner updated</source>
         <translation type="unfinished" />
     </message>
@@ -6475,38 +6802,6 @@ Continue?</source>
     </message>
     <message>
         <source>Text</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Generate</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Retime</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Condense</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Card Backfill</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Deck Filter</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Download</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Manga OCR</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Audiobook Sync</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7046,6 +7341,145 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent source</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Installed pitch accent sources could not be checked.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Importing pitch source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose pitch accent sources</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The pitch source could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The pitch sources could not be re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reimported %1 pitch source(s):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cancelled before remaining pitch sources.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No pitch sources in the chain.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>PitchSettingsPanel</name>
     <message>
         <source>Pitch Accent</source>
@@ -7457,6 +7891,28 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>The profile could not be deleted.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
+    <name>ProgressTelemetry</name>
+    <message>
+        <source>%1 downloaded</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Elapsed %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Resumed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>About %1 remaining</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No update for %1 s</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -8805,6 +9261,80 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>ServiceFactory</name>
+    <message>
+        <source>Couldn't scan dictionaries folder: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't load dictionary chain: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dictionary chain loaded: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipping unavailable provider(s): %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>No offline dictionary — definitions will come from Jisho.org only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent source '%1' unavailable; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Pitch accent data loaded: %1 source(s), %2 entries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't load pitch accent data: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Frequency data loaded: %1 source(s), %2 entries</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't load frequency data: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipping %1 audio entry with no URL</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Skipping audio pack entry with no pack ID</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Audio pack '%1' unavailable; skipped</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Name wordsets loaded: %1 set(s) enabled</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't load name wordsets: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Couldn't load word lists: %1</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>SettingsSearchBox</name>
     <message>
         <source>Search settings</source>
@@ -8918,6 +9448,10 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Appearance &amp; Language</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Keyboard</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10457,6 +10991,14 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Utilities tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
         <translation type="unfinished" />
     </message>
@@ -10675,11 +11217,35 @@ Sort by it to work through a long recording in order — then highlight the rows
         <translation type="unfinished" />
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <source>%1 include/exclude</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
+        <source>%1 play/pause</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 mark known</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 include visible</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 exclude visible</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 next word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 previous word</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>%1 confirm</source>
         <translation type="unfinished" />
     </message>
     <message>

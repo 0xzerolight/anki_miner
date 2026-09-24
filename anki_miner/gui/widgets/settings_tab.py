@@ -67,6 +67,7 @@ from anki_miner.gui.widgets.panels import (
     DictionarySettingsPanel,
     FilteringSettingsPanel,
     FrequencySettingsPanel,
+    KeyboardSettingsPanel,
     MediaSettingsPanel,
     MiningLanguageSettingsPanel,
     PitchSettingsPanel,
@@ -223,7 +224,13 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     # and therefore preserved, so resetting `language` out from under it would
     # leave the stash holding a parked snapshot for the language now active —
     # the one thing that field's invariant forbids.
-    _RESET_PRESERVE_UI: frozenset[str] = frozenset({"theme", "theme_favorites", "ui_zoom", "ui_language", "language"})
+    #
+    # `key_bindings` is kept for its own reason: Reset exists to recover the
+    # behavioural settings a stray scroll can corrupt (Issue #99), no scroll can
+    # change a key, and the Keyboard page has a Restore defaults of its own.
+    _RESET_PRESERVE_UI: frozenset[str] = frozenset(
+        {"theme", "theme_favorites", "ui_zoom", "ui_language", "language", "key_bindings"}
+    )
 
     def __init__(
         self,
@@ -390,6 +397,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.config.ui_zoom,
             self.config.ui_language,
         )
+        self.keyboard_panel = KeyboardSettingsPanel()
 
         self._build_navigator()
 
@@ -551,7 +559,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             ),
             (
                 self.tr("App"),
-                (("ui", self.tr("General"), self.ui_panel),),
+                (
+                    ("ui", self.tr("General"), self.ui_panel),
+                    ("keyboard", self.tr("Keyboard"), self.keyboard_panel),
+                ),
             ),
         )
 
@@ -770,6 +781,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.ui_panel.zoom_changed.connect(self._on_zoom_changed)
         self.ui_panel.hidden_utilities_changed.connect(self._on_hidden_utilities_changed)
         self.ui_panel.language_changed.connect(self._on_language_changed)
+        self.keyboard_panel.key_bindings_changed.connect(self._on_key_bindings_changed)
         # YouTube panel: manual "Update yt-dlp now" → re-emit to MainWindow
         # (app.py routes it to background_tasks.start_ytdlp_update(force=True)).
         self.youtube_panel.update_ytdlp_requested.connect(self._on_ytdlp_update_clicked)
@@ -1271,6 +1283,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # part of this same repaint, not a separate step.
             self.ui_panel.load_from_config(self.config)
 
+            # The Keyboard page is outside _save_panels too (it commits each
+            # accepted key itself), so its repaint is here. Never emits.
+            self.keyboard_panel.load_from_config(self.config)
+
             # Last, and beside the panels' own gate: every page has been
             # repainted for the incoming language by now, so a selection this
             # moves lands on a page that is already current.
@@ -1332,6 +1348,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.youtube_panel,
             self.subtitles_panel,
             self.ui_panel,
+            self.keyboard_panel,
         )
 
     def setting_anchors(self) -> tuple[SettingAnchor, ...]:
@@ -1551,6 +1568,15 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         touches it directly.
         """
         new_config = replace(self.config, hidden_utilities=tuple(hidden))
+        self._commit_immediate_config(new_config, self.config_changed.emit)
+
+    def _on_key_bindings_changed(self, overrides: dict) -> None:
+        """Persist the Keyboard page's overrides at once.
+
+        MainWindow re-keys its own shortcuts in ``update_config``; the Word
+        Curator reads the committed config the next time one opens.
+        """
+        new_config = replace(self.config, key_bindings=dict(overrides))
         self._commit_immediate_config(new_config, self.config_changed.emit)
 
     def commit_settings(self) -> None:

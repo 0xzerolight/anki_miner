@@ -1872,10 +1872,6 @@ def compose_main_window(
         screen.bind_task_registry(window.task_registry)
     # --- end task-registry publication ------------------------------------
 
-    # All tabs are now registered — create the count-driven Ctrl+N shortcuts.
-    # This must come AFTER all addTab calls so self.tabs.count() is final.
-    window.setup_tab_shortcuts()
-
     # Inline run options (the curation checkbox, Card Backfill's field groups)
     # persist by folding themselves into the config and
     # emitting run_options_changed; route it through window.update_config so the

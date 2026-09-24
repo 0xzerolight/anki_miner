@@ -61,6 +61,45 @@ def test_window_title_is_usage_guide(dialog):
     assert dialog.windowTitle() == "Anki Miner Usage Guide"
 
 
+def test_chrome_texts_translate_under_capabilities_context(qapp, qtbot):
+    """Window title, search placeholder, empty state and Open button all read
+    through ``QCoreApplication.translate("Capabilities", ...)`` -- not a
+    ``_tr()`` wrapper pylupdate6 can't see through, which used to leave these
+    four strings in English in every UI language.
+    """
+
+    class _StubTranslator(QTranslator):
+        _MAP = {
+            "Anki Miner Usage Guide": "TR_TITLE",
+            'Search features, e.g. "i+1", "pitch", "youtube"': "TR_PLACEHOLDER",
+            "No matching features.": "TR_EMPTY",
+            "Open ▸": "TR_OPEN",
+        }
+
+        def translate(self, context, source, disambiguation=None, n=-1):  # noqa: N802
+            if context == "Capabilities" and source in self._MAP:
+                return self._MAP[source]
+            return source
+
+    translator = _StubTranslator()
+    qapp.installTranslator(translator)
+    try:
+        dlg = CapabilityBrowser()
+        qtbot.addWidget(dlg)
+
+        assert dlg.windowTitle() == "TR_TITLE"
+        assert dlg.search_box.placeholderText() == "TR_PLACEHOLDER"
+
+        dlg.search_box.setText("zzzz-nothing-here")
+        assert dlg._empty_label.text() == "TR_EMPTY"
+
+        dlg.search_box.setText("")
+        button = next(b for b in dlg.findChildren(QPushButton) if b.objectName() == "capability-open")
+        assert button.text() == "TR_OPEN"
+    finally:
+        qapp.removeTranslator(translator)
+
+
 def test_open_buttons_match_visible_rows(dialog):
     dialog.search_box.setText("youtube")
     buttons = [b for b in dialog.findChildren(QPushButton) if b.objectName() == "capability-open"]

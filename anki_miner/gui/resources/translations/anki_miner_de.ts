@@ -2634,6 +2634,14 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Zwischen den integrierten Dateiauswahldialogen von Anki Miner und den nativen Ihres Betriebssystems wechseln.</translation>
     </message>
     <message>
+        <source>Choose the tools on the Utilities tab</source>
+        <translation>Die Werkzeuge im Werkzeuge-Tab auswählen</translation>
+    </message>
+    <message>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation>Blenden Sie nicht genutzte Werkzeuge des Werkzeuge-Tabs aus, oder holen Sie sie unter Einstellungen -&gt; Darstellung &amp; Sprache zurück. Ein ausgeblendetes Werkzeug behält seinen Eintrag hier; seine Schaltfläche „Öffnen“ führt zu diesem Kontrollkästchen.</translation>
+    </message>
+    <message>
         <source>Search the settings</source>
         <translation>Die Einstellungen durchsuchen</translation>
     </message>
@@ -2671,7 +2679,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation>Führt mokuros japanische OCR auf einem Band-Ordner oder einer ganzen Serie aus, damit Lesung -&gt; Manga es sammeln kann. Installieren Sie mokuro unter Einstellungen -&gt; Transkription &amp; Ausrichtung.</translation>
+        <translation>Führt mokuros japanische OCR auf einem Band-Ordner oder einer ganzen Serie aus, damit Lesen -&gt; Manga es sammeln kann. Installieren Sie mokuro unter Einstellungen -&gt; Transkription &amp; Ausrichtung.</translation>
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -2679,7 +2687,7 @@ Es werden keine Indexdateien gelöscht.</translation>
     </message>
     <message>
         <source>Transcribe an audiobook and time the book's own sentences to it, writing an .srt the Audiobook tab, Reading -&gt; Subtitle Files or a reader can use.</source>
-        <translation>Transkribiert ein Hörbuch und ordnet ihm die eigenen Sätze des Buches zeitlich zu, wodurch eine .srt-Datei entsteht, die der Tab Hörbücher, Lesung -&gt; Untertiteldateien oder eine Lese-App nutzen kann.</translation>
+        <translation>Transkribiert ein Hörbuch und ordnet ihm die eigenen Sätze des Buches zeitlich zu, wodurch eine .srt-Datei entsteht, die der Tab Hörbücher, Lesen -&gt; Untertiteldateien oder eine Lese-App nutzen kann.</translation>
     </message>
     <message>
         <source>Restyle mined cards</source>
@@ -2758,8 +2766,24 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Tastenkombinationen</translation>
     </message>
     <message>
-        <source>Ctrl+1..7 switches tabs, Ctrl+, opens Settings, Ctrl+Enter runs the screen's main action, F1 opens this guide -- full list in Help -&gt; About.</source>
-        <translation>Strg+1..7 wechselt zwischen den Tabs, Strg+, öffnet die Einstellungen, Strg+Eingabe führt die Hauptaktion des Bildschirms aus, F1 öffnet diese Anleitung -- vollständige Liste unter Hilfe -&gt; Über.</translation>
+        <source>See and change every keyboard shortcut: the Word Curator's keys and the app-wide ones for Settings, this guide and each tab.</source>
+        <translation>Alle Tastenkombinationen ansehen und ändern: die Tasten des Wort-Kurators sowie die anwendungsweiten Tasten für Einstellungen, diese Bedienungsanleitung und jeden Tab.</translation>
+    </message>
+    <message>
+        <source>Anki Miner Usage Guide</source>
+        <translation>Anki-Miner-Bedienungsanleitung</translation>
+    </message>
+    <message>
+        <source>Search features, e.g. "i+1", "pitch", "youtube"</source>
+        <translation>Funktionen durchsuchen, z. B. "i+1", "pitch", "youtube"</translation>
+    </message>
+    <message>
+        <source>No matching features.</source>
+        <translation>Keine passenden Funktionen.</translation>
+    </message>
+    <message>
+        <source>Open ▸</source>
+        <translation>Öffnen ▸</translation>
     </message>
 </context><context>
     <name>CardBackfillTab</name>
@@ -4484,6 +4508,10 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
         <translation>Nur Audio (M4A)</translation>
     </message>
     <message>
+        <source>Subtitles only</source>
+        <translation>Nur Untertitel</translation>
+    </message>
+    <message>
         <source>Custom format:</source>
         <translation>Eigenes Format:</translation>
     </message>
@@ -5540,7 +5568,7 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     </message>
     <message>
         <source>Reading</source>
-        <translation>Lesung</translation>
+        <translation>Lesen</translation>
     </message>
     <message>
         <source>Off</source>
@@ -5593,6 +5621,154 @@ Es werden keine Dateien von der Festplatte gelöscht.</translation>
     <message>
         <source>Deck to exclude from known-words detection:</source>
         <translation>Stapel, der von der Erkennung bekannter Wörter ausgeschlossen wird:</translation>
+    </message>
+</context><context>
+    <name>FrequencyImportFlow</name>
+    <message>
+        <source>Choose frequency source</source>
+        <translation>Häufigkeitsquelle auswählen</translation>
+    </message>
+    <message>
+        <source>Choose frequency source to re-import</source>
+        <translation>Häufigkeitsquelle für erneuten Import auswählen</translation>
+    </message>
+    <message>
+        <source>Frequency source (%1);;All Files (*)</source>
+        <translation>Häufigkeitsquelle (%1);;Alle Dateien (*)</translation>
+    </message>
+    <message>
+        <source>Installed frequency sources could not be checked.</source>
+        <translation>Installierte Häufigkeitsquellen konnten nicht geprüft werden.</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Eine andere Aufgabe verwendet gerade die indizierten Ressourcen — versuchen Sie es erneut, sobald sie abgeschlossen ist.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>Der Import wurde abgeschlossen, aber die Einstellungen konnten nicht aktualisiert werden.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Ein anderer Import läuft noch. Warten Sie, bis er abgeschlossen ist, und versuchen Sie es erneut.</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>Der Import wurde vor Abschluss gestoppt. Versuchen Sie es erneut.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Wird abgebrochen…</translation>
+    </message>
+    <message>
+        <source>Importing frequency source…</source>
+        <translation>Häufigkeitsquelle wird importiert…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be imported.</source>
+        <translation>Die Häufigkeitsquelle konnte nicht importiert werden.</translation>
+    </message>
+    <message>
+        <source>Frequency Source Added</source>
+        <translation>Häufigkeitsquelle hinzugefügt</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>%1 Einträge aus „%2“ importiert.</translation>
+    </message>
+    <message>
+        <source>Choose frequency sources</source>
+        <translation>Häufigkeitsquellen auswählen</translation>
+    </message>
+    <message>
+        <source>Frequency Sources Added</source>
+        <translation>Häufigkeitsquellen hinzugefügt</translation>
+    </message>
+    <message>
+        <source>Imported %1 frequency sources:</source>
+        <translation>%1 Häufigkeitsquellen importiert:</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>Es wurde nichts importiert.</translation>
+    </message>
+    <message>
+        <source>Re-importing frequency source…</source>
+        <translation>Häufigkeitsquelle wird erneut importiert…</translation>
+    </message>
+    <message>
+        <source>The frequency source could not be re-imported.</source>
+        <translation>Die Häufigkeitsquelle konnte nicht erneut importiert werden.</translation>
+    </message>
+    <message>
+        <source>Frequency Source Re-imported</source>
+        <translation>Häufigkeitsquelle erneut importiert</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>%1 erneut importiert.</translation>
+    </message>
+    <message>
+        <source>Frequency source %1 of %2: %3</source>
+        <translation>Häufigkeitsquelle %1 von %2: %3</translation>
+    </message>
+    <message>
+        <source>The frequency sources could not be re-imported.</source>
+        <translation>Die Häufigkeitsquellen konnten nicht erneut importiert werden.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Alle erneut importieren</translation>
+    </message>
+    <message>
+        <source>Reimported %1 frequency source(s):</source>
+        <translation>%1 Häufigkeitsquelle(n) erneut importiert:</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>Übersprungen (keine gespeicherte Kopie zum Wiederaufbau vorhanden; zeilenweise Erneut importieren… verwenden):</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Fehlgeschlagen:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining frequency sources.</source>
+        <translation>Vor den verbleibenden Häufigkeitsquellen abgebrochen.</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>Es wurde nichts erneut importiert.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Nichts zum erneuten Importieren</translation>
+    </message>
+    <message>
+        <source>No frequency sources in the chain.</source>
+        <translation>Keine Häufigkeitsquellen in der Kette.</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>Übersprungen (keine gespeicherte Kopie zum Wiederaufbau vorhanden; zeilenweise Erneut importieren… verwenden):
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (%1 fehlerhafte Einträge übersprungen)</translation>
+    </message>
+    <message>
+        <source> This is an occurrence-based source; its counts were converted to ranks.</source>
+        <translation> Dies ist eine vorkommensbasierte Quelle; ihre Zählwerte wurden in Ränge umgewandelt.</translation>
+    </message>
+    <message>
+        <source> This is a word-based source; its level labels show on the card but don't affect frequency-rank filtering.</source>
+        <translation> Dies ist eine wortbasierte Quelle; ihre Stufenbezeichnungen werden auf der Karte angezeigt, wirken sich aber nicht auf die Filterung nach Häufigkeitsrang aus.</translation>
     </message>
 </context><context>
     <name>FrequencySettingsPanel</name>
@@ -5817,6 +5993,126 @@ Es werden keine Indexdateien gelöscht.</translation>
     <message>
         <source>Dismiss</source>
         <translation>Schließen</translation>
+    </message>
+</context><context>
+    <name>KeyBindings</name>
+    <message>
+        <source>Include or exclude the highlighted words</source>
+        <translation>Hervorgehobene Wörter ein- oder ausschließen</translation>
+    </message>
+    <message>
+        <source>Mark known</source>
+        <translation>Als bekannt markieren</translation>
+    </message>
+    <message>
+        <source>Play or pause</source>
+        <translation>Wiedergeben oder pausieren</translation>
+    </message>
+    <message>
+        <source>Edit word and sentence</source>
+        <translation>Wort und Satz bearbeiten</translation>
+    </message>
+    <message>
+        <source>Include visible</source>
+        <translation>Sichtbare einschließen</translation>
+    </message>
+    <message>
+        <source>Exclude visible</source>
+        <translation>Sichtbare ausschließen</translation>
+    </message>
+    <message>
+        <source>Next word</source>
+        <translation>Nächstes Wort</translation>
+    </message>
+    <message>
+        <source>Previous word</source>
+        <translation>Vorheriges Wort</translation>
+    </message>
+    <message>
+        <source>Open Settings</source>
+        <translation>Einstellungen öffnen</translation>
+    </message>
+    <message>
+        <source>Usage Guide</source>
+        <translation>Bedienungsanleitung</translation>
+    </message>
+    <message>
+        <source>Go to Video</source>
+        <translation>Zum Tab Video wechseln</translation>
+    </message>
+    <message>
+        <source>Go to Deck Builder</source>
+        <translation>Zum Tab Stapel-Builder wechseln</translation>
+    </message>
+    <message>
+        <source>Go to Audiobooks</source>
+        <translation>Zum Tab Hörbücher wechseln</translation>
+    </message>
+    <message>
+        <source>Go to Reading</source>
+        <translation>Zum Tab Lesen wechseln</translation>
+    </message>
+    <message>
+        <source>Go to Analytics</source>
+        <translation>Zum Tab Analytik wechseln</translation>
+    </message>
+    <message>
+        <source>Go to Utilities</source>
+        <translation>Zum Tab Werkzeuge wechseln</translation>
+    </message>
+    <message>
+        <source>Go to Settings</source>
+        <translation>Zum Tab Einstellungen wechseln</translation>
+    </message>
+</context><context>
+    <name>KeyboardSettingsPanel</name>
+    <message>
+        <source>Keyboard</source>
+        <translation>Tastenkürzel</translation>
+    </message>
+    <message>
+        <source>Click a box and press the new key. Changes apply at once. A Word Curator window that is already open keeps its keys until it next opens. Up and Down always move between words, Left and Right move between columns, and %1 always confirms.</source>
+        <translation>Klicken Sie auf ein Feld und drücken Sie die neue Taste. Änderungen wirken sofort. Ein bereits geöffnetes Wort-Kurator-Fenster behält seine Tasten, bis es das nächste Mal geöffnet wird. Mit Oben und Unten wechseln Sie immer zwischen den Wörtern, mit Links und Rechts zwischen den Spalten, und %1 bestätigt immer.</translation>
+    </message>
+    <message>
+        <source>Word Curator</source>
+        <translation>Wort-Kurator</translation>
+    </message>
+    <message>
+        <source>Application</source>
+        <translation>Anwendung</translation>
+    </message>
+    <message>
+        <source>Restore defaults</source>
+        <translation>Standardwerte wiederherstellen</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Leeren</translation>
+    </message>
+    <message>
+        <source>Leave this action without a key</source>
+        <translation>Diese Aktion ohne Taste lassen</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Zurücksetzen</translation>
+    </message>
+    <message>
+        <source>Go back to this action's default key</source>
+        <translation>Diese Aktion auf ihre Standardtaste zurücksetzen</translation>
+    </message>
+    <message>
+        <source>%1 is already used for “%2”.</source>
+        <translation>%1 wird bereits für „%2“ verwendet.</translation>
+    </message>
+    <message>
+        <source>%1 would fire from anywhere in the window. Add Ctrl, Alt or Meta, or use an F key.</source>
+        <translation>%1 würde von überall im Fenster ausgelöst. Fügen Sie Strg, Alt oder Meta hinzu, oder verwenden Sie eine Funktionstaste.</translation>
+    </message>
+    <message>
+        <source>%1 already does something else here, so it cannot be used.</source>
+        <translation>%1 wird hier bereits für etwas anderes verwendet und kann daher nicht genutzt werden.</translation>
     </message>
 </context><context>
     <name>KnownWordsManagerDialog</name>
@@ -6207,7 +6503,7 @@ Hinzuzufügende Wörter: %3. Fortfahren?</translation>
     </message>
     <message>
         <source>Reading</source>
-        <translation>Lesung</translation>
+        <translation>Lesen</translation>
     </message>
     <message>
         <source>Analytics</source>
@@ -6220,6 +6516,38 @@ Hinzuzufügende Wörter: %3. Fortfahren?</translation>
     <message>
         <source>Settings</source>
         <translation>Einstellungen</translation>
+    </message>
+    <message>
+        <source>Generate</source>
+        <translation>Generieren</translation>
+    </message>
+    <message>
+        <source>Retime</source>
+        <translation>Neu takten</translation>
+    </message>
+    <message>
+        <source>Condense</source>
+        <translation>Kondensieren</translation>
+    </message>
+    <message>
+        <source>Card Backfill</source>
+        <translation>Karten-Nachbefüllung</translation>
+    </message>
+    <message>
+        <source>Deck Filter</source>
+        <translation>Deck Filter</translation>
+    </message>
+    <message>
+        <source>Download</source>
+        <translation>Download</translation>
+    </message>
+    <message>
+        <source>Manga OCR</source>
+        <translation>Manga-OCR</translation>
+    </message>
+    <message>
+        <source>Audiobook Sync</source>
+        <translation>Hörbuch-Synchronisierung</translation>
     </message>
     <message>
         <source>Anki Miner updated</source>
@@ -6524,38 +6852,6 @@ Fortfahren?</translation>
     <message>
         <source>Text</source>
         <translation>Text</translation>
-    </message>
-    <message>
-        <source>Generate</source>
-        <translation>Generieren</translation>
-    </message>
-    <message>
-        <source>Retime</source>
-        <translation>Neu takten</translation>
-    </message>
-    <message>
-        <source>Condense</source>
-        <translation>Kondensieren</translation>
-    </message>
-    <message>
-        <source>Card Backfill</source>
-        <translation>Karten-Nachbefüllung</translation>
-    </message>
-    <message>
-        <source>Deck Filter</source>
-        <translation>Deck Filter</translation>
-    </message>
-    <message>
-        <source>Download</source>
-        <translation>Download</translation>
-    </message>
-    <message>
-        <source>Manga OCR</source>
-        <translation>Manga-OCR</translation>
-    </message>
-    <message>
-        <source>Audiobook Sync</source>
-        <translation>Hörbuch-Synchronisierung</translation>
     </message>
     <message>
         <source>Single</source>
@@ -6933,7 +7229,7 @@ Fortfahren?</translation>
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
-        <translation>Führt mokuros OCR auf einem Ordner mit Seitenbildern oder einem Serienordner mit Bänden aus. Jeder Band erhält dabei eine .mokuro-Datei daneben für Lesung → Manga.</translation>
+        <translation>Führt mokuros OCR auf einem Ordner mit Seitenbildern oder einem Serienordner mit Bänden aus. Jeder Band erhält dabei eine .mokuro-Datei daneben für Lesen → Manga.</translation>
     </message>
     <message>
         <source>Folder:</source>
@@ -7092,6 +7388,146 @@ Fortfahren?</translation>
     <message>
         <source>Silence-removal library installed.</source>
         <translation>Bibliothek zur Stille-Entfernung installiert.</translation>
+    </message>
+</context><context>
+    <name>PitchImportFlow</name>
+    <message>
+        <source>Choose pitch accent source</source>
+        <translation>Quelle für Tonhöhenakzent auswählen</translation>
+    </message>
+    <message>
+        <source>Choose pitch source to re-import</source>
+        <translation>Tonhöhenquelle für erneuten Import auswählen</translation>
+    </message>
+    <message>
+        <source>Pitch accent source (%1);;All Files (*)</source>
+        <translation>Quelle für Tonhöhenakzent (%1);;Alle Dateien (*)</translation>
+    </message>
+    <message>
+        <source>Installed pitch accent sources could not be checked.</source>
+        <translation>Installierte Quellen für Tonhöhenakzente konnten nicht geprüft werden.</translation>
+    </message>
+    <message>
+        <source>Another task is using the indexed resources — try again when it finishes.</source>
+        <translation>Eine andere Aufgabe verwendet gerade die indizierten Ressourcen — versuchen Sie es erneut, sobald sie abgeschlossen ist.</translation>
+    </message>
+    <message>
+        <source>The import finished, but the settings could not be updated.</source>
+        <translation>Der Import wurde abgeschlossen, aber die Einstellungen konnten nicht aktualisiert werden.</translation>
+    </message>
+    <message>
+        <source>Another import is still finishing. Wait for it to finish and try again.</source>
+        <translation>Ein anderer Import läuft noch. Warten Sie, bis er abgeschlossen ist, und versuchen Sie es erneut.</translation>
+    </message>
+    <message>
+        <source>The import stopped before it finished. Try again.</source>
+        <translation>Der Import wurde vor Abschluss gestoppt. Versuchen Sie es erneut.</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <source>Cancelling…</source>
+        <translation>Wird abgebrochen…</translation>
+    </message>
+    <message>
+        <source>Importing pitch source…</source>
+        <translation>Tonhöhenquelle wird importiert…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be imported.</source>
+        <translation>Die Tonhöhenquelle konnte nicht importiert werden.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Added</source>
+        <translation>Tonhöhenquelle hinzugefügt</translation>
+    </message>
+    <message>
+        <source>Imported %1 entries from '%2'.</source>
+        <translation>%1 Einträge aus „%2“ importiert.</translation>
+    </message>
+    <message>
+        <source>Choose pitch accent sources</source>
+        <translation>Quellen für Tonhöhenakzent auswählen</translation>
+    </message>
+    <message>
+        <source>Pitch Sources Added</source>
+        <translation>Tonhöhenquellen hinzugefügt</translation>
+    </message>
+    <message>
+        <source>Imported %1 pitch sources:</source>
+        <translation>%1 Tonhöhenquellen importiert:</translation>
+    </message>
+    <message>
+        <source>Nothing was imported.</source>
+        <translation>Es wurde nichts importiert.</translation>
+    </message>
+    <message>
+        <source>Re-importing pitch source…</source>
+        <translation>Tonhöhenquelle wird erneut importiert…</translation>
+    </message>
+    <message>
+        <source>The pitch source could not be re-imported.</source>
+        <translation>Die Tonhöhenquelle konnte nicht erneut importiert werden.</translation>
+    </message>
+    <message>
+        <source>Pitch Source Re-imported</source>
+        <translation>Tonhöhenquelle erneut importiert</translation>
+    </message>
+    <message>
+        <source>Re-imported %1.</source>
+        <translation>%1 erneut importiert.</translation>
+    </message>
+    <message>
+        <source>Pitch source %1 of %2: %3</source>
+        <translation>Tonhöhenquelle %1 von %2: %3</translation>
+    </message>
+    <message>
+        <source>The pitch sources could not be re-imported.</source>
+        <translation>Die Tonhöhenquellen konnten nicht erneut importiert werden.</translation>
+    </message>
+    <message>
+        <source>Reimport All</source>
+        <translation>Alle erneut importieren</translation>
+    </message>
+    <message>
+        <source>Reimported %1 pitch source(s):</source>
+        <translation>%1 Tonhöhenquelle(n) erneut importiert:</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):</source>
+        <translation>Übersprungen (keine gespeicherte Kopie zum Wiederaufbau vorhanden; zeilenweise Erneut importieren… verwenden):</translation>
+    </message>
+    <message>
+        <source>Failed:</source>
+        <translation>Fehlgeschlagen:</translation>
+    </message>
+    <message>
+        <source>Cancelled before remaining pitch sources.</source>
+        <translation>Vor den verbleibenden Tonhöhenquellen abgebrochen.</translation>
+    </message>
+    <message>
+        <source>Nothing was re-imported.</source>
+        <translation>Es wurde nichts erneut importiert.</translation>
+    </message>
+    <message>
+        <source>Nothing to reimport</source>
+        <translation>Nichts zum erneuten Importieren</translation>
+    </message>
+    <message>
+        <source>No pitch sources in the chain.</source>
+        <translation>Keine Tonhöhenquellen in der Kette.</translation>
+    </message>
+    <message>
+        <source>Skipped (no saved copy to rebuild from; use per-row Re-import…):
+</source>
+        <translation>Übersprungen (keine gespeicherte Kopie zum Wiederaufbau vorhanden; zeilenweise Erneut importieren… verwenden):
+</translation>
+    </message>
+    <message>
+        <source> (skipped %1 malformed entries)</source>
+        <translation> (%1 fehlerhafte Einträge übersprungen)</translation>
     </message>
 </context><context>
     <name>PitchSettingsPanel</name>
@@ -7510,6 +7946,28 @@ Es werden keine Indexdateien gelöscht.</translation>
     <message>
         <source>The profile could not be deleted.</source>
         <translation>Das Profil konnte nicht gelöscht werden.</translation>
+    </message>
+</context><context>
+    <name>ProgressTelemetry</name>
+    <message>
+        <source>%1 downloaded</source>
+        <translation>%1 heruntergeladen</translation>
+    </message>
+    <message>
+        <source>Elapsed %1</source>
+        <translation>Verstrichen %1</translation>
+    </message>
+    <message>
+        <source>Resumed</source>
+        <translation>Fortgesetzt</translation>
+    </message>
+    <message>
+        <source>About %1 remaining</source>
+        <translation>Etwa %1 verbleibend</translation>
+    </message>
+    <message>
+        <source>No update for %1 s</source>
+        <translation>Keine Aktualisierung seit %1 s</translation>
     </message>
 </context><context>
     <name>ProgressWidget</name>
@@ -8859,6 +9317,80 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Dieser Satz konnte nicht analysiert werden.</translation>
     </message>
 </context><context>
+    <name>ServiceFactory</name>
+    <message>
+        <source>Couldn't scan dictionaries folder: %1</source>
+        <translation>Der Wörterbuchordner konnte nicht gescannt werden: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't load dictionary chain: %1</source>
+        <translation>Die Wörterbuchkette konnte nicht geladen werden: %1</translation>
+    </message>
+    <message>
+        <source>Dictionary chain loaded: %1</source>
+        <translation>Wörterbuchkette geladen: %1</translation>
+    </message>
+    <message>
+        <source>Skipping unavailable provider(s): %1</source>
+        <translation>Nicht verfügbare Anbieter werden übersprungen: %1</translation>
+    </message>
+    <message>
+        <source>No offline dictionary — definitions will come from Jisho.org only</source>
+        <translation>Kein Offline-Wörterbuch — Definitionen kommen nur von Jisho.org</translation>
+    </message>
+    <message>
+        <source>Cards will have no definitions until you add a dictionary in Settings → Dictionaries.</source>
+        <translation>Karten haben keine Definitionen, bis Sie ein Wörterbuch unter Einstellungen → Wörterbücher hinzufügen.</translation>
+    </message>
+    <message>
+        <source>Pitch accent source '%1' unavailable; skipped</source>
+        <translation>Quelle für Tonhöhenakzent „%1“ nicht verfügbar; übersprungen</translation>
+    </message>
+    <message>
+        <source>Pitch accent data loaded: %1 source(s), %2 entries</source>
+        <translation>Tonhöhenakzent-Daten geladen: %1 Quelle(n), %2 Einträge</translation>
+    </message>
+    <message>
+        <source>Couldn't load pitch accent data: %1</source>
+        <translation>Tonhöhenakzent-Daten konnten nicht geladen werden: %1</translation>
+    </message>
+    <message>
+        <source>Frequency data loaded: %1 source(s), %2 entries</source>
+        <translation>Häufigkeitsdaten geladen: %1 Quelle(n), %2 Einträge</translation>
+    </message>
+    <message>
+        <source>Couldn't load frequency data: %1</source>
+        <translation>Häufigkeitsdaten konnten nicht geladen werden: %1</translation>
+    </message>
+    <message>
+        <source>Skipping %1 audio entry with no URL</source>
+        <translation>Audioeintrag %1 ohne URL wird übersprungen</translation>
+    </message>
+    <message>
+        <source>Skipping audio pack entry with no pack ID</source>
+        <translation>Audiopaket-Eintrag ohne Paket-ID wird übersprungen</translation>
+    </message>
+    <message>
+        <source>Audio pack '%1' unavailable; skipped</source>
+        <translation>Audiopaket „%1“ nicht verfügbar; übersprungen</translation>
+    </message>
+    <message>
+        <source>Name wordsets loaded: %1 set(s) enabled</source>
+        <translation>Namens-Wortsets geladen: %1 Set(s) aktiviert</translation>
+    </message>
+    <message>
+        <source>Couldn't load name wordsets: %1</source>
+        <translation>Namens-Wortsets konnten nicht geladen werden: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't initialize known word database: %1</source>
+        <translation>Datenbank bekannter Wörter konnte nicht initialisiert werden: %1</translation>
+    </message>
+    <message>
+        <source>Couldn't load word lists: %1</source>
+        <translation>Wortlisten konnten nicht geladen werden: %1</translation>
+    </message>
+</context><context>
     <name>SettingsSearchBox</name>
     <message>
         <source>Search settings</source>
@@ -8973,6 +9505,10 @@ Es werden keine Indexdateien gelöscht.</translation>
     <message>
         <source>Appearance &amp; Language</source>
         <translation>Darstellung &amp; Sprache</translation>
+    </message>
+    <message>
+        <source>Keyboard</source>
+        <translation>Tastenkürzel</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -10523,6 +11059,14 @@ Ihre installierten Ressourcen und Ihr Design bleiben erhalten.</translation>
         <translation>Die systemeigenen Dateiauswahldialoge verwenden. Deaktivieren Sie dies, um stattdessen die integrierte Auswahl der App zu verwenden, die dem App-Design folgt und auf jeder Plattform gleich aussieht.</translation>
     </message>
     <message>
+        <source>Utilities tab</source>
+        <translation>Werkzeuge-Tab</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Wählen Sie, welche Werkzeuge der Werkzeuge-Tab zeigt. Mindestens eines bleibt.</translation>
+    </message>
+    <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
         <translation>Klicken Sie auf eine Design-Vorschau, um es live anzuwenden; &lt;b&gt;Zurücksetzen&lt;/b&gt; macht dies rückgängig. Markieren Sie Designs mit einem Stern, um sie zur Auswahl oben rechts hinzuzufügen.</translation>
     </message>
@@ -10749,12 +11293,36 @@ Sort by it to work through a long recording in order — then highlight the rows
 Danach sortieren, um eine lange Aufnahme der Reihe nach durchzuarbeiten — dann die Zeilen bis zu Ihrer Abbruchstelle markieren und diese einschließen.</translation>
     </message>
     <message>
-        <source>S include/exclude · Space play/pause · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S Ein-/Ausschließen · Leertaste Wiedergabe/Pause · K Als bekannt markieren · Strg+A Sichtbare einschließen · Strg+D Sichtbare ausschließen · Strg+Eingabe Bestätigen</translation>
+        <source>%1 include/exclude</source>
+        <translation>%1 Ein-/Ausschließen</translation>
     </message>
     <message>
-        <source>S include/exclude · K mark known · Ctrl+A include visible · Ctrl+D exclude visible · Ctrl+Enter confirm</source>
-        <translation>S Ein-/Ausschließen · K Als bekannt markieren · Strg+A Sichtbare einschließen · Strg+D Sichtbare ausschließen · Strg+Eingabe Bestätigen</translation>
+        <source>%1 play/pause</source>
+        <translation>%1 Wiedergabe/Pause</translation>
+    </message>
+    <message>
+        <source>%1 mark known</source>
+        <translation>%1 Als bekannt markieren</translation>
+    </message>
+    <message>
+        <source>%1 include visible</source>
+        <translation>%1 Sichtbare einschließen</translation>
+    </message>
+    <message>
+        <source>%1 exclude visible</source>
+        <translation>%1 Sichtbare ausschließen</translation>
+    </message>
+    <message>
+        <source>%1 next word</source>
+        <translation>%1 Nächstes Wort</translation>
+    </message>
+    <message>
+        <source>%1 previous word</source>
+        <translation>%1 Vorheriges Wort</translation>
+    </message>
+    <message>
+        <source>%1 confirm</source>
+        <translation>%1 Bestätigen</translation>
     </message>
     <message>
         <source>Reset columns</source>

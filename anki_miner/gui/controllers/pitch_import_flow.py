@@ -35,49 +35,69 @@ from anki_miner.services.pitch_accent.source_importer import PITCH_SOURCE_SUFFIX
 from anki_miner.utils.i18n import tr_format
 
 
-def _tr(text: str) -> str:
-    return QCoreApplication.translate("PitchImportFlow", text)
-
-
 class PitchImportFlow(SourceChainImportFlow):
     """Drives pitch-source imports for the Settings → Pitch Accent panel."""
 
     @property
     def _labels(self) -> SourceFlowLabels:
         return SourceFlowLabels(
-            picker_add_caption=_tr("Choose pitch accent source"),
-            picker_reimport_caption=_tr("Choose pitch source to re-import"),
-            picker_filter_template=_tr("Pitch accent source (%1);;All Files (*)"),
-            scan_failed=_tr("Installed pitch accent sources could not be checked."),
-            resources_in_use=_tr("Another task is using the indexed resources — try again when it finishes."),
-            settings_update_failed=_tr("The import finished, but the settings could not be updated."),
-            refusal=_tr("Another import is still finishing. Wait for it to finish and try again."),
-            missing_result=_tr("The import stopped before it finished. Try again."),
-            cancel=_tr("Cancel"),
-            cancelling=_tr("Cancelling…"),
-            add_progress=_tr("Importing pitch source…"),
-            add_failure_summary=_tr("The pitch source could not be imported."),
-            added_title=_tr("Pitch Source Added"),
-            added_body_template=_tr("Imported %1 entries from '%2'."),
-            picker_add_multi_caption=_tr("Choose pitch accent sources"),
-            added_batch_title=_tr("Pitch Sources Added"),
-            added_batch_header_template=_tr("Imported %1 pitch sources:"),
-            added_batch_done=_tr("Nothing was imported."),
-            reimport_progress=_tr("Re-importing pitch source…"),
-            reimport_failure_summary=_tr("The pitch source could not be re-imported."),
-            reimported_title=_tr("Pitch Source Re-imported"),
-            reimported_body_template=_tr("Re-imported %1."),
-            batch_progress_template=_tr("Pitch source %1 of %2: %3"),
-            batch_failure_summary=_tr("The pitch sources could not be re-imported."),
-            batch_title=_tr("Reimport All"),
-            batch_reimported_header_template=_tr("Reimported %1 pitch source(s):"),
-            batch_skipped_header=_tr("Skipped (no saved copy to rebuild from; use per-row Re-import…):"),
-            batch_failed_header=_tr("Failed:"),
-            batch_cancelled=_tr("Cancelled before remaining pitch sources."),
-            batch_done=_tr("Nothing was re-imported."),
-            nothing_title=_tr("Nothing to reimport"),
-            nothing_empty_chain=_tr("No pitch sources in the chain."),
-            nothing_skipped_header=_tr("Skipped (no saved copy to rebuild from; use per-row Re-import…):\n"),
+            picker_add_caption=QCoreApplication.translate("PitchImportFlow", "Choose pitch accent source"),
+            picker_reimport_caption=QCoreApplication.translate("PitchImportFlow", "Choose pitch source to re-import"),
+            picker_filter_template=QCoreApplication.translate(
+                "PitchImportFlow", "Pitch accent source (%1);;All Files (*)"
+            ),
+            scan_failed=QCoreApplication.translate(
+                "PitchImportFlow", "Installed pitch accent sources could not be checked."
+            ),
+            resources_in_use=QCoreApplication.translate(
+                "PitchImportFlow", "Another task is using the indexed resources — try again when it finishes."
+            ),
+            settings_update_failed=QCoreApplication.translate(
+                "PitchImportFlow", "The import finished, but the settings could not be updated."
+            ),
+            refusal=QCoreApplication.translate(
+                "PitchImportFlow", "Another import is still finishing. Wait for it to finish and try again."
+            ),
+            missing_result=QCoreApplication.translate(
+                "PitchImportFlow", "The import stopped before it finished. Try again."
+            ),
+            cancel=QCoreApplication.translate("PitchImportFlow", "Cancel"),
+            cancelling=QCoreApplication.translate("PitchImportFlow", "Cancelling…"),
+            add_progress=QCoreApplication.translate("PitchImportFlow", "Importing pitch source…"),
+            add_failure_summary=QCoreApplication.translate(
+                "PitchImportFlow", "The pitch source could not be imported."
+            ),
+            added_title=QCoreApplication.translate("PitchImportFlow", "Pitch Source Added"),
+            added_body_template=QCoreApplication.translate("PitchImportFlow", "Imported %1 entries from '%2'."),
+            picker_add_multi_caption=QCoreApplication.translate("PitchImportFlow", "Choose pitch accent sources"),
+            added_batch_title=QCoreApplication.translate("PitchImportFlow", "Pitch Sources Added"),
+            added_batch_header_template=QCoreApplication.translate("PitchImportFlow", "Imported %1 pitch sources:"),
+            added_batch_done=QCoreApplication.translate("PitchImportFlow", "Nothing was imported."),
+            reimport_progress=QCoreApplication.translate("PitchImportFlow", "Re-importing pitch source…"),
+            reimport_failure_summary=QCoreApplication.translate(
+                "PitchImportFlow", "The pitch source could not be re-imported."
+            ),
+            reimported_title=QCoreApplication.translate("PitchImportFlow", "Pitch Source Re-imported"),
+            reimported_body_template=QCoreApplication.translate("PitchImportFlow", "Re-imported %1."),
+            batch_progress_template=QCoreApplication.translate("PitchImportFlow", "Pitch source %1 of %2: %3"),
+            batch_failure_summary=QCoreApplication.translate(
+                "PitchImportFlow", "The pitch sources could not be re-imported."
+            ),
+            batch_title=QCoreApplication.translate("PitchImportFlow", "Reimport All"),
+            batch_reimported_header_template=QCoreApplication.translate(
+                "PitchImportFlow", "Reimported %1 pitch source(s):"
+            ),
+            batch_skipped_header=QCoreApplication.translate(
+                "PitchImportFlow", "Skipped (no saved copy to rebuild from; use per-row Re-import…):"
+            ),
+            batch_failed_header=QCoreApplication.translate("PitchImportFlow", "Failed:"),
+            batch_cancelled=QCoreApplication.translate("PitchImportFlow", "Cancelled before remaining pitch sources."),
+            batch_done=QCoreApplication.translate("PitchImportFlow", "Nothing was re-imported."),
+            nothing_title=QCoreApplication.translate("PitchImportFlow", "Nothing to reimport"),
+            nothing_empty_chain=QCoreApplication.translate("PitchImportFlow", "No pitch sources in the chain."),
+            nothing_skipped_header=QCoreApplication.translate(
+                "PitchImportFlow", "Skipped (no saved copy to rebuild from; use per-row Re-import…):\n"
+            ),
         )
 
     @property
@@ -131,4 +151,6 @@ class PitchImportFlow(SourceChainImportFlow):
         skipped = meta.get("skipped_malformed", 0)
         if not skipped:
             return ""
-        return tr_format(_tr(" (skipped %1 malformed entries)"), f"{skipped:,}")
+        return tr_format(
+            QCoreApplication.translate("PitchImportFlow", " (skipped %1 malformed entries)"), f"{skipped:,}"
+        )

@@ -1114,6 +1114,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                 content_style=get_profile(config_language(self.config)).content_style,
                 parse_sentence_fn=self._curation_parse_fn(),
                 expression_audio_fetch_fn=audio_fetch_fn,
+                key_bindings=self.config.key_bindings,
             )
             self._curation_dialog_seq += 1
             presentation = self._curation_dialog_seq
