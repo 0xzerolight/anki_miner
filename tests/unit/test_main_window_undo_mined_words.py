@@ -448,3 +448,42 @@ class TestUndoRevertsMinedWords:
         pending["on_done"](deleted)
 
         assert receipt.receipt is later_receipt
+
+    @pytest.mark.parametrize(
+        ("owner_main_tab", "expect_undo_blocked"),
+        [
+            ("video", True),
+            ("audiobook", True),
+            ("reading", True),
+            ("analytics", False),
+        ],
+    )
+    def test_active_mining_task_blocks_undo_by_owner(
+        self, main_window, monkeypatch, owner_main_tab, expect_undo_blocked
+    ):
+        """``_on_run_details`` passes ``undo_callback=None`` while a task owned by
+        a mining tab (video/audiobook/reading) is running in the task registry.
+
+        A task owned by a non-mining tab (analytics) must not block undo — the
+        gate only cares about tabs that can still be creating cards.
+        """
+        from anki_miner.gui.capabilities import CapabilityTarget
+        from anki_miner.gui.controllers.task_registry import TaskSpec
+
+        captured = _capture_undo_callback(monkeypatch)
+
+        main_window.task_registry.start(TaskSpec("t1", "Running", CapabilityTarget(owner_main_tab)))
+
+        result = ProcessingResult(
+            total_words_found=1,
+            new_words_found=1,
+            cards_created=1,
+            card_ids=[1],
+            mined_forms=["猫"],
+        )
+        main_window._on_run_details(result)
+
+        if expect_undo_blocked:
+            assert captured["cb"] is None
+        else:
+            assert captured["cb"] is not None

@@ -556,10 +556,10 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         """Join and (only if joined) close the prior run's worker + processor.
 
         Shared by ``SingleEpisodeTab`` and ``BatchProcessingTab`` (both subclass
-        this base and start ``ProcessorOwningWorker``s). Mirrors the deck-builder
-        teardown idiom: disconnect the stale ``finished`` → ``_restore_buttons``
-        handler so a late termination can't restore buttons mid-new-run (a no-op
-        when not connected, e.g. the batch queue path), cancel the worker, then
+        this base and start ``ProcessorOwningWorker``s). Disconnect the stale
+        ``finished`` → ``_restore_buttons`` handler so a late termination can't
+        restore buttons mid-new-run (a no-op when not connected, e.g. the batch
+        queue path), cancel the worker, then
         bounded-join it (reassigning ``self.worker_thread`` would otherwise drop
         the only reference to a live QThread and crash with "QThread: Destroyed
         while thread is still running").

@@ -3990,7 +3990,9 @@ class TestPerFileLineCache:
         """count_lemmas then parse_subtitle_file on one instance hits the cache.
 
         Total tagger calls must equal the number of lines (one tokenize pass),
-        NOT 2x lines. The deck-builder double-parse is exactly this pattern.
+        NOT 2x lines. EpisodeProcessor._phase1_parse's own
+        parse_subtitle_file -> count_lemmas double-parse is exactly this
+        pattern, on every mining run.
         """
         import os
 

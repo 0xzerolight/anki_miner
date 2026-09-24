@@ -435,23 +435,22 @@ class AnkiMinerConfig:
     known_words_match_kana_variants: bool = True
     # When True, the known-words subtraction in Phase 2 is skipped so ALL
     # mineable words are mined regardless of Anki collection state. Set by
-    # the Android golden-contract fixtures and the e2e harness's
-    # collection-filter-off scenario (scripts/engine_golden_contract_v2.py,
-    # tests/e2e/app_config.py). Default False preserves the standard
-    # filter-against-known-vocab behaviour.
+    # the e2e harness's no-Anki/deterministic mode (tests/e2e/app_config.py).
+    # Default False preserves the standard filter-against-known-vocab
+    # behaviour.
     include_known_words: bool = False
     # When True, the per-episode reduction filters (frequency rank, word
     # lists, sentence dedup, cross-episode, i+1, sentence length) are
     # skipped. Known-words subtraction is unaffected (see
-    # include_known_words). Set by the Android golden-contract fixtures and
-    # the e2e harness (same call sites as include_known_words). Default
-    # False preserves normal mining.
+    # include_known_words). Set by the Android golden-contract fixtures
+    # (scripts/engine_golden_contract_v2.py). Default False preserves normal
+    # mining.
     bypass_optional_filters: bool = False
     # When True, notes are posted to AnkiConnect with
     # options={"allowDuplicate": True, "duplicateScope": "deck"} so words
     # already present elsewhere in the collection are still carded. Set by
-    # the Android golden-contract fixtures and the e2e harness (same call
-    # sites as include_known_words). Default False preserves the standard
+    # both the Android golden-contract fixtures and the e2e harness's
+    # no-Anki/deterministic mode. Default False preserves the standard
     # dedup behaviour.
     allow_duplicate_cards: bool = False
 

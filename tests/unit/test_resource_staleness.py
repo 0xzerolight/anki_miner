@@ -1,8 +1,8 @@
 """The one pre-run gate for schema-stale indexed resources.
 
-`stale_resource_reimport_error` is what every mining path, the backfill scan
-and the deck builder abort on after an app upgrade moves an index schema. Two
-opposite failures are being pinned:
+`stale_resource_reimport_error` is what every mining path and the backfill
+scan abort on after an app upgrade moves an index schema. Two opposite
+failures are being pinned:
 
 *Silence where it matters.* A stale slot is dropped from its chain without a
 word - the card loses its definition, or its rank (and `max_frequency_rank`

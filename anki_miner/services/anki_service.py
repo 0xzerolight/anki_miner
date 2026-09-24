@@ -227,9 +227,11 @@ class AnkiService:
         # receipt; EpisodeProcessor consumes it to promote only cards Anki
         # created.
         self.last_created_mined_forms: list[str] = []
-        # Positionally aligned source lemmas for the same IDs. Cross-episode
-        # dedup keys on corpus lemmas, which need not map one-to-one to mined
-        # forms.
+        # Positionally aligned source lemmas for the same IDs, which need not
+        # map one-to-one to mined forms. Consumed only by
+        # EpisodeProcessor._stamp_whitelist_coverage, which zips them with
+        # last_created_mined_forms to fold each confirmed card's lemma into
+        # the run's whitelist-coverage "mined" set.
         self.last_created_lemmas: list[str] = []
         self._cancelled_check: Callable[[], bool] | None = None
         # Number of notes not created during the last create_cards_batch call.
@@ -411,9 +413,9 @@ class AnkiService:
         mining path: the Settings → Anki deck dropdown only offers decks that
         really exist, so a configured deck that is missing is a user-visible
         error rather than a silently-created stray deck. ``ensure_deck`` is
-        still used by Deck Filter, which builds a genuinely new deck and calls
-        it BEFORE running its filtered export — that ordering is what makes
-        this check pass there (see services/deck_filter.py).
+        also used by Deck Filter, which never calls this check at all: it
+        creates its own target deck directly via ``ensure_deck`` and copies
+        notes into it (see ``services/deck_filter.py``).
 
         Raises:
             SetupError: note type missing, field mapping invalid, or the

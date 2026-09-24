@@ -207,15 +207,27 @@ class TestRouteRoundTrip:
         assert window._current_subtab_keys()["video"] == "batch"
         assert window._current_subtab_keys()["subtitles"] == "retime"
 
-    def test_a_stale_deckbuilder_route_opens_the_first_tab(self, wired_window):
+    def test_a_stale_deckbuilder_route_does_not_crash_or_move_the_tab(self, wired_window):
         """A route saved before the Deck Builder tab was removed must not crash
-        the restore; it lands on the first tab like any other unknown key."""
+        the restore. ``_main_tab_index`` resolves "deckbuilder" to -1, exactly
+        like any other unknown key, so ``restore_session_state`` skips the
+        ``setCurrentIndex`` call and leaves the tab wherever it already was
+        (see the ``index < 0: continue`` guard) rather than landing on tab 0.
+
+        Starts on the LAST tab (not tab 0) so a restore that silently reset the
+        current tab, or raised and left the widget mid-restore, could not pass
+        by accident.
+        """
         window, _titles, _tabs = wired_window
+        assert window._main_tab_index("deckbuilder") == -1
+
+        last_index = window.tabs.count() - 1
+        window.tabs.setCurrentIndex(last_index)
         session_state.save_route("deckbuilder", {})
 
         window.restore_session_state()
 
-        assert window.tabs.currentIndex() == 0
+        assert window.tabs.currentIndex() == last_index
 
     def test_unknown_keys_are_ignored(self, wired_window):
         window, _titles, _tabs = wired_window

@@ -1555,7 +1555,7 @@ class TestOccurrenceCountsFoldToWordIdentity:
         assert any(word is self._hair(words) for word in kept)
 
     def test_the_corpus_counter_itself_stays_unfolded(self, test_config):
-        """A candidate set built straight from these keys must read them unfolded."""
+        """The curator's Occurrences column reads these keys straight, unfolded."""
         _config, _words, counts = self._parse(test_config, "simplified")
 
         assert counts["頭髮"] == 3

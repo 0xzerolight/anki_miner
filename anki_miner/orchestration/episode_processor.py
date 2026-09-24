@@ -999,10 +999,11 @@ class EpisodeProcessor:
             QCoreApplication.translate("EpisodeProcessor", "Filtering against known vocabulary"),
         )
         if self.config.include_known_words:
-            # Deck Builder "include everything" mode: skip known-words subtraction
-            # entirely — including the Issue #42 user ignore list — and mine all
-            # words that passed POS/subtype filtering. Coverage-deck builds
-            # intentionally re-card words the user already knows.
+            # "Include everything" mode (set by the e2e harness's no-Anki
+            # mode): skip known-words subtraction entirely — including the
+            # Issue #42 user ignore list — and mine all words that passed
+            # POS/subtype filtering. This intentionally re-cards words the
+            # user already knows.
             self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Including words already known"))
             unknown_words = all_words
         else:
@@ -1131,7 +1132,7 @@ class EpisodeProcessor:
         # as Phase 4, so 帰れる can qualify through 帰る without trusting 返る.
         # Runs before every lossy sentence selector so an undefined first word
         # cannot erase a definition-backed sentence-mate. Gated on
-        # bypass_optional_filters so the Deck Builder preview-parity path is
+        # bypass_optional_filters so the golden contract's bypass path is
         # unaffected (Phase 5 stays the skip point there).
         #
         # Known, intentional asymmetry: this probe is offline-only, but Phase 5
@@ -1222,8 +1223,8 @@ class EpisodeProcessor:
         # already ran above, so force-included words remain subject to it. We
         # split them out here and merge them back just before the within-run
         # duplicate collapse.
-        # Gated on bypass_optional_filters so the Deck Builder preview — which
-        # already includes everything — is unchanged.
+        # Gated on bypass_optional_filters so a bypass run — which already
+        # includes everything — is unchanged.
         forced_include: list[TokenizedWord] = []
         whitelist_service = self._active_whitelist()
         if whitelist_service is not None:
@@ -1456,10 +1457,11 @@ class EpisodeProcessor:
         # it would falsely give reading-only junk such as いでる the identity of
         # 出でる. Keep the first source occurrence (stable order).
         #
-        # Gated on allow_duplicate_cards: the Deck Builder sets it True (and
-        # bypass_optional_filters True) to intentionally re-card duplicates, in
-        # which case Anki creates both and showing both is correct — collapsing
-        # there would diverge from its raw-lemma preview parity.
+        # Gated on allow_duplicate_cards: the golden contract (alongside
+        # bypass_optional_filters) and the e2e harness's no-Anki mode set it
+        # True to intentionally re-card duplicates, in which case Anki creates
+        # both and showing both is correct — collapsing here would diverge
+        # from that parity.
         if not self.config.allow_duplicate_cards and unknown_words:
             identity_pairs: list[tuple[str, str]] = [
                 (
@@ -2739,7 +2741,7 @@ class EpisodeProcessor:
                     return outcome
                 unknown_words = outcome
             # Outside the curation branch: the merge can now be stamped with no
-            # curator in the loop (Review words off, batch, Deck Builder). Both
+            # curator in the loop (Review words off, batch). Both
             # calls fast-path out when nothing was stamped or edited, so an
             # untouched run pays nothing for standing here.
             unknown_words = self._materialize_line_expansions(unknown_words, subtitle_file, subtitle_offset)
@@ -3346,7 +3348,7 @@ class EpisodeProcessor:
 
         Queue workers front-run this with their own pre-loop check so a batch
         aborts once rather than per item; this covers the direct single-episode
-        callers (episode / manual-pair / deck-builder).
+        callers (episode / manual-pair).
 
         A family whose registry was not injected is skipped — for frequency,
         pitch and audio packs that is the normal state when the user has not

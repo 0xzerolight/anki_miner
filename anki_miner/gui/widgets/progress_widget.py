@@ -8,9 +8,9 @@ under three rules that keep the motion from becoming a second, prettier lie:
   run undoing itself, and an animation still gliding across a *stalled* bar is
   the app claiming progress it is not making.
 * **Never ahead of the truth.** W1-T6 deleted every fabricated denominator;
-  ``set_composed`` ignores the current item's own percentage for the same
-  reason. An animation is only ever aimed at a number a worker actually
-  reported, so it can lag the truth but never lead it.
+  ``set_composed`` takes no per-item percentage for the same reason — only
+  ``items_done`` is real. An animation is only ever aimed at a number a
+  worker actually reported, so it can lag the truth but never lead it.
 * **Not on the critical path.** The truthful value is recorded first and the
   animation only moves the pixels, so freeze, reset and completion can snap to
   the stored truth at any instant without waiting for anything.

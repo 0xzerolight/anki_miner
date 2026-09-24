@@ -716,6 +716,44 @@ def test_removed_native_dialog_key_is_dropped(tmp_path):
     assert not hasattr(config, "use_native_file_dialogs")
 
 
+_REMOVED_DECK_BUILDER_KEYS = (
+    "deck_builder_mode",
+    "deck_builder_top_n",
+    "deck_builder_coverage_pct",
+    "deck_builder_skip_known",
+)
+
+
+def test_removed_deck_builder_keys_are_dropped(tmp_config: Path):
+    """The Deck Builder tab is gone; its four run-option keys must not survive
+    a load, and a subsequent save must not re-emit them (unknown-key drop is
+    permanent, not just skipped on this one read)."""
+    tmp_config.write_text(
+        json.dumps(
+            {
+                "config_schema_version": 4,
+                "deck_builder_mode": "coverage_pct",
+                "deck_builder_top_n": 250,
+                "deck_builder_coverage_pct": 98.5,
+                "deck_builder_skip_known": False,
+            }
+        )
+    )
+
+    config = GUIConfigManager._parse_and_migrate(tmp_config)
+    for name in _REMOVED_DECK_BUILDER_KEYS:
+        assert not hasattr(config, name)
+
+    GUIConfigManager.save_config(config)
+    raw = json.loads(tmp_config.read_text())
+    for name in _REMOVED_DECK_BUILDER_KEYS:
+        assert name not in raw
+
+    reloaded = GUIConfigManager.load_config()
+    for name in _REMOVED_DECK_BUILDER_KEYS:
+        assert not hasattr(reloaded, name)
+
+
 LEGACY = {"max_sentence_duration_seconds": 30.0, "max_sentence_chars": 80}
 
 

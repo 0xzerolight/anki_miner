@@ -922,10 +922,10 @@ class WordFilterService:
         same double count one step further out — so it goes to neither.
 
         Folding happens HERE and never at the count site
-        (``count_lemmas``/``parse_text_units``): callers that build a
-        candidate set straight from those Counter keys rely on the raw,
-        unfolded key. A language with no fold (ja/ko) gets its own mapping
-        back untouched.
+        (``count_lemmas``/``parse_text_units``): the curator dialog's
+        "Occurrences" column (``EpisodeProcessor._run_curation``) reads those
+        Counter keys straight, unfolded. A language with no fold (ja/ko) gets
+        its own mapping back untouched.
         """
         fold = self._dedup_fold
         if fold is None:
