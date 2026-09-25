@@ -14,8 +14,10 @@ from anki_miner.services.resource_catalog import (
 
 
 class TestRecommendedDefaultSet:
-    def test_has_exactly_three_entries(self):
-        assert len(RECOMMENDED_DEFAULT_SET) == 3
+    def test_ids_in_catalog_order(self):
+        # Order is behaviour: apply_download_summary prepends each success, so
+        # the later freq spec lands first in frequency_chain and on the card.
+        assert [s.id for s in RECOMMENDED_DEFAULT_SET] == ["jmdict-english", "jpdb-freq", "jiten", "kanjium-pitch"]
 
     def test_ids_are_unique(self):
         ids = [spec.id for spec in RECOMMENDED_DEFAULT_SET]
@@ -43,6 +45,16 @@ class TestRecommendedDefaultSet:
             "https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/"
             "JPDB_v2.2_Frequency_Kana_2024-10-13.zip"
         )
+        assert spec.license_note
+
+    def test_jiten_freq_entry(self):
+        spec = _by_id("jiten")
+        assert spec.kind == "freq"
+        assert spec.display_name == "Jiten Frequency"
+        assert spec.url == "https://api.jiten.moe/api/frequency-list/download?downloadType=yomitan"
+        # Always-latest endpoint: every build is a new revision, so a
+        # re-download must replace the slot, not fork a second one.
+        assert spec.pin_slot
         assert spec.license_note
 
     def test_kanjium_pitch_entry(self):

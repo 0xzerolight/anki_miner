@@ -78,6 +78,20 @@ RECOMMENDED_DEFAULT_SET: tuple[ResourceSpec, ...] = (
         ),
         license_note="JPDB frequency data — downloaded from upstream source; original license applies.",
     ),
+    # Jiten serves its list from an always-latest API endpoint, and every build
+    # carries a new index.json revision ("Jiten 26-09-21"): pin_slot keeps each
+    # re-download in one slot. The id is the slug of the zip title "Jiten", so a
+    # hand-imported copy is the slot the download replaces. Placed after JPDB so
+    # it lands first in frequency_chain (apply_download_summary prepends each
+    # success in catalog order), putting Jiten first on the card.
+    ResourceSpec(
+        id="jiten",
+        kind="freq",
+        display_name="Jiten Frequency",
+        url="https://api.jiten.moe/api/frequency-list/download?downloadType=yomitan",
+        license_note="Jiten frequency data (jiten.moe) — CC BY-SA 4.0, downloaded from upstream source.",
+        pin_slot=True,
+    ),
     ResourceSpec(
         id="kanjium-pitch",
         kind="pitch",
