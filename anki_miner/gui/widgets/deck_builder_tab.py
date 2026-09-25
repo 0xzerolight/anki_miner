@@ -3,15 +3,15 @@
 Built on Batch's season pipeline: :class:`DeckBuilderWorker` (a
 ``BatchQueueWorkerThread`` subclass) mines the folder pair as one season item
 under a build-only config, gated on a corpus preview before the actual build
-runs. This module owns the screen's inputs and the request they build --
-Preview, Build and Cancel are wired to the worker in a later task, so their
-slots are stubs here.
+runs. This module owns the screen's inputs, the request they build, and the
+run's lifecycle: Preview scans and waits at the gate, Build confirms (or
+starts a run already confirmed), Cancel stops at any stage.
 """
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -33,6 +33,7 @@ from anki_miner.gui.capabilities import CapabilityTarget
 from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import SPACING
+from anki_miner.gui.utils.run_off_thread import still_running
 from anki_miner.gui.widgets._folder_series_screen import FolderSeriesScreenBase
 from anki_miner.gui.widgets.base import (
     PageWidth,
@@ -45,10 +46,13 @@ from anki_miner.gui.widgets.base import (
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
-from anki_miner.models.deck_build import DeckBuildRequest, DeckSelectionMode
+from anki_miner.gui.workers.deck_builder_worker import DeckBuilderWorker
+from anki_miner.models.deck_build import DeckBuildRequest, DeckCorpus, DeckSelectionMode
+from anki_miner.services.corpus_aggregator import build_preview, rank_select
+from anki_miner.utils.file_pairing import FilePairMatcher
+from anki_miner.utils.i18n import tr_format
 
-if TYPE_CHECKING:
-    from anki_miner.gui.workers.deck_builder_worker import DeckBuilderWorker
+logger = logging.getLogger(__name__)
 
 #: Shared by every folder picker on this screen (D7): Browse reopens where the
 #: last one of these three left off, independent of Batch's own history.
@@ -62,8 +66,9 @@ class DeckBuilderTab(FolderSeriesScreenBase):
     Batch's Add Series card uses (video, subtitle, optional translation
     folder, offsets), then adds the deck name and word-selection controls a
     season build needs. The corpus preview and the actual build both run on
-    :class:`DeckBuilderWorker` (wired in a later task); this class owns the
-    inputs, their validation, and the request they build.
+    one :class:`DeckBuilderWorker`; this class owns the inputs, their
+    validation, the request they build, and the run's four states (see
+    :meth:`_apply_run_state`).
     """
 
     #: Tables of results and log lines genuinely use the extra width.
@@ -100,6 +105,14 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         # Tracks the last value auto-filled from the video folder name, so a
         # manual edit (text no longer equal to it) is never overwritten again.
         self._last_auto_deck_name: str = ""
+        # Run state, reset at every start. Set before _setup_ui: seeding the
+        # selection controls already fires _refresh_preview.
+        self._run_state = "idle"
+        self._corpus: DeckCorpus | None = None
+        self._confirmed_selection: tuple[DeckSelectionMode, float] | None = None
+        self._cancel_requested = False
+        self._run_failed = False
+        self._run_had_item_failures = False
 
         self._wire_progress_callback(self.progress_callback)
         self._init_curation_bridge()
@@ -143,19 +156,16 @@ class DeckBuilderTab(FolderSeriesScreenBase):
 
         # Action buttons. Build is the run this screen is for, so it is the
         # pinned primary; Preview and Cancel are the quieter actions beside
-        # it. Preview/Build/Cancel are stubs here -- a later task wires them
-        # to DeckBuilderWorker.
+        # it. Their enabled states come from _apply_run_state alone.
         self.preview_button = ModernButton(self.tr("Preview"), variant="secondary")
         self.preview_button.setToolTip(self.tr("Scan the season and preview which words will be included"))
         self.preview_button.clicked.connect(self._on_preview_clicked)
 
         self.build_button = ModernButton(self.tr("Build Deck"), variant="primary")
         self.build_button.setToolTip(self.tr("Create the Anki cards for the previewed word list"))
-        self.build_button.setEnabled(False)
         self.build_button.clicked.connect(self._on_build_clicked)
 
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
-        self.cancel_button.setEnabled(False)
         self.cancel_button.clicked.connect(self._on_cancel_clicked)
 
         main_layout = QVBoxLayout()
@@ -174,6 +184,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
 
         self._apply_secondary_gate()
         self._seed_selection_controls()
+        self._apply_run_state("idle")
 
     def _create_input_section(self) -> QFrame:
         """Build the Input card: the season's folder pair, plus their offsets.
@@ -374,11 +385,16 @@ class DeckBuilderTab(FolderSeriesScreenBase):
             lambda value: self.persist_run_options(deck_builder_coverage_pct=value)
         )
 
+        # After a preview, the numbers follow the selection with no rescan.
+        self.mode_combo.currentIndexChanged.connect(self._refresh_preview)
+        self.top_n_spinbox.valueChanged.connect(self._refresh_preview)
+        self.coverage_spinbox.valueChanged.connect(self._refresh_preview)
+
         section.setLayout(layout)
         return section
 
     def _create_results_section(self) -> QFrame:
-        """Build the Results card: the corpus-preview numbers Task 7 fills in."""
+        """Build the Results card: the corpus-preview numbers ``_refresh_preview`` fills in."""
         section = QFrame()
         section.setObjectName("card")
         layout = QVBoxLayout()
@@ -485,9 +501,9 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         """Validate every input and return the run request, or ``None`` on refusal.
 
         A refusal reports its reason through the screen issue banner and
-        starts no worker; Preview and Build (wired in a later task) both read
-        this and stop the same way. Whether the folders actually pair up any
-        episodes is the worker's own preflight, not this screen's.
+        starts no worker; Preview and Build both read this and stop the same
+        way. Whether the folders pair up any episodes is checked separately,
+        in :meth:`_start`.
         """
         self.clear_screen_issue()
 
@@ -518,17 +534,323 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         )
 
     # ------------------------------------------------------------------
-    # Slots: Preview / Build / Cancel -- stubs; a later task wires the worker.
+    # Run state
+    # ------------------------------------------------------------------
+
+    def _apply_run_state(self, state: str) -> None:
+        """Set every run-dependent enable from one table.
+
+        ``idle``: Preview, Build and every input on; Cancel off.
+        ``scanning`` / ``preview_ready``: Build (which pre-confirms or
+        confirms), Cancel and the selection on; Preview and the scan inputs
+        off. ``building``: only Cancel on.
+
+        The scan inputs shaped the corpus a preview describes, so they lock
+        for the whole run. The selection stays live until Build, because
+        changing it only re-reads the cached corpus.
+        """
+        self._run_state = state
+        idle = state == "idle"
+        building = state == "building"
+        self.preview_button.setEnabled(idle)
+        self.build_button.setEnabled(not building)
+        self.cancel_button.setEnabled(not idle)
+        self.cancel_button.setText(self.tr("Cancel"))
+        for control in (
+            self.video_folder_selector,
+            self.subtitle_folder_selector,
+            self.secondary_folder_selector,
+            self.offset_spinbox,
+            self.secondary_offset_spinbox,
+            self.deck_name_edit,
+            self.skip_known_checkbox,
+            self.review_words_checkbox,
+        ):
+            control.setEnabled(idle)
+        for selection_control in (self.mode_combo, self.top_n_spinbox, self.coverage_spinbox):
+            selection_control.setEnabled(not building)
+
+    def _current_selection(self) -> tuple[DeckSelectionMode, float]:
+        """The word selection the controls show now, as ``(mode, value)``."""
+        mode: DeckSelectionMode = self.mode_combo.currentData()
+        if mode is DeckSelectionMode.TOP_N:
+            return mode, float(self.top_n_spinbox.value())
+        if mode is DeckSelectionMode.COVERAGE_PCT:
+            return mode, self.coverage_spinbox.value()
+        return mode, 0.0  # ignored for ALL
+
+    def _from_superseded_worker(self) -> bool:
+        """Whether the running slot was fired by a worker other than the current one.
+
+        Worker signals cross threads queued, so one can land after a newer run
+        has replaced its sender. A slot called directly -- including by the
+        rollback in :meth:`_start`, which clears ``worker_thread`` first -- is
+        never stale.
+        """
+        sender = self.sender()
+        worker = self.worker_thread
+        return sender is not None and worker is not None and sender is not worker
+
+    # ------------------------------------------------------------------
+    # Slots: Preview / Build / Cancel
     # ------------------------------------------------------------------
 
     def _on_preview_clicked(self) -> None:
-        """Stub: a later task starts the corpus-preview worker from here."""
+        """Scan the season and wait at the Build gate with its numbers."""
+        self._start(confirm_now=False)
 
     def _on_build_clicked(self) -> None:
-        """Stub: a later task confirms the gated worker's build phase from here."""
+        """Confirm the live run, or start one already confirmed."""
+        if self._run_state in ("scanning", "preview_ready"):
+            self._confirm()
+        elif self._run_state == "idle":
+            self._start(confirm_now=True)
+
+    def _start(self, confirm_now: bool) -> None:
+        """Start a run: a scan that waits at the Build gate, or one already confirmed.
+
+        Args:
+            confirm_now: Confirm the current selection before the worker
+                starts (Build from idle), so it never waits at the gate.
+        """
+        if still_running(self.worker_thread):
+            return
+        self.clear_screen_issue()
+        request = self._build_request()
+        if request is None:
+            return
+        # Refused here, before the worker creates the deck: folders that pair
+        # no episodes must not leave an empty deck behind.
+        if not FilePairMatcher.find_pairs_by_episode_number(request.video_folder, request.subtitle_folder):
+            self.show_screen_issue(ScreenIssue(summary=self.tr("No video/subtitle pairs found. Check the folders.")))
+            return
+
+        self._cancel_requested = self._run_failed = self._run_had_item_failures = False
+        self._corpus = self._confirmed_selection = None
+        for label in self._result_labels.values():
+            label.setText("—")
+        self.progress_widget.reset()
+        self.log_widget.clear_log()
+
+        # Tear down any prior run before building the worker (Windows
+        # back-to-back-mining freeze: leaked sqlite/Session handles).
+        self._teardown_previous_run("deckbuilder")
+
+        mode, value = self._current_selection()
+        self._begin_receipt(
+            1,
+            item_noun=self.tr("deck"),
+            run_fields={
+                "deck": request.deck_name,
+                "mode": mode.value,
+                "value": value,
+                "skip_known": request.skip_known,
+                "review": request.review,
+            },
+        )
+        self._publish_task_start(self.tr("Deck Builder"))
+
+        # Construct, connect and start under one rollback, as Batch does: the
+        # inputs are about to lock, and a failure anywhere in here would
+        # otherwise leave them locked against a run that never began, with no
+        # thread whose `finished` could ever unlock them.
+        try:
+            worker = DeckBuilderWorker(
+                request,
+                self.config,
+                self.presenter,
+                self.progress_callback,
+                stats_service=self.stats_service,
+                curation_callback=self._curation_bridge,
+            )
+            self.worker_thread = worker
+
+            worker.preview_ready.connect(self._on_preview_ready)
+            worker.item_pairs_progress.connect(self._on_item_pairs_progress)
+            worker.item_completed.connect(self._on_item_completed)
+            worker.item_failed.connect(self._on_item_failed)
+            # Run-level fatals (stale-dict gate, deck creation, preflight)
+            # emit error THEN queue_finished; the flag keeps the terminal line
+            # from reading "Complete".
+            worker.error.connect(self._on_worker_error)
+            worker.queue_finished.connect(self._on_queue_finished)
+            # The thread's end is the one signal every exit path sends, so it
+            # is what returns the screen to idle and seals the receipt.
+            worker.finished.connect(self._restore_buttons)
+            worker.finished.connect(self._on_run_thread_finished)
+
+            if confirm_now:
+                self._confirm()
+            worker.start()
+        except Exception as exc:  # noqa: BLE001 - the run never began; surface and recover
+            logger.exception("DeckBuilderTab failed to start the deck builder worker")
+            self.worker_thread = None
+            self._run_failed = True
+            self._on_worker_error(str(exc))
+            self._restore_buttons()
+            self._on_run_thread_finished()
+            return
+        self._apply_run_state("building" if confirm_now else "scanning")
+
+    def _confirm(self) -> None:
+        """Confirm the current selection: build now, or as soon as the scan ends."""
+        worker = self.worker_thread
+        if worker is None:
+            return
+        mode, value = self._current_selection()
+        self._confirmed_selection = (mode, value)
+        worker.confirm(mode, value)
+        self._apply_run_state("building")
+
+    def _cancel_published_task(self) -> None:
+        """Route a registry cancel request into this screen's own Cancel."""
+        self._on_cancel_clicked()
 
     def _on_cancel_clicked(self) -> None:
-        """Stub: a later task wires worker cancellation to this button."""
+        """Cancel the run at any stage, the Build gate included; no prompt."""
+        self._log_run_control("cancel")
+        self._cancel_requested = True
+        self._publish_task_cancelling()
+        # Release any open curation dialog first so the worker doesn't hang (Issue #60).
+        self._cancel_active_curation_dialog()
+        if self.worker_thread is not None:
+            # Also opens the Build gate, so a worker parked there ends now.
+            self.worker_thread.cancel()
+        # Nothing may confirm a cancelled run into a build on its way out;
+        # the thread's end returns the screen to idle.
+        self.build_button.setEnabled(False)
+        self.cancel_button.setEnabled(False)
+        self.cancel_button.setText(self.tr("Cancelling…"))
+        self.progress_widget.freeze()
+        self.progress_widget.set_status(self.tr("Cancelling…"))
+
+    # ------------------------------------------------------------------
+    # Slots: worker signals
+    # ------------------------------------------------------------------
+
+    def _on_preview_ready(self, corpus: DeckCorpus) -> None:
+        """Show the scan's numbers, and offer Build unless the run is already confirmed."""
+        # Queued across threads, so it can land after Cancel: a cancelled run
+        # must not come back as a preview waiting for Build.
+        if self._from_superseded_worker() or self._cancel_requested:
+            return
+        self._corpus = corpus
+        self._refresh_preview()
+        if self._run_state == "scanning":
+            self._apply_run_state("preview_ready")
+            message = self.tr("Preview ready. Press Build Deck to create the cards.")
+            self.progress_widget.set_status(message)
+            self._publish_task_detail(message)
+
+    def _refresh_preview(self, *_args: object) -> None:
+        """Recompute the Results numbers from the cached corpus and the current selection.
+
+        GUI-thread maths only: no rescan, no worker. Does nothing until a
+        preview has arrived.
+        """
+        corpus = self._corpus
+        if corpus is None:
+            return
+        mode, value = self._current_selection()
+        preview = build_preview(corpus, rank_select(corpus.counts, mode, value))
+        labels = self._result_labels
+        labels["total_tokens"].setText(f"{preview.total_tokens:,}")
+        labels["unique_lemmas"].setText(f"{preview.unique_lemmas:,}")
+        labels["candidate_count"].setText(f"{preview.candidate_count:,}")
+        labels["projected_coverage_pct"].setText(f"{preview.projected_coverage_pct:.1f}%")
+        labels["known_skipped"].setText(f"{preview.known_skipped:,}")
+        labels["card_count"].setText(f"{preview.card_count:,}")
+
+    def _on_item_pairs_progress(self, _item_id: str, done: int, total: int) -> None:
+        """Fill the bar by episodes mined, the one count the build can prove."""
+        if self._from_superseded_worker() or total <= 0:
+            return
+        status = tr_format(self.tr("%1 of %2 episodes mined"), done, total)
+        self.progress_widget.set_composed(done, total, status)
+        self._publish_task_count(done, total, status)
+
+    def _on_item_completed(self, _item_id: str, cards_created: int) -> None:
+        """Record the deck's cards and write the closing line."""
+        if self._from_superseded_worker():
+            return
+        self._record_receipt_counts(notes_added=cards_created, failed=False)
+        self.presenter.show_success(self._closing_line(cards_created))
+
+    def _on_item_failed(self, _item_id: str, error_message: str, cards_created: int) -> None:
+        """Record a build that ended with episode failures, and say so."""
+        if self._from_superseded_worker():
+            return
+        self._run_had_item_failures = True
+        self._record_receipt_counts(notes_added=cards_created, failed=True)
+        self.presenter.show_error(error_message)
+        # Cards Anki already confirmed stay, so the closing line still counts them.
+        self.presenter.show_info(self._closing_line(cards_created))
+        self.show_screen_issue(ScreenIssue(summary=self.tr("Some episodes could not be mined."), details=error_message))
+
+    def _on_worker_error(self, message: str) -> None:
+        """Run-level fatal from the worker: flag it and surface it."""
+        if self._from_superseded_worker():
+            return
+        self._run_failed = True
+        self.presenter.show_error(message)
+        self.show_screen_issue(ScreenIssue(summary=self.tr("The deck could not be built."), details=message))
+
+    def _on_queue_finished(self, total_cards: int, whitelist: object = None) -> None:
+        """Fold the run's whitelist into the receipt and draw the terminal progress line."""
+        if self._from_superseded_worker():
+            return
+        self._record_receipt_whitelist(whitelist)
+        self._show_terminal_progress(self.progress_widget, total_cards)
+
+    def _restore_buttons(self) -> None:
+        """Return the screen to idle once the run's thread has ended."""
+        if self._from_superseded_worker():
+            return
+        self._apply_run_state("idle")
+
+    def _closing_line(self, cards_created: int) -> str:
+        """The Activity Log's closing line: cards, deck, and coverage when known.
+
+        The coverage is the preview's projection for the confirmed selection,
+        so it is attributed to the candidate words, not to the cards: known
+        words count toward it, and a word with no definition gets no card. A
+        run with no preview (every episode failed the scan) has none to quote.
+        """
+        worker = self.worker_thread
+        deck_name = worker.request.deck_name if worker is not None else ""
+        cards = f"{cards_created:,}"
+        corpus = self._corpus
+        if corpus is not None and self._confirmed_selection is not None:
+            mode, value = self._confirmed_selection
+            coverage = build_preview(corpus, rank_select(corpus.counts, mode, value)).projected_coverage_pct
+            return tr_format(
+                self.tr("Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens."),
+                cards,
+                f"{coverage:.1f}",
+                deck_name,
+            )
+        return tr_format(self.tr("Created %1 cards in deck '%2'."), cards, deck_name)
+
+    def release_dictionary_resources(self) -> bool:
+        """Close sqlite handles cached by the most recent run (Issue #30/#32).
+
+        ``DeckBuilderWorker`` exposes its retained processor via the typed
+        ``curation_processor`` property it inherits from Batch's worker. The
+        handle is still open after the run finishes and blocks Settings →
+        Remove / Re-import on Windows.
+
+        Returns ``False`` while a worker is running -- one parked at the Build
+        gate included, since its processor is still in use -- because closing
+        providers under an in-flight processor would crash the run. The facade
+        resets the chain so the next run re-opens it cleanly.
+        """
+        if still_running(self.worker_thread):
+            return False
+        if self.worker_thread is not None:
+            proc = self.worker_thread.curation_processor
+            if proc is not None:
+                proc.release_dictionary_resources()
+        return True
 
     # ------------------------------------------------------------------
     # Config update
