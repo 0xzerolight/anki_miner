@@ -55,9 +55,7 @@ from anki_miner.gui.widgets.subtitle_retime_tab import SubtitleRetimeTab
 from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 
 #: Every page framed by ``install_workflow_shell`` -- the eight mining screens,
-#: the three tools and Card Backfill. Deck Builder is deliberately absent: it
-#: never installs the shell, so its log stays in its column and *is* its
-#: absorber.
+#: the three tools and Card Backfill.
 _SHELL_PAGES = (
     "single",
     "batch",

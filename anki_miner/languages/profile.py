@@ -202,7 +202,7 @@ class AudioDefaults:
     #: The Microsoft Edge read-aloud voice the ``edgetts`` word-audio kind
     #: speaks with — the service's short name (``fa-IR-DilaraNeural``). "" means
     #: the language has no Edge voice: service_factory builds no Edge leg and
-    #: Settings -> Audio does not offer one. A language with no Google voice
+    #: Settings -> Word Audio does not offer one. A language with no Google voice
     #: (``gtts_lang == ""``) names one and puts ``AudioSourceEntry(kind="edgetts")``
     #: in ``default_chain`` (spec D14, tests/unit/languages/test_edge_voice_contract.py).
     edge_voice: str = ""
@@ -365,7 +365,7 @@ class LanguageProfile:
     wiktionary_code: str = ""
     #: The known-words comparison fold (R6, S3): applied to every stored and
     #: probed form at the known-words DB, the Anki vocabulary boundary, the word
-    #: filter, the word lists and the Deck Builder preview. Must be idempotent.
+    #: filter, the word lists and count_lemmas. Must be idempotent.
     #: ``None`` — ja, ko — is ``normalize_lemma`` (NFC) at the DB and the
     #: pre-seam raw comparison everywhere else. Deliberately a different
     #: function from ``dict_keys.fold_term`` (R7): index keys are never

@@ -160,7 +160,7 @@ class ZhMinedFormPolicy:
     """The segmented surface in the configured Character Set.
 
     jieba emits no inflection, so the front is the surface, projected onto
-    ``config.script_variant`` (Settings -> Filtering -> Character Set). The
+    ``config.script_variant`` (Settings -> Mining Language -> Character Set). The
     profile holds the unbound instance, which keeps the surface as written;
     runs bind one through ``registry.bound_mined_form``.
     """

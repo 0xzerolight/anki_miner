@@ -330,8 +330,8 @@
         <translation>Bidang Pinyin</translation>
     </message>
     <message>
-        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
-        <translation>Menyimpan bacaan pinyin dari kata, diwarnai berdasarkan nada bila opsi itu aktif. Kosong = lewati.</translation>
+        <source>Stores the word's pinyin reading. Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Traditional Field</source>
@@ -482,8 +482,8 @@
         <translation>Bidang Jyutping</translation>
     </message>
     <message>
-        <source>Stores the jyutping reading, tone-coloured when that setting is on. Blank = skip.</source>
-        <translation>Menyimpan bacaan jyutping, diwarnai berdasarkan nada bila pengaturan itu aktif. Kosong = lewati.</translation>
+        <source>Stores the jyutping reading. Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Transliteration Field</source>
@@ -510,8 +510,8 @@
         <translation>URL AnkiConnect</translation>
     </message>
     <message>
-        <source>Default http://localhost:8765. Change if AnkiConnect uses a different port.</source>
-        <translation>Bawaan http://localhost:8765. Ubah jika AnkiConnect menggunakan port yang berbeda.</translation>
+        <source>Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Card tags</source>
@@ -670,6 +670,14 @@
         <translation>Menyimpan bacaan biasa dari kalimat.</translation>
     </message>
     <message>
+        <source>Colour the reading by tone</source>
+        <translation>Warnai bacaan berdasarkan nada</translation>
+    </message>
+    <message>
+        <source>Colours each syllable of the reading by its tone.</source>
+        <translation>Mewarnai setiap suku kata bacaan berdasarkan nadanya.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Bidang Data Tambahan</translation>
     </message>
@@ -746,8 +754,8 @@
         <translation>Bidang Terjemahan</translation>
     </message>
     <message>
-        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
-        <translation>Menyimpan baris subtitel bahasa sekunder untuk kalimat (Video -&gt; Tunggal, dengan subtitel sekunder diaktifkan di Penyaringan). Kosong = lewati.</translation>
+        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Sentences). Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Card Type</source>
@@ -804,6 +812,18 @@
     <message>
         <source>Audio:</source>
         <translation>Audio:</translation>
+    </message>
+    <message>
+        <source>Card Creation</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create cards in order of appearance</source>
+        <translation>Buat kartu sesuai urutan kemunculan</translation>
+    </message>
+    <message>
+        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
+        <translation>Menambahkan kartu ke Anki sesuai urutan kemunculan kata dalam media, bukan urutan selesainya ekstraksi media. Mengesampingkan urutan paksa-sertakan daftar putih dan pengurutan kolom apa pun di Word Curator.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -1128,8 +1148,8 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
-        <source>Audio</source>
-        <translation>Audio</translation>
+        <source>Word Audio</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Loading…</source>
@@ -1228,6 +1248,14 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
         <translation>Turunkan prioritas</translation>
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Audio Pack…</source>
         <translation>Paket Audio…</translation>
     </message>
@@ -1238,30 +1266,6 @@ Format yang didukung: AJT (index.json + media/), NHK16 (entries.json + audio/), 
     <message>
         <source>Online Source…</source>
         <translation>Sumber Daring…</translation>
-    </message>
-    <message>
-        <source>Sentence Audio (Reading Sources)</source>
-        <translation>Audio Kalimat (Sumber Bacaan)</translation>
-    </message>
-    <message>
-        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
-        <translation>Tambahkan audio lisan ke kartu dari manga dan buku, yang tidak memiliki audio sumber. Teks kalimat dikirim ke layanan daring yang dipilih.</translation>
-    </message>
-    <message>
-        <source>Generate TTS sentence audio</source>
-        <translation>Buat audio kalimat TTS</translation>
-    </message>
-    <message>
-        <source>Google Translate TTS (tried first)</source>
-        <translation>Google Translate TTS (dicoba pertama)</translation>
-    </message>
-    <message>
-        <source>Naver Papago (fallback)</source>
-        <translation>Naver Papago (cadangan)</translation>
-    </message>
-    <message>
-        <source>Select at least one service.</source>
-        <translation>Pilih setidaknya satu layanan.</translation>
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
@@ -1556,8 +1560,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Coba Lagi yang Gagal</translation>
     </message>
     <message>
-        <source>Quick Processing</source>
-        <translation>Pemrosesan Cepat</translation>
+        <source>Add Series</source>
+        <translation>Tambah Seri</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -1592,12 +1596,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Geser subtitel terjemahan saja (positif = lebih lambat, negatif = lebih awal)</translation>
     </message>
     <message>
-        <source>Process Folder</source>
-        <translation>Proses Folder</translation>
+        <source>Add to Queue</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Process every episode pair found in the selected folders</source>
-        <translation>Proses setiap pasangan episode yang ditemukan dalam folder yang dipilih</translation>
+        <source>Add this folder pair to the queue below as a new series</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancel</source>
@@ -1620,22 +1624,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Pilih folder video dan subtitel yang sudah ada.</translation>
     </message>
     <message>
-        <source>No subtitle file could be matched to any video file in those folders.</source>
-        <translation>Tidak ada berkas subtitel yang dapat dicocokkan dengan berkas video mana pun di folder tersebut.</translation>
-    </message>
-    <message>
-        <source>episodes</source>
-        <translation>episode</translation>
-    </message>
-    <message>
-        <source>Starting batch processing of %1 episodes...</source>
-        <translation>Memulai pemrosesan batch %1 episode...</translation>
-    </message>
-    <message>
-        <source>Batch mining</source>
-        <translation>Mining batch</translation>
-    </message>
-    <message>
         <source>%1 was skipped: its folders no longer exist.</source>
         <translation>%1 dilewati: foldernya sudah tidak ada.</translation>
     </message>
@@ -1650,6 +1638,10 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>series</source>
         <translation>seri</translation>
+    </message>
+    <message>
+        <source>Batch mining</source>
+        <translation>Mining batch</translation>
     </message>
     <message>
         <source>Every series is already complete. Select rows, then Run selected.</source>
@@ -1674,14 +1666,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Starting queue processing...</source>
         <translation>Memulai pemrosesan antrean...</translation>
-    </message>
-    <message>
-        <source>Starting batch processing...</source>
-        <translation>Memulai pemrosesan batch...</translation>
-    </message>
-    <message>
-        <source>Mining episode %1 of %2: %3</source>
-        <translation>Mining episode %1 dari %2: %3</translation>
     </message>
     <message>
         <source>Processing series: %1</source>
@@ -2050,24 +2034,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Subtitel bahasa sekunder</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
-        <translation>Muat berkas subtitel kedua dalam bahasa Anda sendiri di samping berkas bahasa mining: berkas ini muncul di bawah baris pada pratinjau Word Curator dan dapat disimpan ke bidang Terjemahan. Pada Video -&gt; Batch, arahkan ke folder subtitel terjemahan sebagai gantinya dan subtitel itu dipasangkan ke video berdasarkan nomor episode. Aktifkan di Pengaturan -&gt; Penyaringan.</translation>
-    </message>
-    <message>
-        <source>Build a deck by coverage %</source>
-        <translation>Bangun dek berdasarkan cakupan %</translation>
-    </message>
-    <message>
-        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus.</source>
-        <translation>Bangun dek yang diurutkan berdasarkan frekuensi yang mencakup persentase tertentu dari seluruh korpus.</translation>
-    </message>
-    <message>
-        <source>Deck Builder modes (all / top N / coverage %)</source>
-        <translation>Mode Pembuat Dek (semua / N teratas / cakupan %)</translation>
-    </message>
-    <message>
-        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
-        <translation>Pembuat Dek selalu melewati filter per-episode dan pemeriksaan duplikat; pilih semua kata, N teratas, atau target cakupan, dan opsional lewati kata yang dikenal.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -2422,12 +2390,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Pasang akselerasi CUDA atau Vulkan dan paket pelewat-keheningan untuk model Whisper lokal.</translation>
     </message>
     <message>
-        <source>Tune subtitle alignment (alass)</source>
-        <translation>Setel penyelarasan subtitel (alass)</translation>
+        <source>Set the alass binary (subtitle alignment)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.</source>
-        <translation>Konfigurasikan penyelaras alass yang digunakan untuk pengaturan ulang waktu: penalti pemisahan, koreksi laju bingkai, dan mode offset tunggal.</translation>
+        <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2538,16 +2506,16 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Bacaan pinyin &amp; warna nada</translation>
     </message>
     <message>
-        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
-        <translation>Tampilkan pinyin kata pada kartu Anda, setiap suku kata dalam warna nadanya -- pewarnaan itu adalah Warnai bacaan berdasarkan nada, di Pengaturan -&gt; Penyaringan.</translation>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>Warnai bacaan berdasarkan nada</translation>
     </message>
     <message>
-        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
-        <translation>Warnai setiap suku kata bacaan pinyin atau jyutping berdasarkan nadanya, di Pengaturan -&gt; Penyaringan.</translation>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Measure word field</source>
@@ -2590,12 +2558,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Bungkus kata hasil mining dengan huruf tebal di dalam bidang kalimat pada kartu Anda.</translation>
     </message>
     <message>
-        <source>Themes, dark mode, fonts &amp; zoom</source>
-        <translation>Tema, mode gelap, fon &amp; zoom</translation>
+        <source>Themes, dark mode &amp; zoom</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Switch light/dark themes and adjust font scale and UI zoom.</source>
-        <translation>Beralih tema terang/gelap dan sesuaikan skala fon dan zoom UI.</translation>
+        <source>Switch light/dark themes and adjust UI zoom.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Change the app language</source>
@@ -2622,20 +2590,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Tambahkan berkas JSON tema Anda sendiri dan pratinjau setiap tema di galeri sebelum menerapkannya.</translation>
     </message>
     <message>
-        <source>Use system file dialogs</source>
-        <translation>Gunakan dialog berkas sistem</translation>
-    </message>
-    <message>
-        <source>Switch between Anki Miner's built-in file pickers and your operating system's native ones.</source>
-        <translation>Beralih antara pemilih berkas bawaan Anki Miner dan pemilih bawaan sistem operasi Anda.</translation>
-    </message>
-    <message>
         <source>Choose the tools on the Utilities tab</source>
         <translation>Pilih alat pada tab Utilitas</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>Sembunyikan alat Utilitas yang tidak Anda pakai, atau tampilkan lagi, di Pengaturan -&gt; Tampilan &amp; Bahasa. Alat yang disembunyikan tetap memiliki entri di sini; tombol Buka-nya mengarah ke kotak centang itu.</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Search the settings</source>
@@ -2658,8 +2618,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Periksa pembaruan aplikasi</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in the Settings footer.</source>
-        <translation>Periksa versi Anki Miner baru dari menu Bantuan, atau aktifkan/nonaktifkan pemeriksaan otomatis saat startup di footer Pengaturan.</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2674,8 +2634,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Buat berkas .mokuro dari gambar manga</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation>Jalankan OCR Jepang mokuro pada folder volume atau seluruh seri agar Membaca -&gt; Manga dapat mining-nya. Pasang mokuro dari Pengaturan -&gt; Transkripsi &amp; Penyelarasan.</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -2690,8 +2650,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Ubah gaya kartu hasil mining</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Tools menu.</source>
-        <translation>Terapkan ulang gaya Anki Miner terbaru ke kartu yang sebelumnya Anda mining -- menu Alat.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>System health check</source>
@@ -2840,12 +2800,20 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Timpa nilai yang ada</translation>
     </message>
     <message>
-        <source>Overwritten cards may need a Restyle to refresh their styling.</source>
-        <translation>Kartu yang ditimpa mungkin memerlukan Tata Ulang untuk menyegarkan gayanya.</translation>
+        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Scan Anki (read-only)</source>
         <translation>Pindai Anki (hanya-baca)</translation>
+    </message>
+    <message>
+        <source>Restyle cards…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Refresh the dictionary styling on every card of your note type</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancel</source>
@@ -3498,200 +3466,14 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>%1 (%2 dari %3)</translation>
     </message>
 </context><context>
-    <name>DeckBuilderTab</name>
-    <message>
-        <source>Video Folder:</source>
-        <translation>Folder Video:</translation>
-    </message>
-    <message>
-        <source>Subtitle Folder:</source>
-        <translation>Folder Subtitel:</translation>
-    </message>
-    <message>
-        <source>Deck Name:</source>
-        <translation>Nama Dek:</translation>
-    </message>
-    <message>
-        <source>Word Selection:</source>
-        <translation>Pemilihan Kata:</translation>
-    </message>
-    <message>
-        <source>Input</source>
-        <translation>Input</translation>
-    </message>
-    <message>
-        <source>Select folder with video files…</source>
-        <translation>Pilih folder berisi berkas video…</translation>
-    </message>
-    <message>
-        <source>Select folder with subtitle files…</source>
-        <translation>Pilih folder berisi berkas subtitel…</translation>
-    </message>
-    <message>
-        <source>Deck Settings</source>
-        <translation>Pengaturan Dek</translation>
-    </message>
-    <message>
-        <source>Enter deck name…</source>
-        <translation>Masukkan nama dek…</translation>
-    </message>
-    <message>
-        <source>All vocabulary</source>
-        <translation>Semua kosakata</translation>
-    </message>
-    <message>
-        <source>Top N words</source>
-        <translation>N kata teratas</translation>
-    </message>
-    <message>
-        <source>Target coverage %</source>
-        <translation>Target cakupan %</translation>
-    </message>
-    <message>
-        <source> words</source>
-        <translation> kata</translation>
-    </message>
-    <message>
-        <source>Include the N most-frequent lemmas</source>
-        <translation>Sertakan N lema paling sering muncul</translation>
-    </message>
-    <message>
-        <source>Include enough words to cover this percentage of tokens</source>
-        <translation>Sertakan cukup kata untuk mencakup persentase token ini</translation>
-    </message>
-    <message>
-        <source>Skip words already in my Anki collection</source>
-        <translation>Lewati kata yang sudah ada di koleksi Anki saya</translation>
-    </message>
-    <message>
-        <source>Checked: skip your known words; unchecked: mine every word.</source>
-        <translation>Dicentang: lewati kata yang dikenal; tidak dicentang: mining semua kata.</translation>
-    </message>
-    <message>
-        <source>Actions</source>
-        <translation>Tindakan</translation>
-    </message>
-    <message>
-        <source>Preview</source>
-        <translation>Pratinjau</translation>
-    </message>
-    <message>
-        <source>Analyze the corpus and preview which words will be included</source>
-        <translation>Analisis korpus dan pratinjau kata yang akan disertakan</translation>
-    </message>
-    <message>
-        <source>Build Deck</source>
-        <translation>Bangun Dek</translation>
-    </message>
-    <message>
-        <source>Create the Anki cards for the previewed word list</source>
-        <translation>Buat kartu Anki untuk daftar kata yang dipratinjau</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Batal</translation>
-    </message>
-    <message>
-        <source>Results</source>
-        <translation>Hasil</translation>
-    </message>
-    <message>
-        <source>Total tokens:</source>
-        <translation>Total token:</translation>
-    </message>
-    <message>
-        <source>Unique lemmas:</source>
-        <translation>Lema unik:</translation>
-    </message>
-    <message>
-        <source>Candidate words:</source>
-        <translation>Kata kandidat:</translation>
-    </message>
-    <message>
-        <source>Projected coverage:</source>
-        <translation>Cakupan proyeksi:</translation>
-    </message>
-    <message>
-        <source>Known (skipped):</source>
-        <translation>Dikenal (dilewati):</translation>
-    </message>
-    <message>
-        <source>Cards to create:</source>
-        <translation>Kartu yang akan dibuat:</translation>
-    </message>
-    <message>
-        <source>Select both the video folder and subtitle folder first.</source>
-        <translation>Pilih folder video dan folder subtitel terlebih dahulu.</translation>
-    </message>
-    <message>
-        <source>Video folder not found: %1</source>
-        <translation>Folder video tidak ditemukan: %1</translation>
-    </message>
-    <message>
-        <source>Subtitle folder not found: %1</source>
-        <translation>Folder subtitel tidak ditemukan: %1</translation>
-    </message>
-    <message>
-        <source>Enter a deck name before previewing.</source>
-        <translation>Masukkan nama dek sebelum melakukan pratinjau.</translation>
-    </message>
-    <message>
-        <source>No video/subtitle pairs found. Check the folders.</source>
-        <translation>Tidak ada pasangan video/subtitel yang ditemukan. Periksa foldernya.</translation>
-    </message>
-    <message>
-        <source>Analyzing corpus…</source>
-        <translation>Menganalisis korpus…</translation>
-    </message>
-    <message>
-        <source>Preview ready — %1 cards; the candidate words cover ~%2% of tokens.</source>
-        <translation>Pratinjau siap — %1 kartu; kata kandidat mencakup ~%2% token.</translation>
-    </message>
-    <message>
-        <source>Building deck '%1'…</source>
-        <translation>Membangun dek '%1'…</translation>
-    </message>
-    <message>
-        <source>Mining episode %1 of %2: %3</source>
-        <translation>Mining episode %1 dari %2: %3</translation>
-    </message>
-    <message>
-        <source>Processing: %1</source>
-        <translation>Memproses: %1</translation>
-    </message>
-    <message>
-        <source>  %1: %2 card(s) created</source>
-        <translation>  %1: %2 kartu dibuat</translation>
-    </message>
-    <message>
-        <source>Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens.</source>
-        <translation>%1 kartu dibuat di dek '%3'; kata kandidat mencakup ~%2% token.</translation>
-    </message>
-    <message>
-        <source>Complete — %1 cards created</source>
-        <translation>Selesai — %1 kartu dibuat</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Membatalkan…</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Gagal — lihat log</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Dibatalkan</translation>
-    </message>
-</context><context>
     <name>DeckFilterTab</name>
     <message>
         <source>Deck Filter</source>
         <translation>Filter Dek</translation>
     </message>
     <message>
-        <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Filtering; the source deck is not modified.</source>
-        <translation>Salin bagian yang layak dipelajari dari dek siap pakai ke dek baru. Filter berasal dari Pengaturan → Penyaringan; dek sumber tidak diubah.</translation>
+        <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Word Filters; the source deck is not modified.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Source deck:</source>
@@ -4068,18 +3850,6 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
     </message>
     <message>
-        <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
-        <translation>Tidak ada XML JMdict di %1. Unduh dari EDRDG dan letakkan di sana.</translation>
-    </message>
-    <message>
-        <source>Reimporting JMdict…</source>
-        <translation>Mengimpor ulang JMdict…</translation>
-    </message>
-    <message>
-        <source>The dictionaries could not be re-imported.</source>
-        <translation>Kamus tidak dapat diimpor ulang.</translation>
-    </message>
-    <message>
         <source>Skipped (no usable saved copy — add each one again):
 </source>
         <translation>Dilewati (tidak ada salinan tersimpan yang dapat digunakan — tambahkan lagi masing-masing):
@@ -4108,6 +3878,10 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
     <message>
         <source>Reimport All</source>
         <translation>Impor Ulang Semua</translation>
+    </message>
+    <message>
+        <source>The dictionaries could not be re-imported.</source>
+        <translation>Kamus tidak dapat diimpor ulang.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -4242,6 +4016,14 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
     <message>
         <source>Move down in priority</source>
         <translation>Turunkan prioritas</translation>
+    </message>
+    <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>%1 entries</source>
@@ -4686,8 +4468,8 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Paket audio '%1' membaca terlalu lambat — audio dilewati; pindahkan foldernya ke drive lokal lalu impor ulang.</translation>
     </message>
     <message>
-        <source>Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Audio.</source>
-        <translation>Sumber audio kata terlalu lambat — audio dilewati; urutkan ulang atau nonaktifkan di Pengaturan → Audio.</translation>
+        <source>Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Word Audio.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
@@ -5012,78 +4794,6 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Menyelaraskan subtitel</translation>
     </message>
 </context><context>
-    <name>ExportDialog</name>
-    <message>
-        <source>Export Words</source>
-        <translation>Ekspor Kata</translation>
-    </message>
-    <message>
-        <source>Export Format</source>
-        <translation>Format Ekspor</translation>
-    </message>
-    <message>
-        <source>CSV (.csv)</source>
-        <translation>CSV (.csv)</translation>
-    </message>
-    <message>
-        <source>TSV (.tsv)</source>
-        <translation>TSV (.tsv)</translation>
-    </message>
-    <message>
-        <source>Vocabulary List (.txt)</source>
-        <translation>Daftar Kosakata (.txt)</translation>
-    </message>
-    <message>
-        <source>List format:</source>
-        <translation>Format daftar:</translation>
-    </message>
-    <message>
-        <source>Plain (one word per line)</source>
-        <translation>Polos (satu kata per baris)</translation>
-    </message>
-    <message>
-        <source>%1 words</source>
-        <translation>%1 kata</translation>
-    </message>
-    <message>
-        <source>, %1 with definitions</source>
-        <translation>, %1 dengan definisi</translation>
-    </message>
-    <message>
-        <source>, %1 with media</source>
-        <translation>, %1 dengan media</translation>
-    </message>
-    <message>
-        <source>Select output file...</source>
-        <translation>Pilih berkas keluaran...</translation>
-    </message>
-    <message>
-        <source>Browse...</source>
-        <translation>Telusuri...</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Batal</translation>
-    </message>
-    <message>
-        <source>Export</source>
-        <translation>Ekspor</translation>
-    </message>
-    <message>
-        <source>Export Complete</source>
-        <translation>Ekspor Selesai</translation>
-    </message>
-    <message>
-        <source>Exported %1 words to:
-%2</source>
-        <translation>%1 kata diekspor ke:
-%2</translation>
-    </message>
-    <message>
-        <source>The export could not be written.</source>
-        <translation>Ekspor tidak dapat ditulis.</translation>
-    </message>
-</context><context>
     <name>FileSelector</name>
     <message>
         <source>Select file...</source>
@@ -5200,8 +4910,8 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Lewati kata yang mengandung karakter hanja, sehingga dek berisi kosakata hangul murni.</translation>
     </message>
     <message>
-        <source>Filtering</source>
-        <translation>Penyaringan</translation>
+        <source>Word Filters</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Frequency</source>
@@ -5256,8 +4966,12 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Basis Data Kata yang Dikenal</translation>
     </message>
     <message>
-        <source>Use Local Known Words Database</source>
-        <translation>Gunakan Basis Data Kata yang Dikenal Lokal</translation>
+        <source>Keep words known after their cards are deleted</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -5274,6 +4988,14 @@ Tidak ada berkas di disk yang dihapus.</translation>
     <message>
         <source>View, remove, export, or reset the words you added to your local known words list from the Word Curator.</source>
         <translation>Lihat, hapus, ekspor, atau setel ulang kata yang Anda tambahkan ke daftar kata yang dikenal lokal dari Word Curator.</translation>
+    </message>
+    <message>
+        <source>Treat Kana Spellings of Known Words as Known</source>
+        <translation>Anggap Ejaan Kana dari Kata yang Dikenal sebagai Dikenal</translation>
+    </message>
+    <message>
+        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+        <translation>Ketika subtitel mengeja kata dalam kana (misalnya うなずく) dan bentuk kamus kanji-nya (頷く) sudah ada di koleksi Anda atau daftar kata yang dikenal, kata tersebut dilewati alih-alih dibuatkan kartu kedua. Ejaan kanji tidak pernah digabungkan dengan cara ini.</translation>
     </message>
     <message>
         <source>Excluded Decks</source>
@@ -5344,84 +5066,28 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Kecualikan kumpulan kata '%1' bawaan (%2 entri) dari mining.</translation>
     </message>
     <message>
-        <source>Subtitle Text Filtering</source>
-        <translation>Pemfilteran Teks Subtitel</translation>
+        <source>Sentence Rule</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Regex Filter</source>
-        <translation>Filter Regex</translation>
+        <source>Mine every unknown word</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
-        <translation>Regex Python yang dicocokkan dalam teks subtitel dan dihapus (atau diganti) sebelum mining. Berguna untuk menghapus nama pembicara seperti (Tanaka) atau deskripsi suara seperti [pintu]. Gabungkan alternatif dengan |. Uji pola di https://regex101.com.</translation>
-    </message>
-    <message>
-        <source>(empty = delete match)</source>
-        <translation>(kosong = hapus kecocokan)</translation>
-    </message>
-    <message>
-        <source>Replacement</source>
-        <translation>Pengganti</translation>
-    </message>
-    <message>
-        <source>Inserted in place of each match (empty deletes it). Use Python backreferences \1 \2, not asbplayer's $1 $2.</source>
-        <translation>Disisipkan menggantikan setiap kecocokan (kosongkan untuk menghapusnya). Gunakan backreference Python \1 \2, bukan $1 $2 milik asbplayer.</translation>
-    </message>
-    <message>
-        <source>Enable Subtitle Regex Filter</source>
-        <translation>Aktifkan Filter Regex Subtitel</translation>
-    </message>
-    <message>
-        <source>Parens (Tanaka)</source>
-        <translation>Tanda kurung (Tanaka)</translation>
-    </message>
-    <message>
-        <source>Brackets [SFX]</source>
-        <translation>Tanda kurung siku [SFX]</translation>
-    </message>
-    <message>
-        <source>Music ♪♬</source>
-        <translation>Musik ♪♬</translation>
-    </message>
-    <message>
-        <source>Speaker: prefix</source>
-        <translation>Awalan Pembicara:</translation>
-    </message>
-    <message>
-        <source>Dialogue dash</source>
-        <translation>Tanda pisah dialog</translation>
-    </message>
-    <message>
-        <source>Presets</source>
-        <translation>Prasetel</translation>
-    </message>
-    <message>
-        <source>Click to append a built-in pattern to the regex field above.</source>
-        <translation>Klik untuk menambahkan pola bawaan ke bidang regex di atas.</translation>
-    </message>
-    <message>
-        <source>Secondary Subtitles</source>
-        <translation>Subtitel Sekunder</translation>
-    </message>
-    <message>
-        <source>Enable secondary-language subtitles</source>
-        <translation>Aktifkan Subtitel Bahasa Sekunder</translation>
-    </message>
-    <message>
-        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
-        <translation>Menambahkan pemilih subtitel kedua beserta offset-nya sendiri ke Video -&gt; Tunggal. Barisnya muncul di bawah baris bahasa mining pada pratinjau Word Curator, dan pada kartu ketika bidang Terjemahan dipetakan (Kartu &amp; Anki).</translation>
-    </message>
-    <message>
-        <source>Deduplication</source>
-        <translation>Deduplikasi</translation>
-    </message>
-    <message>
-        <source>Deduplicate by Sentence</source>
-        <translation>Deduplikasi berdasarkan Kalimat</translation>
+        <source>One card per sentence</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
         <translation>Mining paling banyak satu kata per kalimat contoh — kata pertama yang ditemukan dalam kalimat itu. Setiap kata lain yang berbagi kalimat tersebut dilewati.</translation>
+    </message>
+    <message>
+        <source>Only i+1 sentences (exactly one unknown word)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
+        <translation>Hanya mining kata dalam kalimat yang memiliki tepat satu kata tidak diketahui (i+1); mengesampingkan deduplikasi kalimat.</translation>
     </message>
     <message>
         <source>Script Type</source>
@@ -5444,80 +5110,12 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Lewati kata yang ditulis sepenuhnya dengan katakana (mis. コーヒー). Centang kedua kotak untuk melewati juga kata yang mencampur kedua aksara kana (サボる, ヤバい).</translation>
     </message>
     <message>
-        <source>Treat Kana Spellings of Known Words as Known</source>
-        <translation>Anggap Ejaan Kana dari Kata yang Dikenal sebagai Dikenal</translation>
-    </message>
-    <message>
-        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
-        <translation>Ketika subtitel mengeja kata dalam kana (misalnya うなずく) dan bentuk kamus kanji-nya (頷く) sudah ada di koleksi Anda atau daftar kata yang dikenal, kata tersebut dilewati alih-alih dibuatkan kartu kedua. Ejaan kanji tidak pernah digabungkan dengan cara ini.</translation>
-    </message>
-    <message>
-        <source>Script Variants</source>
-        <translation>Varian Aksara</translation>
-    </message>
-    <message>
-        <source>As written</source>
-        <translation>Sesuai tulisan</translation>
-    </message>
-    <message>
-        <source>Simplified (简体)</source>
-        <translation>Sederhana (简体)</translation>
-    </message>
-    <message>
-        <source>Traditional (繁體)</source>
-        <translation>Tradisional (繁體)</translation>
-    </message>
-    <message>
-        <source>Character Set</source>
-        <translation>Set Karakter</translation>
-    </message>
-    <message>
-        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
-        <translation>Ejaan mana yang diutamakan sisi depan kartu dan pencarian kamus; Sesuai tulisan mempertahankan ejaan asli sumber.</translation>
-    </message>
-    <message>
-        <source>Regional Variety</source>
-        <translation>Ragam Regional</translation>
-    </message>
-    <message>
-        <source>Brazilian Portuguese</source>
-        <translation>Portugis Brasil</translation>
-    </message>
-    <message>
-        <source>European Portuguese</source>
-        <translation>Portugis Eropa</translation>
-    </message>
-    <message>
-        <source>Variety</source>
-        <translation>Ragam</translation>
-    </message>
-    <message>
-        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
-        <translation>Menentukan suara Google mana yang membacakan audio kata dan kalimat, serta daftar frekuensi mana yang disarankan oleh penyiapan.</translation>
-    </message>
-    <message>
-        <source>i+1 Sentence Filter</source>
-        <translation>Filter Kalimat i+1</translation>
-    </message>
-    <message>
-        <source>Only Mine i+1 Sentences</source>
-        <translation>Hanya Mining Kalimat i+1</translation>
-    </message>
-    <message>
-        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
-        <translation>Hanya mining kata dalam kalimat yang memiliki tepat satu kata tidak diketahui (i+1); mengesampingkan deduplikasi kalimat.</translation>
-    </message>
-    <message>
         <source>Sentence Length</source>
         <translation>Panjang Kalimat</translation>
     </message>
     <message>
-        <source>Enable Sentence Length Filter</source>
-        <translation>Aktifkan Filter Panjang Kalimat</translation>
-    </message>
-    <message>
-        <source>Drops words whose example sentence exceeds either cap below.</source>
-        <translation>Menghilangkan kata yang kalimat contohnya melebihi salah satu batas di bawah ini.</translation>
+        <source>Set either limit above 0 to turn the filter on.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> s</source>
@@ -5540,18 +5138,6 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Menghilangkan kartu yang teks kalimatnya melebihi jumlah karakter ini. Setel ke 0 untuk tanpa batas.</translation>
     </message>
     <message>
-        <source>Full Sentences</source>
-        <translation>Kalimat Penuh</translation>
-    </message>
-    <message>
-        <source>Mine full sentences across subtitle lines</source>
-        <translation>Mining kalimat penuh lintas baris subtitel</translation>
-    </message>
-    <message>
-        <source>Joins neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence instead of a fragment. Reading sources have no subtitle timings and ignore it.</source>
-        <translation>Menggabungkan baris subtitel yang bersebelahan ketika satu baris tidak mengakhiri kalimat, sehingga kartu memuat kalimat utuh, bukan penggalan. Sumber Bacaan tidak memiliki waktu subtitel dan mengabaikan opsi ini.</translation>
-    </message>
-    <message>
         <source>Reading</source>
         <translation>Cara Baca</translation>
     </message>
@@ -5566,38 +5152,6 @@ Tidak ada berkas di disk yang dihapus.</translation>
     <message>
         <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
         <translation>Jumlah minimum kemunculan kata dalam buku atau volume agar bisa di-mining. 1 = tanpa minimum (filter mati).</translation>
-    </message>
-    <message>
-        <source>Card Order</source>
-        <translation>Urutan Kartu</translation>
-    </message>
-    <message>
-        <source>Create cards in order of appearance</source>
-        <translation>Buat kartu sesuai urutan kemunculan</translation>
-    </message>
-    <message>
-        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
-        <translation>Menambahkan kartu ke Anki sesuai urutan kemunculan kata dalam media, bukan urutan selesainya ekstraksi media. Mengesampingkan urutan paksa-sertakan daftar putih dan pengurutan kolom apa pun di Word Curator.</translation>
-    </message>
-    <message>
-        <source>Card Formatting</source>
-        <translation>Pemformatan Kartu</translation>
-    </message>
-    <message>
-        <source>Bold target word in sentence</source>
-        <translation>Tebalkan kata target dalam kalimat</translation>
-    </message>
-    <message>
-        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
-        <translation>Bungkus kata hasil mining dalam &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; di dalam bidang kalimat. Kecocokan adalah rentang persis yang di-mining, sehingga bentuk yang berulang dalam satu kalimat hanya menebalkan kemunculan yang benar-benar di-mining.</translation>
-    </message>
-    <message>
-        <source>Colour the reading by tone</source>
-        <translation>Warnai bacaan berdasarkan nada</translation>
-    </message>
-    <message>
-        <source>Colours each syllable of the reading by its tone.</source>
-        <translation>Mewarnai setiap suku kata bacaan berdasarkan nadanya.</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -5850,6 +5404,14 @@ Tidak ada berkas di disk yang dihapus.</translation>
         <translation>Pindahkan turun dalam daftar sumber pada kartu</translation>
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>word-based</source>
         <translation>berbasis kata</translation>
     </message>
@@ -6026,10 +5588,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Beralih ke Video</translation>
     </message>
     <message>
-        <source>Go to Deck Builder</source>
-        <translation>Beralih ke Pembuat Dek</translation>
-    </message>
-    <message>
         <source>Go to Audiobooks</source>
         <translation>Beralih ke Buku Audio</translation>
     </message>
@@ -6114,12 +5672,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Kata yang Anda tambahkan dari Word Curator. Diabaikan pada setiap proses mining dan tetap ada saat cache dibangun ulang.</translation>
     </message>
     <message>
-        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
-        <translation>Dek yang dilewati pemindaian kata yang dikenal untuk bahasa ini: %1. Ubah di Pengaturan → Penyaringan.</translation>
+        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
-        <translation>Setiap dek dipindai untuk bahasa ini, termasuk dek dalam bahasa lain yang ditulis dengan aksara yang sama. Kecualikan dek tersebut di Pengaturan → Penyaringan.</translation>
+        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Word Filters.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Filter…</source>
@@ -6478,10 +6036,6 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
         <translation>Video</translation>
     </message>
     <message>
-        <source>Deck Builder</source>
-        <translation>Pembuat Dek</translation>
-    </message>
-    <message>
         <source>Audiobooks</source>
         <translation>Buku Audio</translation>
     </message>
@@ -6554,8 +6108,8 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
         <translation>Tab Utama</translation>
     </message>
     <message>
-        <source>Navigate between Video, Deck Builder, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
-        <translation>Navigasi antara Video, Pembuat Dek, Buku Audio, Membaca, Analitik, Utilitas, dan Pengaturan</translation>
+        <source>Navigate between Video, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Application Header</source>
@@ -6588,10 +6142,6 @@ Kata yang akan ditambahkan: %3. Lanjutkan?</translation>
     <message>
         <source>Setup Wizard...</source>
         <translation>Wizard Penyiapan...</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards...</source>
-        <translation>Tata Ulang Kartu Hasil Mining...</translation>
     </message>
     <message>
         <source>&amp;Help</source>
@@ -6908,6 +6458,10 @@ Lanjutkan?</translation>
         <translation>Media Kartu</translation>
     </message>
     <message>
+        <source>Sentence Audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Audio Format</source>
         <translation>Format Audio</translation>
     </message>
@@ -6940,20 +6494,40 @@ Lanjutkan?</translation>
         <translation>Waktu tambahan sebelum dan sesudah subtitel.</translation>
     </message>
     <message>
+        <source>Off</source>
+        <translation>Mati</translation>
+    </message>
+    <message>
+        <source>Google, then Papago</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Google only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Papago only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Spoken sentences for manga and books</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
+        <translation>Tambahkan audio lisan ke kartu dari manga dan buku, yang tidak memiliki audio sumber. Teks kalimat dikirim ke layanan daring yang dipilih.</translation>
+    </message>
+    <message>
+        <source>Screenshot</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Screenshot Offset</source>
         <translation>Offset Tangkapan Layar</translation>
     </message>
     <message>
         <source>Measured from the subtitle start time.</source>
         <translation>Diukur dari waktu mulai subtitel.</translation>
-    </message>
-    <message>
-        <source>Max Parallel Workers</source>
-        <translation>Maks Pekerja Paralel</translation>
-    </message>
-    <message>
-        <source>Higher = faster, but uses more CPU and memory.</source>
-        <translation>Lebih tinggi = lebih cepat, tetapi menggunakan lebih banyak CPU dan memori.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -6988,32 +6562,28 @@ Lanjutkan?</translation>
         <translation>Durasi Klip</translation>
     </message>
     <message>
-        <source>Frames per second for animated clips</source>
-        <translation>Bingkai per detik untuk klip animasi</translation>
+        <source>Small</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>FPS</source>
-        <translation>FPS</translation>
+        <source>Balanced</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source> px</source>
-        <translation> px</translation>
+        <source>High</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Height</source>
-        <translation>Tinggi</translation>
+        <source>Frame rate, height and quality for the animated clip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Output height; aspect ratio preserved</source>
-        <translation>Tinggi keluaran; rasio aspek dipertahankan</translation>
+        <source>Size</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>0 = smallest file, 100 = best quality</source>
-        <translation>0 = berkas terkecil, 100 = kualitas terbaik</translation>
-    </message>
-    <message>
-        <source>Quality</source>
-        <translation>Kualitas</translation>
+        <source>Custom (%1 fps · %2 px · quality %3)</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiniJobMonitor</name>
@@ -7066,8 +6636,52 @@ Lanjutkan?</translation>
         <translation>Bahasa</translation>
     </message>
     <message>
-        <source>Switching swaps dictionaries, filters, deck and card fields to that language's own settings. The interface language is separate (Settings → Appearance &amp; Language).</source>
-        <translation>Beralih menukar kamus, filter, dek, dan bidang kartu ke pengaturan bahasa tersebut sendiri. Bahasa antarmuka terpisah (Pengaturan → Tampilan &amp; Bahasa).</translation>
+        <source>Switching swaps dictionaries, filters, deck and card fields to that language's own settings. The interface language is separate (Settings → General).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Script Variants</source>
+        <translation>Varian Aksara</translation>
+    </message>
+    <message>
+        <source>As written</source>
+        <translation>Sesuai tulisan</translation>
+    </message>
+    <message>
+        <source>Simplified (简体)</source>
+        <translation>Sederhana (简体)</translation>
+    </message>
+    <message>
+        <source>Traditional (繁體)</source>
+        <translation>Tradisional (繁體)</translation>
+    </message>
+    <message>
+        <source>Character Set</source>
+        <translation>Set Karakter</translation>
+    </message>
+    <message>
+        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
+        <translation>Ejaan mana yang diutamakan sisi depan kartu dan pencarian kamus; Sesuai tulisan mempertahankan ejaan asli sumber.</translation>
+    </message>
+    <message>
+        <source>Regional Variety</source>
+        <translation>Ragam Regional</translation>
+    </message>
+    <message>
+        <source>Brazilian Portuguese</source>
+        <translation>Portugis Brasil</translation>
+    </message>
+    <message>
+        <source>European Portuguese</source>
+        <translation>Portugis Eropa</translation>
+    </message>
+    <message>
+        <source>Variety</source>
+        <translation>Ragam</translation>
+    </message>
+    <message>
+        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>Menentukan suara Google mana yang membacakan audio kata dan kalimat, serta daftar frekuensi mana yang disarankan oleh penyiapan.</translation>
     </message>
     <message>
         <source>Download %1 pack</source>
@@ -7208,8 +6822,8 @@ Lanjutkan?</translation>
         <translation>Manga</translation>
     </message>
     <message>
-        <source>mokuro not found. Install it in Settings → Transcription &amp; Alignment → Manga OCR, or set its path there.</source>
-        <translation>mokuro tidak ditemukan. Pasang di Pengaturan → Transkripsi &amp; Penyelarasan → Manga OCR, atau atur jalurnya di sana.</translation>
+        <source>mokuro not found. Install it in the Manga OCR setup section below, or set its path there.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
@@ -7222,6 +6836,34 @@ Lanjutkan?</translation>
     <message>
         <source>A folder of page images (one volume), or a folder whose subfolders and .cbz/.zip files are volumes.</source>
         <translation>Folder berisi gambar halaman (satu volume), atau folder yang subfoldernya serta berkas .cbz/.zip di dalamnya merupakan volume.</translation>
+    </message>
+    <message>
+        <source>Manga OCR setup</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>mokuro executable:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional: path to the mokuro executable</source>
+        <translation>Opsional: jalur ke executable mokuro</translation>
+    </message>
+    <message>
+        <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
+        <translation>Opsional: mokuro milik Anda sendiri (pip/pipx). Kosongkan untuk menggunakan pemasangan dalam aplikasi di bawah atau mokuro pada PATH Anda.</translation>
+    </message>
+    <message>
+        <source>Install mokuro</source>
+        <translation>Pasang mokuro</translation>
+    </message>
+    <message>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <translation>Mengunduh mokuro dan mesin OCR-nya ke folder Anki Miner — sekitar 1 GB, hingga 4 GB dengan dukungan GPU NVIDIA.</translation>
+    </message>
+    <message>
+        <source>Not available on this platform</source>
+        <translation>Tidak tersedia di platform ini</translation>
     </message>
     <message>
         <source>Options</source>
@@ -7246,6 +6888,22 @@ Lanjutkan?</translation>
     <message>
         <source>Run OCR</source>
         <translation>Jalankan OCR</translation>
+    </message>
+    <message>
+        <source>Reinstall mokuro</source>
+        <translation>Pasang ulang mokuro</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Terpasang</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Tidak terpasang</translation>
+    </message>
+    <message>
+        <source>Installing…</source>
+        <translation>Memasang…</translation>
     </message>
     <message>
         <source>No manga volumes found in this folder.</source>
@@ -7608,6 +7266,14 @@ Lanjutkan?</translation>
         <translation>Pindahkan ke bawah (diperiksa setelah baris di atas)</translation>
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 entries</source>
         <translation>%1 entri</translation>
     </message>
@@ -7800,10 +7466,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Zoom</source>
         <translation>Zoom</translation>
-    </message>
-    <message>
-        <source>Text size</source>
-        <translation>Ukuran teks</translation>
     </message>
     <message>
         <source>Statistics database</source>
@@ -8124,10 +7786,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Antrean Multi-Seri</translation>
     </message>
     <message>
-        <source>Add Series</source>
-        <translation>Tambah Seri</translation>
-    </message>
-    <message>
         <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
         <translation>Mining baris yang dipilih, sesuai urutan daftar. Baris yang sudah selesai akan di-mining ulang dari awal.</translation>
     </message>
@@ -8146,14 +7804,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
     <message>
         <source>Remove all items from queue</source>
         <translation>Hapus semua item dari antrean</translation>
-    </message>
-    <message>
-        <source>Enter a name for series #%1:</source>
-        <translation>Masukkan nama untuk seri #%1:</translation>
-    </message>
-    <message>
-        <source>Series %1</source>
-        <translation>Seri %1</translation>
     </message>
     <message>
         <source>Edit: %1</source>
@@ -9300,6 +8950,104 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Tidak dapat mengurai kalimat ini.</translation>
     </message>
 </context><context>
+    <name>SentencesSettingsPanel</name>
+    <message>
+        <source>Sentences</source>
+        <translation>Kalimat</translation>
+    </message>
+    <message>
+        <source>Subtitle Text Filtering</source>
+        <translation>Pemfilteran Teks Subtitel</translation>
+    </message>
+    <message>
+        <source>Regex Filter</source>
+        <translation>Filter Regex</translation>
+    </message>
+    <message>
+        <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
+        <translation>Regex Python yang dicocokkan dalam teks subtitel dan dihapus (atau diganti) sebelum mining. Berguna untuk menghapus nama pembicara seperti (Tanaka) atau deskripsi suara seperti [pintu]. Gabungkan alternatif dengan |. Uji pola di https://regex101.com.</translation>
+    </message>
+    <message>
+        <source>(empty = delete match)</source>
+        <translation>(kosong = hapus kecocokan)</translation>
+    </message>
+    <message>
+        <source>Replacement</source>
+        <translation>Pengganti</translation>
+    </message>
+    <message>
+        <source>Inserted in place of each match (empty deletes it). Use Python backreferences \1 \2, not asbplayer's $1 $2.</source>
+        <translation>Disisipkan menggantikan setiap kecocokan (kosongkan untuk menghapusnya). Gunakan backreference Python \1 \2, bukan $1 $2 milik asbplayer.</translation>
+    </message>
+    <message>
+        <source>Enable Subtitle Regex Filter</source>
+        <translation>Aktifkan Filter Regex Subtitel</translation>
+    </message>
+    <message>
+        <source>Parens (Tanaka)</source>
+        <translation>Tanda kurung (Tanaka)</translation>
+    </message>
+    <message>
+        <source>Brackets [SFX]</source>
+        <translation>Tanda kurung siku [SFX]</translation>
+    </message>
+    <message>
+        <source>Music ♪♬</source>
+        <translation>Musik ♪♬</translation>
+    </message>
+    <message>
+        <source>Speaker: prefix</source>
+        <translation>Awalan Pembicara:</translation>
+    </message>
+    <message>
+        <source>Dialogue dash</source>
+        <translation>Tanda pisah dialog</translation>
+    </message>
+    <message>
+        <source>Presets</source>
+        <translation>Prasetel</translation>
+    </message>
+    <message>
+        <source>Click to append a built-in pattern to the regex field above.</source>
+        <translation>Klik untuk menambahkan pola bawaan ke bidang regex di atas.</translation>
+    </message>
+    <message>
+        <source>Secondary Subtitles</source>
+        <translation>Subtitel Sekunder</translation>
+    </message>
+    <message>
+        <source>Enable secondary-language subtitles</source>
+        <translation>Aktifkan Subtitel Bahasa Sekunder</translation>
+    </message>
+    <message>
+        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
+        <translation>Menambahkan pemilih subtitel kedua beserta offset-nya sendiri ke Video -&gt; Tunggal. Barisnya muncul di bawah baris bahasa mining pada pratinjau Word Curator, dan pada kartu ketika bidang Terjemahan dipetakan (Kartu &amp; Anki).</translation>
+    </message>
+    <message>
+        <source>Full Sentences</source>
+        <translation>Kalimat Penuh</translation>
+    </message>
+    <message>
+        <source>Mine full sentences across subtitle lines</source>
+        <translation>Mining kalimat penuh lintas baris subtitel</translation>
+    </message>
+    <message>
+        <source>Joins neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence instead of a fragment. Reading sources have no subtitle timings and ignore it.</source>
+        <translation>Menggabungkan baris subtitel yang bersebelahan ketika satu baris tidak mengakhiri kalimat, sehingga kartu memuat kalimat utuh, bukan penggalan. Sumber Bacaan tidak memiliki waktu subtitel dan mengabaikan opsi ini.</translation>
+    </message>
+    <message>
+        <source>Card Formatting</source>
+        <translation>Pemformatan Kartu</translation>
+    </message>
+    <message>
+        <source>Bold target word in sentence</source>
+        <translation>Tebalkan kata target dalam kalimat</translation>
+    </message>
+    <message>
+        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
+        <translation>Bungkus kata hasil mining dalam &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; di dalam bidang kalimat. Kecocokan adalah rentang persis yang di-mining, sehingga bentuk yang berulang dalam satu kalimat hanya menebalkan kemunculan yang benar-benar di-mining.</translation>
+    </message>
+</context><context>
     <name>ServiceFactory</name>
     <message>
         <source>Couldn't scan dictionaries folder: %1</source>
@@ -9386,14 +9134,6 @@ Tidak ada berkas indeks yang dihapus.</translation>
 </context><context>
     <name>SettingsTab</name>
     <message>
-        <source>Check for updates on startup</source>
-        <translation>Periksa pembaruan saat memulai</translation>
-    </message>
-    <message>
-        <source>When enabled, Anki Miner queries GitHub for new releases on launch.</source>
-        <translation>Jika diaktifkan, Anki Miner memeriksa rilis baru di GitHub saat diluncurkan.</translation>
-    </message>
-    <message>
         <source>Reset to Defaults…</source>
         <translation>Setel Ulang ke Default…</translation>
     </message>
@@ -9446,8 +9186,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Kamus</translation>
     </message>
     <message>
-        <source>Audio</source>
-        <translation>Audio</translation>
+        <source>Word Audio</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Frequency</source>
@@ -9466,8 +9206,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Bahasa Mining</translation>
     </message>
     <message>
-        <source>Filtering</source>
-        <translation>Penyaringan</translation>
+        <source>Word Filters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentences</source>
+        <translation>Kalimat</translation>
     </message>
     <message>
         <source>Integrations</source>
@@ -9486,8 +9230,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Aplikasi</translation>
     </message>
     <message>
-        <source>Appearance &amp; Language</source>
-        <translation>Tampilan &amp; Bahasa</translation>
+        <source>General</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Keyboard</source>
@@ -9554,16 +9298,8 @@ Sumber yang berhenti berfungsi setelah pemutakhiran aplikasi diperbaiki dengan I
         <translation>Mengunduh…</translation>
     </message>
     <message>
-        <source>Installing…</source>
-        <translation>Memasang…</translation>
-    </message>
-    <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
         <translation>yt-dlp tidak dapat diperbarui. Periksa koneksi Anda dan coba lagi.</translation>
-    </message>
-    <message>
-        <source>Settings</source>
-        <translation>Pengaturan</translation>
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>
@@ -9574,8 +9310,8 @@ Sumber yang berhenti berfungsi setelah pemutakhiran aplikasi diperbaiki dengan I
         <translation>berkas cookies (YouTube)</translation>
     </message>
     <message>
-        <source>subtitle regex (Filtering)</source>
-        <translation>regex subtitel (Pemfilteran)</translation>
+        <source>subtitle regex (Sentences)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>⚠ Saved — kept previous: %1</source>
@@ -9858,8 +9594,8 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Berkas subtitel tersebut sudah tidak ada.</translation>
     </message>
     <message>
-        <source>No subtitle lines to preview — check the filter in Settings → Filtering.</source>
-        <translation>Tidak ada baris subtitel untuk dipratinjau — periksa filter di Pengaturan → Penyaringan.</translation>
+        <source>No subtitle lines to preview — check the filter in Settings → Sentences.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
@@ -10666,22 +10402,6 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Otomatis menggunakan GPU jika tersedia, jika tidak menggunakan CPU. Setiap opsi GPU memerlukan unduhannya sendiri di bawah.</translation>
     </message>
     <message>
-        <source>Download model</source>
-        <translation>Unduh model</translation>
-    </message>
-    <message>
-        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
-        <translation>Unduh bobot model Whisper yang dipilih ke folder model ASR Anki Miner. Diperlukan sebelum pembuatan subtitel dapat dijalankan.</translation>
-    </message>
-    <message>
-        <source>Model download</source>
-        <translation>Unduhan model</translation>
-    </message>
-    <message>
-        <source>Transcription add-ons (optional)</source>
-        <translation>Pengaya transkripsi (opsional)</translation>
-    </message>
-    <message>
         <source>Download GPU acceleration</source>
         <translation>Unduh akselerasi GPU</translation>
     </message>
@@ -10698,6 +10418,34 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Transkripsi lebih cepat pada GPU NVIDIA (CUDA).</translation>
     </message>
     <message>
+        <source>Download Vulkan model</source>
+        <translation>Unduh model Vulkan</translation>
+    </message>
+    <message>
+        <source>Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards.</source>
+        <translation>Unduh model ggml whisper.cpp dan Silero VAD ke folder Anki Miner. Diperlukan untuk transkripsi GPU (Vulkan) pada kartu AMD/Intel/NVIDIA.</translation>
+    </message>
+    <message>
+        <source>Vulkan model</source>
+        <translation>Model Vulkan</translation>
+    </message>
+    <message>
+        <source>Download model</source>
+        <translation>Unduh model</translation>
+    </message>
+    <message>
+        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
+        <translation>Unduh bobot model Whisper yang dipilih ke folder model ASR Anki Miner. Diperlukan sebelum pembuatan subtitel dapat dijalankan.</translation>
+    </message>
+    <message>
+        <source>Model download</source>
+        <translation>Unduhan model</translation>
+    </message>
+    <message>
+        <source>Transcription add-ons (optional)</source>
+        <translation>Pengaya transkripsi (opsional)</translation>
+    </message>
+    <message>
         <source>Download silence removal</source>
         <translation>Unduh penghapusan keheningan</translation>
     </message>
@@ -10712,18 +10460,6 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     <message>
         <source>Skips music and silence so they are not transcribed as garbage.</source>
         <translation>Melewati musik dan keheningan sehingga tidak ditranskripsikan menjadi sampah.</translation>
-    </message>
-    <message>
-        <source>Download Vulkan model</source>
-        <translation>Unduh model Vulkan</translation>
-    </message>
-    <message>
-        <source>Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards.</source>
-        <translation>Unduh model ggml whisper.cpp dan Silero VAD ke folder Anki Miner. Diperlukan untuk transkripsi GPU (Vulkan) pada kartu AMD/Intel/NVIDIA.</translation>
-    </message>
-    <message>
-        <source>Vulkan model</source>
-        <translation>Model Vulkan</translation>
     </message>
     <message>
         <source>Alignment</source>
@@ -10758,38 +10494,6 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Tidak ada biner alass yang diterbitkan untuk macOS. Instal dengan Homebrew:</translation>
     </message>
     <message>
-        <source>Manga OCR</source>
-        <translation>Manga OCR</translation>
-    </message>
-    <message>
-        <source>Optional: path to the mokuro executable</source>
-        <translation>Opsional: jalur ke executable mokuro</translation>
-    </message>
-    <message>
-        <source>mokuro executable</source>
-        <translation>executable mokuro</translation>
-    </message>
-    <message>
-        <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
-        <translation>Opsional: mokuro milik Anda sendiri (pip/pipx). Kosongkan untuk menggunakan pemasangan dalam aplikasi di bawah atau mokuro pada PATH Anda.</translation>
-    </message>
-    <message>
-        <source>Install mokuro</source>
-        <translation>Pasang mokuro</translation>
-    </message>
-    <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
-        <translation>Mengunduh mokuro dan mesin OCR-nya ke folder Anki Miner — sekitar 1 GB, hingga 4 GB dengan dukungan GPU NVIDIA.</translation>
-    </message>
-    <message>
-        <source>mokuro install</source>
-        <translation>pemasangan mokuro</translation>
-    </message>
-    <message>
-        <source>Not available on this platform</source>
-        <translation>Tidak tersedia di platform ini</translation>
-    </message>
-    <message>
         <source>Subtitle generation needs the faster-whisper engine. Install it with:</source>
         <translation>Pembuatan subtitel memerlukan mesin faster-whisper. Instal dengan:</translation>
     </message>
@@ -10804,10 +10508,6 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     <message>
         <source>Not installed</source>
         <translation>Tidak terpasang</translation>
-    </message>
-    <message>
-        <source>Reinstall mokuro</source>
-        <translation>Pasang ulang mokuro</translation>
     </message>
     <message>
         <source>GPU acceleration is not available on this platform.</source>
@@ -10996,6 +10696,10 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
 </context><context>
     <name>UISettingsPanel</name>
     <message>
+        <source>Language</source>
+        <translation>Bahasa</translation>
+    </message>
+    <message>
         <source>Interface language</source>
         <translation>Bahasa antarmuka</translation>
     </message>
@@ -11004,8 +10708,12 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>Mulai ulang untuk menerapkan.</translation>
     </message>
     <message>
-        <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
-        <translation>Skalakan seluruh antarmuka — teks, spasi, dan kontrol. Diterapkan setelah mulai ulang.</translation>
+        <source>Appearance</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Scale the entire interface, including text size and font, plus spacing and controls. Applies after restart.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Zoom</source>
@@ -11016,36 +10724,12 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
         <translation>%1%</translation>
     </message>
     <message>
-        <source>Scale all UI text. Applies after restart.</source>
-        <translation>Skalakan semua teks UI. Diterapkan setelah dimulai ulang.</translation>
-    </message>
-    <message>
-        <source>Text size</source>
-        <translation>Ukuran teks</translation>
-    </message>
-    <message>
         <source>Restart now</source>
         <translation>Mulai ulang sekarang</translation>
     </message>
     <message>
         <source>Later</source>
         <translation>Nanti</translation>
-    </message>
-    <message>
-        <source>Use system file dialogs</source>
-        <translation>Gunakan dialog berkas sistem</translation>
-    </message>
-    <message>
-        <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
-        <translation>Gunakan pemilih berkas bawaan sistem operasi. Nonaktifkan ini untuk menggunakan pemilih bawaan aplikasi, yang mengikuti tema aplikasi dan tampak sama pada setiap platform.</translation>
-    </message>
-    <message>
-        <source>Utilities tab</source>
-        <translation>Tab Utilitas</translation>
-    </message>
-    <message>
-        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
-        <translation>Pilih alat yang ditampilkan pada tab Utilitas. Setidaknya satu akan tetap ada.</translation>
     </message>
     <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
@@ -11062,6 +10746,34 @@ Sumber daya yang terpasang dan tema Anda tetap dipertahankan.</translation>
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Pulihkan tema yang aktif saat tab ini dibuka.</translation>
+    </message>
+    <message>
+        <source>Utilities tab</source>
+        <translation>Tab Utilitas</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Pilih alat yang ditampilkan pada tab Utilitas. Setidaknya satu akan tetap ada.</translation>
+    </message>
+    <message>
+        <source>App</source>
+        <translation>Aplikasi</translation>
+    </message>
+    <message>
+        <source>Check for updates on startup</source>
+        <translation>Periksa pembaruan saat memulai</translation>
+    </message>
+    <message>
+        <source>When enabled, Anki Miner queries GitHub for new releases on launch.</source>
+        <translation>Jika diaktifkan, Anki Miner memeriksa rilis baru di GitHub saat diluncurkan.</translation>
+    </message>
+    <message>
+        <source>Higher = faster, but uses more CPU and memory.</source>
+        <translation>Lebih tinggi = lebih cepat, tetapi menggunakan lebih banyak CPU dan memori.</translation>
+    </message>
+    <message>
+        <source>Max Parallel Workers</source>
+        <translation>Maks Pekerja Paralel</translation>
     </message>
     <message>
         <source>button labels %1:1</source>

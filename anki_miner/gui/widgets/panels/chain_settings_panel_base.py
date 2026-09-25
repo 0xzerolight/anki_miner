@@ -39,12 +39,13 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QShowEvent
+from PyQt6.QtGui import QAction, QShowEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QHBoxLayout,
     QLabel,
     QListWidgetItem,
+    QMenu,
     QVBoxLayout,
     QWidget,
 )
@@ -112,9 +113,14 @@ class ChainListLabels:
     remove: str
     move_up: str
     move_down: str
+    #: Label on the quiet "More" tool button that collapses per-panel
+    #: maintenance actions (Reimport All, Restore from Disk, ...).
+    more: str
     remove_tooltip: str = ""
     move_up_tooltip: str = ""
     move_down_tooltip: str = ""
+    #: Falls back to ``more`` (mirroring ``_make_square_button``) when unset.
+    more_tooltip: str = ""
 
 
 @dataclass(frozen=True, eq=False)
@@ -178,6 +184,9 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
     _explanation_label: QLabel
     _add_btn: ModernButton
     _remove_btn: ModernButton
+    #: The quiet "More" tool button holding ``extra_actions``, or ``None`` when
+    #: the panel was built with none.
+    _more_btn: ModernButton | None
     _row_actions: ChainRowActions
     _strings: _ChainPanelStrings
 
@@ -226,19 +235,21 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         self,
         labels: ChainListLabels,
         *,
-        extra_actions: tuple[ModernButton, ...] = (),
+        extra_actions: tuple[QAction, ...] = (),
     ) -> QWidget:
         """Build the explanation, the drag-reorderable list, and the toolbar.
 
         This is the whole of D13's "one real list": drag to reorder, small square
         arrows as the keyboard path onto the same move, one clear primary Add,
-        quiet panel-specific maintenance actions beside it, and exactly one red
-        control -- the trash, an outline rather than a fill because removing a
-        source is reversible by re-importing it (D41).
+        one quiet "More" menu collecting the panel's maintenance actions, and
+        exactly one red control -- the trash, an outline rather than a fill
+        because removing a source is reversible by re-importing it (D41).
 
         Args:
             labels: This panel's translated strings.
-            extra_actions: Quiet per-panel maintenance buttons, placed after Add.
+            extra_actions: Quiet per-panel maintenance actions (Reimport All,
+                Restore from Disk, ...), collapsed into one "More" tool button
+                placed after Add, in the order given. Empty means no button.
 
         Returns:
             The container to hand to ``add_field``. The caller owns the anchor.
@@ -272,8 +283,11 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
 
         self._add_btn = ModernButton(labels.add, variant="primary")
         toolbar.addWidget(self._add_btn)
-        for action in extra_actions:
-            toolbar.addWidget(action)
+        if extra_actions:
+            self._more_btn = self._make_more_button(labels.more, labels.more_tooltip, extra_actions)
+            toolbar.addWidget(self._more_btn)
+        else:
+            self._more_btn = None
         toolbar.addStretch()
 
         self._remove_btn = self._make_square_button(
@@ -294,6 +308,29 @@ class ChainSettingsPanelBase(ScreenIssueHost, FormPanel):
         button = ModernButton(glyph, variant=variant, square=True)
         button.setAccessibleName(name)
         button.setToolTip(tooltip or name)
+        return button
+
+    @staticmethod
+    def _make_more_button(text: str, tooltip: str, actions: tuple[QAction, ...]) -> ModernButton:
+        """The quiet "More" control collapsing this panel's maintenance actions.
+
+        A ``ModernButton`` rather than a bare ``QToolButton``: the button must
+        read as the toolbar's ordinary quiet control (D41 reserves accent and
+        red for Add and the trash), and that look already exists on
+        ``ModernButton#secondary`` -- reusing it needs no new QSS. ``setMenu``
+        opens the dropdown on click the same way the Audio panel's own Add
+        button already does for its three add-kinds.
+        """
+        button = ModernButton(text, variant="secondary")
+        accessible = tooltip or text
+        button.setAccessibleName(accessible)
+        button.setToolTip(accessible)
+        menu = QMenu(button)
+        # QAction tooltips are otherwise silent inside a menu.
+        menu.setToolTipsVisible(True)
+        for action in actions:
+            menu.addAction(action)
+        button.setMenu(menu)
         return button
 
     # ------------------------------------------------------------------

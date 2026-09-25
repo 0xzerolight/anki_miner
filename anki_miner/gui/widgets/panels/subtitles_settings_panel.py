@@ -8,15 +8,15 @@ Subtitles main tab:
   download. Where the pack cannot be offered the panel says so plainly, and a
   source install without the ``[asr]`` extra gets the pip command instead.
 - **Alignment (alass)** — optional binary-path override plus an in-app
-  "Download alass" button on the platforms that ship a binary (Linux/Windows),
-  and the three retiming knobs (split penalty, frame-rate correction,
-  single-offset) that used to be per-run controls on the Retime screen.
-  macOS has no upstream binary, so it shows Homebrew guidance instead.
-- **Manga OCR (mokuro)** — optional executable-path override plus the in-app
-  "Install mokuro" button, which builds a uv-managed environment under
-  ``config.uv_root``. Not a subtitle tool, but it is the third external
-  executable the app installs on the user's behalf, so it shares this panel's
-  path-override + install-button shape rather than growing a panel of its own.
+  "Download alass" button on the platforms that ship a binary (Linux/Windows).
+  macOS has no upstream binary, so it shows Homebrew guidance instead. The
+  three alignment knobs (split penalty, frame-rate correction, single-offset)
+  that used to live on the Retime screen are gone — the retime pipeline is
+  self-tuning now.
+
+Manga OCR (mokuro) setup used to live here too; it moved onto the Utilities →
+Manga OCR tab itself (:class:`~anki_miner.gui.widgets.mokuro_tab.MokuroTab`),
+next to the "Run OCR" button it enables.
 """
 
 import importlib.util
@@ -40,7 +40,7 @@ from PyQt6.QtWidgets import (
 from anki_miner.gui.utils.run_off_thread import run_off_thread
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton
-from anki_miner.services import alass_installer, mokuro_installer
+from anki_miner.services import alass_installer
 from anki_miner.services.asr import (
     _engine,
     asr_pack_installer,
@@ -49,7 +49,7 @@ from anki_miner.services.asr import (
     model_manager,
     onnx_pack_installer,
 )
-from anki_miner.utils import alass_resolver, mokuro_resolver
+from anki_miner.utils import alass_resolver
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import suppressed
 
@@ -125,7 +125,6 @@ class _AsrState:
     onnxruntime_importable: bool
     vad_pack_installed: bool
     vulkan_installed: bool
-    mokuro_installed: bool
 
 
 class SubtitlesSettingsPanel(FormPanel):
@@ -154,10 +153,6 @@ class SubtitlesSettingsPanel(FormPanel):
     #: resolved by the wiring. One action fetches BOTH the ggml acoustic model
     #: and the Silero VAD.
     vulkan_model_download_requested = pyqtSignal(str)
-    #: Emitted when the user clicks "Install mokuro"; the managed install
-    #: targets (``config.bin_root`` for uv, ``config.uv_root`` for the
-    #: environment) are resolved by the wiring, not the panel.
-    mokuro_install_requested = pyqtSignal()
 
     def __init__(
         self,
@@ -174,9 +169,6 @@ class SubtitlesSettingsPanel(FormPanel):
         self._cuda_libs_root: Path | None = None
         self._onnx_pack_root: Path | None = None
         self._alass_supported = False if suppress_optional_startup else alass_installer.alass_install_supported()
-        self._mokuro_location: Path | None = None
-        self._uv_root: Path | None = None
-        self._mokuro_supported = False if suppress_optional_startup else mokuro_installer.mokuro_install_supported()
         # Vulkan ASR is "offerable" only where it can actually run: non-macOS AND
         # the whisper.cpp Vulkan backend lib (libggml-vulkan) is installed. That
         # lib ships only in the bundled release (built from source with the Vulkan
@@ -205,7 +197,6 @@ class SubtitlesSettingsPanel(FormPanel):
         self._vad_pack_active = False
         self._asr_pack_active = False
         self._vulkan_active = False
-        self._mokuro_install_active = False
         # Off-thread state probe coordination. The heavy probes (ctranslate2
         # import + CUDA init, find_spec, model.bin disk walk) run on a worker;
         # _state_in_flight + _state_refresh_pending give the same single-shot
@@ -241,7 +232,6 @@ class SubtitlesSettingsPanel(FormPanel):
         self._asr_pack_installed_cache = False
         self._alass_installed_cache = False
         self._vulkan_installed_cache = False
-        self._mokuro_installed_cache = False
         self._setup_fields()
 
     # ------------------------------------------------------------------
@@ -249,11 +239,10 @@ class SubtitlesSettingsPanel(FormPanel):
     # ------------------------------------------------------------------
 
     def _setup_fields(self) -> None:
-        """Build the Speech-to-text, add-ons, Alignment, and Manga OCR sections."""
+        """Build the Speech-to-text, add-ons, and Alignment sections."""
         self._setup_asr_section()
         self._setup_addons_section()
         self._setup_alass_section()
-        self._setup_mokuro_section()
         self.add_stretch()
 
     def _add_help(self, text: str) -> QLabel:
@@ -270,7 +259,7 @@ class SubtitlesSettingsPanel(FormPanel):
         return label
 
     def _setup_asr_section(self) -> None:
-        """Engine download row, Whisper model dropdown, download button, and engine guidance."""
+        """Engine download row, model/device dropdowns, their GPU downloads, and engine guidance."""
         self.add_section(self.tr("Speech-to-text"))
 
         # The engine itself. Bundled installs download it here — it is an
@@ -338,49 +327,10 @@ class SubtitlesSettingsPanel(FormPanel):
             helper=self.tr("Auto uses the GPU when available, else CPU. Each GPU option needs its own download below."),
         )
 
-        self.download_model_button = ModernButton(self.tr("Download model"), variant="secondary")
-        self.download_model_button.setToolTip(
-            self.tr(
-                "Download the selected Whisper model weights into Anki Miner's ASR models folder. "
-                "Required before subtitle generation can run."
-            )
-        )
-        self.download_model_button.clicked.connect(self._on_download_clicked)
-
-        self.model_status_label = QLabel("")
-        self.model_status_label.setObjectName("settings-save-status")
-
-        download_container = QWidget()
-        download_row = QHBoxLayout(download_container)
-        download_row.setContentsMargins(0, 0, 0, 0)
-        download_row.addWidget(self.download_model_button)
-        download_row.addWidget(self.model_status_label)
-        download_row.addStretch()
-        self.add_field(
-            self.tr("Model download"),
-            download_container,
-            anchor="model_download",
-            anchor_focus=self.download_model_button,
-            anchor_text=lambda: (self.download_model_button.text(), self.download_model_button.toolTip()),
-        )
-
-        # Guidance shown only when faster-whisper is not installed AND the engine
-        # pack cannot be offered here (a source install on a Python the pack does
-        # not pin) — point them at the pip extra instead of surfacing a cryptic
-        # ImportError after a dead "Download model" click.
-        self._asr_engine_guidance = self._build_engine_guidance()
-        self.add_field(
-            "",
-            self._asr_engine_guidance,
-            anchor_ignore="conditional install instructions, not a setting",
-        )
-
-    def _setup_addons_section(self) -> None:
-        """Optional transcription accelerators/quality packs (CUDA / VAD / Vulkan)."""
-        self.add_section(self.tr("Transcription add-ons (optional)"))
-
         # GPU acceleration pack download. Mirrors the model-download row; gated by
         # _refresh_cuda_pack_status on platform support + NVIDIA-GPU presence.
+        # Sits directly under the device row, as the device choice's own
+        # CUDA-specific download, rather than in the general add-ons section below.
         self.download_cuda_button = ModernButton(self.tr("Download GPU acceleration"), variant="secondary")
         self.download_cuda_button.setToolTip(
             self.tr(
@@ -419,6 +369,89 @@ class SubtitlesSettingsPanel(FormPanel):
         )
         # Shown in lockstep with (the inverse of) its guidance label; see _apply_cuda_pack_state.
         self._cuda_help_label = self._add_help(self.tr("Faster transcription on NVIDIA GPUs (CUDA)."))
+
+        # Vulkan model download. One action fetches BOTH the ggml acoustic model
+        # and the Silero VAD the whisper.cpp (Vulkan/CPU) backend loads off disk.
+        # The button + its row are omitted unless Vulkan is offerable (non-macOS
+        # AND the backend lib is installed) — downloading the ggml weights is
+        # pointless when the engine can't load them; the attributes stay set to
+        # None so set_vulkan_status/notify can no-op safely. Sits directly under
+        # the CUDA row: both are device-specific downloads for the choice above.
+        self.download_vulkan_button: ModernButton | None = None
+        self.vulkan_status_label: QLabel | None = None
+        if self._vulkan_offerable:
+            self.download_vulkan_button = ModernButton(self.tr("Download Vulkan model"), variant="secondary")
+            self.download_vulkan_button.setToolTip(
+                self.tr(
+                    "Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. "
+                    "Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards."
+                )
+            )
+            self.download_vulkan_button.clicked.connect(self._on_vulkan_download_clicked)
+
+            self.vulkan_status_label = QLabel("")
+            self.vulkan_status_label.setObjectName("settings-save-status")
+
+            vulkan_container = QWidget()
+            vulkan_row = QHBoxLayout(vulkan_container)
+            vulkan_row.setContentsMargins(0, 0, 0, 0)
+            vulkan_row.addWidget(self.download_vulkan_button)
+            vulkan_row.addWidget(self.vulkan_status_label)
+            vulkan_row.addStretch()
+            vulkan_button = self.download_vulkan_button
+            self.add_field(
+                self.tr("Vulkan model"),
+                vulkan_container,
+                anchor="vulkan_model",
+                anchor_focus=vulkan_button,
+                anchor_text=lambda: (vulkan_button.text(), vulkan_button.toolTip()),
+            )
+
+        self.download_model_button = ModernButton(self.tr("Download model"), variant="secondary")
+        self.download_model_button.setToolTip(
+            self.tr(
+                "Download the selected Whisper model weights into Anki Miner's ASR models folder. "
+                "Required before subtitle generation can run."
+            )
+        )
+        self.download_model_button.clicked.connect(self._on_download_clicked)
+
+        self.model_status_label = QLabel("")
+        self.model_status_label.setObjectName("settings-save-status")
+
+        download_container = QWidget()
+        download_row = QHBoxLayout(download_container)
+        download_row.setContentsMargins(0, 0, 0, 0)
+        download_row.addWidget(self.download_model_button)
+        download_row.addWidget(self.model_status_label)
+        download_row.addStretch()
+        self.add_field(
+            self.tr("Model download"),
+            download_container,
+            anchor="model_download",
+            anchor_focus=self.download_model_button,
+            anchor_text=lambda: (self.download_model_button.text(), self.download_model_button.toolTip()),
+        )
+
+        # Guidance shown only when faster-whisper is not installed AND the engine
+        # pack cannot be offered here (a source install on a Python the pack does
+        # not pin) — point them at the pip extra instead of surfacing a cryptic
+        # ImportError after a dead "Download model" click.
+        self._asr_engine_guidance = self._build_engine_guidance()
+        self.add_field(
+            "",
+            self._asr_engine_guidance,
+            anchor_ignore="conditional install instructions, not a setting",
+        )
+
+    def _setup_addons_section(self) -> None:
+        """Optional transcription quality pack: silence removal (VAD).
+
+        The GPU-specific downloads (CUDA pack, Vulkan model) live under the
+        device row in the Speech-to-text section instead — they're the device
+        choice's own downloads, not a general add-on.
+        """
+        self.add_section(self.tr("Transcription add-ons (optional)"))
 
         # Silence removal (VAD) pack download. onnxruntime powers Whisper's VAD,
         # which strips silence/music so it is not transcribed as hallucinated
@@ -464,42 +497,6 @@ class SubtitlesSettingsPanel(FormPanel):
         self._vad_help_label = self._add_help(
             self.tr("Skips music and silence so they are not transcribed as garbage.")
         )
-
-        # Vulkan model download. One action fetches BOTH the ggml acoustic model
-        # and the Silero VAD the whisper.cpp (Vulkan/CPU) backend loads off disk.
-        # The button + its row are omitted unless Vulkan is offerable (non-macOS
-        # AND the backend lib is installed) — downloading the ggml weights is
-        # pointless when the engine can't load them; the attributes stay set to
-        # None so set_vulkan_status/notify can no-op safely.
-        self.download_vulkan_button: ModernButton | None = None
-        self.vulkan_status_label: QLabel | None = None
-        if self._vulkan_offerable:
-            self.download_vulkan_button = ModernButton(self.tr("Download Vulkan model"), variant="secondary")
-            self.download_vulkan_button.setToolTip(
-                self.tr(
-                    "Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. "
-                    "Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards."
-                )
-            )
-            self.download_vulkan_button.clicked.connect(self._on_vulkan_download_clicked)
-
-            self.vulkan_status_label = QLabel("")
-            self.vulkan_status_label.setObjectName("settings-save-status")
-
-            vulkan_container = QWidget()
-            vulkan_row = QHBoxLayout(vulkan_container)
-            vulkan_row.setContentsMargins(0, 0, 0, 0)
-            vulkan_row.addWidget(self.download_vulkan_button)
-            vulkan_row.addWidget(self.vulkan_status_label)
-            vulkan_row.addStretch()
-            vulkan_button = self.download_vulkan_button
-            self.add_field(
-                self.tr("Vulkan model"),
-                vulkan_container,
-                anchor="vulkan_model",
-                anchor_focus=vulkan_button,
-                anchor_text=lambda: (vulkan_button.text(), vulkan_button.toolTip()),
-            )
 
     def _setup_alass_section(self) -> None:
         """alass path override plus in-app download (or Homebrew guidance)."""
@@ -556,58 +553,6 @@ class SubtitlesSettingsPanel(FormPanel):
         # the retime pipeline is self-tuning (engine chain + result validation
         # in services/subtitle_retimer.py), and the old single-offset default
         # silently destroyed cross-release retimes.
-
-    def _setup_mokuro_section(self) -> None:
-        """mokuro path override plus the in-app installer (uv-managed environment)."""
-        self.add_section(self.tr("Manga OCR"))
-
-        self.mokuro_selector = FileSelector(
-            label="",
-            file_mode=True,
-            file_filter="All Files (*)",
-            placeholder=self.tr("Optional: path to the mokuro executable"),
-        )
-        self.add_field(
-            self.tr("mokuro executable"),
-            self.mokuro_selector,
-            helper=self.tr(
-                "Optional: your own mokuro (pip/pipx). Leave blank to use the in-app "
-                "install below or mokuro on your PATH."
-            ),
-        )
-
-        # Unlike alass, the button exists on every platform: an unsupported
-        # platform disables it and says so, because the path override above is
-        # still a usable route there.
-        self.install_mokuro_button = ModernButton(self.tr("Install mokuro"), variant="secondary")
-        self.install_mokuro_button.setToolTip(
-            self.tr(
-                "Downloads mokuro and its OCR engine into Anki Miner's folder "
-                "— about 1 GB, up to 4 GB with NVIDIA GPU support."
-            )
-        )
-        self.install_mokuro_button.setEnabled(self._mokuro_supported)
-        self.install_mokuro_button.clicked.connect(self._on_mokuro_install_clicked)
-
-        self.mokuro_status_label = QLabel("")
-        self.mokuro_status_label.setObjectName("settings-save-status")
-
-        container = QWidget()
-        row = QHBoxLayout(container)
-        row.setContentsMargins(0, 0, 0, 0)
-        row.addWidget(self.install_mokuro_button)
-        row.addWidget(self.mokuro_status_label)
-        row.addStretch()
-        button = self.install_mokuro_button
-        self.add_field(
-            self.tr("mokuro install"),
-            container,
-            anchor="mokuro_install",
-            anchor_focus=button,
-            anchor_text=lambda: (button.text(), button.toolTip()),
-        )
-        if not self._mokuro_supported:
-            self.set_mokuro_status(self.tr("Not available on this platform"))
 
     def _build_engine_guidance(self) -> QWidget:
         """Build the (initially hidden) source-install guidance block.
@@ -801,50 +746,6 @@ class SubtitlesSettingsPanel(FormPanel):
             self.set_alass_status(self.tr("Not installed"))
 
     # ------------------------------------------------------------------
-    # mokuro install flow
-    # ------------------------------------------------------------------
-
-    def _on_mokuro_install_clicked(self) -> None:
-        """Disable the button in flight and request the mokuro install."""
-        self._mokuro_install_active = True
-        self.install_mokuro_button.setEnabled(False)
-        self.mokuro_install_requested.emit()
-
-    def notify_mokuro_install_finished(self) -> None:
-        """Clear the in-flight guard and re-probe mokuro after an install.
-
-        Mirrors :meth:`notify_alass_download_finished`: the off-thread re-probe
-        is what moves the label/button to the new on-disk state.
-        """
-        self._mokuro_install_active = False
-        self._refresh_state_async(self.get_model(), self._models_root, self._cuda_libs_root)
-
-    def set_mokuro_status(self, text: str) -> None:
-        """Set the mokuro status label text (shown beside the Install button)."""
-        self.set_status_text(self.mokuro_status_label, text)
-
-    def _apply_mokuro_state(self, installed: bool) -> None:
-        """Reflect whether mokuro is reachable; re-enable the install button.
-
-        "Installed" covers the managed uv environment, an explicit path
-        override, and a user's own pip/pipx mokuro on PATH — the same chain the
-        Manga OCR tab resolves through, so the two can never disagree. An
-        install in flight keeps the button disabled and its status intact.
-
-        An unsupported platform is a no-op, like :meth:`_apply_alass_state`:
-        the button can never be enabled there and the construction-time
-        "Not available on this platform" status (_setup_mokuro_section) is the
-        only reason on screen for that, so a probe must not overwrite it with
-        "Not installed".
-        """
-        if self._mokuro_install_active or not self._mokuro_supported:
-            self.install_mokuro_button.setEnabled(False)
-            return
-        self.install_mokuro_button.setEnabled(True)
-        self.install_mokuro_button.setText(self.tr("Reinstall mokuro") if installed else self.tr("Install mokuro"))
-        self.set_mokuro_status(self.tr("Installed") if installed else self.tr("Not installed"))
-
-    # ------------------------------------------------------------------
     # GPU acceleration pack download flow
     # ------------------------------------------------------------------
 
@@ -1015,8 +916,6 @@ class SubtitlesSettingsPanel(FormPanel):
         onnx_pack_root = self._onnx_pack_root
         alass_supported = self._alass_supported
         vulkan_offerable = self._vulkan_offerable
-        mokuro_location = self._mokuro_location
-        uv_root = self._uv_root
         # Reuse cached process-lifetime probes; re-probe install/download flags.
         engine_cache = self._engine_available_cache
         cuda_cache = self._cuda_device_count_cache
@@ -1103,19 +1002,6 @@ class SubtitlesSettingsPanel(FormPanel):
                     )
                     alass_installed = False
 
-            # Probed on every platform (unlike alass): the override / PATH tiers
-            # resolve where the in-app install is unsupported.
-            mokuro_installed = False
-            try:
-                mokuro_installed = mokuro_resolver.mokuro_available(mokuro_location, uv_root)
-            except Exception as exc:  # noqa: BLE001 — bucket A: mokuro falls back to unavailable.
-                logger.warning(
-                    "ASR probe degraded: service=%s error=%s",
-                    "mokuro",
-                    type(exc).__name__,
-                )
-                mokuro_installed = False
-
             # onnxruntime importability (find_spec scans sys.path) is the heavy
             # VAD probe; the install flag is a cheap dir check.
             onnxruntime_importable = False
@@ -1163,7 +1049,6 @@ class SubtitlesSettingsPanel(FormPanel):
                 onnxruntime_importable=onnxruntime_importable,
                 vad_pack_installed=vad_pack_installed,
                 vulkan_installed=vulkan_installed,
-                mokuro_installed=mokuro_installed,
             )
 
         run_off_thread(self, _probe, self._on_state_ready, self._on_state_error)
@@ -1182,8 +1067,6 @@ class SubtitlesSettingsPanel(FormPanel):
             self.download_vulkan_button.setEnabled(False)
         if self._alass_supported and not self._alass_download_active:
             self.download_alass_button.setEnabled(False)
-        if not self._mokuro_install_active:
-            self.install_mokuro_button.setEnabled(False)
 
     def _on_state_ready(self, state: object) -> None:
         """Apply a probed :class:`_AsrState` snapshot on the GUI thread."""
@@ -1208,7 +1091,6 @@ class SubtitlesSettingsPanel(FormPanel):
         self._asr_pack_installed_cache = result.asr_pack_installed
         self._alass_installed_cache = result.alass_installed
         self._vulkan_installed_cache = result.vulkan_installed
-        self._mokuro_installed_cache = result.mokuro_installed
 
         self._apply_engine_state(result.engine_available, result.asr_pack_installed)
         self._apply_model_state(result.engine_available, result.model_downloaded)
@@ -1216,7 +1098,6 @@ class SubtitlesSettingsPanel(FormPanel):
         self._apply_vad_pack_state(result.onnxruntime_importable, result.vad_pack_installed)
         self._apply_alass_state(result.alass_installed)
         self._apply_vulkan_state(result.vulkan_installed)
-        self._apply_mokuro_state(result.mokuro_installed)
 
         self._redispatch_pending_state()
 
@@ -1240,7 +1121,6 @@ class SubtitlesSettingsPanel(FormPanel):
         self._apply_vad_pack_state(self._onnxruntime_importable_now(), self._vad_pack_installed_cache)
         self._apply_alass_state(self._alass_installed_cache)
         self._apply_vulkan_state(self._vulkan_installed_cache)
-        self._apply_mokuro_state(self._mokuro_installed_cache)
         self._redispatch_pending_state()
 
     def _redispatch_pending_state(self) -> None:
@@ -1479,10 +1359,6 @@ class SubtitlesSettingsPanel(FormPanel):
         self._bin_root = config.bin_root
         self._alass_location = config.alass_location
         self._onnx_pack_root = config.onnx_pack_root
-        # mokuro
-        self.mokuro_selector.set_path(str(config.mokuro_location) if config.mokuro_location else "")
-        self._mokuro_location = config.mokuro_location
-        self._uv_root = config.uv_root
         # One unified off-thread probe drives every status label + button state.
         if self._suppress_optional_startup:
             self._show_checking_status()
@@ -1497,11 +1373,9 @@ class SubtitlesSettingsPanel(FormPanel):
         the contribute fold.
         """
         path = self.alass_selector.path_or_none()
-        mokuro_path = self.mokuro_selector.path_or_none()
         return replace(
             config,
             asr_model=self.get_model(),
             asr_device=self.get_device(),
             alass_location=Path(path) if path is not None else None,
-            mokuro_location=Path(mokuro_path) if mokuro_path is not None else None,
         )

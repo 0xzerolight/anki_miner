@@ -16,7 +16,6 @@ there and only the per-screen field payloads are checked per tab.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -135,7 +134,7 @@ class TestRunStart:
         assert "first=aaa,bbb" in line
 
     def test_a_screen_without_a_receipt_widget_still_records_the_start(self, youtube_tab, lifecycle_log):
-        """Deck Builder installs no receipt; the run still has to be in the log."""
+        """A screen with no receipt widget; the run still has to be in the log."""
         youtube_tab._receipt_widget = None
 
         youtube_tab._begin_receipt(3, run_fields={"deck": "Mining"})
@@ -335,7 +334,7 @@ class TestSingleEpisodeRunFields:
         assert f"deck={single_tab.config.anki_deck_name}" in line
         assert f"note_type={single_tab.config.anki_note_type}" in line
         assert "language=ja" in line
-        assert "review_words=False" in line
+        assert "review_words=True" in line  # Single always curates.
 
     def test_cancel_is_recorded_as_a_run_control(self, single_tab, lifecycle_log, tmp_path):
         _start_single_run(single_tab, tmp_path)
@@ -367,23 +366,6 @@ def batch_tab(qtbot, test_config):
 
 
 class TestBatchRunFields:
-    def test_the_quick_path_names_the_pairs_it_launched_with(self, batch_tab, lifecycle_log, tmp_path):
-        from anki_miner.utils.file_pairing import FilePair
-
-        pairs = [
-            FilePair(video=tmp_path / "ep01.mkv", subtitle=tmp_path / "ep01.srt"),
-            FilePair(video=tmp_path / "ep02.mkv", subtitle=tmp_path / "ep02.srt"),
-        ]
-        with patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread", MagicMock()):
-            batch_tab._start_processing_with_pairs(pairs)
-
-        line = _one(lifecycle_log, "Run start:")
-        assert "screen=run.batch items=2" in line
-        assert "pairs=2" in line
-        assert "first=ep01,ep02" in line
-        assert "video_folder=" in line
-        assert "subtitle_folder=" in line
-
     def test_the_queue_path_names_the_series_it_launched_with(self, batch_tab, lifecycle_log, tmp_path):
         batch_tab.batch_queue.add_item(tmp_path, tmp_path, "Show A", 0.0)
         with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", MagicMock()):
@@ -394,10 +376,9 @@ class TestBatchRunFields:
         assert 'first="Show A"' in line
 
     def test_cancel_is_recorded_as_a_run_control(self, batch_tab, lifecycle_log, tmp_path):
-        from anki_miner.utils.file_pairing import FilePair
-
-        with patch("anki_miner.gui.workers.manual_pair_worker.ManualPairWorkerThread", MagicMock()):
-            batch_tab._start_processing_with_pairs([FilePair(video=Path("a.mkv"), subtitle=Path("a.srt"))])
+        batch_tab.batch_queue.add_item(tmp_path, tmp_path, "Show A", 0.0)
+        with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", MagicMock()):
+            batch_tab._start_queue_worker()
         lifecycle_log.clear()
 
         batch_tab._on_cancel_clicked()

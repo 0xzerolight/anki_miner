@@ -38,13 +38,13 @@ def test_retry_missing_audio_is_offered_only_when_a_source_caches_misses(qtbot, 
     qtbot.addWidget(panel)
 
     panel.set_chain((AudioSourceEntry(kind="jpod101", pack_id=None, enabled=True),))
-    assert not panel._retry_missing_btn.isHidden()
+    assert panel._retry_missing_btn.isVisible()
     assert "JapanesePod101" in panel._retry_missing_btn.toolTip()
 
     # A zh-shaped chain: googletts writes no .miss markers, so the button has
     # nothing to purge and must not claim otherwise.
     panel.set_chain((AudioSourceEntry(kind="googletts", pack_id=None, enabled=True),))
-    assert panel._retry_missing_btn.isHidden()
+    assert not panel._retry_missing_btn.isVisible()
 
 
 def test_retry_affordance_follows_an_in_place_chain_append(qtbot, tmp_path):
@@ -57,10 +57,10 @@ def test_retry_affordance_follows_an_in_place_chain_append(qtbot, tmp_path):
     qtbot.addWidget(panel)
 
     panel.set_chain((AudioSourceEntry(kind="googletts", pack_id=None, enabled=True),))
-    assert panel._retry_missing_btn.isHidden()
+    assert not panel._retry_missing_btn.isVisible()
 
     panel.add_source_entry(AudioSourceEntry(kind="jpod101", pack_id=None, enabled=True))
-    assert not panel._retry_missing_btn.isHidden()
+    assert panel._retry_missing_btn.isVisible()
 
 
 def test_retry_affordance_follows_a_row_toggle(qtbot, tmp_path):
@@ -79,17 +79,17 @@ def test_retry_affordance_follows_a_row_toggle(qtbot, tmp_path):
             AudioSourceEntry(kind="googletts", pack_id=None, enabled=True),
         )
     )
-    assert not panel._retry_missing_btn.isHidden()
+    assert panel._retry_missing_btn.isVisible()
 
     rows = panel._rows()
     jpod_row = next(row for row in rows if row.entry.kind == "jpod101")
     jpod_row.checkbox.setChecked(False)
 
-    assert panel._retry_missing_btn.isHidden()
+    assert not panel._retry_missing_btn.isVisible()
 
     jpod_row = next(row for row in panel._rows() if row.entry.kind == "jpod101")
     jpod_row.checkbox.setChecked(True)
-    assert not panel._retry_missing_btn.isHidden()
+    assert panel._retry_missing_btn.isVisible()
 
 
 def test_retry_affordance_follows_an_in_place_chain_removal(qtbot, tmp_path):
@@ -99,7 +99,7 @@ def test_retry_affordance_follows_an_in_place_chain_removal(qtbot, tmp_path):
 
     jpod = AudioSourceEntry(kind="jpod101", pack_id=None, enabled=True)
     panel.set_chain((jpod,))
-    assert not panel._retry_missing_btn.isHidden()
+    assert panel._retry_missing_btn.isVisible()
 
     panel._handle_diskless_remove(jpod, 0)
-    assert panel._retry_missing_btn.isHidden()
+    assert not panel._retry_missing_btn.isVisible()

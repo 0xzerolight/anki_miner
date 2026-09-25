@@ -104,8 +104,8 @@ class FileSelector(QWidget):
                 selector serves (e.g. ``"reading.manga.inputs"``). When set,
                 Browse reopens in the folder last ACCEPTED under that key and
                 records each new acceptance there (D7). Selectors without a key
-                behave exactly as before, which is how Settings, profiles and
-                Deck Builder stay out of the history.
+                behave exactly as before, which is how Settings and profiles
+                stay out of the history.
             drop_validator: Decides whether a dragged path may land here, and
                 supplies the sentence shown when it may not (D50). The kind
                 check -- file versus folder, one local path -- is already done
@@ -150,7 +150,7 @@ class FileSelector(QWidget):
             self.label = QLabel(self._label_text)
             self.label.setObjectName("field-label")
             if self._label_width is not None:
-                # Minimum, not fixed: text size is applied LIVE (Settings -> UI)
+                # Minimum, not fixed: zoom is applied LIVE (Settings -> General)
                 # without rebuilding tabs, so a width frozen at construction is
                 # stale the moment the user scales text -- which is how a 105px
                 # box ended up holding 274px of German. A minimum lets the label

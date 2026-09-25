@@ -291,8 +291,9 @@ class MediaExtractorService:
         # probes that never call each other, so there is nothing to deadlock.
         self._filter_capability: tuple[str, bool] | None = None
         # Per-extraction discriminator for temp clip filenames. Two words that
-        # share lemma+start_time (kanji-variant collapse, or the Deck Builder's
-        # dedup bypass) would otherwise map to the same {word}_{ms} name and, run
+        # share lemma+start_time (kanji-variant collapse, or an
+        # allow_duplicate_cards run's dedup bypass) would otherwise map to the
+        # same {word}_{ms} name and, run
         # in parallel by extract_media_batch's ThreadPoolExecutor, race two
         # ``ffmpeg -y`` writes to one path → a corrupt clip. next() on
         # itertools.count is atomic under the GIL, so no lock is needed.

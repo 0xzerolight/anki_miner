@@ -8,7 +8,6 @@ composition must meet, at each site, under the same fold — and with
 from __future__ import annotations
 
 import ast
-import collections
 import dataclasses
 import unicodedata
 from pathlib import Path
@@ -18,10 +17,8 @@ import pytest
 
 import anki_miner
 from anki_miner.models import TokenizedWord
-from anki_miner.models.deck_build import DeckSelectionMode
 from anki_miner.services.anki_note_builder import _strip_for_dedup
 from anki_miner.services.anki_service import AnkiService
-from anki_miner.services.corpus_aggregator import select
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.word_filter import WordFilterService, folded_pairs, whitelist_hits
 from anki_miner.services.word_list_service import WordListService
@@ -96,12 +93,6 @@ def test_word_lists_and_whitelist_coverage(stored, probe, tmp_path):
     assert whitelist_hits(folded_pairs([(probe, probe)], _fold), service) == service.whitelist_entries()
 
 
-@pytest.mark.parametrize(("stored", "probe"), PAIRS)
-def test_deck_builder_preview(stored, probe):
-    _selected, preview = select(collections.Counter({probe: 3}), DeckSelectionMode.ALL, 0, {_fold(stored)}, fold=_fold)
-    assert preview.known_skipped == 1
-
-
 def test_the_profile_fold_reaches_the_anki_service(test_config, monkeypatch):
     """``dedup_fold=None`` resolves the configured language's fold, like ``script``."""
     register_stub_profile(monkeypatch, "zh", dedup_fold=_fold)
@@ -135,6 +126,4 @@ def test_none_keeps_the_anki_key_and_raw_membership(test_config, tmp_path):
     words.load()
     assert words.is_blacklisted("Hund") and not words.is_blacklisted("hund")
 
-    _selected, preview = select(collections.Counter({"Hund": 1}), DeckSelectionMode.ALL, 0, {"hund"})
-    assert preview.known_skipped == 0
     assert list(folded_pairs([("A", "B")], None)) == [("A", "B")]

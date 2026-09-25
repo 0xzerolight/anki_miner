@@ -49,6 +49,13 @@ _LANGUAGE_CODES: tuple[str, ...] = (
 # reason as _LANGUAGE_CODES; test_stage_s_contract.py pins the two identical.
 _SCRIPT_VARIANT_IDS: tuple[str, ...] = ("", "simplified", "traditional", "br", "pt")
 
+# Discrete whole-UI zoom presets (whole percents) offered in the Zoom dropdown
+# (gui/widgets/panels/ui_settings_panel.py) and used to snap a folded legacy
+# ui_font_scale value onto the nearest preset (GUIConfigManager._fold_removed_fields).
+# All values sit inside the [0.5, 2.0] ui_zoom clamp range. Qt-free so the config
+# manager can import it without pulling in a widget module.
+ZOOM_PRESETS: tuple[int, ...] = (75, 100, 125, 150, 175, 200)
+
 
 @dataclass(frozen=True)
 class ChainEntry:
@@ -261,10 +268,6 @@ class AnkiMinerConfig:
     review_words_before_mining: bool = False  # The word curator popup, all 7 mining screens
     youtube_align_captions: bool = False  # Align downloaded captions to the audio
     youtube_subtitle_source: str = "auto"  # "auto" | "transcribe" | "captions"
-    deck_builder_mode: str = "all"  # DeckSelectionMode value: "all" | "top_n" | "coverage_pct"
-    deck_builder_top_n: int = 1000
-    deck_builder_coverage_pct: float = 90.0
-    deck_builder_skip_known: bool = True  # "Skip words already in my Anki collection"
     # Ticked backfill group keys: card_backfiller.FIELD_GROUPS plus one per
     # profile-declared card field (measure_word, expression_pinyin, hanja, …).
     backfill_field_groups: tuple[str, ...] = ()
@@ -431,20 +434,24 @@ class AnkiMinerConfig:
     # (殺る→遣る, Issue #19/#5) keep the exact mined_form match.
     known_words_match_kana_variants: bool = True
     # When True, the known-words subtraction in Phase 2 is skipped so ALL
-    # mineable words are mined regardless of Anki collection state. Used by
-    # the Deck Builder's "include everything" mode. Default False preserves
-    # the standard filter-against-known-vocab behaviour.
+    # mineable words are mined regardless of Anki collection state. Set by
+    # the e2e harness's no-Anki/deterministic mode (tests/e2e/app_config.py).
+    # Default False preserves the standard filter-against-known-vocab
+    # behaviour.
     include_known_words: bool = False
-    # Deck Builder "complete deck" mode. When True, the per-episode reduction
-    # filters (frequency rank, word lists, sentence dedup, cross-episode,
-    # i+1, sentence length) are skipped so the build matches the corpus
-    # preview exactly. Known-words subtraction is unaffected (see
-    # include_known_words). Default False preserves normal mining.
+    # When True, the per-episode reduction filters (frequency rank, word
+    # lists, sentence dedup, cross-episode, i+1, sentence length) are
+    # skipped. Known-words subtraction is unaffected (see
+    # include_known_words). Set by the Android golden-contract fixtures
+    # (scripts/engine_golden_contract_v2.py). Default False preserves normal
+    # mining.
     bypass_optional_filters: bool = False
     # When True, notes are posted to AnkiConnect with
     # options={"allowDuplicate": True, "duplicateScope": "deck"} so words
-    # already present elsewhere in the collection are still carded. Used by
-    # the Deck Builder. Default False preserves the standard dedup behaviour.
+    # already present elsewhere in the collection are still carded. Set by
+    # both the Android golden-contract fixtures and the e2e harness's
+    # no-Anki/deterministic mode. Default False preserves the standard
+    # dedup behaviour.
     allow_duplicate_cards: bool = False
 
     # Script-type filters (Issue #57). When set, words whose card form
@@ -515,12 +522,11 @@ class AnkiMinerConfig:
     use_i_plus_one_filter: bool = False
 
     # Sentence length filter (Issue #33). Caps the example sentence by audio
-    # duration and/or character count. ``use_sentence_length_filter`` is the
-    # master toggle; each cap of ``0`` (or ``0.0``) means "no limit" for that
-    # dimension when the toggle is on. Runs AFTER i+1 because filter_i_plus_one
-    # swaps each word's sentence/duration to its chosen i+1 line — applying the
-    # cap before that swap would be silently bypassed by the swap.
-    use_sentence_length_filter: bool = False
+    # duration and/or character count. Active whenever either cap is above 0
+    # (each ``0``/``0.0`` means "no limit" for that dimension). Runs AFTER i+1
+    # because filter_i_plus_one swaps each word's sentence/duration to its
+    # chosen i+1 line — applying the cap before that swap would be silently
+    # bypassed by the swap.
     max_sentence_duration_seconds: float = 0.0  # 0 = no duration cap
     max_sentence_chars: int = 0  # 0 = no character cap
 
@@ -531,7 +537,7 @@ class AnkiMinerConfig:
     # language's profile (SentenceRules), which is why this is deliberately NOT
     # in LANGUAGE_SCOPED_FIELDS: the preference is the same decision in every
     # language, only the punctuation differs. Every subtitle-timed run inherits
-    # it (video, YouTube, batch, audiobook, Deck Builder — they all go through
+    # it (video, YouTube, batch, audiobook — they all go through
     # process_episode); the reading sources have no cue timeline and ignore it.
     # The sentence-length filter above is unaffected and still measures the raw
     # cue in phase 2, so a merged card can be longer than the cap its fragment
@@ -653,9 +659,9 @@ class AnkiMinerConfig:
     # user-configurable directly.
     bin_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "bin")
 
-    # Root of the in-app uv installs (Settings → Transcription & Alignment →
-    # Manga OCR): uv_root/python (managed CPython), uv_root/mokuro (the venv).
-    # The uv binary itself lives in bin_root beside alass.
+    # Root of the in-app uv installs (Utilities → Manga OCR's setup card):
+    # uv_root/python (managed CPython), uv_root/mokuro (the venv). The uv
+    # binary itself lives in bin_root beside alass.
     uv_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "uv")
 
     # Theme settings (UI state — persisted via gui_config.json).
@@ -664,29 +670,20 @@ class AnkiMinerConfig:
     theme: str = "light"
     theme_favorites: tuple[str, ...] = ("light", "dark")
     themes_root: Path = field(default_factory=lambda: ANKI_MINER_HOME / "themes")
-    # Global UI font scale factor. Applied to all QSS ${font-size-*} variables.
-    # Clamped to [0.5, 2.0] in __post_init__; values outside the range are silently clamped.
-    ui_font_scale: float = 1.0
-    # Whole-UI zoom factor. Injected as QT_SCALE_FACTOR before QApplication is
-    # constructed (gui/app.py), so it scales everything uniformly — fonts,
-    # spacing, fixed-size widgets, pixmaps — unlike the font-only ui_font_scale.
-    # Restart-to-apply (Qt reads QT_SCALE_FACTOR once at startup). Clamped to
-    # [0.5, 2.0] in __post_init__.
+    # Whole-UI zoom factor — the only interface-size control (a removed
+    # ui_font_scale field used to be a second one; GUIConfigManager folds a
+    # saved value into this on load). Injected as QT_SCALE_FACTOR before
+    # QApplication is constructed (gui/app.py), so it scales everything
+    # uniformly — fonts, spacing, fixed-size widgets, pixmaps. Restart-to-apply
+    # (Qt reads QT_SCALE_FACTOR once at startup). Clamped to [0.5, 2.0] in
+    # __post_init__.
     ui_zoom: float = 1.0
     # UI language code (BCP-47-ish short code, e.g. "en", "fr", "ru"). "en" is
     # the source language: no translator is installed for it. Persisted via
     # gui_config.json; applied at startup (restart-to-apply). Discussion #76.
     ui_language: str = "en"
-    # File pickers use the OS-native dialog by default. Issue #100 froze the
-    # GUI thread inside the native Windows picker, and the first fix forced
-    # Qt's own dialog everywhere — but the hang came from the BLOCKING static
-    # call, not from being native (see gui/utils/file_dialogs). The pickers are
-    # non-blocking now, so native is safe and is what users expect. False
-    # switches to Qt's built-in dialog, which also follows the app's QSS theme.
-    # Consumed via gui/utils/file_dialogs.set_use_native.
-    use_native_file_dialogs: bool = True
-    # Utilities tools the user took off the Utilities tab (Settings -> Appearance
-    # & Language), by stable sub-tab key (gui/capabilities.UTILITY_SUBTABS).
+    # Utilities tools the user took off the Utilities tab (Settings -> General),
+    # by stable sub-tab key (gui/capabilities.UTILITY_SUBTABS).
     # Hidden keys only, so a tool added in a later release shows by default.
     # Read through capabilities.effective_hidden_utilities: unknown keys are
     # ignored and a list naming every tool hides none. Global and portable:
@@ -867,9 +864,6 @@ class AnkiMinerConfig:
                 ),
             )
 
-        # Clamp ui_font_scale to [0.5, 2.0]
-        object.__setattr__(self, "ui_font_scale", max(0.5, min(2.0, float(self.ui_font_scale))))
-
         # Clamp ui_zoom to [0.5, 2.0]
         object.__setattr__(self, "ui_zoom", max(0.5, min(2.0, float(self.ui_zoom))))
 
@@ -877,19 +871,9 @@ class AnkiMinerConfig:
         if isinstance(self.backfill_field_groups, list):
             object.__setattr__(self, "backfill_field_groups", tuple(self.backfill_field_groups))
 
-        # Clamp the Deck Builder inputs to their spinbox ranges. A config value
-        # outside them would otherwise be silently re-clamped by the widget at
-        # seed time, so the saved value and the shown value would disagree.
-        object.__setattr__(self, "deck_builder_top_n", max(1, min(100_000, int(self.deck_builder_top_n))))
-        object.__setattr__(
-            self, "deck_builder_coverage_pct", max(1.0, min(100.0, float(self.deck_builder_coverage_pct)))
-        )
-
         # Reset an unrecognised enumerated value rather than carrying it into a
         # combo lookup, which would silently leave the widget on whatever index
         # it happened to hold (mirrors the asr_model / asr_device resets).
-        if self.deck_builder_mode not in {"all", "top_n", "coverage_pct"}:
-            object.__setattr__(self, "deck_builder_mode", "all")
         if self.youtube_subtitle_source not in {"auto", "transcribe", "captions"}:
             object.__setattr__(self, "youtube_subtitle_source", "auto")
 

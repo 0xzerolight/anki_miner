@@ -69,9 +69,31 @@ class TestDebounceWiring:
         assert tab._debounce_timer.isActive()
 
     def test_checkbox_arms_debounce(self, tab):
-        box = tab.check_for_updates_checkbox
+        box = tab.ui_panel.check_for_updates_checkbox
         box.setChecked(not box.isChecked())
         assert tab._debounce_timer.isActive()
+
+    def test_max_workers_spinbox_arms_debounce(self, tab):
+        # T11: moved from Card Media to the UI panel's App section, wired
+        # individually since the UI panel stays out of _save_panels.
+        spinbox = tab.ui_panel.max_workers_spinbox
+        spinbox.setValue(spinbox.value() + 1)
+        assert tab._debounce_timer.isActive()
+
+    def test_sentences_panel_checkbox_arms_debounce(self, tab):
+        # Sentences panel joined _wire_edit_signals' explicit tuple in T9;
+        # this pins that it wasn't left out.
+        box = tab.sentences_panel.bold_target_in_sentence_checkbox
+        box.setChecked(not box.isChecked())
+        assert tab._debounce_timer.isActive()
+
+    def test_mining_language_combo_does_not_arm_debounce(self, tab):
+        # T10: the language selector proposes a guarded switch that commits
+        # its own config; only its two variant combos join the Save
+        # round-trip (see TestMiningLanguageVariantAutosave below).
+        combo = tab.mining_language_panel.mining_language_combo
+        combo.setCurrentIndex(1 if combo.currentIndex() == 0 else 0)
+        assert not tab._debounce_timer.isActive()
 
     def test_nested_file_selector_arms_debounce(self, tab, tmp_path):
         # Filtering panel's blacklist FileSelector only exposes edits through
@@ -121,6 +143,35 @@ class TestDebounceWiring:
         with qtbot.waitSignal(tab.config_changed, timeout=3000) as blocker:
             tab.dictionary_panel.release(token)
         assert blocker.args[0].anki_deck_name == "WaitForToken"
+
+
+class TestMiningLanguageVariantAutosave:
+    """T10: the two variant combos on the Mining Language panel join the Save
+    round-trip; the language selector combo itself must not (pinned above,
+    ``test_mining_language_combo_does_not_arm_debounce``).
+    """
+
+    def test_character_set_change_arms_debounce_and_commits(self, tab, qtbot):
+        tab.update_config(replace(tab.config, language="zh"))
+        combo = tab.mining_language_panel.script_variant_combo
+
+        combo.setCurrentIndex(combo.findData("traditional"))
+
+        assert tab._debounce_timer.isActive()
+        with qtbot.waitSignal(tab.config_changed, timeout=3000) as blocker:
+            tab.commit_settings()
+        assert blocker.args[0].script_variant == "traditional"
+
+    def test_regional_variety_change_arms_debounce_and_commits(self, tab, qtbot):
+        tab.update_config(replace(tab.config, language="pt"))
+        combo = tab.mining_language_panel.regional_variant_combo
+
+        combo.setCurrentIndex(combo.findData("pt"))
+
+        assert tab._debounce_timer.isActive()
+        with qtbot.waitSignal(tab.config_changed, timeout=3000) as blocker:
+            tab.commit_settings()
+        assert blocker.args[0].script_variant == "pt"
 
 
 class TestCommitSelfEcho:
@@ -222,25 +273,13 @@ class TestCommitSelfEcho:
         assert tab.config.anki_tags != "pending-tag"
         assert tab._settings_dirty is True
 
-    def test_native_dialog_commit_preserves_pending_panel_edit(self, tab):
-        tab.config_changed.connect(tab.update_config)
-        tab.anki_panel.anki_tags_input.setText("pending-tag")
-        use_native = not tab.config.use_native_file_dialogs
-
-        tab._on_native_dialogs_changed(use_native)
-
-        assert tab.anki_panel.get_anki_tags() == "pending-tag"
-        assert tab.config.use_native_file_dialogs is use_native
-        assert tab.config.anki_tags != "pending-tag"
-        assert tab._settings_dirty is True
-
 
 class TestPerFieldValidation:
     def test_invalid_regex_keeps_last_good_and_commits_rest(self, tab, test_config, no_modals):
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
-        tab.filtering_panel.use_subtitle_regex_checkbox.setChecked(True)
-        tab.filtering_panel.subtitle_regex_edit.setText("[")
+        tab.sentences_panel.use_subtitle_regex_checkbox.setChecked(True)
+        tab.sentences_panel.subtitle_regex_edit.setText("[")
         tab.anki_panel.set_deck_name("StillSaves")
 
         tab.commit_settings()
@@ -255,9 +294,9 @@ class TestPerFieldValidation:
     def test_invalid_regex_is_rejected_when_filter_is_disabled(self, tab, test_config, no_modals):
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
-        tab.filtering_panel.set_subtitle_regex_filter("(")
-        tab.filtering_panel.set_subtitle_regex_replacement("NEW")
-        tab.filtering_panel.set_use_subtitle_regex_filter(False)
+        tab.sentences_panel.set_subtitle_regex_filter("(")
+        tab.sentences_panel.set_subtitle_regex_replacement("NEW")
+        tab.sentences_panel.set_use_subtitle_regex_filter(False)
 
         tab.commit_settings()
 
@@ -292,9 +331,9 @@ class TestPerFieldValidation:
     ):
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
-        tab.filtering_panel.set_subtitle_regex_filter(pattern)
-        tab.filtering_panel.set_subtitle_regex_replacement(replacement)
-        tab.filtering_panel.set_use_subtitle_regex_filter(True)
+        tab.sentences_panel.set_subtitle_regex_filter(pattern)
+        tab.sentences_panel.set_subtitle_regex_replacement(replacement)
+        tab.sentences_panel.set_use_subtitle_regex_filter(True)
 
         tab.commit_settings()
 
@@ -306,13 +345,13 @@ class TestPerFieldValidation:
         assert "⚠" in tab.save_status_label.text()
 
     def test_warning_is_sticky_until_next_valid_commit(self, tab, no_modals, qtbot):
-        tab.filtering_panel.use_subtitle_regex_checkbox.setChecked(True)
-        tab.filtering_panel.subtitle_regex_edit.setText("[")
+        tab.sentences_panel.use_subtitle_regex_checkbox.setChecked(True)
+        tab.sentences_panel.subtitle_regex_edit.setText("[")
         tab.commit_settings()
         assert "⚠" in tab.save_status_label.text()
         assert not tab._save_status_timer.isActive()
 
-        tab.filtering_panel.subtitle_regex_edit.setText(r"\d+")
+        tab.sentences_panel.subtitle_regex_edit.setText(r"\d+")
         tab.commit_settings()
         assert "✓" in tab.save_status_label.text()
 
@@ -387,10 +426,37 @@ class TestCommitRetainsSaveSemantics:
         tab.update_config(replace(test_config, check_for_updates=False, skipped_update_version="9.9.9"))
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
-        tab.check_for_updates_checkbox.setChecked(True)
+        tab.ui_panel.check_for_updates_checkbox.setChecked(True)
         tab.commit_settings()
         assert received[-1].check_for_updates is True
         assert received[-1].skipped_update_version == ""
+
+    def test_max_workers_spinbox_commits(self, tab, test_config, no_modals):
+        # T11: moved from Card Media to the UI panel's App section; still
+        # contributed by commit_settings, just read straight off the panel.
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+        tab.ui_panel.max_workers_spinbox.setValue(9)
+        tab.commit_settings()
+        assert received[-1].max_parallel_workers == 9
+
+    def test_loaded_app_section_values_survive_an_unrelated_commit(self, tab, test_config, no_modals):
+        """Regression net for a silently-deleted UISettingsPanel.load_from_config.
+
+        Without that load, the panel's freshly-constructed widgets (unchecked,
+        spinbox at its floor) would win an unrelated commit and clobber a real
+        user's saved values with check_for_updates=False,
+        max_parallel_workers=1 — with the suite otherwise green, since nothing
+        else exercises this load path end to end.
+        """
+        tab.update_config(replace(test_config, max_parallel_workers=7, check_for_updates=False))
+        received: list[AnkiMinerConfig] = []
+        tab.config_changed.connect(received.append)
+
+        tab.commit_settings()
+
+        assert received[-1].max_parallel_workers == 7
+        assert received[-1].check_for_updates is False
 
 
 class TestManualControlsRemoved:

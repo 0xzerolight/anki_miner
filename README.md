@@ -114,11 +114,10 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Tabs
 
 - **Video** - mine a single video/subtitle pair, a batch folder, or YouTube URLs.
-- **Deck Builder** - mine a whole series into one frequency-ranked deck.
 - **Audiobooks** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
 - **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), standalone subtitle files, or pasted text.
 - **Analytics** - mining history, difficulty rankings, milestones.
-- **Utilities** - generate subtitles (local Whisper), retime subtitles (ffsubsync/alass), condense media to dialogue-only audio, download video/audio/subtitles from any site yt-dlp supports, copy the worth-learning part of a premade deck into a new one, backfill fields on existing cards, OCR manga page images into .mokuro files (mokuro, installable from Settings), and time an audiobook to its book's text (Audiobook Sync).
+- **Utilities** - generate subtitles (local Whisper), retime subtitles (ffsubsync/alass), condense media to dialogue-only audio, download video/audio/subtitles from any site yt-dlp supports, copy the worth-learning part of a premade deck into a new one, backfill fields on existing cards, OCR manga page images into .mokuro files (mokuro), and time an audiobook to its book's text (Audiobook Sync).
 - **Settings** - everything configurable.
 
 ## Other Features
@@ -135,7 +134,7 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 - Embedded libmpv video preview - play a word's scene while curating, or nudge subtitle timing with live playback.
 - Animated screenshots (see example cards above).
 - Settings profiles - save named configurations and switch between them from the header.
-- Restyle Mined Cards - re-apply your current card styling to cards you already made (Tools menu).
+- Restyle Mined Cards - re-apply your current card styling to cards you already made (Utilities → Card Backfill).
 
 <details>
 <summary><strong>Built-in themes (29)</strong></summary>

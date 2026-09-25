@@ -361,7 +361,7 @@ class SingleEpisodeTab(MiningTabBase):
         # Secondary-language track (F7). Both rows always exist and are shown
         # only while config.secondary_subtitle_enabled is on (update_config
         # re-gates them live), so nothing new is on screen for anyone who
-        # never switched it on under Settings -> Filtering. Drops still land
+        # never switched it on under Settings -> Sentences. Drops still land
         # on the primary picker; the second file is browsed for.
         self.secondary_selector = FileSelector(
             label=self.tr("Translation Subtitles:"),
@@ -615,7 +615,7 @@ class SingleEpisodeTab(MiningTabBase):
                     # in _on_parse_error.
                     self.show_screen_issue(
                         ScreenIssue(
-                            summary=self.tr("No subtitle lines to preview — check the filter in Settings → Filtering.")
+                            summary=self.tr("No subtitle lines to preview — check the filter in Settings → Sentences.")
                         )
                     )
                     return
@@ -769,7 +769,7 @@ class SingleEpisodeTab(MiningTabBase):
                 "deck": self.config.anki_deck_name,
                 "note_type": self.config.anki_note_type,
                 "language": config_language(self.config),
-                "review_words": self.config.review_words_before_mining,
+                "review_words": True,  # Single always curates (see curation_cb below).
             },
         )
 

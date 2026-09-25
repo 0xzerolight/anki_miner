@@ -1,61 +1,43 @@
 """Tooltip regression tests for FilteringSettingsPanel.
 
 The settings-density work deduped tooltips. These assertions lock in the
-load-bearing facts that must survive layout tightening: HTML-escaped markup
-in the bold-target tooltip (Qt QToolTip auto-renders raw <b> as bold), the
-distinct fragments merged into the regex/replacement helpers, and the facts
-restored to the i+1 and sentence-length tooltips.
+load-bearing facts that must survive layout tightening: the facts restored to
+the i+1 and sentence-length tooltips. (The bold-target and regex/replacement
+tooltip cases moved to ``test_sentences_settings_panel.py`` with the fields
+they cover, T9.)
 """
 
 from __future__ import annotations
+
+from dataclasses import replace
 
 import pytest
 
 pytest.importorskip("PyQt6.QtWidgets")
 
+from PyQt6.QtCore import Qt
+
+from anki_miner.config.defaults import create_default_config
 from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
-
-
-def test_bold_target_tooltip_escapes_markup(qtbot):
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    tip = panel.bold_target_in_sentence_checkbox.toolTip()
-    # Escaping is fragile and load-bearing: Qt QToolTip auto-renders raw <b>.
-    assert "&lt;b&gt;" in tip
-    assert "<b>" not in tip
-
-
-def test_regex_tooltip_contains_merged_fragments(qtbot):
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    tip = panel.subtitle_regex_edit.toolTip()
-    assert "speaker names" in tip
-    assert "regex101.com" in tip
-
-
-def test_replacement_tooltip_contains_merged_fragments(qtbot):
-    panel = FilteringSettingsPanel()
-    qtbot.addWidget(panel)
-    tip = panel.subtitle_replacement_edit.toolTip()
-    assert "backreferences" in tip
-    assert "asbplayer" in tip
 
 
 def test_i_plus_one_tooltip_mentions_dedup_override(qtbot):
     panel = FilteringSettingsPanel()
     qtbot.addWidget(panel)
-    tip = panel.use_i_plus_one_checkbox.toolTip()
+    index = panel.sentence_rule_combo.findData("i_plus_one")
+    tip = panel.sentence_rule_combo.itemData(index, Qt.ItemDataRole.ToolTipRole)
     assert "i+1" in tip
     assert "deduplication" in tip.lower()
 
 
-def test_sentence_length_tooltip_only_points_at_the_caps(qtbot):
-    # The "0 means no limit" half is each cap row's own helper, and the
-    # "speeds up reviews" half was an unrequested benefit claim.
+def test_sentence_length_helper_names_the_no_toggle_rule(qtbot):
+    # No master checkbox: the section helper is the only place that says the
+    # filter turns on by setting a cap.
     panel = FilteringSettingsPanel()
     qtbot.addWidget(panel)
-    tip = panel.use_sentence_length_checkbox.toolTip()
-    assert tip == "Drops words whose example sentence exceeds either cap below."
+    assert not hasattr(panel, "use_sentence_length_checkbox")
+    text = panel.sentence_length_helper.text()
+    assert text == "Set either limit above 0 to turn the filter on."
     assert "Set to 0 for no limit" in panel.max_sentence_duration_spinbox.toolTip()
     assert "Set to 0 for no limit" in panel.max_sentence_chars_spinbox.toolTip()
 
@@ -261,14 +243,102 @@ def test_the_unranked_checkbox_is_disabled_while_no_bound_is_set(qtbot):
     assert panel.keep_unranked_checkbox.isEnabled()
 
 
-def test_secondary_subtitle_toggle_round_trips(qtbot):
-    from dataclasses import replace
+@pytest.mark.parametrize(
+    "dedup, i1, index",
+    [(False, False, 0), (True, False, 1), (False, True, 2), (True, True, 2)],
+)
+def test_sentence_rule_loads(qtbot, dedup, i1, index):
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(replace(create_default_config(), deduplicate_sentences=dedup, use_i_plus_one_filter=i1))
+    assert panel.sentence_rule_combo.currentIndex() == index
 
+
+@pytest.mark.parametrize(
+    "index, expected",
+    [(0, (False, False)), (1, (True, False)), (2, (False, True))],
+)
+def test_sentence_rule_contributes(qtbot, index, expected):
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.sentence_rule_combo.setCurrentIndex(index)
+    out = panel.contribute(create_default_config())
+    assert (out.deduplicate_sentences, out.use_i_plus_one_filter) == expected
+
+
+def test_known_words_db_checkbox_names_the_effect(qtbot):
+    # "Use Local Known Words Database" told the user nothing about what turning
+    # it on actually does; the label now names the effect directly.
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    assert panel.use_known_words_db_checkbox.text() == "Keep words known after their cards are deleted"
+    tip = panel.use_known_words_db_checkbox.toolTip()
+    expected_tip = (
+        "Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild forgets them."
+    )
+    assert tip == expected_tip
+
+
+def test_rebuild_known_words_button_follows_the_checkbox(qtbot):
     from anki_miner.config import AnkiMinerConfig
 
     panel = FilteringSettingsPanel()
     qtbot.addWidget(panel)
-    assert panel.secondary_subtitle_checkbox.isChecked() is False
-    panel.load_from_config(replace(AnkiMinerConfig(), secondary_subtitle_enabled=True))
-    assert panel.secondary_subtitle_checkbox.isChecked()
-    assert panel.contribute(AnkiMinerConfig()).secondary_subtitle_enabled is True
+
+    # Construction leaves the checkbox unchecked; the button must start in step.
+    assert not panel.rebuild_known_words_button.isEnabled()
+
+    panel.load_from_config(replace(AnkiMinerConfig(), use_known_words_db=True))
+    assert panel.rebuild_known_words_button.isEnabled()
+
+    panel.load_from_config(AnkiMinerConfig())
+    assert not panel.rebuild_known_words_button.isEnabled()
+
+    # And toggling without a reload keeps the button in step.
+    panel.use_known_words_db_checkbox.setChecked(True)
+    assert panel.rebuild_known_words_button.isEnabled()
+    panel.use_known_words_db_checkbox.setChecked(False)
+    assert not panel.rebuild_known_words_button.isEnabled()
+
+    # "Manage Known Words..." is unaffected: the user list works either way.
+    assert panel.manage_known_words_button.isEnabled()
+
+
+def test_rebuild_button_stays_disabled_mid_rebuild_despite_checkbox_toggling(qtbot):
+    """A rebuild in flight must survive both the checkbox-toggled sync and a
+    load_from_config reload -- neither may re-enable the button mid-rebuild."""
+    from anki_miner.config import AnkiMinerConfig
+
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.use_known_words_db_checkbox.setChecked(True)
+    assert panel.rebuild_known_words_button.isEnabled()
+
+    panel.set_rebuild_known_words_in_flight(True)
+    assert not panel.rebuild_known_words_button.isEnabled()
+
+    # Toggling the checkbox off and back on must not re-enable the button.
+    panel.use_known_words_db_checkbox.setChecked(False)
+    assert not panel.rebuild_known_words_button.isEnabled()
+    panel.use_known_words_db_checkbox.setChecked(True)
+    assert not panel.rebuild_known_words_button.isEnabled()
+
+    # A config reload while the rebuild is in flight must not re-enable it either.
+    panel.load_from_config(replace(AnkiMinerConfig(), use_known_words_db=True))
+    assert not panel.rebuild_known_words_button.isEnabled()
+
+    panel.set_rebuild_known_words_in_flight(False)
+    assert panel.rebuild_known_words_button.isEnabled()
+
+
+def test_kana_variant_row_lives_in_the_known_words_section(qtbot):
+    # FormPanel.add_section opens a new QFormLayout per section (form_panel.py),
+    # so the two widgets sharing one layout is the proof the row moved.
+    from PyQt6.QtWidgets import QFormLayout
+
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+
+    layouts = panel.findChildren(QFormLayout)
+    home = next(layout for layout in layouts if layout.indexOf(panel.use_known_words_db_checkbox) >= 0)
+    assert home.indexOf(panel.match_kana_variants_checkbox) >= 0

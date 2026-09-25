@@ -7,6 +7,7 @@ from typing import Literal, cast
 
 from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFormLayout,
     QGroupBox,
@@ -58,7 +59,7 @@ _HOOK_FIELD_ROW_TEXTS: dict[str, tuple[str, str]] = {
         QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Pinyin Field"),
         QT_TRANSLATE_NOOP(
             "AnkiSettingsPanel",
-            "Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.",
+            "Stores the word's pinyin reading. Blank = skip.",
         ),
     ),
     "expression_traditional": (
@@ -181,7 +182,7 @@ _HOOK_FIELD_ROW_TEXTS: dict[str, tuple[str, str]] = {
         QT_TRANSLATE_NOOP("AnkiSettingsPanel", "Jyutping Field"),
         QT_TRANSLATE_NOOP(
             "AnkiSettingsPanel",
-            "Stores the jyutping reading, tone-coloured when that setting is on. Blank = skip.",
+            "Stores the jyutping reading. Blank = skip.",
         ),
     ),
     # Hebrew (spec F.2): the dictionary's own romanisation and a verb's binyan. Its root, gender,
@@ -455,11 +456,11 @@ class AnkiSettingsPanel(FormPanel):
 
         # AnkiConnect URL
         self.ankiconnect_url_input = QLineEdit()
-        self.ankiconnect_url_input.setPlaceholderText("http://localhost:8765")
+        self.ankiconnect_url_input.setPlaceholderText("http://127.0.0.1:8765")
         self.add_field(
             self.tr("AnkiConnect URL"),
             self.ankiconnect_url_input,
-            helper=self.tr("Default http://localhost:8765. Change if AnkiConnect uses a different port."),
+            helper=self.tr("Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port."),
         )
 
         # Card tags
@@ -693,6 +694,18 @@ class AnkiSettingsPanel(FormPanel):
             self._hook_field_inputs[spec.key] = field_input
             self._language_gate_pairs.extend((w, spec.capability) for w in field_row_widgets(self, field_input))
 
+        # Tone colouring for the pinyin/jyutping readings above (T10): sits
+        # right beside the rows it colours instead of a separate page.
+        self.reading_tone_color_checkbox = QCheckBox(self.tr("Colour the reading by tone"))
+        # The hook writes an inline style, never a class (languages/zh/render.py),
+        # so a tooltip promising a class sends the user off to write CSS that can
+        # neither match nor win.
+        self.reading_tone_color_checkbox.setToolTip(self.tr("Colours each syllable of the reading by its tone."))
+        self.add_field("", self.reading_tone_color_checkbox)
+        self._language_gate_pairs.extend(
+            (w, "tone_color") for w in field_row_widgets(self, self.reading_tone_color_checkbox)
+        )
+
         # Auxiliary Data Fields section
         self.add_section(self.tr("Auxiliary Data Fields"))
 
@@ -776,7 +789,7 @@ class AnkiSettingsPanel(FormPanel):
             self.sentence_translation_field_input,
             helper=self.tr(
                 "Stores the secondary-language subtitle line for the sentence "
-                "(Video -> Single, with secondary subtitles enabled under Filtering). Blank = skip."
+                "(Video -> Single, with secondary subtitles enabled under Sentences). Blank = skip."
             ),
         )
 
@@ -843,6 +856,21 @@ class AnkiSettingsPanel(FormPanel):
             anchor="card_type_marker_fields",
             anchor_focus=self.card_type_word_and_sentence_input,
             anchor_text=lambda: (self.card_type_names_group.title(),),
+        )
+
+        # Card Creation section (T10, moved from Word Filters). Language-agnostic,
+        # so the row is never gated.
+        self.add_section(self.tr("Card Creation"))
+
+        self.strict_card_order_checkbox = QCheckBox(self.tr("Create cards in order of appearance"))
+        self.add_field(
+            "",
+            self.strict_card_order_checkbox,
+            helper=self.tr(
+                "Adds cards to Anki in the order the words appear in the media, instead of "
+                "the order their media finished extracting. Overrides the whitelist's "
+                "force-include ordering and any column sort in the Word Curator."
+            ),
         )
 
         # Language-gated rows. Each row contributes its label too, so a hidden
@@ -1303,6 +1331,16 @@ class AnkiSettingsPanel(FormPanel):
         for key, widget in self._card_type_inputs.items():
             widget.setText(mapping.get(key, _CARD_TYPE_MARKER_DEFAULTS[key]))
 
+    # === Card Creation (T10, moved from Word Filters) ===
+
+    def get_strict_card_order(self) -> bool:
+        """Return whether strict card-creation order is enabled."""
+        return self.strict_card_order_checkbox.isChecked()
+
+    def set_strict_card_order(self, value: bool) -> None:
+        """Set the strict card-order checkbox."""
+        self.strict_card_order_checkbox.setChecked(value)
+
     # === Simple field accessors (OVH-020) ===
 
     def get_deck_name(self) -> str:
@@ -1427,6 +1465,8 @@ class AnkiSettingsPanel(FormPanel):
         self.set_pitch_category_format(config.pitch_category_format)
         self.set_card_type(config.card_type)
         self.set_card_type_marker_fields(config.card_type_marker_fields)
+        self.set_strict_card_order(config.strict_card_order)
+        self.reading_tone_color_checkbox.setChecked(config.reading_tone_color)
         apply_language_gate(self._language_gate_pairs, get_profile(config_language(config)).capabilities)
 
     def contribute(self, config):
@@ -1436,7 +1476,7 @@ class AnkiSettingsPanel(FormPanel):
         Called by :meth:`SettingsTab.commit_settings` as part of the contribute fold.
         """
         fields = self.get_card_fields()
-        return replace(
+        updated = replace(
             config,
             anki_deck_name=self.get_deck_name(),
             anki_note_type=self.get_note_type(),
@@ -1449,4 +1489,11 @@ class AnkiSettingsPanel(FormPanel):
                 self.get_card_type(),
             ),
             card_type_marker_fields=self.get_card_type_marker_fields(),
+            strict_card_order=self.get_strict_card_order(),
         )
+        # Language-scoped: only written while the row is on screen, same
+        # rationale as the hook fields above (see FilteringSettingsPanel's twin
+        # comment before T10 moved this row here).
+        if self.reading_tone_color_checkbox.isVisibleTo(self):
+            updated = replace(updated, reading_tone_color=self.reading_tone_color_checkbox.isChecked())
+        return updated

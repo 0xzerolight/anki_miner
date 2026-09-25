@@ -6,7 +6,7 @@ import itertools
 
 import pytest
 
-from anki_miner.gui.widgets.panels.filtering_settings_panel import SUBTITLE_REGEX_PRESETS
+from anki_miner.gui.widgets.panels.sentences_settings_panel import SUBTITLE_REGEX_PRESETS
 from anki_miner.languages._spaced import script
 from anki_miner.services.subtitle_parser import compile_subtitle_regex_filter
 

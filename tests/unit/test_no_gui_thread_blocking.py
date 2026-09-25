@@ -158,7 +158,6 @@ ALLOWLIST: dict[str, set[str]] = {
     r"create_episode_processor\(": {
         "widgets/single_episode_tab.py",
         "widgets/youtube_tab.py",
-        "widgets/batch_processing_tab.py",
         "widgets/audiobook_tab.py",
         # _launch_run's lazy-rebuild call is inside a `processor_factory` closure
         # passed to the worker thread, so the registry/sqlite/CSV work runs off

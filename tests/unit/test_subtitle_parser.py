@@ -3646,7 +3646,7 @@ class TestCountLemmas:
         by whitespace in the source line is dropped from mining (its space-free
         concatenated surface is not str.find-able in the spaced text). count_lemmas
         must drop it identically so the count and mine lemma sets agree — the
-        count-vs-mine divergence behind the Deck Builder preview bug.
+        count-vs-mine divergence behind the T-38 over-promised-count bug.
         """
         # Source text has a SPACE between 可能 and 性; the noun-suffix merge
         # concatenates them into the synthetic surface "可能性" (no space), which
@@ -3990,7 +3990,9 @@ class TestPerFileLineCache:
         """count_lemmas then parse_subtitle_file on one instance hits the cache.
 
         Total tagger calls must equal the number of lines (one tokenize pass),
-        NOT 2x lines. The deck-builder double-parse is exactly this pattern.
+        NOT 2x lines. EpisodeProcessor._phase1_parse's own
+        parse_subtitle_file -> count_lemmas double-parse is exactly this
+        pattern, on every mining run.
         """
         import os
 
@@ -4407,7 +4409,7 @@ class TestASSCommentFilter:
         assert "猫" in lemmas
 
     def test_comment_line_excluded_from_count_lemmas(self, test_config, tmp_path):
-        """Comment-only token must not contribute to count_lemmas (Deck Builder coverage)."""
+        """Comment-only token must not contribute to count_lemmas."""
         sub_file = tmp_path / "test.ass"
         sub_file.write_text("placeholder", encoding="utf-8")
 
@@ -4484,7 +4486,7 @@ class TestASSCommentFilter:
 
 
 class TestLineCacheMultiFile:
-    """Per-file line cache must survive across files so Deck Builder Phase-1 →
+    """Per-file line cache must survive across files so a Phase-1 →
     Phase-2 reuse covers ALL files, not just the last one (OVH-012).
     """
 
@@ -5377,7 +5379,7 @@ class TestKindACompoundKanaAttestedLeak:
 
 class TestParseRelevantConfigFields:
     """Drift tripwire: every name in PARSE_RELEVANT_CONFIG_FIELDS must remain a
-    real symbol the parser module references, so the Deck Builder cache-reuse
+    real symbol the parser module references, so the parser-reuse cache
     assertion can't silently guard a renamed/deleted field."""
 
     def test_listed_fields_appear_in_module_source(self):
@@ -5677,7 +5679,7 @@ class TestVerbFrontCommonnessResolver:
 
 class TestPerParseCacheCaps:
     """_fg_cache / _rd_cache / _attested_readings_cache are per-parse memos, but a
-    single huge parse (whole-corpus Deck Builder run) can still fill them without
+    single huge parse (a whole-corpus run) can still fill them without
     limit within that one pass. They get the same clear-on-cap treatment as the
     sibling caches (_front_cache et al.) so memory stays bounded.
     """

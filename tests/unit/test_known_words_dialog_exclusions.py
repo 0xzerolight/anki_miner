@@ -15,9 +15,9 @@ def _dialog(qtbot, tmp_path, **kwargs):
 def test_the_excluded_decks_are_named(qtbot, tmp_path):
     dialog = _dialog(qtbot, tmp_path, excluded_decks=("Japanese Mining", "French"))
     text = dialog.exclusions_label.text()
-    assert "Japanese Mining, French" in text and "Settings → Filtering" in text
+    assert "Japanese Mining, French" in text and "Settings → Word Filters" in text
 
 
 def test_no_exclusions_explains_the_risk(qtbot, tmp_path):
     text = _dialog(qtbot, tmp_path).exclusions_label.text()
-    assert "Every deck is scanned" in text and "Settings → Filtering" in text
+    assert "Every deck is scanned" in text and "Settings → Word Filters" in text

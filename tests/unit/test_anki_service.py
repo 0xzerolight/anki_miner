@@ -4258,7 +4258,7 @@ class TestProbeDuplicates:
         assert len(probe_notes[0]["fields"]) == 1
         assert probe_notes[0]["options"]["allowDuplicate"] is False
 
-    def test_probe_preserves_duplicate_scope_for_deck_builder(self, test_config, make_tokenized_word):
+    def test_probe_preserves_duplicate_scope_when_allow_duplicate_cards(self, test_config, make_tokenized_word):
         """allow_duplicate_cards=True: probe keeps duplicateScope, forces allowDuplicate off."""
         import dataclasses
 

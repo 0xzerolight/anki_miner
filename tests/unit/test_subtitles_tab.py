@@ -542,7 +542,7 @@ def test_open_retime_prefills_and_reveals_the_retime_subtab(qtbot, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Hidden tools (Settings -> Appearance & Language)
+# Hidden tools (Settings -> General)
 # ---------------------------------------------------------------------------
 
 

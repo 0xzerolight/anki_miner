@@ -1,9 +1,11 @@
 """Tests for the Zoom (whole-UI scale) control on the UISettingsPanel.
 
 Zoom is restart-to-apply (injected as QT_SCALE_FACTOR before QApplication is
-built), so unlike Text size there is no live Theme/restyle path — selecting a
-preset only persists ``ui_zoom`` and reveals a restart note. The combo is
-seeded from the passed-in ``ui_zoom`` rather than Theme state.
+built), so there is no live Theme/restyle path — selecting a preset only
+persists ``ui_zoom`` and reveals a restart note with *Restart now* / *Later*
+actions (moved here from the removed Text size row, T4: Zoom is now the only
+interface-size control). The combo is seeded from the passed-in ``ui_zoom``
+rather than Theme state.
 """
 
 from __future__ import annotations
@@ -15,9 +17,16 @@ from pathlib import Path
 import pytest
 
 from anki_miner.config import create_default_config
+from anki_miner.gui import restart
 from anki_miner.gui.resources.styles.theme import REQUIRED_COLOR_KEYS, Theme
 from anki_miner.gui.widgets.panels.ui_settings_panel import ZOOM_PRESETS, UISettingsPanel
 from anki_miner.gui.widgets.settings_tab import SettingsTab
+
+
+@pytest.fixture(autouse=True)
+def _reset_restart_intent():
+    yield
+    restart.clear_restart_request()
 
 
 def _theme_dict(name: str, **overrides) -> dict:
@@ -67,6 +76,12 @@ class TestComboPopulation:
 
     def test_restart_note_hidden_initially(self, panel: UISettingsPanel) -> None:
         assert panel.zoom_restart_note.isHidden() is True
+        assert panel.restart_now_btn.isHidden() is True
+        assert panel.restart_later_btn.isHidden() is True
+
+    def test_no_font_scale_combo(self, panel: UISettingsPanel) -> None:
+        """Text size was folded into Zoom (T4); the panel offers no separate control."""
+        assert not hasattr(panel, "font_scale_combo")
 
 
 class TestApplyPath:
@@ -85,6 +100,8 @@ class TestApplyPath:
 
         assert captured == [pytest.approx(expected_zoom)]
         assert panel.zoom_restart_note.isHidden() is False
+        assert panel.restart_now_btn.isHidden() is False
+        assert panel.restart_later_btn.isHidden() is False
         assert panel._ui_zoom == pytest.approx(expected_zoom)
 
     def test_activated_signal_drives_apply(self, panel: UISettingsPanel) -> None:
@@ -96,6 +113,96 @@ class TestApplyPath:
 
         assert captured == [pytest.approx(1.5)]
         assert panel.zoom_restart_note.isHidden() is False
+
+    def test_later_hides_the_note_and_buttons_without_reverting(self, panel: UISettingsPanel) -> None:
+        idx = _index_for_percent(panel, 150)
+        panel.zoom_combo.setCurrentIndex(idx)
+        panel._on_zoom_selected(idx)
+
+        panel._on_restart_later()
+
+        assert panel.zoom_restart_note.isHidden() is True
+        assert panel.restart_now_btn.isHidden() is True
+        assert panel.restart_later_btn.isHidden() is True
+        # The choice itself survives; only the reminder went away.
+        assert panel._ui_zoom == pytest.approx(1.5)
+        assert panel.zoom_combo.currentData() == 150
+
+    def test_a_new_selection_after_later_shows_the_note_again(self, panel: UISettingsPanel) -> None:
+        panel._on_zoom_selected(_index_for_percent(panel, 150))
+        panel._on_restart_later()
+
+        panel._on_zoom_selected(_index_for_percent(panel, 125))
+
+        assert panel.zoom_restart_note.isHidden() is False
+        assert panel.restart_now_btn.isHidden() is False
+        assert panel.restart_later_btn.isHidden() is False
+
+
+class TestRestartNow:
+    """The *Restart now* action, moved here from the removed Text size row."""
+
+    def test_unresolvable_executable_neither_closes_nor_launches(self, panel: UISettingsPanel, monkeypatch) -> None:
+        monkeypatch.setattr(restart, "resolve_relaunch_target", lambda: None)
+        closed: list[bool] = []
+        monkeypatch.setattr(type(panel), "window", lambda self: None)
+
+        panel._on_restart_now()
+
+        assert not restart.restart_requested()
+        assert closed == []
+        banner = panel.issue_banner()
+        assert banner is not None and banner.current_issue() is not None
+
+    def test_success_records_intent_and_closes_the_window(
+        self, panel: UISettingsPanel, monkeypatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.setattr(restart, "resolve_relaunch_target", lambda: tmp_path / "anki_miner_gui")
+
+        class _Window:
+            def __init__(self) -> None:
+                self.closed = False
+
+            def close(self) -> bool:
+                self.closed = True
+                return True
+
+        fake = _Window()
+        monkeypatch.setattr(type(panel), "window", lambda self: fake)
+
+        panel._on_restart_now()
+
+        assert fake.closed
+        assert restart.restart_requested()
+
+    def test_a_refused_close_clears_the_intent(self, panel: UISettingsPanel, monkeypatch, tmp_path: Path) -> None:
+        monkeypatch.setattr(restart, "resolve_relaunch_target", lambda: tmp_path / "anki_miner_gui")
+        monkeypatch.setattr(type(panel), "window", lambda self: type("W", (), {"close": lambda s: False})())
+
+        panel._on_restart_now()
+
+        assert not restart.restart_requested()
+
+    def test_a_deferred_close_keeps_the_intent(self, panel: UISettingsPanel, monkeypatch, tmp_path: Path) -> None:
+        """A worker outliving the join grace must not cancel the relaunch.
+
+        ``MainWindow`` refuses the close event while laggards run, hides itself
+        and quits from a poll once the last one exits — so ``close()`` reports
+        ``False`` for a shutdown that is still going to happen. Reading that as
+        "the user changed their mind" left the app closed and never relaunched,
+        exactly when it was busiest.
+        """
+        monkeypatch.setattr(restart, "resolve_relaunch_target", lambda: tmp_path / "anki_miner_gui")
+        deferred = type(
+            "W",
+            (),
+            {"close": lambda s: False, "is_shutting_down": lambda s: True},
+        )()
+        monkeypatch.setattr(type(panel), "window", lambda self: deferred)
+
+        panel._on_restart_now()
+
+        assert restart.restart_requested()
 
 
 class TestSyncFromConfig:

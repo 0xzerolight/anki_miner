@@ -263,11 +263,14 @@ def patched_background_work():
 def prepared_config(*, language: str = "en", font_scale: float = 1.0, first_run: bool = False):
     """Load, redirect, isolate and persist the harness config. Returns the fake server.
 
-    ``font_scale`` is written to config rather than applied live: ``gui/utils/fonts.py``
-    bakes ``pixel_size * Theme.get_font_scale()`` at widget *construction*, and text
-    size is restart-to-apply by decision (D39b), so a live ``set_font_scale`` after
-    the window exists would leave every already-built widget at the old size and
-    measure a cell nobody can reach.
+    ``font_scale`` is set as ``ANKI_MINER_TEXT_SCALE`` in the environment rather
+    than applied live or written to config: zoom is the only interface-size
+    config field now, and ``gui.app._dev_text_scale`` reads this env var at
+    ``Theme.initialize`` time (boot, inside ``app_mod.main()`` below). A live
+    ``set_font_scale`` after the window exists would leave every already-built
+    widget at the old size and measure a cell nobody can reach — ``gui/utils/fonts.py``
+    bakes ``pixel_size * Theme.get_font_scale()`` at widget *construction*, and
+    text size is restart-to-apply by decision (D39b).
 
     The saved UI session state is removed first, so a cell's geometry and route are
     the cell's own and not the previous run's.
@@ -294,7 +297,11 @@ def prepared_config(*, language: str = "en", font_scale: float = 1.0, first_run:
         raise AssertionError("ankiconnect_url still points at the REAL Anki")
 
     cfg = _disabling_gui_config(cfg)
-    cfg = dataclasses.replace(cfg, ui_language=language, ui_font_scale=font_scale)
+    cfg = dataclasses.replace(cfg, ui_language=language)
+    if font_scale != 1.0:
+        os.environ["ANKI_MINER_TEXT_SCALE"] = repr(float(font_scale))
+    else:
+        os.environ.pop("ANKI_MINER_TEXT_SCALE", None)
     if first_run:
         cfg = dataclasses.replace(cfg, first_run_setup_done=False)
     GUIConfigManager.save_config(cfg)

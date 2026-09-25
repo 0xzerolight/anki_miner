@@ -205,7 +205,6 @@ def profile_a(test_config: AnkiMinerConfig) -> AnkiMinerConfig:
         test_config,
         theme="light",
         theme_favorites=("light",),
-        ui_font_scale=1.0,
         anki_deck_name="Deck A",
     )
 
@@ -216,7 +215,6 @@ def profile_b(test_config: AnkiMinerConfig) -> AnkiMinerConfig:
         test_config,
         theme="dark",
         theme_favorites=("dark", "light"),
-        ui_font_scale=1.25,
         anki_deck_name="Deck B",
     )
 
@@ -612,7 +610,7 @@ class TestComposedWindowSwitch:
     Everywhere else in this file the window is ``_FakeWindow``, which cannot
     show that the Settings panels actually repaint or that the header combo
     actually moves. This is the seam where a switch whose diff is entirely
-    appearance — theme, favorites, font scale, language — is exercised against
+    appearance — theme, favorites, language — is exercised against
     the collaborators that decide whether it is drawn, and it is the one that
     catches ``SettingsTab.update_config`` short-circuiting on
     ``_EXTERNAL_ONLY_FIELDS``.
@@ -649,17 +647,17 @@ class TestComposedWindowSwitch:
 
     def test_an_appearance_only_switch_moves_every_surface(self, composed, test_config):
         window, settings_tab, saves = composed
-        outgoing = replace(test_config, theme="light", theme_favorites=("light",), ui_font_scale=1.0, ui_language="en")
+        outgoing = replace(test_config, theme="light", theme_favorites=("light",), ui_language="en")
         _seed("a", outgoing, "A")
-        _seed("b", replace(outgoing, theme="dark", theme_favorites=("dark", "light"), ui_font_scale=1.5), "B")
+        _seed("b", replace(outgoing, theme="dark", theme_favorites=("dark", "light")), "B")
         # Both sides through the file round trip, as the running app has them:
         # _parse_and_migrate normalises anki_fields, so an in-memory outgoing
         # config would add a panel-relevant diff the real window never sees and
         # the repaint would happen for the wrong reason.
-        window.config = replace(ProfileStore.read_profile("a"), ui_font_scale=1.25)
+        window.config = ProfileStore.read_profile("a")
         settings_tab.update_config(window.config)
         GUIConfigManager.ACTIVE_PROFILE_ID = "a"
-        Theme.initialize(active="light", favorites=("light",), user_dir=None, font_scale=1.25, state_listener=None)
+        Theme.initialize(active="light", favorites=("light",), user_dir=None, state_listener=None)
         before = window.config
         saves.clear()  # drop the setup writes; count only the switch's
 
@@ -683,13 +681,9 @@ class TestComposedWindowSwitch:
         assert saves[0][0].theme == "dark"
         assert GUIConfigManager.read_active_profile_id() == "b"
 
-        # The outgoing snapshot captured the live value, not the stale file.
-        assert ProfileStore.read_profile("a").ui_font_scale == 1.25
-
         # The panels repainted.
         ui_panel = settings_tab.ui_panel
         assert settings_tab.config is window.config
-        assert ui_panel.font_scale_combo.currentData() == 150
         assert self._drawn_favorites(ui_panel) == {"dark", "light"}
         # The stars and the singleton the next star click writes through agree.
         assert self._drawn_favorites(ui_panel) == set(Theme.get_favorites()) & set(ui_panel.gallery.card_keys())
@@ -995,8 +989,9 @@ class TestCommitBoundary:
         saved = json.loads(GUIConfigManager.CONFIG_FILE.read_text(encoding="utf-8"))
         assert saved["active_profile_id"] == "b"
         assert saved["anki_deck_name"] == "Deck B"
-        # Font scale stays on the process's boot value: text size is
-        # restart-to-apply (D39b-A), so a switch persists it without restyling.
+        # Font scale stays on the process's boot value: it is not a per-profile
+        # config field, only a dev/tooling env-var override applied once at
+        # boot, so a switch never touches it.
         assert (Theme.get_current_mode(), Theme.get_favorites(), Theme.get_font_scale()) == (
             "dark",
             ("dark", "light"),
@@ -1072,19 +1067,21 @@ class TestThemeReseed:
         assert (Theme.get_current_mode(), Theme.get_favorites(), Theme.get_font_scale()) == before
         assert theme_applies == []
 
-    def test_theme_favorites_and_font_scale_survive_a_round_trip(self, controller, window, profile_a, profile_b):
+    def test_theme_favorites_survive_a_round_trip(self, controller, window, profile_a, profile_b):
         _two_profiles(profile_a, profile_b)
 
         controller.switch_to("b")
         controller.switch_to("a")
 
+        # The font scale is not part of this: it is no longer a per-profile
+        # config field, only a dev/tooling env-var override applied once at
+        # boot, so it never moves — the singleton check below is a constancy
+        # guard, not a round-trip one.
         assert (Theme.get_current_mode(), Theme.get_favorites(), Theme.get_font_scale()) == ("light", ("light",), 1.0)
         stored_b = ProfileStore.read_profile("b")
         assert stored_b.theme_favorites == ("dark", "light")
-        assert stored_b.ui_font_scale == 1.25
         stored_a = ProfileStore.read_profile("a")
         assert stored_a.theme_favorites == ("light",)
-        assert stored_a.ui_font_scale == 1.0
 
     def test_a_theme_seed_failure_refuses_the_switch(self, controller, window, profile_a, profile_b, monkeypatch):
         _two_profiles(profile_a, profile_b)
@@ -1112,7 +1109,7 @@ class TestSettingsRepaint:
     Its ``_EXTERNAL_ONLY_FIELDS`` allowlist protects unsaved panel edits during
     unrelated commits (OVH-007) and stays as it is; a profile switch is the case
     it gets wrong, because two profiles differing only in theme / favorites /
-    font scale / language produce a diff entirely inside that allowlist. So the
+    language produce a diff entirely inside that allowlist. So the
     controller forces the redraw itself.
     """
 
@@ -1127,7 +1124,7 @@ class TestSettingsRepaint:
     def test_an_appearance_only_switch_still_repaints(self, controller, window, profile_a):
         """The exact diff ``update_config``'s allowlist swallows."""
         _seed("a", profile_a, "A")
-        _seed("b", replace(profile_a, theme="dark", theme_favorites=("dark",), ui_font_scale=1.5), "B")
+        _seed("b", replace(profile_a, theme="dark", theme_favorites=("dark",)), "B")
         # Both sides through the file round trip, as the running app has them:
         # _parse_and_migrate normalises anki_fields, so an in-memory outgoing
         # config would show a diff the real window never sees.
@@ -1201,12 +1198,7 @@ class TestRestartNote:
         assert len(window.status_bar.messages) == seen
 
     def test_live_only_differences_raise_no_note(self, controller, window, profile_a):
-        """Theme and favorites are re-seeded live, so they say nothing.
-
-        ``profile_b`` is deliberately not used here: it also carries a different
-        ``ui_font_scale``, which is boot-only under D39b-A and therefore *does*
-        earn a note (see below).
-        """
+        """Theme and favorites are re-seeded live, so they say nothing."""
         _seed("a", profile_a, "A")
         _seed("b", replace(profile_a, theme="dark", theme_favorites=("dark", "light")), "B")
         _activate("a", profile_a)
@@ -1215,26 +1207,6 @@ class TestRestartNote:
         controller.switch_to("b")
 
         assert window.status_bar.messages == []
-
-    def test_a_different_text_size_names_itself_in_the_note(self, controller, window, profile_a, profile_b):
-        """Text size is restart-to-apply (D39b-A), so a switch must say so.
-
-        The alternative — re-styling the window on a profile switch — is exactly
-        the ~900 ms dead window the decision removes, and it would arrive
-        unrequested in the middle of switching profiles.
-        """
-        _two_profiles(profile_a, profile_b)
-        controller.bootstrap()
-        boot_scale = Theme.get_font_scale()
-
-        controller.switch_to("b")
-
-        assert window.status_bar.messages
-        message, level = window.status_bar.messages[-1]
-        assert "Text size" in message
-        assert level == "info"
-        # And the running process kept the scale it booted with.
-        assert Theme.get_font_scale() == boot_scale
 
     def test_themes_root_is_applied_live_so_it_raises_no_note(self, controller, window, profile_a, tmp_path):
         """``themes_root`` is NOT boot-only: the Theme re-seed applies it.
@@ -1254,8 +1226,8 @@ class TestRestartNote:
         assert Theme._user_dir == incoming_root
         assert window.status_bar.messages == []
 
-    def test_boot_only_fields_are_the_documented_five(self):
-        assert {"ui_language", "ui_zoom", "ui_font_scale", "stats_db_path", "log_path"} == _BOOT_ONLY_FIELDS
+    def test_boot_only_fields_are_the_documented_four(self):
+        assert {"ui_language", "ui_zoom", "stats_db_path", "log_path"} == _BOOT_ONLY_FIELDS
         for name in _BOOT_ONLY_FIELDS:
             assert name in AnkiMinerConfig.__dataclass_fields__
 

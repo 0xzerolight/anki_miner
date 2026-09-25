@@ -50,7 +50,7 @@ class TestTable:
         assert set(MAIN_TAB_ORDER) == MAIN_TABS
         tab_actions = [action for action in KEY_ACTIONS if action.id.startswith("app.tab.")]
         assert [action.id for action in tab_actions] == [tab_action_id(key) for key in MAIN_TAB_ORDER]
-        assert [action.default for action in tab_actions] == [f"Ctrl+{n}" for n in range(1, 8)]
+        assert [action.default for action in tab_actions] == [f"Ctrl+{n}" for n in range(1, 7)]
 
     def test_every_default_round_trips_through_portable_text(self, qapp) -> None:
         for action in KEY_ACTIONS:
@@ -171,7 +171,7 @@ class TestBindingProblem:
 class TestAboutRows:
     def test_the_shipped_keys_print_as_before(self, qapp) -> None:
         assert about_rows(resolve_bindings({})) == [
-            ("Ctrl+1..7", "Switch tabs"),
+            ("Ctrl+1..6", "Switch tabs"),
             ("Ctrl+,", "Open Settings"),
             (primary_action_display(), "Run this screen's main action"),
             ("F1", "Usage Guide"),
@@ -188,7 +188,7 @@ class TestAboutRows:
 
     def test_customised_tabs_list_each_bound_tab(self, qapp) -> None:
         rows = about_rows(resolve_bindings({tab_action_id("video"): "Alt+1", tab_action_id("reading"): ""}))
-        assert "Ctrl+1..7" not in [key for key, _ in rows]
+        assert "Ctrl+1..6" not in [key for key, _ in rows]
         assert ("Alt+1", "Go to Video") in rows
-        assert ("Ctrl+2", "Go to Deck Builder") in rows
+        assert ("Ctrl+2", "Go to Audiobooks") in rows
         assert "Go to Reading" not in [description for _, description in rows]

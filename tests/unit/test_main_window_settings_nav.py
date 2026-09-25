@@ -33,9 +33,9 @@ def _build_window(qtbot, patch_heavy_init, test_config):
 
     window = MainWindow()
     qtbot.addWidget(window)
-    # Reproduce app.py order: 0..3 placeholders, 4 = Analytics, 5 = Settings.
+    # Reproduce app.py order: 0..2 placeholders, 3 = Analytics, 4 = Settings.
     window.tabs.clear()
-    for label in ("Episode Mining", "Batch Mining", "Deck Builder", "YouTube"):
+    for label in ("Episode Mining", "Batch Mining", "YouTube"):
         window.tabs.addTab(QWidget(), label)
     analytics = QWidget()
     window.tabs.addTab(analytics, "Analytics")

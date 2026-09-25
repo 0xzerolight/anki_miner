@@ -4,7 +4,7 @@ Engine-free on purpose (it only reads token attributes), so it is unit-tested
 with stub tokens. ``surface`` is ALWAYS ``text[tok.idx : tok.idx + len(tok.text)]``
 over the ORIGINAL line: ``morphology.iter_token_spans`` locates tokens with a
 case-sensitive ``str.find`` and silently drops what it cannot find, from mining
-and from Deck Builder counts alike. The model may have tagged a lowercased,
+and from count_lemmas alike. The model may have tagged a lowercased,
 apostrophe-folded copy (``morphology.tagging_copy``); that copy is the same
 length, so every offset holds.
 """

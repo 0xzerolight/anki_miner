@@ -100,13 +100,15 @@ class TestIndex:
         entry = _by_id(entries, "filtering.frequency_rank_range")
 
         assert entry.title == "Frequency Rank Range"
-        assert entry.breadcrumb == f"Mining{BREADCRUMB_SEPARATOR}Filtering"
+        assert entry.breadcrumb == f"Mining{BREADCRUMB_SEPARATOR}Word Filters"
 
-    def test_a_tab_level_setting_belongs_to_no_page(self, entries):
-        entry = _by_id(entries, "app.check_for_updates")
+    def test_check_for_updates_belongs_to_the_general_page(self, entries):
+        # T11: moved off the tab itself onto the UI panel's App section, so it
+        # now belongs to a page like any other panel-owned setting.
+        entry = _by_id(entries, "ui.check_for_updates")
 
-        assert entry.page_key == ""
-        assert entry.breadcrumb == "Settings"
+        assert entry.page_key == "ui"
+        assert entry.breadcrumb == f"App{BREADCRUMB_SEPARATOR}General"
 
     def test_rebuilding_picks_up_a_newly_registered_anchor(self, tab):
         checkbox = QCheckBox("Synthetic later setting", tab.media_panel)
@@ -144,6 +146,56 @@ class TestMatching:
         """Neither end has a label of its own, so both names live in anchor_text."""
         assert _ids(search(entries, "Min Frequency Rank"))[0] == "filtering.frequency_rank_range"
 
+    def test_regex_finds_the_sentences_panel_field(self, entries):
+        """T9 moved subtitle text filtering off Filtering onto its own page."""
+        assert _ids(search(entries, "regex"))[0] == "sentences.subtitle_regex_edit"
+
+    def test_papago_finds_the_sentence_tts_combo(self, entries):
+        """T11 folded the master + two provider checkboxes into one combo; its
+        anchor_text lists every item so a provider name still finds it, even
+        though "Papago" never appears in the combo's current selection."""
+        results = _ids(search(entries, "Papago"))
+
+        assert "media.reading_tts" in results
+
+    def test_tts_finds_the_sentence_tts_combo(self, entries):
+        """The combo's own label never spells out "TTS"; the anchor_text
+        keyword must still surface it for that abbreviation."""
+        results = _ids(search(entries, "TTS"))
+
+        assert "media.reading_tts" in results
+
+    def test_fps_finds_the_animated_size_combo(self, entries):
+        """Small/Balanced/High never say "fps"; only a still-custom entry's
+        label would, and only once a non-preset triple is loaded."""
+        results = _ids(search(entries, "fps"))
+
+        assert "media.animated_size_combo" in results
+
+    def test_i_plus_one_finds_the_sentence_rule_combo(self, entries):
+        """The sentence rule combo has no field label; its own item texts
+        must carry the search text, including the "i+1" one item spells out."""
+        results = _ids(search(entries, "i+1"))
+
+        assert "filtering.sentence_rule_combo" in results
+
+    def test_dedup_finds_the_sentence_rule_combo(self, entries):
+        results = _ids(search(entries, "dedup"))
+
+        assert "filtering.sentence_rule_combo" in results
+
+    def test_deduplicate_finds_the_sentence_rule_combo(self, entries):
+        """ "deduplicate" is not a substring of the tooltip's "deduplication";
+        it needs its own keyword."""
+        results = _ids(search(entries, "deduplicate"))
+
+        assert "filtering.sentence_rule_combo" in results
+
+    def test_one_card_per_sentence_finds_the_sentence_rule_combo(self, entries):
+        results = _ids(search(entries, "one card per sentence"))
+
+        assert "filtering.sentence_rule_combo" in results
+
 
 class TestRenamedDestinations:
     def test_the_old_asr_name_still_finds_transcription_settings(self, entries):
@@ -153,15 +205,37 @@ class TestRenamedDestinations:
         assert "subtitles.alass_selector" in results
 
     def test_the_filtering_destination_name_finds_its_settings(self, entries):
-        """Filtering kept its name, so the breadcrumb alone has to match it."""
+        """The old "Filtering" name still finds it (T9 renamed the label to
+        "Word Filters"; the legacy term keeps the vocabulary users typed)."""
         results = _ids(search(entries, "filtering"))
 
-        assert "filtering.use_i_plus_one_checkbox" in results
+        assert "filtering.sentence_rule_combo" in results
+
+    def test_the_filtering_destination_name_also_finds_the_sentences_page(self, entries):
+        """These settings used to live on Filtering; the old name still reaches
+        them on the Sentences page they moved to (T9)."""
+        results = _ids(search(entries, "filtering"))
+
+        assert any(result.startswith("sentences.") for result in results)
 
     def test_the_old_subtitles_tab_name_still_finds_its_page(self, entries):
         results = _ids(search(entries, "subtitles"))
 
         assert "subtitles.model_combo" in results
+
+    def test_text_size_still_finds_zoom(self, entries):
+        """T4 folded the removed Text size control into Zoom; the old vocabulary
+        must still resolve to it."""
+        results = _ids(search(entries, "text size"))
+
+        assert "ui.zoom" in results
+
+    def test_the_appearance_destination_name_still_finds_the_general_page(self, entries):
+        """T11 renamed "Appearance & Language" to "General"; the old name still
+        reaches it (same pattern as the "filtering" legacy term for Word Filters)."""
+        results = _ids(search(entries, "appearance"))
+
+        assert any(result.startswith("ui.") for result in results)
 
 
 class TestTranslatedIndex:
@@ -170,7 +244,7 @@ class TestTranslatedIndex:
     _JA = {
         "Frequency Rank Range": "頻度ランク範囲",
         "Mining": "採掘",
-        "Filtering": "フィルタリング",
+        "Word Filters": "ワードフィルター",
     }
 
     @pytest.fixture
@@ -204,7 +278,7 @@ class TestTranslatedIndex:
         entry = _by_id(translated_tab.setting_search_entries(), "filtering.frequency_rank_range")
 
         assert entry.title == "頻度ランク範囲"
-        assert entry.breadcrumb == f"採掘{BREADCRUMB_SEPARATOR}フィルタリング"
+        assert entry.breadcrumb == f"採掘{BREADCRUMB_SEPARATOR}ワードフィルター"
 
 
 class TestSearchBox:
@@ -217,7 +291,7 @@ class TestSearchBox:
         item = tab.search_box.results.item(0)
         assert item is not None
         assert "Frequency Rank Range" in item.text()
-        assert f"Mining{BREADCRUMB_SEPARATOR}Filtering" in item.text()
+        assert f"Mining{BREADCRUMB_SEPARATOR}Word Filters" in item.text()
         assert item.data(Qt.ItemDataRole.UserRole) == "filtering.frequency_rank_range"
 
     def test_a_query_with_no_match_lists_no_jumpable_row(self, tab):
@@ -343,13 +417,13 @@ class TestJump:
         assert tab.search_box.input.text() == ""
         assert not tab.search_box.results.isVisibleTo(tab.search_box)
 
-    def test_a_tab_level_setting_needs_no_page_change(self, tab, qtbot):
+    def test_a_search_for_check_for_updates_jumps_to_general(self, tab, qtbot):
         tab.open_subtab("anki")
 
-        self._jump(tab, qtbot, "app.check_for_updates", "Check for updates on startup")
+        self._jump(tab, qtbot, "ui.check_for_updates", "Check for updates on startup")
 
-        assert tab.pages.currentIndex() == tab._subtab_index["anki"]
-        assert tab.focusWidget() is tab.check_for_updates_checkbox
+        assert tab.pages.currentIndex() == tab._subtab_index["ui"]
+        assert tab.focusWidget() is tab.ui_panel.check_for_updates_checkbox
 
     def test_an_unknown_id_is_ignored(self, tab, qtbot):
         tab.jump_to_setting("nope.not-a-setting")

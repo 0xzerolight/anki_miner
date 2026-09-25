@@ -1184,6 +1184,54 @@ def test_addons_section_heading_present(qtbot):
     assert "Transcription add-ons (optional)" in headings
 
 
+def test_gpu_download_rows_sit_directly_under_the_device_row(qtbot, monkeypatch):
+    """CUDA pack + Vulkan model downloads move under the device choice (T12).
+
+    FormPanel.add_section opens a new QFormLayout per section, so both rows
+    living in the SAME layout as the device row (not the addons section's own
+    layout) plus contiguous row indices is the proof they moved, not just that
+    the widgets exist somewhere on the page.
+    """
+    from PyQt6.QtWidgets import QFormLayout
+
+    _enable_vulkan(monkeypatch)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+
+    layouts = panel.findChildren(QFormLayout)
+    home = next(layout for layout in layouts if layout.indexOf(panel.device_combo) >= 0)
+
+    device_row, _ = home.getWidgetPosition(panel.device_combo)
+    cuda_row, _ = home.getWidgetPosition(panel.download_cuda_button.parentWidget())
+    assert cuda_row == device_row + 1
+
+    # The CUDA help line (_cuda_help_label) is its own full-width row right
+    # after the CUDA row (see _add_help); Vulkan follows that, still with no
+    # unrelated row (e.g. the whisper-model download) between the device row
+    # and Vulkan.
+    cuda_help_row, _ = home.getWidgetPosition(panel._cuda_help_label)
+    assert cuda_help_row == cuda_row + 1
+
+    assert panel.download_vulkan_button is not None
+    vulkan_row, _ = home.getWidgetPosition(panel.download_vulkan_button.parentWidget())
+    assert vulkan_row == cuda_help_row + 1
+
+
+def test_addons_section_holds_only_silence_removal(qtbot, monkeypatch):
+    """The "Transcription add-ons (optional)" heading keeps just VAD (T12):
+    CUDA and Vulkan moved out to sit under the device row instead."""
+    from PyQt6.QtWidgets import QFormLayout
+
+    _enable_vulkan(monkeypatch)
+    panel = SubtitlesSettingsPanel()
+    qtbot.addWidget(panel)
+
+    layouts = panel.findChildren(QFormLayout)
+    addons_layout = next(layout for layout in layouts if layout.indexOf(panel.download_vad_button.parentWidget()) >= 0)
+    assert addons_layout.indexOf(panel.download_cuda_button.parentWidget()) == -1
+    assert addons_layout.indexOf(panel.download_vulkan_button.parentWidget()) == -1
+
+
 def test_help_lines_present(qtbot, monkeypatch):
     """The CUDA/VAD state-carrier description lines render as helper-text; the
     section intros and the pure tooltip-duplicate rows were removed."""
@@ -1318,96 +1366,31 @@ def test_cuda_guidance_shares_row_with_label(qtbot):
 
 
 # ---------------------------------------------------------------------------
-# Manga OCR (mokuro) section
+# Manga OCR (mokuro) moved off this panel entirely (Task 13): it now sets up
+# from its own tab, Utilities → Manga OCR. This panel keeps no trace of it.
 # ---------------------------------------------------------------------------
 
 
-def test_panel_has_mokuro_section(qtbot):
+def test_panel_has_no_mokuro_controls(qtbot):
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
-    assert panel.mokuro_selector is not None
-    assert panel.install_mokuro_button.text() == "Install mokuro"
+    assert not hasattr(panel, "mokuro_selector")
+    assert not hasattr(panel, "install_mokuro_button")
+    assert not hasattr(panel, "mokuro_status_label")
+    assert not hasattr(panel, "mokuro_install_requested")
+    # Not just the widgets: the anchor the old "mokuro install" row registered
+    # (and any other mokuro anchor) must not survive in the panel's own
+    # registered anchor ids either — that's what settings search indexes.
+    anchor_ids = {anchor.stable_id for anchor in panel.setting_anchors()}
+    assert "subtitles.mokuro_install" not in anchor_ids
+    assert not any("mokuro" in anchor_id for anchor_id in anchor_ids)
 
 
-def test_contribute_round_trips_mokuro_location(qtbot, tmp_path):
+def test_contribute_does_not_touch_mokuro_location(qtbot, tmp_path):
     panel = SubtitlesSettingsPanel()
     qtbot.addWidget(panel)
-    exe = tmp_path / "mokuro"
-    exe.write_text("")
-    panel.mokuro_selector.set_path(str(exe))
-    cfg = panel.contribute(AnkiMinerConfig())
-    assert cfg.mokuro_location == exe
-    panel.mokuro_selector.set_path("")
-    assert panel.contribute(cfg).mokuro_location is None
-
-
-def test_install_mokuro_button_emits_and_disables(qtbot):
-    panel = SubtitlesSettingsPanel()
-    qtbot.addWidget(panel)
-    fired: list = []
-    panel.mokuro_install_requested.connect(lambda: fired.append(True))
-    panel.install_mokuro_button.setEnabled(True)
-    panel.install_mokuro_button.click()
-    assert fired and not panel.install_mokuro_button.isEnabled()
-
-
-def test_mokuro_status_reflects_resolver(qtbot, tmp_path, monkeypatch):
-    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_resolver.mokuro_available", lambda loc, root: True)
-    panel = SubtitlesSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.load_from_config(AnkiMinerConfig(uv_root=tmp_path / "uv"))
-    _wait_state_settled(qtbot, panel)
-    assert panel.mokuro_status_label.text() == "Installed"
-    assert panel.install_mokuro_button.text() == "Reinstall mokuro"
-
-
-def test_notify_mokuro_install_finished_reprobes(qtbot, tmp_path, monkeypatch):
-    """The in-flight guard clears and the label follows the new on-disk state."""
-    state = {"installed": False}
-    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_resolver.mokuro_available", lambda loc, root: state["installed"])
-    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_installer.mokuro_install_supported", lambda: True)
-
-    panel = SubtitlesSettingsPanel()
-    qtbot.addWidget(panel)
-    panel.load_from_config(AnkiMinerConfig(uv_root=tmp_path / "uv"))
-    _wait_state_settled(qtbot, panel)
-    assert panel.mokuro_status_label.text() == "Not installed"
-
-    panel.install_mokuro_button.click()
-    assert panel._mokuro_install_active
-    state["installed"] = True
-    panel.notify_mokuro_install_finished()
-    _wait_state_settled(qtbot, panel)
-
-    assert not panel._mokuro_install_active
-    assert panel.mokuro_status_label.text() == "Installed"
-    assert panel.install_mokuro_button.isEnabled()
-
-
-def test_mokuro_button_disabled_when_platform_unsupported(qtbot, monkeypatch):
-    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_installer.mokuro_install_supported", lambda: False)
-    panel = SubtitlesSettingsPanel()
-    qtbot.addWidget(panel)
-    assert not panel.install_mokuro_button.isEnabled()
-    assert panel.mokuro_status_label.text() == "Not available on this platform"
-
-
-def test_the_probe_keeps_the_unsupported_platform_status(qtbot, tmp_path, monkeypatch):
-    """A probe must not relabel an unsupported platform "Not installed".
-
-    The construction-time status is the only reason on screen for a
-    permanently disabled Install button, and the probe used to overwrite it.
-    """
-    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_installer.mokuro_install_supported", lambda: False)
-    monkeypatch.setattr(f"{_PANEL_MOD}.mokuro_resolver.mokuro_available", lambda loc, root: False)
-    panel = SubtitlesSettingsPanel()
-    qtbot.addWidget(panel)
-
-    panel.load_from_config(AnkiMinerConfig(uv_root=tmp_path / "uv"))
-    _wait_state_settled(qtbot, panel)
-
-    assert panel.mokuro_status_label.text() == "Not available on this platform"
-    assert not panel.install_mokuro_button.isEnabled()
+    original = AnkiMinerConfig(mokuro_location=tmp_path / "mokuro")
+    assert panel.contribute(original).mokuro_location == tmp_path / "mokuro"
 
 
 # ---------------------------------------------------------------------------

@@ -205,7 +205,7 @@ def _settings_tab(ctx):
 
 
 def _drive_settings_rebuild(cfg, ctx) -> Path:
-    """Settings -> Filtering -> Rebuild Known Words DB."""
+    """Settings -> Word Filters -> Rebuild Known Words DB."""
     from anki_miner.gui.widgets import settings_tab as st_module
 
     seen: list[Path] = []
@@ -224,7 +224,7 @@ def _drive_settings_rebuild(cfg, ctx) -> Path:
 
 
 def _drive_settings_manage(cfg, ctx) -> Path:
-    """Settings -> Filtering -> Manage Known Words."""
+    """Settings -> Word Filters -> Manage Known Words."""
     from anki_miner.gui.widgets import settings_tab as st_module
     from anki_miner.gui.widgets.dialogs import known_words_dialog as kwd_module
 

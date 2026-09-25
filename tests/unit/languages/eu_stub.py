@@ -146,7 +146,7 @@ class EuScriptSupport:
     """No script toggles; the ingestion gate is "contains an ASCII letter".
 
     ``filter_options() == ()`` is the zh precedent: a language whose script
-    offers nothing to exclude contributes no rows to Settings -> Filtering, and
+    offers nothing to exclude contributes no rows to Settings -> Word Filters, and
     the panel renders an empty section rather than ja's two checkboxes.
     """
 

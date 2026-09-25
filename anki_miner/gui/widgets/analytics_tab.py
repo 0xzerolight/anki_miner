@@ -237,7 +237,7 @@ class AnalyticsTab(ScreenIssueHost, QWidget):
     def changeEvent(self, a0):  # noqa: N802  (Qt override)
         """Re-derive table row metrics whenever the font changes.
 
-        Text size is applied live (Settings -> UI), so a row height computed once
+        Zoom is applied live (Settings -> General), so a row height computed once
         at construction goes stale the moment the user changes it -- which is the
         same "pixel constant frozen against a font that later grows" mistake the
         row sizing exists to fix.

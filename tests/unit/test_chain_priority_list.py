@@ -459,6 +459,79 @@ class TestOneClearAddAndOneRedTrash:
         assert panel._add_btn.text().endswith("…")
 
 
+#: Every panel's own maintenance actions, in the order its toolbar declares
+#: them -- the order the "More" menu must reproduce.
+_EXTRA_ACTIONS = {
+    "dictionary": lambda p: (p._reimport_btn, p._restore_btn),
+    "audio": lambda p: (p._reimport_btn, p._restore_btn, p._retry_missing_btn),
+    "frequency": lambda p: (p._reimport_btn, p._restore_btn),
+    "pitch": lambda p: (p._reimport_btn, p._restore_btn),
+}
+
+
+class TestMoreMenu:
+    """T6: the quiet per-panel maintenance actions collapse into one "More" menu.
+
+    Reimport All, Restore from Disk and (Audio only) Retry missing audio used
+    to be their own ``ModernButton``\\ s beside Add. They are now ``QAction``\\ s
+    living in one drop-down, so the old callers (``setEnabled``, ``setVisible``,
+    ``.text()``) still work unchanged.
+    """
+
+    def test_exactly_one_more_button_holds_every_action_in_order(self, kind, qtbot, tmp_path):
+        widget = _make_panel(kind, qtbot, tmp_path, ("a", True))
+
+        # Audio's own Add button also carries a menu (its three add-kinds), so
+        # "the More button" has to be told apart by role, not by "has a menu".
+        more_buttons = [b for b in widget.findChildren(ModernButton) if b.objectName() == "secondary" and b.menu()]
+        assert more_buttons == [widget._more_btn]
+        # A quiet control, not a second Add and not a second trash (D41).
+        assert widget._more_btn.objectName() == "secondary"
+
+        expected = list(_EXTRA_ACTIONS[kind](widget))
+        assert widget._more_btn.menu().actions() == expected
+
+    def test_the_more_button_says_what_it_is(self, kind, qtbot, tmp_path):
+        """Navigation chrome, not a setting -- so it gets an accessible name
+        without joining the panel's settings-search text (D13)."""
+        widget = _make_panel(kind, qtbot, tmp_path, ("a", True))
+
+        assert widget._more_btn.accessibleName()
+        assert widget._more_btn.toolTip()
+        assert widget._more_btn.menu().toolTipsVisible() is True
+
+    def test_every_action_in_the_menu_carries_its_old_tooltip(self, kind, qtbot, tmp_path):
+        widget = _make_panel(kind, qtbot, tmp_path, ("a", True))
+
+        for action in _EXTRA_ACTIONS[kind](widget):
+            assert action.toolTip()
+
+    def test_triggering_reimport_all_emits_its_request(self, kind, qtbot, tmp_path):
+        widget = _make_panel(kind, qtbot, tmp_path, ("a", True))
+        fired: list[None] = []
+        widget.reimport_all_requested.connect(lambda: fired.append(None))
+
+        widget._reimport_btn.trigger()
+
+        assert fired == [None]
+
+    def test_disabling_jpod101_hides_only_the_retry_action(self, qtbot, tmp_path):
+        """Audio-only: the button itself never hides (Reimport/Restore stay)."""
+        panel = AudioPackSettingsPanel(tmp_path)
+        qtbot.addWidget(panel)
+
+        panel.set_chain((AudioSourceEntry(kind="jpod101", pack_id=None, enabled=True),))
+        assert panel._retry_missing_btn.isVisible()
+
+        panel.set_chain((AudioSourceEntry(kind="googletts", pack_id=None, enabled=True),))
+        assert not panel._retry_missing_btn.isVisible()
+        # _more_btn is a real QWidget, never shown in this test -- isHidden()
+        # (was it ever told to hide?) is the question, not isVisible().
+        assert not panel._more_btn.isHidden()
+        assert panel._reimport_btn.isVisible()
+        assert panel._restore_btn.isVisible()
+
+
 class TestRowsCarryTheirOwnFacts:
     def test_the_enable_toggle_has_a_label(self, panel):
         row = panel._row_widget(0)
@@ -538,7 +611,9 @@ class TestSettingAnchorsAreUnchanged:
 
     EXPECTED = {
         "dictionary": {"dictionaries.storage_folder", "dictionaries.chain"},
-        "audio": {"audio.chain", "audio.reading_tts"},
+        # T11: the sentence-TTS block (formerly audio.reading_tts) folded into
+        # the Card Media combo, media.reading_tts.
+        "audio": {"audio.chain"},
         "frequency": {"frequency.chain"},
         "pitch": {"pitch.chain"},
     }

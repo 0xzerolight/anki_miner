@@ -74,7 +74,7 @@ _MAX_SPAN_TOKENS = 5
 Alternatives = tuple[tuple[str, str], ...]
 
 # Existence-cache bound (positive AND negative results). Clear-on-cap keeps
-# whole-corpus Deck Builder runs from growing without limit.
+# whole-corpus runs from growing without limit.
 _EXIST_CACHE_CAP = 200_000
 
 

@@ -537,7 +537,7 @@ class TestStaleHelpers:
         registry.load()
         one = format_stale_reimport_message([registry.get("a")])
         assert "Dictionary 'Alpha' needs reimport" in one
-        assert "Settings → Dictionaries → Reimport All" in one
+        assert "Settings → Dictionaries → More → Reimport All" in one
         two = format_stale_reimport_message([registry.get("a"), registry.get("b")])
         assert "Dictionaries 'Alpha', 'Beta' need reimport" in two
 

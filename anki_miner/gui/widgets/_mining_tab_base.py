@@ -92,7 +92,7 @@ _CURATION_PREFETCH_JOIN_MS = 3000
 
 
 class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidget):
-    """Common scaffolding for the four mining tabs (``SingleEpisodeTab``, ``BatchProcessingTab``, ``DeckBuilderTab``, ``YouTubeTab``).
+    """Common scaffolding for the three mining tabs (``SingleEpisodeTab``, ``BatchProcessingTab``, ``YouTubeTab``).
 
     Subclasses own their layout, their progress widgets, and the bodies of the
     progress slots and drag-drop event handlers. The base provides:
@@ -104,19 +104,18 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
       the bar advances one notch per completed pipeline stage, and everything
       finer-grained goes to the status line as a true count.
 
-    Tabs with one progress widget (``SingleEpisodeTab``, ``DeckBuilderTab``) use the
-    defaults as-is. ``BatchProcessingTab`` owns two widgets (overall + current) and
-    overrides the three progress slots. Subclasses still provide ``dragEnterEvent``
-    and ``dropEvent`` via duck typing.
+    Tabs with one progress widget (``SingleEpisodeTab``) use the defaults as-is.
+    ``BatchProcessingTab`` owns two widgets (overall + current) and overrides the
+    three progress slots. Subclasses still provide ``dragEnterEvent`` and
+    ``dropEvent`` via duck typing.
     """
 
     # Worker→GUI curation bridge (shared by SingleEpisodeTab, BatchProcessingTab,
-    # and YouTubeTab; DeckBuilderTab builds its own batch curation callback).
+    # and YouTubeTab).
     _curation_requested = pyqtSignal(list)
 
-    # Inline run options edited on this screen (the curation checkbox, Deck
-    # Builder's selection mode). Connected once, by discovery, in
-    # compose_main_window -- never per tab.
+    # Inline run options edited on this screen (the curation checkbox).
+    # Connected once, by discovery, in compose_main_window -- never per tab.
     run_options_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
 
     # Active frozen config. Every mining-tab subclass assigns this in its
@@ -127,10 +126,9 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
 
     # The curation opt-in, built by the seven mining screens that offer it
     # (BatchProcessingTab plus the six _QueueMiningTabBase ones, which restate
-    # this declaration). SingleEpisodeTab always curates and DeckBuilderTab
-    # never does, so neither builds one — which is why
-    # _seed_review_words_checkbox reaches it through getattr. Bare annotation
-    # only — no runtime class attribute.
+    # this declaration). SingleEpisodeTab always curates, so it does not build
+    # one — which is why _seed_review_words_checkbox reaches it through
+    # getattr. Bare annotation only — no runtime class attribute.
     review_words_checkbox: QCheckBox
 
     # ------------------------------------------------------------------
@@ -236,7 +234,7 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
 
     #: Receipt state, declared on the class so every mining tab inherits the
     #: no-receipt default. A screen that never calls :meth:`_install_receipt`
-    #: (Deck Builder, under D3) keeps them and every hook below is a no-op.
+    #: keeps them and every hook below is a no-op.
     _receipt_widget: InlineReceipt | None = None
     _receipt_accumulator: RunReceiptAccumulator | None = None
     _receipt_noun: str = ""
@@ -274,8 +272,8 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
 
         The published task id is the same string the task registry, the status
         bar and the queue snapshot already use, so a report and a log line name
-        one screen the same way. Deck Builder publishes no task, so it falls
-        back to its class name rather than logging an anonymous run.
+        one screen the same way. A screen with no ``TASK_ID`` falls back to
+        its class name rather than logging an anonymous run.
         """
         return self.TASK_ID or type(self).__name__
 
@@ -328,8 +326,8 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
                 recoverable from its result, so it is recorded at launch.
         """
         # Emitted before the receipt guard: a screen with no installed receipt
-        # widget (Deck Builder) still has a run, and a run start that only some
-        # screens log is not a lifecycle record.
+        # widget still has a run, and a run start that only some screens log
+        # is not a lifecycle record.
         start_fields: dict[str, object] = {"screen": self._run_log_id(), "items": items_total}
         start_fields.update(run_fields or {})
         # `level` is stated rather than defaulted so the screen-supplied fields
@@ -491,9 +489,9 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
     # ------------------------------------------------------------------
 
     #: This screen's pinned action bar, or ``None`` on a screen that never
-    #: installs one. Deliberately opt-in rather than built in ``__init__``:
-    #: Deck Builder also subclasses this base and, under D3, is not part of the
-    #: D6 work. Every hook below is a no-op without a bar.
+    #: installs one. Deliberately opt-in rather than built in ``__init__``, so a
+    #: future subclass outside the D6 work can skip it. Every hook below is a
+    #: no-op without a bar.
     action_bar: WorkflowActionBar | None = None
 
     def _install_action_bar(
@@ -558,10 +556,10 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         """Join and (only if joined) close the prior run's worker + processor.
 
         Shared by ``SingleEpisodeTab`` and ``BatchProcessingTab`` (both subclass
-        this base and start ``ProcessorOwningWorker``s). Mirrors the deck-builder
-        teardown idiom: disconnect the stale ``finished`` → ``_restore_buttons``
-        handler so a late termination can't restore buttons mid-new-run (a no-op
-        when not connected, e.g. the batch queue path), cancel the worker, then
+        this base and start ``ProcessorOwningWorker``s). Disconnect the stale
+        ``finished`` → ``_restore_buttons`` handler so a late termination can't
+        restore buttons mid-new-run (a no-op when not connected, e.g. the batch
+        queue path), cancel the worker, then
         bounded-join it (reassigning ``self.worker_thread`` would otherwise drop
         the only reference to a live QThread and crash with "QThread: Destroyed
         while thread is still running").
@@ -739,8 +737,8 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
     def _seed_review_words_checkbox(self) -> None:
         """Re-seed the checkbox from ``self.config``; call from update_config.
 
-        ``getattr``-guarded: ``DeckBuilderTab`` and ``SingleEpisodeTab`` are
-        also ``MiningTabBase`` subclasses and own no such checkbox.
+        ``getattr``-guarded: ``SingleEpisodeTab`` is also a ``MiningTabBase``
+        subclass and owns no such checkbox.
         """
         checkbox = getattr(self, "review_words_checkbox", None)
         if checkbox is None:

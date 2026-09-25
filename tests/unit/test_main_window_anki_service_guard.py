@@ -2,7 +2,7 @@
 
 A corrupted ``anki_fields`` (missing a required key) makes ``AnkiService``'s
 constructor raise ``ValueError``. Both ``_build_config_bound_services`` (called
-from every ``update_config``) and ``_restyle_mined_cards`` construct it inside a
+from every ``update_config``) and ``restyle_mined_cards`` construct it inside a
 Qt slot, where an unguarded raise is fatal. They must catch the ValueError and
 surface it, mirroring ``AnkiProbeController``.
 """
@@ -34,7 +34,7 @@ def test_update_config_survives_corrupt_fields(main_window):
 
 
 def test_restyle_survives_corrupt_fields(main_window, monkeypatch):
-    """_restyle_mined_cards must not crash on a corrupt-fields config."""
+    """restyle_mined_cards must not crash on a corrupt-fields config."""
     from PyQt6.QtWidgets import QMessageBox
 
     from anki_miner.gui import main_window as mw_module
@@ -52,7 +52,7 @@ def test_restyle_survives_corrupt_fields(main_window, monkeypatch):
     main_window.config = bad_config
 
     # Must not raise; must surface the failure and NOT dispatch the restyle worker.
-    main_window._restyle_mined_cards()
+    main_window.restyle_mined_cards()
 
     issue = main_window.issue_banner().current_issue()
     assert issue is not None, "the failure must be visible"

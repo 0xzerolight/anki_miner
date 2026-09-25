@@ -118,7 +118,7 @@ class TestComposition:
 
         assert len(seen) == 1, "the session must be restored from exactly one place"
         restored_tab_count, visible_at_restore = seen[0]
-        assert restored_tab_count == window.tabs.count() == 7
+        assert restored_tab_count == window.tabs.count() == 6
         assert visible_at_restore is False
         window.deleteLater()
 

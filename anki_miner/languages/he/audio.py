@@ -10,7 +10,7 @@ vowels a bare Hebrew spelling leaves out. A word the dictionary did not resolve 
 then the bare front is all there is to say.
 
 ``edge_voice`` is set but the default chain is Google's: Hebrew HAS a Google voice, so the Edge leg
-is the user-addable alternative (Settings -> Audio -> Add audio source -> Online Source), not the
+is the user-addable alternative (Settings -> Word Audio -> Add audio source -> Online Source), not the
 default. That is the seam's "user-added leg" shape, and the D14 contract test allows it.
 """
 

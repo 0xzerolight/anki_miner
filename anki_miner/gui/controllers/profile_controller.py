@@ -79,7 +79,7 @@ _MUTATION_KIND = "profile-switch"
 # Sibling field partitions, same idiom: SettingsTab._EXTERNAL_ONLY_FIELDS
 # (settings_tab.py:120), SettingsTab._RESET_PRESERVE_UI (:141) and
 # GUIConfigManager.machine_specific_fields() (config_manager.py:450).
-_BOOT_ONLY_FIELDS = frozenset({"ui_language", "ui_zoom", "ui_font_scale", "stats_db_path", "log_path"})
+_BOOT_ONLY_FIELDS = frozenset({"ui_language", "ui_zoom", "stats_db_path", "log_path"})
 
 
 def _boot_only_values(config: AnkiMinerConfig) -> dict[str, object]:
@@ -105,12 +105,11 @@ def _incoming_language_name(incoming: AnkiMinerConfig) -> str:
 def _boot_only_label(field: str) -> str:
     """User-facing label for a boot-only field name (falls back to the name)."""
     labels = {
-        # The labels the Appearance & Language panel itself shows — "Language"
+        # The labels the General panel itself shows — "Language"
         # read as the mining language, and nothing on screen is called
         # "Interface scale".
         "ui_language": QCoreApplication.translate("ProfileController", "Interface language"),
         "ui_zoom": QCoreApplication.translate("ProfileController", "Zoom"),
-        "ui_font_scale": QCoreApplication.translate("ProfileController", "Text size"),
         "stats_db_path": QCoreApplication.translate("ProfileController", "Statistics database"),
         "log_path": QCoreApplication.translate("ProfileController", "Log file"),
     }
@@ -154,17 +153,21 @@ class SwitchResult:
 
 @dataclass(frozen=True)
 class _ThemeState:
-    """The four ``Theme`` singleton fields a profile owns.
+    """The three ``Theme`` singleton fields a profile owns.
 
     Captured before the re-seed so a refused switch can put the singleton back
     exactly as it was — the re-seed necessarily happens BEFORE the commit that
     may fail (see :meth:`ProfileController._switch_locked`).
+
+    The font (text) scale is deliberately NOT one of them: it is no longer a
+    per-profile config field, only a dev/tooling env-var override applied once
+    at boot (``gui.app._dev_text_scale``), so it never varies during a session
+    and :meth:`seed` reads it straight from the running ``Theme`` instead.
     """
 
     active: str
     favorites: tuple[str, ...]
     user_dir: Path | None
-    font_scale: float
 
     @classmethod
     def capture(cls) -> _ThemeState:
@@ -175,47 +178,39 @@ class _ThemeState:
             # write-only through initialize(). Reading the attribute is
             # cheaper than widening Theme's surface for one caller.
             user_dir=Theme._user_dir,
-            font_scale=Theme.get_font_scale(),
         )
 
     @classmethod
     def of_config(cls, config: AnkiMinerConfig) -> _ThemeState:
-        """Theme state for an incoming profile.
-
-        ``font_scale`` deliberately keeps the *running* process's boot scale
-        rather than the incoming config's: text size is restart-to-apply
-        (D39b-A), so a profile switch must not silently re-style the window.
-        The incoming value is still persisted, still reaches the Text size
-        combo through ``load_from_config``, and is named in the boot-only
-        restart note.
-        """
+        """Theme state for an incoming profile."""
         return cls(
             active=config.theme,
             favorites=config.theme_favorites,
             user_dir=config.themes_root,
-            font_scale=Theme.get_font_scale(),
         )
 
     def seed(self) -> None:
         """Re-seed the singleton wholesale (does NOT repaint the app).
 
-        ``Theme.initialize`` is the only entry point that sets all four fields,
-        re-runs theme discovery for a changed user dir and drops the compiled
-        QSS cache. The public per-field setters are not equivalent:
-        ``set_favorites`` silently drops keys that are not in the CURRENT
-        discovery set, which would trim a profile's favorites to whatever the
-        outgoing themes folder happened to contain.
+        ``Theme.initialize`` re-runs theme discovery for a changed user dir and
+        drops the compiled QSS cache. The public per-field setters are not
+        equivalent: ``set_favorites`` silently drops keys that are not in the
+        CURRENT discovery set, which would trim a profile's favorites to
+        whatever the outgoing themes folder happened to contain.
 
-        ``shipped_dir`` and ``state_listener`` are carried through explicitly
-        because ``initialize`` resets every parameter it is not given — dropping
-        them would rediscover the wrong shipped themes and detach whatever
-        write-through listener the app (or a test harness) installed.
+        ``font_scale``, ``shipped_dir`` and ``state_listener`` are carried
+        through explicitly because ``initialize`` resets every parameter it is
+        not given: ``font_scale`` would otherwise silently fall back to its
+        1.0 default (dropping the dev/tooling override for the rest of the
+        session), and the other two would rediscover the wrong shipped themes
+        and detach whatever write-through listener the app (or a test harness)
+        installed.
         """
         Theme.initialize(
             active=self.active,
             favorites=self.favorites,
             user_dir=self.user_dir,
-            font_scale=self.font_scale,
+            font_scale=Theme.get_font_scale(),
             shipped_dir=Theme._shipped_dir_override,
             state_listener=Theme._state_listener,
         )
@@ -669,8 +664,8 @@ class ProfileController:
         ``SettingsTab.update_config`` skips its reload whenever the whole diff
         falls inside ``_EXTERNAL_ONLY_FIELDS`` — a gate that protects unsaved
         panel edits during unrelated commits (OVH-007) and must keep doing so.
-        Two profiles differing only in theme / favorites / font scale / language
-        produce exactly that diff (the ``last_known_version`` re-stamp above and
+        Two profiles differing only in theme / favorites / language produce
+        exactly that diff (the ``last_known_version`` re-stamp above and
         ``update_config``'s ``config_version`` bump are both inside the allowlist
         too, so neither can force the reload), and the tab would go on rendering
         the profile the user just left — including a theme tree drawing the

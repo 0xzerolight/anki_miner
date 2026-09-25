@@ -375,7 +375,7 @@ class BackgroundTaskController(QObject):
             uv_root: Directory the uv-managed mokuro environment is created in;
                 typically ``config.uv_root``.
             on_status: Slot for ``status(str)`` — typically
-                ``SettingsTab.set_mokuro_status``.
+                ``MokuroTab.set_mokuro_status`` (the Manga OCR tab's setup card).
             on_finished: Slot for ``result_ready(bool, str)`` — called with
                 ``(ok, message)`` when the install completes or fails.
         """
@@ -770,9 +770,9 @@ class BackgroundTaskController(QObject):
                 continue
             # Poison the curation gate / cancel queue workers BEFORE the bounded
             # worker_thread join.  Every MiningTabBase subclass (Single, Batch,
-            # DeckBuilder, YouTube, Audiobook) exposes shutdown() via the base;
+            # YouTube, Audiobook) exposes shutdown() via the base;
             # YouTube/Audiobook override it to also cancel their queue workers,
-            # Single/Batch/DeckBuilder inherit the base that cancels the curation
+            # Single/Batch inherit the base that cancels the curation
             # dialog and poisons the gate (OVH-003).  A worker parked in
             # _curation_event.wait() cannot exit on cancel() alone, so joining
             # first would always time it out and spuriously defer the close
@@ -786,8 +786,6 @@ class BackgroundTaskController(QObject):
             # A new tab that forgets this contract silently leaves its workers
             # unjoined — they are destroyed mid-run by Qt, aborting the process.
             # All mining tabs expose their worker on `worker_thread`.
-            # DeckBuilderWorker.cancel() also opens its confirm gate, so a worker
-            # blocked awaiting Build unblocks and exits.
             join(getattr(tab, "worker_thread", None))
             # SettingsTab owns short-lived AnkiConnect workers and import-flow
             # workers with no `worker_thread` (T-12, OVH-004/059/060).  Route

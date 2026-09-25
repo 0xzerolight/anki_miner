@@ -336,8 +336,8 @@
         <translation>Поле пиньиня</translation>
     </message>
     <message>
-        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
-        <translation>Хранит чтение слова в пиньине, раскрашенное по тонам, если эта опция включена. Пусто = пропустить.</translation>
+        <source>Stores the word's pinyin reading. Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Traditional Field</source>
@@ -488,8 +488,8 @@
         <translation>Поле Jyutping</translation>
     </message>
     <message>
-        <source>Stores the jyutping reading, tone-coloured when that setting is on. Blank = skip.</source>
-        <translation>Хранит чтение в системе Jyutping, раскрашенное по тонам, если эта настройка включена. Пусто = пропустить.</translation>
+        <source>Stores the jyutping reading. Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Transliteration Field</source>
@@ -516,8 +516,8 @@
         <translation>URL AnkiConnect</translation>
     </message>
     <message>
-        <source>Default http://localhost:8765. Change if AnkiConnect uses a different port.</source>
-        <translation>По умолчанию http://localhost:8765. Измените, если AnkiConnect использует другой порт.</translation>
+        <source>Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Card tags</source>
@@ -676,6 +676,14 @@
         <translation>Хранит чтение предложения обычным текстом.</translation>
     </message>
     <message>
+        <source>Colour the reading by tone</source>
+        <translation>Раскрашивать чтение по тонам</translation>
+    </message>
+    <message>
+        <source>Colours each syllable of the reading by its tone.</source>
+        <translation>Раскрашивает каждый слог чтения в цвет его тона.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Поля вспомогательных данных</translation>
     </message>
@@ -752,8 +760,8 @@
         <translation>Поле перевода</translation>
     </message>
     <message>
-        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
-        <translation>Хранит строку субтитров перевода для предложения (Видео -&gt; Один, если в разделе «Фильтрация» включены субтитры перевода). Пусто = пропустить.</translation>
+        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Sentences). Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Card Type</source>
@@ -810,6 +818,18 @@
     <message>
         <source>Audio:</source>
         <translation>Аудио:</translation>
+    </message>
+    <message>
+        <source>Card Creation</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create cards in order of appearance</source>
+        <translation>Создавать карточки в порядке появления</translation>
+    </message>
+    <message>
+        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
+        <translation>Добавляет карточки в Anki в порядке появления слов в медиафайле, а не в порядке завершения извлечения их медиа. Переопределяет порядок принудительного включения белого списка и любую сортировку столбцов в Кураторе слов.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -1134,8 +1154,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
-        <source>Audio</source>
-        <translation>Аудио</translation>
+        <source>Word Audio</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Loading…</source>
@@ -1234,6 +1254,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>Понизить приоритет</translation>
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Audio Pack…</source>
         <translation>Пакет аудио…</translation>
     </message>
@@ -1244,30 +1272,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Online Source…</source>
         <translation>Онлайн-источник…</translation>
-    </message>
-    <message>
-        <source>Sentence Audio (Reading Sources)</source>
-        <translation>Аудио предложений (источники для чтения)</translation>
-    </message>
-    <message>
-        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
-        <translation>Добавляет озвучку к карточкам из манги и книг, у которых нет исходного аудио. Текст предложения отправляется в выбранные онлайн-сервисы.</translation>
-    </message>
-    <message>
-        <source>Generate TTS sentence audio</source>
-        <translation>Генерировать TTS-аудио предложений</translation>
-    </message>
-    <message>
-        <source>Google Translate TTS (tried first)</source>
-        <translation>Google Translate TTS (пробуется первым)</translation>
-    </message>
-    <message>
-        <source>Naver Papago (fallback)</source>
-        <translation>Naver Papago (резервный)</translation>
-    </message>
-    <message>
-        <source>Select at least one service.</source>
-        <translation>Выберите хотя бы один сервис.</translation>
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
@@ -1562,8 +1566,8 @@ No index files are deleted.</source>
         <translation>Повторить неудачные</translation>
     </message>
     <message>
-        <source>Quick Processing</source>
-        <translation>Быстрая обработка</translation>
+        <source>Add Series</source>
+        <translation>Добавить сериал</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -1598,12 +1602,12 @@ No index files are deleted.</source>
         <translation>Сдвинуть только субтитры перевода (положительное = позже, отрицательное = раньше)</translation>
     </message>
     <message>
-        <source>Process Folder</source>
-        <translation>Обработать папку</translation>
+        <source>Add to Queue</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Process every episode pair found in the selected folders</source>
-        <translation>Обработать каждую пару эпизодов, найденную в выбранных папках</translation>
+        <source>Add this folder pair to the queue below as a new series</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancel</source>
@@ -1626,22 +1630,6 @@ No index files are deleted.</source>
         <translation>Выберите существующие папки с видео и субтитрами.</translation>
     </message>
     <message>
-        <source>No subtitle file could be matched to any video file in those folders.</source>
-        <translation>Не удалось сопоставить ни один файл субтитров с видеофайлами в этих папках.</translation>
-    </message>
-    <message>
-        <source>episodes</source>
-        <translation>эпизоды</translation>
-    </message>
-    <message>
-        <source>Starting batch processing of %1 episodes...</source>
-        <translation>Запуск пакетной обработки %1 эпизодов...</translation>
-    </message>
-    <message>
-        <source>Batch mining</source>
-        <translation>Пакетный майнинг</translation>
-    </message>
-    <message>
         <source>%1 was skipped: its folders no longer exist.</source>
         <translation>%1 пропущен: его папки больше не существуют.</translation>
     </message>
@@ -1656,6 +1644,10 @@ No index files are deleted.</source>
     <message>
         <source>series</source>
         <translation>серии</translation>
+    </message>
+    <message>
+        <source>Batch mining</source>
+        <translation>Пакетный майнинг</translation>
     </message>
     <message>
         <source>Every series is already complete. Select rows, then Run selected.</source>
@@ -1680,14 +1672,6 @@ No index files are deleted.</source>
     <message>
         <source>Starting queue processing...</source>
         <translation>Запуск обработки очереди...</translation>
-    </message>
-    <message>
-        <source>Starting batch processing...</source>
-        <translation>Запуск пакетной обработки...</translation>
-    </message>
-    <message>
-        <source>Mining episode %1 of %2: %3</source>
-        <translation>Майнинг эпизода %1 из %2: %3</translation>
     </message>
     <message>
         <source>Processing series: %1</source>
@@ -2058,24 +2042,8 @@ No index files are deleted.</source>
         <translation>Субтитры перевода</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
-        <translation>Загрузите второй файл субтитров на вашем языке рядом с файлом на языке майнинга: он отображается под строкой в предпросмотре Куратора слов и может быть сохранён в поле перевода. В разделе Видео -&gt; Пакет вместо этого укажите папку с субтитрами перевода — они сопоставляются с видео по номеру эпизода. Включите эту функцию в разделе Настройки -&gt; Фильтрация.</translation>
-    </message>
-    <message>
-        <source>Build a deck by coverage %</source>
-        <translation>Собрать колоду по % покрытия</translation>
-    </message>
-    <message>
-        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus.</source>
-        <translation>Соберите колоду, упорядоченную по частотности, которая покрывает выбранный процент всего корпуса.</translation>
-    </message>
-    <message>
-        <source>Deck Builder modes (all / top N / coverage %)</source>
-        <translation>Режимы Конструктора колод (все / первые N / % покрытия)</translation>
-    </message>
-    <message>
-        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
-        <translation>Конструктор колод всегда пропускает пофрагментные фильтры и проверки на дубликаты; выбирайте все слова, первые N или целевой охват, и при желании пропускайте известные слова.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -2430,12 +2398,12 @@ No index files are deleted.</source>
         <translation>Установите ускорение CUDA или Vulkan и пакет пропуска тишины для локальной модели Whisper.</translation>
     </message>
     <message>
-        <source>Tune subtitle alignment (alass)</source>
-        <translation>Настройте выравнивание субтитров (alass)</translation>
+        <source>Set the alass binary (subtitle alignment)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.</source>
-        <translation>Настройте выравниватель alass, используемый для переназначения тайминга: штраф за разбиение, коррекцию частоты кадров и режим единого смещения.</translation>
+        <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2546,16 +2514,16 @@ No index files are deleted.</source>
         <translation>Чтения в пиньине и цвета тонов</translation>
     </message>
     <message>
-        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
-        <translation>Размещайте пиньинь слова на ваших карточках, окрашивая каждый слог в цвет его тона — за раскраску отвечает настройка «Раскрашивать чтение по тонам» в разделе Настройки -&gt; Фильтрация.</translation>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>Раскрашивать чтение по тонам</translation>
     </message>
     <message>
-        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
-        <translation>Раскрашивает каждый слог чтения пиньинь или ютпхин по его тону; находится в разделе Настройки -&gt; Фильтрация.</translation>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Measure word field</source>
@@ -2598,12 +2566,12 @@ No index files are deleted.</source>
         <translation>Заключайте намайненное слово в жирное начертание в полях предложения на ваших карточках.</translation>
     </message>
     <message>
-        <source>Themes, dark mode, fonts &amp; zoom</source>
-        <translation>Темы, тёмный режим, шрифты и масштаб</translation>
+        <source>Themes, dark mode &amp; zoom</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Switch light/dark themes and adjust font scale and UI zoom.</source>
-        <translation>Переключайте светлые/тёмные темы и регулируйте масштаб шрифта и масштаб интерфейса.</translation>
+        <source>Switch light/dark themes and adjust UI zoom.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Change the app language</source>
@@ -2630,20 +2598,12 @@ No index files are deleted.</source>
         <translation>Добавляйте собственные JSON-файлы тем и просматривайте каждую тему в галерее перед применением.</translation>
     </message>
     <message>
-        <source>Use system file dialogs</source>
-        <translation>Использовать системные диалоги выбора файлов</translation>
-    </message>
-    <message>
-        <source>Switch between Anki Miner's built-in file pickers and your operating system's native ones.</source>
-        <translation>Переключайтесь между встроенными диалогами выбора файлов Anki Miner и системными диалогами вашей ОС.</translation>
-    </message>
-    <message>
         <source>Choose the tools on the Utilities tab</source>
         <translation>Выбрать инструменты на вкладке «Утилиты»</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>Скройте неиспользуемые инструменты вкладки «Утилиты» или верните их обратно в разделе Настройки -&gt; Внешний вид и язык. Скрытый инструмент сохраняет свою запись здесь; его кнопка «Открыть» ведёт к этому флажку.</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Search the settings</source>
@@ -2666,8 +2626,8 @@ No index files are deleted.</source>
         <translation>Проверка обновлений приложения</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in the Settings footer.</source>
-        <translation>Проверяйте наличие новой версии Anki Miner из меню «Справка» или переключайте автоматическую проверку при запуске в нижней панели настроек.</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2682,8 +2642,8 @@ No index files are deleted.</source>
         <translation>Создать файлы .mokuro из изображений манги</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation>Запустите японское OCR mokuro для папки тома или целой серии, чтобы её можно было майнить в разделе Чтение -&gt; Манга. Установите mokuro в разделе Настройки -&gt; Транскрипция и выравнивание.</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -2698,8 +2658,8 @@ No index files are deleted.</source>
         <translation>Изменить стиль намайненных карточек</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Tools menu.</source>
-        <translation>Повторно применяйте последний стиль Anki Miner к ранее намайненным карточкам — меню «Инструменты».</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>System health check</source>
@@ -2848,12 +2808,20 @@ No index files are deleted.</source>
         <translation>Перезаписывать существующие значения</translation>
     </message>
     <message>
-        <source>Overwritten cards may need a Restyle to refresh their styling.</source>
-        <translation>Перезаписанным карточкам может потребоваться изменение стиля, чтобы обновить их оформление.</translation>
+        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Scan Anki (read-only)</source>
         <translation>Сканировать Anki (только чтение)</translation>
+    </message>
+    <message>
+        <source>Restyle cards…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Refresh the dictionary styling on every card of your note type</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancel</source>
@@ -3506,200 +3474,14 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>%1 (%2 из %3)</translation>
     </message>
 </context><context>
-    <name>DeckBuilderTab</name>
-    <message>
-        <source>Video Folder:</source>
-        <translation>Папка с видео:</translation>
-    </message>
-    <message>
-        <source>Subtitle Folder:</source>
-        <translation>Папка с субтитрами:</translation>
-    </message>
-    <message>
-        <source>Deck Name:</source>
-        <translation>Название колоды:</translation>
-    </message>
-    <message>
-        <source>Word Selection:</source>
-        <translation>Выбор слов:</translation>
-    </message>
-    <message>
-        <source>Input</source>
-        <translation>Ввод</translation>
-    </message>
-    <message>
-        <source>Select folder with video files…</source>
-        <translation>Выберите папку с видеофайлами…</translation>
-    </message>
-    <message>
-        <source>Select folder with subtitle files…</source>
-        <translation>Выберите папку с файлами субтитров…</translation>
-    </message>
-    <message>
-        <source>Deck Settings</source>
-        <translation>Настройки колоды</translation>
-    </message>
-    <message>
-        <source>Enter deck name…</source>
-        <translation>Введите название колоды…</translation>
-    </message>
-    <message>
-        <source>All vocabulary</source>
-        <translation>Вся лексика</translation>
-    </message>
-    <message>
-        <source>Top N words</source>
-        <translation>Топ-N слов</translation>
-    </message>
-    <message>
-        <source>Target coverage %</source>
-        <translation>Целевой охват, %</translation>
-    </message>
-    <message>
-        <source> words</source>
-        <translation> слов</translation>
-    </message>
-    <message>
-        <source>Include the N most-frequent lemmas</source>
-        <translation>Включить N наиболее частотных лемм</translation>
-    </message>
-    <message>
-        <source>Include enough words to cover this percentage of tokens</source>
-        <translation>Включить столько слов, чтобы покрыть этот процент токенов</translation>
-    </message>
-    <message>
-        <source>Skip words already in my Anki collection</source>
-        <translation>Пропускать слова, уже имеющиеся в моей коллекции Anki</translation>
-    </message>
-    <message>
-        <source>Checked: skip your known words; unchecked: mine every word.</source>
-        <translation>Если отмечено: известные слова пропускаются; если не отмечено: майнятся все слова.</translation>
-    </message>
-    <message>
-        <source>Actions</source>
-        <translation>Действия</translation>
-    </message>
-    <message>
-        <source>Preview</source>
-        <translation>Предпросмотр</translation>
-    </message>
-    <message>
-        <source>Analyze the corpus and preview which words will be included</source>
-        <translation>Проанализировать корпус и показать, какие слова будут включены</translation>
-    </message>
-    <message>
-        <source>Build Deck</source>
-        <translation>Собрать колоду</translation>
-    </message>
-    <message>
-        <source>Create the Anki cards for the previewed word list</source>
-        <translation>Создать карточки Anki для списка слов из предпросмотра</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Отмена</translation>
-    </message>
-    <message>
-        <source>Results</source>
-        <translation>Результаты</translation>
-    </message>
-    <message>
-        <source>Total tokens:</source>
-        <translation>Всего токенов:</translation>
-    </message>
-    <message>
-        <source>Unique lemmas:</source>
-        <translation>Уникальных лемм:</translation>
-    </message>
-    <message>
-        <source>Candidate words:</source>
-        <translation>Слов-кандидатов:</translation>
-    </message>
-    <message>
-        <source>Projected coverage:</source>
-        <translation>Прогнозируемый охват:</translation>
-    </message>
-    <message>
-        <source>Known (skipped):</source>
-        <translation>Известные (пропущено):</translation>
-    </message>
-    <message>
-        <source>Cards to create:</source>
-        <translation>Карточек к созданию:</translation>
-    </message>
-    <message>
-        <source>Select both the video folder and subtitle folder first.</source>
-        <translation>Сначала выберите и папку с видео, и папку с субтитрами.</translation>
-    </message>
-    <message>
-        <source>Video folder not found: %1</source>
-        <translation>Папка с видео не найдена: %1</translation>
-    </message>
-    <message>
-        <source>Subtitle folder not found: %1</source>
-        <translation>Папка с субтитрами не найдена: %1</translation>
-    </message>
-    <message>
-        <source>Enter a deck name before previewing.</source>
-        <translation>Введите название колоды перед предпросмотром.</translation>
-    </message>
-    <message>
-        <source>No video/subtitle pairs found. Check the folders.</source>
-        <translation>Пары видео/субтитры не найдены. Проверьте папки.</translation>
-    </message>
-    <message>
-        <source>Analyzing corpus…</source>
-        <translation>Анализ корпуса…</translation>
-    </message>
-    <message>
-        <source>Preview ready — %1 cards; the candidate words cover ~%2% of tokens.</source>
-        <translation>Предпросмотр готов — карточек: %1; кандидаты покрывают ~%2% токенов.</translation>
-    </message>
-    <message>
-        <source>Building deck '%1'…</source>
-        <translation>Сборка колоды «%1»…</translation>
-    </message>
-    <message>
-        <source>Mining episode %1 of %2: %3</source>
-        <translation>Майнинг эпизода %1 из %2: %3</translation>
-    </message>
-    <message>
-        <source>Processing: %1</source>
-        <translation>Обработка: %1</translation>
-    </message>
-    <message>
-        <source>  %1: %2 card(s) created</source>
-        <translation>  %1: создано карточек: %2</translation>
-    </message>
-    <message>
-        <source>Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens.</source>
-        <translation>Создано %1 карточек в колоде «%3»; кандидаты покрывают ~%2% токенов.</translation>
-    </message>
-    <message>
-        <source>Complete — %1 cards created</source>
-        <translation>Завершено — создано карточек: %1</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Отмена…</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Ошибка — см. журнал</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Отменено</translation>
-    </message>
-</context><context>
     <name>DeckFilterTab</name>
     <message>
         <source>Deck Filter</source>
         <translation>Фильтр колоды</translation>
     </message>
     <message>
-        <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Filtering; the source deck is not modified.</source>
-        <translation>Скопируйте достойную изучения часть готовой колоды в новую колоду. Фильтры берутся из раздела Настройки → Фильтрация; исходная колода не изменяется.</translation>
+        <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Word Filters; the source deck is not modified.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Source deck:</source>
@@ -4076,18 +3858,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
     </message>
     <message>
-        <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
-        <translation>Нет XML-файла JMdict по пути %1. Скачайте его с EDRDG и поместите туда.</translation>
-    </message>
-    <message>
-        <source>Reimporting JMdict…</source>
-        <translation>Повторный импорт JMdict…</translation>
-    </message>
-    <message>
-        <source>The dictionaries could not be re-imported.</source>
-        <translation>Не удалось повторно импортировать словари.</translation>
-    </message>
-    <message>
         <source>Skipped (no usable saved copy — add each one again):
 </source>
         <translation>Пропущено (нет пригодной сохранённой копии — добавьте каждый словарь заново):
@@ -4116,6 +3886,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Reimport All</source>
         <translation>Повторно импортировать все</translation>
+    </message>
+    <message>
+        <source>The dictionaries could not be re-imported.</source>
+        <translation>Не удалось повторно импортировать словари.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -4250,6 +4024,14 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Move down in priority</source>
         <translation>Понизить приоритет</translation>
+    </message>
+    <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>%1 entries</source>
@@ -4694,8 +4476,8 @@ No files on disk are deleted.</source>
         <translation>Аудиопакет «%1» читается слишком медленно — аудио пропущено; перенесите его папку на локальный диск и переимпортируйте.</translation>
     </message>
     <message>
-        <source>Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Audio.</source>
-        <translation>Источник аудио для слов слишком медленный — аудио пропущено; переставьте его или отключите в разделе Настройки → Аудио.</translation>
+        <source>Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Word Audio.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
@@ -5042,78 +4824,6 @@ No files on disk are deleted.</source>
         <translation>Синхронизация субтитров</translation>
     </message>
 </context><context>
-    <name>ExportDialog</name>
-    <message>
-        <source>Export Words</source>
-        <translation>Экспорт слов</translation>
-    </message>
-    <message>
-        <source>Export Format</source>
-        <translation>Формат экспорта</translation>
-    </message>
-    <message>
-        <source>CSV (.csv)</source>
-        <translation>CSV (.csv)</translation>
-    </message>
-    <message>
-        <source>TSV (.tsv)</source>
-        <translation>TSV (.tsv)</translation>
-    </message>
-    <message>
-        <source>Vocabulary List (.txt)</source>
-        <translation>Список лексики (.txt)</translation>
-    </message>
-    <message>
-        <source>List format:</source>
-        <translation>Формат списка:</translation>
-    </message>
-    <message>
-        <source>Plain (one word per line)</source>
-        <translation>Простой (одно слово в строке)</translation>
-    </message>
-    <message>
-        <source>%1 words</source>
-        <translation>%1 слов</translation>
-    </message>
-    <message>
-        <source>, %1 with definitions</source>
-        <translation>, %1 с определениями</translation>
-    </message>
-    <message>
-        <source>, %1 with media</source>
-        <translation>, %1 с медиа</translation>
-    </message>
-    <message>
-        <source>Select output file...</source>
-        <translation>Выбрать файл для сохранения...</translation>
-    </message>
-    <message>
-        <source>Browse...</source>
-        <translation>Обзор...</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Отмена</translation>
-    </message>
-    <message>
-        <source>Export</source>
-        <translation>Экспортировать</translation>
-    </message>
-    <message>
-        <source>Export Complete</source>
-        <translation>Экспорт завершён</translation>
-    </message>
-    <message>
-        <source>Exported %1 words to:
-%2</source>
-        <translation>Экспортировано слов: %1. Путь:
-%2</translation>
-    </message>
-    <message>
-        <source>The export could not be written.</source>
-        <translation>Не удалось записать экспорт.</translation>
-    </message>
-</context><context>
     <name>FileSelector</name>
     <message>
         <source>Select file...</source>
@@ -5230,8 +4940,8 @@ No files on disk are deleted.</source>
         <translation>Пропускать слова, содержащие любой знак ханчи, оставляя в колоде лексику только на хангыле.</translation>
     </message>
     <message>
-        <source>Filtering</source>
-        <translation>Фильтрация</translation>
+        <source>Word Filters</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Frequency</source>
@@ -5286,8 +4996,12 @@ No files on disk are deleted.</source>
         <translation>База данных известных слов</translation>
     </message>
     <message>
-        <source>Use Local Known Words Database</source>
-        <translation>Использовать локальную базу данных известных слов</translation>
+        <source>Keep words known after their cards are deleted</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -5304,6 +5018,14 @@ No files on disk are deleted.</source>
     <message>
         <source>View, remove, export, or reset the words you added to your local known words list from the Word Curator.</source>
         <translation>Просмотр, удаление, экспорт или сброс слов, добавленных вами в локальный список известных слов из Куратора слов.</translation>
+    </message>
+    <message>
+        <source>Treat Kana Spellings of Known Words as Known</source>
+        <translation>Считать кана-написания известных слов известными</translation>
+    </message>
+    <message>
+        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+        <translation>Если субтитры записывают слово каной (например, うなずく), а словарная форма с иероглифами (頷く) уже есть в вашей коллекции или списке известных слов, слово будет пропущено вместо создания второй карточки. Написания с иероглифами таким образом никогда не объединяются.</translation>
     </message>
     <message>
         <source>Excluded Decks</source>
@@ -5374,84 +5096,28 @@ No files on disk are deleted.</source>
         <translation>Исключить из майнинга встроенный набор «%1» (%2 записей).</translation>
     </message>
     <message>
-        <source>Subtitle Text Filtering</source>
-        <translation>Фильтрация текста субтитров</translation>
+        <source>Sentence Rule</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Regex Filter</source>
-        <translation>Фильтр регулярных выражений</translation>
+        <source>Mine every unknown word</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
-        <translation>Регулярное выражение Python, совпадения с которым в тексте субтитров удаляются (или заменяются) перед майнингом. Полезно для удаления имён говорящих, например (Танака), или описаний звуков, например [дверь]. Объединяйте варианты через |. Проверяйте шаблоны на https://regex101.com.</translation>
-    </message>
-    <message>
-        <source>(empty = delete match)</source>
-        <translation>(пусто = удалить совпадение)</translation>
-    </message>
-    <message>
-        <source>Replacement</source>
-        <translation>Замена</translation>
-    </message>
-    <message>
-        <source>Inserted in place of each match (empty deletes it). Use Python backreferences \1 \2, not asbplayer's $1 $2.</source>
-        <translation>Подставляется вместо каждого совпадения (пустое значение удаляет его). Используйте обратные ссылки Python \1 \2, а не $1 $2, как в asbplayer.</translation>
-    </message>
-    <message>
-        <source>Enable Subtitle Regex Filter</source>
-        <translation>Включить фильтр регулярных выражений для субтитров</translation>
-    </message>
-    <message>
-        <source>Parens (Tanaka)</source>
-        <translation>Скобки (Танака)</translation>
-    </message>
-    <message>
-        <source>Brackets [SFX]</source>
-        <translation>Квадратные скобки [SFX]</translation>
-    </message>
-    <message>
-        <source>Music ♪♬</source>
-        <translation>Музыка ♪♬</translation>
-    </message>
-    <message>
-        <source>Speaker: prefix</source>
-        <translation>Префикс «Говорящий:»</translation>
-    </message>
-    <message>
-        <source>Dialogue dash</source>
-        <translation>Диалоговое тире</translation>
-    </message>
-    <message>
-        <source>Presets</source>
-        <translation>Предустановки</translation>
-    </message>
-    <message>
-        <source>Click to append a built-in pattern to the regex field above.</source>
-        <translation>Нажмите, чтобы добавить встроенный шаблон в поле регулярного выражения выше.</translation>
-    </message>
-    <message>
-        <source>Secondary Subtitles</source>
-        <translation>Субтитры перевода</translation>
-    </message>
-    <message>
-        <source>Enable secondary-language subtitles</source>
-        <translation>Включить субтитры перевода</translation>
-    </message>
-    <message>
-        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
-        <translation>Добавляет второй выбор файла субтитров с собственным смещением на вкладку «Видео -&gt; Один». Строка этих субтитров отображается под строкой языка майнинга в предпросмотре Куратора слов, а также на карточке, если сопоставлено поле перевода (Карточки и Anki).</translation>
-    </message>
-    <message>
-        <source>Deduplication</source>
-        <translation>Дедупликация</translation>
-    </message>
-    <message>
-        <source>Deduplicate by Sentence</source>
-        <translation>Дедупликация по предложению</translation>
+        <source>One card per sentence</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
         <translation>Майнит не более одного слова на каждый пример предложения — первое найденное в этом предложении. Все остальные слова из него пропускаются.</translation>
+    </message>
+    <message>
+        <source>Only i+1 sentences (exactly one unknown word)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
+        <translation>Майнить только слова из предложений ровно с одним незнакомым словом (i+1); отменяет дедупликацию предложений.</translation>
     </message>
     <message>
         <source>Script Type</source>
@@ -5474,80 +5140,12 @@ No files on disk are deleted.</source>
         <translation>Пропускать слова, записанные полностью катаканой (например, コーヒー). Отметьте оба флажка, чтобы пропускать и слова, смешивающие обе слоговые азбуки (サボる, ヤバい).</translation>
     </message>
     <message>
-        <source>Treat Kana Spellings of Known Words as Known</source>
-        <translation>Считать кана-написания известных слов известными</translation>
-    </message>
-    <message>
-        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
-        <translation>Если субтитры записывают слово каной (например, うなずく), а словарная форма с иероглифами (頷く) уже есть в вашей коллекции или списке известных слов, слово будет пропущено вместо создания второй карточки. Написания с иероглифами таким образом никогда не объединяются.</translation>
-    </message>
-    <message>
-        <source>Script Variants</source>
-        <translation>Варианты письменности</translation>
-    </message>
-    <message>
-        <source>As written</source>
-        <translation>Как в источнике</translation>
-    </message>
-    <message>
-        <source>Simplified (简体)</source>
-        <translation>Упрощённое (简体)</translation>
-    </message>
-    <message>
-        <source>Traditional (繁體)</source>
-        <translation>Традиционное (繁體)</translation>
-    </message>
-    <message>
-        <source>Character Set</source>
-        <translation>Набор иероглифов</translation>
-    </message>
-    <message>
-        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
-        <translation>Какое написание предпочитают лицевая сторона карточки и поиск в словаре; «Как в источнике» сохраняет собственное написание источника.</translation>
-    </message>
-    <message>
-        <source>Regional Variety</source>
-        <translation>Региональный вариант языка</translation>
-    </message>
-    <message>
-        <source>Brazilian Portuguese</source>
-        <translation>Бразильский португальский</translation>
-    </message>
-    <message>
-        <source>European Portuguese</source>
-        <translation>Европейский португальский</translation>
-    </message>
-    <message>
-        <source>Variety</source>
-        <translation>Вариант языка</translation>
-    </message>
-    <message>
-        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
-        <translation>Определяет, каким голосом Google озвучиваются слова и предложения и какой список частотности предлагается при настройке.</translation>
-    </message>
-    <message>
-        <source>i+1 Sentence Filter</source>
-        <translation>Фильтр предложений i+1</translation>
-    </message>
-    <message>
-        <source>Only Mine i+1 Sentences</source>
-        <translation>Майнить только предложения i+1</translation>
-    </message>
-    <message>
-        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
-        <translation>Майнить только слова из предложений ровно с одним незнакомым словом (i+1); отменяет дедупликацию предложений.</translation>
-    </message>
-    <message>
         <source>Sentence Length</source>
         <translation>Длина предложения</translation>
     </message>
     <message>
-        <source>Enable Sentence Length Filter</source>
-        <translation>Включить фильтр длины предложения</translation>
-    </message>
-    <message>
-        <source>Drops words whose example sentence exceeds either cap below.</source>
-        <translation>Отбрасывает слова, у которых пример предложения превышает любой из пределов ниже.</translation>
+        <source>Set either limit above 0 to turn the filter on.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> s</source>
@@ -5570,18 +5168,6 @@ No files on disk are deleted.</source>
         <translation>Отбрасывает карточки, у которых текст предложения превышает указанное число символов. Установите 0, чтобы снять ограничение.</translation>
     </message>
     <message>
-        <source>Full Sentences</source>
-        <translation>Полные предложения</translation>
-    </message>
-    <message>
-        <source>Mine full sentences across subtitle lines</source>
-        <translation>Майнить полные предложения из нескольких строк субтитров</translation>
-    </message>
-    <message>
-        <source>Joins neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence instead of a fragment. Reading sources have no subtitle timings and ignore it.</source>
-        <translation>Объединяет соседние строки субтитров, если строка не заканчивает предложение, чтобы карточка содержала предложение целиком, а не фрагмент. Источники для чтения не имеют таймингов субтитров и игнорируют этот параметр.</translation>
-    </message>
-    <message>
         <source>Reading</source>
         <translation>Чтение</translation>
     </message>
@@ -5596,38 +5182,6 @@ No files on disk are deleted.</source>
     <message>
         <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
         <translation>Минимальное число раз, которое слово должно встретиться в книге или томе, чтобы быть добытым. 1 = без минимума (фильтр выключен).</translation>
-    </message>
-    <message>
-        <source>Card Order</source>
-        <translation>Порядок карточек</translation>
-    </message>
-    <message>
-        <source>Create cards in order of appearance</source>
-        <translation>Создавать карточки в порядке появления</translation>
-    </message>
-    <message>
-        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
-        <translation>Добавляет карточки в Anki в порядке появления слов в медиафайле, а не в порядке завершения извлечения их медиа. Переопределяет порядок принудительного включения белого списка и любую сортировку столбцов в Кураторе слов.</translation>
-    </message>
-    <message>
-        <source>Card Formatting</source>
-        <translation>Форматирование карточки</translation>
-    </message>
-    <message>
-        <source>Bold target word in sentence</source>
-        <translation>Выделять целевое слово в предложении жирным</translation>
-    </message>
-    <message>
-        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
-        <translation>Заключает намайненное слово в &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; в полях предложения. Совпадением считается точный фрагмент, который был намайнен, поэтому при повторе одинаковых словоформ в предложении жирным выделяется только действительно намайненное вхождение.</translation>
-    </message>
-    <message>
-        <source>Colour the reading by tone</source>
-        <translation>Раскрашивать чтение по тонам</translation>
-    </message>
-    <message>
-        <source>Colours each syllable of the reading by its tone.</source>
-        <translation>Раскрашивает каждый слог чтения в цвет его тона.</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -5880,6 +5434,14 @@ No files on disk are deleted.</source>
         <translation>Переместить вниз в списке источников карточки</translation>
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>word-based</source>
         <translation>на основе слов</translation>
     </message>
@@ -6056,10 +5618,6 @@ No index files are deleted.</source>
         <translation>Перейти на вкладку «Видео»</translation>
     </message>
     <message>
-        <source>Go to Deck Builder</source>
-        <translation>Перейти на вкладку «Конструктор колод»</translation>
-    </message>
-    <message>
         <source>Go to Audiobooks</source>
         <translation>Перейти на вкладку «Аудиокниги»</translation>
     </message>
@@ -6144,12 +5702,12 @@ No index files are deleted.</source>
         <translation>Слова, добавленные вами из Куратора слов. Игнорируются при каждом запуске и сохраняются при пересборке кеша.</translation>
     </message>
     <message>
-        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
-        <translation>Колоды, которые сканирование известных слов для этого языка пропускает: %1. Измените их в разделе Настройки → Фильтрация.</translation>
+        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
-        <translation>Для этого языка сканируются все колоды, включая колоды на другом языке с тем же типом письменности. Исключите их в разделе Настройки → Фильтрация.</translation>
+        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Word Filters.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Filter…</source>
@@ -6510,10 +6068,6 @@ Words to add: %3. Continue?</source>
         <translation>Видео</translation>
     </message>
     <message>
-        <source>Deck Builder</source>
-        <translation>Конструктор колод</translation>
-    </message>
-    <message>
         <source>Audiobooks</source>
         <translation>Аудиокниги</translation>
     </message>
@@ -6586,8 +6140,8 @@ Words to add: %3. Continue?</source>
         <translation>Основные вкладки</translation>
     </message>
     <message>
-        <source>Navigate between Video, Deck Builder, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
-        <translation>Переход между разделами «Видео», «Конструктор колоды», «Аудиокниги», «Чтение», «Аналитика», «Утилиты» и «Настройки»</translation>
+        <source>Navigate between Video, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Application Header</source>
@@ -6620,10 +6174,6 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Setup Wizard...</source>
         <translation>Мастер настройки...</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards...</source>
-        <translation>Изменить стиль намайненных карточек...</translation>
     </message>
     <message>
         <source>&amp;Help</source>
@@ -6940,6 +6490,10 @@ Continue?</source>
         <translation>Медиа карточек</translation>
     </message>
     <message>
+        <source>Sentence Audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Audio Format</source>
         <translation>Формат аудио</translation>
     </message>
@@ -6972,20 +6526,40 @@ Continue?</source>
         <translation>Дополнительное время до и после субтитров.</translation>
     </message>
     <message>
+        <source>Off</source>
+        <translation>Выкл.</translation>
+    </message>
+    <message>
+        <source>Google, then Papago</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Google only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Papago only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Spoken sentences for manga and books</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
+        <translation>Добавляет озвучку к карточкам из манги и книг, у которых нет исходного аудио. Текст предложения отправляется в выбранные онлайн-сервисы.</translation>
+    </message>
+    <message>
+        <source>Screenshot</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Screenshot Offset</source>
         <translation>Смещение скриншота</translation>
     </message>
     <message>
         <source>Measured from the subtitle start time.</source>
         <translation>Отсчитывается от времени начала субтитров.</translation>
-    </message>
-    <message>
-        <source>Max Parallel Workers</source>
-        <translation>Макс. параллельных обработчиков</translation>
-    </message>
-    <message>
-        <source>Higher = faster, but uses more CPU and memory.</source>
-        <translation>Выше = быстрее, но больше нагрузка на ЦП и память.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7020,32 +6594,28 @@ Continue?</source>
         <translation>Длительность клипа</translation>
     </message>
     <message>
-        <source>Frames per second for animated clips</source>
-        <translation>Кадров в секунду для анимированных клипов</translation>
+        <source>Small</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>FPS</source>
-        <translation>FPS</translation>
+        <source>Balanced</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source> px</source>
-        <translation> пикс.</translation>
+        <source>High</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Height</source>
-        <translation>Высота</translation>
+        <source>Frame rate, height and quality for the animated clip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Output height; aspect ratio preserved</source>
-        <translation>Высота вывода; пропорции сохраняются</translation>
+        <source>Size</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>0 = smallest file, 100 = best quality</source>
-        <translation>0 = наименьший файл, 100 = наилучшее качество</translation>
-    </message>
-    <message>
-        <source>Quality</source>
-        <translation>Качество</translation>
+        <source>Custom (%1 fps · %2 px · quality %3)</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiniJobMonitor</name>
@@ -7098,8 +6668,52 @@ Continue?</source>
         <translation>Язык</translation>
     </message>
     <message>
-        <source>Switching swaps dictionaries, filters, deck and card fields to that language's own settings. The interface language is separate (Settings → Appearance &amp; Language).</source>
-        <translation>Переключение заменяет словари, фильтры, колоду и поля карточек на настройки, свои для этого языка. Язык интерфейса отделён от этого (Настройки → Внешний вид и язык).</translation>
+        <source>Switching swaps dictionaries, filters, deck and card fields to that language's own settings. The interface language is separate (Settings → General).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Script Variants</source>
+        <translation>Варианты письменности</translation>
+    </message>
+    <message>
+        <source>As written</source>
+        <translation>Как в источнике</translation>
+    </message>
+    <message>
+        <source>Simplified (简体)</source>
+        <translation>Упрощённое (简体)</translation>
+    </message>
+    <message>
+        <source>Traditional (繁體)</source>
+        <translation>Традиционное (繁體)</translation>
+    </message>
+    <message>
+        <source>Character Set</source>
+        <translation>Набор иероглифов</translation>
+    </message>
+    <message>
+        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
+        <translation>Какое написание предпочитают лицевая сторона карточки и поиск в словаре; «Как в источнике» сохраняет собственное написание источника.</translation>
+    </message>
+    <message>
+        <source>Regional Variety</source>
+        <translation>Региональный вариант языка</translation>
+    </message>
+    <message>
+        <source>Brazilian Portuguese</source>
+        <translation>Бразильский португальский</translation>
+    </message>
+    <message>
+        <source>European Portuguese</source>
+        <translation>Европейский португальский</translation>
+    </message>
+    <message>
+        <source>Variety</source>
+        <translation>Вариант языка</translation>
+    </message>
+    <message>
+        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>Определяет, каким голосом Google озвучиваются слова и предложения и какой список частотности предлагается при настройке.</translation>
     </message>
     <message>
         <source>Download %1 pack</source>
@@ -7240,8 +6854,8 @@ Continue?</source>
         <translation>Манга</translation>
     </message>
     <message>
-        <source>mokuro not found. Install it in Settings → Transcription &amp; Alignment → Manga OCR, or set its path there.</source>
-        <translation>mokuro не найден. Установите его в разделе Настройки → Транскрипция и выравнивание → OCR манги либо укажите там его путь.</translation>
+        <source>mokuro not found. Install it in the Manga OCR setup section below, or set its path there.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
@@ -7254,6 +6868,34 @@ Continue?</source>
     <message>
         <source>A folder of page images (one volume), or a folder whose subfolders and .cbz/.zip files are volumes.</source>
         <translation>Папка с изображениями страниц (один том) либо папка, чьи подпапки и файлы .cbz/.zip являются томами.</translation>
+    </message>
+    <message>
+        <source>Manga OCR setup</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>mokuro executable:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional: path to the mokuro executable</source>
+        <translation>Необязательно: путь к исполняемому файлу mokuro</translation>
+    </message>
+    <message>
+        <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
+        <translation>Необязательно: собственный mokuro (pip/pipx). Оставьте пустым, чтобы использовать встроенную установку ниже или mokuro в PATH.</translation>
+    </message>
+    <message>
+        <source>Install mokuro</source>
+        <translation>Установить mokuro</translation>
+    </message>
+    <message>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <translation>Загружает mokuro и его OCR-движок в папку Anki Miner — около 1 ГБ, до 4 ГБ с поддержкой GPU NVIDIA.</translation>
+    </message>
+    <message>
+        <source>Not available on this platform</source>
+        <translation>Недоступно на этой платформе</translation>
     </message>
     <message>
         <source>Options</source>
@@ -7278,6 +6920,22 @@ Continue?</source>
     <message>
         <source>Run OCR</source>
         <translation>Запустить OCR</translation>
+    </message>
+    <message>
+        <source>Reinstall mokuro</source>
+        <translation>Переустановить mokuro</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Установлено</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Не установлено</translation>
+    </message>
+    <message>
+        <source>Installing…</source>
+        <translation>Установка…</translation>
     </message>
     <message>
         <source>No manga volumes found in this folder.</source>
@@ -7640,6 +7298,14 @@ Continue?</source>
         <translation>Переместить вниз (проверяется после строк выше)</translation>
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 entries</source>
         <translation>%1 записей</translation>
     </message>
@@ -7832,10 +7498,6 @@ No index files are deleted.</source>
     <message>
         <source>Zoom</source>
         <translation>Масштаб</translation>
-    </message>
-    <message>
-        <source>Text size</source>
-        <translation>Размер текста</translation>
     </message>
     <message>
         <source>Statistics database</source>
@@ -8156,10 +7818,6 @@ No index files are deleted.</source>
         <translation>Очередь нескольких сериалов</translation>
     </message>
     <message>
-        <source>Add Series</source>
-        <translation>Добавить сериал</translation>
-    </message>
-    <message>
         <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
         <translation>Майнить выбранные строки в порядке списка. Завершённая строка майнится заново, с нуля.</translation>
     </message>
@@ -8178,14 +7836,6 @@ No index files are deleted.</source>
     <message>
         <source>Remove all items from queue</source>
         <translation>Удалить все элементы из очереди</translation>
-    </message>
-    <message>
-        <source>Enter a name for series #%1:</source>
-        <translation>Введите название для сериала №%1:</translation>
-    </message>
-    <message>
-        <source>Series %1</source>
-        <translation>Сериал %1</translation>
     </message>
     <message>
         <source>Edit: %1</source>
@@ -9334,6 +8984,104 @@ No index files are deleted.</source>
         <translation>Не удалось разобрать это предложение.</translation>
     </message>
 </context><context>
+    <name>SentencesSettingsPanel</name>
+    <message>
+        <source>Sentences</source>
+        <translation>Предложения</translation>
+    </message>
+    <message>
+        <source>Subtitle Text Filtering</source>
+        <translation>Фильтрация текста субтитров</translation>
+    </message>
+    <message>
+        <source>Regex Filter</source>
+        <translation>Фильтр регулярных выражений</translation>
+    </message>
+    <message>
+        <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
+        <translation>Регулярное выражение Python, совпадения с которым в тексте субтитров удаляются (или заменяются) перед майнингом. Полезно для удаления имён говорящих, например (Танака), или описаний звуков, например [дверь]. Объединяйте варианты через |. Проверяйте шаблоны на https://regex101.com.</translation>
+    </message>
+    <message>
+        <source>(empty = delete match)</source>
+        <translation>(пусто = удалить совпадение)</translation>
+    </message>
+    <message>
+        <source>Replacement</source>
+        <translation>Замена</translation>
+    </message>
+    <message>
+        <source>Inserted in place of each match (empty deletes it). Use Python backreferences \1 \2, not asbplayer's $1 $2.</source>
+        <translation>Подставляется вместо каждого совпадения (пустое значение удаляет его). Используйте обратные ссылки Python \1 \2, а не $1 $2, как в asbplayer.</translation>
+    </message>
+    <message>
+        <source>Enable Subtitle Regex Filter</source>
+        <translation>Включить фильтр регулярных выражений для субтитров</translation>
+    </message>
+    <message>
+        <source>Parens (Tanaka)</source>
+        <translation>Скобки (Танака)</translation>
+    </message>
+    <message>
+        <source>Brackets [SFX]</source>
+        <translation>Квадратные скобки [SFX]</translation>
+    </message>
+    <message>
+        <source>Music ♪♬</source>
+        <translation>Музыка ♪♬</translation>
+    </message>
+    <message>
+        <source>Speaker: prefix</source>
+        <translation>Префикс «Говорящий:»</translation>
+    </message>
+    <message>
+        <source>Dialogue dash</source>
+        <translation>Диалоговое тире</translation>
+    </message>
+    <message>
+        <source>Presets</source>
+        <translation>Предустановки</translation>
+    </message>
+    <message>
+        <source>Click to append a built-in pattern to the regex field above.</source>
+        <translation>Нажмите, чтобы добавить встроенный шаблон в поле регулярного выражения выше.</translation>
+    </message>
+    <message>
+        <source>Secondary Subtitles</source>
+        <translation>Субтитры перевода</translation>
+    </message>
+    <message>
+        <source>Enable secondary-language subtitles</source>
+        <translation>Включить субтитры перевода</translation>
+    </message>
+    <message>
+        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
+        <translation>Добавляет второй выбор файла субтитров с собственным смещением на вкладку «Видео -&gt; Один». Строка этих субтитров отображается под строкой языка майнинга в предпросмотре Куратора слов, а также на карточке, если сопоставлено поле перевода (Карточки и Anki).</translation>
+    </message>
+    <message>
+        <source>Full Sentences</source>
+        <translation>Полные предложения</translation>
+    </message>
+    <message>
+        <source>Mine full sentences across subtitle lines</source>
+        <translation>Майнить полные предложения из нескольких строк субтитров</translation>
+    </message>
+    <message>
+        <source>Joins neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence instead of a fragment. Reading sources have no subtitle timings and ignore it.</source>
+        <translation>Объединяет соседние строки субтитров, если строка не заканчивает предложение, чтобы карточка содержала предложение целиком, а не фрагмент. Источники для чтения не имеют таймингов субтитров и игнорируют этот параметр.</translation>
+    </message>
+    <message>
+        <source>Card Formatting</source>
+        <translation>Форматирование карточки</translation>
+    </message>
+    <message>
+        <source>Bold target word in sentence</source>
+        <translation>Выделять целевое слово в предложении жирным</translation>
+    </message>
+    <message>
+        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
+        <translation>Заключает намайненное слово в &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; в полях предложения. Совпадением считается точный фрагмент, который был намайнен, поэтому при повторе одинаковых словоформ в предложении жирным выделяется только действительно намайненное вхождение.</translation>
+    </message>
+</context><context>
     <name>ServiceFactory</name>
     <message>
         <source>Couldn't scan dictionaries folder: %1</source>
@@ -9420,14 +9168,6 @@ No index files are deleted.</source>
 </context><context>
     <name>SettingsTab</name>
     <message>
-        <source>Check for updates on startup</source>
-        <translation>Проверять обновления при запуске</translation>
-    </message>
-    <message>
-        <source>When enabled, Anki Miner queries GitHub for new releases on launch.</source>
-        <translation>Если включено, Anki Miner запрашивает GitHub о новых релизах при запуске.</translation>
-    </message>
-    <message>
         <source>Reset to Defaults…</source>
         <translation>Сбросить настройки по умолчанию…</translation>
     </message>
@@ -9480,8 +9220,8 @@ No index files are deleted.</source>
         <translation>Словари</translation>
     </message>
     <message>
-        <source>Audio</source>
-        <translation>Аудио</translation>
+        <source>Word Audio</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Frequency</source>
@@ -9500,8 +9240,12 @@ No index files are deleted.</source>
         <translation>Язык майнинга</translation>
     </message>
     <message>
-        <source>Filtering</source>
-        <translation>Фильтрация</translation>
+        <source>Word Filters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentences</source>
+        <translation>Предложения</translation>
     </message>
     <message>
         <source>Integrations</source>
@@ -9520,8 +9264,8 @@ No index files are deleted.</source>
         <translation>Приложение</translation>
     </message>
     <message>
-        <source>Appearance &amp; Language</source>
-        <translation>Внешний вид и язык</translation>
+        <source>General</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Keyboard</source>
@@ -9588,16 +9332,8 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
         <translation>Загрузка…</translation>
     </message>
     <message>
-        <source>Installing…</source>
-        <translation>Установка…</translation>
-    </message>
-    <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
         <translation>Не удалось обновить yt-dlp. Проверьте подключение и попробуйте снова.</translation>
-    </message>
-    <message>
-        <source>Settings</source>
-        <translation>Настройки</translation>
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>
@@ -9608,8 +9344,8 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
         <translation>файл cookie (YouTube)</translation>
     </message>
     <message>
-        <source>subtitle regex (Filtering)</source>
-        <translation>регулярное выражение субтитров (Фильтрация)</translation>
+        <source>subtitle regex (Sentences)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>⚠ Saved — kept previous: %1</source>
@@ -9892,8 +9628,8 @@ Your installed resources and your theme are kept.</source>
         <translation>Этот файл субтитров больше не существует.</translation>
     </message>
     <message>
-        <source>No subtitle lines to preview — check the filter in Settings → Filtering.</source>
-        <translation>Нет строк субтитров для предпросмотра — проверьте фильтр в разделе Настройки → Фильтрация.</translation>
+        <source>No subtitle lines to preview — check the filter in Settings → Sentences.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
@@ -10704,22 +10440,6 @@ Your installed resources and your theme are kept.</source>
         <translation>Авто использует GPU, если он доступен, иначе CPU. Для каждого варианта GPU нужна собственная загрузка ниже.</translation>
     </message>
     <message>
-        <source>Download model</source>
-        <translation>Загрузить модель</translation>
-    </message>
-    <message>
-        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
-        <translation>Загрузить веса выбранной модели Whisper в папку моделей ASR приложения Anki Miner. Требуется перед запуском генерации субтитров.</translation>
-    </message>
-    <message>
-        <source>Model download</source>
-        <translation>Загрузка модели</translation>
-    </message>
-    <message>
-        <source>Transcription add-ons (optional)</source>
-        <translation>Дополнения для транскрипции (необязательно)</translation>
-    </message>
-    <message>
         <source>Download GPU acceleration</source>
         <translation>Загрузить GPU-ускорение</translation>
     </message>
@@ -10736,6 +10456,34 @@ Your installed resources and your theme are kept.</source>
         <translation>Более быстрая транскрипция на видеокартах NVIDIA (CUDA).</translation>
     </message>
     <message>
+        <source>Download Vulkan model</source>
+        <translation>Скачать модель Vulkan</translation>
+    </message>
+    <message>
+        <source>Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards.</source>
+        <translation>Скачать модель whisper.cpp ggml и Silero VAD в папку Anki Miner. Требуется для транскрипции на GPU (Vulkan) на видеокартах AMD/Intel/NVIDIA.</translation>
+    </message>
+    <message>
+        <source>Vulkan model</source>
+        <translation>Модель Vulkan</translation>
+    </message>
+    <message>
+        <source>Download model</source>
+        <translation>Загрузить модель</translation>
+    </message>
+    <message>
+        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
+        <translation>Загрузить веса выбранной модели Whisper в папку моделей ASR приложения Anki Miner. Требуется перед запуском генерации субтитров.</translation>
+    </message>
+    <message>
+        <source>Model download</source>
+        <translation>Загрузка модели</translation>
+    </message>
+    <message>
+        <source>Transcription add-ons (optional)</source>
+        <translation>Дополнения для транскрипции (необязательно)</translation>
+    </message>
+    <message>
         <source>Download silence removal</source>
         <translation>Загрузить удаление тишины</translation>
     </message>
@@ -10750,18 +10498,6 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Skips music and silence so they are not transcribed as garbage.</source>
         <translation>Пропускает музыку и тишину, чтобы они не транскрибировались как мусор.</translation>
-    </message>
-    <message>
-        <source>Download Vulkan model</source>
-        <translation>Скачать модель Vulkan</translation>
-    </message>
-    <message>
-        <source>Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards.</source>
-        <translation>Скачать модель whisper.cpp ggml и Silero VAD в папку Anki Miner. Требуется для транскрипции на GPU (Vulkan) на видеокартах AMD/Intel/NVIDIA.</translation>
-    </message>
-    <message>
-        <source>Vulkan model</source>
-        <translation>Модель Vulkan</translation>
     </message>
     <message>
         <source>Alignment</source>
@@ -10796,38 +10532,6 @@ Your installed resources and your theme are kept.</source>
         <translation>Бинарный файл alass для macOS не публикуется. Установите его через Homebrew:</translation>
     </message>
     <message>
-        <source>Manga OCR</source>
-        <translation>OCR манги</translation>
-    </message>
-    <message>
-        <source>Optional: path to the mokuro executable</source>
-        <translation>Необязательно: путь к исполняемому файлу mokuro</translation>
-    </message>
-    <message>
-        <source>mokuro executable</source>
-        <translation>Исполняемый файл mokuro</translation>
-    </message>
-    <message>
-        <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
-        <translation>Необязательно: собственный mokuro (pip/pipx). Оставьте пустым, чтобы использовать встроенную установку ниже или mokuro в PATH.</translation>
-    </message>
-    <message>
-        <source>Install mokuro</source>
-        <translation>Установить mokuro</translation>
-    </message>
-    <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
-        <translation>Загружает mokuro и его OCR-движок в папку Anki Miner — около 1 ГБ, до 4 ГБ с поддержкой GPU NVIDIA.</translation>
-    </message>
-    <message>
-        <source>mokuro install</source>
-        <translation>Установка mokuro</translation>
-    </message>
-    <message>
-        <source>Not available on this platform</source>
-        <translation>Недоступно на этой платформе</translation>
-    </message>
-    <message>
         <source>Subtitle generation needs the faster-whisper engine. Install it with:</source>
         <translation>Для генерации субтитров нужен движок faster-whisper. Установите его командой:</translation>
     </message>
@@ -10842,10 +10546,6 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Not installed</source>
         <translation>Не установлено</translation>
-    </message>
-    <message>
-        <source>Reinstall mokuro</source>
-        <translation>Переустановить mokuro</translation>
     </message>
     <message>
         <source>GPU acceleration is not available on this platform.</source>
@@ -11034,6 +10734,10 @@ Your installed resources and your theme are kept.</source>
 </context><context>
     <name>UISettingsPanel</name>
     <message>
+        <source>Language</source>
+        <translation>Язык</translation>
+    </message>
+    <message>
         <source>Interface language</source>
         <translation>Язык интерфейса</translation>
     </message>
@@ -11042,8 +10746,12 @@ Your installed resources and your theme are kept.</source>
         <translation>Перезапустите, чтобы применить.</translation>
     </message>
     <message>
-        <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
-        <translation>Масштабировать весь интерфейс — текст, отступы и элементы управления. Применяется после перезапуска.</translation>
+        <source>Appearance</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Scale the entire interface, including text size and font, plus spacing and controls. Applies after restart.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Zoom</source>
@@ -11054,36 +10762,12 @@ Your installed resources and your theme are kept.</source>
         <translation>%1%</translation>
     </message>
     <message>
-        <source>Scale all UI text. Applies after restart.</source>
-        <translation>Масштабировать весь текст интерфейса. Применяется после перезапуска.</translation>
-    </message>
-    <message>
-        <source>Text size</source>
-        <translation>Размер текста</translation>
-    </message>
-    <message>
         <source>Restart now</source>
         <translation>Перезапустить сейчас</translation>
     </message>
     <message>
         <source>Later</source>
         <translation>Позже</translation>
-    </message>
-    <message>
-        <source>Use system file dialogs</source>
-        <translation>Использовать системные диалоги выбора файлов</translation>
-    </message>
-    <message>
-        <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
-        <translation>Использовать системные диалоги выбора файлов. Выключите, чтобы использовать встроенный диалог приложения, который следует теме приложения и выглядит одинаково на всех платформах.</translation>
-    </message>
-    <message>
-        <source>Utilities tab</source>
-        <translation>Вкладка «Утилиты»</translation>
-    </message>
-    <message>
-        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
-        <translation>Выберите, какие инструменты показывает вкладка «Утилиты». Хотя бы один остаётся.</translation>
     </message>
     <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
@@ -11100,6 +10784,34 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Восстановить тему, которая была активна при открытии этой вкладки.</translation>
+    </message>
+    <message>
+        <source>Utilities tab</source>
+        <translation>Вкладка «Утилиты»</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Выберите, какие инструменты показывает вкладка «Утилиты». Хотя бы один остаётся.</translation>
+    </message>
+    <message>
+        <source>App</source>
+        <translation>Приложение</translation>
+    </message>
+    <message>
+        <source>Check for updates on startup</source>
+        <translation>Проверять обновления при запуске</translation>
+    </message>
+    <message>
+        <source>When enabled, Anki Miner queries GitHub for new releases on launch.</source>
+        <translation>Если включено, Anki Miner запрашивает GitHub о новых релизах при запуске.</translation>
+    </message>
+    <message>
+        <source>Higher = faster, but uses more CPU and memory.</source>
+        <translation>Выше = быстрее, но больше нагрузка на ЦП и память.</translation>
+    </message>
+    <message>
+        <source>Max Parallel Workers</source>
+        <translation>Макс. параллельных обработчиков</translation>
     </message>
     <message>
         <source>button labels %1:1</source>

@@ -1,4 +1,4 @@
-"""Settings -> Audio labels the Edge read-aloud leg and offers it only for a language with a voice."""
+"""Settings -> Word Audio labels the Edge read-aloud leg and offers it only for a language with a voice."""
 
 from __future__ import annotations
 

@@ -174,8 +174,7 @@ class CancellableWorker(QThread):
                 the user abandoned the run and does not need a dialog for it.
                 Pass False where the terminal signal drives UI state that would
                 otherwise hang, so a genuine failure still surfaces after a
-                cancel (ImportWorker, DeckBuilderWorker). The log record is
-                written either way.
+                cancel (ImportWorker). The log record is written either way.
         """
         # Per-instance logger so records keep the subclass's own module name
         # rather than collapsing onto base_worker.
@@ -220,21 +219,17 @@ class ProcessorOwningWorker(CancellableWorker):
     def _validate_processor_xor_factory(
         processor: EpisodeProcessor | None,
         processor_factory: Callable[[], EpisodeProcessor] | None,
-        *,
-        param_name: str = "processor",
     ) -> None:
         """Enforce the exactly-one-of processor/factory constructor contract.
 
-        Shared by all processor-owning workers (episode, manual, and the three
-        sequential queue workers): either a pre-built processor or a
+        Shared by every processor-owning worker (episode, batch queue, and the
+        three sequential queue workers): either a pre-built processor or a
         ``processor_factory`` is supplied, never both and never neither.
-        ``param_name`` names the processor parameter in the message so
-        :class:`ManualPairWorkerThread` keeps its ``episode_processor`` wording.
         """
         if processor is not None and processor_factory is not None:
-            raise ValueError(f"Provide either {param_name} or processor_factory, not both")
+            raise ValueError("Provide either processor or processor_factory, not both")
         if processor is None and processor_factory is None:
-            raise ValueError(f"Either {param_name} or processor_factory must be provided")
+            raise ValueError("Either processor or processor_factory must be provided")
 
     @property
     def curation_processor(self) -> EpisodeProcessor | None:

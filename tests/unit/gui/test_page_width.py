@@ -5,11 +5,12 @@ whole width, and a form became one enormous sparse column. So content stops at
 a column and the rest of the monitor becomes gutters.
 
 There is **one** column measure for every screen. There used to be two -- a
-narrow form class and a wide data class -- plus Deck Builder, capped by
-neither, running the full window as an unofficial third. Moving between
-sibling tabs therefore jumped the content edge by ~550px, which reads as three
-unrelated apps rather than one. Keeping a form input readable inside that one
-wide column is a separate job, done a level down by ``form_row_cap``.
+narrow form class and a wide data class -- plus one screen that built its own
+uncapped scroll area, capped by neither, running the full window as an
+unofficial third. Moving between sibling tabs therefore jumped the content
+edge by ~550px, which reads as three unrelated apps rather than one. Keeping
+a form input readable inside that one wide column is a separate job, done a
+level down by ``form_row_cap``.
 
 Both caps are character counts rendered through the live font, not pixel
 literals, so they track the UI text scale exactly the way ``apply_button_size``
@@ -44,7 +45,6 @@ from anki_miner.gui.widgets.base.sizing import (
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.booksync_tab import BookSyncTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
-from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.gui.widgets.enhanced import FileSelector
@@ -63,9 +63,7 @@ from anki_miner.gui.widgets.youtube_tab import YouTubeTab
 VIEWPORT_WIDTHS = (1024, 1920, 2560, 3440)
 
 #: Every scrolled page in the app. They all declare the same measure -- that is
-#: the point -- so this is a list, not a map of classes to classes. Deck Builder
-#: is in it: it used to build its own uncapped scroll area and was the third
-#: width the user was seeing.
+#: the point -- so this is a list, not a map of classes to classes.
 PAGES = (
     SingleEpisodeTab,
     ReadingMangaTab,
@@ -82,7 +80,6 @@ PAGES = (
     AnalyticsTab,
     CardBackfillTab,
     DeckFilterTab,
-    DeckBuilderTab,
     DownloadTab,
     MokuroTab,
     BookSyncTab,
@@ -110,7 +107,6 @@ def _build_page(name: str, config):
         "AnalyticsTab": lambda: AnalyticsTab(MagicMock()),
         "CardBackfillTab": lambda: CardBackfillTab(config),
         "DeckFilterTab": lambda: DeckFilterTab(config),
-        "DeckBuilderTab": lambda: DeckBuilderTab(config, MagicMock(), MagicMock()),
         "DownloadTab": lambda: DownloadTab(config, suppress_optional_startup=True),
         "MokuroTab": lambda: MokuroTab(config, suppress_optional_startup=True),
         "BookSyncTab": lambda: BookSyncTab(config, suppress_optional_startup=True),

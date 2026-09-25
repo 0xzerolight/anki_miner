@@ -1458,62 +1458,6 @@ def test_add_source_dialog_custom_also_needs_url(qapp, qtbot):
     assert dialog.url_value() == "http://h/?t={term}"
 
 
-# ---------------------------------------------------------------------------
-# Sentence TTS (reading sources) controls
-# ---------------------------------------------------------------------------
-
-
-class TestReadingTtsControls:
-    def _panel(self, qtbot, tmp_path) -> AudioPackSettingsPanel:
-        panel = AudioPackSettingsPanel(tmp_path)
-        qtbot.addWidget(panel)
-        return panel
-
-    def test_set_get_round_trip(self, qapp, qtbot, tmp_path):
-        panel = self._panel(qtbot, tmp_path)
-        panel.set_reading_tts(True, False, True)
-        assert panel.get_reading_tts() == (True, False, True)
-        panel.set_reading_tts(False, True, False)
-        assert panel.get_reading_tts() == (False, True, False)
-
-    def test_set_reading_tts_emits_no_signal(self, qapp, qtbot, tmp_path):
-        """Loading config values must not trigger a persist round-trip."""
-        panel = self._panel(qtbot, tmp_path)
-        emissions = []
-        panel.reading_tts_changed.connect(lambda: emissions.append(True))
-        panel.set_reading_tts(True, True, False)
-        assert emissions == []
-
-    def test_master_toggle_emits_once_and_greys_providers(self, qapp, qtbot, tmp_path):
-        panel = self._panel(qtbot, tmp_path)
-        panel.set_reading_tts(False, True, True)
-        assert not panel._reading_tts_google.isEnabled()
-        assert not panel._reading_tts_papago.isEnabled()
-
-        emissions = []
-        panel.reading_tts_changed.connect(lambda: emissions.append(True))
-        panel._reading_tts_checkbox.setChecked(True)
-
-        assert emissions == [True]
-        assert panel._reading_tts_google.isEnabled()
-        assert panel._reading_tts_papago.isEnabled()
-
-    def test_provider_toggle_preserves_sibling(self, qapp, qtbot, tmp_path):
-        panel = self._panel(qtbot, tmp_path)
-        panel.set_reading_tts(True, True, True)
-        panel._reading_tts_google.setChecked(False)
-        assert panel.get_reading_tts() == (True, False, True)
-
-    def test_hint_visible_only_when_master_on_and_both_providers_off(self, qapp, qtbot, tmp_path):
-        panel = self._panel(qtbot, tmp_path)
-        panel.set_reading_tts(True, False, False)
-        assert panel._reading_tts_hint.isVisibleTo(panel)
-        panel.set_reading_tts(True, True, False)
-        assert not panel._reading_tts_hint.isVisibleTo(panel)
-        panel.set_reading_tts(False, False, False)
-        assert not panel._reading_tts_hint.isVisibleTo(panel)
-
-
 class TestAddSourceDialogImeSafety:
     """D49 — the URL template is a text field, so Return must not confirm."""
 
@@ -1619,6 +1563,6 @@ def test_reimport_all_button_emits_its_request(qapp, qtbot, tmp_path):
     fired: list[int] = []
     panel.reimport_all_requested.connect(lambda: fired.append(1))
 
-    panel._reimport_btn.click()
+    panel._reimport_btn.trigger()
 
     assert fired == [1]

@@ -12,7 +12,7 @@ from dataclasses import fields
 from pathlib import Path
 from typing import Any, ClassVar
 
-from anki_miner.config import AnkiMinerConfig, create_default_config
+from anki_miner.config import ZOOM_PRESETS, AnkiMinerConfig, create_default_config
 from anki_miner.config.paths import ANKI_MINER_HOME
 from anki_miner.services.startup_store_recovery import backup_config_repair_is_safe
 from anki_miner.utils.atomic_io import atomic_write_path
@@ -122,14 +122,9 @@ class GUIConfigManager:
     # that absent keys keep current values, so such a rule would silently disable
     # the updater on every settings import that omits the key.
     #
-    # Version 4 flips use_native_file_dialogs on once. The dataclass default is
-    # now True, but that alone reaches only installs with no config file:
-    # _config_to_serializable_dict writes every field, so every existing
-    # gui_config.json already carries an explicit False that a load preserves.
-    # Both halves are needed, exactly like version 3 — the load shim below AND
-    # the present-key-gated shim in import_config, without which importing any
-    # pre-flip export silently reverts the user (the field is portable; it is
-    # not in machine_specific_fields).
+    # Version 4 flipped the (since-removed) native-file-dialogs setting on once;
+    # that shim is gone along with the field, but the marker stays at 4 — no
+    # migration currently gates on version 5.
     CONFIG_SCHEMA_VERSION = 4
 
     @classmethod
@@ -355,7 +350,6 @@ class GUIConfigManager:
             config_dict,
             seed_wordsets=True,
             disable_legacy_ytdlp_update=True,
-            enable_native_file_dialogs=True,
             seed_first_run_flags=True,
         )
         return AnkiMinerConfig(**cls._decode_field_types(migrated))
@@ -417,7 +411,6 @@ class GUIConfigManager:
         backfill_anki_fields: bool = True,
         seed_wordsets: bool = False,
         disable_legacy_ytdlp_update: bool = False,
-        enable_native_file_dialogs: bool = False,
         seed_first_run_flags: bool = False,
     ) -> dict[str, Any]:
         """Run the full pre-construction migration pipeline on a raw JSON dict.
@@ -440,9 +433,6 @@ class GUIConfigManager:
             disable_legacy_ytdlp_update: When True, force the updater off for
                 configs written under schema < 3. Used for loads; schema 3+
                 preserves an explicit opt-in.
-            enable_native_file_dialogs: When True, force native file pickers on
-                for configs written under schema < 4. Used for loads; schema 4+
-                preserves an explicit opt-out.
             seed_first_run_flags: When True (LOAD path only), mark first-run
                 flows done when their keys are absent from an existing config.
                 Explicit stored values are preserved.
@@ -508,14 +498,6 @@ class GUIConfigManager:
             config_dict["auto_update_ytdlp"] = False
             shims.append("disable_legacy_ytdlp_update")
 
-        # Pre-v4 files serialized the old Qt-only picker choice, which existed
-        # only because the blocking native call could freeze the GUI thread
-        # (Issue #100). The pickers are non-blocking now, so turn native back on
-        # once; after a v4 save, a deliberate user opt-out remains False.
-        if enable_native_file_dialogs and schema_version < 4:
-            config_dict["use_native_file_dialogs"] = True
-            shims.append("enable_native_file_dialogs")
-
         # Existing installs predate both first-run flows. Offer them only on a
         # genuinely fresh install; preserve explicit False so an interrupted or
         # deliberately re-enabled flow remains pending.
@@ -540,6 +522,11 @@ class GUIConfigManager:
         config_dict.pop("active_profile_id", None)
         config_dict.pop("profile_name", None)
 
+        # Translate fields a later version removed into the fields that
+        # replaced them, before the unknown-key drop below discards the old
+        # key outright.
+        cls._fold_removed_fields(config_dict, shims)
+
         # Drop keys not in the current dataclass (e.g., removed fields from old
         # versions). Without this filter, AnkiMinerConfig(**config_dict) raises
         # TypeError and the except below would silently reset the entire user
@@ -562,6 +549,30 @@ class GUIConfigManager:
                 dropped_keys=capped(sorted(dropped), 20),
             )
         return {k: v for k, v in config_dict.items() if k in valid_keys}
+
+    @staticmethod
+    def _fold_removed_fields(config_dict: dict[str, Any], shims: list[str]) -> None:
+        """Translate fields this version removed into the ones that replaced them.
+
+        Gated on the removed key being present with its exact old type. No writer
+        since the removal emits it, so presence alone proves the old semantics —
+        including markerless raw imports, which carry no schema version.
+        """
+        if config_dict.get("use_sentence_length_filter") is False:
+            config_dict["max_sentence_duration_seconds"] = 0.0
+            config_dict["max_sentence_chars"] = 0
+            shims.append("fold_sentence_length_toggle")
+
+        font = config_dict.get("ui_font_scale")
+        if (
+            isinstance(font, (int, float))
+            and not isinstance(font, bool)
+            and font != 1.0
+            and config_dict.get("ui_zoom", 1.0) == 1.0
+        ):
+            presets = tuple(p / 100 for p in ZOOM_PRESETS)
+            config_dict["ui_zoom"] = min(presets, key=lambda p: (abs(p - font), p))
+            shims.append("fold_text_size_into_zoom")
 
     @classmethod
     def load_config(cls) -> AnkiMinerConfig:
@@ -784,13 +795,6 @@ class GUIConfigManager:
             if source_schema < 3 and isinstance(data.get("auto_update_ytdlp"), bool):
                 incoming["auto_update_ytdlp"] = False
                 legacy_ytdlp_forced = True
-            # The field is portable (not machine-specific), so without this a
-            # pre-v4 export would write its Qt-only picker choice straight back
-            # and silently undo the schema-4 load migration. No user notice:
-            # unlike the yt-dlp updater this is a visible, one-click-reversible
-            # UI preference, not a change in network behaviour.
-            if source_schema < 4 and isinstance(data.get("use_native_file_dialogs"), bool):
-                incoming["use_native_file_dialogs"] = True
         excluded = cls.machine_specific_fields()
         incoming = {k: v for k, v in incoming.items() if k not in excluded}
 

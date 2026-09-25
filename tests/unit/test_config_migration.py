@@ -707,3 +707,110 @@ def test_migrate_pitch_chain_absent_falls_through_to_default(tmp_config: Path):
     assert "pitch_chain" not in data
     data = GUIConfigManager._migrate_pitch_chain({"pitch_chain": "garbage"})
     assert "pitch_chain" not in data
+
+
+def test_removed_native_dialog_key_is_dropped(tmp_path):
+    path = tmp_path / "gui_config.json"
+    path.write_text(json.dumps({"config_schema_version": 4, "use_native_file_dialogs": False}))
+    config = GUIConfigManager._parse_and_migrate(path)
+    assert not hasattr(config, "use_native_file_dialogs")
+
+
+_REMOVED_DECK_BUILDER_KEYS = (
+    "deck_builder_mode",
+    "deck_builder_top_n",
+    "deck_builder_coverage_pct",
+    "deck_builder_skip_known",
+)
+
+
+def test_removed_deck_builder_keys_are_dropped(tmp_config: Path):
+    """The Deck Builder tab is gone; its four run-option keys must not survive
+    a load, and a subsequent save must not re-emit them (unknown-key drop is
+    permanent, not just skipped on this one read)."""
+    tmp_config.write_text(
+        json.dumps(
+            {
+                "config_schema_version": 4,
+                "deck_builder_mode": "coverage_pct",
+                "deck_builder_top_n": 250,
+                "deck_builder_coverage_pct": 98.5,
+                "deck_builder_skip_known": False,
+            }
+        )
+    )
+
+    config = GUIConfigManager._parse_and_migrate(tmp_config)
+    for name in _REMOVED_DECK_BUILDER_KEYS:
+        assert not hasattr(config, name)
+
+    GUIConfigManager.save_config(config)
+    raw = json.loads(tmp_config.read_text())
+    for name in _REMOVED_DECK_BUILDER_KEYS:
+        assert name not in raw
+
+    reloaded = GUIConfigManager.load_config()
+    for name in _REMOVED_DECK_BUILDER_KEYS:
+        assert not hasattr(reloaded, name)
+
+
+LEGACY = {"max_sentence_duration_seconds": 30.0, "max_sentence_chars": 80}
+
+
+@pytest.mark.parametrize("toggle, expected", [(False, (0.0, 0)), (True, (30.0, 80))])
+def test_sentence_length_toggle_folds_on_load(tmp_path, toggle, expected):
+    path = tmp_path / "gui_config.json"
+    path.write_text(json.dumps({"config_schema_version": 4, "use_sentence_length_filter": toggle, **LEGACY}))
+    config = GUIConfigManager._parse_and_migrate(path)
+    assert (config.max_sentence_duration_seconds, config.max_sentence_chars) == expected
+
+
+@pytest.mark.parametrize("marker", [{"config_schema_version": 4}, {}])  # {} = markerless raw config (Review Focus 1)
+@pytest.mark.parametrize("toggle, expected", [(False, (0.0, 0)), (True, (30.0, 80))])
+def test_sentence_length_toggle_folds_on_import(tmp_path, marker, toggle, expected):
+    path = tmp_path / "import.json"
+    path.write_text(json.dumps({**marker, "use_sentence_length_filter": toggle, **LEGACY}))
+    result = GUIConfigManager.import_config(path, create_default_config()).config
+    assert (result.max_sentence_duration_seconds, result.max_sentence_chars) == expected
+
+
+def test_caps_without_the_legacy_key_are_kept(tmp_path):
+    path = tmp_path / "gui_config.json"
+    path.write_text(json.dumps({"config_schema_version": 4, **LEGACY}))
+    config = GUIConfigManager._parse_and_migrate(path)
+    assert (config.max_sentence_duration_seconds, config.max_sentence_chars) == (30.0, 80)
+
+
+@pytest.mark.parametrize(
+    "font, zoom, expected",
+    [(1.5, 1.0, 1.5), (1.3, 1.0, 1.25), (0.5, 1.0, 0.75), (1.5, 1.25, 1.25), (1.0, 1.0, 1.0)],
+)
+def test_text_size_folds_into_zoom_on_load(tmp_path, font, zoom, expected):
+    path = tmp_path / "gui_config.json"
+    path.write_text(json.dumps({"config_schema_version": 4, "ui_font_scale": font, "ui_zoom": zoom}))
+    assert GUIConfigManager._parse_and_migrate(path).ui_zoom == expected
+
+
+@pytest.mark.parametrize("marker", [{"config_schema_version": 4}, {}])  # {} = markerless raw config (Review Focus 1)
+@pytest.mark.parametrize(
+    "font, zoom, expected",
+    [(1.5, 1.0, 1.5), (1.3, 1.0, 1.25), (0.5, 1.0, 0.75), (1.5, 1.25, 1.25), (1.0, 1.0, 1.0)],
+)
+def test_text_size_folds_into_zoom_on_import(tmp_path, marker, font, zoom, expected):
+    path = tmp_path / "import.json"
+    path.write_text(json.dumps({**marker, "ui_font_scale": font, "ui_zoom": zoom}))
+    result = GUIConfigManager.import_config(path, create_default_config()).config
+    assert result.ui_zoom == expected
+
+
+def test_removed_font_scale_key_is_dropped(tmp_config: Path):
+    tmp_config.write_text(json.dumps({"config_schema_version": 4, "ui_font_scale": 1.5, "anki_deck_name": "Kept Deck"}))
+
+    config = GUIConfigManager._parse_and_migrate(tmp_config)
+
+    # The file was not rejected wholesale over the unknown key.
+    assert config.anki_deck_name == "Kept Deck"
+    # And the drop is durable: a re-save never re-emits the removed key.
+    GUIConfigManager.save_config(config)
+    resaved = json.loads(tmp_config.read_text(encoding="utf-8"))
+    assert "ui_font_scale" not in resaved

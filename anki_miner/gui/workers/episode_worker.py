@@ -29,7 +29,7 @@ class EpisodeWorkerThread(ProcessorOwningWorker):
     supply a ``processor_factory`` and leave ``processor=None``.  When a factory
     is given the processor is built at the START of ``run()`` on the worker thread,
     so the GUI thread is never blocked by the registry scan / sqlite opens / CSV
-    parses that happen during construction (mirrors the DeckBuilder precedent).
+    parses that happen during construction (the same pattern the queue workers use).
     A factory that raises surfaces on the existing ``error`` signal.
     """
 

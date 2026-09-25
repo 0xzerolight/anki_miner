@@ -1208,11 +1208,11 @@ class TestCheckMokuro:
             ok, message = service._check_mokuro()
         assert ok is True and "mokuro" in message and "[" in message
 
-    def test_missing_is_a_warning_with_the_settings_route(self, test_config, monkeypatch):
+    def test_missing_is_a_warning_with_the_manga_ocr_route(self, test_config, monkeypatch):
         service = ValidationService(test_config)
         monkeypatch.setattr("anki_miner.services.validation_service.mokuro_available", lambda loc, root: False)
         ok, message = service._check_mokuro()
-        assert ok is False and "Manga OCR" in message and "Settings" in message
+        assert ok is False and "Manga OCR" in message and "Settings" not in message
 
     def test_validate_setup_records_component_and_version(self, test_config, monkeypatch):
         """Same per-check stubbing as TestValidateSetup (test_validation_service.py:~530)."""
@@ -1640,7 +1640,7 @@ class TestOptionalIndexedResourceChecks:
 
         assert ok is False
         assert "JPDB" in message
-        assert "Settings → Frequency → Reimport All" in message
+        assert "Settings → Frequency → More → Reimport All" in message
 
     def test_empty_source_warns(self, test_config, tmp_path):
         from anki_miner.config import PitchSourceEntry
@@ -1778,7 +1778,7 @@ class TestOptionalIndexedResourceChecks:
 
         assert ok is False
         assert "NHK 2016" in message
-        assert "Settings → Audio → Reimport All" in message
+        assert "Settings → Word Audio → More → Reimport All" in message
 
     def test_audio_packs_report_not_configured_when_field_unmapped(self, test_config, tmp_path):
         """A pack is only ever consulted when expression_audio is mapped too.

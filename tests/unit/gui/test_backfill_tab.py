@@ -204,6 +204,21 @@ class TestScanFlow:
         assert factory.call_args[0][1].deck == "Mining"
 
 
+class TestRestyleButton:
+    def test_click_emits_restyle_requested(self, tab, qtbot):
+        with qtbot.waitSignal(tab.restyle_requested, timeout=1000):
+            tab.restyle_button.click()
+
+    def test_disabled_while_a_scan_or_apply_is_running(self, tab):
+        running = MagicMock()
+        running.isRunning.return_value = True
+        tab.worker_thread = running
+        tab._set_running(True)
+        assert not tab.restyle_button.isEnabled()
+        tab._set_running(False)
+        assert tab.restyle_button.isEnabled()
+
+
 class TestPreviewTable:
     def test_plan_populates_table_and_summary(self, tab):
         plan = _plan([_note_plan(1, 2), _note_plan(2, 1)])

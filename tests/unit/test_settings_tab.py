@@ -412,9 +412,9 @@ class TestSubtitleRegexValidationRevert:
         qtbot.addWidget(widget)
         try:
             # User edits: an invalid pattern paired with a brand-new replacement.
-            widget.filtering_panel.set_subtitle_regex_filter("(")  # unbalanced → re.error
-            widget.filtering_panel.set_subtitle_regex_replacement("NEW")
-            widget.filtering_panel.set_use_subtitle_regex_filter(True)
+            widget.sentences_panel.set_subtitle_regex_filter("(")  # unbalanced → re.error
+            widget.sentences_panel.set_subtitle_regex_replacement("NEW")
+            widget.sentences_panel.set_use_subtitle_regex_filter(True)
 
             received: list[AnkiMinerConfig] = []
             widget.config_changed.connect(received.append)
@@ -577,14 +577,14 @@ class TestImportResultFeedback:
 
 
 class TestIPlusOneFilterRoundTrip:
-    """Load/save round-trip for the i+1 sentence filter checkbox."""
+    """Load/save round-trip for the i+1 sentence rule combo item."""
 
     def test_loads_use_i_plus_one_filter_from_config(self, test_config: AnkiMinerConfig, qtbot):
         cfg_on = replace(test_config, use_i_plus_one_filter=True)
         widget = SettingsTab(cfg_on)
         qtbot.addWidget(widget)
         try:
-            assert widget.filtering_panel.use_i_plus_one_checkbox.isChecked() is True
+            assert widget.filtering_panel.sentence_rule_combo.currentData() == "i_plus_one"
         finally:
             widget.deleteLater()
 
@@ -592,7 +592,7 @@ class TestIPlusOneFilterRoundTrip:
         widget = SettingsTab(cfg_off)
         qtbot.addWidget(widget)
         try:
-            assert widget.filtering_panel.use_i_plus_one_checkbox.isChecked() is False
+            assert widget.filtering_panel.sentence_rule_combo.currentData() != "i_plus_one"
         finally:
             widget.deleteLater()
 
@@ -604,13 +604,15 @@ class TestIPlusOneFilterRoundTrip:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.filtering_panel.use_i_plus_one_checkbox.setChecked(True)
+        index = tab.filtering_panel.sentence_rule_combo.findData("i_plus_one")
+        tab.filtering_panel.sentence_rule_combo.setCurrentIndex(index)
         tab.commit_settings()
 
         assert len(received) == 1
         assert received[0].use_i_plus_one_filter is True
 
-        tab.filtering_panel.use_i_plus_one_checkbox.setChecked(False)
+        index = tab.filtering_panel.sentence_rule_combo.findData("all")
+        tab.filtering_panel.sentence_rule_combo.setCurrentIndex(index)
         tab.commit_settings()
 
         assert len(received) == 2
@@ -705,19 +707,20 @@ class TestExpressionAudioRoundTrip:
 
 
 class TestSentenceLengthFilterRoundTrip:
-    """Load/save round-trip for the sentence-length filter widgets (Issue #33)."""
+    """Load/save round-trip for the sentence-length filter widgets (Issue #33).
+
+    No master toggle: the filter is active whenever either cap is above 0.
+    """
 
     def test_loads_sentence_length_filter_from_config(self, test_config: AnkiMinerConfig, qtbot):
         cfg = replace(
             test_config,
-            use_sentence_length_filter=True,
             max_sentence_duration_seconds=7.5,
             max_sentence_chars=60,
         )
         widget = SettingsTab(cfg)
         qtbot.addWidget(widget)
         try:
-            assert widget.filtering_panel.use_sentence_length_checkbox.isChecked() is True
             assert widget.filtering_panel.max_sentence_duration_spinbox.value() == pytest.approx(7.5)
             assert widget.filtering_panel.max_sentence_chars_spinbox.value() == 60
         finally:
@@ -731,13 +734,11 @@ class TestSentenceLengthFilterRoundTrip:
         received: list[AnkiMinerConfig] = []
         tab.config_changed.connect(received.append)
 
-        tab.filtering_panel.use_sentence_length_checkbox.setChecked(True)
         tab.filtering_panel.max_sentence_duration_spinbox.setValue(7.5)
         tab.filtering_panel.max_sentence_chars_spinbox.setValue(60)
         tab.commit_settings()
 
         assert len(received) == 1
-        assert received[0].use_sentence_length_filter is True
         assert received[0].max_sentence_duration_seconds == pytest.approx(7.5)
         assert received[0].max_sentence_chars == 60
 
@@ -1225,6 +1226,9 @@ def test_rebuild_known_words_does_not_block_gui_and_reenables_action(tab, tmp_pa
     db.initialize()
     db.add_words({"食べる"}, source="anki")
     tab.config = replace(tab.config, known_words_db_path=db_path)
+    # Rebuild only means anything (and is only reachable in the real UI) while
+    # the checkbox is on; the finish handler now re-syncs from it (Task 7).
+    tab.filtering_panel.use_known_words_db_checkbox.setChecked(True)
     monkeypatch.setattr(QMessageBox, "question", lambda *args, **kwargs: QMessageBox.StandardButton.Yes)
     monkeypatch.setattr(QMessageBox, "information", lambda *args, **kwargs: QMessageBox.StandardButton.Ok)
 
@@ -1250,6 +1254,50 @@ def test_rebuild_known_words_does_not_block_gui_and_reenables_action(tab, tmp_pa
             worker.wait(6000)
 
     qtbot.waitUntil(lambda: tab.filtering_panel.rebuild_known_words_button.isEnabled(), timeout=1000)
+
+
+def test_rebuild_finish_handler_leaves_the_button_disabled_when_unchecked_mid_run(tab):
+    """The checkbox can be toggled off while a rebuild runs off-thread; the
+    finish handler must not force the button back on regardless of it."""
+    panel = tab.filtering_panel
+    panel.use_known_words_db_checkbox.setChecked(True)
+    panel.rebuild_known_words_button.setEnabled(False)  # simulates the in-flight disable
+
+    panel.use_known_words_db_checkbox.setChecked(False)
+    tab._on_rebuild_known_words_finished()
+
+    assert panel.rebuild_known_words_button.isEnabled() is False
+
+
+def test_rebuild_finish_handler_reenables_the_button_when_still_checked(tab):
+    panel = tab.filtering_panel
+    panel.use_known_words_db_checkbox.setChecked(True)
+    panel.rebuild_known_words_button.setEnabled(False)  # simulates the in-flight disable
+
+    tab._on_rebuild_known_words_finished()
+
+    assert panel.rebuild_known_words_button.isEnabled() is True
+
+
+def test_pending_field_names_reports_a_dirty_save_panel_field(tab):
+    tab.anki_panel.set_deck_name("A Different Deck")
+
+    assert "anki_deck_name" in tab._pending_field_names()
+
+
+def test_pending_field_names_reports_check_for_updates(tab):
+    """check_for_updates lives on the UI panel, outside _save_panels (T11);
+    _pending_field_names must still fold it in from its own widget."""
+    tab.ui_panel.check_for_updates_checkbox.setChecked(not tab.config.check_for_updates)
+
+    assert "check_for_updates" in tab._pending_field_names()
+
+
+def test_pending_field_names_reports_max_parallel_workers(tab):
+    """max_parallel_workers lives on the UI panel too, outside _save_panels."""
+    tab.ui_panel.max_workers_spinbox.setValue(tab.config.max_parallel_workers + 1)
+
+    assert "max_parallel_workers" in tab._pending_field_names()
 
 
 def test_a_completed_install_turns_the_button_back_into_an_update(tab):

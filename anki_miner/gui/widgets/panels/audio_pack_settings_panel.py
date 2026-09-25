@@ -10,7 +10,6 @@ from urllib.parse import urlsplit
 from PyQt6.QtCore import QPoint, pyqtSignal
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -27,7 +26,6 @@ from anki_miner.gui.utils.config_commit import ConfigCommitResult
 from anki_miner.gui.utils.keyboard_shortcuts import disown_default_buttons, primary_action_shortcut
 from anki_miner.gui.utils.qt_helpers import add_min_max_buttons
 from anki_miner.gui.widgets.base import ScreenIssue
-from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.gui.widgets.panels.chain_priority_list import ChainRowSpec, ChainSourceRow
 from anki_miner.gui.widgets.panels.chain_settings_panel_base import (
     ChainListLabels,
@@ -157,9 +155,6 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
     # are re-tried next run. The settings tab owns the actual unlink sweep (it
     # holds the audio_cache path); the panel only surfaces the affordance.
     retry_missing_audio_requested = pyqtSignal()
-    # Emitted when any sentence-TTS control (master / provider checkbox)
-    # changes; the settings tab persists the three reading_tts_* bools.
-    reading_tts_changed = pyqtSignal()
 
     ANCHOR_NAMESPACE = "audio"
 
@@ -167,7 +162,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
     _REMOVE_ERROR_NOUN = "audio pack index folder"
 
     def __init__(self, packs_root: Path, parent=None):
-        super().__init__(self.tr("Audio"), parent=parent)
+        super().__init__(self.tr("Word Audio"), parent=parent)
         self._packs_root = packs_root
         self._release_callback: Callable[[], bool] | None = None
         # Whether the mining language names an Edge voice; SettingsTab sets it
@@ -238,9 +233,9 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         # Cache-hygiene: clear the record of words JPod101 had no audio for so
         # they are re-requested on the next run (replaces deleting the cache dir
         # by hand). The unlink sweep is dispatched by the settings tab.
-        self._retry_missing_btn = ModernButton(self.tr("Retry missing audio"), variant="secondary")
+        self._retry_missing_btn = QAction(self.tr("Retry missing audio"), self)
         self._retry_missing_btn.setToolTip(self.tr("Re-try words JapanesePod101 had no audio for on the next run"))
-        self._retry_missing_btn.clicked.connect(self.retry_missing_audio_requested.emit)
+        self._retry_missing_btn.triggered.connect(lambda _checked=False: self.retry_missing_audio_requested.emit())
         # _write_chain re-syncs the affordance for this panel's own writers, but
         # the base class writes _chain directly on a row toggle, a reorder and a
         # chain-only remove - all of which announce themselves here. Subscribing
@@ -248,22 +243,22 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
         # setVisible is idempotent, so the double call on our own writes is free.
         self.chain_changed.connect(self._sync_retry_affordance)
 
-        self._restore_btn = ModernButton(self.tr("Restore from Disk"), variant="secondary")
+        self._restore_btn = QAction(self.tr("Restore from Disk"), self)
         self._restore_btn.setToolTip(
             self.tr(
                 "Re-add audio packs found in the storage folder that aren't in the list above. No re-import needed."
             )
         )
-        self._restore_btn.clicked.connect(self.restore_requested.emit)
+        self._restore_btn.triggered.connect(lambda _checked=False: self.restore_requested.emit())
 
-        self._reimport_btn = ModernButton(self.tr("Reimport All"), variant="secondary")
+        self._reimport_btn = QAction(self.tr("Reimport All"), self)
         self._reimport_btn.setToolTip(
             self.tr(
                 "Rebuild every audio pack in the list from the folder or database it was imported from. "
                 "Needed after an app upgrade changes the index format."
             )
         )
-        self._reimport_btn.clicked.connect(self.reimport_all_requested.emit)
+        self._reimport_btn.triggered.connect(lambda _checked=False: self.reimport_all_requested.emit())
 
         container = self._build_chain_container(
             ChainListLabels(
@@ -277,6 +272,8 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 move_up_tooltip=self.tr("Move up in priority"),
                 move_down=self.tr("Move down"),
                 move_down_tooltip=self.tr("Move down in priority"),
+                more=self.tr("More"),
+                more_tooltip=self.tr("More actions"),
             ),
             extra_actions=(self._reimport_btn, self._restore_btn, self._retry_missing_btn),
         )
@@ -311,98 +308,7 @@ class AudioPackSettingsPanel(ChainSettingsPanelBase):
                 self._retry_missing_btn.text(),
             ),
         )
-
-        # Sentence TTS for reading sources (manga/novels). Deliberately simpler
-        # than the chain editor above: fixed 2-provider order (Google first),
-        # the checkboxes only select membership; the master flag is the opt-in.
-        self.add_section(self.tr("Sentence Audio (Reading Sources)"))
-        tts_container = QWidget()
-        tts_layout = QVBoxLayout(tts_container)
-        tts_layout.setContentsMargins(0, 0, 0, 0)
-
-        tts_blurb = QLabel(
-            self.tr(
-                "Add spoken audio to cards from manga and books, which have no source "
-                "audio. Sentence text is sent to the selected online services."
-            )
-        )
-        tts_blurb.setObjectName("helper-text")
-        tts_blurb.setWordWrap(True)
-        tts_layout.addWidget(tts_blurb)
-
-        self._reading_tts_checkbox = QCheckBox(self.tr("Generate TTS sentence audio"))
-        self._reading_tts_checkbox.toggled.connect(self._on_reading_tts_toggled)
-        tts_layout.addWidget(self._reading_tts_checkbox)
-
-        provider_row = QVBoxLayout()
-        provider_row.setContentsMargins(24, 0, 0, 0)
-        self._reading_tts_google = QCheckBox(self.tr("Google Translate TTS (tried first)"))
-        self._reading_tts_google.toggled.connect(self._on_reading_tts_provider_toggled)
-        provider_row.addWidget(self._reading_tts_google)
-        self._reading_tts_papago = QCheckBox(self.tr("Naver Papago (fallback)"))
-        self._reading_tts_papago.toggled.connect(self._on_reading_tts_provider_toggled)
-        provider_row.addWidget(self._reading_tts_papago)
-        tts_layout.addLayout(provider_row)
-
-        # Master ON + both providers OFF is silently inactive at mining time;
-        # surface why instead of leaving the user guessing.
-        self._reading_tts_hint = QLabel(self.tr("Select at least one service."))
-        self._reading_tts_hint.setWordWrap(True)
-        self._reading_tts_hint.setVisible(False)
-        tts_layout.addWidget(self._reading_tts_hint)
-
-        # The master toggle and its two providers are one logical setting; index
-        # all three captions so searching a provider name still lands here.
-        self.add_field(
-            "",
-            tts_container,
-            anchor="reading_tts",
-            anchor_focus=self._reading_tts_checkbox,
-            anchor_text=lambda: (
-                self._reading_tts_checkbox.text(),
-                self._reading_tts_google.text(),
-                self._reading_tts_papago.text(),
-                tts_blurb.text(),
-            ),
-        )
-        self._sync_reading_tts_enabled_states()
         self.add_stretch()
-
-    def _on_reading_tts_toggled(self, _checked: bool) -> None:
-        self._sync_reading_tts_enabled_states()
-        self.reading_tts_changed.emit()
-
-    def _on_reading_tts_provider_toggled(self, _checked: bool) -> None:
-        self._sync_reading_tts_enabled_states()
-        self.reading_tts_changed.emit()
-
-    def _sync_reading_tts_enabled_states(self) -> None:
-        """Grey provider boxes when the master is off; show the no-provider hint."""
-        master_on = self._reading_tts_checkbox.isChecked()
-        self._reading_tts_google.setEnabled(master_on)
-        self._reading_tts_papago.setEnabled(master_on)
-        both_off = not (self._reading_tts_google.isChecked() or self._reading_tts_papago.isChecked())
-        self._reading_tts_hint.setVisible(master_on and both_off)
-
-    def set_reading_tts(self, enabled: bool, google_on: bool, papago_on: bool) -> None:
-        """Load the three reading_tts_* config bools into the controls (no signals)."""
-        for box, value in (
-            (self._reading_tts_checkbox, enabled),
-            (self._reading_tts_google, google_on),
-            (self._reading_tts_papago, papago_on),
-        ):
-            box.blockSignals(True)
-            box.setChecked(value)
-            box.blockSignals(False)
-        self._sync_reading_tts_enabled_states()
-
-    def get_reading_tts(self) -> tuple[bool, bool, bool]:
-        """Return (master enabled, google enabled, papago enabled)."""
-        return (
-            self._reading_tts_checkbox.isChecked(),
-            self._reading_tts_google.isChecked(),
-            self._reading_tts_papago.isChecked(),
-        )
 
     def set_retry_missing_enabled(self, enabled: bool) -> None:
         """Enable/disable the retry button while its off-thread sweep runs."""

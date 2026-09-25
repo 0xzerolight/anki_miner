@@ -479,7 +479,7 @@ class ReadingNovelsTab(_ReadingMiningTabBase):
         # composed fill correct when a book errors mid-run. Count-unit writes
         # (set_progress) are banned on the composition-driven widget.
         done = sum(1 for i in self._run_items if i.status in (ReadyItemStatus.COMPLETED, ReadyItemStatus.ERROR))
-        self.progress_widget.set_composed(done, 0, len(self._run_items))
+        self.progress_widget.set_composed(done, len(self._run_items))
 
     def _on_queue_finished(self) -> None:
         """Run summary for folder runs. Cleanup is elsewhere.

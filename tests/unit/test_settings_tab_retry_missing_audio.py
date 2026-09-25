@@ -1,4 +1,4 @@
-"""Tests for the Settings -> Audio 'Retry missing expression audio' affordance."""
+"""Tests for the Settings -> Word Audio 'Retry missing expression audio' affordance."""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ def test_panel_button_emits_retry_signal(qtbot, tmp_path):
     panel = AudioPackSettingsPanel(packs_root=tmp_path)
     qtbot.addWidget(panel)
     with qtbot.waitSignal(panel.retry_missing_audio_requested, timeout=1000):
-        panel._retry_missing_btn.click()
+        panel._retry_missing_btn.trigger()
 
 
 def test_retry_slot_purges_markers_and_reports_count(tab, tmp_path, monkeypatch):

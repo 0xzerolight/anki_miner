@@ -1,4 +1,4 @@
-"""Quick Processing card must never compress below its content minimum.
+"""Add Series card must never compress below its content minimum.
 
 An explicit ``setMinimumHeight`` on the card OVERRIDES the larger layout-derived
 minimum (Qt's ``qSmartMinSize`` prefers an explicit minimum), so a vertically
@@ -27,7 +27,7 @@ def _make_tab(qtbot, config):
     return widget
 
 
-def test_quick_section_minimum_is_content_derived(qapp, qtbot, test_config):
+def test_add_series_section_minimum_is_content_derived(qapp, qtbot, test_config):
     tab = _make_tab(qtbot, test_config)
     card = tab.video_folder_selector.parentWidget()
     assert card is not None

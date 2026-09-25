@@ -196,7 +196,7 @@ def _audio_failure_diagnosis(counts: dict[str, int], attempts: int, slow_pack: s
         # to reorder or disable it rather than to wait it out.
         return QCoreApplication.translate(
             "EpisodeProcessor",
-            "Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Audio.",
+            "Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Word Audio.",
         )
     if dominant in ("ssl", "connection", "timeout"):
         return QCoreApplication.translate(

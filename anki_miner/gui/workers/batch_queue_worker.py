@@ -99,8 +99,8 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
         self.stats_service = stats_service
         self._current_processor: EpisodeProcessor | None = None
         self.curation_callback = curation_callback
-        # Published per-pair for the GUI curation bridge (mirrors ManualPairWorkerThread's
-        # _curation_* attrs so BatchProcessingTab reads one attribute name across both workers).
+        # Published per-pair for the GUI curation bridge: BatchProcessingTab reads
+        # these _curation_* attrs to build the curator's media context.
         self._curation_video: Path | None = None
         self._curation_subtitle: Path | None = None
         self._curation_offset: float = 0.0
@@ -170,8 +170,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
             # anki_fields — and get_next_pending) runs in the reimplemented
             # QThread.run(); an escaping exception here is a PyQt6 FATAL
             # abort. Catch it, surface via error, and still emit
-            # queue_finished so the GUI leaves the running state (mirrors
-            # ManualPairWorkerThread.run()).
+            # queue_finished so the GUI leaves the running state.
             logger.exception("BatchQueueWorker run failed before/around the item loop")
             self.error.emit(str(e))
         finally:
@@ -318,8 +317,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                 from anki_miner.utils.file_pairing import FilePairMatcher
 
                 # The setting is global and the row is not: a folder chosen while
-                # it was on stays on the row, but only mines while it is on --
-                # the same gate the quick path applies before pairing.
+                # it was on stays on the row, but only mines while it is on.
                 pairs = FilePairMatcher.find_pairs_by_episode_number(
                     item.video_folder,
                     item.subtitle_folder,
@@ -327,9 +325,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                 )
 
                 if not pairs:
-                    # Byte-identical to the quick path's banner in
-                    # batch_processing_tab: one pairing miss, one sentence,
-                    # whichever path hit it.
+                    # One pairing miss, one sentence naming it.
                     raise ValueError(
                         QCoreApplication.translate(
                             "BatchQueueWorkerThread",
@@ -385,8 +381,7 @@ class BatchQueueWorkerThread(RunBoundaryControls, ProcessorOwningWorker):
                             # SetupError/AnkiConnectionError. Without this guard a single
                             # transient AnkiConnect blip aborted the item's remaining pairs
                             # AND dropped cards already created for earlier pairs from the
-                            # count. Record the failure and continue (mirrors
-                            # ManualPairWorkerThread's per-pair except).
+                            # count. Record the failure and continue.
                             logger.exception("BatchQueueWorker pair %s failed", pair.video.name)
                             failed_pairs.append((pair.video.name, str(e)))
                             pairs_done += 1

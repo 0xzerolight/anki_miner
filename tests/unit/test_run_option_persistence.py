@@ -21,8 +21,8 @@ def test_every_screen_with_run_options_reaches_the_config_save(wired_window):
     window, _titles, _tabs = wired_window
     screens = [w for w in window.findChildren(QWidget) if hasattr(w, "run_options_changed")]
 
-    # The seven curation screens plus Single, Deck Builder and Card Backfill.
-    assert len(screens) >= 9
+    # The seven curation screens plus Single and Card Backfill.
+    assert len(screens) >= 8
 
     for screen in screens:
         assert screen.receivers(screen.run_options_changed) == 1, type(screen).__name__
@@ -153,43 +153,6 @@ def test_a_remembered_source_reaches_the_add_flow_at_construction(qtbot, test_co
         assert tab._add_flow._subtitle_source == "captions"
     finally:
         window.deleteLater()
-
-
-def test_the_deck_builder_controls_reopen_where_they_were(wired_window):
-    from anki_miner.models.deck_build import DeckSelectionMode
-
-    window, _titles, _tabs = wired_window
-    tab = _screen(window, "DeckBuilderTab")
-
-    tab.mode_combo.setCurrentIndex(tab.mode_combo.findData(DeckSelectionMode.COVERAGE_PCT))
-    tab.coverage_spinbox.setValue(75.0)
-    tab.top_n_spinbox.setValue(300)
-    tab.collection_filter_checkbox.setChecked(False)
-
-    assert window.config.deck_builder_mode == "coverage_pct"
-    assert window.config.deck_builder_coverage_pct == 75.0
-    assert window.config.deck_builder_top_n == 300
-    assert window.config.deck_builder_skip_known is False
-
-    tab.update_config(window.config)
-    assert tab.mode_combo.currentData() is DeckSelectionMode.COVERAGE_PCT
-    assert tab.coverage_spinbox.value() == 75.0
-    assert tab.top_n_spinbox.value() == 300
-    assert tab.collection_filter_checkbox.isChecked() is False
-
-
-def test_seeding_a_mode_still_sets_the_value_widget_visibility(wired_window):
-    """Visibility follows the mode and is not persisted state of its own."""
-    from anki_miner.models.deck_build import DeckSelectionMode
-
-    window, _titles, _tabs = wired_window
-    tab = _screen(window, "DeckBuilderTab")
-
-    tab.mode_combo.setCurrentIndex(tab.mode_combo.findData(DeckSelectionMode.TOP_N))
-    tab.update_config(window.config)
-
-    assert tab.top_n_spinbox.isVisibleTo(tab) is True
-    assert tab.coverage_spinbox.isVisibleTo(tab) is False
 
 
 def _map_pitch(config):

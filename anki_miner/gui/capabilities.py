@@ -34,10 +34,9 @@ TRANSLATION_CONTEXT = "Capabilities"
 
 # Stable main-tab keys in tab-bar order: app.compose_main_window registers the
 # tabs in this order and MainWindow._MAIN_TAB_CLASSES lists them the same way.
-# The default Ctrl+1..7 bindings follow it (gui/utils/key_bindings.py).
+# The default Ctrl+1..6 bindings follow it (gui/utils/key_bindings.py).
 MAIN_TAB_ORDER: tuple[str, ...] = (
     "video",
-    "deckbuilder",
     "audiobook",
     "reading",
     "analytics",
@@ -57,6 +56,7 @@ SETTINGS_SUBTABS: frozenset[str] = frozenset(
         "pitch",
         "mining_language",
         "filtering",
+        "sentences",
         "youtube",
         "subtitles",
         "ui",
@@ -64,8 +64,8 @@ SETTINGS_SUBTABS: frozenset[str] = frozenset(
     }
 )
 # The Utilities tab's tools, in tab-bar order. SubtitlesTab builds its inner
-# tabs in this order and Settings -> Appearance & Language shows one checkbox
-# per key, so this tuple and SUBTAB_KEYS["subtitles"] are the same set.
+# tabs in this order and Settings -> General shows one checkbox per key, so
+# this tuple and SUBTAB_KEYS["subtitles"] are the same set.
 UTILITY_SUBTABS: tuple[str, ...] = (
     "generate",
     "retime",
@@ -201,7 +201,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Approve or reject each word, pick its sentence and scene, trim its audio, mark words known, and fix a mistranscribed sentence or swap the word to mine -- before any card is created.",
         ),
         category=_CAT_WORKFLOWS,
-        target=CapabilityTarget("video", "single"),
+        target=CapabilityTarget("video", "batch"),
         keywords=(
             "curator",
             "review",
@@ -225,7 +225,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Load a second subtitle file in your own language beside the mining-language one: it shows under "
             "the line in the Word Curator preview and can be saved to a Translation field. "
             "On Video -> Batch, point it at a folder of translation subtitles instead and they pair to the "
-            "videos by episode number. Turn it on under Settings -> Filtering.",
+            "videos by episode number. Turn it on under Settings -> Sentences.",
         ),
         category=_CAT_WORKFLOWS,
         target=CapabilityTarget("video", "single"),
@@ -238,36 +238,6 @@ CAPABILITIES: tuple[Capability, ...] = (
             "dual subtitles",
             "batch",
             "folder",
-        ),
-    ),
-    Capability(
-        id="deck-builder",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Build a deck by coverage %"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities",
-            "Build a frequency-ordered deck that covers a chosen percentage of a whole corpus.",
-        ),
-        category=_CAT_WORKFLOWS,
-        target=CapabilityTarget("deckbuilder"),
-        keywords=("deck builder", "corpus", "coverage", "frequency deck", "premade", "premine", "top words"),
-    ),
-    Capability(
-        id="deck-builder-modes",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Deck Builder modes (all / top N / coverage %)"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities",
-            "Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.",
-        ),
-        category=_CAT_WORKFLOWS,
-        target=CapabilityTarget("deckbuilder"),
-        keywords=(
-            "bypass filters",
-            "include known",
-            "allow duplicates",
-            "complete deck",
-            "top n",
-            "coverage target",
-            "everything",
         ),
     ),
     Capability(
@@ -701,7 +671,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Remove names, music notes, or bracketed text from subtitles before parsing.",
         ),
         category=_CAT_FILTERING,
-        target=CapabilityTarget("settings", "filtering"),
+        target=CapabilityTarget("settings", "sentences"),
         keywords=("regex", "brackets", "music notes", "speaker labels", "clean subtitles", "strip", "parentheses"),
     ),
     Capability(
@@ -747,7 +717,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Choose which Portuguese variety reads word and sentence audio, and which frequency list setup suggests.",
         ),
         category=_CAT_FILTERING,
-        target=CapabilityTarget("settings", "filtering"),
+        target=CapabilityTarget("settings", "mining_language"),
         keywords=("portuguese", "brazilian", "european", "regional variety", "variant", "pt-br", "pt-pt"),
         requires="regional_variants",
     ),
@@ -773,7 +743,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Settings -> Cards & Anki, carries the other spelling when it differs from the front.",
         ),
         category=_CAT_FILTERING,
-        target=CapabilityTarget("settings", "filtering"),
+        target=CapabilityTarget("settings", "mining_language"),
         keywords=(
             "character set",
             "simplified",
@@ -901,14 +871,15 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         id="alass-tuning",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Tune subtitle alignment (alass)"),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Set the alass binary (subtitle alignment)"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.",
+            "Point alass, the subtitle re-timing tool, at a specific executable, or download it "
+            "in-app (Linux/Windows; macOS installs it with Homebrew).",
         ),
         category=_CAT_SOURCES,
         target=CapabilityTarget("settings", "subtitles"),
-        keywords=("alass", "alignment", "split penalty", "framerate", "drift", "sync settings"),
+        keywords=("alass", "alignment", "binary", "download", "homebrew", "sync settings"),
     ),
     # --- Audio -------------------------------------------------------------
     Capability(
@@ -963,7 +934,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Not available for Persian or Slovenian.",
         ),
         category=_CAT_AUDIO,
-        target=CapabilityTarget("settings", "audio"),
+        target=CapabilityTarget("settings", "media"),
         keywords=("tts", "text to speech", "sentence audio", "reading audio", "synthesized voice"),
     ),
     Capability(
@@ -1012,7 +983,7 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Choose how many media-extraction jobs run at once to trade speed against CPU and memory use.",
         ),
         category=_CAT_MEDIA,
-        target=CapabilityTarget("settings", "media"),
+        target=CapabilityTarget("settings", "ui"),
         keywords=("parallel", "workers", "cpu", "ram", "performance", "speed", "slow extraction"),
     ),
     # --- Anki cards --------------------------------------------------------
@@ -1057,7 +1028,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Put the word's pinyin on your cards, each syllable in its tone's colour -- "
-            "the colouring is Colour the reading by tone, under Settings -> Filtering.",
+            "the colouring is Colour the reading by tone, under Settings -> Cards & Anki.",
         ),
         category=_CAT_CARDS,
         target=CapabilityTarget("settings", "anki"),
@@ -1069,10 +1040,10 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Colour the reading by tone"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -> Filtering.",
+            "Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -> Cards & Anki.",
         ),
         category=_CAT_CARDS,
-        target=CapabilityTarget("settings", "filtering"),
+        target=CapabilityTarget("settings", "anki"),
         keywords=("tone", "tone colour", "tone color", "pinyin", "jyutping", "cantonese", "reading colour"),
         requires="tone_color",
     ),
@@ -1127,14 +1098,14 @@ CAPABILITIES: tuple[Capability, ...] = (
             "Wrap the mined word in bold inside the sentence fields on your cards.",
         ),
         category=_CAT_CARDS,
-        target=CapabilityTarget("settings", "filtering"),
+        target=CapabilityTarget("settings", "sentences"),
         keywords=("bold", "highlight", "emphasize", "target word", "sentence formatting"),
     ),
     # --- Appearance & language ---------------------------------------------
     Capability(
         id="themes",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Themes, dark mode, fonts & zoom"),
-        description=QT_TRANSLATE_NOOP("Capabilities", "Switch light/dark themes and adjust font scale and UI zoom."),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Themes, dark mode & zoom"),
+        description=QT_TRANSLATE_NOOP("Capabilities", "Switch light/dark themes and adjust UI zoom."),
         category=_CAT_APPEARANCE,
         target=CapabilityTarget("settings", "ui"),
         keywords=("theme", "dark mode", "light mode", "font", "zoom", "color", "appearance", "language"),
@@ -1179,22 +1150,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         keywords=("custom theme", "theme json", "gallery", "install theme", "colors", "preview"),
     ),
     Capability(
-        id="native-file-dialogs",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Use system file dialogs"),
-        description=QT_TRANSLATE_NOOP(
-            "Capabilities",
-            "Switch between Anki Miner's built-in file pickers and your operating system's native ones.",
-        ),
-        category=_CAT_APPEARANCE,
-        target=CapabilityTarget("settings", "ui"),
-        keywords=("file dialog", "native picker", "browse window", "file chooser"),
-    ),
-    Capability(
         id="utilities-visibility",
         title=QT_TRANSLATE_NOOP("Capabilities", "Choose the tools on the Utilities tab"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Hide the Utilities tools you do not use, or bring them back, under Settings -> Appearance & Language. "
+            "Hide the Utilities tools you do not use, or bring them back, under Settings -> General. "
             "A hidden tool keeps its entry here; its Open button leads to that checkbox.",
         ),
         category=_CAT_APPEARANCE,
@@ -1228,10 +1188,10 @@ CAPABILITIES: tuple[Capability, ...] = (
         title=QT_TRANSLATE_NOOP("Capabilities", "Check for app updates"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in the Settings footer.",
+            "Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -> General.",
         ),
         category=_CAT_APPEARANCE,
-        target=CapabilityTarget("settings"),
+        target=CapabilityTarget("settings", "ui"),
         keywords=("update", "new version", "upgrade", "release", "check for updates"),
     ),
     # --- Tools & maintenance (standalone tools plus menu/dialog features) --
@@ -1263,7 +1223,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
             "Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -> Manga can mine it. "
-            "Install mokuro from Settings -> Transcription & Alignment.",
+            "Install mokuro from its setup card on Utilities -> Manga OCR.",
         ),
         category=_CAT_TOOLS,
         target=CapabilityTarget("subtitles", "mokuro"),
@@ -1285,9 +1245,11 @@ CAPABILITIES: tuple[Capability, ...] = (
         id="restyle-mined-cards",
         title=QT_TRANSLATE_NOOP("Capabilities", "Restyle mined cards"),
         description=QT_TRANSLATE_NOOP(
-            "Capabilities", "Re-apply the latest Anki Miner styling to cards you mined earlier -- Tools menu."
+            "Capabilities",
+            "Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -> Card Backfill.",
         ),
         category=_CAT_TOOLS,
+        target=CapabilityTarget("subtitles", "backfill"),
         keywords=("restyle", "existing cards", "old cards", "card styling", "css", "update styles"),
     ),
     Capability(

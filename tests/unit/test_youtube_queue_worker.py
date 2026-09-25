@@ -1020,7 +1020,7 @@ def test_stale_dict_aborts_queue_once(make_worker, mock_processor):
 
     with patch(
         "anki_miner.gui.workers.youtube_queue_worker.stale_resource_reimport_error",
-        return_value="Dictionary 'X' needs reimport (schema upgrade) — Settings → Dictionaries → Reimport All",
+        return_value="Dictionary 'X' needs reimport (schema upgrade) — Settings → Dictionaries → More → Reimport All",
     ):
         worker.run()
 

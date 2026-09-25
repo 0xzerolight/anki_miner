@@ -63,7 +63,7 @@ _PACK_PRIORITY: dict[str, int] = {
 
 
 class AudioPackImportFlow(ModalImportFlowMixin):
-    """Drives audio pack directory imports for the Settings → Audio panel.
+    """Drives audio pack directory imports for the Settings → Word Audio panel.
 
     Args:
         parent: Widget used as the Qt parent for dialogs (the settings tab).

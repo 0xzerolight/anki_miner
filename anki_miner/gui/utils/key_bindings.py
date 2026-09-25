@@ -85,12 +85,11 @@ KEY_ACTIONS: tuple[KeyAction, ...] = (
     KeyAction("app.open_settings", APP, QT_TRANSLATE_NOOP("KeyBindings", "Open Settings"), "Ctrl+,"),
     KeyAction("app.usage_guide", APP, QT_TRANSLATE_NOOP("KeyBindings", "Usage Guide"), "F1"),
     KeyAction(tab_action_id("video"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Video"), "Ctrl+1"),
-    KeyAction(tab_action_id("deckbuilder"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Deck Builder"), "Ctrl+2"),
-    KeyAction(tab_action_id("audiobook"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Audiobooks"), "Ctrl+3"),
-    KeyAction(tab_action_id("reading"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Reading"), "Ctrl+4"),
-    KeyAction(tab_action_id("analytics"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Analytics"), "Ctrl+5"),
-    KeyAction(tab_action_id("subtitles"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Utilities"), "Ctrl+6"),
-    KeyAction(tab_action_id("settings"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Settings"), "Ctrl+7"),
+    KeyAction(tab_action_id("audiobook"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Audiobooks"), "Ctrl+2"),
+    KeyAction(tab_action_id("reading"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Reading"), "Ctrl+3"),
+    KeyAction(tab_action_id("analytics"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Analytics"), "Ctrl+4"),
+    KeyAction(tab_action_id("subtitles"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Utilities"), "Ctrl+5"),
+    KeyAction(tab_action_id("settings"), APP, QT_TRANSLATE_NOOP("KeyBindings", "Go to Settings"), "Ctrl+6"),
 )
 
 _BY_ID: dict[str, KeyAction] = {action.id: action for action in KEY_ACTIONS}
@@ -243,7 +242,7 @@ def about_rows(keys: Mapping[str, QKeySequence]) -> list[tuple[str, str]]:
 
     Two independent lists are how About once kept advertising F1 for itself
     after F1 had become Help. D48-B: essentials only, no command list. The
-    shipped Ctrl+1..7 run reads as one row, as it always has; a customised tab
+    shipped Ctrl+1..6 run reads as one row, as it always has; a customised tab
     set lists each bound tab. Unbound actions are left out. Descriptions come
     back translated.
     """

@@ -1,10 +1,10 @@
 """Tests for BatchProcessingTab retry-run cancel affordance (T-22).
 
 ``_retry_failed_items`` disabled the action buttons but never called
-``_show_cancel_state()`` like the other two run paths (``_process_queue`` and
-``_start_processing_with_pairs``), so the Cancel button stayed hidden for the
-whole retry run — the run was uncancellable and any open curation dialog could
-not be released. The retry path must surface Cancel like every other run.
+``_show_cancel_state()`` like ``_process_queue``, so the Cancel button stayed
+hidden for the whole retry run — the run was uncancellable and any open
+curation dialog could not be released. The retry path must surface Cancel
+like every other run.
 """
 
 from __future__ import annotations
@@ -67,4 +67,4 @@ def test_retry_failed_items_shows_cancel_button(tab):
     assert not tab.cancel_button.isHidden()
     assert tab.cancel_button.isEnabled()
     # The two normal-run buttons must be hidden during the retry run.
-    assert tab.process_pairs_button.isHidden()
+    assert tab.add_series_button.isHidden()

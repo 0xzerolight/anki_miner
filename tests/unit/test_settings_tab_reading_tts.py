@@ -1,6 +1,15 @@
-"""Sentence-TTS toggles persist immediately via reading_tts_changed."""
+"""Sentence-TTS combo (T11): folded into MediaSettingsPanel's Sentence audio
+section, persisting through the ordinary debounced save path.
+
+Before T11 this lived on the Audio page as a master checkbox + two provider
+checkboxes, with its own immediate-persist connection alongside the debounced
+one — two commit paths racing. That immediate path is gone: the combo now
+joins the same debounce every other Card Media field uses.
+"""
 
 from __future__ import annotations
+
+from dataclasses import replace
 
 import pytest
 
@@ -19,33 +28,44 @@ def tab(test_config: AnkiMinerConfig, qtbot):
 
 
 class TestReadingTtsPersist:
-    def test_loads_config_values_into_panel(self, test_config, qtbot):
-        from dataclasses import replace
-
-        cfg = replace(test_config, reading_tts_enabled=True, reading_tts_papago_enabled=False)
+    def test_loads_config_values_into_the_combo(self, test_config, qtbot):
+        cfg = replace(
+            test_config,
+            reading_tts_enabled=True,
+            reading_tts_google_enabled=True,
+            reading_tts_papago_enabled=False,
+        )
         widget = SettingsTab(cfg)
         qtbot.addWidget(widget)
-        assert widget.audio_panel.get_reading_tts() == (True, True, False)
+        assert widget.media_panel.reading_tts_combo.currentData() == "google"
         widget.deleteLater()
 
-    def test_master_toggle_persists_immediately(self, tab, qtbot):
+    def test_picking_an_item_arms_the_debounce_not_an_immediate_commit(self, tab, qtbot):
+        """T11: no separate immediate-persist path — only the ordinary debounce."""
         emitted = []
         tab.config_changed.connect(emitted.append)
 
-        tab.audio_panel._reading_tts_checkbox.setChecked(True)
+        idx = tab.media_panel.reading_tts_combo.findData("google")
+        tab.media_panel.reading_tts_combo.setCurrentIndex(idx)
+        tab.media_panel.reading_tts_combo.activated.emit(idx)
 
-        assert len(emitted) == 1
-        assert emitted[0].reading_tts_enabled is True
-        assert tab.config.reading_tts_enabled is False
+        assert emitted == []
+        assert tab._debounce_timer.isActive()
 
-    def test_provider_toggle_persists_immediately(self, tab, qtbot):
-        tab.audio_panel.set_reading_tts(True, True, True)
+    def test_flushing_the_debounce_commits_the_pick_exactly_once(self, tab, qtbot):
+        """Picking "Google only" commits (True, True, False), once, on flush."""
         emitted = []
         tab.config_changed.connect(emitted.append)
 
-        tab.audio_panel._reading_tts_papago.setChecked(False)
+        idx = tab.media_panel.reading_tts_combo.findData("google")
+        tab.media_panel.reading_tts_combo.setCurrentIndex(idx)
+        tab.media_panel.reading_tts_combo.activated.emit(idx)
+
+        tab.flush_pending_settings()
 
         assert len(emitted) == 1
-        assert emitted[0].reading_tts_papago_enabled is False
-        assert emitted[0].reading_tts_enabled is True
-        assert emitted[0].reading_tts_google_enabled is True
+        assert (
+            emitted[0].reading_tts_enabled,
+            emitted[0].reading_tts_google_enabled,
+            emitted[0].reading_tts_papago_enabled,
+        ) == (True, True, False)

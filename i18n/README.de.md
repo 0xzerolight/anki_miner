@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:d6de3b1fd803053b -->
+<!-- i18n-source: README.md sha256:eaf6f4a3bb1bf708 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -116,11 +116,10 @@ Die vollständige Entwicklungseinrichtung findest du in [CONTRIBUTING.md](../CON
 ## Tabs
 
 - **Video** - mine ein einzelnes Video/Untertitel-Paar, einen Stapelordner oder YouTube-URLs.
-- **Deck Builder** - mine eine ganze Serie zu einem nach Häufigkeit geordneten Stapel.
 - **Audiobooks** - mine Hörbücher, Podcasts, Radio, Songs (Audio- + Untertitel-/Transkript-Paare).
 - **Reading** - mine Manga (mokuro), Romane (`.epub`, `.txt`; einzelnes Buch oder ein ganzer Ordner), eigenständige Untertiteldateien oder eingefügten Text.
 - **Analytics** - Mining-Verlauf, Schwierigkeitsrangliste, Meilensteine.
-- **Utilities** - Untertitel erzeugen (lokales Whisper), Untertitel neu timen (ffsubsync/alass), Medien auf reines Dialog-Audio kondensieren, Video/Audio/Untertitel von jeder Seite herunterladen, die yt-dlp unterstützt, den lernenswerten Teil eines fertigen Stapels in einen neuen kopieren, Felder bestehender Karten nachträglich befüllen, Manga-Seitenbilder per OCR in .mokuro-Dateien umwandeln (mokuro, in den Einstellungen installierbar) und ein Hörbuch auf den Text seines Buchs timen (Hörbuch-Synchronisierung).
+- **Utilities** - Untertitel erzeugen (lokales Whisper), Untertitel neu timen (ffsubsync/alass), Medien auf reines Dialog-Audio kondensieren, Video/Audio/Untertitel von jeder Seite herunterladen, die yt-dlp unterstützt, den lernenswerten Teil eines fertigen Stapels in einen neuen kopieren, Felder bestehender Karten nachträglich befüllen, Manga-Seitenbilder per OCR in .mokuro-Dateien umwandeln (mokuro) und ein Hörbuch auf den Text seines Buchs timen (Hörbuch-Synchronisierung).
 - **Settings** - alles konfigurierbar.
 
 ## Weitere Funktionen
@@ -137,7 +136,7 @@ Die vollständige Entwicklungseinrichtung findest du in [CONTRIBUTING.md](../CON
 - Eingebettete libmpv-Videovorschau - die Szene eines Worts während der Prüfung abspielen oder das Untertitel-Timing per Live-Wiedergabe nachjustieren.
 - Animierte Screenshots (siehe Beispielkarten oben).
 - Einstellungsprofile - benannte Konfigurationen speichern und über den Header wechseln.
-- Gesammelte Karten neu gestalten - dein aktuelles Karten-Styling auf bereits erstellte Karten anwenden (Werkzeuge-Menü).
+- Gesammelte Karten neu gestalten - dein aktuelles Karten-Styling auf bereits erstellte Karten anwenden (Utilities → Karten-Nachbefüllung).
 
 <details>
 <summary><strong>Integrierte Themes (29)</strong></summary>

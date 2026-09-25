@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from PyQt6.QtCore import Qt
 
+from anki_miner.config import create_default_config
 from anki_miner.gui.i18n import available_languages
 from anki_miner.gui.resources.styles.theme import REQUIRED_COLOR_KEYS, Theme
 from anki_miner.gui.widgets.base import ScreenIssue
@@ -312,3 +314,46 @@ class TestThemesFolderFailureIsVisible:
         )
         panel._open_themes_folder()
         assert panel.issue_banner().current_issue() is None
+
+
+class TestAppSectionLoadFromConfig:
+    """T11 fix round 1: load_from_config must fill the App section's two
+    moved controls — regression net for the "deleting the load block leaves
+    the suite green" gap the review caught."""
+
+    def test_loads_updates_off_and_a_non_default_worker_count(self, panel: UISettingsPanel) -> None:
+        panel.load_from_config(
+            replace(
+                create_default_config(),
+                themes_root=panel._themes_root,
+                check_for_updates=False,
+                max_parallel_workers=7,
+            )
+        )
+        assert panel.check_for_updates_checkbox.isChecked() is False
+        assert panel.max_workers_spinbox.value() == 7
+
+    def test_loads_updates_on_and_a_different_non_default_worker_count(self, panel: UISettingsPanel) -> None:
+        panel.load_from_config(
+            replace(
+                create_default_config(),
+                themes_root=panel._themes_root,
+                check_for_updates=True,
+                max_parallel_workers=15,
+            )
+        )
+        assert panel.check_for_updates_checkbox.isChecked() is True
+        assert panel.max_workers_spinbox.value() == 15
+
+
+def test_the_workers_helper_is_a_visible_label_not_only_a_tooltip(panel: UISettingsPanel) -> None:
+    """T11 fix round 1: this line was a visible helper on Card Media; the App
+    section must show it too, not just carry it as a hover tooltip."""
+    from PyQt6.QtWidgets import QLabel
+
+    text = "Higher = faster, but uses more CPU and memory."
+    assert panel.max_workers_spinbox.toolTip() == text  # the tooltip stays
+
+    matches = [label for label in panel.findChildren(QLabel) if label.text() == text]
+    assert matches, "no visible helper label carries the workers helper text"
+    assert matches[0].objectName() == "helper-text"

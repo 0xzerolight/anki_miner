@@ -483,8 +483,8 @@ def check_10_primary_action_hidden(root: QWidget, screen: str) -> list[dict]:
         scrolls. This is the D6 regression signal.
     ``below_fold``
         The action is inside ordinary page scroll, so it is reachable by
-        scrolling. Reported, not a D6 failure: Settings pages and Deck Builder
-        (D3 still open) legitimately scroll their content.
+        scrolling. Reported, not a D6 failure: Settings pages legitimately
+        scroll their content.
     """
     out = []
     for b in root.findChildren(QAbstractButton):

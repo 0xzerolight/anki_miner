@@ -72,7 +72,7 @@ def _star_geometry(widget: QWidget) -> tuple[int, int]:
     Same formula the deleted tree-panel ``_apply_tree_metrics`` used, re-derived
     here from ``widget``'s own (polished, themed) font through the shared
     ``data_row_height`` rather than a flat constant -- the old flat 28px box
-    clipped the glyph at ``ui_font_scale`` above ~1.4 and shrank it well below
+    clipped the glyph at a text scale above ~1.4 and shrank it well below
     the tree-era 21px at 1.0.
     """
     row_height = data_row_height(widget)

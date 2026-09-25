@@ -106,7 +106,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
 
     This window provides a tabbed interface for:
     - Video (container: Single episode / Batch folder / YouTube sub-tabs)
-    - Deck Builder (corpus-driven deck assembly)
     - Audiobooks (audio + subtitle pair queue)
     - Reading (container: Manga / Novels sub-tabs)
     - Analytics (mining statistics dashboard)
@@ -426,7 +425,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         # Set accessible names for main components
         self.tabs.setAccessibleName(self.tr("Main Tabs"))
         self.tabs.setAccessibleDescription(
-            self.tr("Navigate between Video, Deck Builder, Audiobooks, Reading, Analytics, Utilities, and Settings")
+            self.tr("Navigate between Video, Audiobooks, Reading, Analytics, Utilities, and Settings")
         )
 
         self.header.setAccessibleName(self.tr("Application Header"))
@@ -458,10 +457,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         setup_wizard_action = tools_menu.addAction(self.tr("Setup Wizard..."))
         assert setup_wizard_action is not None
         setup_wizard_action.triggered.connect(self._run_setup_wizard_tool)
-
-        restyle_action = tools_menu.addAction(self.tr("Restyle Mined Cards..."))
-        assert restyle_action is not None
-        restyle_action.triggered.connect(self._restyle_mined_cards)
 
         # Help menu
         help_menu = menu_bar.addMenu(self.tr("&Help"))
@@ -672,7 +667,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     # Matched by class name (not index/label) so it survives tab reorder and i18n.
     _MAIN_TAB_CLASSES = {
         "video": "VideoTab",
-        "deckbuilder": "DeckBuilderTab",
         "audiobook": "AudiobookTab",
         "reading": "ReadingTab",
         "analytics": "AnalyticsTab",
@@ -940,7 +934,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         found (e.g. an optional tab was not registered) so a stale catalogue entry
         never crashes the UI.
 
-        A Utilities tool the user hid (Settings → Appearance & Language) has no
+        A Utilities tool the user hid (Settings → General) has no
         page to land on, so its target opens that tool's checkbox instead. The
         Usage Guide, a task chosen in the status bar and any later deep link
         all arrive here.
@@ -990,8 +984,8 @@ class MainWindow(ScreenIssueHost, QMainWindow):
     def _open_theme_settings(self) -> None:
         """Switch to Settings → UI (triggered by 'All themes…' sentinel).
 
-        The theme list now lives on the UI sub-tab (alongside language/zoom/
-        text size), so this lands there.
+        The theme list now lives on the UI sub-tab (alongside language/zoom),
+        so this lands there.
         """
         idx = self._settings_tab_index()
         if idx < 0:
@@ -1147,7 +1141,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         facts["qt_scale_factor"] = os.environ.get("QT_SCALE_FACTOR", "-")
         facts["theme"] = Theme.get_current_mode()
         facts["ui_language"] = self.config.ui_language
-        facts["ui_font_scale"] = str(self.config.ui_font_scale)
         facts["ui_zoom"] = str(self.config.ui_zoom)
         return facts
 
@@ -1455,12 +1448,14 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         if outcome.open_video_mining:
             self.reveal_capability(CapabilityTarget("video", "single"))
 
-    def _restyle_mined_cards(self) -> None:
-        """Tools-menu handler: re-apply the built-in glossary styling to already-mined cards.
+    def restyle_mined_cards(self) -> None:
+        """Restyle entry point: re-apply the built-in glossary styling to already-mined cards.
 
-        Idempotent and content-preserving: prepends the self-contained ``<style>``
-        block to cards that lack the base sheet, and refreshes the embedded base
-        head in place on cards that already carry one — so a styling change reaches
+        Reached from the Restyle button on Utilities -> Card Backfill (the
+        backfill tab's ``restyle_requested`` signal). Idempotent and
+        content-preserving: prepends the self-contained ``<style>`` block to
+        cards that lack the base sheet, and refreshes the embedded base head
+        in place on cards that already carry one — so a styling change reaches
         existing cards (see :func:`card_restyler.restyle_mined_cards`). Runs
         off-thread via ``BackgroundTaskController`` (joined at close).
         """
@@ -1936,17 +1931,8 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         originating_run_receipt = originating_receipt.receipt if originating_receipt is not None else None
         # known_words rows have no run identity. The modal dialog blocks new
         # starts; this gate covers mining tasks that were already running.
-        # Deck Builder owns its workers directly and does not publish to the
-        # task registry, so every current or retained QThread is authoritative.
-        deck_builder_index = self._main_tab_index("deckbuilder")
-        deck_builder_workers = []
-        if deck_builder_index >= 0:
-            deck_builder_tab = self.tabs.widget(deck_builder_index)
-            deck_builder_workers.append(getattr(deck_builder_tab, "worker_thread", None))
-            deck_builder_workers.extend(worker for worker, _processor in getattr(deck_builder_tab, "_leaked_runs", ()))
-        mining_task_active = any(still_running(worker) for worker in deck_builder_workers) or any(
-            snapshot.owner.main_tab in {"video", "deckbuilder", "audiobook", "reading"}
-            for snapshot in self.task_registry.running()
+        mining_task_active = any(
+            snapshot.owner.main_tab in {"video", "audiobook", "reading"} for snapshot in self.task_registry.running()
         )
 
         # Create undo callback. This is the BLOCKING work handed to
@@ -2028,9 +2014,6 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         self.config = committed_config
         refresh_error: Exception | None = None
         try:
-            # Re-seed the app-wide file-dialog mode so a toggled setting applies to
-            # the very next dialog without restart (Issue #100).
-            file_dialogs.set_use_native(committed_config.use_native_file_dialogs)
             # Re-key the window-wide shortcuts so a Settings -> Keyboard change
             # is live without a restart.
             self._apply_key_bindings()
@@ -2201,6 +2184,16 @@ class MainWindow(ScreenIssueHost, QMainWindow):
             if callable(flush):
                 flush()
 
+        # Same reason, same ordering constraint: a mokuro-executable path
+        # typed into the Manga OCR tab's setup card just before quitting is
+        # still debouncing (1000 ms) and must not be dropped by teardown.
+        subtitles_idx = self._main_tab_index("subtitles")
+        if subtitles_idx >= 0:
+            mokuro_tab = getattr(self.tabs.widget(subtitles_idx), "mokuro_tab", None)
+            flush_mokuro = getattr(mokuro_tab, "flush_pending_edits", None)
+            if callable(flush_mokuro):
+                flush_mokuro()
+
         # Stop the main-thread stall watchdog so its monitor thread and
         # heartbeat timer don't outlive shutdown. The monitor is daemon=True as
         # a backstop, but stopping it cleanly avoids a stray WARNING if a worker
@@ -2262,10 +2255,15 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         """
         window = self._system_health_window
         if window is None:
+            from anki_miner.gui.capabilities import CapabilityTarget
+
             window = SystemHealthWindow(self)
             window.recheck_requested.connect(self._run_validation)
             window.export_requested.connect(self._export_diagnostics)
             window.fix_requested.connect(self.reveal_setting)
+            # A HEALTH_FIX_ROUTES row's fix is a whole tab, not a Settings
+            # anchor (mokuro's setup card lives on Utilities -> Manga OCR now).
+            window.route_requested.connect(lambda m, s: self.reveal_capability(CapabilityTarget(m, s)))
             window.set_export_enabled(not self._diagnostics_export_running)
             self._system_health_window = window
             window.show_health(self._health_report)

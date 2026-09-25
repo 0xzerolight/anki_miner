@@ -26,7 +26,6 @@ anki_miner/gui/widgets/reading_subtitles_tab.py	1
 anki_miner/gui/widgets/reading_text_tab.py	1
 anki_miner/gui/workers/backfill_worker.py	1
 anki_miner/gui/workers/batch_queue_worker.py	1
-anki_miner/gui/workers/deck_builder_worker.py	2
 anki_miner/services/_ankiconnect.py	1
 anki_miner/services/_staging.py	1
 anki_miner/services/audio_fetch_common.py	2

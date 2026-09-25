@@ -1,4 +1,4 @@
-"""SettingsTab wiring for the Keyboard page (App group, beside Appearance & Language)."""
+"""SettingsTab wiring for the Keyboard page (App group, beside General)."""
 
 from __future__ import annotations
 

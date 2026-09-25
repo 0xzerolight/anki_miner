@@ -11,7 +11,7 @@ Wraps :class:`~anki_miner.gui.widgets.subtitle_creation_tab.SubtitleCreationTab`
 and :class:`~anki_miner.gui.widgets.booksync_tab.BookSyncTab` (Audiobook Sync)
 inside a single top-level tab so the main tab bar stays uncluttered.
 
-Settings → Appearance & Language can hide any of the eight but not all of them
+Settings → General can hide any of the eight but not all of them
 (``config.hidden_utilities``, :meth:`SubtitlesTab.apply_hidden`).
 
 Close contract:
@@ -122,7 +122,7 @@ class SubtitlesTab(QWidget):
         ``"retime"``, ``"condense"``, ``"backfill"``, ``"deckfilter"``,
         ``"download"``, ``"mokuro"``, ``"booksync"``). Unknown keys are
         ignored so a stale caller can't crash the UI. A tool hidden in
-        Settings → Appearance & Language is refused the same way, so a deep
+        Settings → General is refused the same way, so a deep
         link or a restored route never lands on a page the tab bar does not
         show.
         """

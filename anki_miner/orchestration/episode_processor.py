@@ -284,7 +284,7 @@ class _EpisodeContext:
     # curation step reads it to count unknowns per line. Empty on any path
     # that never reached phase 2.
     unknown_lemmas: set[str] = field(default_factory=set)
-    # Which whitelist entries this item reached (Settings -> Filtering): phase
+    # Which whitelist entries this item reached (Settings -> Word Filters): phase
     # 2 stamps the entries and the already-known ones; None when no whitelist
     # is in effect. The mined ones are added at the result funnel
     # (_stamp_whitelist_coverage), not here - a cancelled result never comes
@@ -584,7 +584,7 @@ class EpisodeProcessor:
         The expression-audio fetcher chain is closed unconditionally, even
         when the lookup services are worker-owned: ``SharedLookupServices``
         never holds an audio fetcher, so this processor is always the sole
-        owner of its persistent audio-pack handles (PB3) — Settings → Audio
+        owner of its persistent audio-pack handles (PB3) — Settings → Word Audio
         panel's pack-removal ``rmtree`` needs them released regardless of
         ``owns_lookup_services``.
 
@@ -999,10 +999,11 @@ class EpisodeProcessor:
             QCoreApplication.translate("EpisodeProcessor", "Filtering against known vocabulary"),
         )
         if self.config.include_known_words:
-            # Deck Builder "include everything" mode: skip known-words subtraction
-            # entirely — including the Issue #42 user ignore list — and mine all
-            # words that passed POS/subtype filtering. Coverage-deck builds
-            # intentionally re-card words the user already knows.
+            # "Include everything" mode (set by the e2e harness's no-Anki
+            # mode): skip known-words subtraction entirely — including the
+            # Issue #42 user ignore list — and mine all words that passed
+            # POS/subtype filtering. This intentionally re-cards words the
+            # user already knows.
             self.presenter.show_info(QCoreApplication.translate("EpisodeProcessor", "Including words already known"))
             unknown_words = all_words
         else:
@@ -1131,7 +1132,7 @@ class EpisodeProcessor:
         # as Phase 4, so 帰れる can qualify through 帰る without trusting 返る.
         # Runs before every lossy sentence selector so an undefined first word
         # cannot erase a definition-backed sentence-mate. Gated on
-        # bypass_optional_filters so the Deck Builder preview-parity path is
+        # bypass_optional_filters so the golden contract's bypass path is
         # unaffected (Phase 5 stays the skip point there).
         #
         # Known, intentional asymmetry: this probe is offline-only, but Phase 5
@@ -1222,8 +1223,8 @@ class EpisodeProcessor:
         # already ran above, so force-included words remain subject to it. We
         # split them out here and merge them back just before the within-run
         # duplicate collapse.
-        # Gated on bypass_optional_filters so the Deck Builder preview — which
-        # already includes everything — is unchanged.
+        # Gated on bypass_optional_filters so a bypass run — which already
+        # includes everything — is unchanged.
         forced_include: list[TokenizedWord] = []
         whitelist_service = self._active_whitelist()
         if whitelist_service is not None:
@@ -1403,10 +1404,8 @@ class EpisodeProcessor:
         # Runs AFTER i+1 because filter_i_plus_one swaps each word's sentence
         # (and duration) to its chosen i+1 line — applying the cap before that
         # swap would be silently bypassed by the swap target.
-        if (
-            self.config.use_sentence_length_filter
-            and not self.config.bypass_optional_filters
-            and (self.config.max_sentence_duration_seconds > 0.0 or self.config.max_sentence_chars > 0)
+        if not self.config.bypass_optional_filters and (
+            self.config.max_sentence_duration_seconds > 0.0 or self.config.max_sentence_chars > 0
         ):
             before = len(unknown_words)
             unknown_words = self.word_filter.filter_by_sentence_length(
@@ -1458,10 +1457,11 @@ class EpisodeProcessor:
         # it would falsely give reading-only junk such as いでる the identity of
         # 出でる. Keep the first source occurrence (stable order).
         #
-        # Gated on allow_duplicate_cards: the Deck Builder sets it True (and
-        # bypass_optional_filters True) to intentionally re-card duplicates, in
-        # which case Anki creates both and showing both is correct — collapsing
-        # there would diverge from its raw-lemma preview parity.
+        # Gated on allow_duplicate_cards: the golden contract (alongside
+        # bypass_optional_filters) and the e2e harness's no-Anki mode set it
+        # True to intentionally re-card duplicates, in which case Anki creates
+        # both and showing both is correct — collapsing here would diverge
+        # from that parity.
         if not self.config.allow_duplicate_cards and unknown_words:
             identity_pairs: list[tuple[str, str]] = [
                 (
@@ -2118,7 +2118,7 @@ class EpisodeProcessor:
             names.append("dedup")
         if config.use_i_plus_one_filter:
             names.append("i+1")
-        if config.use_sentence_length_filter:
+        if config.max_sentence_duration_seconds > 0.0 or config.max_sentence_chars > 0:
             names.append("sentence-length")
         return names
 
@@ -2741,7 +2741,7 @@ class EpisodeProcessor:
                     return outcome
                 unknown_words = outcome
             # Outside the curation branch: the merge can now be stamped with no
-            # curator in the loop (Review words off, batch, Deck Builder). Both
+            # curator in the loop (Review words off, batch). Both
             # calls fast-path out when nothing was stamped or edited, so an
             # untouched run pays nothing for standing here.
             unknown_words = self._materialize_line_expansions(unknown_words, subtitle_file, subtitle_offset)
@@ -3348,7 +3348,7 @@ class EpisodeProcessor:
 
         Queue workers front-run this with their own pre-loop check so a batch
         aborts once rather than per item; this covers the direct single-episode
-        callers (episode / manual-pair / deck-builder).
+        caller (the Single Episode tab), which has no such pre-loop gate.
 
         A family whose registry was not injected is skipped — for frequency,
         pitch and audio packs that is the normal state when the user has not

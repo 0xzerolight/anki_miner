@@ -55,7 +55,7 @@ def test_dialog_only_entries_live_in_tools_category() -> None:
     # A target-less row shows no Open button, so its description must say where
     # the feature lives; the Tools & maintenance block groups them.
     target_less = [c for c in CAPABILITIES if c.target is None]
-    assert len(target_less) >= 9
+    assert len(target_less) >= 8
     assert {c.category for c in target_less} == {"Tools & maintenance"}
 
 
@@ -144,17 +144,24 @@ def test_pos_filter_is_not_advertised() -> None:
     assert all(cap.id != "pos-filter" for cap in CAPABILITIES)
 
 
-def test_restyle_mined_cards_is_dialog_only() -> None:
-    # It is a Tools-menu action; there is no tab that hosts a Restyle control.
+def test_restyle_mined_cards_targets_backfill() -> None:
+    # The Restyle button lives on Utilities -> Card Backfill (Task 14); it is
+    # no longer a Tools-menu-only dialog.
     hits = search("restyle mined cards")
     capability = next(c for c in hits if c.id == "restyle-mined-cards")
-    assert capability.target is None
+    assert capability.target == CapabilityTarget("subtitles", "backfill")
 
 
-def test_subtitle_regex_targets_filtering() -> None:
-    # The regex presets live on the Filtering panel, not Transcription & Alignment.
+def test_subtitle_regex_targets_sentences() -> None:
+    # The regex presets live on the Sentences panel, not Transcription & Alignment.
     capability = next(c for c in CAPABILITIES if c.id == "subtitle-regex")
-    assert capability.target == CapabilityTarget("settings", "filtering")
+    assert capability.target == CapabilityTarget("settings", "sentences")
+
+
+def test_bold_target_word_targets_sentences() -> None:
+    # Moved off Filtering with the rest of the sentence-content settings (T9).
+    capability = next(c for c in CAPABILITIES if c.id == "bold-target-word")
+    assert capability.target == CapabilityTarget("settings", "sentences")
 
 
 def test_subtitle_file_mining_is_findable() -> None:
@@ -166,6 +173,11 @@ def test_subtitle_file_mining_is_findable() -> None:
 def test_word_curator_is_findable() -> None:
     hits = search("curator")
     assert any(c.id == "word-curator" for c in hits)
+
+
+def test_review_words_entry_targets_a_screen_that_has_the_checkbox():
+    entry = next(c for c in CAPABILITIES if c.id == "word-curator")
+    assert entry.target == CapabilityTarget("video", "batch")
 
 
 def test_secondary_subtitles_is_findable() -> None:
@@ -287,7 +299,7 @@ def test_audiobook_sync_names_the_reading_subtab_by_its_label() -> None:
 
 
 def test_word_audio_entry_scopes_edge_tts_to_the_languages_that_offer_it() -> None:
-    # Settings -> Audio offers Edge only where the profile names an Edge voice;
+    # Settings -> Word Audio offers Edge only where the profile names an Edge voice;
     # a fifth language gaining one has to be added to the entry's text too.
     from anki_miner.languages import AVAILABLE_LANGUAGES
 
@@ -321,6 +333,48 @@ def test_sentence_tts_names_the_languages_without_a_voice() -> None:
     assert "Persian or Slovenian" in _entry("sentence-tts").description
 
 
+def test_regional_variety_targets_the_mining_language_page() -> None:
+    # Moved off Filtering onto Mining Language, beside the selector it varies
+    # with (T10).
+    assert _entry("regional-variety").target == CapabilityTarget("settings", "mining_language")
+
+
+def test_script_variant_targets_the_mining_language_page() -> None:
+    # The zh Character Set choice moved with the Portuguese variety (T10).
+    assert _entry("script-variant").target == CapabilityTarget("settings", "mining_language")
+
+
+def test_tone_colour_targets_cards_and_anki() -> None:
+    # Moved off Filtering onto Cards & Anki, beside the Pinyin/Jyutping rows it
+    # colours (T10).
+    assert _entry("tone-colour").target == CapabilityTarget("settings", "anki")
+    assert "Settings -> Cards & Anki" in _entry("tone-colour").description
+    assert "Filtering" not in _entry("tone-colour").description
+
+
+def test_pinyin_description_points_at_cards_and_anki() -> None:
+    assert "Settings -> Cards & Anki" in _entry("pinyin").description
+    assert "Filtering" not in _entry("pinyin").description
+
+
+def test_sentence_tts_targets_the_card_media_page() -> None:
+    # The reading-TTS block folded into Card Media's one combo (T11); it no
+    # longer lives on the Word Audio page.
+    assert _entry("sentence-tts").target == CapabilityTarget("settings", "media")
+
+
+def test_parallel_workers_targets_the_general_page() -> None:
+    # Moved off Card Media onto the UI panel's App section (T11).
+    assert _entry("parallel-workers").target == CapabilityTarget("settings", "ui")
+
+
+def test_update_check_targets_the_general_page() -> None:
+    # Moved off the tab itself onto the UI panel's App section (T11).
+    entry = _entry("update-check")
+    assert entry.target == CapabilityTarget("settings", "ui")
+    assert "Settings -> General" in entry.description
+
+
 @pytest.mark.parametrize(
     ("cap_id", "code"),
     [("tone-colour", "zh"), ("tone-colour", "yue"), ("regional-variety", "pt"), ("hangul-filters", "ko")],
@@ -339,7 +393,7 @@ def test_gated_setting_entry_is_hidden_from_japanese(cap_id: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# The Utilities tools (Settings -> Appearance & Language hides them)
+# The Utilities tools (Settings -> General hides them)
 # ---------------------------------------------------------------------------
 
 

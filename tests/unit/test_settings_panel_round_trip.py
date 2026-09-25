@@ -21,6 +21,8 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.panels.anki_settings_panel import AnkiSettingsPanel
 from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
 from anki_miner.gui.widgets.panels.media_settings_panel import MediaSettingsPanel
+from anki_miner.gui.widgets.panels.mining_language_settings_panel import MiningLanguageSettingsPanel
+from anki_miner.gui.widgets.panels.sentences_settings_panel import SentencesSettingsPanel
 from anki_miner.gui.widgets.panels.subtitles_settings_panel import SubtitlesSettingsPanel
 from anki_miner.gui.widgets.panels.youtube_settings_panel import YouTubeSettingsPanel
 
@@ -73,12 +75,15 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
             "sentence": "SN",
             "audio": "AU",
         },
+        strict_card_order=True,  # T10: moved here from FilteringSettingsPanel
         # --- MediaSettingsPanel ---
         audio_format="opus",
         audio_bitrate=96,
         audio_padding=0.5,
+        reading_tts_enabled=True,
+        reading_tts_google_enabled=False,
+        reading_tts_papago_enabled=True,
         screenshot_offset=2.0,
-        max_parallel_workers=4,
         screenshot_animated=True,
         screenshot_animated_format="webp",
         screenshot_animated_clip_duration=3.0,
@@ -98,23 +103,23 @@ def _non_default_save_config(tmp_path: Path) -> AnkiMinerConfig:
         use_blacklist=True,
         whitelist_path=wl,
         use_whitelist=True,
-        subtitle_regex_filter=r"\([^)]*\)",
-        subtitle_regex_replacement="",
-        use_subtitle_regex_filter=True,
+        # The sentence_rule combo has 3 states, not 4: (True, True) collapses
+        # to "i_plus_one" (i+1 wins) same as (False, True), so it isn't
+        # round-trip-stable. dedup=True picks the "dedup" item instead.
         deduplicate_sentences=True,  # default is False
-        strict_card_order=True,
         exclude_hiragana_only_words=True,
         exclude_katakana_only_words=True,
-        use_i_plus_one_filter=True,
-        use_sentence_length_filter=True,
-        merge_incomplete_cues=True,
+        use_i_plus_one_filter=False,
         max_sentence_duration_seconds=8.0,
         max_sentence_chars=50,
         reading_min_occurrence=7,
-        bold_target_in_sentence=True,
+        # --- SentencesSettingsPanel ---
+        subtitle_regex_filter=r"\([^)]*\)",
+        subtitle_regex_replacement="",
+        use_subtitle_regex_filter=True,
         secondary_subtitle_enabled=True,
-        # --- SubtitlesSettingsPanel ---
-        mokuro_location=Path("/opt/mokuro/bin/mokuro"),
+        merge_incomplete_cues=True,
+        bold_target_in_sentence=True,
         # --- YouTubeSettingsPanel ---
         youtube_cookies_from_browser="firefox",
         youtube_cookies_file=cookies_txt,
@@ -136,12 +141,15 @@ _SAVE_PATH_FIELDS = frozenset(
         "pitch_category_format",
         "card_type",
         "card_type_marker_fields",
+        "strict_card_order",  # T10: moved here from FilteringSettingsPanel
         # MediaSettingsPanel
         "audio_format",
         "audio_bitrate",
         "audio_padding",
+        "reading_tts_enabled",
+        "reading_tts_google_enabled",
+        "reading_tts_papago_enabled",
         "screenshot_offset",
-        "max_parallel_workers",
         "screenshot_animated",
         "screenshot_animated_format",
         "screenshot_animated_clip_duration",
@@ -161,23 +169,20 @@ _SAVE_PATH_FIELDS = frozenset(
         "use_blacklist",
         "whitelist_path",
         "use_whitelist",
-        "subtitle_regex_filter",
-        "subtitle_regex_replacement",
-        "use_subtitle_regex_filter",
         "deduplicate_sentences",
-        "strict_card_order",
         "exclude_hiragana_only_words",
         "exclude_katakana_only_words",
         "use_i_plus_one_filter",
-        "use_sentence_length_filter",
-        "merge_incomplete_cues",
         "max_sentence_duration_seconds",
         "max_sentence_chars",
         "reading_min_occurrence",
-        "bold_target_in_sentence",
+        # SentencesSettingsPanel
+        "subtitle_regex_filter",
+        "subtitle_regex_replacement",
+        "use_subtitle_regex_filter",
         "secondary_subtitle_enabled",
-        # SubtitlesSettingsPanel
-        "mokuro_location",
+        "merge_incomplete_cues",
+        "bold_target_in_sentence",
         # YouTubeSettingsPanel
         "youtube_cookies_from_browser",
         "youtube_cookies_file",
@@ -205,8 +210,17 @@ class TestSavePathRoundTrip:
         qtbot.addWidget(anki_panel)
         media_panel = MediaSettingsPanel()
         qtbot.addWidget(media_panel)
+        # T10: takes part in the Save round-trip (script_variant), like
+        # SettingsTab._save_panels. The shared config below carries no
+        # language-gated value for it (see
+        # test_mining_language_panel_round_trips_the_variant), so its fold
+        # here is a no-op; present for structural parity with prod.
+        mining_language_panel = MiningLanguageSettingsPanel()
+        qtbot.addWidget(mining_language_panel)
         filtering_panel = FilteringSettingsPanel()
         qtbot.addWidget(filtering_panel)
+        sentences_panel = SentencesSettingsPanel()
+        qtbot.addWidget(sentences_panel)
         youtube_panel = YouTubeSettingsPanel()
         qtbot.addWidget(youtube_panel)
         # suppress_optional_startup: this panel's availability probes run
@@ -215,7 +229,15 @@ class TestSavePathRoundTrip:
         subtitles_panel = SubtitlesSettingsPanel(suppress_optional_startup=True)
         qtbot.addWidget(subtitles_panel)
 
-        panels = [anki_panel, media_panel, filtering_panel, youtube_panel, subtitles_panel]
+        panels = [
+            anki_panel,
+            media_panel,
+            mining_language_panel,
+            filtering_panel,
+            sentences_panel,
+            youtube_panel,
+            subtitles_panel,
+        ]
 
         # Step 2: load.
         for panel in panels:
@@ -259,8 +281,29 @@ class TestSavePathRoundTrip:
             "pitch_category_format",
             "card_type",
             "card_type_marker_fields",
+            "strict_card_order",
         ):
             assert getattr(result, field_name) == getattr(original, field_name), field_name
+
+    def test_anki_panel_round_trips_the_tone_colour_row(self, qtbot):
+        """reading_tone_color is gated on tone_color (zh/yue); load under zh to show it."""
+        cfg = AnkiMinerConfig(language="zh", reading_tone_color=True)
+        panel = AnkiSettingsPanel()
+        qtbot.addWidget(panel)
+
+        panel.load_from_config(cfg)
+        result = panel.contribute(AnkiMinerConfig())
+
+        assert result.reading_tone_color is True
+
+    def test_a_ja_anki_panel_never_writes_reading_tone_color(self, qtbot):
+        panel = AnkiSettingsPanel()
+        qtbot.addWidget(panel)
+
+        panel.load_from_config(AnkiMinerConfig())
+        result = panel.contribute(AnkiMinerConfig(reading_tone_color=True))
+
+        assert result.reading_tone_color is True  # unchanged: the row was hidden
 
     def test_media_panel_load_and_contribute(self, tmp_path, qtbot):
         """MediaSettingsPanel round-trip in isolation."""
@@ -275,8 +318,10 @@ class TestSavePathRoundTrip:
             "audio_format",
             "audio_bitrate",
             "audio_padding",
+            "reading_tts_enabled",
+            "reading_tts_google_enabled",
+            "reading_tts_papago_enabled",
             "screenshot_offset",
-            "max_parallel_workers",
             "screenshot_animated",
             "screenshot_animated_format",
             "screenshot_animated_clip_duration",
@@ -312,18 +357,56 @@ class TestSavePathRoundTrip:
             "use_blacklist",
             "whitelist_path",
             "use_whitelist",
-            "subtitle_regex_filter",
-            "subtitle_regex_replacement",
-            "use_subtitle_regex_filter",
             "deduplicate_sentences",
             "exclude_hiragana_only_words",
             "exclude_katakana_only_words",
             "use_i_plus_one_filter",
-            "use_sentence_length_filter",
-            "merge_incomplete_cues",
             "max_sentence_duration_seconds",
             "max_sentence_chars",
             "reading_min_occurrence",
+        ):
+            assert getattr(result, field_name) == getattr(original, field_name), field_name
+
+    @pytest.mark.parametrize(
+        ("language", "value"),
+        [("zh", "traditional"), ("pt", "pt")],
+    )
+    def test_mining_language_panel_round_trips_the_variant(self, qtbot, language, value):
+        """script_variant is gated (script_variants/regional_variants); load
+        under a language that shows one of the two combos."""
+        cfg = AnkiMinerConfig(language=language, script_variant=value)
+        panel = MiningLanguageSettingsPanel()
+        qtbot.addWidget(panel)
+
+        panel.load_from_config(cfg)
+        result = panel.contribute(AnkiMinerConfig())
+
+        assert result.script_variant == value
+
+    def test_a_ja_mining_language_panel_never_writes_script_variant(self, qtbot):
+        panel = MiningLanguageSettingsPanel()
+        qtbot.addWidget(panel)
+
+        panel.load_from_config(AnkiMinerConfig())
+        result = panel.contribute(AnkiMinerConfig(script_variant="traditional"))
+
+        assert result.script_variant == "traditional"  # unchanged: both combos hidden
+
+    def test_sentences_panel_load_and_contribute(self, tmp_path, qtbot):
+        """SentencesSettingsPanel round-trip in isolation."""
+        original = _non_default_save_config(tmp_path)
+        panel = SentencesSettingsPanel()
+        qtbot.addWidget(panel)
+
+        panel.load_from_config(original)
+        result = panel.contribute(AnkiMinerConfig())
+
+        for field_name in (
+            "subtitle_regex_filter",
+            "subtitle_regex_replacement",
+            "use_subtitle_regex_filter",
+            "secondary_subtitle_enabled",
+            "merge_incomplete_cues",
             "bold_target_in_sentence",
         ):
             assert getattr(result, field_name) == getattr(original, field_name), field_name

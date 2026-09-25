@@ -4,17 +4,20 @@ Its own destination rather than a section of Filtering: the switcher is not a
 filter, and every language added after ja brings plumbing of its own -- an
 engine probe, a model pack, a status line -- that would otherwise pile onto a
 page users open to set frequency bands. The per-language *filtering* options
-(kana, hangul, wordsets, character set) stay in Filtering, where they read as
-filters.
+(kana, hangul, wordsets) stay in Filtering, where they read as filters; the
+character-set/regional-variety choice lives here instead, beside the selector
+whose language it varies with (T10).
 
-Deliberately outside ``SettingsTab._save_panels`` and ``_wire_edit_signals``:
-the panel writes no config field. Picking a language proposes a guarded switch
-which commits its own config, so arming the autosave debounce here would save
-the pre-switch panel state on top of it.
+In ``SettingsTab._save_panels`` (T10): the variant combos write
+``script_variant``, so the panel takes part in the Save round-trip like any
+other. Its own ``mining_language_combo`` stays out of ``_wire_edit_signals``
+though -- picking a language proposes a guarded switch which commits its own
+config, so arming the autosave debounce on that combo would save the
+pre-switch panel state on top of it.
 """
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QComboBox, QHBoxLayout, QLabel, QWidget
@@ -25,12 +28,12 @@ from anki_miner.gui.utils.language_choices import (
     mining_language_display_name,
     mining_language_english_name,
 )
-from anki_miner.gui.utils.language_gate import field_row_widgets
+from anki_miner.gui.utils.language_gate import apply_language_gate, field_row_widgets
 from anki_miner.gui.widgets.base import FormPanel
 from anki_miner.gui.widgets.enhanced import ModernButton
 from anki_miner.languages import AVAILABLE_LANGUAGES
 from anki_miner.languages.pack_spec import LanguagePack
-from anki_miner.languages.registry import config_language
+from anki_miner.languages.registry import config_language, get_profile
 from anki_miner.utils.i18n import tr_format
 from anki_miner.utils.logging_ext import log_summary
 
@@ -132,6 +135,11 @@ class MiningLanguageSettingsPanel(FormPanel):
 
     def _setup_fields(self) -> None:
         """Set up the panel fields."""
+        # Every capability contributor extends this list; a second assignment
+        # would drop the pairs already in it, so this is the only place it is
+        # bound.
+        self._language_gate_pairs: list[tuple[QWidget, str]] = []
+
         self.add_section(self.tr("Language"))
 
         self.mining_language_combo = QComboBox()
@@ -144,11 +152,63 @@ class MiningLanguageSettingsPanel(FormPanel):
             helper=self.tr(
                 "Switching swaps dictionaries, filters, deck and card fields to that "
                 "language's own settings. The interface language is separate "
-                "(Settings → Appearance & Language)."
+                "(Settings → General)."
             ),
         )
 
         self._setup_language_pack_rows()
+
+        # Chinese script preference (T10, moved from Word Filters). Generic,
+        # language-scoped field - ja and ko carry "" here and never see this
+        # row.
+        self.add_section(self.tr("Script Variants"))
+        self._script_variants_section_label = self._active_section_label
+
+        self.script_variant_combo = QComboBox()
+        # "" leads because it is the zh default. It must have an item of its
+        # own: findData returns -1 for a value the combo does not carry, the
+        # panel then shows item 0, and contribute() writes that item back on
+        # the next Save.
+        self.script_variant_combo.addItem(self.tr("As written"), "")
+        self.script_variant_combo.addItem(self.tr("Simplified (简体)"), "simplified")
+        self.script_variant_combo.addItem(self.tr("Traditional (繁體)"), "traditional")
+        self.add_field(
+            self.tr("Character Set"),
+            self.script_variant_combo,
+            helper=self.tr(
+                "Which spelling the card front and the dictionary lookup prefer; "
+                "As written keeps the source's own spelling."
+            ),
+        )
+
+        # Portuguese national variety (T10, moved from Word Filters): the same
+        # language-scoped field as the zh combo above, its own ids and
+        # capability, so at most one of the two is ever visible and
+        # contribute() writes only the visible one.
+        self.add_section(self.tr("Regional Variety"))
+        self._regional_variants_section_label = self._active_section_label
+
+        self.regional_variant_combo = QComboBox()
+        self.regional_variant_combo.addItem(self.tr("Brazilian Portuguese"), "br")
+        self.regional_variant_combo.addItem(self.tr("European Portuguese"), "pt")
+        self.add_field(
+            self.tr("Variety"),
+            self.regional_variant_combo,
+            helper=self.tr(
+                "Which Google voice reads word and sentence audio, and which frequency list setup suggests."
+            ),
+        )
+
+        self._language_gate_pairs.extend(
+            (w, "script_variants") for w in field_row_widgets(self, self.script_variant_combo)
+        )
+        if self._script_variants_section_label is not None:
+            self._language_gate_pairs.append((self._script_variants_section_label, "script_variants"))
+        self._language_gate_pairs.extend(
+            (w, "regional_variants") for w in field_row_widgets(self, self.regional_variant_combo)
+        )
+        if self._regional_variants_section_label is not None:
+            self._language_gate_pairs.append((self._regional_variants_section_label, "regional_variants"))
 
         self.add_stretch()
 
@@ -345,13 +405,43 @@ class MiningLanguageSettingsPanel(FormPanel):
     # ------------------------------------------------------------------
 
     def load_from_config(self, config) -> None:
-        """Point the selector at the language actually in force.
+        """Point the selector at the language in force, and load the variant combos.
 
-        No ``contribute`` counterpart, so this panel is not a ``_SavePathPanel``
-        and :meth:`SettingsTab._load_config` calls this one explicitly. The
-        switch controller writes ``config.language`` after stashing the outgoing
-        language's scoped values, and a second writer would race it.
+        A ``_SavePathPanel`` since T10: the two variant combos write
+        ``script_variant``, so :meth:`SettingsTab._load_config` reaches this
+        through the ``_save_panels`` loop like any other panel. The mining
+        language selector itself is unaffected -- the switch controller writes
+        ``config.language`` after stashing the outgoing language's scoped
+        values, and a second writer would race it, so this only ever points the
+        combo, never proposes a switch (see :meth:`set_mining_language`).
         """
         # config_language, not config.language: an unregistered code mines as
         # Japanese, and the selector has to show the language actually in force.
         self.set_mining_language(config_language(config))
+        index = self.script_variant_combo.findData(config.script_variant)
+        if index >= 0:
+            self.script_variant_combo.setCurrentIndex(index)
+        index = self.regional_variant_combo.findData(config.script_variant)
+        if index >= 0:
+            self.regional_variant_combo.setCurrentIndex(index)
+        apply_language_gate(self._language_gate_pairs, get_profile(config_language(config)).capabilities)
+
+    def contribute(self, config):
+        """Return a new config with the visible variant combo's value applied.
+
+        Uses ``dataclasses.replace`` so the frozen-config invariant is
+        preserved. Called by :meth:`SettingsTab.commit_settings` as part of the
+        contribute fold.
+
+        Both combos write the same field, ``script_variant``, and the gate
+        shows at most one of them: a blind write would stamp the hidden one's
+        own default ("br", the Portuguese row's first item) onto a language
+        that has neither setting. Visibility is the gate's own output, so
+        there is one source of truth for "does this language have this
+        setting". With neither combo visible, ``config`` is returned unchanged.
+        """
+        if self.script_variant_combo.isVisibleTo(self):
+            return replace(config, script_variant=str(self.script_variant_combo.currentData()))
+        if self.regional_variant_combo.isVisibleTo(self):
+            return replace(config, script_variant=str(self.regional_variant_combo.currentData()))
+        return config

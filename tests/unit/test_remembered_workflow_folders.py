@@ -6,8 +6,8 @@ the two dialogs that never went through ``FileSelector`` at all — Reading →
 Subtitles' multi-select and the tool tabs' output chooser.
 
 Two things are as load-bearing as the remembering: one workflow's anchor never
-overwrites another's, and Settings, profiles and Deck Builder stay out of the
-history entirely.
+overwrites another's, and Settings and profiles stay out of the history
+entirely.
 """
 
 from __future__ import annotations
@@ -229,9 +229,9 @@ class TestOptIn:
         # multi-select dialog), so it is covered by its own tests above.
         assert _selector_keys(window) == _INPUT_KEYS - {"reading.subtitles.inputs"}
 
-    @pytest.mark.parametrize("class_name", ["SettingsTab", "DeckBuilderTab"])
+    @pytest.mark.parametrize("class_name", ["SettingsTab"])
     def test_excluded_screens_have_no_history(self, wired_window, class_name):
-        """Settings resources, import/export, profiles and Deck Builder are out."""
+        """Settings resources, import/export and profiles are out."""
         window, _titles, _tabs = wired_window
         index = next(i for i in range(window.tabs.count()) if type(window.tabs.widget(i)).__name__ == class_name)
         excluded = window.tabs.widget(index)

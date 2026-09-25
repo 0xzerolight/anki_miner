@@ -429,12 +429,9 @@ def test_stale_yomitan_row_shows_warning_and_reimport_button(qapp, qtbot, tmp_pa
 
     emitted: list[str] = []
     panel.reimport_dict_requested.connect(emitted.append)
-    jmdict_fired: list[None] = []
-    panel.reimport_jmdict_requested.connect(lambda: jmdict_fired.append(None))
 
     row.repair_button.click()
     assert emitted == ["stale-yomi"]
-    assert jmdict_fired == [], "Yomitan row must not fire the JMdict signal"
 
 
 def test_stale_jmdict_row_fires_source_first_reimport_signal(qtbot, tmp_path):
@@ -463,13 +460,10 @@ def test_stale_jmdict_row_fires_source_first_reimport_signal(qtbot, tmp_path):
     assert row.warning_text != ""
     assert row.repair_button is not None
 
-    jmdict_fired: list[None] = []
-    panel.reimport_jmdict_requested.connect(lambda: jmdict_fired.append(None))
     generic_fired: list[str] = []
     panel.reimport_dict_requested.connect(generic_fired.append)
 
     row.repair_button.click()
-    assert jmdict_fired == []
     assert generic_fired == ["jmdict-english"]
 
 
@@ -516,19 +510,15 @@ def test_global_button_labeled_reimport_all(qapp, qtbot, tmp_path):
 
 
 def test_reimport_all_signal_fires_on_button_click(qapp, qtbot, tmp_path):
-    """Clicking the top-level button emits the new reimport_all_requested signal,
-    not the per-row reimport_jmdict_requested signal."""
+    """Clicking the top-level button emits the reimport_all_requested signal."""
     panel = DictionarySettingsPanel(tmp_path)
     qtbot.addWidget(panel)
 
     all_fired: list[None] = []
     panel.reimport_all_requested.connect(lambda: all_fired.append(None))
-    jmdict_fired: list[None] = []
-    panel.reimport_jmdict_requested.connect(lambda: jmdict_fired.append(None))
 
-    panel._reimport_btn.click()
+    panel._reimport_btn.trigger()
     assert all_fired == [None]
-    assert jmdict_fired == [], "Global button must not fire the JMdict-only signal"
 
 
 def _patch_menu_exec(monkeypatch, action_label: str | None):
@@ -585,8 +575,6 @@ def test_right_click_non_stale_yomitan_row_emits_reimport_dict_requested(qapp, q
 
     emitted: list[str] = []
     panel.reimport_dict_requested.connect(emitted.append)
-    jmdict_fired: list[None] = []
-    panel.reimport_jmdict_requested.connect(lambda: jmdict_fired.append(None))
 
     item = panel._list.item(0)
     pos = panel._list.visualItemRect(item).center()
@@ -594,7 +582,6 @@ def test_right_click_non_stale_yomitan_row_emits_reimport_dict_requested(qapp, q
 
     assert len(constructed) == 1, "Yomitan row must open the context menu"
     assert emitted == ["fresh-yomi"]
-    assert jmdict_fired == [], "Yomitan row must not fire the JMdict signal"
 
 
 def test_right_click_jmdict_row_emits_source_first_reimport(qtbot, monkeypatch, tmp_path):
@@ -620,8 +607,6 @@ def test_right_click_jmdict_row_emits_source_first_reimport(qtbot, monkeypatch, 
 
     _patch_menu_exec(monkeypatch, "Re-import…")
 
-    jmdict_fired: list[None] = []
-    panel.reimport_jmdict_requested.connect(lambda: jmdict_fired.append(None))
     generic_fired: list[str] = []
     panel.reimport_dict_requested.connect(generic_fired.append)
 
@@ -629,7 +614,6 @@ def test_right_click_jmdict_row_emits_source_first_reimport(qtbot, monkeypatch, 
     pos = panel._list.visualItemRect(item).center()
     panel._on_row_context_menu(pos)
 
-    assert jmdict_fired == []
     assert generic_fired == ["jmdict-english"]
 
 
@@ -962,8 +946,6 @@ def test_right_click_jisho_row_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path)
 
     emitted: list[str] = []
     panel.reimport_dict_requested.connect(emitted.append)
-    jmdict_fired: list[None] = []
-    panel.reimport_jmdict_requested.connect(lambda: jmdict_fired.append(None))
 
     item = panel._list.item(0)
     pos = panel._list.visualItemRect(item).center()
@@ -971,7 +953,6 @@ def test_right_click_jisho_row_shows_no_menu(qapp, qtbot, monkeypatch, tmp_path)
 
     assert constructed == [], "Jisho row must not open a context menu"
     assert emitted == []
-    assert jmdict_fired == []
 
 
 def test_request_resource_release_returns_true_when_unset(qapp, qtbot, tmp_path):

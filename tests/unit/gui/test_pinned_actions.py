@@ -5,10 +5,12 @@ because the property being defended is the same sentence on all of them: the
 button you press to start the job, the button you press to stop it, and the
 activity log are siblings of the scroll area, not children of it.
 
-The alternate launch actions are checked here too. Batch's *Process Folder*
-and the Reading tabs' *Mine Folder* act on a specific card's inputs, so they
-stay in that card; promoting them to the bar would put two run buttons on one
-screen with no way to tell which folder each meant.
+The alternate launch action is checked here too: the Reading tabs' *Mine
+Folder* acts on a specific card's inputs, so it stays in that card;
+promoting it to the bar would put two run buttons on one screen with no way
+to tell which folder was meant. Batch's *Add to Queue* is checked for the
+same layout reason, though it is not itself a launch action -- it adds a row
+to the queue below, which the pinned *Process Queue* then runs.
 """
 
 from __future__ import annotations
@@ -162,11 +164,11 @@ def test_a_warning_does_not_open_activity_on_any_screen(screen):
     assert widget.log_widget.parentWidget().isHidden()
 
 
-def test_batch_keeps_process_folder_in_its_card(qtbot, test_config: AnkiMinerConfig):
+def test_batch_keeps_add_series_in_its_card(qtbot, test_config: AnkiMinerConfig):
     widget = BatchProcessingTab(test_config, _presenter(), _progress_callback())
     qtbot.addWidget(widget)
 
-    assert _bar(widget) not in _ancestors(widget.process_pairs_button)
+    assert _bar(widget) not in _ancestors(widget.add_series_button)
 
 
 @pytest.mark.parametrize("name", ["manga", "novels"])

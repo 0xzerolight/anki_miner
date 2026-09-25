@@ -17,10 +17,19 @@ from PyQt6.QtWidgets import QLabel
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.widgets.panels.anki_settings_panel import AnkiSettingsPanel
 from anki_miner.gui.widgets.panels.filtering_settings_panel import FilteringSettingsPanel
+from anki_miner.gui.widgets.panels.mining_language_settings_panel import MiningLanguageSettingsPanel
+from anki_miner.gui.widgets.panels.sentences_settings_panel import SentencesSettingsPanel
 
 
 def _filtering(qtbot, config: AnkiMinerConfig) -> FilteringSettingsPanel:
     panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(config)
+    return panel
+
+
+def _sentences(qtbot, config: AnkiMinerConfig) -> SentencesSettingsPanel:
+    panel = SentencesSettingsPanel()
     qtbot.addWidget(panel)
     panel.load_from_config(config)
     return panel
@@ -33,33 +42,48 @@ def _anki(qtbot, config: AnkiMinerConfig) -> AnkiSettingsPanel:
     return panel
 
 
+def _mining_language(qtbot, config: AnkiMinerConfig) -> MiningLanguageSettingsPanel:
+    panel = MiningLanguageSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.load_from_config(config)
+    return panel
+
+
 def _zh(config: AnkiMinerConfig, **overrides) -> AnkiMinerConfig:
     return replace(config, language="zh", **overrides)
 
 
 def test_ja_hides_the_zh_rows(qtbot, test_config):
-    panel = _filtering(qtbot, test_config)
-    assert not panel.script_variant_combo.isVisibleTo(panel)
-    assert not panel.reading_tone_color_checkbox.isVisibleTo(panel)
+    mining_panel = _mining_language(qtbot, test_config)
+    anki_panel = _anki(qtbot, test_config)
+    assert not mining_panel.script_variant_combo.isVisibleTo(mining_panel)
+    assert not anki_panel.reading_tone_color_checkbox.isVisibleTo(anki_panel)
 
 
 def test_zh_shows_them_with_the_configured_values(qtbot, test_config):
-    panel = _filtering(qtbot, _zh(test_config, script_variant="traditional", reading_tone_color=True))
-    assert panel.script_variant_combo.isVisibleTo(panel)
-    assert panel.script_variant_combo.currentData() == "traditional"
-    assert panel.reading_tone_color_checkbox.isChecked()
+    config = _zh(test_config, script_variant="traditional", reading_tone_color=True)
+    mining_panel = _mining_language(qtbot, config)
+    anki_panel = _anki(qtbot, config)
+    assert mining_panel.script_variant_combo.isVisibleTo(mining_panel)
+    assert mining_panel.script_variant_combo.currentData() == "traditional"
+    assert anki_panel.reading_tone_color_checkbox.isChecked()
 
 
 def test_switching_back_to_ja_hides_them_again(qtbot, test_config):
-    panel = _filtering(qtbot, _zh(test_config, script_variant="simplified", reading_tone_color=True))
-    panel.load_from_config(test_config)
-    assert not panel.script_variant_combo.isVisibleTo(panel)
-    assert not panel.reading_tone_color_checkbox.isVisibleTo(panel)
+    config = _zh(test_config, script_variant="simplified", reading_tone_color=True)
+    mining_panel = _mining_language(qtbot, config)
+    anki_panel = _anki(qtbot, config)
+    mining_panel.load_from_config(test_config)
+    anki_panel.load_from_config(test_config)
+    assert not mining_panel.script_variant_combo.isVisibleTo(mining_panel)
+    assert not anki_panel.reading_tone_color_checkbox.isVisibleTo(anki_panel)
 
 
 def test_a_ja_save_never_writes_a_zh_value(qtbot, test_config):
-    panel = _filtering(qtbot, test_config)
-    result = panel.contribute(test_config)
+    mining_panel = _mining_language(qtbot, test_config)
+    anki_panel = _anki(qtbot, test_config)
+    result = mining_panel.contribute(test_config)
+    result = anki_panel.contribute(result)
     assert result.script_variant == ""
     assert result.reading_tone_color is False
 
@@ -71,17 +95,19 @@ def test_the_as_written_default_survives_a_save(qtbot, test_config):
     or ``contribute`` writes "simplified" back the first time settings are saved.
     """
     config = _zh(test_config, script_variant="", reading_tone_color=True)
-    panel = _filtering(qtbot, config)
+    panel = _mining_language(qtbot, config)
     assert panel.script_variant_combo.currentData() == ""
     assert panel.contribute(config).script_variant == ""
 
 
 def test_a_zh_save_round_trips_both(qtbot, test_config):
     config = _zh(test_config, script_variant="simplified", reading_tone_color=True)
-    panel = _filtering(qtbot, config)
-    panel.script_variant_combo.setCurrentIndex(panel.script_variant_combo.findData("traditional"))
-    panel.reading_tone_color_checkbox.setChecked(False)
-    result = panel.contribute(config)
+    mining_panel = _mining_language(qtbot, config)
+    anki_panel = _anki(qtbot, config)
+    mining_panel.script_variant_combo.setCurrentIndex(mining_panel.script_variant_combo.findData("traditional"))
+    anki_panel.reading_tone_color_checkbox.setChecked(False)
+    result = mining_panel.contribute(config)
+    result = anki_panel.contribute(result)
     assert result.script_variant == "traditional"
     assert result.reading_tone_color is False
 
@@ -89,7 +115,7 @@ def test_a_zh_save_round_trips_both(qtbot, test_config):
 def test_the_gated_row_hides_its_label_too(qtbot, test_config):
     from anki_miner.gui.utils.language_gate import field_row_widgets
 
-    panel = _filtering(qtbot, test_config)
+    panel = _mining_language(qtbot, test_config)
     label, widget = field_row_widgets(panel, panel.script_variant_combo)
     assert not label.isVisibleTo(panel)
     assert not widget.isVisibleTo(panel)
@@ -97,13 +123,13 @@ def test_the_gated_row_hides_its_label_too(qtbot, test_config):
 
 def test_the_tone_colour_tooltip_describes_what_the_hook_emits(qtbot, test_config):
     """The hook writes an inline style on purpose, so no class is on offer."""
-    panel = _filtering(qtbot, _zh(test_config))
+    panel = _anki(qtbot, _zh(test_config))
     assert panel.reading_tone_color_checkbox.toolTip() == "Colours each syllable of the reading by its tone."
 
 
 def test_the_bold_tooltip_names_no_japanese_field_or_tagger(qtbot, test_config):
     """One string for every language: the row itself is not language-gated."""
-    panel = _filtering(qtbot, _zh(test_config))
+    panel = _sentences(qtbot, _zh(test_config))
     tooltip = panel.bold_target_in_sentence_checkbox.toolTip()
 
     assert "SentenceFurigana" not in tooltip
@@ -112,32 +138,42 @@ def test_the_bold_tooltip_names_no_japanese_field_or_tagger(qtbot, test_config):
     assert "&lt;b&gt;" in tooltip
 
 
-def test_the_zh_script_rows_carry_their_own_heading(qtbot, test_config):
-    """ "Script Type" above is gated on kana_filters and hides under zh.
-
-    Without a heading of their own the zh rows read as part of "Deduplication".
-    """
-    panel = _filtering(qtbot, _zh(test_config))
+def test_the_zh_variant_row_carries_its_own_heading(qtbot, test_config):
+    """The Character Set row (Mining Language page) has its own heading."""
+    panel = _mining_language(qtbot, _zh(test_config))
     heading = panel._script_variants_section_label
     assert heading is not None
     assert heading.isVisibleTo(panel)
-    assert not panel._script_type_section_label.isVisibleTo(panel)
 
 
-def test_ja_hides_the_zh_heading(qtbot, test_config):
-    panel = _filtering(qtbot, test_config)
+def test_ja_hides_the_zh_variant_heading(qtbot, test_config):
+    panel = _mining_language(qtbot, test_config)
     assert not panel._script_variants_section_label.isVisibleTo(panel)
-    assert panel._script_type_section_label.isVisibleTo(panel)
 
 
-def test_the_headings_swap_back_on_a_return_to_ja(qtbot, test_config):
+def test_the_variant_heading_swaps_back_on_a_return_to_ja(qtbot, test_config):
     config = _zh(test_config, script_variant="traditional")
-    panel = _filtering(qtbot, config)
+    panel = _mining_language(qtbot, config)
     panel.load_from_config(test_config)
 
     assert not panel._script_variants_section_label.isVisibleTo(panel)
-    assert panel._script_type_section_label.isVisibleTo(panel)
     assert panel.contribute(test_config).script_variant == ""
+
+
+def test_ja_keeps_the_filtering_script_type_heading(qtbot, test_config):
+    """ "Script Type" (the kana rows) is unaffected by the T10 move."""
+    panel = _filtering(qtbot, test_config)
+    assert panel._script_type_section_label.isVisibleTo(panel)
+
+
+def test_zh_hides_the_filtering_script_type_heading(qtbot, test_config):
+    """zh has no kana_filters capability, so the kana-rows heading hides too.
+
+    Without a heading of its own on the Mining Language page, the zh Character
+    Set row would otherwise have read as part of Filtering's "Sentence Rule".
+    """
+    panel = _filtering(qtbot, _zh(test_config))
+    assert not panel._script_type_section_label.isVisibleTo(panel)
 
 
 #: A plain Chinese note type: three of its fields are profile-declared keys.

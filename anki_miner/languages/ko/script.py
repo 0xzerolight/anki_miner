@@ -75,7 +75,7 @@ class KoreanScript:
     """
 
     def filter_options(self) -> tuple[ScriptFilterOption, ...]:
-        """Script filters offered in Settings -> Filtering for Korean."""
+        """Script filters offered in Settings -> Word Filters for Korean."""
         return (
             ScriptFilterOption(
                 option_id="hangul_only",

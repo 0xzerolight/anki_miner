@@ -39,7 +39,7 @@ MANAGE_PROFILES_SENTINEL = "__open_profile_manager__"
 # budget is the backstop for a very large UI font.
 #
 # Measured in the combo's own font on every set_profiles rather than frozen as
-# pixels: the 12-character hint alone is 160px at ui_font_scale 1.0 but 256px at
+# pixels: the 12-character hint alone is 160px at a text scale of 1.0 but 256px at
 # 2.0, so the flat 220px this replaces clamped the combo BELOW the width it was
 # sized for — truncating the text exactly when the user had asked for bigger.
 _PROFILE_COMBO_MIN_CHARS = 12
@@ -54,7 +54,7 @@ _PROFILE_NAME_MAX_WIDTH = 150
 # Same character budget for the theme combo, and for the same reason: without it
 # the combo sizes to its widest ITEM, which is the "Browse all N themes…"
 # sentinel, making it the widest thing in the header (288px against the profile
-# combo's 232px at ui_font_scale 1.5 on DejaVu Sans). That pushed the header
+# combo's 232px at a text scale of 1.5 on DejaVu Sans). That pushed the header
 # minimum to 1028px -- past the 1024px WINDOW_MIN_WIDTH the window sets on
 # itself -- on any desktop whose default sans face is Latin-only, because DejaVu
 # advances run wider than Noto Sans CJK JP's for the same string.
@@ -333,7 +333,7 @@ class HeaderWidget(QWidget):
 
         # Both measurements below (elision budget, width cap) read the combo's
         # font, and an unpolished widget reports the plain application font
-        # rather than the stylesheet's ui_font_scale-derived one — measured, a
+        # rather than the stylesheet's text-scale-derived one — measured, a
         # scale-2.0 combo answers with a 6px advance until it is polished, then
         # 14px. Polishing first is what makes the numbers the real ones.
         self.profile_combo.ensurePolished()
@@ -356,7 +356,7 @@ class HeaderWidget(QWidget):
             self.profile_combo.blockSignals(False)
 
         # Re-measured here, not frozen at construction: this runs again after the
-        # app stylesheet has been applied (and after every ui_font_scale change
+        # app stylesheet has been applied (and after every text-scale change
         # that repolishes it), which is the only point the combo's real font is
         # known.
         self.profile_combo.setMaximumWidth(self._profile_combo_max_width(metrics))
@@ -380,8 +380,8 @@ class HeaderWidget(QWidget):
         the combo from ``_PROFILE_COMBO_MIN_CHARS``, not from its widest item),
         so it is a clean measure of the chrome — frame, arrow, margins — wrapped
         around that many characters. Widening it by the remaining characters in
-        the same font keeps the cap a fixed CHARACTER budget at every
-        ``ui_font_scale``, which a frozen pixel count cannot be.
+        the same font keeps the cap a fixed CHARACTER budget at every zoom
+        level, which a frozen pixel count cannot be.
         """
         extra = _PROFILE_COMBO_MAX_CHARS - _PROFILE_COMBO_MIN_CHARS
         return self.profile_combo.sizeHint().width() + extra * metrics.horizontalAdvance("x")

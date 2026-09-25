@@ -18,7 +18,6 @@ from PyQt6.QtCore import QEvent
 
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
-from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.single_episode_tab import SingleEpisodeTab
 from anki_miner.gui.widgets.video_tab import VideoTab
@@ -155,17 +154,6 @@ class _FakeBatchTab(BatchProcessingTab):
 
         QWidget.__init__(self)
         self.worker_thread = _FakeWorker(running=worker_running)
-        self._processor = None  # needed by inherited release_dictionary_resources
-
-
-class _FakeDeckBuilderTab(DeckBuilderTab):
-    """Real DeckBuilderTab subclass that skips the heavy ``__init__``."""
-
-    def __init__(self, *, worker_running: bool = False) -> None:
-        from PyQt6.QtWidgets import QWidget
-
-        QWidget.__init__(self)
-        self.worker_thread: _FakeWorker | None = _FakeWorker(running=worker_running)
         self._processor = None  # needed by inherited release_dictionary_resources
 
 
@@ -316,29 +304,6 @@ class TestCloseEventOtherTabs:
 
         assert tab.worker_thread.cancel_called
         assert tab.worker_thread.wait_called_with == 2000
-
-
-class TestCloseEventDeckBuilderTab:
-    """Deck builder worker (held on ``worker_thread``) must also be torn down."""
-
-    def test_running_deck_builder_worker_cancelled(self, main_window):
-        tab = _FakeDeckBuilderTab(worker_running=True)
-        main_window.tabs.addTab(tab, "Deck Builder")
-
-        _trigger_close(main_window)
-
-        # cancel() also opens the confirm gate, so a worker blocked awaiting
-        # Build unblocks and exits cleanly before the window closes.
-        assert tab.worker_thread.cancel_called
-        assert tab.worker_thread.wait_called_with == 2000
-
-    def test_idle_deck_builder_worker_not_cancelled(self, main_window):
-        tab = _FakeDeckBuilderTab(worker_running=False)
-        main_window.tabs.addTab(tab, "Deck Builder")
-
-        _trigger_close(main_window)
-
-        assert not tab.worker_thread.cancel_called
 
 
 class TestCloseEventSettingsTab:
@@ -926,3 +891,57 @@ class TestCloseEventFlushesSettingsAutosave:
         _trigger_close(main_window)
 
         assert main_window.config.anki_deck_name == "EditedJustBeforeQuit"
+
+
+class TestCloseEventFlushesMokuroLocationEdit:
+    """closeEvent must flush a pending Manga OCR setup-card path edit too, for
+    the same reason and via the same ordering as the Settings auto-save flush
+    (Task 13 fix round 1): the field debounces for 1000 ms, and quitting
+    inside that window must not silently drop the edit."""
+
+    def _subtitles_tab_with_mokuro(self, main_window, test_config, qtbot):
+        """Insert a REAL MokuroTab under a minimal ``SubtitlesTab``-named stand-in
+        (MainWindow finds it by class name via ``_main_tab_index("subtitles")``),
+        and mirror app.py's ``config_changed`` -> ``window.update_config`` wiring."""
+        from PyQt6.QtWidgets import QWidget
+
+        from anki_miner.gui.widgets.mokuro_tab import MokuroTab
+
+        class SubtitlesTab(QWidget):
+            def __init__(self, mokuro_tab: MokuroTab) -> None:
+                super().__init__()
+                self.mokuro_tab = mokuro_tab
+
+        mokuro_tab = MokuroTab(test_config, suppress_optional_startup=True)
+        qtbot.addWidget(mokuro_tab)
+        mokuro_tab.config_changed.connect(main_window.update_config)
+        container = SubtitlesTab(mokuro_tab)
+        qtbot.addWidget(container)
+        main_window.tabs.addTab(container, "Utilities")
+        return mokuro_tab
+
+    def test_flush_runs_before_background_shutdown(self, main_window, test_config, qtbot, monkeypatch):
+        call_order: list[str] = []
+        mokuro_tab = self._subtitles_tab_with_mokuro(main_window, test_config, qtbot)
+        monkeypatch.setattr(mokuro_tab, "flush_pending_edits", lambda: call_order.append("flush"))
+        original_shutdown = main_window.background_tasks.shutdown
+        monkeypatch.setattr(
+            main_window.background_tasks,
+            "shutdown",
+            lambda tabs: call_order.append("shutdown") or original_shutdown(tabs),
+        )
+
+        _trigger_close(main_window)
+
+        assert call_order[:2] == ["flush", "shutdown"]
+
+    def test_pending_edit_persists_through_close(self, main_window, test_config, qtbot, tmp_path):
+        """End-to-end: an armed debounce edit reaches MainWindow.config on close."""
+        mokuro_tab = self._subtitles_tab_with_mokuro(main_window, test_config, qtbot)
+        pending_path = tmp_path / "edited_just_before_quit"
+        mokuro_tab.mokuro_selector.set_path(str(pending_path))
+        assert mokuro_tab._mokuro_location_timer.isActive()
+
+        _trigger_close(main_window)
+
+        assert main_window.config.mokuro_location == pending_path

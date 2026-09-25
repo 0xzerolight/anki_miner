@@ -1,6 +1,6 @@
 """The Settings footer's "Settings Profiles…" request reaches the window unchanged.
 
-The button moved here from the foot of Appearance & Language: the footer sits
+The button moved here from the foot of General: the footer sits
 outside the panels' scroll area, so one entry point serves all ten pages, and it
 belongs with Reset / Export / Import rather than under the theme gallery.
 

@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:d6de3b1fd803053b -->
+<!-- i18n-source: README.md sha256:eaf6f4a3bb1bf708 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -116,11 +116,10 @@ Per la configurazione completa dell'ambiente di sviluppo, consulta [CONTRIBUTING
 ## Schede
 
 - **Video** - estrai da una singola coppia video/sottotitoli, una cartella in batch o URL YouTube.
-- **Costruttore di mazzi** - estrai un'intera serie in un unico mazzo ordinato per frequenza.
 - **Audiolibri** - estrai audiolibri, podcast, radio, canzoni (coppie audio + sottotitoli/trascrizione).
 - **Lettura** - estrai manga (mokuro), romanzi (`.epub`, `.txt`; un singolo libro o un'intera cartella), file di sottotitoli autonomi o testo incollato.
 - **Analisi** - cronologia del mining, classifiche di difficoltà, traguardi.
-- **Utilità** - genera sottotitoli (Whisper locale), risincronizza sottotitoli (ffsubsync/alass), condensa i contenuti multimediali in audio con solo dialoghi, scarica video/audio/sottotitoli da qualsiasi sito supportato da yt-dlp, copia la parte che vale la pena imparare di un mazzo predefinito in uno nuovo, completa retroattivamente i campi delle carte esistenti, esegui l'OCR delle immagini delle pagine manga in file .mokuro (mokuro, installabile dalle Impostazioni) e sincronizza un audiolibro con il testo del suo libro (Sincronizzazione dell'audiolibro).
+- **Utilità** - genera sottotitoli (Whisper locale), risincronizza sottotitoli (ffsubsync/alass), condensa i contenuti multimediali in audio con solo dialoghi, scarica video/audio/sottotitoli da qualsiasi sito supportato da yt-dlp, copia la parte che vale la pena imparare di un mazzo predefinito in uno nuovo, completa retroattivamente i campi delle carte esistenti, esegui l'OCR delle immagini delle pagine manga in file .mokuro (mokuro) e sincronizza un audiolibro con il testo del suo libro (Sincronizzazione dell'audiolibro).
 - **Impostazioni** - tutto ciò che è configurabile.
 
 ## Altre funzionalità
@@ -137,7 +136,7 @@ Per la configurazione completa dell'ambiente di sviluppo, consulta [CONTRIBUTING
 - Anteprima video integrata con libmpv - riproduci la scena di una parola durante la revisione, oppure regola la sincronizzazione dei sottotitoli con la riproduzione dal vivo.
 - Schermate animate (vedi gli esempi di carte sopra).
 - Profili delle impostazioni - salva configurazioni con nome e passa dall'una all'altra dall'intestazione.
-- Riapplica stile alle carte estratte - riapplica il tuo stile attuale delle carte a quelle già create (menu Strumenti).
+- Riapplica stile alle carte estratte - riapplica il tuo stile attuale delle carte a quelle già create (Utilità → Completamento delle carte).
 
 <details>
 <summary><strong>Temi integrati (29)</strong></summary>

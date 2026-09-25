@@ -1199,7 +1199,7 @@ class TestOptionalServices:
         )
 
     def test_bypass_optional_filters_skips_frequency(self, test_config, mock_services, tmp_path):
-        """Deck Builder: bypass_optional_filters=True skips the frequency cutoff."""
+        """bypass_optional_filters=True skips the frequency cutoff."""
         config = replace(test_config, max_frequency_rank=1000, bypass_optional_filters=True)
 
         word1 = _make_word("食べる")
@@ -2176,7 +2176,7 @@ class TestKnownWordDBIntegration:
 
 
 class TestIncludeKnownWordsFlag:
-    """Tests for the include_known_words config flag (Deck Builder bypass)."""
+    """Tests for the include_known_words config flag."""
 
     @pytest.fixture
     def mock_services(self):
@@ -2398,7 +2398,7 @@ class TestWordsetServiceIntegration:
         assert result.cards_created == 1
 
     def test_bypass_optional_filters_skips_wordset_filter(self, test_config, mock_services, tmp_path):
-        """Deck Builder bypass_optional_filters=True must skip the wordset filter."""
+        """bypass_optional_filters=True must skip the wordset filter."""
         config = replace(test_config, bypass_optional_filters=True)
 
         word1 = _make_word("食べる")
@@ -2481,8 +2481,8 @@ class TestWhitelistForceInclude:
         assert [w.mined_form for w in sent] == ["コーヒー"]
 
     def test_force_includes_past_sentence_length_filter(self, test_config, mock_services, tmp_path):
-        """Whitelisted word survives use_sentence_length_filter's char cap."""
-        config = replace(test_config, use_whitelist=True, use_sentence_length_filter=True, max_sentence_chars=1)
+        """Whitelisted word survives the sentence-length filter's char cap."""
+        config = replace(test_config, use_whitelist=True, max_sentence_chars=1)
         kept = _make_word("食べる")
 
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = [kept]
@@ -4631,7 +4631,7 @@ class TestIPlusOneFilter:
         assert "kept 1/2 words (50%)" in matched[0]
 
     def test_bypass_optional_filters_skips_i_plus_one(self, test_config, mock_services, tmp_path):
-        """Deck Builder: bypass_optional_filters=True skips i+1 even when its flag is on."""
+        """bypass_optional_filters=True skips i+1 even when its flag is on."""
         config = replace(test_config, use_i_plus_one_filter=True, bypass_optional_filters=True)
         word = _make_word("食べる")
         line = _make_line_lemmas(lemmas=("食べる",))
@@ -5270,7 +5270,7 @@ class TestPreflightCardTarget:
         assert result.errors == []
         mock_services["definition_service"].has_usable_offline_provider.assert_called_once_with()
 
-    def test_deck_builder_bypass_does_not_require_offline_provider(self, test_config, mock_services, tmp_path):
+    def test_bypass_optional_filters_does_not_require_offline_provider(self, test_config, mock_services, tmp_path):
         config = replace(test_config, bypass_optional_filters=True)
         mock_services["definition_service"].has_usable_offline_provider.return_value = False
         mock_services["subtitle_parser"].parse_subtitle_file.return_value = []
@@ -5579,7 +5579,6 @@ class TestPhase2FilterOrdering:
         config = replace(
             test_config,
             use_i_plus_one_filter=True,
-            use_sentence_length_filter=True,
             max_sentence_chars=40,
         )
         word = _make_word("食べる")
@@ -5655,7 +5654,7 @@ class TestPhase2FilterOrdering:
         assert mock_services["media_extractor"].extract_media_batch.call_args[0][1] == [word1]
 
     def test_script_type_filter_bypassed_by_optional_filters_flag(self, test_config, mock_services, tmp_path):
-        """Deck Builder bypass_optional_filters=True must skip the script-type filter."""
+        """bypass_optional_filters=True must skip the script-type filter."""
         config = replace(
             test_config,
             exclude_hiragana_only_words=True,
@@ -5678,7 +5677,6 @@ class TestPhase2FilterOrdering:
         """bypass_optional_filters=True must skip the sentence-length filter too."""
         config = replace(
             test_config,
-            use_sentence_length_filter=True,
             max_sentence_chars=40,
             bypass_optional_filters=True,
         )
@@ -5694,6 +5692,64 @@ class TestPhase2FilterOrdering:
         processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
 
         mock_services["word_filter"].filter_by_sentence_length.assert_not_called()
+
+    def test_sentence_length_filter_off_when_both_caps_are_zero(self, test_config, mock_services, tmp_path):
+        """No master toggle: caps (0, 0) is off, exactly like the old toggle-off state."""
+        config = replace(test_config, max_sentence_duration_seconds=0.0, max_sentence_chars=0)
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        processor = build_processor(config=config, presenter=NullPresenter(), **mock_services)
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].filter_by_sentence_length.assert_not_called()
+
+    def test_sentence_length_filter_on_when_one_cap_is_set(self, test_config, mock_services, tmp_path):
+        """No master toggle: caps (30, 0) alone turns the filter on."""
+        config = replace(test_config, max_sentence_duration_seconds=30.0, max_sentence_chars=0)
+        word = _make_word("食べる")
+        mock_services["subtitle_parser"].parse_subtitle_file.return_value = [word]
+        mock_services["anki_service"].get_existing_vocabulary.return_value = set()
+        mock_services["word_filter"].filter_unknown.return_value = [word]
+        mock_services["media_extractor"].extract_media_batch.return_value = [(word, _make_media())]
+        mock_services["definition_service"].get_definitions_batch.return_value = ["1. to eat"]
+        mock_services["anki_service"].create_cards_batch.return_value = [1]
+
+        processor = build_processor(config=config, presenter=NullPresenter(), **mock_services)
+        processor.process_episode(tmp_path / "v.mkv", tmp_path / "s.ass")
+
+        mock_services["word_filter"].filter_by_sentence_length.assert_called_once_with(
+            [word], max_duration=30.0, max_chars=0
+        )
+
+
+class TestActiveFilterNames:
+    """``_active_filter_names`` names the sentence-length filter by the same
+    no-master-toggle rule as the filter itself: caps (0, 0) is off, any
+    non-zero cap is on."""
+
+    def test_no_sentence_length_name_when_both_caps_are_zero(self, test_config):
+        config = replace(test_config, max_sentence_duration_seconds=0.0, max_sentence_chars=0)
+        processor = build_processor(config=config)
+
+        assert "sentence-length" not in processor._active_filter_names()
+
+    def test_sentence_length_name_present_when_duration_cap_is_set(self, test_config):
+        config = replace(test_config, max_sentence_duration_seconds=30.0, max_sentence_chars=0)
+        processor = build_processor(config=config)
+
+        assert "sentence-length" in processor._active_filter_names()
+
+    def test_sentence_length_name_present_when_chars_cap_is_set(self, test_config):
+        config = replace(test_config, max_sentence_duration_seconds=0.0, max_sentence_chars=80)
+        processor = build_processor(config=config)
+
+        assert "sentence-length" in processor._active_filter_names()
 
 
 # ---------------------------------------------------------------------------
@@ -6320,8 +6376,8 @@ class TestWithinRunDuplicateCollapse:
         assert captured["mined_forms"] == ["出でる", "いでる"]
 
     def test_duplicates_preserved_when_allow_duplicate_cards(self, test_config, mock_services, tmp_path):
-        # Deck Builder parity: allow_duplicate_cards=True ⇒ Anki creates both, so
-        # showing both is correct and the collapse must be skipped.
+        # allow_duplicate_cards=True ⇒ Anki creates both, so showing both is
+        # correct and the collapse must be skipped.
         config = replace(test_config, allow_duplicate_cards=True)
         dup_a, dup_b = _make_word("食べる", start_time=1.0), _make_word("食べる", start_time=9.0)
         self._prime(mock_services, [dup_a, dup_b])

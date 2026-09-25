@@ -6,6 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from PyQt6.QtCore import QPoint, Qt, pyqtSignal
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QMenu,
@@ -45,7 +46,6 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
     """Reorderable chain of dictionary providers."""
 
     add_dict_requested = pyqtSignal()
-    reimport_jmdict_requested = pyqtSignal()
     reimport_dict_requested = pyqtSignal(str)
     reimport_all_requested = pyqtSignal()
     rescan_requested = pyqtSignal()
@@ -189,22 +189,22 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
 
         self.add_section(self.tr("Active Dictionaries"))
 
-        self._reimport_btn = ModernButton(self.tr("Reimport All"), variant="secondary")
+        self._reimport_btn = QAction(self.tr("Reimport All"), self)
         self._reimport_btn.setToolTip(
             self.tr(
                 "Rebuild every dictionary in the list from the zip saved when it was "
                 "imported. Needed after an app upgrade changes the index format."
             )
         )
-        self._reimport_btn.clicked.connect(self.reimport_all_requested.emit)
+        self._reimport_btn.triggered.connect(lambda _checked=False: self.reimport_all_requested.emit())
 
-        self._restore_btn = ModernButton(self.tr("Restore from Disk"), variant="secondary")
+        self._restore_btn = QAction(self.tr("Restore from Disk"), self)
         self._restore_btn.setToolTip(
             self.tr(
                 "Re-add dictionaries found in the storage folder that aren't in the " "list above. No re-import needed."
             )
         )
-        self._restore_btn.clicked.connect(self.rescan_requested.emit)
+        self._restore_btn.triggered.connect(lambda _checked=False: self.rescan_requested.emit())
 
         container = self._build_chain_container(
             ChainListLabels(
@@ -216,6 +216,8 @@ class DictionarySettingsPanel(ChainSettingsPanelBase):
                 move_up_tooltip=self.tr("Move up in priority"),
                 move_down=self.tr("Move down"),
                 move_down_tooltip=self.tr("Move down in priority"),
+                more=self.tr("More"),
+                more_tooltip=self.tr("More actions"),
             ),
             extra_actions=(self._reimport_btn, self._restore_btn),
         )

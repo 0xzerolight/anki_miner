@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:d6de3b1fd803053b -->
+<!-- i18n-source: README.md sha256:eaf6f4a3bb1bf708 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -116,11 +116,10 @@ Para a configuração completa de desenvolvimento, veja [CONTRIBUTING.md](../CON
 ## Abas
 
 - **Vídeo** - minere um único par de vídeo/legenda, uma pasta inteira ou URLs do YouTube.
-- **Construtor de Baralho** - minere uma série inteira em um único baralho ordenado por frequência.
 - **Audiobooks** - minere audiobooks, podcasts, rádio, músicas (áudio + legenda/transcrição).
 - **Leitura** - minere mangás (mokuro), livros (`.epub`, `.txt`; um livro único ou uma pasta inteira), arquivos de legenda avulsos ou texto copiado e colado.
 - **Análise e Dados** - histórico de mineração, classificações de dificuldade, marcos.
-- **Utilitários** - gerar legendas (Whisper local), reajustar o tempo de legendas (ffsubsync/alass), condensar mídia em áudio só com diálogos, baixar vídeo/áudio/legendas de qualquer site compatível com yt-dlp, copiar a parte que vale a pena aprender de um baralho pronto para um novo, preencher de forma retroativa campos em cartões existentes, aplicar OCR em imagens de páginas de mangá gerando arquivos .mokuro (mokuro, possível instalar em Configurações), e sincronizar um audiolivro com o texto do livro (Sincronização de Audiolivro).
+- **Utilitários** - gerar legendas (Whisper local), reajustar o tempo de legendas (ffsubsync/alass), condensar mídia em áudio só com diálogos, baixar vídeo/áudio/legendas de qualquer site compatível com yt-dlp, copiar a parte que vale a pena aprender de um baralho pronto para um novo, preencher de forma retroativa campos em cartões existentes, aplicar OCR em imagens de páginas de mangá gerando arquivos .mokuro (mokuro), e sincronizar um audiolivro com o texto do livro (Sincronização de Audiolivro).
 - **Configurações** - tudo configurável.
 
 ## Outros Recursos
@@ -137,7 +136,7 @@ Para a configuração completa de desenvolvimento, veja [CONTRIBUTING.md](../CON
 - Pré-visualização de vídeo embutida com libmpv - reproduza a cena de uma palavra durante a seleção, ou ajuste o tempo da legenda com reprodução em tempo real.
 - Capturas de tela animadas (veja os exemplos de cartões acima).
 - Perfis de configurações - salve perfis com nomes e alterne entre eles pelas abas.
-- Reestilize Cartões Minerados - aplique o estilo atual dos seus cartões aos cartões que você já criou (menu Ferramentas).
+- Reestilize Cartões Minerados - aplique o estilo atual dos seus cartões aos cartões que você já criou (Utilitários → Preenchimento retroativo de cartões).
 
 <details>
 <summary><strong>Temas Inclusos (29)</strong></summary>

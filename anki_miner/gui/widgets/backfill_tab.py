@@ -120,6 +120,11 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
     #: compose_main_window.
     run_options_changed = pyqtSignal(object)  # Emits AnkiMinerConfig
 
+    #: Re-emitted so the window can run the Restyle entry point (moved here
+    #: from the Tools menu); this screen owns no AnkiService or worker of its
+    #: own, so it asks rather than starting the run itself.
+    restyle_requested = pyqtSignal()
+
     #: Tables and queue rows genuinely use the extra width.
     PAGE_WIDTH = PageWidth.PAGE
 
@@ -237,14 +242,22 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         # silently. Pinned by
         # tests/unit/test_run_option_persistence.py::test_overwrite_is_never_persisted.
         self.overwrite_checkbox = QCheckBox(self.tr("Overwrite existing values"))
-        self.overwrite_checkbox.setToolTip(self.tr("Overwritten cards may need a Restyle to refresh their styling."))
+        self.overwrite_checkbox.setToolTip(
+            self.tr("Overwritten cards may need to use Restyle cards… to refresh their styling.")
+        )
         layout.addWidget(self.overwrite_checkbox)
 
         # Scan, Apply and Cancel all live in the pinned bar (D6). Scan is the
         # primary until a preview exists; after that Apply takes over and Scan
-        # stays reachable as the quiet way to rescan.
+        # stays reachable as the quiet way to rescan. Restyle is unrelated to
+        # the scan/apply cycle -- it re-applies styling to every card of the
+        # note type, not just the previewed ones -- so it sits beside Scan
+        # rather than swapping with it.
         self.scan_button = ModernButton(self.tr("Scan Anki (read-only)"), variant="primary")
         self.scan_button.clicked.connect(self._start_scan)
+        self.restyle_button = ModernButton(self.tr("Restyle cards…"), variant="secondary")
+        self.restyle_button.setToolTip(self.tr("Refresh the dictionary styling on every card of your note type"))
+        self.restyle_button.clicked.connect(self.restyle_requested.emit)
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.setEnabled(False)
         self.cancel_button.clicked.connect(self._cancel)
@@ -316,9 +329,9 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         )
 
     def changeEvent(self, a0) -> None:  # noqa: N802 - Qt override
-        """Re-derive the preview's row metrics when the UI text size changes.
+        """Re-derive the preview's row metrics when the UI zoom changes.
 
-        Text size applies live, so a row height and a floor computed once at
+        Zoom applies live, so a row height and a floor computed once at
         construction are stale from the next Settings save onward.
         """
         from PyQt6.QtCore import QEvent
@@ -358,7 +371,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         quiet = self.scan_button if has_plan else self.apply_button
         _set_variant(primary, "primary")
         _set_variant(quiet, "secondary")
-        self.action_bar.set_actions(primary, (self.cancel_button, quiet))
+        self.action_bar.set_actions(primary, (self.cancel_button, quiet, self.restyle_button))
 
     # ------------------------------------------------------------------
     # Drag and drop (D50): this screen takes no payload, and says so
@@ -885,6 +898,7 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
     def _set_running(self, running: bool) -> None:
         self.scan_button.setEnabled(not running)
         self.apply_button.setEnabled(not running and self._can_apply_plan())
+        self.restyle_button.setEnabled(not running)
         self.cancel_button.setEnabled(running)
         for checkbox in self.field_checkboxes.values():
             checkbox.setEnabled(not running)

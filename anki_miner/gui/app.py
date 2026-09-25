@@ -62,8 +62,7 @@ from anki_miner.gui.main_window import MainWindow, open_log_folder
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.qt_log_bridge import install_qt_message_handler
 from anki_miner.gui.resources import get_resource_dir
-from anki_miner.gui.resources.styles.theme import Theme
-from anki_miner.gui.utils import file_dialogs
+from anki_miner.gui.resources.styles.theme import Theme, _clamp_font_scale
 from anki_miner.gui.utils.config_manager import GUIConfigManager
 from anki_miner.gui.utils.focus_ring import install_keyboard_focus_ring
 from anki_miner.gui.utils.fonts import initialize_application_fonts
@@ -78,7 +77,6 @@ from anki_miner.gui.utils.stall_watchdog import (
 from anki_miner.gui.widgets.analytics_tab import AnalyticsTab
 from anki_miner.gui.widgets.audiobook_tab import AudiobookTab
 from anki_miner.gui.widgets.base import ScreenIssue
-from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.reading_tab import ReadingTab
 from anki_miner.gui.widgets.settings_tab import SettingsTab
 from anki_miner.gui.widgets.subtitles_tab import SubtitlesTab
@@ -722,7 +720,6 @@ def _log_effective_config(config: Any) -> None:
             ankiconnect=config.ankiconnect_url,
             theme=config.theme,
             zoom=config.ui_zoom,
-            native_dialogs=config.use_native_file_dialogs,
             asr=f"{config.asr_model}/{config.asr_device}",
             log=config.log_path,
         )
@@ -814,6 +811,17 @@ def _log_session_boundary() -> None:
     _log_home_fallback()
 
 
+# Whether THIS process's _apply_ui_zoom is the one that put QT_SCALE_FACTOR
+# into os.environ, as opposed to inheriting a user's own external override.
+# _relaunch_if_requested reads this: QProcess.startDetached hands the child our
+# whole os.environ verbatim, so an app-set value would otherwise freeze every
+# restarted child at the zoom THIS process booted with — the child's own
+# _apply_ui_zoom sees the var already present and returns early, never reading
+# the freshly-saved ui_zoom the user just picked. A genuine user override has
+# no such source to re-derive from, so it must still be inherited.
+_qt_scale_factor_set_by_app = False
+
+
 def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:
     """Inject the whole-UI zoom factor as ``QT_SCALE_FACTOR``.
 
@@ -822,6 +830,7 @@ def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:
     restart-to-apply. An explicit user-set env override wins (we never clobber
     it), and the no-op 1.0 case is left unset so the env stays clean.
     """
+    global _qt_scale_factor_set_by_app
     if config is None:
         # Config failed to load at startup — leave the env untouched so Qt uses
         # its default 1.0 scale rather than crashing the whole app over zoom.
@@ -830,6 +839,27 @@ def _apply_ui_zoom(config: AnkiMinerConfig | None) -> None:
         return
     if config.ui_zoom != 1.0:
         os.environ["QT_SCALE_FACTOR"] = repr(float(config.ui_zoom))
+        _qt_scale_factor_set_by_app = True
+
+
+def _dev_text_scale() -> float:
+    """Read the dev-only text-scale override from ``ANKI_MINER_TEXT_SCALE``.
+
+    Zoom is the only user-facing interface-size control (the removed
+    ``ui_font_scale`` config field had no setting left to drive it from). This
+    env var is what is left for tooling that still needs to stress text at a
+    scale independent of Zoom — the UI atlas hostile cell renders at 1.5x text
+    (``scripts/ui_atlas/isolation.py``). Absent or malformed values fall back
+    to 1.0; the result is clamped the same way ``Theme.set_font_scale`` clamps.
+    """
+    raw = os.environ.get("ANKI_MINER_TEXT_SCALE")
+    if raw is None:
+        return 1.0
+    try:
+        value = float(raw)
+    except ValueError:
+        return 1.0
+    return _clamp_font_scale(value)
 
 
 def _configure_qt_application_policy() -> None:
@@ -921,6 +951,14 @@ def _relaunch_if_requested(app: QApplication) -> None:
     lock = getattr(app, "_instance_lock", None)
     if lock is not None:
         lock.unlock()
+    if _qt_scale_factor_set_by_app:
+        # QProcess.startDetached inherits this process's environment verbatim,
+        # so a value THIS process's own _apply_ui_zoom wrote must not ride
+        # along — it would freeze the child at the zoom we booted with instead
+        # of the freshly-saved one it re-derives on its own. A genuine user
+        # override never reaches this branch (the flag is only set when
+        # _apply_ui_zoom itself wrote the var) and is inherited untouched.
+        os.environ.pop("QT_SCALE_FACTOR", None)
     if not QProcess.startDetached(str(program), []):
         logger.warning("Restart was requested but launching %s failed", program)
 
@@ -964,17 +1002,6 @@ def _run_store_recovery_if_locked(
         )
     except Exception:  # noqa: BLE001 — bucket A: recovery is skipped and startup continues.
         logger.exception("Startup store recovery failed; continuing startup")
-
-
-def _seed_file_dialog_mode(config: AnkiMinerConfig | None) -> None:
-    """Seed the app-wide file-dialog mode from config (Issue #100).
-
-    Non-native Qt dialogs are the default; ``use_native_file_dialogs`` restores
-    the OS pickers. A failed config load (``None``) keeps the safe default.
-    """
-    if config is None:
-        return
-    file_dialogs.set_use_native(config.use_native_file_dialogs)
 
 
 @runtime_checkable
@@ -1278,8 +1305,8 @@ def _connect_alass_download(window: MainWindow, settings_tab: SettingsTab) -> No
     )
 
 
-def _connect_mokuro_install(window: MainWindow, settings_tab: SettingsTab, subtitles_tab: SubtitlesTab) -> None:
-    """Wire the Subtitles panel's "Install mokuro" button to the install worker.
+def _connect_mokuro_install(window: MainWindow, subtitles_tab: SubtitlesTab) -> None:
+    """Wire the Manga OCR tab's "Install mokuro" button to the install worker.
 
     Unlike ``_connect_alass_download`` this does NOT re-emit ``config_refreshed``:
     an install changes no config value and ``MokuroTab.update_config`` masks a
@@ -1288,22 +1315,20 @@ def _connect_mokuro_install(window: MainWindow, settings_tab: SettingsTab, subti
 
     def _tail(request_arg: object, ok: bool, message: str) -> None:
         if ok:
-            # Cleared BEFORE both notifies, which each dispatch an off-thread
-            # re-probe that calls the resolver: a cached pre-install miss read
-            # by that probe would settle on "Not installed" right after a
-            # successful install.
+            # Cleared BEFORE the notify, which (on success) dispatches an
+            # off-thread re-probe that calls the resolver: a cached
+            # pre-install miss read by that probe would settle on "Not
+            # installed" right after a successful install.
             mokuro_resolver._clear_cache()
-        settings_tab.subtitles_panel.notify_mokuro_install_finished()
-        if ok:
-            subtitles_tab.mokuro_tab.notify_install_finished()
+        subtitles_tab.mokuro_tab.notify_install_finished(ok)
 
     def _start(request_arg: object, on_status: Callable[[str], None], on_finished: Callable[[bool, str], None]) -> None:
         config = window.get_config()
         window.background_tasks.start_mokuro_install(config.bin_root, config.uv_root, on_status, on_finished)
 
     _connect_download(
-        settings_tab.mokuro_install_requested,
-        set_status=settings_tab.set_mokuro_status,
+        subtitles_tab.mokuro_tab.mokuro_install_requested,
+        set_status=subtitles_tab.mokuro_tab.set_mokuro_status,
         start=_start,
         on_finished_tail=_tail,
     )
@@ -1668,18 +1693,6 @@ def compose_main_window(
         extra_presenters=(batch_presenter, youtube_presenter),
     )
 
-    deck_builder_presenter = GUIPresenter(window)
-    deck_builder_progress = GUIProgressCallback(window)
-    deck_builder_tab = DeckBuilderTab(
-        window.get_config(),
-        deck_builder_presenter,
-        deck_builder_progress,
-        stats_service=stats_service,
-    )
-    register_mining_tab(
-        window, deck_builder_tab, deck_builder_presenter, QCoreApplication.translate("MainWindow", "Deck Builder")
-    )
-
     # Audiobook tab (Issue #71). Same lazy-processor pattern as YouTube:
     # processor=None defers the dictionary-chain build to the first Mine
     # click; stats_service is threaded through so sessions land in analytics.
@@ -1762,12 +1775,14 @@ def compose_main_window(
     )
     window.background_tasks.ytdlp_update_result.connect(settings_tab.set_ytdlp_status_from_result)
 
-    # Resource download buttons (ASR model, alass, mokuro, CUDA pack, VAD pack,
-    # ASR engine pack, Vulkan model, language packs): each button hands off to a
-    # background worker and refreshes its panel on finish. The seven
+    # Resource download buttons (ASR model, alass, CUDA pack, VAD pack, ASR
+    # engine pack, Vulkan model, language packs): each button hands off to a
+    # background worker and refreshes its panel on finish. The six
     # Subtitles-panel ones share the connect skeleton in _connect_download; the
     # per-tool builders carry the differences. The language packs sit on Mining
     # Language, beside the selector they unlock, and wire per language code.
+    # mokuro's own install button lives on the Manga OCR tab, not Settings, so
+    # it is wired separately below (_connect_mokuro_install).
     for _connect in (
         _connect_asr_download,
         _connect_alass_download,
@@ -1778,8 +1793,8 @@ def compose_main_window(
         _connect_language_pack_download,
     ):
         _connect(window, settings_tab)
-    # mokuro needs the Manga OCR tab too (see _connect_mokuro_install).
-    _connect_mokuro_install(window, settings_tab, subtitles_tab)
+    # mokuro install lives on the Manga OCR tab itself (see _connect_mokuro_install).
+    _connect_mokuro_install(window, subtitles_tab)
     # Utilities -> Download and Video -> YouTube offer the same repair when
     # yt-dlp is missing; both route to the updater the Settings button uses.
     _connect_ytdlp_download(window, video_tab, subtitles_tab)
@@ -1820,8 +1835,12 @@ def compose_main_window(
     subtitles_tab.condense_tab.config_changed.connect(window.update_config)
     # Same pattern for the Download tab's downloader_* options.
     subtitles_tab.download_tab.config_changed.connect(window.update_config)
-    # Same pattern for the Manga OCR tab's mokuro_use_gpu option.
+    # Same pattern for the Manga OCR tab's mokuro_use_gpu option and its setup
+    # card's (debounced) mokuro_location edits.
     subtitles_tab.mokuro_tab.config_changed.connect(window.update_config)
+    # Restyle moved off the Tools menu onto Card Backfill (Task 14); the
+    # button re-emits, and the window still owns the AnkiService + worker.
+    subtitles_tab.backfill_tab.restyle_requested.connect(window.restyle_mined_cards)
 
     # A validation sweep that reached Anki re-drives the three deck / note-type
     # fetches that failed while Anki was closed.
@@ -1853,8 +1872,8 @@ def compose_main_window(
         screen.bind_task_registry(window.task_registry)
     # --- end task-registry publication ------------------------------------
 
-    # Inline run options (the curation checkbox, Deck Builder's mode, Card
-    # Backfill's field groups) persist by folding themselves into the config and
+    # Inline run options (the curation checkbox, Card Backfill's field groups)
+    # persist by folding themselves into the config and
     # emitting run_options_changed; route it through window.update_config so the
     # value lands in gui_config.json and survives restart. Same contract as
     # condense_tab/download_tab's config_changed, but discovered rather than
@@ -2042,7 +2061,6 @@ def _schedule_installer_smoke(app: QApplication, window: MainWindow) -> None:
 
             expected_titles = [
                 QCoreApplication.translate("MainWindow", "Video"),
-                QCoreApplication.translate("MainWindow", "Deck Builder"),
                 QCoreApplication.translate("MainWindow", "Audiobooks"),
                 QCoreApplication.translate("MainWindow", "Reading"),
                 QCoreApplication.translate("MainWindow", "Analytics"),
@@ -2235,9 +2253,6 @@ def main():
     # settings UI validates it (Issue #100 red-border state).
     _ensure_default_dicts_root(_early_config)
 
-    # File pickers default to Qt's non-native dialogs (Issue #100 freeze).
-    _seed_file_dialog_mode(_early_config)
-
     # Whole-UI zoom: must be set before QApplication is constructed (Qt reads
     # QT_SCALE_FACTOR once, at construction). Restart-to-apply by nature.
     _apply_ui_zoom(_early_config)
@@ -2283,7 +2298,7 @@ def main():
             active=_early_config.theme,
             favorites=_early_config.theme_favorites,
             user_dir=_early_config.themes_root,
-            font_scale=_early_config.ui_font_scale,
+            font_scale=_dev_text_scale(),
         )
         Theme.apply_to_app(app)
     except Exception:  # noqa: BLE001 — bucket A: boot continues with Qt's default theme.

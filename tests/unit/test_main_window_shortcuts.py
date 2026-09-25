@@ -123,8 +123,8 @@ def test_f1_opens_the_usage_guide_not_about(main_window):
     assert about.shortcut().isEmpty(), "About must not hold a shortcut of its own"
 
 
-def test_about_lists_the_seven_tab_shortcuts_as_one_row(qapp):
-    assert dict(about_rows(resolve_bindings({}))).get("Ctrl+1..7") == "Switch tabs"
+def test_about_lists_the_six_tab_shortcuts_as_one_row(qapp):
+    assert dict(about_rows(resolve_bindings({}))).get("Ctrl+1..6") == "Switch tabs"
 
 
 def test_advertised_global_bindings_are_the_installed_ones(main_window):
@@ -136,7 +136,7 @@ def test_advertised_global_bindings_are_the_installed_ones(main_window):
         if not action.shortcut().isEmpty()
     }
     reachable = installed | menu_keys
-    # Ctrl+1..7 is a range and Ctrl+Enter is per-screen, so neither is a literal
+    # Ctrl+1..6 is a range and Ctrl+Enter is per-screen, so neither is a literal
     # window binding; every other advertised row must be.
     for keys, _description in about_rows(resolve_bindings(main_window.config.key_bindings)):
         if ".." in keys or keys == primary_action_display():

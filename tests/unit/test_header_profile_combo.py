@@ -302,7 +302,7 @@ def test_a_long_profile_name_does_not_widen_the_combo(qtbot):
 
     header.set_profiles([Profile(id="long", name=long_name), NOVELS], "long")
 
-    # Font-independent, so it holds at every ui_font_scale: the hint does not
+    # Font-independent, so it holds at every text scale: the hint does not
     # depend on the items at all.
     assert combo.sizeHint().width() == baseline
     assert combo.maximumWidth() >= combo.sizeHint().width()
@@ -312,7 +312,7 @@ def test_the_width_cap_tracks_the_ui_font_instead_of_clamping_it(qtbot):
     """The cap is a CHARACTER budget measured in the combo's current font.
 
     Measured with the flat 220px it replaces: the combo's own 12-character hint
-    is 160px at ui_font_scale 1.0 but 256px at 2.0, so the cap clamped the combo
+    is 160px at a text scale of 1.0 but 256px at 2.0, so the cap clamped the combo
     below the width it was sized for exactly when the user asked for bigger text.
     """
     header = _header(qtbot)

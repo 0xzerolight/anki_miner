@@ -71,6 +71,7 @@ from anki_miner.gui.widgets.panels import (
     MediaSettingsPanel,
     MiningLanguageSettingsPanel,
     PitchSettingsPanel,
+    SentencesSettingsPanel,
     UISettingsPanel,
     YouTubeSettingsPanel,
 )
@@ -129,7 +130,9 @@ class _SavePathPanel(Protocol):
     """Structural interface for panels that participate in the Save round-trip.
 
     Implemented by :class:`AnkiSettingsPanel`, :class:`MediaSettingsPanel`,
-    :class:`FilteringSettingsPanel`, and :class:`YouTubeSettingsPanel`.
+    :class:`MiningLanguageSettingsPanel`, :class:`FilteringSettingsPanel`,
+    :class:`SentencesSettingsPanel`, :class:`YouTubeSettingsPanel`, and
+    :class:`SubtitlesSettingsPanel`.
     """
 
     def load_from_config(self, config: AnkiMinerConfig) -> None: ...
@@ -154,8 +157,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             model" button is clicked. Carries the selected model name.
         alass_download_requested: Emitted when the Subtitles panel's "Download
             alass" button is clicked.
-        mokuro_install_requested: Emitted when the Subtitles panel's "Install
-            mokuro" button is clicked.
         cuda_pack_download_requested: Emitted when the Subtitles panel's
             "Download GPU acceleration" button is clicked.
         vad_pack_download_requested: Emitted when the Subtitles panel's
@@ -168,7 +169,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         manage_profiles_requested: Emitted by the footer's "Settings Profiles…"
             button. The window opens the dialog, not this tab: a profile switch
             reloads every panel here from the incoming config.
-        mining_language_requested: Re-emitted from the Filtering panel's mining
+        mining_language_requested: Re-emitted from the Mining Language panel's
             language selector. The window runs the guard and commits, because a
             switch clears queues and reloads every panel in this tab.
         language_pack_download_requested: Emitted with a language code when one
@@ -185,7 +186,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     ytdlp_update_requested = pyqtSignal()
     asr_download_requested = pyqtSignal(str)  # Emits model name
     alass_download_requested = pyqtSignal()
-    mokuro_install_requested = pyqtSignal()
     cuda_pack_download_requested = pyqtSignal()
     vad_pack_download_requested = pyqtSignal()
     asr_pack_download_requested = pyqtSignal()
@@ -202,7 +202,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         {
             "theme",
             "theme_favorites",
-            "ui_font_scale",
             "ui_language",
             "skipped_update_version",
             "last_known_version",
@@ -230,7 +229,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     # behavioural settings a stray scroll can corrupt (Issue #99), no scroll can
     # change a key, and the Keyboard page has a Restore defaults of its own.
     _RESET_PRESERVE_UI: frozenset[str] = frozenset(
-        {"theme", "theme_favorites", "ui_font_scale", "ui_zoom", "ui_language", "language", "key_bindings"}
+        {"theme", "theme_favorites", "ui_zoom", "ui_language", "language", "key_bindings"}
     )
 
     def __init__(
@@ -331,7 +330,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self._save_panels: list[_SavePathPanel] = [
             self.anki_panel,
             self.media_panel,
+            self.mining_language_panel,
             self.filtering_panel,
+            self.sentences_panel,
             self.youtube_panel,
             self.subtitles_panel,
         ]
@@ -388,14 +389,13 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.pitch_panel = PitchSettingsPanel(self.config.pitch_root)
         self.mining_language_panel = MiningLanguageSettingsPanel()
         self.filtering_panel = FilteringSettingsPanel()
+        self.sentences_panel = SentencesSettingsPanel()
         self.youtube_panel = YouTubeSettingsPanel()
         self.subtitles_panel = SubtitlesSettingsPanel(suppress_optional_startup=self._suppress_optional_startup)
         self.ui_panel = UISettingsPanel(
             self.config.themes_root,
             self.config.ui_zoom,
             self.config.ui_language,
-            self.config.use_native_file_dialogs,
-            self.config.ui_font_scale,
         )
         self.keyboard_panel = KeyboardSettingsPanel()
 
@@ -414,8 +414,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # UI page; reading it from the map keeps a single source of truth.
         self._ui_subtab_index = self._subtab_index["ui"]
         # Reset the theme preview baseline when the user navigates away from
-        # Appearance & Language so a later visit reverts to their last-chosen
-        # theme, not session start. Connected after the navigator is populated,
+        # General so a later visit reverts to their last-chosen theme, not
+        # session start. Connected after the navigator is populated,
         # so selecting the first destination can't fire it during construction.
         self.pages.currentChanged.connect(self._on_settings_subtab_changed)
 
@@ -424,22 +424,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         body.addWidget(self.nav_list)
         body.addWidget(self.pages, 1)
         layout.addLayout(body)
-
-        # Updates row — single top-level toggle, no panel needed for one checkbox.
-        self.check_for_updates_checkbox = QCheckBox(self.tr("Check for updates on startup"))
-        self.check_for_updates_checkbox.setToolTip(
-            self.tr("When enabled, Anki Miner queries GitHub for new releases on launch.")
-        )
-        layout.addWidget(self.check_for_updates_checkbox)
-        # Lives on the tab, not in a panel, so it anchors here (D11).
-        self.register_setting(
-            "check_for_updates",
-            self.check_for_updates_checkbox,
-            lambda: (
-                self.check_for_updates_checkbox.text(),
-                self.check_for_updates_checkbox.toolTip(),
-            ),
-        )
 
         # Status row at bottom. The Save Settings button is gone — settings
         # auto-save (debounced) — but its inline "✓ Saved" confirmation stays
@@ -462,9 +446,9 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         button_layout.addStretch()
 
         # Settings Profiles sits with the other whole-config actions rather than
-        # at the foot of Appearance & Language, where the theme gallery pushed it
-        # below the fold and it read as a third theme button. This footer is
-        # outside the panels' scroll area, so one button serves all ten pages.
+        # at the foot of General, where the theme gallery pushed it below the
+        # fold and it read as a third theme button. This footer is
+        # outside the panels' scroll area, so one button serves all 13 pages.
         # Left of Export/Import because it is the same kind of action: a named
         # snapshot of every setting, kept in the app instead of in a file.
         self.manage_profiles_button = ModernButton(self.tr("Settings Profiles…"), variant="secondary")
@@ -514,7 +498,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.setLayout(outer)
 
     def _build_navigator(self) -> None:
-        """Fill the navigator with five headings over ten destinations (D10).
+        """Fill the navigator with five headings over 13 destinations (D10).
 
         Populates ``self.nav_list`` and ``self.pages`` together and records the
         stable key → page index map in ``_subtab_index``, which callers
@@ -553,7 +537,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 self.tr("Resources"),
                 (
                     ("dictionaries", self.tr("Dictionaries"), self.dictionary_panel),
-                    ("audio", self.tr("Audio"), self.audio_panel),
+                    ("audio", self.tr("Word Audio"), self.audio_panel),
                     ("frequency", self.tr("Frequency"), self.frequency_panel),
                     ("pitch", self.tr("Pitch Accent"), self.pitch_panel),
                 ),
@@ -562,7 +546,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 self.tr("Mining"),
                 (
                     ("mining_language", self.tr("Mining Language"), self.mining_language_panel),
-                    ("filtering", self.tr("Filtering"), self.filtering_panel),
+                    ("filtering", self.tr("Word Filters"), self.filtering_panel),
+                    ("sentences", self.tr("Sentences"), self.sentences_panel),
                 ),
             ),
             (
@@ -575,7 +560,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             (
                 self.tr("App"),
                 (
-                    ("ui", self.tr("Appearance & Language"), self.ui_panel),
+                    ("ui", self.tr("General"), self.ui_panel),
                     ("keyboard", self.tr("Keyboard"), self.keyboard_panel),
                 ),
             ),
@@ -740,7 +725,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Dictionary panel signals — wire Add/Reimport to the import flow
         # controller, which owns the worker dialogs (T-66).
         self.dictionary_panel.add_dict_requested.connect(self._dict_import_flow.add_dict)
-        self.dictionary_panel.reimport_jmdict_requested.connect(self._dict_import_flow.reimport_jmdict)
         self.dictionary_panel.reimport_dict_requested.connect(self._dict_import_flow.reimport_dict)
         self.dictionary_panel.reimport_all_requested.connect(self._dict_import_flow.reimport_all)
         self.dictionary_panel.rescan_requested.connect(self._dict_import_flow.restore_unlisted)
@@ -765,8 +749,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Persist chain immediately after reorder/toggle.
         self.audio_panel.chain_changed.connect(lambda: self._persist_audio_chain_change(self.audio_panel.get_chain()))
         self.audio_panel.retry_missing_audio_requested.connect(self._on_retry_missing_audio)
-        # Sentence-TTS toggles persist immediately, like the chain above.
-        self.audio_panel.reading_tts_changed.connect(self._persist_reading_tts_change)
 
         # Frequency panel signals — wire Add/Reimport to the import flow.
         self.frequency_panel.add_source_requested.connect(self._frequency_import_flow.add_source)
@@ -796,9 +778,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         # UI panel persists immediately on any change (live-preview model).
         self.ui_panel.state_changed.connect(self._on_theme_state_changed)
-        self.ui_panel.font_scale_changed.connect(self._on_font_scale_changed)
         self.ui_panel.zoom_changed.connect(self._on_zoom_changed)
-        self.ui_panel.native_dialogs_changed.connect(self._on_native_dialogs_changed)
         self.ui_panel.hidden_utilities_changed.connect(self._on_hidden_utilities_changed)
         self.ui_panel.language_changed.connect(self._on_language_changed)
         self.keyboard_panel.key_bindings_changed.connect(self._on_key_bindings_changed)
@@ -810,7 +790,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # MainWindow (or caller), which owns the background download workers.
         self.subtitles_panel.asr_download_requested.connect(self._on_asr_download_clicked)
         self.subtitles_panel.alass_download_requested.connect(self._on_alass_download_clicked)
-        self.subtitles_panel.mokuro_install_requested.connect(self._on_mokuro_install_clicked)
         self.subtitles_panel.cuda_pack_download_requested.connect(self._on_cuda_pack_download_clicked)
         self.subtitles_panel.vad_pack_download_requested.connect(self._on_vad_pack_download_clicked)
         self.subtitles_panel.asr_pack_download_requested.connect(self._on_asr_pack_download_clicked)
@@ -993,13 +972,17 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         """
         from PyQt6.QtWidgets import QComboBox, QDoubleSpinBox, QLineEdit, QListWidget, QSpinBox
 
-        # mining_language_panel is deliberately absent: its combo proposes a
-        # guarded switch which commits its own config, so arming the debounce
-        # would re-save the pre-switch panel state on top of it.
+        # mining_language_panel is deliberately absent from this whole-panel
+        # scan: its own mining_language_combo proposes a guarded switch which
+        # commits its own config, so arming the debounce on it would re-save
+        # the pre-switch panel state on top of it. Its two variant combos DO
+        # take part in the Save round-trip (T10) and are wired individually
+        # below instead.
         panels: tuple[QWidget, ...] = (
             self.anki_panel,
             self.media_panel,
             self.filtering_panel,
+            self.sentences_panel,
             self.youtube_panel,
             self.subtitles_panel,
         )
@@ -1023,8 +1006,18 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                     model.rowsRemoved.connect(self._on_settings_edited)
 
         # Fields outside the save panels that commit through the same path.
-        self.check_for_updates_checkbox.toggled.connect(self._on_settings_edited)
+        # check_for_updates_checkbox and max_workers_spinbox live on the UI
+        # panel (T11) but the panel itself stays out of _save_panels — it
+        # persists everything else via its own signals — so both are wired
+        # individually here, like the mining_language variant combos below.
+        self.ui_panel.check_for_updates_checkbox.toggled.connect(self._on_settings_edited)
+        self.ui_panel.max_workers_spinbox.valueChanged.connect(self._on_settings_edited)
         self.dictionary_panel.dicts_root_selector.path_changed.connect(self._on_settings_edited)
+
+        # mining_language_panel's two variant combos, individually (see the
+        # comment above): only they participate in the Save round-trip.
+        self.mining_language_panel.script_variant_combo.currentIndexChanged.connect(self._on_settings_edited)
+        self.mining_language_panel.regional_variant_combo.currentIndexChanged.connect(self._on_settings_edited)
 
     def _on_settings_edited(self, *_args) -> None:
         """Restart the auto-save debounce on a user edit (no-op while loading)."""
@@ -1063,15 +1056,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         """
         self.subtitles_panel.set_alass_status(self.tr("Downloading…"))
         self.alass_download_requested.emit()
-
-    def _on_mokuro_install_clicked(self) -> None:
-        """Set a pending status and re-emit so the caller can start the install.
-
-        Mirrors :meth:`_on_alass_download_clicked`: the install itself is owned
-        by the caller (MainWindow / background_tasks).
-        """
-        self.subtitles_panel.set_mokuro_status(self.tr("Installing…"))
-        self.mokuro_install_requested.emit()
 
     def _on_cuda_pack_download_clicked(self) -> None:
         """Set a pending status and re-emit so the caller can start the download.
@@ -1147,10 +1131,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     def set_alass_status(self, text: str) -> None:
         """Forward an alass download status line to the Subtitles panel."""
         self.subtitles_panel.set_alass_status(text)
-
-    def set_mokuro_status(self, text: str) -> None:
-        """Forward a mokuro install status line to the Subtitles panel."""
-        self.subtitles_panel.set_mokuro_status(text)
 
     def set_cuda_pack_status(self, text: str) -> None:
         """Forward a GPU-pack download status line to the Subtitles panel."""
@@ -1251,11 +1231,12 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     def _load_config(self) -> None:
         """Load current configuration into UI.
 
-        Save-path panels (Anki, Media, Filtering, YouTube) are loaded via the
-        symmetric ``load_from_config`` contract so each panel owns its fields
-        in one place (OVH-019).  Dictionary/audio chain panels and the
-        top-level update checkbox persist via their own paths and are handled
-        directly here.
+        Save-path panels (Anki, Media, Mining Language, Filtering, Sentences,
+        YouTube, Subtitles) are loaded via the symmetric ``load_from_config``
+        contract so each panel owns its fields in one place (OVH-019).
+        Dictionary/audio chain panels and the UI panel (which owns Check for
+        updates and Max parallel workers, T11) persist via their own paths
+        and are handled directly here.
 
         Runs under the ``_loading`` guard: the setText/setChecked/setValue
         calls below fire the same change signals user edits do, and must not
@@ -1282,11 +1263,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             from anki_miner.languages.registry import config_language, get_profile
 
             self.audio_panel.set_edge_tts_available(bool(get_profile(config_language(self.config)).audio.edge_voice))
-            self.audio_panel.set_reading_tts(
-                self.config.reading_tts_enabled,
-                self.config.reading_tts_google_enabled,
-                self.config.reading_tts_papago_enabled,
-            )
 
             # Frequency source chain lives in the Frequency tab; the chain persists
             # immediately via its own signal. Frequency activation is derived from an
@@ -1300,15 +1276,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.pitch_panel.set_pitch_root(self.config.pitch_root)
             self.pitch_panel.set_chain(self.config.pitch_chain)
 
-            # Update settings — standalone checkbox outside all panels.
-            self.check_for_updates_checkbox.setChecked(self.config.check_for_updates)
-
-            # Also outside _save_panels — it writes no field, so its repaint is
-            # here rather than in the contribute fold.
-            self.mining_language_panel.load_from_config(self.config)
-
             # UI panel is outside _save_panels (it persists via its own signals),
             # so it owns its whole repaint here — signal-safe by construction.
+            # It also owns Check for updates and Max parallel workers (T11,
+            # moved here from the tab and Media respectively); their values are
+            # part of this same repaint, not a separate step.
             self.ui_panel.load_from_config(self.config)
 
             # The Keyboard page is outside _save_panels too (it commits each
@@ -1372,6 +1344,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             self.pitch_panel,
             self.mining_language_panel,
             self.filtering_panel,
+            self.sentences_panel,
             self.youtube_panel,
             self.subtitles_panel,
             self.ui_panel,
@@ -1379,12 +1352,16 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         )
 
     def setting_anchors(self) -> tuple[SettingAnchor, ...]:
-        """Every addressable setting: this tab's own, then each panel's (D11).
+        """Every addressable setting, aggregated across every panel (D11).
+
+        The tab itself registers no anchors of its own (T11 moved the last
+        one, Check for updates, onto the UI panel) — every setting lives on a
+        panel now, so this is purely the panel loop.
 
         Collected on demand rather than at import, so a search index built by
         the caller sees whatever translator ``app.py`` installed.
         """
-        anchors = list(super().setting_anchors())
+        anchors: list[SettingAnchor] = []
         for host in self.setting_anchor_hosts():
             anchors.extend(host.setting_anchors())
         return tuple(anchors)
@@ -1409,22 +1386,17 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         A panel's ``ANCHOR_NAMESPACE`` is its navigator key, which is what makes
         an anchor id self-locating: ``filtering.max_frequency_spinbox`` names
-        both the page to open and the control to focus. This tab's own anchors
-        get no page — they sit below the navigator and are always on screen.
+        both the page to open and the control to focus. The tab itself
+        registers no anchors of its own (see :meth:`setting_anchors`), so
+        every source here is panel-owned — there is no separate
+        no-page/always-visible source to carry.
 
         Each source names the surface its anchors are laid out on, which is what
         the index resolves visibility against: the language gate hides rows on
         the panel, and only a panel-relative check sees that while the tab is
         still unshown.
         """
-        sources = [
-            SettingSearchSource(
-                page_key="",
-                breadcrumb=self.tr("Settings"),
-                anchors=super().setting_anchors(),
-                host=self,
-            )
-        ]
+        sources: list[SettingSearchSource] = []
         for host in self.setting_anchor_hosts():
             key = host.ANCHOR_NAMESPACE
             sources.append(
@@ -1535,7 +1507,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.dictionary_panel.set_external_mutation_preflight(callback)
 
     def open_ui_subtab(self) -> None:
-        """Switch to Appearance & Language (language, zoom, text size, themes).
+        """Switch to General (language, zoom, themes, updates, workers).
 
         Thin wrapper over :meth:`open_subtab` kept because MainWindow's
         ``_settings_tab_index`` uses this method name as the capability marker
@@ -1573,23 +1545,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         new_config = replace(self.config, theme=active, theme_favorites=tuple(favorites))
         self._commit_immediate_config(new_config, self.config_changed.emit)
 
-    def _on_font_scale_changed(self, scale: float) -> None:
-        """Fold the UI panel's text-size change into the config and persist.
-
-        Text size is restart-to-apply (D39b-A), so unlike theme nothing is made
-        live here: the panel reveals its restart note and this slot only folds
-        ``ui_font_scale`` into the config so the existing ``config_changed`` →
-        ``MainWindow.update_config`` chain writes it to ``gui_config.json``.
-        The running process keeps the boot scale until it is relaunched.
-        """
-        new_config = replace(self.config, ui_font_scale=scale)
-        self._commit_immediate_config(new_config, self.config_changed.emit)
-
     def _on_zoom_changed(self, zoom: float) -> None:
         """Persist a whole-UI zoom change immediately (applies on next launch).
 
         Zoom is injected as QT_SCALE_FACTOR before QApplication is built, so
-        unlike font scale there is no live restyle — the Themes panel reveals a
+        unlike theme there is no live restyle — the Themes panel reveals a
         restart note and this slot only folds ``ui_zoom`` into the config.
         """
         new_config = replace(self.config, ui_zoom=zoom)
@@ -1598,15 +1558,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
     def _on_language_changed(self, language: str) -> None:
         """Persist a UI-language change immediately (applies on next launch)."""
         new_config = replace(self.config, ui_language=language)
-        self._commit_immediate_config(new_config, self.config_changed.emit)
-
-    def _on_native_dialogs_changed(self, use_native: bool) -> None:
-        """Persist the file-dialog mode immediately (applies to the next dialog).
-
-        The live module state is re-seeded by ``MainWindow.update_config`` on
-        the committed config, so no direct ``file_dialogs`` call here.
-        """
-        new_config = replace(self.config, use_native_file_dialogs=use_native)
         self._commit_immediate_config(new_config, self.config_changed.emit)
 
     def _on_hidden_utilities_changed(self, hidden: tuple) -> None:
@@ -1671,6 +1622,13 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 for spec in fields(self.config)
                 if getattr(proposed, spec.name) != getattr(self.config, spec.name)
             ]
+            # UI panel fields outside _save_panels (T11): Check for updates and
+            # Max parallel workers persist straight from their widgets in
+            # _commit_settings, not through a panel's contribute().
+            if self.ui_panel.check_for_updates_checkbox.isChecked() != self.config.check_for_updates:
+                names.append("check_for_updates")
+            if self.ui_panel.max_workers_spinbox.value() != self.config.max_parallel_workers:
+                names.append("max_parallel_workers")
         return capped(sorted(names))
 
     def commit_pending_settings_for_mutation(self) -> bool:
@@ -1785,7 +1743,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # If the user just re-enabled startup checks (False -> True), clear any
         # previously skipped version so a fresh check runs next launch.
         was_enabled = self.config.check_for_updates
-        now_enabled = self.check_for_updates_checkbox.isChecked()
+        now_enabled = self.ui_panel.check_for_updates_checkbox.isChecked()
         skipped_update_version = self.config.skipped_update_version
         if now_enabled and not was_enabled:
             skipped_update_version = ""
@@ -1823,11 +1781,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
 
         # Validate subtitle regex filter before persistence, even while disabled.
         # The toggle, pattern AND replacement are kept back together — the
-        # replacement is folded in by the filtering panel's contribute(), so
+        # replacement is folded in by the sentences panel's contribute(), so
         # reverting only pattern+toggle would leave the last-good pattern paired
         # with a new replacement the user never previewed.
-        subtitle_regex = self.filtering_panel.get_subtitle_regex_filter()
-        subtitle_regex_replacement = self.filtering_panel.get_subtitle_regex_replacement()
+        subtitle_regex = self.sentences_panel.get_subtitle_regex_filter()
+        subtitle_regex_replacement = self.sentences_panel.get_subtitle_regex_replacement()
         if subtitle_regex or subtitle_regex_replacement:
             try:
                 compile_subtitle_regex_filter(subtitle_regex, subtitle_regex_replacement)
@@ -1844,7 +1802,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                     replacement=subtitle_regex_replacement,
                     error=f"{type(error).__name__}: {error}",
                 )
-                kept_back.append(self.tr("subtitle regex (Filtering)"))
+                kept_back.append(self.tr("subtitle regex (Sentences)"))
                 new_config = replace(
                     new_config,
                     subtitle_regex_filter=self.config.subtitle_regex_filter,
@@ -1857,13 +1815,11 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # Dictionary storage folder (Issue #45). Validated above; reuse of
             # current value passes through unchanged.
             dicts_root=new_dicts_root,
-            # Sentence-TTS toggles — same immediate-persist + full-Save sync.
-            reading_tts_enabled=self.audio_panel.get_reading_tts()[0],
-            reading_tts_google_enabled=self.audio_panel.get_reading_tts()[1],
-            reading_tts_papago_enabled=self.audio_panel.get_reading_tts()[2],
-            # Update settings
+            # UI panel fields outside _save_panels (T11): Check for updates and
+            # Max parallel workers.
             check_for_updates=now_enabled,
             skipped_update_version=skipped_update_version,
+            max_parallel_workers=self.ui_panel.max_workers_spinbox.value(),
         )
 
         # Async import flows can complete between the start-of-Save snapshot
@@ -2140,8 +2096,8 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         refreshes still follow the field-diff rules below.
 
         Skips reloading the panel widgets when the incoming config differs from
-        the current one ONLY in externally-managed fields (theme, font scale,
-        first-run flags, update-banner fields — see ``_EXTERNAL_ONLY_FIELDS``).
+        the current one ONLY in externally-managed fields (theme, first-run
+        flags, update-banner fields — see ``_EXTERNAL_ONLY_FIELDS``).
         This preserves unsaved edits the user has made in the Settings tab when,
         for example, a theme change arrives via config_refreshed (OVH-007).
 
@@ -2175,7 +2131,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         ``_EXTERNAL_ONLY_FIELDS`` short-circuit exists to protect unsaved panel
         edits during unrelated commits (OVH-007) and must stay exactly as it is.
         A settings-profile switch is the case that gate gets wrong: two profiles
-        differing only in theme / favorites / font scale / language produce a
+        differing only in theme / favorites / language produce a
         diff that lies ENTIRELY inside the allowlist (the version stamps ride in
         it too), so the panels would keep rendering the profile the user just
         left — a stale language and zoom combo, a hidden restart note, and a
@@ -2324,17 +2280,6 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         new_config = replace(self.config, expression_audio_chain=new_chain)
         self._commit_immediate_config(new_config, self._commit_config)
 
-    def _persist_reading_tts_change(self) -> None:
-        """Save the sentence-TTS toggles immediately (no Save click needed)."""
-        enabled, google_on, papago_on = self.audio_panel.get_reading_tts()
-        new_config = replace(
-            self.config,
-            reading_tts_enabled=enabled,
-            reading_tts_google_enabled=google_on,
-            reading_tts_papago_enabled=papago_on,
-        )
-        self._commit_immediate_config(new_config, self.config_changed.emit)
-
     def _on_retry_missing_audio(self) -> None:
         """Clear JPod101 ``.miss`` markers so absent words are re-tried next run.
 
@@ -2439,7 +2384,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # Anki-synced rows are rebuilt from Anki on the next run.
             return db.clear(preserve_user=True)
 
-        self.filtering_panel.rebuild_known_words_button.setEnabled(False)
+        self.filtering_panel.set_rebuild_known_words_in_flight(True)
         run_off_thread(
             self,
             work,
@@ -2470,7 +2415,10 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         )
 
     def _on_rebuild_known_words_finished(self) -> None:
-        self.filtering_panel.rebuild_known_words_button.setEnabled(True)
+        # Not an unconditional re-enable: the checkbox may have been toggled off
+        # while the rebuild ran off-thread, and the button must land back in
+        # step with it rather than staying enabled regardless (Task 7).
+        self.filtering_panel.set_rebuild_known_words_in_flight(False)
 
     def _on_manage_known_words(self) -> None:
         """Open the Manage Known Words dialog (Issue #42)."""

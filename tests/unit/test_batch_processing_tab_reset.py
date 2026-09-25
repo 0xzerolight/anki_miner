@@ -61,34 +61,19 @@ def test_queue_finished_failed_resets_to_failed(tab):
     assert tab.overall_progress_widget.status_label.text() == "Failed — see log"
 
 
-def test_processing_finished_pins_summary(tab):
-    """Manual-pair completion pins the summary (result_ready implies no cancel)."""
-    _prime_progress(tab)
-    tab._on_processing_finished(results=[])
-    assert tab.overall_progress_widget.progress_bar.value() == 100
-    assert tab.overall_progress_widget.status_label.text() == "Complete — 0 cards created"
-
-
-def test_processing_error_resets_to_failed(tab):
-    _prime_progress(tab)
-    tab._on_processing_error("boom")
-    assert tab.overall_progress_widget.progress_bar.value() == 0
-    assert tab.overall_progress_widget.status_label.text() == "Failed — see log"
-
-
 def test_run_start_resets_previous_end_state(tab):
     """A new run must clear the previous run's pinned summary."""
     tab.overall_progress_widget.show_completion("Complete — 5 cards created")
-    tab._begin_run(queue_mode=False)
+    tab._begin_run()
     assert tab.overall_progress_widget.progress_bar.value() == 0
     assert tab.overall_progress_widget.status_label.text() == "Ready"
     assert tab._cancel_requested is False
     assert tab._run_failed is False
 
 
-def test_restore_buttons_recovers_cancelled_quick_run(tab):
-    """Quick-path cancel: QThread.finished → _restore_buttons must replace
-    "Cancelling…" with "Cancelled", leaving the bar where it froze."""
+def test_restore_buttons_recovers_a_cancelled_run(tab):
+    """QThread.finished → _restore_buttons must replace "Cancelling…" with
+    "Cancelled", leaving the bar where it froze."""
     _prime_progress(tab)
     tab._cancel_requested = True
     tab._restore_buttons()

@@ -29,7 +29,6 @@ from PyQt6.QtWidgets import (
     QDoubleSpinBox,
     QFrame,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QListWidget,
     QListWidgetItem,
@@ -125,8 +124,7 @@ class QueuePanel(QFrame):
         layout = QVBoxLayout()
         configure_card_layout(layout)
 
-        header = SectionHeader(title=self.tr("Multi-Series Queue"), action_text=self.tr("Add Series"))
-        header.action_clicked.connect(self._add_series)
+        header = SectionHeader(title=self.tr("Multi-Series Queue"))
         layout.addWidget(header)
 
         self.queue_stats_label = QLabel()
@@ -234,31 +232,6 @@ class QueuePanel(QFrame):
     # ------------------------------------------------------------------
     # Rows
     # ------------------------------------------------------------------
-
-    def _add_series(self) -> None:
-        """Add a new series row to the queue."""
-        if self._locked:
-            return
-        # Instantiated rather than QInputDialog.getText: the static helper leaves
-        # OK as the default button, so Return commits the dialog — and Return is
-        # also how a Japanese input method commits a composition, which makes a
-        # kana series name impossible to type (D49). Ctrl+Enter confirms instead.
-        prompt = QInputDialog(self)
-        prompt.setWindowTitle(self.tr("Add Series"))
-        prompt.setLabelText(tr_format(self.tr("Enter a name for series #%1:"), len(self.queue_item_widgets) + 1))
-        prompt.setTextValue(tr_format(self.tr("Series %1"), len(self.queue_item_widgets) + 1))
-        disown_default_buttons(prompt)
-        primary_action_shortcut(prompt, prompt.accept)
-        if prompt.exec() != QDialog.DialogCode.Accepted:
-            return
-        name = prompt.textValue()
-        if not name.strip():
-            return
-
-        widget = QueueItemWidget(display_name=name, parent=self.list_widget)
-        widget.removed.connect(lambda: self._remove_item(widget))
-        widget.edited.connect(lambda: self._edit_item(widget))
-        self.register_widget(widget)
 
     def register_widget(self, widget: QueueItemWidget) -> None:
         """Put ``widget`` on the list and bind it if its folders already validate.
@@ -819,9 +792,38 @@ class QueuePanel(QFrame):
 
     # === Public API ===
 
-    def add_series_external(self) -> None:
-        """Add a series (for external shortcut binding)."""
-        self._add_series()
+    def add_series(
+        self,
+        *,
+        display_name: str,
+        video_folder: Path,
+        subtitle_folder: Path,
+        subtitle_offset: float,
+        secondary_folder: Path | None = None,
+        secondary_offset: float = 0.0,
+    ) -> QueueItem | None:
+        """Add one series row to the queue, binding it if its folders validate.
+
+        The single entry point for turning a name and a pair of folders into a
+        queue row: the batch tab's Add Series card and a recovery-snapshot
+        restore (:meth:`restore_item`) both go through this rather than each
+        building a ``QueueItemWidget`` its own way.
+
+        Returns:
+            The bound ``QueueItem``, or ``None`` when the queue is locked for
+            a run. ``video_folder``/``subtitle_folder`` are required Paths, so
+            a call that reaches ``register_widget`` always binds.
+        """
+        if self._locked:
+            return None
+        widget = QueueItemWidget(display_name=display_name, parent=self.list_widget)
+        widget.removed.connect(lambda: self._remove_item(widget))
+        widget.edited.connect(lambda: self._edit_item(widget))
+        widget.set_folders(video_folder, subtitle_folder, secondary_folder)
+        widget.subtitle_offset = subtitle_offset
+        widget.secondary_offset = secondary_offset
+        self.register_widget(widget)
+        return self._items.get(id(widget))
 
     def restore_item(
         self,
@@ -840,26 +842,26 @@ class QueuePanel(QFrame):
     ) -> QueueItem | None:
         """Re-add one row from a recovery snapshot, keeping its identity (D16-C).
 
-        Same construction path as an ordinary Add, then the stored id is
-        re-attached: the id is how the worker and the row find each other, so a
-        restored row that took a fresh one would be a different row wearing the
-        same name.
+        Same construction path as an ordinary Add (:meth:`add_series`), then the
+        stored id is re-attached: the id is how the worker and the row find
+        each other, so a restored row that took a fresh one would be a
+        different row wearing the same name.
 
         Returns:
-            The bound ``QueueItem``, or ``None`` when the row could not be bound
-            (its folders no longer validate).
+            The bound ``QueueItem``, or ``None`` when the queue is locked (see
+            :meth:`add_series`).
         """
-        widget = QueueItemWidget(display_name=display_name, parent=self.list_widget)
-        widget.removed.connect(lambda: self._remove_item(widget))
-        widget.edited.connect(lambda: self._edit_item(widget))
-        widget.set_folders(video_folder, subtitle_folder, secondary_folder)
-        widget.subtitle_offset = subtitle_offset
-        widget.secondary_offset = secondary_offset
-        self.register_widget(widget)
-
-        item = self._items.get(id(widget))
+        item = self.add_series(
+            display_name=display_name,
+            video_folder=video_folder,
+            subtitle_folder=subtitle_folder,
+            subtitle_offset=subtitle_offset,
+            secondary_folder=secondary_folder,
+            secondary_offset=secondary_offset,
+        )
         if item is None:
             return None
+        widget = next(w for w in self.queue_item_widgets if w.item_id == item.id)
         item.id = item_id
         widget.item_id = item_id
         item.cards_created = cards_created

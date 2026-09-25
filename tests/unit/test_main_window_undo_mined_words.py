@@ -449,160 +449,41 @@ class TestUndoRevertsMinedWords:
 
         assert receipt.receipt is later_receipt
 
-    @pytest.mark.parametrize("worker_owner", ["current", "retained"])
-    def test_active_mining_task_prevents_undo_overlap(self, main_window, monkeypatch, test_config, qtbot, worker_owner):
-        from threading import Event, Thread
+    @pytest.mark.parametrize(
+        ("owner_main_tab", "expect_undo_blocked"),
+        [
+            ("video", True),
+            ("audiobook", True),
+            ("reading", True),
+            ("analytics", False),
+        ],
+    )
+    def test_active_mining_task_blocks_undo_by_owner(
+        self, main_window, monkeypatch, owner_main_tab, expect_undo_blocked
+    ):
+        """``_on_run_details`` passes ``undo_callback=None`` while a task owned by
+        a mining tab (video/audiobook/reading) is running in the task registry.
 
-        from anki_miner.gui import main_window as mw_module
-        from anki_miner.gui.controllers.run_receipt import RunReceipt
-        from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
-        from anki_miner.gui.utils.progress_telemetry import ActiveDuration
-        from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
-        from anki_miner.gui.widgets.inline_receipt import InlineReceipt
-        from anki_miner.gui.workers.deck_builder_worker import DeckBuilderWorker
-        from anki_miner.models import TerminalOutcome
-        from anki_miner.models.deck_build import DeckBuildRequest, DeckSelectionMode
-        from anki_miner.services.known_word_db import KnownWordDB
+        A task owned by a non-mining tab (analytics) must not block undo — the
+        gate only cares about tabs that can still be creating cards.
+        """
+        from anki_miner.gui.capabilities import CapabilityTarget
+        from anki_miner.gui.controllers.task_registry import TaskSpec
 
-        db_path = test_config.known_words_db_path
-        self._setup_known_words_db(db_path, {"猫": "mined"})
-        main_window.update_config(replace(main_window.config, use_known_words_db=True))
+        captured = _capture_undo_callback(monkeypatch)
 
-        old_note_deleted = Event()
-        release_old_delete = Event()
-        notes = {101}
+        main_window.task_registry.start(TaskSpec("t1", "Running", CapabilityTarget(owner_main_tab)))
 
-        def blocking_delete_notes(note_ids):
-            notes.difference_update(note_ids)
-            old_note_deleted.set()
-            assert release_old_delete.wait(2)
-            return len(note_ids)
-
-        monkeypatch.setattr(main_window._anki_service, "delete_notes", blocking_delete_notes)
-
-        old_result = ProcessingResult(
+        result = ProcessingResult(
             total_words_found=1,
             new_words_found=1,
             cards_created=1,
-            card_ids=[101],
+            card_ids=[1],
             mined_forms=["猫"],
         )
-        later_result = ProcessingResult(
-            total_words_found=1,
-            new_words_found=1,
-            cards_created=1,
-            card_ids=[202],
-            mined_forms=["猫"],
-        )
-        later_receipt = RunReceipt(
-            outcome=TerminalOutcome.SUCCESS,
-            items_total=1,
-            items_completed=1,
-            items_failed=0,
-            notes_added=1,
-            note_ids=(202,),
-            duration=ActiveDuration(active_s=1.0, suspended_s=0.0),
-            results=(later_result,),
-        )
-        receipt = InlineReceipt()
-        qtbot.addWidget(receipt)
-        receipt.show_receipt(
-            RunReceipt(
-                outcome=TerminalOutcome.SUCCESS,
-                items_total=1,
-                items_completed=1,
-                items_failed=0,
-                notes_added=1,
-                note_ids=(101,),
-                duration=ActiveDuration(active_s=1.0, suspended_s=0.0),
-                results=(old_result,),
-            )
-        )
+        main_window._on_run_details(result)
 
-        callbacks: list[object] = []
-
-        class _OverlappingResultsDialog:
-            def __init__(self, result, parent, undo_callback=None, on_undo_committed=None):
-                callbacks.append(undo_callback)
-                self._undo_callback = undo_callback
-                self._on_undo_committed = on_undo_committed
-
-            def exec(self):
-                deleted: list[int] = []
-                undo_thread = None
-                if self._undo_callback is not None:
-
-                    def run_undo():
-                        deleted.append(self._undo_callback([101]))
-
-                    undo_thread = Thread(target=run_undo)
-                    undo_thread.start()
-                    assert old_note_deleted.wait(2)
-
-                notes.add(202)
-                KnownWordDB(db_path).add_words({"猫"}, source="mined")
-                receipt.show_receipt(later_receipt)
-
-                release_old_delete.set()
-                if undo_thread is not None:
-                    undo_thread.join(2)
-                    assert not undo_thread.is_alive()
-                    self._on_undo_committed(deleted[0])
-                return 0
-
-        monkeypatch.setattr(mw_module, "ResultsDialog", _OverlappingResultsDialog)
-        deck_builder_tab = DeckBuilderTab(
-            config=main_window.config,
-            presenter=GUIPresenter(main_window),
-            progress_callback=GUIProgressCallback(main_window),
-            parent=main_window.tabs,
-        )
-        main_window.tabs.addTab(deck_builder_tab, "Deck Builder")
-        worker_started = Event()
-        release_worker = Event()
-
-        class _LiveDeckBuilderWorker(DeckBuilderWorker):
-            def run(self):
-                worker_started.set()
-                release_worker.wait(2)
-
-        worker = _LiveDeckBuilderWorker(
-            request=DeckBuildRequest(
-                pairs=[],
-                deck_name="Deck Builder",
-                mode=DeckSelectionMode.ALL,
-                value=0.0,
-                collection_filter=False,
-            ),
-            config=main_window.config,
-            presenter=deck_builder_tab.presenter,
-            progress_callback=deck_builder_tab.progress_callback,
-            parent=deck_builder_tab,
-        )
-        if worker_owner == "current":
-            deck_builder_tab.worker_thread = worker
+        if expect_undo_blocked:
+            assert captured["cb"] is None
         else:
-            deck_builder_tab.worker_thread = None
-            deck_builder_tab._leaked_runs.append((worker, None))
-        worker.start()
-        assert worker_started.wait(2)
-        assert worker.isRunning()
-        assert not main_window.task_registry.running()
-
-        def open_details():
-            current = receipt.receipt
-            aggregate = current.aggregate_result() if current is not None else None
-            if aggregate is not None:
-                main_window._on_run_details(aggregate)
-
-        try:
-            receipt.details_requested.connect(open_details)
-            receipt.details_button.click()
-
-            assert KnownWordDB(db_path).get_words_by_source("mined") == {"猫"}
-            assert 202 in notes
-            assert receipt.receipt is later_receipt
-            assert callbacks == [None]
-        finally:
-            release_worker.set()
-            assert worker.wait(2000)
+            assert captured["cb"] is not None

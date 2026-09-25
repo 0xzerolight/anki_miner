@@ -10,6 +10,7 @@ from .media_settings_panel import MediaSettingsPanel
 from .mining_language_settings_panel import MiningLanguageSettingsPanel
 from .pitch_settings_panel import PitchSettingsPanel
 from .queue_panel import QueuePanel
+from .sentences_settings_panel import SentencesSettingsPanel
 from .subtitles_settings_panel import SubtitlesSettingsPanel
 from .ui_settings_panel import UISettingsPanel
 from .youtube_settings_panel import YouTubeSettingsPanel
@@ -25,6 +26,7 @@ __all__ = [
     "MiningLanguageSettingsPanel",
     "PitchSettingsPanel",
     "QueuePanel",
+    "SentencesSettingsPanel",
     "SubtitlesSettingsPanel",
     "UISettingsPanel",
     "YouTubeSettingsPanel",

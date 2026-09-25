@@ -35,8 +35,8 @@ from anki_miner.languages.switching import switch_language
 GATED = [
     ("anki.hanja_field_input", "Hanja Field", "ko"),
     ("anki.measure_word_field_input", "Measure Word Field", "zh"),
-    ("filtering.script_variant_combo", "Character Set", "zh"),
-    ("filtering.reading_tone_color_checkbox", "Colour the reading by tone", "zh"),
+    ("mining_language.script_variant_combo", "Character Set", "zh"),
+    ("anki.reading_tone_color_checkbox", "Colour the reading by tone", "zh"),
     ("filtering.script_filter_hangul_only", "Hangul", "ko"),
 ]
 
@@ -132,7 +132,7 @@ class TestTheAddressBookStaysComplete:
     def test_a_hidden_anchor_is_still_reachable_by_id(self, tab_factory, test_config):
         tab = tab_factory(switch_language(test_config, "ja"))
 
-        tab.jump_to_setting("filtering.script_variant_combo")  # resolves; must not raise
+        tab.jump_to_setting("mining_language.script_variant_combo")  # resolves; must not raise
 
 
 class TestASwitchReindexes:
@@ -144,20 +144,20 @@ class TestASwitchReindexes:
 
     def test_the_incoming_languages_rows_become_searchable(self, tab_factory, test_config):
         tab = tab_factory(test_config)
-        assert "filtering.script_variant_combo" not in result_ids(tab, "Character Set")
+        assert "mining_language.script_variant_combo" not in result_ids(tab, "Character Set")
 
         # What MainWindow does on a switch: adopt the config (which repaints the
         # panels and re-applies the gate), then re-point the language surfaces.
         tab.update_config(switch_language(test_config, "zh"))
         tab.set_mining_language("zh")
 
-        assert "filtering.script_variant_combo" in result_ids(tab, "Character Set")
+        assert "mining_language.script_variant_combo" in result_ids(tab, "Character Set")
 
     def test_the_outgoing_languages_rows_stop_being_searchable(self, tab_factory, test_config):
         tab = tab_factory(switch_language(test_config, "zh"))
-        assert "filtering.reading_tone_color_checkbox" in result_ids(tab, "Colour the reading by tone")
+        assert "anki.reading_tone_color_checkbox" in result_ids(tab, "Colour the reading by tone")
 
         tab.update_config(switch_language(test_config, "ja"))
         tab.set_mining_language("ja")
 
-        assert "filtering.reading_tone_color_checkbox" not in result_ids(tab, "Colour the reading by tone")
+        assert "anki.reading_tone_color_checkbox" not in result_ids(tab, "Colour the reading by tone")

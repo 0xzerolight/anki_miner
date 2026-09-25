@@ -88,8 +88,7 @@ def _build(name: str, config: AnkiMinerConfig) -> QWidget:
     return reading(config, MagicMock(name="Processor"), MagicMock())
 
 
-#: Every screen that pins a primary action. Deck Builder is deliberately absent:
-#: under D3 it is blocked and installs no bar, so it gains no binding here.
+#: Every screen that pins a primary action.
 SCREENS = [
     "single",
     "batch",
@@ -193,51 +192,6 @@ class TestActivationGoesThroughTheButton:
         bar.trigger_primary()
 
         assert presses == []
-
-
-class TestDialogsWithTextFieldsNeverConfirmOnBareReturn:
-    """D49's structural floor, applied to the dialogs that carry a text field.
-
-    Qt promotes the first button whose ``autoDefault`` is on to the dialog's
-    Enter target. ``ModernButton`` already declines it for every quiet variant,
-    which leaves the *primary* one -- and Export was exactly that: a path field
-    beside an auto-default Export button, so committing kana in the field ran
-    the export.
-    """
-
-    @pytest.fixture
-    def export_dialog(self, qtbot, test_config: AnkiMinerConfig):
-        from anki_miner.gui.widgets.dialogs.export_dialog import ExportDialog
-
-        dialog = ExportDialog(words=[], config=test_config)
-        qtbot.addWidget(dialog)
-        return dialog
-
-    def test_no_button_is_the_enter_target(self, export_dialog):
-        from PyQt6.QtWidgets import QLineEdit, QPushButton
-
-        assert export_dialog.findChildren(QLineEdit), "this test is only meaningful with a text field present"
-
-        promoted = [b.text() for b in export_dialog.findChildren(QPushButton) if b.autoDefault() or b.isDefault()]
-
-        assert promoted == [], f"bare Return would fire {promoted} while an input method is composing"
-
-    def test_confirmation_is_ctrl_enter_instead(self, export_dialog):
-        bound = {_keys(s) for s in _shortcuts(export_dialog)}
-
-        assert bound >= PRIMARY_KEYS, f"no Ctrl+Enter confirmation to replace the default button: {bound}"
-
-    def test_ctrl_enter_respects_the_disabled_primary(self, export_dialog, qtbot):
-        """Export is disabled until a path is chosen; the shortcut must agree."""
-        exported: list[int] = []
-        export_dialog._export_btn.clicked.connect(lambda: exported.append(1))
-        export_dialog._export_btn.setEnabled(False)
-        export_dialog.show()
-        qtbot.waitExposed(export_dialog)
-
-        qtbot.keyClick(export_dialog, Qt.Key.Key_Return, Qt.KeyboardModifier.ControlModifier)
-
-        assert exported == []
 
 
 class TestHiddenPagesStaySilent:

@@ -30,7 +30,6 @@ from anki_miner.gui.utils import queue_state_store, result_copy
 from anki_miner.gui.utils.keyboard_shortcuts import scoped_shortcut
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.utils.queue_state_store import QueueItemSnapshot, QueueSnapshot
-from anki_miner.gui.utils.service_factory import create_episode_processor
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
 from anki_miner.gui.widgets.base import (
     PageWidth,
@@ -45,14 +44,12 @@ from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionH
 from anki_miner.gui.widgets.log_widget import LogWidget
 from anki_miner.gui.widgets.panels import QueuePanel
 from anki_miner.gui.widgets.progress_widget import ProgressWidget
-from anki_miner.models.batch_queue import QueueItemStatus
+from anki_miner.models.batch_queue import QueueItem, QueueItemStatus
 from anki_miner.utils.file_pairing import is_same_folder
 from anki_miner.utils.i18n import tr_format
 
 if TYPE_CHECKING:
     from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
-    from anki_miner.gui.workers.manual_pair_worker import ManualPairWorkerThread
-    from anki_miner.orchestration import EpisodeProcessor
 
 
 logger = logging.getLogger(__name__)
@@ -62,8 +59,8 @@ class BatchProcessingTab(MiningTabBase):
     """Enhanced batch processing tab with modern UI design.
 
     Features:
-    - Quick Processing section with FileSelector widgets
-    - Multi-Series Queue via QueuePanel
+    - Add Series card with FileSelector widgets, adding a row to the queue
+    - Multi-Series Queue via QueuePanel, the one run this screen has
     - Dual progress bars (overall + current episode)
     - Enhanced log widget
     """
@@ -72,8 +69,7 @@ class BatchProcessingTab(MiningTabBase):
     PAGE_WIDTH = PageWidth.PAGE
 
     #: Published so this screen's Cancel gets a live wait clock and the pinned
-    #: bar gets a stage and a progress bar (D17, D22). One id for both paths --
-    #: the screen runs either the folder pairs or the series queue, never both.
+    #: bar gets a stage and a progress bar (D17, D22).
     TASK_ID = "run.batch"
     TASK_OWNER = CapabilityTarget("video", "batch")
 
@@ -102,15 +98,11 @@ class BatchProcessingTab(MiningTabBase):
         self.presenter = presenter
         self.progress_callback = progress_callback
         self.stats_service = stats_service
-        self.worker_thread: ManualPairWorkerThread | BatchQueueWorkerThread | None = None
+        self.worker_thread: BatchQueueWorkerThread | None = None
         self._is_processing = False
         self._cancel_requested = False
         self._run_failed = False
         self._run_had_item_failures = False
-        # Both start methods assign the same union-typed worker_thread, so the
-        # active path (Queue = two-level series items vs Quick = one episode
-        # per item) is tracked explicitly for _on_progress_update's branch.
-        self._queue_mode = False
         self._items_done = 0
         self._items_total = 0
         self._run_terminal_ids: set[str] = set()
@@ -146,9 +138,10 @@ class BatchProcessingTab(MiningTabBase):
         layout.setSpacing(SPACING.sm)
         layout.setContentsMargins(SPACING.md, SPACING.md, SPACING.md, SPACING.md)
 
-        # Quick Processing Section
-        quick_section = self._create_quick_processing_section()
-        layout.addWidget(quick_section)
+        # Add Series card: the folder pickers that used to run their own quick
+        # pass now just add a row to the queue below.
+        add_series_section = self._create_add_series_section()
+        layout.addWidget(add_series_section)
 
         # Multi-Series Queue Panel (extracted component). It binds its rows to
         # THIS queue, so removal, reorder and edits mutate one model rather than
@@ -167,7 +160,7 @@ class BatchProcessingTab(MiningTabBase):
         layout.addWidget(self.queue_panel)
 
         # Issue #60: opt-in word curation popup (default off). Season-level on
-        # this tab: one popup per series (queue) / per run (quick pairs).
+        # this tab: one popup per series.
         self.review_words_checkbox = QCheckBox(self.tr("Review words before mining"))
         self._bind_review_words_checkbox()
         self.review_words_checkbox.setToolTip(self.tr("Pick which words get cards, once per series."))
@@ -184,8 +177,8 @@ class BatchProcessingTab(MiningTabBase):
 
         self.overall_progress_widget = ProgressWidget()
         layout.addWidget(self.overall_progress_widget)
-        # The durable end state of this same card (D20). The noun is set per
-        # run: the quick path mines episodes, the queue path whole series.
+        # The durable end state of this same card (D20). The noun ("series")
+        # is set per run at _begin_receipt.
         self._install_receipt(layout, self.overall_progress_widget)
 
         # Retry Failed button (hidden by default)
@@ -212,8 +205,8 @@ class BatchProcessingTab(MiningTabBase):
         container.setLayout(layout)
 
         # Scroll, Activity drawer, pinned bar (D6). Process Queue is the run
-        # this screen is for, so it is the pinned action; Process Folder stays
-        # in the quick-processing card with the folders it reads.
+        # this screen is for, so it is the pinned action; Add to Queue stays
+        # in its own card with the folders it reads.
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(0, 0, 0, 0)
         self._install_action_bar(
@@ -247,14 +240,17 @@ class BatchProcessingTab(MiningTabBase):
             lambda: (self.video_folder_selector.browse() if hasattr(self, "video_folder_selector") else None),
         )
 
-        # Ctrl+Shift+A: Add series to queue
-        scoped_shortcut(self, QKeySequence("Ctrl+Shift+A"), self.queue_panel.add_series_external)
+        # Ctrl+Shift+A: jump to the Add Series card's video folder picker. The
+        # panel no longer owns a naming dialog to bind this to; FileSelector
+        # itself is NoFocus with no focus proxy, so the shortcut has to reach
+        # past it to the line edit it wraps.
+        scoped_shortcut(self, QKeySequence("Ctrl+Shift+A"), self.video_folder_selector.input.setFocus)
 
-    def _create_quick_processing_section(self) -> QFrame:
-        """Create the quick processing section with card styling.
+    def _create_add_series_section(self) -> QFrame:
+        """Create the "Add Series" card: the pickers that add a row to the queue.
 
         Returns:
-            Frame with quick processing controls
+            Frame with the Add Series controls
         """
         section = QFrame()
         section.setObjectName("card")
@@ -262,7 +258,7 @@ class BatchProcessingTab(MiningTabBase):
         configure_card_layout(layout)
 
         # Section header
-        header = SectionHeader(title=self.tr("Quick Processing"))
+        header = SectionHeader(title=self.tr("Add Series"))
         layout.addWidget(header)
 
         # Shared label-column width so both folder rows and the offset row line up.
@@ -366,10 +362,10 @@ class BatchProcessingTab(MiningTabBase):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING.sm)
 
-        self.process_pairs_button = ModernButton(self.tr("Process Folder"), variant="primary")
-        self.process_pairs_button.clicked.connect(self._process_pairs)
-        self.process_pairs_button.setToolTip(self.tr("Process every episode pair found in the selected folders"))
-        button_layout.addWidget(self.process_pairs_button)
+        self.add_series_button = ModernButton(self.tr("Add to Queue"), variant="secondary")
+        self.add_series_button.clicked.connect(self._add_series_from_pickers)
+        self.add_series_button.setToolTip(self.tr("Add this folder pair to the queue below as a new series"))
+        button_layout.addWidget(self.add_series_button)
 
         self.cancel_button = ModernButton(self.tr("Cancel"), variant="secondary")
         self.cancel_button.setToolTip(self.tr("Cancel processing"))
@@ -413,7 +409,7 @@ class BatchProcessingTab(MiningTabBase):
         self.secondary_offset_row.setVisible(enabled)
 
     def _validated_secondary_folder(self, subtitle_folder: Path) -> tuple[bool, Path | None]:
-        """The quick path's translation folder as ``(ok, folder)``.
+        """The Add Series card's translation folder as ``(ok, folder)``.
 
         Kept apart from :meth:`_get_validated_folders` because the two answer
         different questions: the video/subtitle pair is required, this one is
@@ -444,153 +440,120 @@ class BatchProcessingTab(MiningTabBase):
         return True, secondary_folder
 
     def _secondary_offset(self) -> float:
-        """The quick path's translation offset, or 0.0 without a chosen folder."""
+        """The Add Series card's translation offset, or 0.0 without a chosen folder."""
         if not self.config.secondary_subtitle_enabled:
             return 0.0
         if self.secondary_folder_selector.path_or_none() is None:
             return 0.0
         return self.secondary_offset_spinbox.value()
 
-    def _find_episode_pairs(
-        self, video_folder: Path, subtitle_folder: Path, secondary_folder: Path | None = None
-    ) -> list:
-        """Find matching video/subtitle pairs in folders.
+    def _add_series_from_pickers(self) -> QueueItem | None:
+        """Add the Add Series card's folders as a new queue row.
 
-        Args:
-            video_folder: Path to video folder
-            subtitle_folder: Path to subtitle folder
-            secondary_folder: Optional folder of translation subtitles (F7),
-                matched to the same videos by episode number
+        Mirrors the old quick path's clear-then-validate order (D24): the
+        previous attempt's complaint is cleared before anything here can
+        re-raise it, and only then are the folders checked. A successful add
+        clears the pickers so the card is ready for the next series; a failed
+        one leaves them exactly as the user left them.
 
         Returns:
-            List of FilePair objects
+            The added ``QueueItem``, or ``None`` when nothing was added.
         """
-        from anki_miner.utils.file_pairing import FilePairMatcher
-
-        return FilePairMatcher.find_pairs_by_episode_number(
-            video_folder, subtitle_folder, secondary_folder=secondary_folder
-        )
-
-    def _process_pairs(self) -> None:
-        """Process all discovered pairs from quick processing section."""
-        if self._is_processing:
-            return
-
         self.clear_screen_issue()
 
         folders = self._get_validated_folders()
         if not folders:
             self.show_screen_issue(ScreenIssue(summary=self.tr("Choose existing video and subtitle folders.")))
-            return
+            return None
 
         video_folder, subtitle_folder = folders
         ok, secondary_folder = self._validated_secondary_folder(subtitle_folder)
         if not ok:
-            return
-        pairs = self._find_episode_pairs(video_folder, subtitle_folder, secondary_folder)
+            return None
 
-        if not pairs:
-            self.show_screen_issue(
-                ScreenIssue(summary=self.tr("No subtitle file could be matched to any video file in those folders."))
-            )
-            return
+        item = self.queue_panel.add_series(
+            display_name=self._unique_series_name(video_folder.name),
+            video_folder=video_folder,
+            subtitle_folder=subtitle_folder,
+            subtitle_offset=self.offset_spinbox.value(),
+            secondary_folder=secondary_folder,
+            secondary_offset=self._secondary_offset(),
+        )
+        if item is not None:
+            self._clear_add_series_pickers(secondary_folder)
+        return item
 
-        self._start_processing_with_pairs(pairs)
+    def _clear_add_series_pickers(self, secondary_folder: Path | None) -> None:
+        """Reset the Add Series card so it is ready for the next series.
 
-    def _quick_run_log_fields(self, pairs) -> dict[str, object]:
-        """Name the quick path's run in the log: how many pairs, and from where.
-
-        Pairing is episode-number based over two folders (Issue #39), so the
-        folders and the first few matched stems are what make a "it mined the
-        wrong episodes" report answerable.
+        ``secondary_folder`` is the folder that was actually validated for
+        this fold (``None`` when the secondary picker was unused), so its
+        picker is only cleared when it was actually part of what was folded.
         """
-        return {
-            "review_words": self.review_words_checkbox.isChecked(),
-            "pairs": len(pairs),
-            "first": [self._pair_stem(pair) for pair in pairs[:5]],
-            "video_folder": self.video_folder_selector.path_or_none(),
-            "subtitle_folder": self.subtitle_folder_selector.path_or_none(),
-            # F7: how many of the matched episodes actually got a translation.
-            # A partial set is normal and never fails the run, so the count is
-            # the only record that some cards will have an empty field.
-            "secondary_folder": (
-                self.secondary_folder_selector.path_or_none() if self.config.secondary_subtitle_enabled else None
-            ),
-            "secondary_offset": self._secondary_offset(),
-            "translations": sum(1 for pair in pairs if getattr(pair, "secondary", None) is not None),
-        }
+        self.video_folder_selector.clear()
+        self.subtitle_folder_selector.clear()
+        if secondary_folder is not None:
+            self.secondary_folder_selector.clear()
 
-    @staticmethod
-    def _pair_stem(pair) -> str:
-        """The episode stem of one ``FilePair``, for the run's log line."""
-        video = getattr(pair, "video", None)
-        return Path(video).stem if video else type(pair).__name__
+    def _unique_series_name(self, base: str) -> str:
+        """``base``, or ``base`` suffixed " (2)", " (3)", ... to avoid a repeat.
 
-    def _start_processing_with_pairs(self, pairs) -> None:
-        """Start processing with manually paired files.
-
-        Args:
-            pairs: List of FilePair objects to process
+        Two rows sharing a display name are otherwise indistinguishable in the
+        queue list; the row's own id, not its name, is what a run and its
+        receipts actually address it by.
         """
-        # Clear log and reset the bar from the previous run's end state.
-        self.log_widget.clear_log()
-        self._begin_run(queue_mode=False)
-        self._begin_receipt(
-            len(pairs),
-            item_noun=self.tr("episodes"),
-            run_fields=self._quick_run_log_fields(pairs),
+        existing = {widget.display_name for widget in self.queue_panel.queue_item_widgets}
+        if base not in existing:
+            return base
+        n = 2
+        while f"{base} ({n})" in existing:
+            n += 1
+        return f"{base} ({n})"
+
+    def _has_runnable_duplicate(self, video_folder: Path, subtitle_folder: Path) -> bool:
+        """Whether a pending or errored row already mines this exact folder pair.
+
+        Checked before folding the Add Series card into the queue, so pressing
+        Process with the same folders still sitting in the card mines that row
+        again instead of adding a second, identical one beside it. A completed
+        row is not a match: re-mining one on purpose already goes through
+        selecting it and running it, not through this card.
+        """
+        return any(
+            is_same_folder(item.video_folder, video_folder) and is_same_folder(item.subtitle_folder, subtitle_folder)
+            for item in self.batch_queue.get_all_items()
+            if item.status in (QueueItemStatus.PENDING, QueueItemStatus.ERROR)
         )
 
-        # Hide action buttons, show cancel
-        self._is_processing = True
-        self._show_cancel_state()
+    def _fold_pickers_into_queue(self) -> bool:
+        """Add the Add Series card's folders to the queue before a run.
 
-        # Log start
-        self.presenter.show_info(tr_format(self.tr("Starting batch processing of %1 episodes..."), len(pairs)))
-        self._publish_task_start(self.tr("Batch mining"), total=len(pairs))
+        Filling either picker is always intent: pressing Process must never
+        quietly mine whatever is already queued while ignoring what is sitting
+        in the card. Both pickers empty is the plain "run what is already
+        queued" case, and this is then a no-op.
 
-        # Tear down the previous run before building a new processor so leaked
-        # sqlite handles / Session sockets can't survive into this run (Windows
-        # back-to-back-mining freeze).
-        self._teardown_previous_run("batch")
+        Returns:
+            ``False`` when the run must stop here (a screen issue was already
+            raised, or the fold itself failed); ``True`` to proceed to the run.
+        """
+        if self.video_folder_selector.path_or_none() is None and self.subtitle_folder_selector.path_or_none() is None:
+            return True
 
-        # Process each pair sequentially in worker thread
-        from anki_miner.gui.workers.manual_pair_worker import ManualPairWorkerThread
+        folders = self._get_validated_folders()
+        if folders is None:
+            self.show_screen_issue(ScreenIssue(summary=self.tr("Choose existing video and subtitle folders.")))
+            return False
 
-        # Read the constant offset on the GUI thread now; the factory runs on
-        # the worker thread so it must close over the precomputed config, never
-        # touch the spinbox (cross-thread QWidget access). Mirrors SingleEpisodeTab.
-        config_with_offset = replace(self.config, subtitle_offset=self.offset_spinbox.value())
+        video_folder, subtitle_folder = folders
+        ok, _secondary_folder = self._validated_secondary_folder(subtitle_folder)
+        if not ok:
+            return False
 
-        # Pass a factory so the processor is built on the worker thread. This
-        # keeps the GUI thread free during the slow registry scan, sqlite opens,
-        # and CSV parses that happen during construction.
-        def _processor_factory() -> EpisodeProcessor:
-            return create_episode_processor(config_with_offset, self.presenter, self.stats_service)
-
-        curation_cb = self._curation_bridge if self.review_words_checkbox.isChecked() else None
-        self.worker_thread = ManualPairWorkerThread(
-            None,
-            pairs,
-            self.progress_callback,
-            curation_callback=curation_cb,
-            processor_factory=_processor_factory,
-            secondary_subtitle_offset=self._secondary_offset(),
-        )
-
-        # Pair-level signals set the counters/labels; the per-episode stage
-        # sweep via progress_callback (wired in __init__) is composed into the
-        # single overall bar by _on_progress_update.
-        self.worker_thread.batch_started.connect(self._on_batch_started)
-        self.worker_thread.pair_started.connect(self._on_pair_started)
-        self.worker_thread.pair_finished.connect(self._on_pair_finished)
-        self.worker_thread.result_ready.connect(self._on_processing_finished)
-        self.worker_thread.error.connect(self._on_processing_error)
-        self.worker_thread.finished.connect(self._restore_buttons)
-        # Sealed on the thread's own end: the terminal summary the worker emits
-        # on every exit path -- including a cancellation -- has arrived by then.
-        self.worker_thread.finished.connect(self._on_run_thread_finished)
-        self.worker_thread.start()
+        if self._has_runnable_duplicate(video_folder, subtitle_folder):
+            self._clear_add_series_pickers(_secondary_folder)
+            return True
+        return self._add_series_from_pickers() is not None
 
     def _warn_incomplete_items(self) -> None:
         """Report every series this run skipped, in ONE banner.
@@ -677,8 +640,7 @@ class BatchProcessingTab(MiningTabBase):
             # would read "Complete — 0 cards created" on a failed run.
             worker.error.connect(self._on_queue_worker_error)
             # Safety net (G1): restore the action buttons once the thread ends.
-            # The quick (manual-pair) path already wires this; without it a
-            # caught run-level failure (stale-dict gate, AnkiService
+            # Without it a caught run-level failure (stale-dict gate, AnkiService
             # construction) leaves the buttons stranded in the running state.
             worker.finished.connect(self._restore_buttons)
             worker.finished.connect(self._on_run_thread_finished)
@@ -755,6 +717,12 @@ class BatchProcessingTab(MiningTabBase):
         # and before the checks below, which re-raise whatever is still wrong.
         self.clear_screen_issue()
 
+        # Filled pickers are folded into the queue before it is read, so a
+        # picker issue is the one thing on screen -- never overwritten by the
+        # empty-queue refusal below.
+        if not self._fold_pickers_into_queue():
+            return
+
         # The rows themselves are the model now: each one bound to a persistent
         # QueueItem when its folders validated. The queue is NOT rebuilt here --
         # doing so would mint new identities and lose the episode receipts that
@@ -770,7 +738,7 @@ class BatchProcessingTab(MiningTabBase):
         # Prepare UI for processing
         self._is_processing = True
         self.log_widget.clear_log()
-        self._begin_run(queue_mode=True)
+        self._begin_run()
         self._show_cancel_state()
         self.presenter.show_info(
             tr_format(self.tr("Starting queue processing (%1 series)..."), len(self._run_selection))
@@ -785,12 +753,12 @@ class BatchProcessingTab(MiningTabBase):
         Args:
             enabled: Whether buttons should be enabled
         """
-        self.process_pairs_button.setEnabled(enabled)
+        self.add_series_button.setEnabled(enabled)
         self.queue_panel.set_buttons_enabled(enabled)
 
     def _show_cancel_state(self) -> None:
         """Hide action buttons and show cancel button."""
-        self.process_pairs_button.hide()
+        self.add_series_button.hide()
         self.cancel_button.setText(self.tr("Cancel"))
         self.cancel_button.setEnabled(True)
         self.cancel_button.show()
@@ -803,14 +771,14 @@ class BatchProcessingTab(MiningTabBase):
         """Restore normal button state after processing ends."""
         self._is_processing = False
         self.cancel_button.hide()
-        self.process_pairs_button.show()
+        self.add_series_button.show()
         self._set_buttons_enabled(True)
         self.queue_panel.set_locked(False)
-        # Cancel recovery: the Quick-path worker suppresses result_ready on a
-        # cancelled run, so QThread.finished (always fires) is the only safe
-        # place to replace "Cancelling…". Idempotent for the queue path,
-        # whose _on_queue_finished also handles the flag. The bar is left where
-        # it froze: how many episodes were actually done is the point.
+        # Cancel recovery: QThread.finished always fires, so this is the one
+        # place guaranteed to replace "Cancelling…" whatever exit path the run
+        # took. Idempotent with _on_queue_finished, which checks the same flag
+        # on its own cancel path. The bar is left where it froze: how many
+        # series were actually done is the point.
         if self._cancel_requested:
             self.overall_progress_widget.set_status(self.tr("Cancelled"))
 
@@ -837,10 +805,10 @@ class BatchProcessingTab(MiningTabBase):
     # ------------------------------------------------------------------
 
     def _boundary_worker(self) -> BatchQueueWorkerThread | None:
-        """The active queue worker, or None on the folder-pairs path.
+        """The active queue worker, or None when nothing is running.
 
-        Only the series queue has boundaries: a Quick run is one list of
-        episodes inside one worker, with nothing to pause between.
+        Boundaries (pause, finish-current) land only between whole series,
+        never mid-run inside one.
         """
         worker = self.worker_thread
         from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread as _QueueWorker
@@ -891,13 +859,12 @@ class BatchProcessingTab(MiningTabBase):
         """Return the badge and the button to their running state."""
         self.queue_panel.queue_controls.set_paused(False)
 
-    def _begin_run(self, queue_mode: bool) -> None:
+    def _begin_run(self) -> None:
         """Reset the bar, flags, and per-run counters at run start."""
         self.overall_progress_widget.reset()
         self._cancel_requested = False
         self._run_failed = False
         self._run_had_item_failures = False
-        self._queue_mode = queue_mode
         self._items_done = 0
         self._items_total = 0
         self._run_terminal_ids = set()
@@ -917,43 +884,6 @@ class BatchProcessingTab(MiningTabBase):
         self._items_total = total_items
         self._items_done = 0
         self.overall_progress_widget.set_percent(0, self.tr("Starting queue processing..."))
-
-    def _on_batch_started(self, total_pairs: int) -> None:
-        """Quick Processing start: prime the Overall Progress bar with pair count.
-
-        Mirrors :meth:`_on_queue_started` for the folder-pair path
-        (ManualPairWorkerThread). The per-episode stage sweep via
-        ``progress_callback`` is composed into the same bar.
-
-        Args:
-            total_pairs: Total number of episode pairs to process
-        """
-        self._items_total = total_pairs
-        self._items_done = 0
-        self.overall_progress_widget.set_percent(0, self.tr("Starting batch processing..."))
-
-    def _on_pair_started(self, index: int, name: str) -> None:
-        """Quick Processing per-pair start: refresh the persistent episode prefix.
-
-        Args:
-            index: 1-based pair index
-            name: Display name (video file name)
-        """
-        self._current_item_label = tr_format(self.tr("Mining episode %1 of %2: %3"), index, self._items_total, name)
-        self.overall_progress_widget.set_status(self._current_item_label)
-
-    def _on_pair_finished(self, completed: int, total: int) -> None:
-        """Quick Processing per-pair tick: advance the composed bar.
-
-        Args:
-            completed: Number of pairs finished so far (1-based)
-            total: Total number of pairs in the run
-        """
-        self._items_done = completed
-        # Bar-only advance (no status): keeps the fill correct when a pair
-        # errors mid-sweep; monotone with the composed per-episode updates.
-        self.overall_progress_widget.set_composed(completed, 0, total)
-        self._publish_task_count(current=completed, total=total or None, detail="")
 
     def _on_item_started(self, item_id: str, display_name: str) -> None:
         """Called when processing starts for an item.
@@ -1054,7 +984,7 @@ class BatchProcessingTab(MiningTabBase):
         """
         self._run_terminal_ids.add(item_id)
         self._items_done = len(self._run_terminal_ids)
-        self.overall_progress_widget.set_composed(self._items_done, 0, self._items_total)
+        self.overall_progress_widget.set_composed(self._items_done, self._items_total)
         self._publish_task_count(current=self._items_done, total=self._items_total or None, detail="")
 
     def _on_queue_finished(self, total_cards: int, whitelist: object = None) -> None:
@@ -1213,12 +1143,11 @@ class BatchProcessingTab(MiningTabBase):
 
         # Hide retry button and start processing. Use _show_cancel_state()
         # (not just _set_buttons_enabled(False)) so the Cancel button is
-        # surfaced for the retry run, matching _process_queue and
-        # _start_processing_with_pairs — otherwise the retry run is
-        # uncancellable (T-22).
+        # surfaced for the retry run, matching _process_queue — otherwise the
+        # retry run is uncancellable (T-22).
         self.retry_button.setVisible(False)
         self._is_processing = True
-        self._begin_run(queue_mode=True)
+        self._begin_run()
         self._show_cancel_state()
 
         self.presenter.show_info(tr_format(self.tr("Retrying %1 failed items..."), reset_count))
@@ -1273,53 +1202,6 @@ class BatchProcessingTab(MiningTabBase):
     def _on_progress_complete(self) -> None:
         """Per-episode stage complete: no-op (terminal handlers own the summary)."""
 
-    def _on_processing_finished(self, results: list) -> None:
-        """Record the manual-pair run's results and paint its terminal bar.
-
-        The worker emits this on every exit path, cancellation included, so the
-        receipt sealed afterwards on ``QThread.finished`` can state what a
-        stopped run managed to do. Failed episodes come back as results with
-        ``errors`` populated (``process_episode`` never raises), so they are
-        classified rather than counted as successes (Issue #51).
-
-        Args:
-            results: List of processing results
-        """
-        for result in results:
-            self._record_receipt_result(result)
-        self._run_had_item_failures = any(not result.success for result in results)
-        self._restore_buttons()
-
-        # A cancelled run keeps its frozen bar and says nothing here: the
-        # receipt sealed on QThread.finished states what the stopped run
-        # managed to do, and a modal announcing "Complete" is the last thing
-        # someone who just pressed Cancel wants (D20/D22).
-        if self._cancel_requested:
-            return
-        if self._run_had_item_failures:
-            self.overall_progress_widget.reset()
-            self.overall_progress_widget.set_status(self.tr("Finished with errors — see log"))
-        else:
-            self.overall_progress_widget.show_completion(
-                tr_format(self.tr("Complete — %1 cards created"), sum(r.cards_created for r in results))
-            )
-
-    def _on_processing_error(self, error_message: str) -> None:
-        """Handle processing error signal.
-
-        Args:
-            error_message: Error message
-        """
-        self._run_failed = True
-        self._restore_buttons()
-
-        # Show error
-        self.presenter.show_error(error_message)
-
-        # Reset progress
-        self.overall_progress_widget.reset()
-        self.overall_progress_widget.set_status(self.tr("Failed — see log"))
-
     def dragEnterEvent(self, event: QDragEnterEvent | None) -> None:
         """Accept drag if any URL is a directory."""
         if event is None:
@@ -1346,8 +1228,8 @@ class BatchProcessingTab(MiningTabBase):
         Args:
             config: New configuration
         """
-        # The Quick-path offset spinbox is a per-session value the user dials in
-        # for the current folder batch; it is never persisted back to config.
+        # The Add Series card's offset spinbox is a per-session value the user
+        # dials in for the next series; it is never persisted back to config.
         # Only follow config.subtitle_offset when the *persisted* value actually
         # changed, so an unrelated settings save / theme toggle (each of which
         # re-fires update_config) doesn't wipe the in-progress offset. Mirrors
@@ -1364,11 +1246,10 @@ class BatchProcessingTab(MiningTabBase):
     def release_dictionary_resources(self) -> bool:
         """Close sqlite handles cached by the most recent worker run.
 
-        Both hosted workers (``ManualPairWorkerThread``,
-        ``BatchQueueWorkerThread``) expose their retained processor via the
-        typed ``curation_processor`` property. Either way, the handle is
-        still open after the run finishes and blocks Settings → Remove /
-        Re-import on Windows (Issue #30 follow-up).
+        ``BatchQueueWorkerThread`` exposes its retained processor via the
+        typed ``curation_processor`` property. The handle is still open after
+        the run finishes and blocks Settings → Remove / Re-import on Windows
+        (Issue #30 follow-up).
 
         Returns ``False`` while a worker is actively running — closing
         providers under an in-flight processor would crash the run. The

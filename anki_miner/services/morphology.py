@@ -442,7 +442,7 @@ def iter_token_spans(text: str, tokens: list) -> Iterator[tuple[Any, int, int]]:
     is the single source of truth for that drop-and-consume rule:
     ``parse_subtitle_file``, ``parse_subtitle_file_with_index`` AND
     ``count_lemmas`` must all route through it, or the count-vs-mine
-    sets diverge and the Deck Builder preview over-promises (T-38).
+    sets diverge and a reported occurrence count over-promises (T-38).
     """
     cursor = 0
     for token in tokens:

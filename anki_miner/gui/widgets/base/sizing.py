@@ -209,7 +209,7 @@ class PageWidth(Enum):
 
     There is deliberately one member. This started as two -- a narrow FORM
     class and a wide DATA class -- which meant the content column jumped by
-    550px as the user moved between sibling tabs, and Deck Builder, capped by
+    550px as the user moved between sibling tabs, and one screen, capped by
     neither, ran the full window as a third width. Reading that as three
     unrelated screens is exactly what the split produced.
 

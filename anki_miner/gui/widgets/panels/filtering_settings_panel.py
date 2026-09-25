@@ -4,7 +4,7 @@ import logging
 from dataclasses import replace
 from pathlib import Path
 
-from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, pyqtSignal
+from PyQt6.QtCore import QT_TRANSLATE_NOOP, QCoreApplication, Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -12,7 +12,6 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
     QLabel,
-    QLineEdit,
     QListWidget,
     QPushButton,
     QSpinBox,
@@ -105,19 +104,6 @@ def _capability_script_filter_options(capabilities: tuple[str, ...]) -> tuple[Sc
 # pixels: a flat cap shows fewer decks the larger the user's text gets.
 _EXCLUDED_DECK_ROWS = 5
 
-# Built-in regex presets for common subtitle noise. Buttons append these to the
-# user's pattern with `|` so multiple presets can be stacked. Patterns target
-# both half-width and full-width punctuation common in JP subtitle files.
-SUBTITLE_REGEX_PRESETS: tuple[tuple[str, str], ...] = (
-    ("Parens (Tanaka)", r"\([^)]*\)|（[^）]*）"),
-    ("Brackets [SFX]", r"\[[^\]]*\]|［[^］]*］"),
-    ("Music ♪♬", r"[♪♬♫#～〜]+"),
-    ("Speaker: prefix", r"^[^「『:：]+[:：]\s*"),
-    # A dash that opens a speaker turn ("- Hi. - Hello."): at the line start or after
-    # a sentence terminator. Hyphenated words and a mid-sentence dash are untouched.
-    ("Dialogue dash", r"(?:^|(?<=[.!?…]\s))[-–—]\s+"),
-)
-
 
 class FilteringSettingsPanel(FormPanel):
     """Panel for word filtering settings.
@@ -146,7 +132,10 @@ class FilteringSettingsPanel(FormPanel):
         # Most recently fetched deck names. Every picker open refreshes them
         # first because the connected endpoint or Anki collection may change.
         self._available_decks: list[str] = []
-        super().__init__(self.tr("Filtering"), parent=parent)
+        # Whether SettingsTab currently has a rebuild running off-thread; see
+        # sync_rebuild_known_words_button_state.
+        self._rebuild_in_flight = False
+        super().__init__(self.tr("Word Filters"), parent=parent)
         self._setup_fields()
 
     def _setup_fields(self) -> None:
@@ -244,7 +233,14 @@ class FilteringSettingsPanel(FormPanel):
         # Known Words Database section
         self.add_section(self.tr("Known Words Database"))
 
-        self.use_known_words_db_checkbox = QCheckBox(self.tr("Use Local Known Words Database"))
+        self.use_known_words_db_checkbox = QCheckBox(self.tr("Keep words known after their cards are deleted"))
+        self.use_known_words_db_checkbox.setToolTip(
+            self.tr(
+                "Words stay known after their Anki cards are deleted or moved to an "
+                "excluded deck. Rebuild forgets them."
+            )
+        )
+        self.use_known_words_db_checkbox.toggled.connect(self.sync_rebuild_known_words_button_state)
         self.add_field("", self.use_known_words_db_checkbox)
 
         # Rebuild button: clears the local cache so deck exclusions take effect.
@@ -260,6 +256,11 @@ class FilteringSettingsPanel(FormPanel):
             )
         )
         self.rebuild_known_words_button.clicked.connect(self.rebuild_known_words_requested.emit)
+        # Rebuild has nothing to clear while the cache itself is off (Task 7);
+        # sync the initial state now that the button exists — construction
+        # leaves the checkbox unchecked, and setChecked(False) below fires no
+        # signal for a value that was already False.
+        self.sync_rebuild_known_words_button_state()
         rebuild_row.addWidget(self.rebuild_known_words_button)
 
         # Manage the user-curated known/ignore list (Issue #42): view, remove,
@@ -275,6 +276,22 @@ class FilteringSettingsPanel(FormPanel):
         rebuild_row.addWidget(self.manage_known_words_button)
         rebuild_row.addStretch()
         self.add_layout(rebuild_row)
+
+        # Kana-variant fold: a kana-spelled word (うなずく) counts as known when
+        # the kanji dictionary form (頷く) is already carded. Script-gated in
+        # WordFilterService.filter_unknown; kanji variants never fold. Lives here
+        # rather than under Script Type because it is a known-words rule, not a
+        # script-exclusion filter.
+        self.match_kana_variants_checkbox = QCheckBox(self.tr("Treat Kana Spellings of Known Words as Known"))
+        self.match_kana_variants_checkbox.setToolTip(
+            self.tr(
+                "When a subtitle spells a word in kana (e.g. うなずく) and the kanji "
+                "dictionary form (頷く) is already in your collection or known list, "
+                "skip it instead of creating a second card. Kanji spellings are "
+                "never merged this way."
+            )
+        )
+        self.add_field("", self.match_kana_variants_checkbox)
 
         # Excluded decks (Issue #38)
         self.add_section(self.tr("Excluded Decks"))
@@ -373,87 +390,35 @@ class FilteringSettingsPanel(FormPanel):
             # from; the catalog id is the stable name.
             self.add_field("", cb, anchor=f"wordset_{info.id}")
 
-        # Subtitle Text Filtering section (Issue #8)
-        self.add_section(self.tr("Subtitle Text Filtering"))
+        # Sentence Rule section. Folds the old separate "Deduplicate by
+        # Sentence" and "Only Mine i+1 Sentences" checkboxes into one choice --
+        # i+1 already overrode dedup in EpisodeProcessor, so the pair never
+        # expressed four independent states.
+        self.add_section(self.tr("Sentence Rule"))
 
-        self.subtitle_regex_edit = QLineEdit()
-        self.subtitle_regex_edit.setPlaceholderText(r"e.g. \([^)]*\)|\[[^\]]*\]")
-        self.add_field(
-            self.tr("Regex Filter"),
-            self.subtitle_regex_edit,
-            helper=self.tr(
-                "Python regex matched in subtitle text and removed (or replaced) before mining. "
-                "Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. "
-                "Combine alternatives with |. Test patterns at https://regex101.com."
-            ),
-        )
-
-        self.subtitle_replacement_edit = QLineEdit()
-        self.subtitle_replacement_edit.setPlaceholderText(self.tr("(empty = delete match)"))
-        self.add_field(
-            self.tr("Replacement"),
-            self.subtitle_replacement_edit,
-            helper=self.tr(
-                "Inserted in place of each match (empty deletes it). Use Python "
-                "backreferences \\1 \\2, not asbplayer's $1 $2."
-            ),
-        )
-
-        self.use_subtitle_regex_checkbox = QCheckBox(self.tr("Enable Subtitle Regex Filter"))
-        self.add_field("", self.use_subtitle_regex_checkbox)
-
-        # Preset buttons row: each click appends its pattern to the regex field
-        # joined with `|`. Lets a GUI-only user discover useful patterns without
-        # learning regex syntax up front.
-        preset_container = QWidget()
-        preset_layout = QHBoxLayout()
-        preset_layout.setContentsMargins(0, 0, 0, 0)
-        _preset_labels = [
-            self.tr("Parens (Tanaka)"),
-            self.tr("Brackets [SFX]"),
-            self.tr("Music ♪♬"),
-            self.tr("Speaker: prefix"),
-            self.tr("Dialogue dash"),
-        ]
-        for (_, pattern), translated_label in zip(SUBTITLE_REGEX_PRESETS, _preset_labels, strict=True):
-            btn = QPushButton(translated_label)
-            btn.setToolTip(pattern)
-            btn.clicked.connect(lambda _checked=False, p=pattern: self._append_preset(p))
-            preset_layout.addWidget(btn)
-        preset_layout.addStretch()
-        preset_container.setLayout(preset_layout)
-        self.add_field(
-            self.tr("Presets"),
-            preset_container,
-            helper=self.tr("Click to append a built-in pattern to the regex field above."),
-            anchor="subtitle_regex_presets",
-            anchor_text=lambda: tuple(_preset_labels),
-        )
-
-        # Secondary Subtitles (F7). One toggle gates every new surface.
-        self.add_section(self.tr("Secondary Subtitles"))
-        self.secondary_subtitle_checkbox = QCheckBox(self.tr("Enable secondary-language subtitles"))
-        self.add_field(
-            "",
-            self.secondary_subtitle_checkbox,
-            helper=self.tr(
-                "Adds a second subtitle picker and its own offset to Video -> Single. Its line shows under "
-                "the mining-language line in the Word Curator preview and, when the Translation field is "
-                "mapped (Cards & Anki), on the card."
-            ),
-        )
-
-        # Deduplication section
-        self.add_section(self.tr("Deduplication"))
-
-        self.deduplicate_sentences_checkbox = QCheckBox(self.tr("Deduplicate by Sentence"))
-        self.add_field(
-            "",
-            self.deduplicate_sentences_checkbox,
-            helper=self.tr(
+        self.sentence_rule_combo = QComboBox()
+        self.sentence_rule_combo.addItem(self.tr("Mine every unknown word"), "all")
+        self.sentence_rule_combo.addItem(self.tr("One card per sentence"), "dedup")
+        self.sentence_rule_combo.setItemData(
+            1,
+            self.tr(
                 "Mines at most one word per example sentence — the first one found in that sentence. "
                 "Every other word sharing it is skipped."
             ),
+            Qt.ItemDataRole.ToolTipRole,
+        )
+        self.sentence_rule_combo.addItem(self.tr("Only i+1 sentences (exactly one unknown word)"), "i_plus_one")
+        self.sentence_rule_combo.setItemData(
+            2,
+            self.tr(
+                "Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication."
+            ),
+            Qt.ItemDataRole.ToolTipRole,
+        )
+        self.add_field(
+            "",
+            self.sentence_rule_combo,
+            anchor_text=self._sentence_rule_search_text,
         )
 
         # Script Type section (Issue #57)
@@ -480,20 +445,6 @@ class FilteringSettingsPanel(FormPanel):
             ),
         )
 
-        # Kana-variant fold: a kana-spelled word (うなずく) counts as known when
-        # the kanji dictionary form (頷く) is already carded. Script-gated in
-        # WordFilterService.filter_unknown; kanji variants never fold.
-        self.match_kana_variants_checkbox = QCheckBox(self.tr("Treat Kana Spellings of Known Words as Known"))
-        self.match_kana_variants_checkbox.setToolTip(
-            self.tr(
-                "When a subtitle spells a word in kana (e.g. うなずく) and the kanji "
-                "dictionary form (頷く) is already in your collection or known list, "
-                "skip it instead of creating a second card. Kanji spellings are "
-                "never merged this way."
-            )
-        )
-        self.add_field("", self.match_kana_variants_checkbox)
-
         # Option-driven script filters. The Korean pair binds to the SAME two
         # language-scoped booleans the kana rows above use, and the mapping is
         # counter-intuitive (hangul-only -> exclude_hiragana_only_words), so the
@@ -501,7 +452,7 @@ class FilteringSettingsPanel(FormPanel):
         # here: the panel and WordFilterService then read one source of truth.
         # It gets a heading of its own because "Script Type" above is gated on
         # kana_filters and hides here, which would leave these rows reading as
-        # part of "Deduplication".
+        # part of "Sentence Rule".
         self.add_section(self.tr("Script Type"))
         self._script_filter_section_label = self._active_section_label
 
@@ -521,66 +472,14 @@ class FilteringSettingsPanel(FormPanel):
             self.script_filter_checkboxes[option.option_id] = checkbox
             self._script_filter_fields[option.option_id] = option.config_field
 
-        # Chinese script preference. Generic, language-scoped field - ja and ko
-        # carry "" here and never see this row. It gets a heading of its own
-        # because "Script Type" above is gated on kana_filters and hides under
-        # zh, which would leave this row reading as part of "Deduplication".
-        self.add_section(self.tr("Script Variants"))
-        self._script_variants_section_label = self._active_section_label
-
-        self.script_variant_combo = QComboBox()
-        # "" leads because it is the zh default. It must have an item of its
-        # own: findData returns -1 for a value the combo does not carry, the
-        # panel then shows item 0, and contribute() writes that item back on
-        # the next Save.
-        self.script_variant_combo.addItem(self.tr("As written"), "")
-        self.script_variant_combo.addItem(self.tr("Simplified (简体)"), "simplified")
-        self.script_variant_combo.addItem(self.tr("Traditional (繁體)"), "traditional")
-        self.add_field(
-            self.tr("Character Set"),
-            self.script_variant_combo,
-            helper=self.tr(
-                "Which spelling the card front and the dictionary lookup prefer; "
-                "As written keeps the source's own spelling."
-            ),
-        )
-
-        # Portuguese national variety (B.3): the same language-scoped field as
-        # the zh combo above, its own ids and capability, so at most one of the
-        # two is ever visible and contribute() writes only the visible one.
-        self.add_section(self.tr("Regional Variety"))
-        self._regional_variants_section_label = self._active_section_label
-
-        self.regional_variant_combo = QComboBox()
-        self.regional_variant_combo.addItem(self.tr("Brazilian Portuguese"), "br")
-        self.regional_variant_combo.addItem(self.tr("European Portuguese"), "pt")
-        self.add_field(
-            self.tr("Variety"),
-            self.regional_variant_combo,
-            helper=self.tr(
-                "Which Google voice reads word and sentence audio, and which frequency list setup suggests."
-            ),
-        )
-
-        # i+1 Sentence Filter section
-        self.add_section(self.tr("i+1 Sentence Filter"))
-
-        self.use_i_plus_one_checkbox = QCheckBox(self.tr("Only Mine i+1 Sentences"))
-        self.use_i_plus_one_checkbox.setToolTip(
-            self.tr(
-                "Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication."
-            )
-        )
-        self.add_field("", self.use_i_plus_one_checkbox)
-
-        # Sentence Length section (Issue #33)
+        # Sentence Length section (Issue #33). No master toggle: the filter is
+        # active whenever either cap below is above 0.
         self.add_section(self.tr("Sentence Length"))
 
-        self.use_sentence_length_checkbox = QCheckBox(self.tr("Enable Sentence Length Filter"))
-        self.use_sentence_length_checkbox.setToolTip(
-            self.tr("Drops words whose example sentence exceeds either cap below.")
-        )
-        self.add_field("", self.use_sentence_length_checkbox)
+        self.sentence_length_helper = QLabel(self.tr("Set either limit above 0 to turn the filter on."))
+        self.sentence_length_helper.setObjectName("helper-text")
+        self.sentence_length_helper.setWordWrap(True)
+        self.add_widget(self.sentence_length_helper)
 
         self.max_sentence_duration_spinbox = QDoubleSpinBox()
         self.max_sentence_duration_spinbox.setRange(0.0, 600.0)
@@ -605,20 +504,6 @@ class FilteringSettingsPanel(FormPanel):
             helper=self.tr("Drops cards whose sentence text exceeds this many characters. Set to 0 for no limit."),
         )
 
-        # Full Sentences section (FUTURE_IDEAS 6).
-        self.add_section(self.tr("Full Sentences"))
-
-        self.merge_incomplete_cues_checkbox = QCheckBox(self.tr("Mine full sentences across subtitle lines"))
-        self.add_field(
-            "",
-            self.merge_incomplete_cues_checkbox,
-            helper=self.tr(
-                "Joins neighbouring subtitle lines when a line does not end a sentence, so the "
-                "card carries the whole sentence instead of a fragment. Reading sources have no "
-                "subtitle timings and ignore it."
-            ),
-        )
-
         # Reading section: per-book minimum word occurrence (Reading tab).
         self.add_section(self.tr("Reading"))
 
@@ -633,42 +518,6 @@ class FilteringSettingsPanel(FormPanel):
                 "mined. 1 = no minimum (filter off)."
             ),
         )
-
-        self.add_section(self.tr("Card Order"))
-
-        self.strict_card_order_checkbox = QCheckBox(self.tr("Create cards in order of appearance"))
-        self.add_field(
-            "",
-            self.strict_card_order_checkbox,
-            helper=self.tr(
-                "Adds cards to Anki in the order the words appear in the media, instead of "
-                "the order their media finished extracting. Overrides the whitelist's "
-                "force-include ordering and any column sort in the Word Curator."
-            ),
-        )
-
-        # Card Formatting section (Issue #20)
-        self.add_section(self.tr("Card Formatting"))
-
-        self.bold_target_in_sentence_checkbox = QCheckBox(self.tr("Bold target word in sentence"))
-        # QToolTip has no PlainText format and auto-detects HTML when the
-        # string contains tag-like substrings. Escape the angle brackets so
-        # the literal "<b>...</b>" markup is visible. Issue #20.
-        self.bold_target_in_sentence_checkbox.setToolTip(
-            self.tr(
-                "Wrap the mined word in &lt;b&gt;...&lt;/b&gt; inside the sentence "
-                "fields. Match is the exact span that was mined, so duplicated "
-                "surfaces in a sentence only bold the actually-mined occurrence."
-            )
-        )
-        self.add_field("", self.bold_target_in_sentence_checkbox)
-
-        self.reading_tone_color_checkbox = QCheckBox(self.tr("Colour the reading by tone"))
-        # The hook writes an inline style, never a class (languages/zh/render.py),
-        # so a tooltip promising a class sends the user off to write CSS that can
-        # neither match nor win.
-        self.reading_tone_color_checkbox.setToolTip(self.tr("Colours each syllable of the reading by its tone."))
-        self.add_field("", self.reading_tone_color_checkbox)
 
         # Language-gated rows. Each row contributes its label too, so a hidden
         # field never leaves a dangling caption behind.
@@ -693,8 +542,8 @@ class FilteringSettingsPanel(FormPanel):
         # every checkbox regardless of which capability actually supplied it.
         # Harmless today because there is exactly one entry. Before adding a
         # second, pair each option with its own capability at collection time
-        # instead of this cross product. EXTENDED, never assigned (see the zh
-        # note below).
+        # instead of this cross product. EXTENDED, never assigned, like every
+        # block in this method.
         self._language_gate_pairs.extend(
             (w, capability)
             for capability in _OPTION_DRIVEN_FILTER_CAPABILITIES
@@ -711,34 +560,27 @@ class FilteringSettingsPanel(FormPanel):
         self._language_gate_pairs.extend(
             (w, "name_wordsets") for w in (self._wordset_section_label, self._wordsets_helper) if w is not None
         )
-        # The zh rows join the same list. EXTENDED, never assigned: a plain
-        # assignment here would drop the kana and wordset pairs above.
-        self._language_gate_pairs.extend(
-            (w, "script_variants") for w in field_row_widgets(self, self.script_variant_combo)
-        )
-        if self._script_variants_section_label is not None:
-            self._language_gate_pairs.append((self._script_variants_section_label, "script_variants"))
-        self._language_gate_pairs.extend(
-            (w, "regional_variants") for w in field_row_widgets(self, self.regional_variant_combo)
-        )
-        if self._regional_variants_section_label is not None:
-            self._language_gate_pairs.append((self._regional_variants_section_label, "regional_variants"))
-        self._language_gate_pairs.extend(
-            (w, "tone_color") for w in field_row_widgets(self, self.reading_tone_color_checkbox)
-        )
 
         self.add_stretch()
 
-    def _append_preset(self, pattern: str) -> None:
-        """Append a preset regex pattern to the filter field with `|` join."""
-        current = self.subtitle_regex_edit.text().strip()
-        if not current:
-            self.subtitle_regex_edit.setText(pattern)
-        elif pattern in current:
-            # Avoid duplicate alternations from double-clicking a preset.
-            return
-        else:
-            self.subtitle_regex_edit.setText(f"{current}|{pattern}")
+    def _sentence_rule_search_text(self) -> tuple[str, ...]:
+        """Searchable text for ``sentence_rule_combo``: every item plus its tooltip.
+
+        The combo has no field label (``add_field("", ...)``), so without this
+        the row's item texts and per-item tooltips (set via ``ItemDataRole.
+        ToolTipRole``) are invisible to search. "dedup" and "deduplicate" are
+        plain English keywords, not translated strings: the tooltip only spells
+        out "deduplication", which contains "dedup" as a substring but not
+        "deduplicate".
+        """
+        parts: list[str] = ["dedup", "deduplicate"]
+        combo = self.sentence_rule_combo
+        for index in range(combo.count()):
+            parts.append(combo.itemText(index))
+            tooltip = combo.itemData(index, Qt.ItemDataRole.ToolTipRole)
+            if tooltip:
+                parts.append(str(tooltip))
+        return tuple(parts)
 
     # --- Excluded decks (Issue #38) ---
 
@@ -880,6 +722,32 @@ class FilteringSettingsPanel(FormPanel):
         """Set the kana-variant fold checkbox."""
         self.match_kana_variants_checkbox.setChecked(value)
 
+    def sync_rebuild_known_words_button_state(self) -> None:
+        """Rebuild only means anything while the cache the checkbox names is on,
+        and only while no rebuild is already running.
+
+        Public: also called by ``SettingsTab`` when a background rebuild finishes,
+        so the button lands back in step with the checkbox instead of being
+        force-enabled regardless of it (the checkbox can be toggled off while a
+        rebuild is still running off-thread). The checkbox-toggled sync and
+        ``load_from_config`` both reach this too, so it must never re-enable the
+        button mid-rebuild -- hence the in-flight flag gates it alongside the
+        checkbox.
+        """
+        self.rebuild_known_words_button.setEnabled(
+            self.use_known_words_db_checkbox.isChecked() and not self._rebuild_in_flight
+        )
+
+    def set_rebuild_known_words_in_flight(self, in_flight: bool) -> None:
+        """Record whether ``SettingsTab`` has a rebuild running off-thread.
+
+        The only public path that flips :attr:`_rebuild_in_flight`; it
+        re-syncs the button immediately so the caller never has to remember to
+        call :meth:`sync_rebuild_known_words_button_state` itself.
+        """
+        self._rebuild_in_flight = in_flight
+        self.sync_rebuild_known_words_button_state()
+
     # --- Word lists ---
 
     def get_blacklist_path(self) -> Path | None:
@@ -916,57 +784,32 @@ class FilteringSettingsPanel(FormPanel):
         """Set the whitelist-enabled checkbox."""
         self.use_whitelist_checkbox.setChecked(value)
 
-    # --- Subtitle regex ---
+    # --- Sentence rule (dedup / i+1) ---
 
-    def get_subtitle_regex_filter(self) -> str:
-        """Return the subtitle regex pattern."""
-        return self.subtitle_regex_edit.text()
+    #: combo item data -> (deduplicate_sentences, use_i_plus_one_filter). i+1
+    #: already overrides dedup in EpisodeProcessor, so a source config with
+    #: both booleans set selects "i_plus_one" same as one with only i+1 set.
+    _SENTENCE_RULE_VALUES: dict[str, tuple[bool, bool]] = {
+        "all": (False, False),
+        "dedup": (True, False),
+        "i_plus_one": (False, True),
+    }
 
-    def set_subtitle_regex_filter(self, value: str) -> None:
-        """Set the subtitle regex pattern field."""
-        self.subtitle_regex_edit.setText(value)
+    def get_sentence_rule(self) -> tuple[bool, bool]:
+        """Return (deduplicate_sentences, use_i_plus_one_filter) for the current selection."""
+        return self._SENTENCE_RULE_VALUES[self.sentence_rule_combo.currentData()]
 
-    def get_subtitle_regex_replacement(self) -> str:
-        """Return the subtitle regex replacement string."""
-        return self.subtitle_replacement_edit.text()
-
-    def set_subtitle_regex_replacement(self, value: str) -> None:
-        """Set the subtitle regex replacement field."""
-        self.subtitle_replacement_edit.setText(value)
-
-    def get_use_subtitle_regex_filter(self) -> bool:
-        """Return whether the subtitle regex filter is enabled."""
-        return self.use_subtitle_regex_checkbox.isChecked()
-
-    def set_use_subtitle_regex_filter(self, value: bool) -> None:
-        """Set the subtitle regex filter checkbox."""
-        self.use_subtitle_regex_checkbox.setChecked(value)
-
-    def get_secondary_subtitle_enabled(self) -> bool:
-        return self.secondary_subtitle_checkbox.isChecked()
-
-    def set_secondary_subtitle_enabled(self, value: bool) -> None:
-        self.secondary_subtitle_checkbox.setChecked(value)
-
-    # --- Deduplication ---
-
-    def get_deduplicate_sentences(self) -> bool:
-        """Return whether sentence deduplication is enabled."""
-        return self.deduplicate_sentences_checkbox.isChecked()
-
-    def set_deduplicate_sentences(self, value: bool) -> None:
-        """Set the deduplicate-sentences checkbox."""
-        self.deduplicate_sentences_checkbox.setChecked(value)
-
-    # --- Card order ---
-
-    def get_strict_card_order(self) -> bool:
-        """Return whether strict card-creation order is enabled."""
-        return self.strict_card_order_checkbox.isChecked()
-
-    def set_strict_card_order(self, value: bool) -> None:
-        """Set the strict card-order checkbox."""
-        self.strict_card_order_checkbox.setChecked(value)
+    def set_sentence_rule(self, deduplicate_sentences: bool, use_i_plus_one_filter: bool) -> None:
+        """Select the combo item matching the two source booleans."""
+        if use_i_plus_one_filter:
+            value = "i_plus_one"
+        elif deduplicate_sentences:
+            value = "dedup"
+        else:
+            value = "all"
+        index = self.sentence_rule_combo.findData(value)
+        if index >= 0:
+            self.sentence_rule_combo.setCurrentIndex(index)
 
     # --- Script type ---
 
@@ -986,35 +829,7 @@ class FilteringSettingsPanel(FormPanel):
         """Set the exclude-katakana-only checkbox."""
         self.exclude_katakana_only_checkbox.setChecked(value)
 
-    # --- i+1 filter ---
-
-    def get_use_i_plus_one_filter(self) -> bool:
-        """Return whether the i+1 sentence filter is enabled."""
-        return self.use_i_plus_one_checkbox.isChecked()
-
-    def set_use_i_plus_one_filter(self, value: bool) -> None:
-        """Set the i+1 filter checkbox."""
-        self.use_i_plus_one_checkbox.setChecked(value)
-
     # --- Sentence length ---
-
-    def get_use_sentence_length_filter(self) -> bool:
-        """Return whether the sentence length filter is enabled."""
-        return self.use_sentence_length_checkbox.isChecked()
-
-    def set_use_sentence_length_filter(self, value: bool) -> None:
-        """Set the sentence length filter checkbox."""
-        self.use_sentence_length_checkbox.setChecked(value)
-
-    # --- Full sentences ---
-
-    def get_merge_incomplete_cues(self) -> bool:
-        """Return whether incomplete subtitle lines merge into full sentences."""
-        return self.merge_incomplete_cues_checkbox.isChecked()
-
-    def set_merge_incomplete_cues(self, value: bool) -> None:
-        """Set the full-sentence merge checkbox."""
-        self.merge_incomplete_cues_checkbox.setChecked(value)
 
     def get_max_sentence_duration_seconds(self) -> float:
         """Return the max sentence duration (seconds)."""
@@ -1041,16 +856,6 @@ class FilteringSettingsPanel(FormPanel):
     def set_reading_min_occurrence(self, value: int) -> None:
         """Set the reading min-occurrence spinbox."""
         self.reading_min_occurrence_spinbox.setValue(value)
-
-    # --- Card formatting ---
-
-    def get_bold_target_in_sentence(self) -> bool:
-        """Return whether the target word is bolded in the sentence field."""
-        return self.bold_target_in_sentence_checkbox.isChecked()
-
-    def set_bold_target_in_sentence(self, value: bool) -> None:
-        """Set the bold-target-in-sentence checkbox."""
-        self.bold_target_in_sentence_checkbox.setChecked(value)
 
     # --- Add-deck button enable/disable (used by AnkiProbeController) ---
 
@@ -1099,6 +904,7 @@ class FilteringSettingsPanel(FormPanel):
                 max_frequency_rank=config.max_frequency_rank,
             )
         self.set_use_known_words_db(config.use_known_words_db)
+        self.sync_rebuild_known_words_button_state()
         self.set_match_kana_variants(config.known_words_match_kana_variants)
         self.set_excluded_decks(config.excluded_decks)
         self.set_excluded_wordsets(config.excluded_wordsets)
@@ -1109,31 +915,15 @@ class FilteringSettingsPanel(FormPanel):
         self.set_use_blacklist(config.use_blacklist)
         self.set_whitelist_path(config.whitelist_path)
         self.set_use_whitelist(config.use_whitelist)
-        self.set_subtitle_regex_filter(config.subtitle_regex_filter)
-        self.set_subtitle_regex_replacement(config.subtitle_regex_replacement)
-        self.set_use_subtitle_regex_filter(config.use_subtitle_regex_filter)
-        self.set_secondary_subtitle_enabled(config.secondary_subtitle_enabled)
-        self.set_deduplicate_sentences(config.deduplicate_sentences)
-        self.set_strict_card_order(config.strict_card_order)
+        self.set_sentence_rule(config.deduplicate_sentences, config.use_i_plus_one_filter)
         self.set_exclude_hiragana_only_words(config.exclude_hiragana_only_words)
         self.set_exclude_katakana_only_words(config.exclude_katakana_only_words)
         # Same two booleans, read through whichever language's option named them.
         for option_id, checkbox in self.script_filter_checkboxes.items():
             checkbox.setChecked(bool(getattr(config, self._script_filter_fields[option_id])))
-        self.set_use_i_plus_one_filter(config.use_i_plus_one_filter)
-        self.set_use_sentence_length_filter(config.use_sentence_length_filter)
-        self.set_merge_incomplete_cues(config.merge_incomplete_cues)
         self.set_max_sentence_duration_seconds(config.max_sentence_duration_seconds)
         self.set_max_sentence_chars(config.max_sentence_chars)
         self.set_reading_min_occurrence(config.reading_min_occurrence)
-        self.set_bold_target_in_sentence(config.bold_target_in_sentence)
-        index = self.script_variant_combo.findData(config.script_variant)
-        if index >= 0:
-            self.script_variant_combo.setCurrentIndex(index)
-        index = self.regional_variant_combo.findData(config.script_variant)
-        if index >= 0:
-            self.regional_variant_combo.setCurrentIndex(index)
-        self.reading_tone_color_checkbox.setChecked(config.reading_tone_color)
         apply_language_gate(self._language_gate_pairs, get_profile(config_language(config)).capabilities)
 
     def contribute(self, config):
@@ -1141,12 +931,8 @@ class FilteringSettingsPanel(FormPanel):
 
         Uses ``dataclasses.replace`` so the frozen-config invariant is preserved.
         Called by :meth:`SettingsTab.commit_settings` as part of the contribute fold.
-
-        Note: ``subtitle_regex_filter`` and ``use_subtitle_regex_filter`` are
-        read here (behind the accessors) but the *validation* of the regex pattern
-        stays in :meth:`SettingsTab.commit_settings` — it runs before the fold
-        so any invalid pattern aborts Save before ``contribute`` is ever called.
         """
+        deduplicate_sentences, use_i_plus_one_filter = self.get_sentence_rule()
         updated = replace(
             config,
             min_frequency_rank=self.get_min_frequency_rank(),
@@ -1160,28 +946,23 @@ class FilteringSettingsPanel(FormPanel):
             use_blacklist=self.get_use_blacklist(),
             whitelist_path=self.get_whitelist_path(),
             use_whitelist=self.get_use_whitelist(),
-            subtitle_regex_filter=self.get_subtitle_regex_filter(),
-            subtitle_regex_replacement=self.get_subtitle_regex_replacement(),
-            use_subtitle_regex_filter=self.get_use_subtitle_regex_filter(),
-            secondary_subtitle_enabled=self.get_secondary_subtitle_enabled(),
-            deduplicate_sentences=self.get_deduplicate_sentences(),
-            strict_card_order=self.get_strict_card_order(),
+            deduplicate_sentences=deduplicate_sentences,
             exclude_hiragana_only_words=self.get_exclude_hiragana_only_words(),
             exclude_katakana_only_words=self.get_exclude_katakana_only_words(),
-            use_i_plus_one_filter=self.get_use_i_plus_one_filter(),
-            use_sentence_length_filter=self.get_use_sentence_length_filter(),
-            merge_incomplete_cues=self.get_merge_incomplete_cues(),
+            use_i_plus_one_filter=use_i_plus_one_filter,
             max_sentence_duration_seconds=self.get_max_sentence_duration_seconds(),
             max_sentence_chars=self.get_max_sentence_chars(),
             reading_min_occurrence=self.get_reading_min_occurrence(),
-            bold_target_in_sentence=self.get_bold_target_in_sentence(),
         )
         # Language-scoped rows contribute only while their capability is present.
-        # The two variant combos write the same field and at most one of them is
-        # ever visible, so a blind write would stamp the hidden one's own default
-        # ("br", the Portuguese row's first item) onto a language that has
-        # neither setting. Visibility is the gate's own output, so there is one
-        # source of truth for "does this language have this setting".
+        # Every option-driven Script Type row reuses the two JA-historical
+        # fields (exclude_hiragana_only_words, exclude_katakana_only_words) as
+        # generic slots -- Korean's hangul-only and hanja-containing checkboxes
+        # among them -- and at most one language's row set is ever visible, so
+        # a blind write would stamp a hidden checkbox's stale value onto a
+        # language that has neither setting. Visibility is the gate's own
+        # output, so there is one source of truth for "does this language have
+        # this setting".
         # The kana boxes above already wrote these two fields unconditionally --
         # under another language they are hidden and still hold the loaded
         # value, so that write is a no-op. The visible option-driven row is the
@@ -1189,10 +970,4 @@ class FilteringSettingsPanel(FormPanel):
         for option_id, checkbox in self.script_filter_checkboxes.items():
             if checkbox.isVisibleTo(self):
                 updated = replace(updated, **{self._script_filter_fields[option_id]: checkbox.isChecked()})
-        if self.script_variant_combo.isVisibleTo(self):
-            updated = replace(updated, script_variant=str(self.script_variant_combo.currentData()))
-        if self.regional_variant_combo.isVisibleTo(self):
-            updated = replace(updated, script_variant=str(self.regional_variant_combo.currentData()))
-        if self.reading_tone_color_checkbox.isVisibleTo(self):
-            updated = replace(updated, reading_tone_color=self.reading_tone_color_checkbox.isChecked())
         return updated

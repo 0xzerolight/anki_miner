@@ -646,7 +646,7 @@ def test_rejected_updates_reach_main_window_as_non_success(qtbot, patch_heavy_in
         MagicMock(return_value=QMessageBox.StandardButton.Yes),
     )
 
-    window._restyle_mined_cards()
+    window.restyle_mined_cards()
     on_result = start_restyle.call_args.args[3]
     on_result(RestyleResult(scanned=2, restyled=1, skipped_styled=0, skipped_no_markup=0, failed=1))
 

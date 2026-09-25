@@ -2,7 +2,7 @@
 
 Uses the shared ``wired_window`` fixture (``tests/unit/conftest.py``), which
 calls ``anki_miner.gui.app.compose_main_window``, and asserts the
-"Audiobooks" tab is present, correctly typed, and ordered right after Deck Builder.
+"Audiobooks" tab is present, correctly typed, and ordered right after Video.
 """
 
 from __future__ import annotations
@@ -24,10 +24,10 @@ def test_audiobook_tab_is_correct_type(wired_window):
     assert isinstance(tabs["Audiobooks"], AudiobookTab)
 
 
-def test_audiobook_tab_after_deck_builder(wired_window):
-    """Audiobooks must appear right after Deck Builder."""
+def test_audiobook_tab_after_video(wired_window):
+    """Audiobooks must appear right after Video."""
     _window, titles, _tabs = wired_window
-    assert titles.index("Audiobooks") == titles.index("Deck Builder") + 1
+    assert titles.index("Audiobooks") == titles.index("Video") + 1
 
 
 def test_audiobook_tab_before_analytics(wired_window):

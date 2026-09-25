@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -24,7 +24,6 @@ from anki_miner.gui.workers import prewarm_worker as prewarm_worker_module
 from anki_miner.gui.workers.base_worker import CancellableWorker
 from anki_miner.gui.workers.file_queue_worker import FileQueueWorker
 from anki_miner.gui.workers.import_worker import ImportWorker
-from anki_miner.gui.workers.manual_pair_worker import ManualPairWorkerThread
 from anki_miner.gui.workers.prewarm_worker import PrewarmWorker
 from anki_miner.gui.workers.youtube_playlist_probe_worker import (
     YouTubePlaylistProbeWorker,
@@ -39,7 +38,6 @@ _PREWARM_LOGGER = "anki_miner.gui.workers.prewarm_worker"
 _PROBE_LOGGER = "anki_miner.gui.workers.youtube_probe_worker"
 _PLAYLIST_LOGGER = "anki_miner.gui.workers.youtube_playlist_probe_worker"
 _IMPORT_LOGGER = "anki_miner.gui.workers.import_worker"
-_MANUAL_LOGGER = "anki_miner.gui.workers.manual_pair_worker"
 
 
 def _lines(caplog, prefix: str) -> list[str]:
@@ -273,7 +271,7 @@ def test_playlist_probe_worker_end_line_counts_entries(qapp, caplog):
 
 
 # ---------------------------------------------------------------------------
-# ImportWorker / ManualPairWorkerThread end lines
+# ImportWorker / BatchQueueWorkerThread end lines
 # ---------------------------------------------------------------------------
 
 
@@ -290,25 +288,54 @@ def test_import_worker_end_line_reports_the_outcome(qapp, caplog):
     assert "resource_id=jitendex-english" in end
 
 
-def test_manual_pair_worker_end_line_reports_pair_tallies(tmp_path, qapp, caplog):
-    """The quick-pairs run closes with what it actually mined."""
+def test_batch_queue_worker_end_line_reports_series_tallies(tmp_path, qapp, caplog):
+    """The merged batch flow's one worker closes with what it actually mined."""
+    from anki_miner.config import AnkiMinerConfig
+    from anki_miner.gui.workers.batch_queue_worker import BatchQueueWorkerThread
+    from anki_miner.models.batch_queue import BatchQueue
+    from anki_miner.services.anki_service import AnkiService
+
+    video = tmp_path / "video"
+    subtitle = tmp_path / "subs"
+    video.mkdir()
+    subtitle.mkdir()
+    queue = BatchQueue()
+    queue.add_item(video, subtitle, "Show")
+
+    pair = SimpleNamespace(video=video / "ep1.mkv", subtitle=subtitle / "ep1.ass", secondary=None)
     processor = MagicMock()
-    processor.config = SimpleNamespace(subtitle_offset=0.0)
     processor.process_episode.return_value = ProcessingResult(
         total_words_found=4,
         new_words_found=2,
         cards_created=2,
     )
-    processor._preflight_card_target = MagicMock()
-    processor.check_offline_dictionary = MagicMock()
-    pair = SimpleNamespace(video=tmp_path / "ep1.mkv", subtitle=tmp_path / "ep1.ass", secondary=None)
-    worker = ManualPairWorkerThread(processor, [pair])
 
-    with caplog.at_level(logging.INFO, logger=_MANUAL_LOGGER):
+    bundle = MagicMock(name="shared_lookup")
+    bundle.load_result.info = []
+    bundle.load_result.warnings = []
+
+    worker = BatchQueueWorkerThread(queue, AnkiMinerConfig(), MagicMock(name="Presenter"), None)
+
+    with (
+        patch.object(AnkiService, "verify_card_target", autospec=True, side_effect=lambda _service: None),
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_shared_lookup_services",
+            return_value=bundle,
+        ),
+        patch(
+            "anki_miner.gui.workers.batch_queue_worker.create_episode_processor",
+            return_value=processor,
+        ),
+        patch(
+            "anki_miner.utils.file_pairing.FilePairMatcher.find_pairs_by_episode_number",
+            return_value=[pair],
+        ),
+        caplog.at_level(logging.INFO, logger="anki_miner.gui.workers.batch_queue_worker"),
+    ):
         worker.run()
 
-    end = _one(caplog, "ManualPairWorkerThread finished:")
+    end = _one(caplog, "BatchQueueWorkerThread finished:")
     assert "elapsed_s=" in end
-    assert "results=1" in end
-    assert "succeeded=1" in end
+    assert "items=1" in end
+    assert "completed=1" in end
     assert "cards=2" in end
