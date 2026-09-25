@@ -235,6 +235,27 @@ def test_stray_output_does_not_reach_stdout(booted, monkeypatch, capfd, tmp_path
         assert noise in captured.err
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX fd numbering: dup() takes the lowest free fd")
+def test_closed_stderr_does_not_route_noise_into_the_event_stream() -> None:
+    # A caller that closed fd 2 (``2>&-``, a daemon): dup(1) would land on fd 2,
+    # and dup2(2, 1) would then point fd 1 back at the caller's stdout.
+    code = (
+        "import os, subprocess, sys\n"
+        "os.close(2)\n"
+        "from anki_miner.cli import entry\n"
+        "with entry._private_stdout() as write:\n"
+        "    print('python noise')\n"
+        "    os.write(1, b'native noise\\n')\n"
+        "    subprocess.run([sys.executable, '-c', 'print(\"child noise\")'], check=True)\n"
+        "    write(b'EVENT\\n')\n"
+        # Skip interpreter shutdown: flushing the closed stderr would exit 120.
+        "os._exit(0)\n"
+    )
+    proc = subprocess.run([sys.executable, "-c", code], cwd=REPO_ROOT, capture_output=True, timeout=120, check=False)
+    assert proc.returncode == 0, proc.stdout
+    assert proc.stdout == b"EVENT\n"
+
+
 def test_commands_match_launch_dispatch_literal() -> None:
     from anki_miner.gui import launch
 

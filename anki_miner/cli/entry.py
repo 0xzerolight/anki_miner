@@ -226,17 +226,18 @@ def _private_stdout() -> Iterator[Callable[[bytes], None]]:
 
     flush_originals()  # before the swap: earlier output stays where it was going
     try:
-        event_fd: int | None = os.dup(1)
+        event_fd: int | None = _private_copy(1)
     except OSError:  # no stdout at all: nowhere for events; the exit code still reports
         event_fd = None
+    stderr_ok = _writable(2)
     if event_fd is not None:
-        try:
+        if stderr_ok:
             os.dup2(2, 1)
-        except OSError:
+        else:
             null_fd = os.open(os.devnull, os.O_WRONLY)
             os.dup2(null_fd, 1)
             os.close(null_fd)
-    python_target: IO[str] | None = sys.stderr
+    python_target: IO[str] | None = sys.stderr if stderr_ok else None
     devnull: IO[str] | None = None
     if python_target is None:
         devnull = python_target = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115 — closed below
@@ -250,6 +251,38 @@ def _private_stdout() -> Iterator[Callable[[bytes], None]]:
             os.close(event_fd)
         if devnull is not None:
             devnull.close()
+
+
+def _private_copy(fd: int) -> int:
+    """Duplicate *fd* onto a descriptor above the standard three.
+
+    A plain ``os.dup`` takes the lowest free number, which is 2 when the caller
+    closed stderr (``2>&-``, a daemon) — and the "stderr" redirect below would
+    then aim straight back at the event stream. Non-inheritable either way.
+    """
+    if sys.platform == "win32":
+        return os.dup(fd)
+    import fcntl
+
+    return fcntl.fcntl(fd, fcntl.F_DUPFD_CLOEXEC, 3)
+
+
+def _writable(fd: int) -> bool:
+    """Whether *fd* is open for writing.
+
+    Open is not enough: with stderr closed at launch, fd 2 is free for the next
+    file the process opens during its imports — libffi, for one, keeps its own
+    shared object open read-only there for its trampolines.
+    """
+    try:
+        if sys.platform == "win32":
+            os.fstat(fd)
+            return True
+        import fcntl
+
+        return (fcntl.fcntl(fd, fcntl.F_GETFL) & os.O_ACCMODE) in (os.O_WRONLY, os.O_RDWR)
+    except OSError:
+        return False
 
 
 def _discard(_data: bytes) -> None:
