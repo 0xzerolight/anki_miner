@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ac281d2293267568 -->
+<!-- i18n-source: README.md sha256:eaf6f4a3bb1bf708 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -116,7 +116,6 @@ anki_miner_gui
 ## 分頁
 
 - **影片** - 採集單一影片／字幕組合、批次資料夾，或 YouTube 網址。
-- **牌組建立器** - 把整部影集採集成一個依頻率排序的牌組。
 - **有聲書** - 採集有聲書、Podcast、廣播、歌曲（音訊 + 字幕／逐字稿組合）。
 - **閱讀** - 採集漫畫（mokuro）、小說（`.epub`、`.txt`；單本書或整個資料夾）、獨立字幕檔，或貼上的文字。
 - **分析** - 採集歷史、難度排名、里程碑。

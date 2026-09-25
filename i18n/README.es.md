@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ac281d2293267568 -->
+<!-- i18n-source: README.md sha256:eaf6f4a3bb1bf708 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -116,7 +116,6 @@ Para la configuración completa de desarrollo, consulta [CONTRIBUTING.md](../CON
 ## Pestañas
 
 - **Video** - minera un solo par de video/subtítulo, una carpeta por lotes o URLs de YouTube.
-- **Constructor de mazos** - minera una serie completa en un solo mazo clasificado por frecuencia.
 - **Audiolibros** - minera audiolibros, pódcasts, radio, canciones (pares de audio + subtítulo/transcripción).
 - **Lectura** - minera manga (mokuro), novelas (`.epub`, `.txt`; un libro individual o una carpeta completa), archivos de subtítulos independientes o texto pegado.
 - **Analíticas** - historial de minería, clasificaciones de dificultad, hitos.

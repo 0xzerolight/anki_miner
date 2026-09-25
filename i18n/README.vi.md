@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ac281d2293267568 -->
+<!-- i18n-source: README.md sha256:eaf6f4a3bb1bf708 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -116,7 +116,6 @@ anki_miner_gui
 ## Các tab
 
 - **Video** - khai thác một cặp video/phụ đề đơn lẻ, một thư mục hàng loạt, hoặc các URL YouTube.
-- **Trình dựng bộ thẻ** - khai thác cả một loạt phim thành một bộ thẻ được xếp hạng theo tần suất.
 - **Sách nói** - khai thác sách nói, podcast, radio, bài hát (cặp âm thanh + phụ đề/bản chép lời).
 - **Cách đọc** - khai thác manga (mokuro), tiểu thuyết (`.epub`, `.txt`; một cuốn sách hoặc cả thư mục), tệp phụ đề độc lập, hoặc văn bản dán vào.
 - **Phân tích** - lịch sử khai thác, xếp hạng độ khó, cột mốc.

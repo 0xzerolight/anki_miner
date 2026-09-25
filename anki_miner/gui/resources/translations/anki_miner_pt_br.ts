@@ -333,8 +333,8 @@
         <translation>Campo de Pinyin</translation>
     </message>
     <message>
-        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
-        <translation>Armazena a leitura em pinyin da palavra, colorida por tom quando essa opção está ativada. Em branco = ignorar.</translation>
+        <source>Stores the word's pinyin reading. Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Traditional Field</source>
@@ -485,8 +485,8 @@
         <translation>Campo de Jyutping</translation>
     </message>
     <message>
-        <source>Stores the jyutping reading, tone-coloured when that setting is on. Blank = skip.</source>
-        <translation>Armazena a leitura em jyutping, colorida por tom quando essa configuração está ativada. Em branco = ignorar.</translation>
+        <source>Stores the jyutping reading. Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Transliteration Field</source>
@@ -513,8 +513,8 @@
         <translation>URL do AnkiConnect</translation>
     </message>
     <message>
-        <source>Default http://localhost:8765. Change if AnkiConnect uses a different port.</source>
-        <translation>Padrão http://localhost:8765. Altere se o AnkiConnect usar uma porta diferente.</translation>
+        <source>Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Card tags</source>
@@ -673,6 +673,14 @@
         <translation>Armazena a leitura simples da frase.</translation>
     </message>
     <message>
+        <source>Colour the reading by tone</source>
+        <translation>Colorir a leitura por tom</translation>
+    </message>
+    <message>
+        <source>Colours each syllable of the reading by its tone.</source>
+        <translation>Colore cada sílaba da leitura conforme o seu tom.</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>Campos de Dados Auxiliares</translation>
     </message>
@@ -749,8 +757,8 @@
         <translation>Campo de Tradução</translation>
     </message>
     <message>
-        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
-        <translation>Armazena a linha de legenda em idioma secundário da frase (Vídeo -&gt; Único, com legendas secundárias ativadas em Filtragem). Em branco = ignorar.</translation>
+        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Sentences). Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Card Type</source>
@@ -807,6 +815,18 @@
     <message>
         <source>Audio:</source>
         <translation>Áudio:</translation>
+    </message>
+    <message>
+        <source>Card Creation</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create cards in order of appearance</source>
+        <translation>Criar cartões na ordem em que aparecem</translation>
+    </message>
+    <message>
+        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
+        <translation>Adiciona cartões ao Anki na ordem em que as palavras aparecem na mídia, em vez da ordem em que a extração da mídia terminou. Substitui a ordenação de inclusão forçada da lista de permissões e qualquer ordenação de coluna no Curador de Palavras.</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -1131,8 +1151,8 @@ Formatos suportados: AJT (index.json + media/), NHK16 (entries.json + audio/), F
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
-        <source>Audio</source>
-        <translation>Áudio</translation>
+        <source>Word Audio</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Loading…</source>
@@ -1231,6 +1251,14 @@ Formatos suportados: AJT (index.json + media/), NHK16 (entries.json + audio/), F
         <translation>Mover para baixo na prioridade</translation>
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Audio Pack…</source>
         <translation>Pacote de Áudio…</translation>
     </message>
@@ -1241,30 +1269,6 @@ Formatos suportados: AJT (index.json + media/), NHK16 (entries.json + audio/), F
     <message>
         <source>Online Source…</source>
         <translation>Fonte Online…</translation>
-    </message>
-    <message>
-        <source>Sentence Audio (Reading Sources)</source>
-        <translation>Áudio de frase (fontes de leitura)</translation>
-    </message>
-    <message>
-        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
-        <translation>Adicione áudio falado aos cartões de mangá e livros, que não possuem áudio de origem. O texto da frase é enviado aos serviços online selecionados.</translation>
-    </message>
-    <message>
-        <source>Generate TTS sentence audio</source>
-        <translation>Gerar áudio de frase por TTS</translation>
-    </message>
-    <message>
-        <source>Google Translate TTS (tried first)</source>
-        <translation>Google Translate TTS (tentado primeiro)</translation>
-    </message>
-    <message>
-        <source>Naver Papago (fallback)</source>
-        <translation>Naver Papago (alternativa)</translation>
-    </message>
-    <message>
-        <source>Select at least one service.</source>
-        <translation>Selecione pelo menos um serviço.</translation>
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
@@ -1559,8 +1563,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Repetir falhas</translation>
     </message>
     <message>
-        <source>Quick Processing</source>
-        <translation>Processamento rápido</translation>
+        <source>Add Series</source>
+        <translation>Adicionar Série</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -1595,12 +1599,12 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Deslocar apenas as legendas de tradução (positivo = mais tarde, negativo = mais cedo)</translation>
     </message>
     <message>
-        <source>Process Folder</source>
-        <translation>Processar pasta</translation>
+        <source>Add to Queue</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Process every episode pair found in the selected folders</source>
-        <translation>Processar todos os pares de episódios encontrados nas pastas selecionadas</translation>
+        <source>Add this folder pair to the queue below as a new series</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancel</source>
@@ -1623,22 +1627,6 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Escolha pastas existentes de vídeo e legenda.</translation>
     </message>
     <message>
-        <source>No subtitle file could be matched to any video file in those folders.</source>
-        <translation>Não foi possível associar nenhum arquivo de legenda a qualquer arquivo de vídeo nessas pastas.</translation>
-    </message>
-    <message>
-        <source>episodes</source>
-        <translation>episódios</translation>
-    </message>
-    <message>
-        <source>Starting batch processing of %1 episodes...</source>
-        <translation>Iniciando processamento em lote de %1 episódios...</translation>
-    </message>
-    <message>
-        <source>Batch mining</source>
-        <translation>Mineração em lote</translation>
-    </message>
-    <message>
         <source>%1 was skipped: its folders no longer exist.</source>
         <translation>%1 foi ignorado: suas pastas não existem mais.</translation>
     </message>
@@ -1653,6 +1641,10 @@ Nenhum arquivo de índice é excluído.</translation>
     <message>
         <source>series</source>
         <translation>séries</translation>
+    </message>
+    <message>
+        <source>Batch mining</source>
+        <translation>Mineração em lote</translation>
     </message>
     <message>
         <source>Every series is already complete. Select rows, then Run selected.</source>
@@ -1677,14 +1669,6 @@ Nenhum arquivo de índice é excluído.</translation>
     <message>
         <source>Starting queue processing...</source>
         <translation>Iniciando processamento da fila...</translation>
-    </message>
-    <message>
-        <source>Starting batch processing...</source>
-        <translation>Iniciando processamento em lote...</translation>
-    </message>
-    <message>
-        <source>Mining episode %1 of %2: %3</source>
-        <translation>Minerando episódio %1 de %2: %3</translation>
     </message>
     <message>
         <source>Processing series: %1</source>
@@ -2054,24 +2038,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Legendas em idioma secundário</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
-        <translation>Carregue um segundo arquivo de legenda no seu próprio idioma ao lado do idioma de mineração: ele aparece abaixo da linha na prévia do Curador de Palavras e pode ser salvo em um campo Tradução. Em Vídeo -&gt; Em lote, aponte-o para uma pasta de legendas de tradução e elas são pareadas aos vídeos pelo número do episódio. Ative isso em Configurações -&gt; Filtragem.</translation>
-    </message>
-    <message>
-        <source>Build a deck by coverage %</source>
-        <translation>Construir um baralho por % de cobertura</translation>
-    </message>
-    <message>
-        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus.</source>
-        <translation>Construir um baralho ordenado por frequência que cobre uma porcentagem escolhida de um corpus inteiro.</translation>
-    </message>
-    <message>
-        <source>Deck Builder modes (all / top N / coverage %)</source>
-        <translation>Modos do Construtor de Baralho (todas / top N / % de cobertura)</translation>
-    </message>
-    <message>
-        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
-        <translation>O Construtor de Baralho sempre ignora os filtros por episódio e as verificações de duplicidade; escolha todas as palavras, as top N ou uma meta de cobertura, e opcionalmente ignore as palavras conhecidas.</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -2542,16 +2510,16 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Leituras em pinyin e cores dos tons</translation>
     </message>
     <message>
-        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
-        <translation>Coloque o pinyin da palavra nos seus cartões, cada sílaba na cor do seu tom -- a coloração é Colorir a leitura por tom, em Configurações -&gt; Filtragem.</translation>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>Colorir a leitura por tom</translation>
     </message>
     <message>
-        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
-        <translation>Colore cada sílaba da leitura em pinyin ou jyutping pelo seu tom, em Configurações -&gt; Filtragem.</translation>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Measure word field</source>
@@ -2598,8 +2566,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Temas, modo escuro, fontes e zoom</translation>
     </message>
     <message>
-        <source>Switch light/dark themes and adjust font scale and UI zoom.</source>
-        <translation>Alterne entre temas claro/escuro e ajuste a escala da fonte e o zoom da interface.</translation>
+        <source>Switch light/dark themes and adjust UI zoom.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Change the app language</source>
@@ -2626,20 +2594,12 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Adicione seus próprios arquivos JSON de tema e visualize cada tema na galeria antes de aplicá-lo.</translation>
     </message>
     <message>
-        <source>Use system file dialogs</source>
-        <translation>Usar diálogos de arquivo do sistema</translation>
-    </message>
-    <message>
-        <source>Switch between Anki Miner's built-in file pickers and your operating system's native ones.</source>
-        <translation>Alterne entre os seletores de arquivo integrados do Anki Miner e os nativos do seu sistema operacional.</translation>
-    </message>
-    <message>
         <source>Choose the tools on the Utilities tab</source>
         <translation>Escolher as ferramentas da aba Utilitários</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>Oculte as ferramentas da aba Utilitários que você não usa, ou traga-as de volta, em Configurações -&gt; Aparência e Idioma. Uma ferramenta oculta mantém sua entrada aqui; seu botão Abrir leva a essa caixa de seleção.</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Search the settings</source>
@@ -2662,8 +2622,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Verificar atualizações do aplicativo</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in the Settings footer.</source>
-        <translation>Verifique se há uma nova versão do Anki Miner pelo menu Ajuda, ou ative/desative a verificação automática na inicialização pelo rodapé de Configurações.</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2678,8 +2638,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Criar arquivos .mokuro a partir de imagens de mangá</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation>Execute o OCR japonês do mokuro em uma pasta de volume ou uma série inteira para que Leitura -&gt; Mangá possa minerá-lo. Instale o mokuro em Configurações -&gt; Transcrição e Alinhamento.</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -2694,8 +2654,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Reestilizar cartões minerados</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Tools menu.</source>
-        <translation>Reaplique o estilo mais recente do Anki Miner aos cartões que você minerou antes -- menu Ferramentas.</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>System health check</source>
@@ -2844,12 +2804,20 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Sobrescrever valores existentes</translation>
     </message>
     <message>
-        <source>Overwritten cards may need a Restyle to refresh their styling.</source>
-        <translation>Cartões sobrescritos podem precisar de uma reestilização para atualizar a aparência.</translation>
+        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Scan Anki (read-only)</source>
         <translation>Examinar o Anki (somente leitura)</translation>
+    </message>
+    <message>
+        <source>Restyle cards…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Refresh the dictionary styling on every card of your note type</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancel</source>
@@ -3502,200 +3470,14 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
         <translation>%1 (%2 de %3)</translation>
     </message>
 </context><context>
-    <name>DeckBuilderTab</name>
-    <message>
-        <source>Video Folder:</source>
-        <translation>Pasta de vídeos:</translation>
-    </message>
-    <message>
-        <source>Subtitle Folder:</source>
-        <translation>Pasta de legendas:</translation>
-    </message>
-    <message>
-        <source>Deck Name:</source>
-        <translation>Nome do baralho:</translation>
-    </message>
-    <message>
-        <source>Word Selection:</source>
-        <translation>Seleção de palavras:</translation>
-    </message>
-    <message>
-        <source>Input</source>
-        <translation>Entrada</translation>
-    </message>
-    <message>
-        <source>Select folder with video files…</source>
-        <translation>Selecione a pasta com arquivos de vídeo…</translation>
-    </message>
-    <message>
-        <source>Select folder with subtitle files…</source>
-        <translation>Selecione a pasta com arquivos de legenda…</translation>
-    </message>
-    <message>
-        <source>Deck Settings</source>
-        <translation>Configurações do baralho</translation>
-    </message>
-    <message>
-        <source>Enter deck name…</source>
-        <translation>Digite o nome do baralho…</translation>
-    </message>
-    <message>
-        <source>All vocabulary</source>
-        <translation>Todo o vocabulário</translation>
-    </message>
-    <message>
-        <source>Top N words</source>
-        <translation>N palavras mais frequentes</translation>
-    </message>
-    <message>
-        <source>Target coverage %</source>
-        <translation>% de cobertura desejada</translation>
-    </message>
-    <message>
-        <source> words</source>
-        <translation> palavras</translation>
-    </message>
-    <message>
-        <source>Include the N most-frequent lemmas</source>
-        <translation>Incluir os N lemas mais frequentes</translation>
-    </message>
-    <message>
-        <source>Include enough words to cover this percentage of tokens</source>
-        <translation>Incluir palavras suficientes para cobrir esta porcentagem de tokens</translation>
-    </message>
-    <message>
-        <source>Skip words already in my Anki collection</source>
-        <translation>Pular palavras que já estão na minha coleção do Anki</translation>
-    </message>
-    <message>
-        <source>Checked: skip your known words; unchecked: mine every word.</source>
-        <translation>Marcado: pula suas palavras conhecidas; desmarcado: minera todas as palavras.</translation>
-    </message>
-    <message>
-        <source>Actions</source>
-        <translation>Ações</translation>
-    </message>
-    <message>
-        <source>Preview</source>
-        <translation>Prévia</translation>
-    </message>
-    <message>
-        <source>Analyze the corpus and preview which words will be included</source>
-        <translation>Analisar o corpus e pré-visualizar quais palavras serão incluídas</translation>
-    </message>
-    <message>
-        <source>Build Deck</source>
-        <translation>Construir Baralho</translation>
-    </message>
-    <message>
-        <source>Create the Anki cards for the previewed word list</source>
-        <translation>Criar os cartões do Anki para a lista de palavras da prévia</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Cancelar</translation>
-    </message>
-    <message>
-        <source>Results</source>
-        <translation>Resultados</translation>
-    </message>
-    <message>
-        <source>Total tokens:</source>
-        <translation>Total de tokens:</translation>
-    </message>
-    <message>
-        <source>Unique lemmas:</source>
-        <translation>Lemas únicos:</translation>
-    </message>
-    <message>
-        <source>Candidate words:</source>
-        <translation>Palavras candidatas:</translation>
-    </message>
-    <message>
-        <source>Projected coverage:</source>
-        <translation>Cobertura projetada:</translation>
-    </message>
-    <message>
-        <source>Known (skipped):</source>
-        <translation>Conhecidas (puladas):</translation>
-    </message>
-    <message>
-        <source>Cards to create:</source>
-        <translation>Cartões a criar:</translation>
-    </message>
-    <message>
-        <source>Select both the video folder and subtitle folder first.</source>
-        <translation>Selecione primeiro a pasta de vídeos e a pasta de legendas.</translation>
-    </message>
-    <message>
-        <source>Video folder not found: %1</source>
-        <translation>Pasta de vídeos não encontrada: %1</translation>
-    </message>
-    <message>
-        <source>Subtitle folder not found: %1</source>
-        <translation>Pasta de legendas não encontrada: %1</translation>
-    </message>
-    <message>
-        <source>Enter a deck name before previewing.</source>
-        <translation>Digite um nome de baralho antes de gerar a prévia.</translation>
-    </message>
-    <message>
-        <source>No video/subtitle pairs found. Check the folders.</source>
-        <translation>Nenhum par de vídeo/legenda encontrado. Verifique as pastas.</translation>
-    </message>
-    <message>
-        <source>Analyzing corpus…</source>
-        <translation>Analisando corpus…</translation>
-    </message>
-    <message>
-        <source>Preview ready — %1 cards; the candidate words cover ~%2% of tokens.</source>
-        <translation>Prévia pronta — %1 cartões; as palavras candidatas cobrem ~%2% dos tokens.</translation>
-    </message>
-    <message>
-        <source>Building deck '%1'…</source>
-        <translation>Construindo baralho '%1'…</translation>
-    </message>
-    <message>
-        <source>Mining episode %1 of %2: %3</source>
-        <translation>Minerando episódio %1 de %2: %3</translation>
-    </message>
-    <message>
-        <source>Processing: %1</source>
-        <translation>Processando: %1</translation>
-    </message>
-    <message>
-        <source>  %1: %2 card(s) created</source>
-        <translation>  %1: %2 cartão(ões) criado(s)</translation>
-    </message>
-    <message>
-        <source>Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens.</source>
-        <translation>Criados %1 cartões no baralho '%3'; as palavras candidatas cobrem ~%2% dos tokens.</translation>
-    </message>
-    <message>
-        <source>Complete — %1 cards created</source>
-        <translation>Concluído — %1 cartões criados</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>Cancelando…</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>Falhou — consulte o log</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>Cancelado</translation>
-    </message>
-</context><context>
     <name>DeckFilterTab</name>
     <message>
         <source>Deck Filter</source>
         <translation>Filtro de Baralho</translation>
     </message>
     <message>
-        <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Filtering; the source deck is not modified.</source>
-        <translation>Copie a parte que vale a pena aprender de um baralho pronto para um novo baralho. Os filtros vêm de Configurações → Filtragem; o baralho de origem não é modificado.</translation>
+        <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Word Filters; the source deck is not modified.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Source deck:</source>
@@ -4248,6 +4030,14 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
         <translation>Diminuir prioridade</translation>
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 entries</source>
         <translation>%1 entradas</translation>
     </message>
@@ -4690,8 +4480,8 @@ Nenhum arquivo no disco é excluído.</translation>
         <translation>O pacote de áudio '%1' lê devagar demais — áudio ignorado; mova a pasta dele para um disco local e reimporte-o.</translation>
     </message>
     <message>
-        <source>Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Audio.</source>
-        <translation>A fonte de áudio de palavras está devagar demais — áudio ignorado; reordene-a ou desative-a em Configurações → Áudio.</translation>
+        <source>Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Word Audio.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
@@ -5027,78 +4817,6 @@ Nenhum arquivo no disco é excluído.</translation>
         <translation>Alinhando legendas</translation>
     </message>
 </context><context>
-    <name>ExportDialog</name>
-    <message>
-        <source>Export Words</source>
-        <translation>Exportar Palavras</translation>
-    </message>
-    <message>
-        <source>Export Format</source>
-        <translation>Formato de Exportação</translation>
-    </message>
-    <message>
-        <source>CSV (.csv)</source>
-        <translation>CSV (.csv)</translation>
-    </message>
-    <message>
-        <source>TSV (.tsv)</source>
-        <translation>TSV (.tsv)</translation>
-    </message>
-    <message>
-        <source>Vocabulary List (.txt)</source>
-        <translation>Lista de Vocabulário (.txt)</translation>
-    </message>
-    <message>
-        <source>List format:</source>
-        <translation>Formato da lista:</translation>
-    </message>
-    <message>
-        <source>Plain (one word per line)</source>
-        <translation>Simples (uma palavra por linha)</translation>
-    </message>
-    <message>
-        <source>%1 words</source>
-        <translation>%1 palavras</translation>
-    </message>
-    <message>
-        <source>, %1 with definitions</source>
-        <translation>, %1 com definições</translation>
-    </message>
-    <message>
-        <source>, %1 with media</source>
-        <translation>, %1 com mídia</translation>
-    </message>
-    <message>
-        <source>Select output file...</source>
-        <translation>Selecionar arquivo de saída...</translation>
-    </message>
-    <message>
-        <source>Browse...</source>
-        <translation>Procurar...</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>Cancelar</translation>
-    </message>
-    <message>
-        <source>Export</source>
-        <translation>Exportar</translation>
-    </message>
-    <message>
-        <source>Export Complete</source>
-        <translation>Exportação Concluída</translation>
-    </message>
-    <message>
-        <source>Exported %1 words to:
-%2</source>
-        <translation>%1 palavras exportadas para:
-%2</translation>
-    </message>
-    <message>
-        <source>The export could not be written.</source>
-        <translation>Não foi possível gravar a exportação.</translation>
-    </message>
-</context><context>
     <name>FileSelector</name>
     <message>
         <source>Select file...</source>
@@ -5215,8 +4933,8 @@ Nenhum arquivo no disco é excluído.</translation>
         <translation>Ignorar palavras que contenham algum caractere hanja, mantendo no baralho vocabulário só em hangul.</translation>
     </message>
     <message>
-        <source>Filtering</source>
-        <translation>Filtragem</translation>
+        <source>Word Filters</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Frequency</source>
@@ -5271,8 +4989,12 @@ Nenhum arquivo no disco é excluído.</translation>
         <translation>Banco de Dados de Palavras Conhecidas</translation>
     </message>
     <message>
-        <source>Use Local Known Words Database</source>
-        <translation>Usar Banco de Dados Local de Palavras Conhecidas</translation>
+        <source>Keep words known after their cards are deleted</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -5289,6 +5011,14 @@ Nenhum arquivo no disco é excluído.</translation>
     <message>
         <source>View, remove, export, or reset the words you added to your local known words list from the Word Curator.</source>
         <translation>Visualize, remova, exporte ou redefina as palavras que você adicionou à sua lista local de palavras conhecidas a partir do Curador de Palavras.</translation>
+    </message>
+    <message>
+        <source>Treat Kana Spellings of Known Words as Known</source>
+        <translation>Tratar Grafias em Kana de Palavras Conhecidas como Conhecidas</translation>
+    </message>
+    <message>
+        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+        <translation>Quando uma legenda grafa uma palavra em kana (ex.: うなずく) e a forma de dicionário em kanji (頷く) já está na sua coleção ou lista de palavras conhecidas, ela é ignorada em vez de criar um segundo cartão. Grafias em kanji nunca são mescladas dessa forma.</translation>
     </message>
     <message>
         <source>Excluded Decks</source>
@@ -5359,84 +5089,28 @@ Nenhum arquivo no disco é excluído.</translation>
         <translation>Exclui o conjunto de palavras integrado '%1' (%2 entradas) da mineração.</translation>
     </message>
     <message>
-        <source>Subtitle Text Filtering</source>
-        <translation>Filtragem de Texto das Legendas</translation>
+        <source>Sentence Rule</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Regex Filter</source>
-        <translation>Filtro Regex</translation>
+        <source>Mine every unknown word</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
-        <translation>Regex Python correspondida no texto da legenda e removida (ou substituída) antes da mineração. Útil para remover nomes de falantes como (Tanaka) ou descrições de sons como [porta]. Combine alternativas com |. Teste padrões em https://regex101.com.</translation>
-    </message>
-    <message>
-        <source>(empty = delete match)</source>
-        <translation>(vazio = excluir a correspondência)</translation>
-    </message>
-    <message>
-        <source>Replacement</source>
-        <translation>Substituição</translation>
-    </message>
-    <message>
-        <source>Inserted in place of each match (empty deletes it). Use Python backreferences \1 \2, not asbplayer's $1 $2.</source>
-        <translation>Inserido no lugar de cada correspondência (vazio a exclui). Use retrorreferências do Python \1 \2, não $1 $2 do asbplayer.</translation>
-    </message>
-    <message>
-        <source>Enable Subtitle Regex Filter</source>
-        <translation>Ativar Filtro Regex de Legendas</translation>
-    </message>
-    <message>
-        <source>Parens (Tanaka)</source>
-        <translation>Parênteses (Tanaka)</translation>
-    </message>
-    <message>
-        <source>Brackets [SFX]</source>
-        <translation>Colchetes [SFX]</translation>
-    </message>
-    <message>
-        <source>Music ♪♬</source>
-        <translation>Música ♪♬</translation>
-    </message>
-    <message>
-        <source>Speaker: prefix</source>
-        <translation>Falante: prefixo</translation>
-    </message>
-    <message>
-        <source>Dialogue dash</source>
-        <translation>Travessão de diálogo</translation>
-    </message>
-    <message>
-        <source>Presets</source>
-        <translation>Predefinições</translation>
-    </message>
-    <message>
-        <source>Click to append a built-in pattern to the regex field above.</source>
-        <translation>Clique para acrescentar um padrão integrado ao campo de regex acima.</translation>
-    </message>
-    <message>
-        <source>Secondary Subtitles</source>
-        <translation>Legendas Secundárias</translation>
-    </message>
-    <message>
-        <source>Enable secondary-language subtitles</source>
-        <translation>Ativar Legendas em Idioma Secundário</translation>
-    </message>
-    <message>
-        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
-        <translation>Adiciona um segundo seletor de legendas e seu próprio deslocamento a Vídeo -&gt; Único. Sua linha aparece abaixo da linha do idioma de mineração na prévia do Curador de Palavras e, quando o campo Tradução está mapeado (Cartões e Anki), no cartão.</translation>
-    </message>
-    <message>
-        <source>Deduplication</source>
-        <translation>Remoção de Duplicatas</translation>
-    </message>
-    <message>
-        <source>Deduplicate by Sentence</source>
-        <translation>Remover Duplicatas por Frase</translation>
+        <source>One card per sentence</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
         <translation>Minera no máximo uma palavra por frase de exemplo — a primeira encontrada nessa frase. Todas as outras palavras dessa mesma frase são ignoradas.</translation>
+    </message>
+    <message>
+        <source>Only i+1 sentences (exactly one unknown word)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
+        <translation>Minerar somente palavras de frases com exatamente uma palavra desconhecida (i+1); substitui a deduplicação de frases.</translation>
     </message>
     <message>
         <source>Script Type</source>
@@ -5459,80 +5133,12 @@ Nenhum arquivo no disco é excluído.</translation>
         <translation>Ignorar palavras escritas inteiramente em katakana (ex.: コーヒー). Marque as duas caixas para ignorar também palavras que misturam os dois silabários kana (サボる, ヤバい).</translation>
     </message>
     <message>
-        <source>Treat Kana Spellings of Known Words as Known</source>
-        <translation>Tratar Grafias em Kana de Palavras Conhecidas como Conhecidas</translation>
-    </message>
-    <message>
-        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
-        <translation>Quando uma legenda grafa uma palavra em kana (ex.: うなずく) e a forma de dicionário em kanji (頷く) já está na sua coleção ou lista de palavras conhecidas, ela é ignorada em vez de criar um segundo cartão. Grafias em kanji nunca são mescladas dessa forma.</translation>
-    </message>
-    <message>
-        <source>Script Variants</source>
-        <translation>Variantes de Escrita</translation>
-    </message>
-    <message>
-        <source>As written</source>
-        <translation>Conforme escrito</translation>
-    </message>
-    <message>
-        <source>Simplified (简体)</source>
-        <translation>Simplificado (简体)</translation>
-    </message>
-    <message>
-        <source>Traditional (繁體)</source>
-        <translation>Tradicional (繁體)</translation>
-    </message>
-    <message>
-        <source>Character Set</source>
-        <translation>Conjunto de Caracteres</translation>
-    </message>
-    <message>
-        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
-        <translation>Qual grafia a frente do cartão e a busca no dicionário preferem; Conforme escrito mantém a grafia do próprio material de origem.</translation>
-    </message>
-    <message>
-        <source>Regional Variety</source>
-        <translation>Variedade Regional</translation>
-    </message>
-    <message>
-        <source>Brazilian Portuguese</source>
-        <translation>Português Brasileiro</translation>
-    </message>
-    <message>
-        <source>European Portuguese</source>
-        <translation>Português Europeu</translation>
-    </message>
-    <message>
-        <source>Variety</source>
-        <translation>Variedade Linguística</translation>
-    </message>
-    <message>
-        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
-        <translation>Determina qual voz do Google lê o áudio de palavra e de frase, e qual lista de frequência a configuração sugere.</translation>
-    </message>
-    <message>
-        <source>i+1 Sentence Filter</source>
-        <translation>Filtro de Frase i+1</translation>
-    </message>
-    <message>
-        <source>Only Mine i+1 Sentences</source>
-        <translation>Minerar Apenas Frases i+1</translation>
-    </message>
-    <message>
-        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
-        <translation>Minerar somente palavras de frases com exatamente uma palavra desconhecida (i+1); substitui a deduplicação de frases.</translation>
-    </message>
-    <message>
         <source>Sentence Length</source>
         <translation>Comprimento da Frase</translation>
     </message>
     <message>
-        <source>Enable Sentence Length Filter</source>
-        <translation>Ativar Filtro de Comprimento de Frase</translation>
-    </message>
-    <message>
-        <source>Drops words whose example sentence exceeds either cap below.</source>
-        <translation>Descarta palavras cuja frase de exemplo ultrapassa qualquer um dos limites abaixo.</translation>
+        <source>Set either limit above 0 to turn the filter on.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> s</source>
@@ -5555,18 +5161,6 @@ Nenhum arquivo no disco é excluído.</translation>
         <translation>Descarta cartões cujo texto da frase excede este número de caracteres. Defina como 0 para sem limite.</translation>
     </message>
     <message>
-        <source>Full Sentences</source>
-        <translation>Frases Completas</translation>
-    </message>
-    <message>
-        <source>Mine full sentences across subtitle lines</source>
-        <translation>Minerar frases completas entre linhas de legenda</translation>
-    </message>
-    <message>
-        <source>Joins neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence instead of a fragment. Reading sources have no subtitle timings and ignore it.</source>
-        <translation>Junta linhas de legenda vizinhas quando uma linha não termina uma frase, para que o cartão traga a frase inteira em vez de um fragmento. Fontes de leitura não têm marcação de tempo de legenda e ignoram esta opção.</translation>
-    </message>
-    <message>
         <source>Reading</source>
         <translation>Leitura</translation>
     </message>
@@ -5581,38 +5175,6 @@ Nenhum arquivo no disco é excluído.</translation>
     <message>
         <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
         <translation>Número mínimo de vezes que uma palavra deve aparecer em um livro ou volume para ser minerada. 1 = sem mínimo (filtro desligado).</translation>
-    </message>
-    <message>
-        <source>Card Order</source>
-        <translation>Ordem dos Cartões</translation>
-    </message>
-    <message>
-        <source>Create cards in order of appearance</source>
-        <translation>Criar cartões na ordem em que aparecem</translation>
-    </message>
-    <message>
-        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
-        <translation>Adiciona cartões ao Anki na ordem em que as palavras aparecem na mídia, em vez da ordem em que a extração da mídia terminou. Substitui a ordenação de inclusão forçada da lista de permissões e qualquer ordenação de coluna no Curador de Palavras.</translation>
-    </message>
-    <message>
-        <source>Card Formatting</source>
-        <translation>Formatação do Cartão</translation>
-    </message>
-    <message>
-        <source>Bold target word in sentence</source>
-        <translation>Destacar em negrito a palavra-alvo na frase</translation>
-    </message>
-    <message>
-        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
-        <translation>Envolve a palavra minerada em &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; dentro dos campos de frase. A correspondência é exatamente o trecho que foi minerado, então formas repetidas numa frase deixam em negrito somente a ocorrência realmente minerada.</translation>
-    </message>
-    <message>
-        <source>Colour the reading by tone</source>
-        <translation>Colorir a leitura por tom</translation>
-    </message>
-    <message>
-        <source>Colours each syllable of the reading by its tone.</source>
-        <translation>Colore cada sílaba da leitura conforme o seu tom.</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -5865,6 +5427,14 @@ Nenhum arquivo no disco é excluído.</translation>
         <translation>Mover para baixo na lista de fontes do cartão</translation>
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>word-based</source>
         <translation>baseada em palavras</translation>
     </message>
@@ -6041,10 +5611,6 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Ir para a aba Vídeo</translation>
     </message>
     <message>
-        <source>Go to Deck Builder</source>
-        <translation>Ir para a aba Construtor de Baralho</translation>
-    </message>
-    <message>
         <source>Go to Audiobooks</source>
         <translation>Ir para a aba Audiolivros</translation>
     </message>
@@ -6129,12 +5695,12 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Palavras que você adicionou pelo Curador de Palavras. Ignoradas em toda execução e mantidas entre reconstruções do cache.</translation>
     </message>
     <message>
-        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
-        <translation>Baralhos que a varredura de palavras conhecidas deste idioma ignora: %1. Altere-os em Configurações → Filtragem.</translation>
+        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
-        <translation>Todos os baralhos são varridos para este idioma, incluindo baralhos de outro idioma que usa a mesma escrita. Exclua-os em Configurações → Filtragem.</translation>
+        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Word Filters.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Filter…</source>
@@ -6494,10 +6060,6 @@ Palavras a adicionar: %3. Continuar?</translation>
         <translation>Vídeo</translation>
     </message>
     <message>
-        <source>Deck Builder</source>
-        <translation>Construtor de Baralho</translation>
-    </message>
-    <message>
         <source>Audiobooks</source>
         <translation>Audiolivros</translation>
     </message>
@@ -6570,8 +6132,8 @@ Palavras a adicionar: %3. Continuar?</translation>
         <translation>Abas principais</translation>
     </message>
     <message>
-        <source>Navigate between Video, Deck Builder, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
-        <translation>Navegue entre Vídeo, Construtor de Baralhos, Audiolivros, Leitura, Análises, Utilitários e Configurações</translation>
+        <source>Navigate between Video, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Application Header</source>
@@ -6604,10 +6166,6 @@ Palavras a adicionar: %3. Continuar?</translation>
     <message>
         <source>Setup Wizard...</source>
         <translation>Assistente de Configuração...</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards...</source>
-        <translation>Reestilizar Cartões Minerados...</translation>
     </message>
     <message>
         <source>&amp;Help</source>
@@ -6924,6 +6482,10 @@ Continuar?</translation>
         <translation>Mídia do Cartão</translation>
     </message>
     <message>
+        <source>Sentence audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Audio Format</source>
         <translation>Formato de Áudio</translation>
     </message>
@@ -6956,20 +6518,40 @@ Continuar?</translation>
         <translation>Tempo extra antes e depois da legenda.</translation>
     </message>
     <message>
+        <source>Off</source>
+        <translation>Desligado</translation>
+    </message>
+    <message>
+        <source>Google, then Papago</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Google only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Papago only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Spoken sentences for manga and books</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
+        <translation>Adicione áudio falado aos cartões de mangá e livros, que não possuem áudio de origem. O texto da frase é enviado aos serviços online selecionados.</translation>
+    </message>
+    <message>
+        <source>Screenshot</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Screenshot Offset</source>
         <translation>Deslocamento da Captura de Tela</translation>
     </message>
     <message>
         <source>Measured from the subtitle start time.</source>
         <translation>Medido a partir do horário de início da legenda.</translation>
-    </message>
-    <message>
-        <source>Max Parallel Workers</source>
-        <translation>Máx. de Processos Paralelos</translation>
-    </message>
-    <message>
-        <source>Higher = faster, but uses more CPU and memory.</source>
-        <translation>Maior = mais rápido, mas usa mais CPU e memória.</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -7004,32 +6586,28 @@ Continuar?</translation>
         <translation>Duração do Clipe</translation>
     </message>
     <message>
-        <source>Frames per second for animated clips</source>
-        <translation>Quadros por segundo para clipes animados</translation>
+        <source>Small</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>FPS</source>
-        <translation>FPS</translation>
+        <source>Balanced</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source> px</source>
-        <translation> px</translation>
+        <source>High</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Height</source>
-        <translation>Altura</translation>
+        <source>Frame rate, height and quality for the animated clip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Output height; aspect ratio preserved</source>
-        <translation>Altura de saída; proporção preservada</translation>
+        <source>Size</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>0 = smallest file, 100 = best quality</source>
-        <translation>0 = arquivo menor, 100 = melhor qualidade</translation>
-    </message>
-    <message>
-        <source>Quality</source>
-        <translation>Qualidade</translation>
+        <source>Custom (%1 fps · %2 px · quality %3)</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiniJobMonitor</name>
@@ -7082,8 +6660,52 @@ Continuar?</translation>
         <translation>Idioma</translation>
     </message>
     <message>
-        <source>Switching swaps dictionaries, filters, deck and card fields to that language's own settings. The interface language is separate (Settings → Appearance &amp; Language).</source>
-        <translation>A alternância troca dicionários, filtros, baralho e campos do cartão para as configurações próprias desse idioma. O idioma da interface é separado (Configurações → Aparência e Idioma).</translation>
+        <source>Switching swaps dictionaries, filters, deck and card fields to that language's own settings. The interface language is separate (Settings → General).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Script Variants</source>
+        <translation>Variantes de Escrita</translation>
+    </message>
+    <message>
+        <source>As written</source>
+        <translation>Conforme escrito</translation>
+    </message>
+    <message>
+        <source>Simplified (简体)</source>
+        <translation>Simplificado (简体)</translation>
+    </message>
+    <message>
+        <source>Traditional (繁體)</source>
+        <translation>Tradicional (繁體)</translation>
+    </message>
+    <message>
+        <source>Character Set</source>
+        <translation>Conjunto de Caracteres</translation>
+    </message>
+    <message>
+        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
+        <translation>Qual grafia a frente do cartão e a busca no dicionário preferem; Conforme escrito mantém a grafia do próprio material de origem.</translation>
+    </message>
+    <message>
+        <source>Regional Variety</source>
+        <translation>Variedade Regional</translation>
+    </message>
+    <message>
+        <source>Brazilian Portuguese</source>
+        <translation>Português Brasileiro</translation>
+    </message>
+    <message>
+        <source>European Portuguese</source>
+        <translation>Português Europeu</translation>
+    </message>
+    <message>
+        <source>Variety</source>
+        <translation>Variedade Linguística</translation>
+    </message>
+    <message>
+        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>Determina qual voz do Google lê o áudio de palavra e de frase, e qual lista de frequência a configuração sugere.</translation>
     </message>
     <message>
         <source>Download %1 pack</source>
@@ -7224,8 +6846,8 @@ Continuar?</translation>
         <translation>Mangá</translation>
     </message>
     <message>
-        <source>mokuro not found. Install it in Settings → Transcription &amp; Alignment → Manga OCR, or set its path there.</source>
-        <translation>mokuro não encontrado. Instale-o em Configurações → Transcrição e Alinhamento → OCR de Mangá, ou defina o caminho dele lá.</translation>
+        <source>mokuro not found. Install it in the Manga OCR setup section below, or set its path there.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
@@ -7238,6 +6860,34 @@ Continuar?</translation>
     <message>
         <source>A folder of page images (one volume), or a folder whose subfolders and .cbz/.zip files are volumes.</source>
         <translation>Uma pasta de imagens de página (um volume), ou uma pasta cujas subpastas e arquivos .cbz/.zip são volumes.</translation>
+    </message>
+    <message>
+        <source>Manga OCR setup</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>mokuro executable:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional: path to the mokuro executable</source>
+        <translation>Opcional: caminho para o executável do mokuro</translation>
+    </message>
+    <message>
+        <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
+        <translation>Opcional: seu próprio mokuro (pip/pipx). Deixe em branco para usar a instalação integrada abaixo ou o mokuro no seu PATH.</translation>
+    </message>
+    <message>
+        <source>Install mokuro</source>
+        <translation>Instalar mokuro</translation>
+    </message>
+    <message>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <translation>Baixa o mokuro e seu mecanismo de OCR para a pasta do Anki Miner — cerca de 1 GB, até 4 GB com suporte a GPU NVIDIA.</translation>
+    </message>
+    <message>
+        <source>Not available on this platform</source>
+        <translation>Não disponível nesta plataforma</translation>
     </message>
     <message>
         <source>Options</source>
@@ -7262,6 +6912,22 @@ Continuar?</translation>
     <message>
         <source>Run OCR</source>
         <translation>Executar OCR</translation>
+    </message>
+    <message>
+        <source>Reinstall mokuro</source>
+        <translation>Reinstalar mokuro</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>Instalado</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>Não instalado</translation>
+    </message>
+    <message>
+        <source>Installing…</source>
+        <translation>Instalando…</translation>
     </message>
     <message>
         <source>No manga volumes found in this folder.</source>
@@ -7624,6 +7290,14 @@ Continuar?</translation>
         <translation>Mover para baixo (consultado depois das linhas acima)</translation>
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 entries</source>
         <translation>%1 entradas</translation>
     </message>
@@ -7816,10 +7490,6 @@ Nenhum arquivo de índice é excluído.</translation>
     <message>
         <source>Zoom</source>
         <translation>Zoom</translation>
-    </message>
-    <message>
-        <source>Text size</source>
-        <translation>Tamanho do texto</translation>
     </message>
     <message>
         <source>Statistics database</source>
@@ -8140,10 +7810,6 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Fila de Várias Séries</translation>
     </message>
     <message>
-        <source>Add Series</source>
-        <translation>Adicionar Série</translation>
-    </message>
-    <message>
         <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
         <translation>Minere as linhas selecionadas na ordem da lista. Uma linha concluída é minerada novamente do zero.</translation>
     </message>
@@ -8162,14 +7828,6 @@ Nenhum arquivo de índice é excluído.</translation>
     <message>
         <source>Remove all items from queue</source>
         <translation>Remover todos os itens da fila</translation>
-    </message>
-    <message>
-        <source>Enter a name for series #%1:</source>
-        <translation>Digite um nome para a série #%1:</translation>
-    </message>
-    <message>
-        <source>Series %1</source>
-        <translation>Série %1</translation>
     </message>
     <message>
         <source>Edit: %1</source>
@@ -9317,6 +8975,104 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Não foi possível analisar esta frase.</translation>
     </message>
 </context><context>
+    <name>SentencesSettingsPanel</name>
+    <message>
+        <source>Sentences</source>
+        <translation>Frases</translation>
+    </message>
+    <message>
+        <source>Subtitle Text Filtering</source>
+        <translation>Filtragem de Texto das Legendas</translation>
+    </message>
+    <message>
+        <source>Regex Filter</source>
+        <translation>Filtro Regex</translation>
+    </message>
+    <message>
+        <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
+        <translation>Regex Python correspondida no texto da legenda e removida (ou substituída) antes da mineração. Útil para remover nomes de falantes como (Tanaka) ou descrições de sons como [porta]. Combine alternativas com |. Teste padrões em https://regex101.com.</translation>
+    </message>
+    <message>
+        <source>(empty = delete match)</source>
+        <translation>(vazio = excluir a correspondência)</translation>
+    </message>
+    <message>
+        <source>Replacement</source>
+        <translation>Substituição</translation>
+    </message>
+    <message>
+        <source>Inserted in place of each match (empty deletes it). Use Python backreferences \1 \2, not asbplayer's $1 $2.</source>
+        <translation>Inserido no lugar de cada correspondência (vazio a exclui). Use retrorreferências do Python \1 \2, não $1 $2 do asbplayer.</translation>
+    </message>
+    <message>
+        <source>Enable Subtitle Regex Filter</source>
+        <translation>Ativar Filtro Regex de Legendas</translation>
+    </message>
+    <message>
+        <source>Parens (Tanaka)</source>
+        <translation>Parênteses (Tanaka)</translation>
+    </message>
+    <message>
+        <source>Brackets [SFX]</source>
+        <translation>Colchetes [SFX]</translation>
+    </message>
+    <message>
+        <source>Music ♪♬</source>
+        <translation>Música ♪♬</translation>
+    </message>
+    <message>
+        <source>Speaker: prefix</source>
+        <translation>Falante: prefixo</translation>
+    </message>
+    <message>
+        <source>Dialogue dash</source>
+        <translation>Travessão de diálogo</translation>
+    </message>
+    <message>
+        <source>Presets</source>
+        <translation>Predefinições</translation>
+    </message>
+    <message>
+        <source>Click to append a built-in pattern to the regex field above.</source>
+        <translation>Clique para acrescentar um padrão integrado ao campo de regex acima.</translation>
+    </message>
+    <message>
+        <source>Secondary Subtitles</source>
+        <translation>Legendas Secundárias</translation>
+    </message>
+    <message>
+        <source>Enable secondary-language subtitles</source>
+        <translation>Ativar Legendas em Idioma Secundário</translation>
+    </message>
+    <message>
+        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
+        <translation>Adiciona um segundo seletor de legendas e seu próprio deslocamento a Vídeo -&gt; Único. Sua linha aparece abaixo da linha do idioma de mineração na prévia do Curador de Palavras e, quando o campo Tradução está mapeado (Cartões e Anki), no cartão.</translation>
+    </message>
+    <message>
+        <source>Full Sentences</source>
+        <translation>Frases Completas</translation>
+    </message>
+    <message>
+        <source>Mine full sentences across subtitle lines</source>
+        <translation>Minerar frases completas entre linhas de legenda</translation>
+    </message>
+    <message>
+        <source>Joins neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence instead of a fragment. Reading sources have no subtitle timings and ignore it.</source>
+        <translation>Junta linhas de legenda vizinhas quando uma linha não termina uma frase, para que o cartão traga a frase inteira em vez de um fragmento. Fontes de leitura não têm marcação de tempo de legenda e ignoram esta opção.</translation>
+    </message>
+    <message>
+        <source>Card Formatting</source>
+        <translation>Formatação do Cartão</translation>
+    </message>
+    <message>
+        <source>Bold target word in sentence</source>
+        <translation>Destacar em negrito a palavra-alvo na frase</translation>
+    </message>
+    <message>
+        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
+        <translation>Envolve a palavra minerada em &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; dentro dos campos de frase. A correspondência é exatamente o trecho que foi minerado, então formas repetidas numa frase deixam em negrito somente a ocorrência realmente minerada.</translation>
+    </message>
+</context><context>
     <name>ServiceFactory</name>
     <message>
         <source>Couldn't scan dictionaries folder: %1</source>
@@ -9403,14 +9159,6 @@ Nenhum arquivo de índice é excluído.</translation>
 </context><context>
     <name>SettingsTab</name>
     <message>
-        <source>Check for updates on startup</source>
-        <translation>Verificar atualizações ao iniciar</translation>
-    </message>
-    <message>
-        <source>When enabled, Anki Miner queries GitHub for new releases on launch.</source>
-        <translation>Quando ativado, o Anki Miner consulta o GitHub por novas versões ao iniciar.</translation>
-    </message>
-    <message>
         <source>Reset to Defaults…</source>
         <translation>Redefinir para o padrão…</translation>
     </message>
@@ -9463,8 +9211,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Dicionários</translation>
     </message>
     <message>
-        <source>Audio</source>
-        <translation>Áudio</translation>
+        <source>Word Audio</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Frequency</source>
@@ -9483,8 +9231,12 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Idioma de Mineração</translation>
     </message>
     <message>
-        <source>Filtering</source>
-        <translation>Filtragem</translation>
+        <source>Word Filters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentences</source>
+        <translation>Frases</translation>
     </message>
     <message>
         <source>Integrations</source>
@@ -9503,8 +9255,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Aplicativo</translation>
     </message>
     <message>
-        <source>Appearance &amp; Language</source>
-        <translation>Aparência e Idioma</translation>
+        <source>General</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Keyboard</source>
@@ -9571,16 +9323,8 @@ Uma fonte que parou de funcionar após uma atualização do aplicativo é repara
         <translation>Baixando…</translation>
     </message>
     <message>
-        <source>Installing…</source>
-        <translation>Instalando…</translation>
-    </message>
-    <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
         <translation>Não foi possível atualizar o yt-dlp. Verifique sua conexão e tente novamente.</translation>
-    </message>
-    <message>
-        <source>Settings</source>
-        <translation>Configurações</translation>
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>
@@ -9591,8 +9335,8 @@ Uma fonte que parou de funcionar após uma atualização do aplicativo é repara
         <translation>arquivo de cookies (YouTube)</translation>
     </message>
     <message>
-        <source>subtitle regex (Filtering)</source>
-        <translation>regex de legenda (Filtragem)</translation>
+        <source>subtitle regex (Sentences)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>⚠ Saved — kept previous: %1</source>
@@ -9875,8 +9619,8 @@ Seus recursos instalados e seu tema são mantidos.</translation>
         <translation>Esse arquivo de legenda não existe mais.</translation>
     </message>
     <message>
-        <source>No subtitle lines to preview — check the filter in Settings → Filtering.</source>
-        <translation>Nenhuma linha de legenda para pré-visualizar — verifique o filtro em Configurações → Filtragem.</translation>
+        <source>No subtitle lines to preview — check the filter in Settings → Sentences.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
@@ -10685,22 +10429,6 @@ Seus recursos instalados e seu tema são mantidos.</translation>
         <translation>Automático usa a GPU quando disponível, senão a CPU. Cada opção de GPU precisa de seu próprio download abaixo.</translation>
     </message>
     <message>
-        <source>Download model</source>
-        <translation>Baixar modelo</translation>
-    </message>
-    <message>
-        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
-        <translation>Baixe os pesos do modelo Whisper selecionado para a pasta de modelos de ASR do Anki Miner. Necessário antes de a geração de legendas poder ser executada.</translation>
-    </message>
-    <message>
-        <source>Model download</source>
-        <translation>Download do modelo</translation>
-    </message>
-    <message>
-        <source>Transcription add-ons (optional)</source>
-        <translation>Complementos de transcrição (opcional)</translation>
-    </message>
-    <message>
         <source>Download GPU acceleration</source>
         <translation>Baixar aceleração por GPU</translation>
     </message>
@@ -10717,6 +10445,34 @@ Seus recursos instalados e seu tema são mantidos.</translation>
         <translation>Transcrição mais rápida em GPUs NVIDIA (CUDA).</translation>
     </message>
     <message>
+        <source>Download Vulkan model</source>
+        <translation>Baixar modelo Vulkan</translation>
+    </message>
+    <message>
+        <source>Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards.</source>
+        <translation>Baixe o modelo ggml do whisper.cpp e o Silero VAD para a pasta do Anki Miner. Necessário para a transcrição por GPU (Vulkan) em placas AMD/Intel/NVIDIA.</translation>
+    </message>
+    <message>
+        <source>Vulkan model</source>
+        <translation>Modelo Vulkan</translation>
+    </message>
+    <message>
+        <source>Download model</source>
+        <translation>Baixar modelo</translation>
+    </message>
+    <message>
+        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
+        <translation>Baixe os pesos do modelo Whisper selecionado para a pasta de modelos de ASR do Anki Miner. Necessário antes de a geração de legendas poder ser executada.</translation>
+    </message>
+    <message>
+        <source>Model download</source>
+        <translation>Download do modelo</translation>
+    </message>
+    <message>
+        <source>Transcription add-ons (optional)</source>
+        <translation>Complementos de transcrição (opcional)</translation>
+    </message>
+    <message>
         <source>Download silence removal</source>
         <translation>Baixar remoção de silêncio</translation>
     </message>
@@ -10731,18 +10487,6 @@ Seus recursos instalados e seu tema são mantidos.</translation>
     <message>
         <source>Skips music and silence so they are not transcribed as garbage.</source>
         <translation>Ignora música e silêncio para que não sejam transcritos como texto sem sentido.</translation>
-    </message>
-    <message>
-        <source>Download Vulkan model</source>
-        <translation>Baixar modelo Vulkan</translation>
-    </message>
-    <message>
-        <source>Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards.</source>
-        <translation>Baixe o modelo ggml do whisper.cpp e o Silero VAD para a pasta do Anki Miner. Necessário para a transcrição por GPU (Vulkan) em placas AMD/Intel/NVIDIA.</translation>
-    </message>
-    <message>
-        <source>Vulkan model</source>
-        <translation>Modelo Vulkan</translation>
     </message>
     <message>
         <source>Alignment</source>
@@ -10777,38 +10521,6 @@ Seus recursos instalados e seu tema são mantidos.</translation>
         <translation>Nenhum binário do alass é publicado para macOS. Instale-o com o Homebrew:</translation>
     </message>
     <message>
-        <source>Manga OCR</source>
-        <translation>OCR de Mangá</translation>
-    </message>
-    <message>
-        <source>Optional: path to the mokuro executable</source>
-        <translation>Opcional: caminho para o executável do mokuro</translation>
-    </message>
-    <message>
-        <source>mokuro executable</source>
-        <translation>Executável do mokuro</translation>
-    </message>
-    <message>
-        <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
-        <translation>Opcional: seu próprio mokuro (pip/pipx). Deixe em branco para usar a instalação integrada abaixo ou o mokuro no seu PATH.</translation>
-    </message>
-    <message>
-        <source>Install mokuro</source>
-        <translation>Instalar mokuro</translation>
-    </message>
-    <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
-        <translation>Baixa o mokuro e seu mecanismo de OCR para a pasta do Anki Miner — cerca de 1 GB, até 4 GB com suporte a GPU NVIDIA.</translation>
-    </message>
-    <message>
-        <source>mokuro install</source>
-        <translation>Instalação do mokuro</translation>
-    </message>
-    <message>
-        <source>Not available on this platform</source>
-        <translation>Não disponível nesta plataforma</translation>
-    </message>
-    <message>
         <source>Subtitle generation needs the faster-whisper engine. Install it with:</source>
         <translation>A geração de legendas exige o mecanismo faster-whisper. Instale-o com:</translation>
     </message>
@@ -10823,10 +10535,6 @@ Seus recursos instalados e seu tema são mantidos.</translation>
     <message>
         <source>Not installed</source>
         <translation>Não instalado</translation>
-    </message>
-    <message>
-        <source>Reinstall mokuro</source>
-        <translation>Reinstalar mokuro</translation>
     </message>
     <message>
         <source>GPU acceleration is not available on this platform.</source>
@@ -11015,6 +10723,10 @@ Seus recursos instalados e seu tema são mantidos.</translation>
 </context><context>
     <name>UISettingsPanel</name>
     <message>
+        <source>Language</source>
+        <translation>Idioma</translation>
+    </message>
+    <message>
         <source>Interface language</source>
         <translation>Idioma da interface</translation>
     </message>
@@ -11023,8 +10735,12 @@ Seus recursos instalados e seu tema são mantidos.</translation>
         <translation>Reinicie para aplicar.</translation>
     </message>
     <message>
-        <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
-        <translation>Dimensiona toda a interface — texto, espaçamento e controles. Aplicado após reiniciar.</translation>
+        <source>Appearance</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Scale the entire interface, including text size and font, plus spacing and controls. Applies after restart.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Zoom</source>
@@ -11035,36 +10751,12 @@ Seus recursos instalados e seu tema são mantidos.</translation>
         <translation>%1%</translation>
     </message>
     <message>
-        <source>Scale all UI text. Applies after restart.</source>
-        <translation>Redimensione todo o texto da interface. Aplicado após reiniciar.</translation>
-    </message>
-    <message>
-        <source>Text size</source>
-        <translation>Tamanho do texto</translation>
-    </message>
-    <message>
         <source>Restart now</source>
         <translation>Reiniciar agora</translation>
     </message>
     <message>
         <source>Later</source>
         <translation>Mais tarde</translation>
-    </message>
-    <message>
-        <source>Use system file dialogs</source>
-        <translation>Usar diálogos de arquivo do sistema</translation>
-    </message>
-    <message>
-        <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
-        <translation>Use os seletores de arquivo nativos do sistema operacional. Desative isto para usar o seletor integrado do aplicativo, que segue o tema do aplicativo e tem a mesma aparência em todas as plataformas.</translation>
-    </message>
-    <message>
-        <source>Utilities tab</source>
-        <translation>Aba Utilitários</translation>
-    </message>
-    <message>
-        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
-        <translation>Escolha quais ferramentas a aba Utilitários mostra. Pelo menos uma permanece.</translation>
     </message>
     <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
@@ -11081,6 +10773,34 @@ Seus recursos instalados e seu tema são mantidos.</translation>
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>Restaura o tema que estava ativo quando esta aba foi aberta.</translation>
+    </message>
+    <message>
+        <source>Utilities tab</source>
+        <translation>Aba Utilitários</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>Escolha quais ferramentas a aba Utilitários mostra. Pelo menos uma permanece.</translation>
+    </message>
+    <message>
+        <source>App</source>
+        <translation>Aplicativo</translation>
+    </message>
+    <message>
+        <source>Check for updates on startup</source>
+        <translation>Verificar atualizações ao iniciar</translation>
+    </message>
+    <message>
+        <source>When enabled, Anki Miner queries GitHub for new releases on launch.</source>
+        <translation>Quando ativado, o Anki Miner consulta o GitHub por novas versões ao iniciar.</translation>
+    </message>
+    <message>
+        <source>Higher = faster, but uses more CPU and memory.</source>
+        <translation>Maior = mais rápido, mas usa mais CPU e memória.</translation>
+    </message>
+    <message>
+        <source>Max Parallel Workers</source>
+        <translation>Máx. de Processos Paralelos</translation>
     </message>
     <message>
         <source>button labels %1:1</source>

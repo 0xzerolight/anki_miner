@@ -330,7 +330,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
+        <source>Stores the word's pinyin reading. Blank = skip.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -482,7 +482,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Stores the jyutping reading, tone-coloured when that setting is on. Blank = skip.</source>
+        <source>Stores the jyutping reading. Blank = skip.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -510,7 +510,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Default http://localhost:8765. Change if AnkiConnect uses a different port.</source>
+        <source>Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -670,6 +670,14 @@
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Colour the reading by tone</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Colours each syllable of the reading by its tone.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation type="unfinished" />
     </message>
@@ -746,7 +754,7 @@
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
+        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Sentences). Blank = skip.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -803,6 +811,18 @@
     </message>
     <message>
         <source>Audio:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card Creation</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create cards in order of appearance</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1123,7 +1143,7 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
-        <source>Audio</source>
+        <source>Word Audio</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1223,6 +1243,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation type="unfinished" />
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Audio Pack…</source>
         <translation type="unfinished" />
     </message>
@@ -1232,30 +1260,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     </message>
     <message>
         <source>Online Source…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Sentence Audio (Reading Sources)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Generate TTS sentence audio</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Google Translate TTS (tried first)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Naver Papago (fallback)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Select at least one service.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1547,7 +1551,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Quick Processing</source>
+        <source>Add Series</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1583,11 +1587,11 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Process Folder</source>
+        <source>Add to Queue</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Process every episode pair found in the selected folders</source>
+        <source>Add this folder pair to the queue below as a new series</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1611,22 +1615,6 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No subtitle file could be matched to any video file in those folders.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>episodes</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Starting batch processing of %1 episodes...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Batch mining</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>%1 was skipped: its folders no longer exist.</source>
         <translation type="unfinished" />
     </message>
@@ -1640,6 +1628,10 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>series</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Batch mining</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -1664,14 +1656,6 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Starting queue processing...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Starting batch processing...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Mining episode %1 of %2: %3</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2041,23 +2025,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Build a deck by coverage %</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Deck Builder modes (all / top N / coverage %)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2529,7 +2497,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2537,7 +2505,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2585,7 +2553,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Switch light/dark themes and adjust font scale and UI zoom.</source>
+        <source>Switch light/dark themes and adjust UI zoom.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2613,19 +2581,11 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Use system file dialogs</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Switch between Anki Miner's built-in file pickers and your operating system's native ones.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Choose the tools on the Utilities tab</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2649,7 +2609,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in the Settings footer.</source>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2665,7 +2625,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2681,7 +2641,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Tools menu.</source>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2831,11 +2791,19 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Overwritten cards may need a Restyle to refresh their styling.</source>
+        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Scan Anki (read-only)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Restyle cards…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Refresh the dictionary styling on every card of your note type</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3487,199 +3455,13 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
 </context><context>
-    <name>DeckBuilderTab</name>
-    <message>
-        <source>Video Folder:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Subtitle Folder:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Deck Name:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Word Selection:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Input</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Select folder with video files…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Select folder with subtitle files…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Deck Settings</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enter deck name…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>All vocabulary</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Top N words</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Target coverage %</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source> words</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Include the N most-frequent lemmas</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Include enough words to cover this percentage of tokens</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Skip words already in my Anki collection</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Checked: skip your known words; unchecked: mine every word.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Actions</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Preview</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Analyze the corpus and preview which words will be included</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Build Deck</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Create the Anki cards for the previewed word list</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Results</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Total tokens:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Unique lemmas:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Candidate words:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Projected coverage:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Known (skipped):</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cards to create:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Select both the video folder and subtitle folder first.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Video folder not found: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Subtitle folder not found: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enter a deck name before previewing.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>No video/subtitle pairs found. Check the folders.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Analyzing corpus…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Preview ready — %1 cards; the candidate words cover ~%2% of tokens.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Building deck '%1'…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Mining episode %1 of %2: %3</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Processing: %1</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>  %1: %2 card(s) created</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Complete — %1 cards created</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation type="unfinished" />
-    </message>
-</context><context>
     <name>DeckFilterTab</name>
     <message>
         <source>Deck Filter</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Filtering; the source deck is not modified.</source>
+        <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Word Filters; the source deck is not modified.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4230,6 +4012,14 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 entries</source>
         <translation type="unfinished" />
     </message>
@@ -4668,7 +4458,7 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Audio.</source>
+        <source>Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Word Audio.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -4994,77 +4784,6 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
-    <name>ExportDialog</name>
-    <message>
-        <source>Export Words</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Export Format</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>CSV (.csv)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>TSV (.tsv)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Vocabulary List (.txt)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>List format:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Plain (one word per line)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>%1 words</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>, %1 with definitions</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>, %1 with media</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Select output file...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Browse...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Export</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Export Complete</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Exported %1 words to:
-%2</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The export could not be written.</source>
-        <translation type="unfinished" />
-    </message>
-</context><context>
     <name>FileSelector</name>
     <message>
         <source>Select file...</source>
@@ -5181,7 +4900,7 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Filtering</source>
+        <source>Word Filters</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5237,7 +4956,11 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Use Local Known Words Database</source>
+        <source>Keep words known after their cards are deleted</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild forgets them.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5254,6 +4977,14 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>View, remove, export, or reset the words you added to your local known words list from the Word Curator.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Treat Kana Spellings of Known Words as Known</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5325,83 +5056,27 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Subtitle Text Filtering</source>
+        <source>Sentence Rule</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Regex Filter</source>
+        <source>Mine every unknown word</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>(empty = delete match)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Replacement</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Inserted in place of each match (empty deletes it). Use Python backreferences \1 \2, not asbplayer's $1 $2.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enable Subtitle Regex Filter</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Parens (Tanaka)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Brackets [SFX]</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Music ♪♬</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Speaker: prefix</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Dialogue dash</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Presets</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Click to append a built-in pattern to the regex field above.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Secondary Subtitles</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enable secondary-language subtitles</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Deduplication</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Deduplicate by Sentence</source>
+        <source>One card per sentence</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Only i+1 sentences (exactly one unknown word)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5425,79 +5100,11 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Treat Kana Spellings of Known Words as Known</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Script Variants</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>As written</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Simplified (简体)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Traditional (繁體)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Character Set</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Regional Variety</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Brazilian Portuguese</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>European Portuguese</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Variety</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>i+1 Sentence Filter</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Only Mine i+1 Sentences</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Sentence Length</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Enable Sentence Length Filter</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Drops words whose example sentence exceeds either cap below.</source>
+        <source>Set either limit above 0 to turn the filter on.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5521,18 +5128,6 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Full Sentences</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Mine full sentences across subtitle lines</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Joins neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence instead of a fragment. Reading sources have no subtitle timings and ignore it.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Reading</source>
         <translation type="unfinished" />
     </message>
@@ -5546,38 +5141,6 @@ No files on disk are deleted.</source>
     </message>
     <message>
         <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Card Order</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Create cards in order of appearance</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Card Formatting</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Bold target word in sentence</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Colour the reading by tone</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Colours each syllable of the reading by its tone.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -5830,6 +5393,14 @@ No files on disk are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>word-based</source>
         <translation type="unfinished" />
     </message>
@@ -6002,10 +5573,6 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Go to Deck Builder</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Go to Audiobooks</source>
         <translation type="unfinished" />
     </message>
@@ -6090,11 +5657,11 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
+        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
+        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Word Filters.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6449,10 +6016,6 @@ Words to add: %3. Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Deck Builder</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Audiobooks</source>
         <translation type="unfinished" />
     </message>
@@ -6525,7 +6088,7 @@ Words to add: %3. Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Navigate between Video, Deck Builder, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
+        <source>Navigate between Video, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6558,10 +6121,6 @@ Words to add: %3. Continue?</source>
     </message>
     <message>
         <source>Setup Wizard...</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Restyle Mined Cards...</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6875,6 +6434,10 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Sentence audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Audio Format</source>
         <translation type="unfinished" />
     </message>
@@ -6907,19 +6470,39 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Off</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Google, then Papago</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Google only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Papago only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Spoken sentences for manga and books</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Screenshot</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Screenshot Offset</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Measured from the subtitle start time.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Max Parallel Workers</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Higher = faster, but uses more CPU and memory.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6955,31 +6538,27 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Frames per second for animated clips</source>
+        <source>Small</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>FPS</source>
+        <source>Balanced</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source> px</source>
+        <source>High</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Height</source>
+        <source>Frame rate, height and quality for the animated clip.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Output height; aspect ratio preserved</source>
+        <source>Size</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>0 = smallest file, 100 = best quality</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Quality</source>
+        <source>Custom (%1 fps · %2 px · quality %3)</source>
         <translation type="unfinished" />
     </message>
 </context><context>
@@ -7033,7 +6612,51 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Switching swaps dictionaries, filters, deck and card fields to that language's own settings. The interface language is separate (Settings → Appearance &amp; Language).</source>
+        <source>Switching swaps dictionaries, filters, deck and card fields to that language's own settings. The interface language is separate (Settings → General).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Script Variants</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>As written</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Simplified (简体)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Traditional (繁體)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Character Set</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Regional Variety</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Brazilian Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>European Portuguese</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Variety</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7175,7 +6798,7 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>mokuro not found. Install it in Settings → Transcription &amp; Alignment → Manga OCR, or set its path there.</source>
+        <source>mokuro not found. Install it in the Manga OCR setup section below, or set its path there.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7188,6 +6811,34 @@ Continue?</source>
     </message>
     <message>
         <source>A folder of page images (one volume), or a folder whose subfolders and .cbz/.zip files are volumes.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Manga OCR setup</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>mokuro executable:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional: path to the mokuro executable</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Install mokuro</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not available on this platform</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7212,6 +6863,22 @@ Continue?</source>
     </message>
     <message>
         <source>Run OCR</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Reinstall mokuro</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Installing…</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -7574,6 +7241,14 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 entries</source>
         <translation type="unfinished" />
     </message>
@@ -7761,10 +7436,6 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Zoom</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Text size</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -8086,10 +7757,6 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Add Series</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
         <translation type="unfinished" />
     </message>
@@ -8107,14 +7774,6 @@ No index files are deleted.</source>
     </message>
     <message>
         <source>Remove all items from queue</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Enter a name for series #%1:</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Series %1</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -9261,6 +8920,104 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
 </context><context>
+    <name>SentencesSettingsPanel</name>
+    <message>
+        <source>Sentences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Subtitle Text Filtering</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Regex Filter</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>(empty = delete match)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Replacement</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Inserted in place of each match (empty deletes it). Use Python backreferences \1 \2, not asbplayer's $1 $2.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable Subtitle Regex Filter</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Parens (Tanaka)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Brackets [SFX]</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Music ♪♬</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Speaker: prefix</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Dialogue dash</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Presets</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Click to append a built-in pattern to the regex field above.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Secondary Subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Enable secondary-language subtitles</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Full Sentences</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Mine full sentences across subtitle lines</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Joins neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence instead of a fragment. Reading sources have no subtitle timings and ignore it.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Card Formatting</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Bold target word in sentence</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
+        <translation type="unfinished" />
+    </message>
+</context><context>
     <name>ServiceFactory</name>
     <message>
         <source>Couldn't scan dictionaries folder: %1</source>
@@ -9347,14 +9104,6 @@ No index files are deleted.</source>
 </context><context>
     <name>SettingsTab</name>
     <message>
-        <source>Check for updates on startup</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>When enabled, Anki Miner queries GitHub for new releases on launch.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Reset to Defaults…</source>
         <translation type="unfinished" />
     </message>
@@ -9407,7 +9156,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Audio</source>
+        <source>Word Audio</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -9427,7 +9176,11 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Filtering</source>
+        <source>Word Filters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentences</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -9447,7 +9200,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Appearance &amp; Language</source>
+        <source>General</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -9509,15 +9262,7 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Installing…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Settings</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -9529,7 +9274,7 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
         <translation type="unfinished" />
     </message>
     <message>
-        <source>subtitle regex (Filtering)</source>
+        <source>subtitle regex (Sentences)</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -9809,7 +9554,7 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No subtitle lines to preview — check the filter in Settings → Filtering.</source>
+        <source>No subtitle lines to preview — check the filter in Settings → Sentences.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10617,22 +10362,6 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Download model</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Model download</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Transcription add-ons (optional)</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Download GPU acceleration</source>
         <translation type="unfinished" />
     </message>
@@ -10649,6 +10378,34 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
+        <source>Download Vulkan model</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Vulkan model</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download model</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Model download</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Transcription add-ons (optional)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Download silence removal</source>
         <translation type="unfinished" />
     </message>
@@ -10662,18 +10419,6 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Skips music and silence so they are not transcribed as garbage.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Download Vulkan model</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Vulkan model</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10709,38 +10454,6 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Manga OCR</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Optional: path to the mokuro executable</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>mokuro executable</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Install mokuro</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>mokuro install</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Not available on this platform</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Subtitle generation needs the faster-whisper engine. Install it with:</source>
         <translation type="unfinished" />
     </message>
@@ -10754,10 +10467,6 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Not installed</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Reinstall mokuro</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10947,6 +10656,10 @@ Your installed resources and your theme are kept.</source>
 </context><context>
     <name>UISettingsPanel</name>
     <message>
+        <source>Language</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Interface language</source>
         <translation type="unfinished" />
     </message>
@@ -10955,7 +10668,11 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
+        <source>Appearance</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Scale the entire interface, including text size and font, plus spacing and controls. Applies after restart.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -10967,35 +10684,11 @@ Your installed resources and your theme are kept.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Scale all UI text. Applies after restart.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Text size</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Restart now</source>
         <translation type="unfinished" />
     </message>
     <message>
         <source>Later</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Use system file dialogs</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Utilities tab</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -11012,6 +10705,34 @@ Your installed resources and your theme are kept.</source>
     </message>
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Utilities tab</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>App</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Check for updates on startup</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>When enabled, Anki Miner queries GitHub for new releases on launch.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Higher = faster, but uses more CPU and memory.</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Max Parallel Workers</source>
         <translation type="unfinished" />
     </message>
     <message>

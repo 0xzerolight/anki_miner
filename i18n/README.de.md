@@ -1,4 +1,4 @@
-<!-- i18n-source: README.md sha256:ac281d2293267568 -->
+<!-- i18n-source: README.md sha256:eaf6f4a3bb1bf708 -->
 
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/0xzerolight/anki_miner/main/anki_miner/gui/resources/icons/anki_miner.svg" height="76" align="absmiddle" alt=""> Anki Miner
@@ -116,7 +116,6 @@ Die vollständige Entwicklungseinrichtung findest du in [CONTRIBUTING.md](../CON
 ## Tabs
 
 - **Video** - mine ein einzelnes Video/Untertitel-Paar, einen Stapelordner oder YouTube-URLs.
-- **Deck Builder** - mine eine ganze Serie zu einem nach Häufigkeit geordneten Stapel.
 - **Audiobooks** - mine Hörbücher, Podcasts, Radio, Songs (Audio- + Untertitel-/Transkript-Paare).
 - **Reading** - mine Manga (mokuro), Romane (`.epub`, `.txt`; einzelnes Buch oder ein ganzer Ordner), eigenständige Untertiteldateien oder eingefügten Text.
 - **Analytics** - Mining-Verlauf, Schwierigkeitsrangliste, Meilensteine.

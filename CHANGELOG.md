@@ -70,6 +70,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Auto-Map Fields clears mappings the note type has no field for (Settings → Cards & Anki).** It only filled matches, so after switching language the previous note type's names stayed behind and failed the pre-run check (Expression, MainDefinition, Picture, SentenceAudio on a Chinese note type). Rows the panel shows, and the active card type's marker, are blanked when the fetched note type lacks the field; hand-set keys, rows hidden for the current language and the other card types' markers are left alone. Applies to every mining language.
 - **The Linux software-centre listing and the Windows file description no longer describe a Japanese-only app.**
 - **Recommended resources are listed per mining language in `RESOURCES.md`.** The README's table was Japanese-first, with one Chinese and one Korean row, while the app mines 32 languages. `RESOURCES.md` has a section for each: the dictionaries and frequency lists the setup wizard downloads, plus ones to add by hand (monolingual Wiktionary editions, Arabic dialect dictionaries, Leipzig frequency lists, words.hk, Volubilis and more). The setup wizard's "What are these resources?" link opens the section for the language being set up.
+- **Filtering splits into Word Filters and a new Sentences page (Settings).** Word Filters keeps what decides which words get mined; Sentences takes what shapes the example sentence itself — subtitle text cleanup, a secondary-language subtitle line, whole sentences instead of fragments, and bolding the mined word.
+- **Card Order and the reading tone colour moved off Word Filters, onto Settings → Cards & Anki.** They shape a card field, not which words are mined.
+- **Character Set and Regional Variety moved off Word Filters, onto Settings → Mining Language.**
+- **Card Media has separate Sentence audio and Screenshot sections, and one "Spoken sentences for manga and books" choice replaces the two TTS checkboxes** — Off, Google only, Papago only, or Google, then Papago.
+- **Animated screenshots take a Size preset — Small, Balanced or High (Settings → Card Media)** — instead of separate fps/height/quality fields. A saved triple matching none of the three shows as Custom and is kept until a preset is actually picked.
+- **One Sentence Rule choice replaces the deduplicate-by-sentence and i+1 checkboxes (Settings → Word Filters):** Mine every unknown word, One card per sentence, or Only i+1 sentences.
+- **Settings → Audio is now Word Audio, and Appearance & Language is now General**, where Check for updates on startup and Max parallel workers also live.
+- **Dictionary, frequency, pitch and Word Audio maintenance sit behind a More menu** on each chain row (Re-import…, Remove).
+- **The known-words toggle is renamed "Keep words known after their cards are deleted" (Settings → Word Filters).**
+- **GPU downloads sit under the device choice on Settings → Transcription & Alignment**, next to the engine and model it applies to.
+- **Manga OCR setup (mokuro path, Install) moved to Utilities → Manga OCR**, off Settings; System Health's Fix for a missing mokuro now routes there instead.
+- **Batch is one queue flow (Video → Batch).** The Add Series card's folder pickers add a row to the queue below; pressing Process with the pickers filled adds that series first, then runs, so filling both folders and pressing Process still mines that folder as before.
+- **Tab shortcuts are Ctrl+1 through Ctrl+6 (Settings → Keyboard),** one per main tab.
 
 ### Fixed
 
@@ -102,6 +115,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **The setup wizard's "recommended note type" link opens a list of note types.** It pointed at a README section removed in June 2026 and landed on the top of the README. It now opens the Note types section of `RESOURCES.md`: Lapis, Kiku and Senren for Japanese, or any note type with a word field and a sentence field.
 
 ### Removed
+
+- **The Deck Builder tab.** Point-a-folder-at-a-corpus, frequency-ranked deck mining is gone; a loaded config drops its four run-option keys (`deck_builder_mode`, `deck_builder_top_n`, `deck_builder_coverage_pct`, `deck_builder_skip_known`).
+- **The "Use system file dialogs" toggle (Settings → General).** Native file dialogs are always used now.
+- **The "Text size" control (Settings → General).** Zoom is the one size control; a saved text size is folded into Zoom on load.
+- **The sentence-length filter's Enable box (Settings → Word Filters).** Setting either limit above 0 now turns the filter on by itself; a saved config with the box off keeps its limits at 0.
+- **Tools → Restyle Mined Cards.** Moved to Utilities → Card Backfill → "Restyle cards…", beside the rest of the card-maintenance tools.
 
 ## [3.4.0] - 2026-09-18
 

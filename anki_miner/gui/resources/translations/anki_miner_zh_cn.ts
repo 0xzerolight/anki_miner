@@ -330,8 +330,8 @@
         <translation>拼音字段</translation>
     </message>
     <message>
-        <source>Stores the word's pinyin reading, tone-coloured when that is on. Blank = skip.</source>
-        <translation>存储单词的拼音读音；若已开启声调着色，则带颜色。留空 = 跳过。</translation>
+        <source>Stores the word's pinyin reading. Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Traditional Field</source>
@@ -482,8 +482,8 @@
         <translation>粤拼字段</translation>
     </message>
     <message>
-        <source>Stores the jyutping reading, tone-coloured when that setting is on. Blank = skip.</source>
-        <translation>存储粤拼读音；若已开启该设置，则按声调着色。留空 = 跳过。</translation>
+        <source>Stores the jyutping reading. Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Transliteration Field</source>
@@ -510,8 +510,8 @@
         <translation>AnkiConnect URL</translation>
     </message>
     <message>
-        <source>Default http://localhost:8765. Change if AnkiConnect uses a different port.</source>
-        <translation>默认 http://localhost:8765。如果 AnkiConnect 使用其他端口，请更改。</translation>
+        <source>Default http://127.0.0.1:8765. Change if AnkiConnect uses a different port.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Card tags</source>
@@ -670,6 +670,14 @@
         <translation>存储例句的纯读音。</translation>
     </message>
     <message>
+        <source>Colour the reading by tone</source>
+        <translation>按声调为读音着色</translation>
+    </message>
+    <message>
+        <source>Colours each syllable of the reading by its tone.</source>
+        <translation>按声调为读音的每个音节着色。</translation>
+    </message>
+    <message>
         <source>Auxiliary Data Fields</source>
         <translation>辅助数据字段</translation>
     </message>
@@ -746,8 +754,8 @@
         <translation>翻译字段</translation>
     </message>
     <message>
-        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Filtering). Blank = skip.</source>
-        <translation>存储该句的第二语言字幕行（视频 -&gt; 单个，需在过滤中启用第二语言字幕）。留空 = 跳过。</translation>
+        <source>Stores the secondary-language subtitle line for the sentence (Video -&gt; Single, with secondary subtitles enabled under Sentences). Blank = skip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Card Type</source>
@@ -804,6 +812,18 @@
     <message>
         <source>Audio:</source>
         <translation>音频：</translation>
+    </message>
+    <message>
+        <source>Card Creation</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Create cards in order of appearance</source>
+        <translation>按出现顺序创建卡片</translation>
+    </message>
+    <message>
+        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
+        <translation>按单词在媒体中出现的顺序把卡片添加到 Anki，而不是按媒体完成提取的顺序。会覆盖白名单的强制包含顺序，以及单词整理器中的任何列排序。</translation>
     </message>
     <message>
         <source>Refresh</source>
@@ -1128,8 +1148,8 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
 </context><context>
     <name>AudioPackSettingsPanel</name>
     <message>
-        <source>Audio</source>
-        <translation>音频</translation>
+        <source>Word Audio</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Loading…</source>
@@ -1228,6 +1248,14 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
         <translation>降低优先级</translation>
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Audio Pack…</source>
         <translation>音频包…</translation>
     </message>
@@ -1238,30 +1266,6 @@ Supported formats: AJT (index.json + media/), NHK16 (entries.json + audio/), For
     <message>
         <source>Online Source…</source>
         <translation>在线来源…</translation>
-    </message>
-    <message>
-        <source>Sentence Audio (Reading Sources)</source>
-        <translation>句子音频（阅读来源）</translation>
-    </message>
-    <message>
-        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
-        <translation>为漫画和书籍（无原始音频）挖出的卡片添加朗读音频。例句文本会发送至所选在线服务。</translation>
-    </message>
-    <message>
-        <source>Generate TTS sentence audio</source>
-        <translation>生成 TTS 句子音频</translation>
-    </message>
-    <message>
-        <source>Google Translate TTS (tried first)</source>
-        <translation>Google 翻译 TTS（优先尝试）</translation>
-    </message>
-    <message>
-        <source>Naver Papago (fallback)</source>
-        <translation>Naver Papago（备用）</translation>
-    </message>
-    <message>
-        <source>Select at least one service.</source>
-        <translation>请至少选择一项服务。</translation>
     </message>
     <message>
         <source>Google Translate (synthetic TTS)</source>
@@ -1556,8 +1560,8 @@ No index files are deleted.</source>
         <translation>重试失败项</translation>
     </message>
     <message>
-        <source>Quick Processing</source>
-        <translation>快速处理</translation>
+        <source>Add Series</source>
+        <translation>添加剧集</translation>
     </message>
     <message>
         <source>Video Folder:</source>
@@ -1592,12 +1596,12 @@ No index files are deleted.</source>
         <translation>仅偏移翻译字幕（正值 = 延后，负值 = 提前）</translation>
     </message>
     <message>
-        <source>Process Folder</source>
-        <translation>处理文件夹</translation>
+        <source>Add to Queue</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Process every episode pair found in the selected folders</source>
-        <translation>处理所选文件夹中找到的每个剧集对</translation>
+        <source>Add this folder pair to the queue below as a new series</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancel</source>
@@ -1620,22 +1624,6 @@ No index files are deleted.</source>
         <translation>选择已有的视频和字幕文件夹。</translation>
     </message>
     <message>
-        <source>No subtitle file could be matched to any video file in those folders.</source>
-        <translation>无法将这些文件夹中的任何字幕文件与视频文件匹配。</translation>
-    </message>
-    <message>
-        <source>episodes</source>
-        <translation>剧集</translation>
-    </message>
-    <message>
-        <source>Starting batch processing of %1 episodes...</source>
-        <translation>正在开始批量处理 %1 集…</translation>
-    </message>
-    <message>
-        <source>Batch mining</source>
-        <translation>批量挖词</translation>
-    </message>
-    <message>
         <source>%1 was skipped: its folders no longer exist.</source>
         <translation>已跳过 %1：其文件夹已不存在。</translation>
     </message>
@@ -1650,6 +1638,10 @@ No index files are deleted.</source>
     <message>
         <source>series</source>
         <translation>系列</translation>
+    </message>
+    <message>
+        <source>Batch mining</source>
+        <translation>批量挖词</translation>
     </message>
     <message>
         <source>Every series is already complete. Select rows, then Run selected.</source>
@@ -1674,14 +1666,6 @@ No index files are deleted.</source>
     <message>
         <source>Starting queue processing...</source>
         <translation>正在开始队列处理…</translation>
-    </message>
-    <message>
-        <source>Starting batch processing...</source>
-        <translation>正在开始批量处理…</translation>
-    </message>
-    <message>
-        <source>Mining episode %1 of %2: %3</source>
-        <translation>正在挖取第 %1 集，共 %2 集：%3</translation>
     </message>
     <message>
         <source>Processing series: %1</source>
@@ -2050,24 +2034,8 @@ No index files are deleted.</source>
         <translation>第二语言字幕</translation>
     </message>
     <message>
-        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Filtering.</source>
-        <translation>在挖词语言字幕旁加载一个你自己语言的第二个字幕文件：它会显示在单词整理器预览中该行的下方，并可保存到“翻译”字段。在视频 -&gt; 批量中，可改为指向一个翻译字幕文件夹，按剧集编号与视频配对。在设置 -&gt; 过滤中开启此功能。</translation>
-    </message>
-    <message>
-        <source>Build a deck by coverage %</source>
-        <translation>按覆盖率 % 构建牌组</translation>
-    </message>
-    <message>
-        <source>Build a frequency-ordered deck that covers a chosen percentage of a whole corpus.</source>
-        <translation>构建按词频排序的牌组，覆盖整个语料库中所选的百分比。</translation>
-    </message>
-    <message>
-        <source>Deck Builder modes (all / top N / coverage %)</source>
-        <translation>牌组构建器模式（全部 / 前 N 个 / 覆盖率 %）</translation>
-    </message>
-    <message>
-        <source>Deck Builder always skips per-episode filters and duplicate checks; pick every word, the top N, or a coverage target, and optionally skip known words.</source>
-        <translation>牌组构建器始终跳过按集过滤和重复检查；可选择挖取全部单词、前 N 个，或达到目标覆盖率，并可选择跳过已知单词。</translation>
+        <source>Load a second subtitle file in your own language beside the mining-language one: it shows under the line in the Word Curator preview and can be saved to a Translation field. On Video -&gt; Batch, point it at a folder of translation subtitles instead and they pair to the videos by episode number. Turn it on under Settings -&gt; Sentences.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mine from YouTube</source>
@@ -2538,16 +2506,16 @@ No index files are deleted.</source>
         <translation>拼音读音与声调颜色</translation>
     </message>
     <message>
-        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Filtering.</source>
-        <translation>把单词的拼音放到你的卡片上，每个音节按其声调着色——着色开关是设置 -&gt; 过滤下的“按声调为读音着色”。</translation>
+        <source>Put the word's pinyin on your cards, each syllable in its tone's colour -- the colouring is Colour the reading by tone, under Settings -&gt; Cards &amp; Anki.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Colour the reading by tone</source>
         <translation>按声调为读音着色</translation>
     </message>
     <message>
-        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Filtering.</source>
-        <translation>按声调为拼音或粤拼读音的每个音节着色，位于 设置 -&gt; 过滤。</translation>
+        <source>Colour each syllable of the pinyin or jyutping reading by its tone, under Settings -&gt; Cards &amp; Anki.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Measure word field</source>
@@ -2594,8 +2562,8 @@ No index files are deleted.</source>
         <translation>主题、深色模式、字体与缩放</translation>
     </message>
     <message>
-        <source>Switch light/dark themes and adjust font scale and UI zoom.</source>
-        <translation>切换浅色/深色主题并调整字体比例和界面缩放。</translation>
+        <source>Switch light/dark themes and adjust UI zoom.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Change the app language</source>
@@ -2622,20 +2590,12 @@ No index files are deleted.</source>
         <translation>添加你自己的主题 JSON 文件，并在主题库中预览每个主题后再应用。</translation>
     </message>
     <message>
-        <source>Use system file dialogs</source>
-        <translation>使用系统文件对话框</translation>
-    </message>
-    <message>
-        <source>Switch between Anki Miner's built-in file pickers and your operating system's native ones.</source>
-        <translation>在 Anki Miner 内置的文件选择器和操作系统原生文件选择器之间切换。</translation>
-    </message>
-    <message>
         <source>Choose the tools on the Utilities tab</source>
         <translation>选择“工具”标签页中的工具</translation>
     </message>
     <message>
-        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; Appearance &amp; Language. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
-        <translation>在设置 -&gt; 外观和语言中，隐藏“工具”标签页中你不用的工具，或将其恢复。隐藏的工具仍保留在本指南中；其“打开”按钮会跳转到该复选框。</translation>
+        <source>Hide the Utilities tools you do not use, or bring them back, under Settings -&gt; General. A hidden tool keeps its entry here; its Open button leads to that checkbox.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Search the settings</source>
@@ -2658,8 +2618,8 @@ No index files are deleted.</source>
         <translation>检查应用更新</translation>
     </message>
     <message>
-        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in the Settings footer.</source>
-        <translation>从帮助菜单检查是否有新版 Anki Miner，或在设置页脚部切换自动启动检查。</translation>
+        <source>Check for a new Anki Miner version from the Help menu, or toggle the automatic startup check in Settings -&gt; General.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Download videos or audio</source>
@@ -2674,8 +2634,8 @@ No index files are deleted.</source>
         <translation>从漫画图像创建 .mokuro 文件</translation>
     </message>
     <message>
-        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from Settings -&gt; Transcription &amp; Alignment.</source>
-        <translation>对卷文件夹或整个系列运行 mokuro 的日语 OCR，以便阅读 -&gt; 漫画可以挖词。从设置 -&gt; 转写和对齐安装 mokuro。</translation>
+        <source>Run mokuro's Japanese OCR on a volume folder or a whole series so Reading -&gt; Manga can mine it. Install mokuro from its setup card on Utilities -&gt; Manga OCR.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Sync an audiobook to its EPUB</source>
@@ -2690,8 +2650,8 @@ No index files are deleted.</source>
         <translation>重新设置挖词卡片样式</translation>
     </message>
     <message>
-        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Tools menu.</source>
-        <translation>为此前挖取的卡片重新应用最新的 Anki Miner 样式 -- 工具菜单。</translation>
+        <source>Re-apply the latest Anki Miner styling to cards you mined earlier -- Utilities -&gt; Card Backfill.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>System health check</source>
@@ -2840,12 +2800,20 @@ No index files are deleted.</source>
         <translation>覆盖现有值</translation>
     </message>
     <message>
-        <source>Overwritten cards may need a Restyle to refresh their styling.</source>
-        <translation>被覆盖的卡片可能需要“重新设置样式”来刷新外观。</translation>
+        <source>Overwritten cards may need to use Restyle cards… to refresh their styling.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Scan Anki (read-only)</source>
         <translation>扫描 Anki（只读）</translation>
+    </message>
+    <message>
+        <source>Restyle cards…</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Refresh the dictionary styling on every card of your note type</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Cancel</source>
@@ -3498,200 +3466,14 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>%1（第 %2 项，共 %3 项）</translation>
     </message>
 </context><context>
-    <name>DeckBuilderTab</name>
-    <message>
-        <source>Video Folder:</source>
-        <translation>视频文件夹：</translation>
-    </message>
-    <message>
-        <source>Subtitle Folder:</source>
-        <translation>字幕文件夹：</translation>
-    </message>
-    <message>
-        <source>Deck Name:</source>
-        <translation>牌组名称：</translation>
-    </message>
-    <message>
-        <source>Word Selection:</source>
-        <translation>单词选择：</translation>
-    </message>
-    <message>
-        <source>Input</source>
-        <translation>输入</translation>
-    </message>
-    <message>
-        <source>Select folder with video files…</source>
-        <translation>选择包含视频文件的文件夹…</translation>
-    </message>
-    <message>
-        <source>Select folder with subtitle files…</source>
-        <translation>选择包含字幕文件的文件夹…</translation>
-    </message>
-    <message>
-        <source>Deck Settings</source>
-        <translation>牌组设置</translation>
-    </message>
-    <message>
-        <source>Enter deck name…</source>
-        <translation>输入牌组名称…</translation>
-    </message>
-    <message>
-        <source>All vocabulary</source>
-        <translation>全部词汇</translation>
-    </message>
-    <message>
-        <source>Top N words</source>
-        <translation>前 N 个单词</translation>
-    </message>
-    <message>
-        <source>Target coverage %</source>
-        <translation>目标覆盖率 %</translation>
-    </message>
-    <message>
-        <source> words</source>
-        <translation> 个单词</translation>
-    </message>
-    <message>
-        <source>Include the N most-frequent lemmas</source>
-        <translation>包含最高频的 N 个原形</translation>
-    </message>
-    <message>
-        <source>Include enough words to cover this percentage of tokens</source>
-        <translation>包含足够多的单词以覆盖此百分比的词元</translation>
-    </message>
-    <message>
-        <source>Skip words already in my Anki collection</source>
-        <translation>跳过我 Anki 收藏中已有的单词</translation>
-    </message>
-    <message>
-        <source>Checked: skip your known words; unchecked: mine every word.</source>
-        <translation>勾选：跳过已知单词；不勾选：挖取所有单词。</translation>
-    </message>
-    <message>
-        <source>Actions</source>
-        <translation>操作</translation>
-    </message>
-    <message>
-        <source>Preview</source>
-        <translation>预览</translation>
-    </message>
-    <message>
-        <source>Analyze the corpus and preview which words will be included</source>
-        <translation>分析语料库并预览将被包含的单词</translation>
-    </message>
-    <message>
-        <source>Build Deck</source>
-        <translation>构建牌组</translation>
-    </message>
-    <message>
-        <source>Create the Anki cards for the previewed word list</source>
-        <translation>为预览的单词列表创建 Anki 卡片</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>取消</translation>
-    </message>
-    <message>
-        <source>Results</source>
-        <translation>结果</translation>
-    </message>
-    <message>
-        <source>Total tokens:</source>
-        <translation>词元总数：</translation>
-    </message>
-    <message>
-        <source>Unique lemmas:</source>
-        <translation>唯一原形数：</translation>
-    </message>
-    <message>
-        <source>Candidate words:</source>
-        <translation>候选单词：</translation>
-    </message>
-    <message>
-        <source>Projected coverage:</source>
-        <translation>预计覆盖率：</translation>
-    </message>
-    <message>
-        <source>Known (skipped):</source>
-        <translation>已知（已跳过）：</translation>
-    </message>
-    <message>
-        <source>Cards to create:</source>
-        <translation>待创建卡片：</translation>
-    </message>
-    <message>
-        <source>Select both the video folder and subtitle folder first.</source>
-        <translation>请先选择视频文件夹和字幕文件夹。</translation>
-    </message>
-    <message>
-        <source>Video folder not found: %1</source>
-        <translation>未找到视频文件夹：%1</translation>
-    </message>
-    <message>
-        <source>Subtitle folder not found: %1</source>
-        <translation>未找到字幕文件夹：%1</translation>
-    </message>
-    <message>
-        <source>Enter a deck name before previewing.</source>
-        <translation>预览前请输入牌组名称。</translation>
-    </message>
-    <message>
-        <source>No video/subtitle pairs found. Check the folders.</source>
-        <translation>未找到视频/字幕配对。请检查文件夹。</translation>
-    </message>
-    <message>
-        <source>Analyzing corpus…</source>
-        <translation>正在分析语料库…</translation>
-    </message>
-    <message>
-        <source>Preview ready — %1 cards; the candidate words cover ~%2% of tokens.</source>
-        <translation>预览就绪——%1 张卡片；候选单词覆盖约 %2% 的词元。</translation>
-    </message>
-    <message>
-        <source>Building deck '%1'…</source>
-        <translation>正在构建牌组“%1”…</translation>
-    </message>
-    <message>
-        <source>Mining episode %1 of %2: %3</source>
-        <translation>正在挖取第 %1 集，共 %2 集：%3</translation>
-    </message>
-    <message>
-        <source>Processing: %1</source>
-        <translation>正在处理：%1</translation>
-    </message>
-    <message>
-        <source>  %1: %2 card(s) created</source>
-        <translation>  %1：已创建 %2 张卡片</translation>
-    </message>
-    <message>
-        <source>Created %1 cards in deck '%3'; the candidate words cover ~%2% of tokens.</source>
-        <translation>已在牌组“%3”中创建 %1 张卡片；候选单词覆盖约 %2% 的词元。</translation>
-    </message>
-    <message>
-        <source>Complete — %1 cards created</source>
-        <translation>完成——已创建 %1 张卡片</translation>
-    </message>
-    <message>
-        <source>Cancelling…</source>
-        <translation>正在取消…</translation>
-    </message>
-    <message>
-        <source>Failed — see log</source>
-        <translation>失败——请查看日志</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>已取消</translation>
-    </message>
-</context><context>
     <name>DeckFilterTab</name>
     <message>
         <source>Deck Filter</source>
         <translation>牌组过滤</translation>
     </message>
     <message>
-        <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Filtering; the source deck is not modified.</source>
-        <translation>将现成牌组中值得学习的部分复制到新牌组。过滤规则来自“设置 → 过滤”；源牌组不会被修改。</translation>
+        <source>Copy the worth-learning part of a premade deck into a new deck. Filters come from Settings → Word Filters; the source deck is not modified.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Source deck:</source>
@@ -4244,6 +4026,14 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>降低优先级</translation>
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 entries</source>
         <translation>%1 个条目</translation>
     </message>
@@ -4686,8 +4476,8 @@ No files on disk are deleted.</source>
         <translation>音频包“%1”读取速度过慢——已跳过音频；请将其文件夹移到本地磁盘后重新导入。</translation>
     </message>
     <message>
-        <source>Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Audio.</source>
-        <translation>单词音频来源速度过慢——已跳过音频；请在“设置 → 音频”中调整顺序或禁用它。</translation>
+        <source>Word-audio source is too slow — audio skipped; reorder or disable it in Settings → Word Audio.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word-audio source connection/certificate failure — audio skipped this run, will retry next run</source>
@@ -5012,78 +4802,6 @@ No files on disk are deleted.</source>
         <translation>对齐字幕中</translation>
     </message>
 </context><context>
-    <name>ExportDialog</name>
-    <message>
-        <source>Export Words</source>
-        <translation>导出单词</translation>
-    </message>
-    <message>
-        <source>Export Format</source>
-        <translation>导出格式</translation>
-    </message>
-    <message>
-        <source>CSV (.csv)</source>
-        <translation>CSV (.csv)</translation>
-    </message>
-    <message>
-        <source>TSV (.tsv)</source>
-        <translation>TSV (.tsv)</translation>
-    </message>
-    <message>
-        <source>Vocabulary List (.txt)</source>
-        <translation>词汇列表 (.txt)</translation>
-    </message>
-    <message>
-        <source>List format:</source>
-        <translation>列表格式：</translation>
-    </message>
-    <message>
-        <source>Plain (one word per line)</source>
-        <translation>纯文本（每行一个单词）</translation>
-    </message>
-    <message>
-        <source>%1 words</source>
-        <translation>%1 个单词</translation>
-    </message>
-    <message>
-        <source>, %1 with definitions</source>
-        <translation>，%1 个带释义</translation>
-    </message>
-    <message>
-        <source>, %1 with media</source>
-        <translation>，%1 个带媒体</translation>
-    </message>
-    <message>
-        <source>Select output file...</source>
-        <translation>选择输出文件...</translation>
-    </message>
-    <message>
-        <source>Browse...</source>
-        <translation>浏览...</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation>取消</translation>
-    </message>
-    <message>
-        <source>Export</source>
-        <translation>导出</translation>
-    </message>
-    <message>
-        <source>Export Complete</source>
-        <translation>导出完成</translation>
-    </message>
-    <message>
-        <source>Exported %1 words to:
-%2</source>
-        <translation>已将 %1 个单词导出至：
-%2</translation>
-    </message>
-    <message>
-        <source>The export could not be written.</source>
-        <translation>无法写入导出文件。</translation>
-    </message>
-</context><context>
     <name>FileSelector</name>
     <message>
         <source>Select file...</source>
@@ -5200,8 +4918,8 @@ No files on disk are deleted.</source>
         <translation>跳过含有任何韩文汉字的词，让牌组保持纯谚文词汇。</translation>
     </message>
     <message>
-        <source>Filtering</source>
-        <translation>过滤</translation>
+        <source>Word Filters</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word Frequency</source>
@@ -5256,8 +4974,12 @@ No files on disk are deleted.</source>
         <translation>已知单词数据库</translation>
     </message>
     <message>
-        <source>Use Local Known Words Database</source>
-        <translation>使用本地已知单词数据库</translation>
+        <source>Keep words known after their cards are deleted</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Words stay known after their Anki cards are deleted or moved to an excluded deck. Rebuild forgets them.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Rebuild Known Words DB</source>
@@ -5274,6 +4996,14 @@ No files on disk are deleted.</source>
     <message>
         <source>View, remove, export, or reset the words you added to your local known words list from the Word Curator.</source>
         <translation>查看、移除、导出或重置你从生词整理器添加到本地已知单词列表中的单词。</translation>
+    </message>
+    <message>
+        <source>Treat Kana Spellings of Known Words as Known</source>
+        <translation>将已知单词的假名拼写视为已知</translation>
+    </message>
+    <message>
+        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
+        <translation>当字幕以假名拼写某个单词（例如 うなずく），而该词的汉字词典形式（頷く）已存在于您的收藏或已知单词列表中时，将跳过该单词，而不会创建第二张卡片。汉字拼写永远不会以这种方式合并。</translation>
     </message>
     <message>
         <source>Excluded Decks</source>
@@ -5344,84 +5074,28 @@ No files on disk are deleted.</source>
         <translation>将内置的“%1”词集（%2 条）排除在挖掘之外。</translation>
     </message>
     <message>
-        <source>Subtitle Text Filtering</source>
-        <translation>字幕文本过滤</translation>
+        <source>Sentence Rule</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Regex Filter</source>
-        <translation>正则过滤器</translation>
+        <source>Mine every unknown word</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
-        <translation>在挖掘前对字幕文本进行匹配并移除（或替换）的 Python 正则表达式。适用于剥离说话人姓名如 (Tanaka) 或声音描述如 [door]。用 | 组合多个选项。可在 https://regex101.com 测试模式。</translation>
-    </message>
-    <message>
-        <source>(empty = delete match)</source>
-        <translation>（留空 = 删除匹配项）</translation>
-    </message>
-    <message>
-        <source>Replacement</source>
-        <translation>替换内容</translation>
-    </message>
-    <message>
-        <source>Inserted in place of each match (empty deletes it). Use Python backreferences \1 \2, not asbplayer's $1 $2.</source>
-        <translation>插入替换每个匹配项（留空则删除该匹配项）。请使用 Python 的反向引用 \1 \2，而非 asbplayer 的 $1 $2。</translation>
-    </message>
-    <message>
-        <source>Enable Subtitle Regex Filter</source>
-        <translation>启用字幕正则过滤器</translation>
-    </message>
-    <message>
-        <source>Parens (Tanaka)</source>
-        <translation>圆括号 (Tanaka)</translation>
-    </message>
-    <message>
-        <source>Brackets [SFX]</source>
-        <translation>方括号 [SFX]</translation>
-    </message>
-    <message>
-        <source>Music ♪♬</source>
-        <translation>音乐 ♪♬</translation>
-    </message>
-    <message>
-        <source>Speaker: prefix</source>
-        <translation>说话人：前缀</translation>
-    </message>
-    <message>
-        <source>Dialogue dash</source>
-        <translation>对话破折号</translation>
-    </message>
-    <message>
-        <source>Presets</source>
-        <translation>预设</translation>
-    </message>
-    <message>
-        <source>Click to append a built-in pattern to the regex field above.</source>
-        <translation>点击将内置模式追加到上方的正则字段。</translation>
-    </message>
-    <message>
-        <source>Secondary Subtitles</source>
-        <translation>第二语言字幕</translation>
-    </message>
-    <message>
-        <source>Enable secondary-language subtitles</source>
-        <translation>启用第二语言字幕</translation>
-    </message>
-    <message>
-        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
-        <translation>在视频 -&gt; 单个中新增第二个字幕选择器及其独立的偏移设置。该行会显示在单词整理器预览中挖词语言行的下方；若已映射翻译字段（卡片和 Anki），还会显示在卡片上。</translation>
-    </message>
-    <message>
-        <source>Deduplication</source>
-        <translation>去重</translation>
-    </message>
-    <message>
-        <source>Deduplicate by Sentence</source>
-        <translation>按句子去重</translation>
+        <source>One card per sentence</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Mines at most one word per example sentence — the first one found in that sentence. Every other word sharing it is skipped.</source>
         <translation>每个例句最多挖取一个单词——该句中最先找到的那个。共用该句的其他单词都会被跳过。</translation>
+    </message>
+    <message>
+        <source>Only i+1 sentences (exactly one unknown word)</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
+        <translation>仅挖取恰好含有一个生词的句子中的单词（i+1）；此设置会覆盖句子去重规则。</translation>
     </message>
     <message>
         <source>Script Type</source>
@@ -5444,80 +5118,12 @@ No files on disk are deleted.</source>
         <translation>跳过完全用片假名书写的词（如 コーヒー）。同时勾选两项，也会跳过混用两种假名的词（サボる、ヤバい）。</translation>
     </message>
     <message>
-        <source>Treat Kana Spellings of Known Words as Known</source>
-        <translation>将已知单词的假名拼写视为已知</translation>
-    </message>
-    <message>
-        <source>When a subtitle spells a word in kana (e.g. うなずく) and the kanji dictionary form (頷く) is already in your collection or known list, skip it instead of creating a second card. Kanji spellings are never merged this way.</source>
-        <translation>当字幕以假名拼写某个单词（例如 うなずく），而该词的汉字词典形式（頷く）已存在于您的收藏或已知单词列表中时，将跳过该单词，而不会创建第二张卡片。汉字拼写永远不会以这种方式合并。</translation>
-    </message>
-    <message>
-        <source>Script Variants</source>
-        <translation>字形变体</translation>
-    </message>
-    <message>
-        <source>As written</source>
-        <translation>按原文</translation>
-    </message>
-    <message>
-        <source>Simplified (简体)</source>
-        <translation>简体</translation>
-    </message>
-    <message>
-        <source>Traditional (繁體)</source>
-        <translation>繁体</translation>
-    </message>
-    <message>
-        <source>Character Set</source>
-        <translation>字符集</translation>
-    </message>
-    <message>
-        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
-        <translation>卡片正面和词典查询优先使用哪种写法；“按原文”保留来源自身的写法。</translation>
-    </message>
-    <message>
-        <source>Regional Variety</source>
-        <translation>地区变体</translation>
-    </message>
-    <message>
-        <source>Brazilian Portuguese</source>
-        <translation>巴西葡萄牙语</translation>
-    </message>
-    <message>
-        <source>European Portuguese</source>
-        <translation>欧洲葡萄牙语</translation>
-    </message>
-    <message>
-        <source>Variety</source>
-        <translation>变体</translation>
-    </message>
-    <message>
-        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
-        <translation>决定使用哪种 Google 语音朗读单词和句子音频，以及设置向导会推荐哪个词频列表。</translation>
-    </message>
-    <message>
-        <source>i+1 Sentence Filter</source>
-        <translation>i+1 句子过滤器</translation>
-    </message>
-    <message>
-        <source>Only Mine i+1 Sentences</source>
-        <translation>仅挖掘 i+1 句子</translation>
-    </message>
-    <message>
-        <source>Only mine words in a sentence with exactly one unknown word (i+1); overrides sentence deduplication.</source>
-        <translation>仅挖取恰好含有一个生词的句子中的单词（i+1）；此设置会覆盖句子去重规则。</translation>
-    </message>
-    <message>
         <source>Sentence Length</source>
         <translation>句子长度</translation>
     </message>
     <message>
-        <source>Enable Sentence Length Filter</source>
-        <translation>启用句子长度过滤器</translation>
-    </message>
-    <message>
-        <source>Drops words whose example sentence exceeds either cap below.</source>
-        <translation>丢弃例句超过下方任一上限的单词。</translation>
+        <source>Set either limit above 0 to turn the filter on.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source> s</source>
@@ -5540,18 +5146,6 @@ No files on disk are deleted.</source>
         <translation>丢弃句子文本超过此字符数的卡片。设为 0 表示无限制。</translation>
     </message>
     <message>
-        <source>Full Sentences</source>
-        <translation>完整句子</translation>
-    </message>
-    <message>
-        <source>Mine full sentences across subtitle lines</source>
-        <translation>跨字幕行挖取完整句子</translation>
-    </message>
-    <message>
-        <source>Joins neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence instead of a fragment. Reading sources have no subtitle timings and ignore it.</source>
-        <translation>当某行未在句子末尾结束时，将其与相邻字幕行合并，使卡片包含完整句子而非片段。阅读来源没有字幕时间信息，会忽略此设置。</translation>
-    </message>
-    <message>
         <source>Reading</source>
         <translation>读音</translation>
     </message>
@@ -5566,38 +5160,6 @@ No files on disk are deleted.</source>
     <message>
         <source>Minimum number of times a word must appear in a book or volume to be mined. 1 = no minimum (filter off).</source>
         <translation>一个单词在一本书或一卷中必须出现的最少次数才会被挖取。1 = 无最小值（过滤器关闭）。</translation>
-    </message>
-    <message>
-        <source>Card Order</source>
-        <translation>卡片顺序</translation>
-    </message>
-    <message>
-        <source>Create cards in order of appearance</source>
-        <translation>按出现顺序创建卡片</translation>
-    </message>
-    <message>
-        <source>Adds cards to Anki in the order the words appear in the media, instead of the order their media finished extracting. Overrides the whitelist's force-include ordering and any column sort in the Word Curator.</source>
-        <translation>按单词在媒体中出现的顺序把卡片添加到 Anki，而不是按媒体完成提取的顺序。会覆盖白名单的强制包含顺序，以及单词整理器中的任何列排序。</translation>
-    </message>
-    <message>
-        <source>Card Formatting</source>
-        <translation>卡片格式</translation>
-    </message>
-    <message>
-        <source>Bold target word in sentence</source>
-        <translation>在句子中加粗目标单词</translation>
-    </message>
-    <message>
-        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
-        <translation>在例句字段中用 &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; 包裹挖取的单词。匹配的是实际被挖取的那一段，因此句中重复出现的相同词形只会加粗真正挖取的那一处。</translation>
-    </message>
-    <message>
-        <source>Colour the reading by tone</source>
-        <translation>按声调为读音着色</translation>
-    </message>
-    <message>
-        <source>Colours each syllable of the reading by its tone.</source>
-        <translation>按声调为读音的每个音节着色。</translation>
     </message>
     <message>
         <source>Exclude Deck</source>
@@ -5850,6 +5412,14 @@ No files on disk are deleted.</source>
         <translation>在卡片来源列表中下移</translation>
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>word-based</source>
         <translation>基于单词</translation>
     </message>
@@ -6026,10 +5596,6 @@ No index files are deleted.</source>
         <translation>切换到视频</translation>
     </message>
     <message>
-        <source>Go to Deck Builder</source>
-        <translation>切换到牌组构建器</translation>
-    </message>
-    <message>
         <source>Go to Audiobooks</source>
         <translation>切换到有声书</translation>
     </message>
@@ -6114,12 +5680,12 @@ No index files are deleted.</source>
         <translation>你从单词整理器添加的单词。每次运行都会忽略它们，且在缓存重建后依然保留。</translation>
     </message>
     <message>
-        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Filtering.</source>
-        <translation>此语言的已知单词扫描会跳过以下牌组：%1。可在“设置 → 过滤”中更改。</translation>
+        <source>Decks this language's known-words scan skips: %1. Change them in Settings → Word Filters.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Filtering.</source>
-        <translation>此语言会扫描每一个牌组，包括其他使用相同文字书写的语言的牌组。可在“设置 → 过滤”中排除它们。</translation>
+        <source>Every deck is scanned for this language, including decks in another language written in the same script. Exclude them in Settings → Word Filters.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Filter…</source>
@@ -6478,10 +6044,6 @@ Words to add: %3. Continue?</source>
         <translation>视频</translation>
     </message>
     <message>
-        <source>Deck Builder</source>
-        <translation>牌组构建器</translation>
-    </message>
-    <message>
         <source>Audiobooks</source>
         <translation>有声书</translation>
     </message>
@@ -6554,8 +6116,8 @@ Words to add: %3. Continue?</source>
         <translation>主标签页</translation>
     </message>
     <message>
-        <source>Navigate between Video, Deck Builder, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
-        <translation>在视频、牌组构建器、有声书、阅读、分析、工具和设置之间导航</translation>
+        <source>Navigate between Video, Audiobooks, Reading, Analytics, Utilities, and Settings</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Application Header</source>
@@ -6588,10 +6150,6 @@ Words to add: %3. Continue?</source>
     <message>
         <source>Setup Wizard...</source>
         <translation>设置向导…</translation>
-    </message>
-    <message>
-        <source>Restyle Mined Cards...</source>
-        <translation>重新设置挖词卡片样式...</translation>
     </message>
     <message>
         <source>&amp;Help</source>
@@ -6908,6 +6466,10 @@ Continue?</source>
         <translation>卡片媒体</translation>
     </message>
     <message>
+        <source>Sentence audio</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Audio Format</source>
         <translation>音频格式</translation>
     </message>
@@ -6940,20 +6502,40 @@ Continue?</source>
         <translation>字幕前后额外添加的时间。</translation>
     </message>
     <message>
+        <source>Off</source>
+        <translation>关闭</translation>
+    </message>
+    <message>
+        <source>Google, then Papago</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Google only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Papago only</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Spoken sentences for manga and books</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Add spoken audio to cards from manga and books, which have no source audio. Sentence text is sent to the selected online services.</source>
+        <translation>为漫画和书籍（无原始音频）挖出的卡片添加朗读音频。例句文本会发送至所选在线服务。</translation>
+    </message>
+    <message>
+        <source>Screenshot</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>Screenshot Offset</source>
         <translation>截图偏移</translation>
     </message>
     <message>
         <source>Measured from the subtitle start time.</source>
         <translation>从字幕开始时间起计算。</translation>
-    </message>
-    <message>
-        <source>Max Parallel Workers</source>
-        <translation>最大并行工作线程数</translation>
-    </message>
-    <message>
-        <source>Higher = faster, but uses more CPU and memory.</source>
-        <translation>越高 = 越快，但占用更多 CPU 和内存。</translation>
     </message>
     <message>
         <source>Enable animated screenshots</source>
@@ -6988,32 +6570,28 @@ Continue?</source>
         <translation>片段时长</translation>
     </message>
     <message>
-        <source>Frames per second for animated clips</source>
-        <translation>动态片段的每秒帧数</translation>
+        <source>Small</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>FPS</source>
-        <translation>FPS</translation>
+        <source>Balanced</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source> px</source>
-        <translation> px</translation>
+        <source>High</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Height</source>
-        <translation>高度</translation>
+        <source>Frame rate, height and quality for the animated clip.</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Output height; aspect ratio preserved</source>
-        <translation>输出高度；保持宽高比</translation>
+        <source>Size</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>0 = smallest file, 100 = best quality</source>
-        <translation>0 = 文件最小，100 = 质量最好</translation>
-    </message>
-    <message>
-        <source>Quality</source>
-        <translation>质量</translation>
+        <source>Custom (%1 fps · %2 px · quality %3)</source>
+        <translation type="unfinished" />
     </message>
 </context><context>
     <name>MiniJobMonitor</name>
@@ -7066,8 +6644,52 @@ Continue?</source>
         <translation>语言</translation>
     </message>
     <message>
-        <source>Switching swaps dictionaries, filters, deck and card fields to that language's own settings. The interface language is separate (Settings → Appearance &amp; Language).</source>
-        <translation>切换会将词典、过滤器、牌组和卡片字段替换为该语言自身的设置。界面语言是独立的（设置 → 外观和语言）。</translation>
+        <source>Switching swaps dictionaries, filters, deck and card fields to that language's own settings. The interface language is separate (Settings → General).</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Script Variants</source>
+        <translation>字形变体</translation>
+    </message>
+    <message>
+        <source>As written</source>
+        <translation>按原文</translation>
+    </message>
+    <message>
+        <source>Simplified (简体)</source>
+        <translation>简体</translation>
+    </message>
+    <message>
+        <source>Traditional (繁體)</source>
+        <translation>繁体</translation>
+    </message>
+    <message>
+        <source>Character Set</source>
+        <translation>字符集</translation>
+    </message>
+    <message>
+        <source>Which spelling the card front and the dictionary lookup prefer; As written keeps the source's own spelling.</source>
+        <translation>卡片正面和词典查询优先使用哪种写法；“按原文”保留来源自身的写法。</translation>
+    </message>
+    <message>
+        <source>Regional Variety</source>
+        <translation>地区变体</translation>
+    </message>
+    <message>
+        <source>Brazilian Portuguese</source>
+        <translation>巴西葡萄牙语</translation>
+    </message>
+    <message>
+        <source>European Portuguese</source>
+        <translation>欧洲葡萄牙语</translation>
+    </message>
+    <message>
+        <source>Variety</source>
+        <translation>变体</translation>
+    </message>
+    <message>
+        <source>Which Google voice reads word and sentence audio, and which frequency list setup suggests.</source>
+        <translation>决定使用哪种 Google 语音朗读单词和句子音频，以及设置向导会推荐哪个词频列表。</translation>
     </message>
     <message>
         <source>Download %1 pack</source>
@@ -7208,8 +6830,8 @@ Continue?</source>
         <translation>漫画</translation>
     </message>
     <message>
-        <source>mokuro not found. Install it in Settings → Transcription &amp; Alignment → Manga OCR, or set its path there.</source>
-        <translation>未找到 mokuro。请在“设置 → 转写和对齐 → 漫画 OCR”中安装，或在那里设置其路径。</translation>
+        <source>mokuro not found. Install it in the Manga OCR setup section below, or set its path there.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Run mokuro's OCR on a folder of page images, or a series folder of volumes. Each volume gets a .mokuro file beside it for Reading → Manga.</source>
@@ -7222,6 +6844,34 @@ Continue?</source>
     <message>
         <source>A folder of page images (one volume), or a folder whose subfolders and .cbz/.zip files are volumes.</source>
         <translation>包含页面图像的文件夹（即一卷），或其子文件夹和 .cbz/.zip 文件均为卷的文件夹。</translation>
+    </message>
+    <message>
+        <source>Manga OCR setup</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>mokuro executable:</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Optional: path to the mokuro executable</source>
+        <translation>可选：mokuro 可执行文件的路径</translation>
+    </message>
+    <message>
+        <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
+        <translation>可选：使用你自己的 mokuro（pip/pipx）。留空则使用下方的应用内安装，或 PATH 中的 mokuro。</translation>
+    </message>
+    <message>
+        <source>Install mokuro</source>
+        <translation>安装 mokuro</translation>
+    </message>
+    <message>
+        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
+        <translation>将 mokuro 及其 OCR 引擎下载到 Anki Miner 的文件夹中——约 1 GB，若支持 NVIDIA GPU 则最多 4 GB。</translation>
+    </message>
+    <message>
+        <source>Not available on this platform</source>
+        <translation>此平台不可用</translation>
     </message>
     <message>
         <source>Options</source>
@@ -7246,6 +6896,22 @@ Continue?</source>
     <message>
         <source>Run OCR</source>
         <translation>运行 OCR</translation>
+    </message>
+    <message>
+        <source>Reinstall mokuro</source>
+        <translation>重新安装 mokuro</translation>
+    </message>
+    <message>
+        <source>Installed</source>
+        <translation>已安装</translation>
+    </message>
+    <message>
+        <source>Not installed</source>
+        <translation>未安装</translation>
+    </message>
+    <message>
+        <source>Installing…</source>
+        <translation>正在安装…</translation>
     </message>
     <message>
         <source>No manga volumes found in this folder.</source>
@@ -7608,6 +7274,14 @@ Continue?</source>
         <translation>下移（排在以上各行之后检查）</translation>
     </message>
     <message>
+        <source>More</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>More actions</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
         <source>%1 entries</source>
         <translation>%1 个条目</translation>
     </message>
@@ -7800,10 +7474,6 @@ No index files are deleted.</source>
     <message>
         <source>Zoom</source>
         <translation>缩放</translation>
-    </message>
-    <message>
-        <source>Text size</source>
-        <translation>文字大小</translation>
     </message>
     <message>
         <source>Statistics database</source>
@@ -8124,10 +7794,6 @@ No index files are deleted.</source>
         <translation>多剧集队列</translation>
     </message>
     <message>
-        <source>Add Series</source>
-        <translation>添加剧集</translation>
-    </message>
-    <message>
         <source>Mine the selected rows, in list order. A completed row is mined again from scratch.</source>
         <translation>按列表顺序挖词所选行。已完成的行会从头重新挖词。</translation>
     </message>
@@ -8146,14 +7812,6 @@ No index files are deleted.</source>
     <message>
         <source>Remove all items from queue</source>
         <translation>从队列中移除所有项目</translation>
-    </message>
-    <message>
-        <source>Enter a name for series #%1:</source>
-        <translation>为剧集 #%1 输入名称：</translation>
-    </message>
-    <message>
-        <source>Series %1</source>
-        <translation>剧集 %1</translation>
     </message>
     <message>
         <source>Edit: %1</source>
@@ -9300,6 +8958,104 @@ No index files are deleted.</source>
         <translation>无法解析此句子。</translation>
     </message>
 </context><context>
+    <name>SentencesSettingsPanel</name>
+    <message>
+        <source>Sentences</source>
+        <translation>句子</translation>
+    </message>
+    <message>
+        <source>Subtitle Text Filtering</source>
+        <translation>字幕文本过滤</translation>
+    </message>
+    <message>
+        <source>Regex Filter</source>
+        <translation>正则过滤器</translation>
+    </message>
+    <message>
+        <source>Python regex matched in subtitle text and removed (or replaced) before mining. Useful for stripping speaker names like (Tanaka) or sound descriptions like [door]. Combine alternatives with |. Test patterns at https://regex101.com.</source>
+        <translation>在挖掘前对字幕文本进行匹配并移除（或替换）的 Python 正则表达式。适用于剥离说话人姓名如 (Tanaka) 或声音描述如 [door]。用 | 组合多个选项。可在 https://regex101.com 测试模式。</translation>
+    </message>
+    <message>
+        <source>(empty = delete match)</source>
+        <translation>（留空 = 删除匹配项）</translation>
+    </message>
+    <message>
+        <source>Replacement</source>
+        <translation>替换内容</translation>
+    </message>
+    <message>
+        <source>Inserted in place of each match (empty deletes it). Use Python backreferences \1 \2, not asbplayer's $1 $2.</source>
+        <translation>插入替换每个匹配项（留空则删除该匹配项）。请使用 Python 的反向引用 \1 \2，而非 asbplayer 的 $1 $2。</translation>
+    </message>
+    <message>
+        <source>Enable Subtitle Regex Filter</source>
+        <translation>启用字幕正则过滤器</translation>
+    </message>
+    <message>
+        <source>Parens (Tanaka)</source>
+        <translation>圆括号 (Tanaka)</translation>
+    </message>
+    <message>
+        <source>Brackets [SFX]</source>
+        <translation>方括号 [SFX]</translation>
+    </message>
+    <message>
+        <source>Music ♪♬</source>
+        <translation>音乐 ♪♬</translation>
+    </message>
+    <message>
+        <source>Speaker: prefix</source>
+        <translation>说话人：前缀</translation>
+    </message>
+    <message>
+        <source>Dialogue dash</source>
+        <translation>对话破折号</translation>
+    </message>
+    <message>
+        <source>Presets</source>
+        <translation>预设</translation>
+    </message>
+    <message>
+        <source>Click to append a built-in pattern to the regex field above.</source>
+        <translation>点击将内置模式追加到上方的正则字段。</translation>
+    </message>
+    <message>
+        <source>Secondary Subtitles</source>
+        <translation>第二语言字幕</translation>
+    </message>
+    <message>
+        <source>Enable secondary-language subtitles</source>
+        <translation>启用第二语言字幕</translation>
+    </message>
+    <message>
+        <source>Adds a second subtitle picker and its own offset to Video -&gt; Single. Its line shows under the mining-language line in the Word Curator preview and, when the Translation field is mapped (Cards &amp; Anki), on the card.</source>
+        <translation>在视频 -&gt; 单个中新增第二个字幕选择器及其独立的偏移设置。该行会显示在单词整理器预览中挖词语言行的下方；若已映射翻译字段（卡片和 Anki），还会显示在卡片上。</translation>
+    </message>
+    <message>
+        <source>Full Sentences</source>
+        <translation>完整句子</translation>
+    </message>
+    <message>
+        <source>Mine full sentences across subtitle lines</source>
+        <translation>跨字幕行挖取完整句子</translation>
+    </message>
+    <message>
+        <source>Joins neighbouring subtitle lines when a line does not end a sentence, so the card carries the whole sentence instead of a fragment. Reading sources have no subtitle timings and ignore it.</source>
+        <translation>当某行未在句子末尾结束时，将其与相邻字幕行合并，使卡片包含完整句子而非片段。阅读来源没有字幕时间信息，会忽略此设置。</translation>
+    </message>
+    <message>
+        <source>Card Formatting</source>
+        <translation>卡片格式</translation>
+    </message>
+    <message>
+        <source>Bold target word in sentence</source>
+        <translation>在句子中加粗目标单词</translation>
+    </message>
+    <message>
+        <source>Wrap the mined word in &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; inside the sentence fields. Match is the exact span that was mined, so duplicated surfaces in a sentence only bold the actually-mined occurrence.</source>
+        <translation>在例句字段中用 &amp;lt;b&amp;gt;...&amp;lt;/b&amp;gt; 包裹挖取的单词。匹配的是实际被挖取的那一段，因此句中重复出现的相同词形只会加粗真正挖取的那一处。</translation>
+    </message>
+</context><context>
     <name>ServiceFactory</name>
     <message>
         <source>Couldn't scan dictionaries folder: %1</source>
@@ -9386,14 +9142,6 @@ No index files are deleted.</source>
 </context><context>
     <name>SettingsTab</name>
     <message>
-        <source>Check for updates on startup</source>
-        <translation>启动时检查更新</translation>
-    </message>
-    <message>
-        <source>When enabled, Anki Miner queries GitHub for new releases on launch.</source>
-        <translation>启用后，Anki Miner 会在启动时向 GitHub 查询新版本。</translation>
-    </message>
-    <message>
         <source>Reset to Defaults…</source>
         <translation>恢复默认设置…</translation>
     </message>
@@ -9446,8 +9194,8 @@ No index files are deleted.</source>
         <translation>词典</translation>
     </message>
     <message>
-        <source>Audio</source>
-        <translation>音频</translation>
+        <source>Word Audio</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Frequency</source>
@@ -9466,8 +9214,12 @@ No index files are deleted.</source>
         <translation>挖词语言</translation>
     </message>
     <message>
-        <source>Filtering</source>
-        <translation>过滤</translation>
+        <source>Word Filters</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Sentences</source>
+        <translation>句子</translation>
     </message>
     <message>
         <source>Integrations</source>
@@ -9486,8 +9238,8 @@ No index files are deleted.</source>
         <translation>应用</translation>
     </message>
     <message>
-        <source>Appearance &amp; Language</source>
-        <translation>外观和语言</translation>
+        <source>General</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Keyboard</source>
@@ -9554,16 +9306,8 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
         <translation>正在下载…</translation>
     </message>
     <message>
-        <source>Installing…</source>
-        <translation>正在安装…</translation>
-    </message>
-    <message>
         <source>yt-dlp could not be updated. Check your connection and try again.</source>
         <translation>无法更新 yt-dlp。请检查网络连接后重试。</translation>
-    </message>
-    <message>
-        <source>Settings</source>
-        <translation>设置</translation>
     </message>
     <message>
         <source>dictionary folder (Dictionaries)</source>
@@ -9574,8 +9318,8 @@ A source that stopped working after an app upgrade is repaired by Reimport All, 
         <translation>cookies 文件（YouTube）</translation>
     </message>
     <message>
-        <source>subtitle regex (Filtering)</source>
-        <translation>字幕正则表达式（过滤）</translation>
+        <source>subtitle regex (Sentences)</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>⚠ Saved — kept previous: %1</source>
@@ -9858,8 +9602,8 @@ Your installed resources and your theme are kept.</source>
         <translation>该字幕文件已不存在。</translation>
     </message>
     <message>
-        <source>No subtitle lines to preview — check the filter in Settings → Filtering.</source>
-        <translation>没有可预览的字幕行——请检查“设置 → 过滤”中的过滤规则。</translation>
+        <source>No subtitle lines to preview — check the filter in Settings → Sentences.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>The subtitles could not be read. Check the file format.</source>
@@ -10666,22 +10410,6 @@ Your installed resources and your theme are kept.</source>
         <translation>自动模式在可用时使用 GPU，否则使用 CPU。每个 GPU 选项都需要在下方单独下载。</translation>
     </message>
     <message>
-        <source>Download model</source>
-        <translation>下载模型</translation>
-    </message>
-    <message>
-        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
-        <translation>将所选 Whisper 模型权重下载到 Anki Miner 的 ASR 模型文件夹。运行字幕生成前必须完成。</translation>
-    </message>
-    <message>
-        <source>Model download</source>
-        <translation>模型下载</translation>
-    </message>
-    <message>
-        <source>Transcription add-ons (optional)</source>
-        <translation>转写附加组件（可选）</translation>
-    </message>
-    <message>
         <source>Download GPU acceleration</source>
         <translation>下载 GPU 加速</translation>
     </message>
@@ -10698,6 +10426,34 @@ Your installed resources and your theme are kept.</source>
         <translation>在 NVIDIA GPU（CUDA）上更快转写。</translation>
     </message>
     <message>
+        <source>Download Vulkan model</source>
+        <translation>下载 Vulkan 模型</translation>
+    </message>
+    <message>
+        <source>Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards.</source>
+        <translation>将 whisper.cpp ggml 模型和 Silero VAD 下载到 Anki Miner 的文件夹。在 AMD/Intel/NVIDIA 显卡上进行 GPU（Vulkan）转写时必需。</translation>
+    </message>
+    <message>
+        <source>Vulkan model</source>
+        <translation>Vulkan 模型</translation>
+    </message>
+    <message>
+        <source>Download model</source>
+        <translation>下载模型</translation>
+    </message>
+    <message>
+        <source>Download the selected Whisper model weights into Anki Miner's ASR models folder. Required before subtitle generation can run.</source>
+        <translation>将所选 Whisper 模型权重下载到 Anki Miner 的 ASR 模型文件夹。运行字幕生成前必须完成。</translation>
+    </message>
+    <message>
+        <source>Model download</source>
+        <translation>模型下载</translation>
+    </message>
+    <message>
+        <source>Transcription add-ons (optional)</source>
+        <translation>转写附加组件（可选）</translation>
+    </message>
+    <message>
         <source>Download silence removal</source>
         <translation>下载静音移除</translation>
     </message>
@@ -10712,18 +10468,6 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Skips music and silence so they are not transcribed as garbage.</source>
         <translation>跳过音乐和静音，使其不被转写为无意义文字。</translation>
-    </message>
-    <message>
-        <source>Download Vulkan model</source>
-        <translation>下载 Vulkan 模型</translation>
-    </message>
-    <message>
-        <source>Download the whisper.cpp ggml model and Silero VAD into Anki Miner's folder. Required for GPU (Vulkan) transcription on AMD/Intel/NVIDIA cards.</source>
-        <translation>将 whisper.cpp ggml 模型和 Silero VAD 下载到 Anki Miner 的文件夹。在 AMD/Intel/NVIDIA 显卡上进行 GPU（Vulkan）转写时必需。</translation>
-    </message>
-    <message>
-        <source>Vulkan model</source>
-        <translation>Vulkan 模型</translation>
     </message>
     <message>
         <source>Alignment</source>
@@ -10758,38 +10502,6 @@ Your installed resources and your theme are kept.</source>
         <translation>macOS 没有发布 alass 二进制文件。请使用 Homebrew 安装：</translation>
     </message>
     <message>
-        <source>Manga OCR</source>
-        <translation>漫画 OCR</translation>
-    </message>
-    <message>
-        <source>Optional: path to the mokuro executable</source>
-        <translation>可选：mokuro 可执行文件的路径</translation>
-    </message>
-    <message>
-        <source>mokuro executable</source>
-        <translation>mokuro 可执行文件</translation>
-    </message>
-    <message>
-        <source>Optional: your own mokuro (pip/pipx). Leave blank to use the in-app install below or mokuro on your PATH.</source>
-        <translation>可选：使用你自己的 mokuro（pip/pipx）。留空则使用下方的应用内安装，或 PATH 中的 mokuro。</translation>
-    </message>
-    <message>
-        <source>Install mokuro</source>
-        <translation>安装 mokuro</translation>
-    </message>
-    <message>
-        <source>Downloads mokuro and its OCR engine into Anki Miner's folder — about 1 GB, up to 4 GB with NVIDIA GPU support.</source>
-        <translation>将 mokuro 及其 OCR 引擎下载到 Anki Miner 的文件夹中——约 1 GB，若支持 NVIDIA GPU 则最多 4 GB。</translation>
-    </message>
-    <message>
-        <source>mokuro install</source>
-        <translation>mokuro 安装</translation>
-    </message>
-    <message>
-        <source>Not available on this platform</source>
-        <translation>此平台不可用</translation>
-    </message>
-    <message>
         <source>Subtitle generation needs the faster-whisper engine. Install it with:</source>
         <translation>生成字幕需要 faster-whisper 引擎。请使用以下命令安装：</translation>
     </message>
@@ -10804,10 +10516,6 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Not installed</source>
         <translation>未安装</translation>
-    </message>
-    <message>
-        <source>Reinstall mokuro</source>
-        <translation>重新安装 mokuro</translation>
     </message>
     <message>
         <source>GPU acceleration is not available on this platform.</source>
@@ -10996,6 +10704,10 @@ Your installed resources and your theme are kept.</source>
 </context><context>
     <name>UISettingsPanel</name>
     <message>
+        <source>Language</source>
+        <translation>语言</translation>
+    </message>
+    <message>
         <source>Interface language</source>
         <translation>界面语言</translation>
     </message>
@@ -11004,8 +10716,12 @@ Your installed resources and your theme are kept.</source>
         <translation>重启后生效。</translation>
     </message>
     <message>
-        <source>Scale the entire interface — text, spacing, and controls. Applies after restart.</source>
-        <translation>缩放整个界面——文字、间距和控件。重启后生效。</translation>
+        <source>Appearance</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>Scale the entire interface, including text size and font, plus spacing and controls. Applies after restart.</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Zoom</source>
@@ -11016,36 +10732,12 @@ Your installed resources and your theme are kept.</source>
         <translation>%1%</translation>
     </message>
     <message>
-        <source>Scale all UI text. Applies after restart.</source>
-        <translation>缩放所有 UI 文本。重启后生效。</translation>
-    </message>
-    <message>
-        <source>Text size</source>
-        <translation>文字大小</translation>
-    </message>
-    <message>
         <source>Restart now</source>
         <translation>立即重启</translation>
     </message>
     <message>
         <source>Later</source>
         <translation>稍后</translation>
-    </message>
-    <message>
-        <source>Use system file dialogs</source>
-        <translation>使用系统文件对话框</translation>
-    </message>
-    <message>
-        <source>Use the operating system's native file pickers. Turn this off to use the app's built-in picker instead, which follows the app's theme and looks the same on every platform.</source>
-        <translation>使用操作系统的原生文件选择器。关闭此选项可改用应用内置选择器，它遵循应用主题，且在所有平台上外观一致。</translation>
-    </message>
-    <message>
-        <source>Utilities tab</source>
-        <translation>工具标签页</translation>
-    </message>
-    <message>
-        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
-        <translation>选择“工具”标签页显示哪些工具。至少保留一个。</translation>
     </message>
     <message>
         <source>Click a theme preview to apply it live; &lt;b&gt;Revert&lt;/b&gt; undoes it. Star themes to add them to the top-right selector.</source>
@@ -11062,6 +10754,34 @@ Your installed resources and your theme are kept.</source>
     <message>
         <source>Restore the theme that was active when this tab was opened.</source>
         <translation>恢复打开此标签页时处于活动状态的主题。</translation>
+    </message>
+    <message>
+        <source>Utilities tab</source>
+        <translation>工具标签页</translation>
+    </message>
+    <message>
+        <source>Choose which tools the Utilities tab shows. At least one stays.</source>
+        <translation>选择“工具”标签页显示哪些工具。至少保留一个。</translation>
+    </message>
+    <message>
+        <source>App</source>
+        <translation>应用</translation>
+    </message>
+    <message>
+        <source>Check for updates on startup</source>
+        <translation>启动时检查更新</translation>
+    </message>
+    <message>
+        <source>When enabled, Anki Miner queries GitHub for new releases on launch.</source>
+        <translation>启用后，Anki Miner 会在启动时向 GitHub 查询新版本。</translation>
+    </message>
+    <message>
+        <source>Higher = faster, but uses more CPU and memory.</source>
+        <translation>越高 = 越快，但占用更多 CPU 和内存。</translation>
+    </message>
+    <message>
+        <source>Max Parallel Workers</source>
+        <translation>最大并行工作线程数</translation>
     </message>
     <message>
         <source>button labels %1:1</source>

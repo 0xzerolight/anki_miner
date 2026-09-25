@@ -114,7 +114,6 @@ For full development setup, see [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Tabs
 
 - **Video** - mine a single video/subtitle pair, a batch folder, or YouTube URLs.
-- **Deck Builder** - mine a whole series into one frequency-ranked deck.
 - **Audiobooks** - mine audiobooks, podcasts, radio, songs (audio + subtitle/transcript pairs).
 - **Reading** - mine manga (mokuro), novels (`.epub`, `.txt`; single book or a whole folder), standalone subtitle files, or pasted text.
 - **Analytics** - mining history, difficulty rankings, milestones.
