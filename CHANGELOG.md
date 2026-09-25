@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
+- **Other tools can drive Anki Miner from the command line.** `anki-miner mine batch|pairs|reading|youtube …` mines with your saved settings and prints one JSON object per line — progress, per-episode results with note IDs, and a final result — with exit codes for busy, setup and usage errors. It is the same installed program (`AnkiMiner.exe mine …` on Windows, `/usr/bin/anki-miner mine …` from the .deb). It never opens the word curator and refuses to run while the Anki Miner window is open. See CLI.md.
+
 - **Jiten is a recommended Japanese frequency list (setup wizard, Tools → Download Recommended Resources).** Jiten ranks words across more than 16,000 anime, drama, film, novel, visual-novel and manga titles and is rebuilt from its live library; the JPDB list the app already offered is a 2024 snapshot. It installs beside JPDB rather than replacing it: cards list both ranks, the Frequency Rank Range (Settings → Filtering) judges each word by the more common of its two ranks, and Frequency Sort takes the harmonic mean of the two. Downloading it again replaces the installed list in place, including a copy you imported by hand. Jiten's per-media lists (anime only, visual novels only, …) are linked from RESOURCES.md for manual import. CC BY-SA 4.0.
 
 - **Utilities → Download can fetch subtitles only.** A new "Subtitles only" entry in the Quality list skips the video and audio; re-running the same URL reports the file as already downloaded instead of re-fetching it.

@@ -64,7 +64,8 @@ The offline dictionary also participates in stage 1 when available (this paragra
 ## Package Dependencies
 
 ```
-gui/                          ← sole entry point
+gui/                          ← the app's entry point
+cli/                          ← command-line entry point for other tools (CLI.md)
   │
   ▼
 orchestration/
@@ -89,7 +90,9 @@ diagnostics/ ← Qt-free; imported only by MainWindow (export, boot environment 
 resources/   ← packaged data (wordsets, etc.), no code
 ```
 
-`config` and `exceptions` are true leaves; `models` imports only `utils`, and `utils` only `config.paths` and `exceptions`. `interfaces` depends only on `models` for type signatures. `services` depends on `interfaces`, `models`, `config`, `exceptions`, `utils` and `languages`. `orchestration` composes services. `gui` is the sole top-level entry point.
+`config` and `exceptions` are true leaves; `models` imports only `utils`, and `utils` only `config.paths` and `exceptions`. `interfaces` depends only on `models` for type signatures. `services` depends on `interfaces`, `models`, `config`, `exceptions`, `utils` and `languages`. `orchestration` composes services. `gui` and `cli` are the two top-level entry points.
+
+`cli` (`anki-miner mine …`, see CLI.md) is reached from the same bundle entry script: `gui/launch.py` hands it the `mine`/`version` commands before any GUI bootstrap. It never constructs a `QApplication`. It composes a run from `gui/utils/service_factory.py` and `gui/utils/config_manager.py`, reuses module-level seams in `gui/workers/` (`queue_preflight_error`, `exception_retry_eligible`, `load_reading_source`, `allocate_youtube_workspace`), and imports `gui.app`'s boot helpers lazily. It takes the GUI's own `instance.lock`, so it refuses to run while the app is open.
 
 `languages` sits beside `services` rather than under it. The package `__init__.py` deliberately exports nothing but `AVAILABLE_LANGUAGES`, `SHARED_PACK_CODES` and `SCRIPT_VARIANT_IDS` and may import neither Qt, a tokenizer, nor `anki_miner.services` — profile types and the registry are imported from `anki_miner.languages.registry` instead, because `profile.py` imports `services/resource_catalog` at module level and an eager re-export would drag the service layer into every `import anki_miner.languages`. `AnkiMinerConfig` duplicates the language tuple as `config.config._LANGUAGE_CODES` for the same reason (config must not import this package); `tests/unit/test_config_language.py` pins the two identical.
 
@@ -104,7 +107,7 @@ Five protocols in `interfaces/` define the system's extension points:
 - `show_processing_result(ProcessingResult)`: episode processing summary.
 - `show_run_details(ProcessingResult)`: per-run detail lines.
 
-Implementations: `GUIPresenter` (Qt signals) and `NullPresenter` (tests). The protocol is preserved even without a CLI so that workers, orchestration, and services stay UI-agnostic and fully testable.
+Implementations: `GUIPresenter` (Qt signals), `EventPresenter` (the command line's JSON Lines, `cli/events.py`) and `NullPresenter` (tests). The protocol keeps workers, orchestration, and services UI-agnostic and fully testable.
 
 **ProgressCallback** (`interfaces/progress.py`): progress reporting with 5 methods.
 - `on_stage(index, total, name)`: coarse pipeline stage, independent of item progress
