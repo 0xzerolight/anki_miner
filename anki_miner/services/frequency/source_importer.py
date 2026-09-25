@@ -230,7 +230,7 @@ def repair_frequency_source(
     language = read_slot_language(dest_root / source_id)
     # The same holds for how the list was built (S17): a rebuild without them
     # would re-rank a lemmatised list from its raw surface counts.
-    declared_mode, lemmatised = _slot_import_options(dest_root / source_id)
+    declared_mode, lemmatised = slot_import_options(dest_root / source_id)
     # Function-local like _term_fold: the lemmatizer resolves the tagger lazily.
     from anki_miner.services.frequency.lemmatize import build_frequency_lemmatizer
 
@@ -255,7 +255,7 @@ def repair_frequency_source(
     )
 
 
-def _slot_import_options(slot_dir: Path) -> tuple[str, bool]:
+def slot_import_options(slot_dir: Path) -> tuple[str, bool]:
     """The declared mode and lemmatisation a slot's import recorded (S17), or ("", False).
 
     The ``meta.json`` sidecar answers first, fresh or not, as
