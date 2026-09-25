@@ -751,6 +751,105 @@ def test_freq_route_imports_real_source_into_freqs_root(tmp_path, monkeypatch):
     assert rows == [("猫", 5)]
 
 
+def test_pinned_freq_spec_reimports_in_place_across_revisions(tmp_path, monkeypatch):
+    # A list served from a moving URL (Jiten) ships a new index.json revision
+    # every build. Unpinned, the second download forks "jiten-<hash>" beside
+    # "jiten" (resolve_auto_store_id compares revision), and the chain gains a
+    # second entry for the same list.
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+    revisions = iter(["Jiten 26-09-21", "Jiten 26-10-21"])
+
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
+        temp = Path(dest_dir) / "freq-download.part"
+        index = {"title": "Jiten", "format": 3, "revision": next(revisions), "frequencyMode": "rank-based"}
+        with zipfile.ZipFile(temp, "w") as zf:
+            zf.writestr("index.json", json.dumps(index))
+            zf.writestr("term_meta_bank_1.json", json.dumps([["猫", "freq", 5]]))
+        return temp
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    spec = ResourceSpec(
+        id="jiten",
+        kind="freq",
+        display_name="Jiten Frequency",
+        # No file suffix: the worker must still route it to the zip importer.
+        url="https://example.test/api/frequency-list/download?downloadType=yomitan",
+        license_note="note",
+        pin_slot=True,
+    )
+
+    source_ids = []
+    for _ in range(2):
+        worker = _make_worker([spec], tmp_path)
+        _done, _progress, summaries = _connect_capture(worker)
+        worker.run()
+        assert len(summaries[0].succeeded) == 1, summaries[0].failed
+        source_ids.append(summaries[0].succeeded[0].source_id)
+
+    assert source_ids == ["jiten", "jiten"]
+    freqs = tmp_path / "freqs"
+    assert sorted(p.name for p in freqs.iterdir() if not p.name.startswith(".")) == ["jiten"]
+    meta = json.loads((freqs / "jiten" / "meta.json").read_text(encoding="utf-8"))
+    assert meta["source_revision"] == "Jiten 26-10-21"
+
+
+def test_catalog_jiten_download_replaces_a_hand_imported_jiten(tmp_path, monkeypatch):
+    # Someone who added Jiten by hand (Settings → Frequency → Add) holds the
+    # title-derived slot "jiten". The catalog spec must land in that same slot,
+    # or cards list Jiten twice.
+    from anki_miner.services.resource_catalog import RECOMMENDED_DEFAULT_SET  # noqa: PLC0415
+
+    spec = next(s for s in RECOMMENDED_DEFAULT_SET if s.id == "jiten")
+
+    def jiten_zip(path: Path, revision: str) -> Path:
+        index = {"title": "Jiten", "format": 3, "revision": revision, "frequencyMode": "rank-based"}
+        with zipfile.ZipFile(path, "w") as zf:
+            zf.writestr("index.json", json.dumps(index))
+            zf.writestr("term_meta_bank_1.json", json.dumps([["猫", "freq", 5]]))
+        return path
+
+    hand = frequency_source_importer.import_frequency_source(
+        jiten_zip(tmp_path / "hand.zip", "Jiten 26-08-21"), tmp_path / "freqs"
+    )
+    assert hand.source_id == "jiten"
+
+    download_dir = tmp_path / "downloads"
+    download_dir.mkdir()
+
+    def fake_download(
+        url,
+        *,
+        dest_dir,
+        progress=None,
+        cancelled_check=None,
+        read_timeout_seconds=None,
+        resume_key=None,
+        resume_root=None,
+    ):
+        _assert_stable_resume_key(resume_key)
+        return jiten_zip(Path(dest_dir) / "freq-download.part", "Jiten 26-09-21")
+
+    monkeypatch.setattr(resource_download_worker, "download_to_temp", fake_download)
+    worker = _make_worker([spec], tmp_path)
+    _done, _progress, summaries = _connect_capture(worker)
+    worker.run()
+
+    assert [r.source_id for r in summaries[0].succeeded] == ["jiten"], summaries[0].failed
+    freqs = tmp_path / "freqs"
+    assert sorted(p.name for p in freqs.iterdir() if not p.name.startswith(".")) == ["jiten"]
+
+
 def test_summary_properties_filter_results():
     summary = ResourceDownloadSummary(
         results=[

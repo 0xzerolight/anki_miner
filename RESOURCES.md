@@ -152,11 +152,13 @@ The dialect dictionaries import with a note that their language is not Arabic; t
 |------|----------|----------|---------|--------------|
 | Dictionary | [JMdict](https://github.com/yomidevs/jmdict-yomitan) | [Yomitan zip](https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_english.zip) | Dictionaries -> Add dictionary… | Yes |
 | Frequency | [JPDB v2.2 Kana](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/JPDB_v2.2_Frequency_Kana_2024-10-13.zip) | Frequency -> Add frequency source… | Yes |
+| Frequency | [Jiten](https://jiten.moe) | [Yomitan zip](https://api.jiten.moe/api/frequency-list/download?downloadType=yomitan) | Frequency -> Add frequency source… | Yes |
 | Pitch | [Kanjium](https://github.com/mifunetoshiro/kanjium) | [TSV](https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt) | Pitch Accent -> Add pitch source… | Yes |
 | Dictionary | [Jitendex](https://jitendex.org/) | [Yomitan zip](https://github.com/stephenmk/stephenmk.github.io/releases/latest/download/jitendex-yomitan.zip) | Dictionaries -> Add dictionary… | No |
 | Dictionary | [Bee's Character Dictionary](https://characterdictionary.tokyo/) | Generated on site | Dictionaries -> Add dictionary… | No |
 | Pitch | [アクセント辞典v2](https://learnjapanese.moe/yomichan/#dictionaries) | [Drive](https://drive.google.com/drive/folders/1tTdLppnqMfVC5otPlX_cs4ixlIgjv_lH) | Pitch Accent -> Add pitch source… | No |
 | Frequency | [BCCWJ SUW+LUW](https://github.com/Kuuuube/yomitan-dictionaries) | [Yomitan zip](https://github.com/Kuuuube/yomitan-dictionaries/raw/main/dictionaries/BCCWJ_SUW_LUW_combined.zip) | Frequency -> Add frequency source… | No |
+| Frequency | [Jiten per-media lists](https://jiten.moe/other) | Yomitan zip per media type on the linked page | Frequency -> Add frequency source… | No |
 | Word audio | [local-audio-yomichan](https://github.com/yomidevs/local-audio-yomichan) | Collection torrent or generated `android.db` | Audio -> Add audio source… | No |
 
 ## Korean

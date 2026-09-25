@@ -1772,7 +1772,7 @@ def test_unchecked_resources_are_not_downloaded(qtbot, wiz_config, monkeypatch):
     page.resource_checks["jpdb-freq"].setChecked(False)
     page._on_download_clicked()
 
-    assert [s.id for s in seen[0]] == ["jmdict-english", "kanjium-pitch"]
+    assert [s.id for s in seen[0]] == ["jmdict-english", "jiten", "kanjium-pitch"]
 
 
 def test_download_button_is_dead_with_nothing_selected(qtbot, wiz_config, monkeypatch):
