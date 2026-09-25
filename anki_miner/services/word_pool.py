@@ -125,14 +125,18 @@ class CaptureCurationCallback:
 
     suppress_curation_messages = True
 
-    def __init__(self) -> None:
+    def __init__(self, keep_candidates: bool = True) -> None:
         self.pools: list[list[TokenizedWord]] = []
         self._episode: Path | None = None
+        self.keep_candidates = keep_candidates
 
     def set_episode(self, video: Path) -> None:
         self._episode = video
 
     def __call__(self, words: list[TokenizedWord]) -> list[TokenizedWord]:
+        if not self.keep_candidates:
+            for word in words:
+                word.sentence_candidates = []
         if self._episode is not None:
             stamp_episode(words, self._episode)
         self.pools.append(words)
