@@ -1,5 +1,13 @@
 """Resource bundles: one mining language's resources as a single portable zip."""
 
+from anki_miner.services.resource_bundle.export import (
+    BundleWriteResult,
+    CancelFn,
+    ExportCandidate,
+    ProgressFn,
+    collect_export_candidates,
+    write_resource_bundle,
+)
 from anki_miner.services.resource_bundle.manifest import (
     MANIFEST_MEMBER,
     SLOT_KINDS,
@@ -15,6 +23,12 @@ from anki_miner.services.resource_bundle.manifest import (
 )
 
 __all__ = [
+    "BundleWriteResult",
+    "CancelFn",
+    "ExportCandidate",
+    "ProgressFn",
+    "collect_export_candidates",
+    "write_resource_bundle",
     "MANIFEST_MEMBER",
     "SLOT_KINDS",
     "WORDLIST_KINDS",
