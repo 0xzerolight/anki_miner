@@ -30,6 +30,12 @@ class ResourceSpec:
         variant: The ``config.script_variant`` id this resource belongs to
             ("" = every variety). The setup wizard starts a spec ticked only when
             its variant is "" or the config's own (pt's two frequency lists).
+        pin_slot: Freq only. Import into ``freqs_root/<id>/`` instead of the
+            slot derived from the zip title. For a list served from a moving
+            URL: each build carries a new ``index.json`` revision, and a
+            title-derived slot would fork ``<slug>-<hash>`` beside the old one,
+            leaving two enabled chain entries for one list. Dict and pitch
+            specs always import into ``<id>``.
     """
 
     id: str
@@ -39,6 +45,7 @@ class ResourceSpec:
     license_note: str
     lemmatise: bool = False
     variant: str = ""
+    pin_slot: bool = False
 
 
 # For dict resources, ``id`` is the PINNED on-disk slot the importer writes to

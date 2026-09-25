@@ -79,8 +79,9 @@ class TestCatalogDictSlotIds:
         # stacking. A non-dict spec must NOT use a releases/latest style URL
         # (which would silently reintroduce the freq/pitch stacking the fix
         # deliberately descopes). Locks the descope so a future URL flip fails.
+        # A pin_slot spec imports into its catalog id, so a moving URL cannot stack.
         for spec in RECOMMENDED_DEFAULT_SET:
-            if spec.kind != "dict":
+            if spec.kind != "dict" and not spec.pin_slot:
                 assert "releases/latest" not in spec.url
 
 
@@ -92,7 +93,16 @@ class TestResourceSpec:
 
     def test_fields_present(self):
         field_names = {f.name for f in dataclasses.fields(ResourceSpec)}
-        assert field_names == {"id", "kind", "display_name", "url", "license_note", "lemmatise", "variant"}
+        assert field_names == {
+            "id",
+            "kind",
+            "display_name",
+            "url",
+            "license_note",
+            "lemmatise",
+            "variant",
+            "pin_slot",
+        }
 
 
 def _by_id(spec_id: str) -> ResourceSpec:
