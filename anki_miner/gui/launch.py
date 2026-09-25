@@ -24,6 +24,13 @@ _APP_MUTEX_HANDLE: int | None = None
 # included — into every application boot; a test pins the two equal.
 FFSUBSYNC_CHILD_FLAG = "--ffsubsync-child"
 
+# First-argument words that hand the process to the command line
+# (anki_miner.cli), for other tools driving an installed Anki Miner. Answered
+# here for the same reason as the ffsubsync flag: this is the bundle's only entry
+# script. A literal, not an import (the cli package pulls in services and Qt);
+# a test pins it equal to anki_miner.cli.entry.COMMANDS.
+CLI_COMMANDS = frozenset({"mine", "version"})
+
 _CA_ENV_VARS = ("REQUESTS_CA_BUNDLE", "SSL_CERT_FILE", "CURL_CA_BUNDLE")
 # Module + line number form an exact source coordinate against the version in
 # the later session header. Thread name is present because threads now carry
@@ -285,6 +292,14 @@ def main() -> int:
         from anki_miner.services.sync_engines._ffsubsync_child import main as ffsubsync_child_main
 
         return ffsubsync_child_main(sys.argv[2:])
+
+    # A command-line run owns its own boot (mutex, truststore, log sink after
+    # the lock) in anki_miner.cli.entry, shared with the pip console script; it
+    # must not install the GUI's early crash sink or import the GUI app here.
+    if len(sys.argv) > 1 and sys.argv[1] in CLI_COMMANDS:
+        from anki_miner.cli import main as cli_main
+
+        return cli_main(sys.argv[1:])
 
     _install_early_crash_sink()
     _create_windows_app_mutex()

@@ -305,6 +305,41 @@ def test_main_creates_app_mutex_after_early_sink_before_heavy_imports(
     assert calls == ["sink", "mutex", "truststore", "app"]
 
 
+def test_cli_command_dispatches_before_any_gui_bootstrap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``AnkiMiner mine ...`` must reach the CLI without booting the GUI."""
+    from anki_miner.gui import launch
+
+    calls = []
+    monkeypatch.setattr(launch, "_install_early_crash_sink", lambda: calls.append("sink"))
+    monkeypatch.setattr(launch, "_create_windows_app_mutex", lambda: calls.append("mutex"))
+    monkeypatch.setattr(launch, "_inject_system_truststore", lambda: calls.append("truststore"))
+    fake_cli = ModuleType("anki_miner.cli")
+    fake_cli.main = lambda argv: calls.append(("cli", argv)) or 4  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "anki_miner.cli", fake_cli)
+    monkeypatch.setattr(sys, "argv", ["AnkiMiner", "mine", "pairs", "--pair", "a.mkv", "a.srt"])
+
+    assert launch.main() == 4
+    assert calls == [("cli", ["mine", "pairs", "--pair", "a.mkv", "a.srt"])]
+
+
+def test_non_cli_argv_still_boots_gui(monkeypatch: pytest.MonkeyPatch) -> None:
+    from anki_miner.gui import launch
+
+    calls = []
+    monkeypatch.setattr(launch, "_install_early_crash_sink", lambda: None)
+    monkeypatch.setattr(launch, "_create_windows_app_mutex", lambda: None)
+    monkeypatch.setattr(launch, "_inject_system_truststore", lambda: None)
+    fake_app = ModuleType("anki_miner.gui.app")
+    fake_app.main = lambda: calls.append("app") or 0  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "anki_miner.gui.app", fake_app)
+    monkeypatch.setattr(sys, "argv", ["AnkiMiner", "-platform", "offscreen"])
+
+    assert launch.main() == 0
+    assert calls == ["app"]
+
+
 def test_ffsubsync_child_flag_dispatches_before_any_bootstrap(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

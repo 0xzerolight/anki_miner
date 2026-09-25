@@ -1,0 +1,319 @@
+"""``anki-miner mine ...``: the command-line entry point for other tools.
+
+Reached from the bundle's only entry script (``gui/launch.py`` dispatches
+``COMMANDS`` before any GUI bootstrap) and from the pip ``anki-miner`` console
+script. The output contract is in CLI.md; ``events.py`` owns the wire format.
+
+The single-instance lock is the GUI's own (``instance.lock``): two processes
+writing the rollback-journal known-words and stats databases lose writes, so a
+run refuses with ``busy`` instead of waiting or proceeding. Everything that
+writes to the user's home — config migration, the log — happens only after the
+lock is held.
+"""
+
+from __future__ import annotations
+
+import argparse
+import atexit
+import contextlib
+import logging
+import os
+import signal
+import sys
+import threading
+from collections.abc import Callable, Iterator, Sequence
+from dataclasses import replace
+from pathlib import Path
+from typing import IO, TYPE_CHECKING, NoReturn
+
+from anki_miner import __version__
+from anki_miner.cli import runner
+from anki_miner.cli.events import SCHEMA_VERSION, EventSink, fd_writer
+from anki_miner.cli.runner import MiningRun
+from anki_miner.config import paths as config_paths
+from anki_miner.gui.utils.config_manager import GUIConfigManager
+
+if TYPE_CHECKING:
+    from PyQt6.QtCore import QLockFile
+
+logger = logging.getLogger(__name__)
+
+#: First-argument words that select the CLI. Mirrored as a literal in
+#: ``gui/launch.py`` (which must not import this package at boot); a test pins
+#: the two equal.
+COMMANDS = frozenset({"mine", "version"})
+
+EXIT_OK = 0
+EXIT_FAILED = 1
+EXIT_USAGE = 2
+EXIT_BUSY = 3
+EXIT_SETUP = 4
+EXIT_CANCELLED = 130
+
+_EXIT_BY_STATUS = {
+    "success": EXIT_OK,
+    "partial": EXIT_FAILED,
+    "failed": EXIT_FAILED,
+    "error": EXIT_FAILED,
+    "usage_error": EXIT_USAGE,
+    "busy": EXIT_BUSY,
+    "setup_error": EXIT_SETUP,
+    "cancelled": EXIT_CANCELLED,
+}
+
+_BUSY_MESSAGE = (
+    "Anki Miner is already running (its window, or another command-line run). "
+    "Close it or wait for the other run to finish, then try again."
+)
+_NOT_SET_UP_MESSAGE = "Anki Miner has no saved settings yet. Open Anki Miner once and finish setup, then try again."
+
+
+class _UsageError(Exception):
+    pass
+
+
+class _Parser(argparse.ArgumentParser):
+    def error(self, message: str) -> NoReturn:
+        raise _UsageError(message)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """The ``anki-miner`` argument grammar (see CLI.md)."""
+    parser = _Parser(prog="anki-miner", description="Mine vocabulary into Anki with your Anki Miner settings.")
+    commands = parser.add_subparsers(dest="command", required=True, parser_class=_Parser)
+    commands.add_parser("version", help="Print the app and output-schema versions as JSON.")
+    mine = commands.add_parser("mine", help="Mine cards; prints JSON Lines (see CLI.md).")
+    sources = mine.add_subparsers(dest="source", required=True, parser_class=_Parser)
+
+    def add_deck(p: argparse.ArgumentParser) -> None:
+        p.add_argument("--deck", help="Anki deck to add cards to (default: the deck in your settings).")
+
+    batch = sources.add_parser("batch", help="Pair videos and subtitles in two folders by episode number.")
+    batch.add_argument("video_dir", type=Path)
+    batch.add_argument("subtitle_dir", type=Path)
+    add_deck(batch)
+    pairs = sources.add_parser("pairs", help="Mine explicit video/subtitle pairs.")
+    pairs.add_argument("--pair", nargs=2, action="append", required=True, type=Path, metavar=("VIDEO", "SUBTITLE"))
+    add_deck(pairs)
+    reading = sources.add_parser("reading", help="Mine subtitle files without video (also novels, mokuro manga).")
+    reading.add_argument("paths", nargs="+", type=Path)
+    add_deck(reading)
+    youtube = sources.add_parser("youtube", help="Download and mine YouTube videos.")
+    youtube.add_argument("urls", nargs="+")
+    add_deck(youtube)
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """Run one command; the last stdout line is always its ``result`` event."""
+    args_list = list(sys.argv[1:] if argv is None else argv)
+    with _private_stdout() as write:
+        sink = EventSink(write=write)
+        try:
+            return _dispatch(args_list, sink)
+        except Exception as exc:  # noqa: BLE001 — the caller always gets a result line, never a traceback
+            logger.exception("CLI failed")
+            return _finish(sink, "error", f"{type(exc).__name__}: {exc}")
+
+
+def _dispatch(args_list: list[str], sink: EventSink) -> int:
+    try:
+        args = build_parser().parse_args(args_list)
+    except _UsageError as exc:
+        return _finish(sink, "usage_error", str(exc))
+    except SystemExit as exc:
+        # --help printed to (redirected) stdout, i.e. stderr, and asked to exit.
+        if exc.code in (0, None):
+            return _finish(sink, "success")
+        raise
+    if args.command == "version":
+        return _finish(sink, "success", app_version=__version__)
+    return _mine(args, sink)
+
+
+def _mine(args: argparse.Namespace, sink: EventSink) -> int:
+    try:
+        jobs = _jobs(args)
+    except runner.InputError as exc:
+        return _finish(sink, "usage_error", str(exc))
+
+    _prepare_process()
+    lock = _acquire_lock()
+    if lock is None:
+        return _finish(sink, "busy", _BUSY_MESSAGE)
+    try:
+        if not _settings_exist():
+            return _finish(sink, "setup_error", _NOT_SET_UP_MESSAGE)
+        config = GUIConfigManager.load_config()
+        _start_log(config.log_path)
+        if args.deck:
+            config = replace(config, anki_deck_name=args.deck)
+        cancel = threading.Event()
+        sink.emit("start", schema=SCHEMA_VERSION, app_version=__version__, command=args.source, items=len(jobs))
+        logger.info("CLI run start: command=%s items=%d", args.source, len(jobs))
+        with _cancel_on_signals(cancel):
+            try:
+                reports = MiningRun(config, sink, cancel).run(jobs)
+            except runner.SetupFailure as exc:
+                return _finish(sink, "setup_error", str(exc))
+        status = runner.run_status(reports, cancelled=cancel.is_set())
+        logger.info("CLI run end: status=%s", status)
+        return _finish(
+            sink,
+            status,
+            cards_created=sum(r.cards_created for r in reports),
+            items=[r.to_json() for r in reports],
+        )
+    finally:
+        lock.unlock()
+
+
+def _jobs(args: argparse.Namespace) -> list[runner.Job]:
+    if args.source == "batch":
+        return list(runner.batch_jobs(args.video_dir, args.subtitle_dir))
+    if args.source == "pairs":
+        return list(runner.pair_jobs([(video, subtitle) for video, subtitle in args.pair]))
+    if args.source == "reading":
+        return list(runner.reading_jobs(args.paths))
+    return list(runner.youtube_jobs(args.urls))
+
+
+def _finish(
+    sink: EventSink,
+    status: str,
+    error: str | None = None,
+    *,
+    cards_created: int = 0,
+    items: list[dict[str, object]] | None = None,
+    **fields: object,
+) -> int:
+    """Emit the one ``result`` line; every result carries the same core keys."""
+    sink.emit(
+        "result",
+        schema=SCHEMA_VERSION,
+        status=status,
+        error=error,
+        cards_created=cards_created,
+        items=items if items is not None else [],
+        **fields,
+    )
+    return _EXIT_BY_STATUS[status]
+
+
+@contextlib.contextmanager
+def _private_stdout() -> Iterator[Callable[[bytes], None]]:
+    """Give the JSON stream a private copy of fd 1 and send everything else to stderr.
+
+    A dependency's ``print()``, a native library writing fd 1 and (on POSIX) a
+    child process inheriting stdout would each corrupt the stream the calling
+    tool parses. During the run fd 1 and ``sys.stdout`` point at stderr (devnull
+    when there is none — a console=False Windows exe launched without one);
+    events go to the saved descriptor. On Windows a child spawned without an
+    explicit stdout still inherits the original handle, but every spawn site in
+    the app captures stdout. Both are restored on exit.
+    """
+    # Text already buffered in the original stdout objects (an import-time print
+    # while stdout is a block-buffered pipe, or a library holding a cached
+    # reference) would otherwise be flushed at interpreter exit — after fd 1 is
+    # restored, i.e. after the result line. Flush them while fd 1 is stderr.
+    originals = [s for s in {id(s): s for s in (sys.stdout, sys.__stdout__)}.values() if s is not None]
+
+    def flush_originals() -> None:
+        for stream in originals:
+            with contextlib.suppress(Exception):
+                stream.flush()
+
+    flush_originals()  # before the swap: earlier output stays where it was going
+    try:
+        event_fd: int | None = os.dup(1)
+    except OSError:  # no stdout at all: nowhere for events; the exit code still reports
+        event_fd = None
+    if event_fd is not None:
+        try:
+            os.dup2(2, 1)
+        except OSError:
+            null_fd = os.open(os.devnull, os.O_WRONLY)
+            os.dup2(null_fd, 1)
+            os.close(null_fd)
+    python_target: IO[str] | None = sys.stderr
+    devnull: IO[str] | None = None
+    if python_target is None:
+        devnull = python_target = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115 — closed below
+    try:
+        with contextlib.redirect_stdout(python_target):
+            yield fd_writer(event_fd) if event_fd is not None else _discard
+    finally:
+        flush_originals()  # while fd 1 still points at stderr
+        if event_fd is not None:
+            os.dup2(event_fd, 1)
+            os.close(event_fd)
+        if devnull is not None:
+            devnull.close()
+
+
+def _discard(_data: bytes) -> None:
+    """Event writer for a process started with no stdout."""
+
+
+@contextlib.contextmanager
+def _cancel_on_signals(cancel: threading.Event) -> Iterator[None]:
+    """SIGINT/SIGTERM set the run's cancel event; the processor stops at its next checkpoint."""
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+    signums = [getattr(signal, name) for name in ("SIGINT", "SIGTERM") if hasattr(signal, name)]
+    previous = {signum: signal.getsignal(signum) for signum in signums}
+
+    def handler(signum: int, _frame: object) -> None:
+        logger.warning("CLI received signal %d; cancelling after the current step", signum)
+        cancel.set()
+
+    for signum in signums:
+        signal.signal(signum, handler)
+    try:
+        yield
+    finally:
+        for signum, old in previous.items():
+            signal.signal(signum, old)
+
+
+def _prepare_process() -> None:
+    """The GUI boot's pre-Qt process steps a mining run also needs (no file writes)."""
+    from anki_miner.gui import app as gui_app
+    from anki_miner.gui import launch
+    from anki_miner.services.asr.asr_pack_installer import ensure_asr_pack_on_syspath
+    from anki_miner.services.language_pack_installer import ensure_language_packs_on_syspath
+
+    launch._create_windows_app_mutex()
+    launch._inject_system_truststore()
+    gui_app._scrub_pyinstaller_env()
+    ensure_language_packs_on_syspath()
+    ensure_asr_pack_on_syspath()
+
+
+def _acquire_lock() -> QLockFile | None:
+    """The GUI's own single-instance lock, or None when someone else holds it."""
+    from anki_miner.gui.app import _acquire_instance_lock
+
+    home = config_paths.ANKI_MINER_HOME
+    home.mkdir(parents=True, exist_ok=True)  # QLockFile cannot lock inside a missing directory
+    lock, proceed = _acquire_instance_lock(home / "instance.lock", lambda: False)
+    return lock if proceed else None
+
+
+def _settings_exist() -> bool:
+    """Whether Anki Miner was ever set up (load_config silently falls back to defaults)."""
+    config_file = GUIConfigManager.CONFIG_FILE
+    return config_file.exists() or config_file.with_name(config_file.name + ".bak").exists()
+
+
+def _start_log(log_path: Path) -> None:
+    """Attach the normal log sink — only once the lock is held — with the GUI's session markers."""
+    from anki_miner.gui import app as gui_app
+
+    try:
+        gui_app._configure_logging(log_path)
+        gui_app._log_session_boundary()
+        atexit.register(gui_app._log_session_end, None, reason="atexit")
+    except Exception:  # noqa: BLE001 — logging trouble must not stop a mining run
+        logger.exception("CLI could not configure the log file")
