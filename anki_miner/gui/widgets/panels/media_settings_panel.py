@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QSpinBox
 
 from anki_miner.gui.widgets.base import FormPanel
@@ -34,7 +35,7 @@ class MediaSettingsPanel(FormPanel):
 
     def _setup_fields(self) -> None:
         """Set up the panel fields."""
-        self.add_section(self.tr("Sentence audio"))
+        self.add_section(self.tr("Sentence Audio"))
 
         # Audio format (Issue #18)
         self.audio_format_combo = QComboBox()
@@ -94,8 +95,9 @@ class MediaSettingsPanel(FormPanel):
                 "audio. Sentence text is sent to the selected online services."
             ),
             anchor="reading_tts",
-            anchor_text=lambda: tuple(
-                self.reading_tts_combo.itemText(i) for i in range(self.reading_tts_combo.count())
+            anchor_text=lambda: (
+                "TTS",
+                *(self.reading_tts_combo.itemText(i) for i in range(self.reading_tts_combo.count())),
             ),
         )
 
@@ -156,7 +158,11 @@ class MediaSettingsPanel(FormPanel):
         self.animated_size_combo.addItem(self.tr("High"), "high")
         self.animated_size_combo.setToolTip(self.tr("Frame rate, height and quality for the animated clip."))
         self.animated_size_combo.activated.connect(self._on_animated_size_activated)
-        self.add_field(self.tr("Size"), self.animated_size_combo)
+        self.add_field(
+            self.tr("Size"),
+            self.animated_size_combo,
+            anchor_text=self._animated_size_search_text,
+        )
 
         self.animated_checkbox.toggled.connect(self._set_animated_enabled)
         self.animated_match_audio_checkbox.toggled.connect(self._set_match_audio)
@@ -221,6 +227,23 @@ class MediaSettingsPanel(FormPanel):
         label = tr_format(self.tr("Custom (%1 fps · %2 px · quality %3)"), fps, height, quality)
         self.animated_size_combo.addItem(label, "custom")
         self.animated_size_combo.setCurrentIndex(self.animated_size_combo.count() - 1)
+
+    def _animated_size_search_text(self) -> tuple[str, ...]:
+        """Searchable text for ``animated_size_combo``: every item plus its tooltip.
+
+        "fps" is a plain English keyword, not a translated string: the presets
+        (Small/Balanced/High) never spell it out, only the widget's own tooltip
+        says "Frame rate", and a still-custom entry's "fps" label only exists
+        once a config has saved a non-preset triple.
+        """
+        parts: list[str] = ["fps"]
+        combo = self.animated_size_combo
+        for index in range(combo.count()):
+            parts.append(combo.itemText(index))
+            tooltip = combo.itemData(index, Qt.ItemDataRole.ToolTipRole)
+            if tooltip:
+                parts.append(str(tooltip))
+        return tuple(parts)
 
     def _current_animated_size_triple(self) -> tuple[int, int, int]:
         """Return the (fps, height, quality) triple for the selected entry."""

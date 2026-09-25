@@ -14,6 +14,7 @@ connection -- now the only path there is.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -177,7 +178,11 @@ def test_process_with_an_error_row_and_new_valid_pickers_adds_and_runs_both(tab,
 
 
 def test_process_with_pickers_matching_a_pending_row_does_not_duplicate(tab, tmp_path):
-    """The same folders already queued mine that row again, not a copy."""
+    """The same folders already queued mine that row again, not a copy.
+
+    The pickers must also come away empty: once that row completes, the next
+    Process must not fold them in again and add a stray "Show (2)" row.
+    """
     video, subs = _fill_pickers(tab, tmp_path, name="Show")
     tab.queue_panel.add_series(display_name="Show", video_folder=video, subtitle_folder=subs, subtitle_offset=0.0)
     _fill_pickers(tab, tmp_path, name="Show")  # identical folders again
@@ -187,6 +192,54 @@ def test_process_with_pickers_matching_a_pending_row_does_not_duplicate(tab, tmp
         tab.queue_panel.process_queue_button.click()
 
     assert [w.display_name for w in tab.queue_panel.queue_item_widgets] == ["Show"]
+    assert tab.video_folder_selector.path_or_none() is None
+    assert tab.subtitle_folder_selector.path_or_none() is None
+
+
+def test_process_with_a_relative_duplicate_of_a_pending_row_does_not_duplicate(tab, tmp_path):
+    """A relative path naming the same folder as a pending row is still a
+    duplicate: comparison goes through ``is_same_folder``, not ``Path ==``."""
+    video, subs = _fill_pickers(tab, tmp_path, name="Show")
+    tab.queue_panel.add_series(display_name="Show", video_folder=video, subtitle_folder=subs, subtitle_offset=0.0)
+
+    # ``is_same_folder`` resolves relative to the process cwd at call time
+    # (inside the click below), not at ``set_path`` time -- so the chdir must
+    # still be in effect when Process is pressed.
+    original_cwd = Path.cwd()
+    fake_worker = MagicMock(name="BatchQueueWorkerThread")
+    try:
+        os.chdir(tmp_path)
+        tab.video_folder_selector.set_path(str(Path(".") / "Show"))
+        tab.subtitle_folder_selector.set_path(str(Path(".") / "Show Subs"))
+        with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", return_value=fake_worker):
+            tab.queue_panel.process_queue_button.click()
+    finally:
+        os.chdir(original_cwd)
+
+    assert [w.display_name for w in tab.queue_panel.queue_item_widgets] == ["Show"]
+    assert tab.video_folder_selector.path_or_none() is None
+    assert tab.subtitle_folder_selector.path_or_none() is None
+
+
+def test_process_with_a_symlinked_duplicate_of_a_pending_row_does_not_duplicate(tab, tmp_path):
+    """A symlink resolving to a pending row's folder is still a duplicate."""
+    video, subs = _fill_pickers(tab, tmp_path, name="Show")
+    tab.queue_panel.add_series(display_name="Show", video_folder=video, subtitle_folder=subs, subtitle_offset=0.0)
+
+    video_link = tmp_path / "Show Link"
+    subs_link = tmp_path / "Show Subs Link"
+    os.symlink(video, video_link)
+    os.symlink(subs, subs_link)
+    tab.video_folder_selector.set_path(str(video_link))
+    tab.subtitle_folder_selector.set_path(str(subs_link))
+
+    fake_worker = MagicMock(name="BatchQueueWorkerThread")
+    with patch("anki_miner.gui.workers.batch_queue_worker.BatchQueueWorkerThread", return_value=fake_worker):
+        tab.queue_panel.process_queue_button.click()
+
+    assert [w.display_name for w in tab.queue_panel.queue_item_widgets] == ["Show"]
+    assert tab.video_folder_selector.path_or_none() is None
+    assert tab.subtitle_folder_selector.path_or_none() is None
 
 
 def test_process_with_one_invalid_picker_and_runnable_rows_shows_the_picker_issue(tab, tmp_path):

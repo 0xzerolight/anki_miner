@@ -480,11 +480,20 @@ class BatchProcessingTab(MiningTabBase):
             secondary_offset=self._secondary_offset(),
         )
         if item is not None:
-            self.video_folder_selector.clear()
-            self.subtitle_folder_selector.clear()
-            if secondary_folder is not None:
-                self.secondary_folder_selector.clear()
+            self._clear_add_series_pickers(secondary_folder)
         return item
+
+    def _clear_add_series_pickers(self, secondary_folder: Path | None) -> None:
+        """Reset the Add Series card so it is ready for the next series.
+
+        ``secondary_folder`` is the folder that was actually validated for
+        this fold (``None`` when the secondary picker was unused), so its
+        picker is only cleared when it was actually part of what was folded.
+        """
+        self.video_folder_selector.clear()
+        self.subtitle_folder_selector.clear()
+        if secondary_folder is not None:
+            self.secondary_folder_selector.clear()
 
     def _unique_series_name(self, base: str) -> str:
         """``base``, or ``base`` suffixed " (2)", " (3)", ... to avoid a repeat.
@@ -511,7 +520,7 @@ class BatchProcessingTab(MiningTabBase):
         selecting it and running it, not through this card.
         """
         return any(
-            item.video_folder == video_folder and item.subtitle_folder == subtitle_folder
+            is_same_folder(item.video_folder, video_folder) and is_same_folder(item.subtitle_folder, subtitle_folder)
             for item in self.batch_queue.get_all_items()
             if item.status in (QueueItemStatus.PENDING, QueueItemStatus.ERROR)
         )
@@ -542,6 +551,7 @@ class BatchProcessingTab(MiningTabBase):
             return False
 
         if self._has_runnable_duplicate(video_folder, subtitle_folder):
+            self._clear_add_series_pickers(_secondary_folder)
             return True
         return self._add_series_from_pickers() is not None
 

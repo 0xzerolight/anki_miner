@@ -5728,6 +5728,30 @@ class TestPhase2FilterOrdering:
         )
 
 
+class TestActiveFilterNames:
+    """``_active_filter_names`` names the sentence-length filter by the same
+    no-master-toggle rule as the filter itself: caps (0, 0) is off, any
+    non-zero cap is on."""
+
+    def test_no_sentence_length_name_when_both_caps_are_zero(self, test_config):
+        config = replace(test_config, max_sentence_duration_seconds=0.0, max_sentence_chars=0)
+        processor = build_processor(config=config)
+
+        assert "sentence-length" not in processor._active_filter_names()
+
+    def test_sentence_length_name_present_when_duration_cap_is_set(self, test_config):
+        config = replace(test_config, max_sentence_duration_seconds=30.0, max_sentence_chars=0)
+        processor = build_processor(config=config)
+
+        assert "sentence-length" in processor._active_filter_names()
+
+    def test_sentence_length_name_present_when_chars_cap_is_set(self, test_config):
+        config = replace(test_config, max_sentence_duration_seconds=0.0, max_sentence_chars=80)
+        processor = build_processor(config=config)
+
+        assert "sentence-length" in processor._active_filter_names()
+
+
 # ---------------------------------------------------------------------------
 # OVH-023 / OVH-038 — guard record_difficulty against locked stats.db
 # ---------------------------------------------------------------------------

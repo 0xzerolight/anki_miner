@@ -1279,6 +1279,27 @@ def test_rebuild_finish_handler_reenables_the_button_when_still_checked(tab):
     assert panel.rebuild_known_words_button.isEnabled() is True
 
 
+def test_pending_field_names_reports_a_dirty_save_panel_field(tab):
+    tab.anki_panel.set_deck_name("A Different Deck")
+
+    assert "anki_deck_name" in tab._pending_field_names()
+
+
+def test_pending_field_names_reports_check_for_updates(tab):
+    """check_for_updates lives on the UI panel, outside _save_panels (T11);
+    _pending_field_names must still fold it in from its own widget."""
+    tab.ui_panel.check_for_updates_checkbox.setChecked(not tab.config.check_for_updates)
+
+    assert "check_for_updates" in tab._pending_field_names()
+
+
+def test_pending_field_names_reports_max_parallel_workers(tab):
+    """max_parallel_workers lives on the UI panel too, outside _save_panels."""
+    tab.ui_panel.max_workers_spinbox.setValue(tab.config.max_parallel_workers + 1)
+
+    assert "max_parallel_workers" in tab._pending_field_names()
+
+
 def test_a_completed_install_turns_the_button_back_into_an_update(tab):
     """A finished yt-dlp download relabels the button without a validation sweep."""
     from types import SimpleNamespace

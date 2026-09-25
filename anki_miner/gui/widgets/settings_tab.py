@@ -448,7 +448,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Settings Profiles sits with the other whole-config actions rather than
         # at the foot of General, where the theme gallery pushed it below the
         # fold and it read as a third theme button. This footer is
-        # outside the panels' scroll area, so one button serves all ten pages.
+        # outside the panels' scroll area, so one button serves all 13 pages.
         # Left of Export/Import because it is the same kind of action: a named
         # snapshot of every setting, kept in the app instead of in a file.
         self.manage_profiles_button = ModernButton(self.tr("Settings Profiles…"), variant="secondary")
@@ -498,7 +498,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         self.setLayout(outer)
 
     def _build_navigator(self) -> None:
-        """Fill the navigator with five headings over ten destinations (D10).
+        """Fill the navigator with five headings over 13 destinations (D10).
 
         Populates ``self.nav_list`` and ``self.pages`` together and records the
         stable key → page index map in ``_subtab_index``, which callers
@@ -1622,6 +1622,13 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
                 for spec in fields(self.config)
                 if getattr(proposed, spec.name) != getattr(self.config, spec.name)
             ]
+            # UI panel fields outside _save_panels (T11): Check for updates and
+            # Max parallel workers persist straight from their widgets in
+            # _commit_settings, not through a panel's contribute().
+            if self.ui_panel.check_for_updates_checkbox.isChecked() != self.config.check_for_updates:
+                names.append("check_for_updates")
+            if self.ui_panel.max_workers_spinbox.value() != self.config.max_parallel_workers:
+                names.append("max_parallel_workers")
         return capped(sorted(names))
 
     def commit_pending_settings_for_mutation(self) -> bool:
@@ -2377,7 +2384,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
             # Anki-synced rows are rebuilt from Anki on the next run.
             return db.clear(preserve_user=True)
 
-        self.filtering_panel.rebuild_known_words_button.setEnabled(False)
+        self.filtering_panel.set_rebuild_known_words_in_flight(True)
         run_off_thread(
             self,
             work,
@@ -2411,7 +2418,7 @@ class SettingsTab(ScreenIssueHost, SettingAnchorHost, QWidget):
         # Not an unconditional re-enable: the checkbox may have been toggled off
         # while the rebuild ran off-thread, and the button must land back in
         # step with it rather than staying enabled regardless (Task 7).
-        self.filtering_panel.sync_rebuild_known_words_button_state()
+        self.filtering_panel.set_rebuild_known_words_in_flight(False)
 
     def _on_manage_known_words(self) -> None:
         """Open the Manage Known Words dialog (Issue #42)."""

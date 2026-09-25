@@ -158,6 +158,44 @@ class TestMatching:
 
         assert "media.reading_tts" in results
 
+    def test_tts_finds_the_sentence_tts_combo(self, entries):
+        """The combo's own label never spells out "TTS"; the anchor_text
+        keyword must still surface it for that abbreviation."""
+        results = _ids(search(entries, "TTS"))
+
+        assert "media.reading_tts" in results
+
+    def test_fps_finds_the_animated_size_combo(self, entries):
+        """Small/Balanced/High never say "fps"; only a still-custom entry's
+        label would, and only once a non-preset triple is loaded."""
+        results = _ids(search(entries, "fps"))
+
+        assert "media.animated_size_combo" in results
+
+    def test_i_plus_one_finds_the_sentence_rule_combo(self, entries):
+        """The sentence rule combo has no field label; its own item texts
+        must carry the search text, including the "i+1" one item spells out."""
+        results = _ids(search(entries, "i+1"))
+
+        assert "filtering.sentence_rule_combo" in results
+
+    def test_dedup_finds_the_sentence_rule_combo(self, entries):
+        results = _ids(search(entries, "dedup"))
+
+        assert "filtering.sentence_rule_combo" in results
+
+    def test_deduplicate_finds_the_sentence_rule_combo(self, entries):
+        """ "deduplicate" is not a substring of the tooltip's "deduplication";
+        it needs its own keyword."""
+        results = _ids(search(entries, "deduplicate"))
+
+        assert "filtering.sentence_rule_combo" in results
+
+    def test_one_card_per_sentence_finds_the_sentence_rule_combo(self, entries):
+        results = _ids(search(entries, "one card per sentence"))
+
+        assert "filtering.sentence_rule_combo" in results
+
 
 class TestRenamedDestinations:
     def test_the_old_asr_name_still_finds_transcription_settings(self, entries):

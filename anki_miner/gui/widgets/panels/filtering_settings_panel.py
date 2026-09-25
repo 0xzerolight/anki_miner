@@ -132,6 +132,9 @@ class FilteringSettingsPanel(FormPanel):
         # Most recently fetched deck names. Every picker open refreshes them
         # first because the connected endpoint or Anki collection may change.
         self._available_decks: list[str] = []
+        # Whether SettingsTab currently has a rebuild running off-thread; see
+        # sync_rebuild_known_words_button_state.
+        self._rebuild_in_flight = False
         super().__init__(self.tr("Word Filters"), parent=parent)
         self._setup_fields()
 
@@ -412,7 +415,11 @@ class FilteringSettingsPanel(FormPanel):
             ),
             Qt.ItemDataRole.ToolTipRole,
         )
-        self.add_field("", self.sentence_rule_combo)
+        self.add_field(
+            "",
+            self.sentence_rule_combo,
+            anchor_text=self._sentence_rule_search_text,
+        )
 
         # Script Type section (Issue #57)
         self.add_section(self.tr("Script Type"))
@@ -556,6 +563,25 @@ class FilteringSettingsPanel(FormPanel):
 
         self.add_stretch()
 
+    def _sentence_rule_search_text(self) -> tuple[str, ...]:
+        """Searchable text for ``sentence_rule_combo``: every item plus its tooltip.
+
+        The combo has no field label (``add_field("", ...)``), so without this
+        the row's item texts and per-item tooltips (set via ``ItemDataRole.
+        ToolTipRole``) are invisible to search. "dedup" and "deduplicate" are
+        plain English keywords, not translated strings: the tooltip only spells
+        out "deduplication", which contains "dedup" as a substring but not
+        "deduplicate".
+        """
+        parts: list[str] = ["dedup", "deduplicate"]
+        combo = self.sentence_rule_combo
+        for index in range(combo.count()):
+            parts.append(combo.itemText(index))
+            tooltip = combo.itemData(index, Qt.ItemDataRole.ToolTipRole)
+            if tooltip:
+                parts.append(str(tooltip))
+        return tuple(parts)
+
     # --- Excluded decks (Issue #38) ---
 
     def _on_add_deck_clicked(self) -> None:
@@ -697,14 +723,30 @@ class FilteringSettingsPanel(FormPanel):
         self.match_kana_variants_checkbox.setChecked(value)
 
     def sync_rebuild_known_words_button_state(self) -> None:
-        """Rebuild only means anything while the cache the checkbox names is on.
+        """Rebuild only means anything while the cache the checkbox names is on,
+        and only while no rebuild is already running.
 
         Public: also called by ``SettingsTab`` when a background rebuild finishes,
         so the button lands back in step with the checkbox instead of being
         force-enabled regardless of it (the checkbox can be toggled off while a
-        rebuild is still running off-thread).
+        rebuild is still running off-thread). The checkbox-toggled sync and
+        ``load_from_config`` both reach this too, so it must never re-enable the
+        button mid-rebuild -- hence the in-flight flag gates it alongside the
+        checkbox.
         """
-        self.rebuild_known_words_button.setEnabled(self.use_known_words_db_checkbox.isChecked())
+        self.rebuild_known_words_button.setEnabled(
+            self.use_known_words_db_checkbox.isChecked() and not self._rebuild_in_flight
+        )
+
+    def set_rebuild_known_words_in_flight(self, in_flight: bool) -> None:
+        """Record whether ``SettingsTab`` has a rebuild running off-thread.
+
+        The only public path that flips :attr:`_rebuild_in_flight`; it
+        re-syncs the button immediately so the caller never has to remember to
+        call :meth:`sync_rebuild_known_words_button_state` itself.
+        """
+        self._rebuild_in_flight = in_flight
+        self.sync_rebuild_known_words_button_state()
 
     # --- Word lists ---
 

@@ -96,6 +96,59 @@ def test_custom_triple_survives_unrelated_edit(qtbot):
     ) == (25, 600, 45)
 
 
+def test_custom_then_preset_then_custom_reload_shows_exactly_one_custom_item(qtbot):
+    """Custom -> a real preset -> a different custom reload never leaves two
+    stale "Custom (...)" entries, or the wrong one, behind."""
+    panel = MediaSettingsPanel()
+    qtbot.addWidget(panel)
+
+    # 1. Load custom triple A -- the Custom item appears.
+    triple_a = (18, 540, 35)
+    cfg_a = replace(
+        create_default_config(),
+        screenshot_animated_fps=triple_a[0],
+        screenshot_animated_height=triple_a[1],
+        screenshot_animated_quality=triple_a[2],
+    )
+    panel.load_from_config(cfg_a)
+    assert panel.animated_size_combo.currentData() == "custom"
+    assert panel.animated_size_combo.findData("custom") != -1
+
+    # 2. Pick High -- the Custom item is dropped.
+    idx = panel.animated_size_combo.findData("high")
+    panel.animated_size_combo.setCurrentIndex(idx)
+    panel.animated_size_combo.activated.emit(idx)
+    assert panel.animated_size_combo.currentData() == "high"
+    assert panel.animated_size_combo.findData("custom") == -1
+
+    # 3. Reload a config with a different custom triple B -- exactly one
+    # Custom item, showing B's values.
+    triple_b = (22, 900, 65)
+    cfg_b = replace(
+        create_default_config(),
+        screenshot_animated_fps=triple_b[0],
+        screenshot_animated_height=triple_b[1],
+        screenshot_animated_quality=triple_b[2],
+    )
+    panel.load_from_config(cfg_b)
+
+    custom_items = [
+        i for i in range(panel.animated_size_combo.count()) if panel.animated_size_combo.itemData(i) == "custom"
+    ]
+    assert len(custom_items) == 1
+    assert panel.animated_size_combo.currentData() == "custom"
+    label = panel.animated_size_combo.currentText()
+    assert "22" in label and "900" in label and "65" in label
+
+    # 4. contribute() returns B.
+    out = panel.contribute(cfg_b)
+    assert (
+        out.screenshot_animated_fps,
+        out.screenshot_animated_height,
+        out.screenshot_animated_quality,
+    ) == triple_b
+
+
 def test_picking_high_writes_its_triple(qtbot):
     """Selecting the High preset writes its (fps, height, quality) triple."""
     panel = MediaSettingsPanel()

@@ -304,6 +304,33 @@ def test_rebuild_known_words_button_follows_the_checkbox(qtbot):
     assert panel.manage_known_words_button.isEnabled()
 
 
+def test_rebuild_button_stays_disabled_mid_rebuild_despite_checkbox_toggling(qtbot):
+    """A rebuild in flight must survive both the checkbox-toggled sync and a
+    load_from_config reload -- neither may re-enable the button mid-rebuild."""
+    from anki_miner.config import AnkiMinerConfig
+
+    panel = FilteringSettingsPanel()
+    qtbot.addWidget(panel)
+    panel.use_known_words_db_checkbox.setChecked(True)
+    assert panel.rebuild_known_words_button.isEnabled()
+
+    panel.set_rebuild_known_words_in_flight(True)
+    assert not panel.rebuild_known_words_button.isEnabled()
+
+    # Toggling the checkbox off and back on must not re-enable the button.
+    panel.use_known_words_db_checkbox.setChecked(False)
+    assert not panel.rebuild_known_words_button.isEnabled()
+    panel.use_known_words_db_checkbox.setChecked(True)
+    assert not panel.rebuild_known_words_button.isEnabled()
+
+    # A config reload while the rebuild is in flight must not re-enable it either.
+    panel.load_from_config(replace(AnkiMinerConfig(), use_known_words_db=True))
+    assert not panel.rebuild_known_words_button.isEnabled()
+
+    panel.set_rebuild_known_words_in_flight(False)
+    assert panel.rebuild_known_words_button.isEnabled()
+
+
 def test_kana_variant_row_lives_in_the_known_words_section(qtbot):
     # FormPanel.add_section opens a new QFormLayout per section (form_panel.py),
     # so the two widgets sharing one layout is the proof the row moved.

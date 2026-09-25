@@ -871,14 +871,15 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         id="alass-tuning",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Tune subtitle alignment (alass)"),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Set the alass binary (subtitle alignment)"),
         description=QT_TRANSLATE_NOOP(
             "Capabilities",
-            "Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.",
+            "Point alass, the subtitle re-timing tool, at a specific executable, or download it "
+            "in-app (Linux/Windows; macOS installs it with Homebrew).",
         ),
         category=_CAT_SOURCES,
         target=CapabilityTarget("settings", "subtitles"),
-        keywords=("alass", "alignment", "split penalty", "framerate", "drift", "sync settings"),
+        keywords=("alass", "alignment", "binary", "download", "homebrew", "sync settings"),
     ),
     # --- Audio -------------------------------------------------------------
     Capability(
@@ -1103,7 +1104,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     # --- Appearance & language ---------------------------------------------
     Capability(
         id="themes",
-        title=QT_TRANSLATE_NOOP("Capabilities", "Themes, dark mode, fonts & zoom"),
+        title=QT_TRANSLATE_NOOP("Capabilities", "Themes, dark mode & zoom"),
         description=QT_TRANSLATE_NOOP("Capabilities", "Switch light/dark themes and adjust UI zoom."),
         category=_CAT_APPEARANCE,
         target=CapabilityTarget("settings", "ui"),
