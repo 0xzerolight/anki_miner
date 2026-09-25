@@ -159,6 +159,19 @@ def test_reading_source_ref_file_kind_requires_path():
             ReadingSourceRef(kind=kind)  # type: ignore[arg-type]
 
 
+def test_reading_source_ref_byte_range_is_txt_only():
+    # Only the novel loader reads a part; any other loader would mine the whole file.
+    part = ReadingSourceRef(kind="txt", path=Path("/b/big.txt"), byte_range=(0, 8))
+    assert part.byte_range == (0, 8)
+    hash(part)
+    assert ReadingSourceRef(kind="txt", path=Path("/b/big.txt")).byte_range is None
+    for kind in ("mokuro", "epub", "subtitle"):
+        with pytest.raises(ValueError, match="cannot carry a byte_range"):
+            ReadingSourceRef(kind=kind, path=Path("/b/x"), byte_range=(0, None))  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="cannot carry a byte_range"):
+        ReadingSourceRef(kind="text", text="本文", byte_range=(0, None))
+
+
 def test_reading_document_is_mutable():
     doc = ReadingDocument(title="T", kind="book", series="Books", episode="T")
     assert doc.units == []

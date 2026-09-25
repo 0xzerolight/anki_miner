@@ -170,6 +170,9 @@ def reading_source(ref: ReadingSourceRef) -> dict[str, Any] | None:
     ``kind="text"`` carries content the user typed into a box. That is a form
     draft, and D7-B says drafts are never restored — so it is not written at all,
     rather than written and skipped on the way back in.
+
+    ``byte_range`` is not written: only the Novels tab builds part refs, and it
+    never persists its items.
     """
     if ref.kind == "text" or ref.path is None:
         return None
