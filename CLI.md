@@ -10,9 +10,9 @@ Requirements: Anki is running with the AnkiConnect add-on, and Anki Miner has be
 |---|---|
 | pip | `anki-miner` |
 | Linux .deb | `/usr/bin/anki-miner` |
-| Linux AppImage | `./AnkiMiner-<version>-x86_64.AppImage` |
+| Linux AppImage | `./AnkiMiner-<version>-Linux-x86_64.AppImage` |
 | macOS | `/Applications/AnkiMiner.app/Contents/MacOS/AnkiMiner` |
-| Windows | `%LOCALAPPDATA%\Programs\AnkiMiner\AnkiMiner.exe` (per-user install), `C:\Program Files\AnkiMiner\AnkiMiner.exe` (all users) |
+| Windows | `%LOCALAPPDATA%\Programs\AnkiMiner\AnkiMiner.exe` |
 
 On Windows, `AnkiMiner.exe` is a GUI-subsystem program. Its output reaches a caller that captures stdout (for example `subprocess.run(..., capture_output=True)`), but `cmd.exe` shows nothing.
 
@@ -62,7 +62,7 @@ An item report:
  "total_words_found": 140, "note_ids": [1726…], "errors": [], "retryable": false}
 ```
 
-Item `status` is `success`, `failed`, `cancelled` or `skipped` (not reached after a cancel). `note_ids` are the Anki note IDs created. `retryable` is true only when the failure was transient and no note was written, so running the item again cannot duplicate cards.
+Item `status` is `success`, `failed`, `cancelled` or `skipped` (not reached after a cancel). File paths in `input` are absolute and resolved (symlinks followed), so they can differ from the paths you passed; match items by `item`, their position in the run. `note_ids` are the Anki note IDs created. `retryable` is true only when the failure was transient and no note was written, so running the item again cannot duplicate cards.
 
 | `result.status` | exit code | meaning |
 |---|---|---|
@@ -105,6 +105,9 @@ for line in proc.stdout:
         print(event["input"]["video"], event["status"], event["cards_created"])
     elif event["event"] == "result":
         result = event
-if proc.wait() != 0:
+code = proc.wait()
+if result is None:  # killed before it could report
+    print("no result, exit code", code)
+elif code != 0:
     print("run ended with", result["status"], result["error"])
 ```
