@@ -77,6 +77,11 @@ class ReadingSourceRef:
 
     ``path`` is always set for the file-backed kinds (their loaders assert
     this) and only None for kind="text".
+
+    ``byte_range`` marks one part of a ``.txt`` too large to mine whole
+    (``aozora_source.split_oversize``): ``(start, end)`` byte offsets, ``end``
+    None meaning end of file. The part owns every line whose first byte lies
+    in ``[start, end)``. None for every other ref.
     """
 
     kind: Literal["mokuro", "epub", "txt", "subtitle", "text"]
@@ -86,6 +91,7 @@ class ReadingSourceRef:
     volume: str | None = None
     text: str | None = None
     ocr_entry: str | None = None
+    byte_range: tuple[int, int | None] | None = None
 
     def __post_init__(self) -> None:
         # Every field defaults so kind="text" can be built positionally, but the
@@ -94,6 +100,10 @@ class ReadingSourceRef:
         # construction so a malformed ref fails loudly at its source instead.
         if self.kind != "text" and self.path is None:
             raise ValueError(f"ReadingSourceRef(kind={self.kind!r}) requires a path")
+        # Only the novel loader reads a part; any other loader would silently
+        # mine the whole file.
+        if self.byte_range is not None and self.kind != "txt":
+            raise ValueError(f"ReadingSourceRef(kind={self.kind!r}) cannot carry a byte_range")
 
 
 @dataclass

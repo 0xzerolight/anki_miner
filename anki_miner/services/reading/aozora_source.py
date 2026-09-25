@@ -13,11 +13,12 @@ so a ``《reading》`` can't confuse the annotation scanner.
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import re
 import unicodedata
-from collections.abc import Callable
-from typing import TYPE_CHECKING
+from collections.abc import Callable, Iterable
+from typing import TYPE_CHECKING, BinaryIO
 
 from anki_miner.exceptions import OperationCancelled, SetupError
 from anki_miner.models.reading import (
@@ -37,9 +38,28 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# The two over-cap SetupErrors in load() name this in MB ("over 32 MB"); change
-# both if this changes.
+# The three over-cap SetupErrors (two in load(), one in _read_part) name this in
+# MB ("over 32 MB"); change them if this changes.
 _MAX_TEXT_FILE_BYTES = 32 * 1024 * 1024
+
+# A .txt over the cap is mined as consecutive parts of this size, one queue item
+# each (split_oversize), because one run over the whole file holds every unit in
+# memory and sits in an uncancellable parse for minutes. A quarter of the cap
+# keeps each part's parse short. The last part runs to end of file, so it holds
+# up to two parts' worth and must still fit under the cap.
+_PART_BYTES = _MAX_TEXT_FILE_BYTES // 4
+
+# Longest line a part boundary may fall inside. A part owns every line that
+# starts in it, so it reads the line crossing its end in full, up to this.
+# _long_line_error names it ("over 1 MB").
+_LINE_SLACK = 1024 * 1024
+
+assert _LINE_SLACK < _PART_BYTES and 2 * _PART_BYTES <= _MAX_TEXT_FILE_BYTES
+
+# A b"\n" split is safe in every ASCII-compatible encoding the ladders decode
+# (0x0A is never a trail byte), but not in UTF-16, where it can sit inside a
+# character.
+_UTF16_BOMS = (b"\xff\xfe", b"\xfe\xff")
 
 # --- gaiji (external characters) -----------------------------------------
 
@@ -338,6 +358,93 @@ def _emit_units(
     return units, para_no, skipped
 
 
+# --- parts of an over-cap file -------------------------------------------
+
+
+def _line_too_long(chunk: bytes, limit: int) -> bool:
+    # A short read without a newline is end of file, never an error.
+    return len(chunk) == limit and not chunk.endswith(b"\n")
+
+
+def _long_line_error(name: str) -> SetupError:
+    # A file with CR-only line ends has no b"\n" at all, so it lands here too.
+    return SetupError(f"'{name}' has a line over 1 MB, so it can't be mined in parts.")
+
+
+def _read_part(f: BinaryIO, name: str, start: int, end: int | None) -> bytes:
+    """Read one part: every line whose first byte lies in ``[start, end)``.
+
+    Neighbouring parts meet from both sides of one boundary. The part before
+    reads the line crossing it to its end; this part skips that line. The skip
+    starts one byte earlier and reads one byte more, so both stop on the same
+    byte: a boundary line lands whole in one part, or is too long for both.
+    """
+    if start > 0:
+        f.seek(start - 1)
+        if _line_too_long(f.readline(_LINE_SLACK + 1), _LINE_SLACK + 1):
+            raise _long_line_error(name)
+    if end is None:
+        body = f.read(_MAX_TEXT_FILE_BYTES + 1)
+        if len(body) > _MAX_TEXT_FILE_BYTES:
+            raise SetupError(f"'{name}' is too large to mine (over 32 MB).")
+        return body
+    body = f.read(max(0, end - f.tell()))
+    # An empty body means the skipped line ran past this part's end: the line
+    # crossing it started in an earlier part, which owns it.
+    if body and not body.endswith(b"\n"):
+        tail = f.readline(_LINE_SLACK)
+        if _line_too_long(tail, _LINE_SLACK):
+            raise _long_line_error(name)
+        body += tail
+    return body
+
+
+def _parts_of(ref: ReadingSourceRef) -> list[ReadingSourceRef] | None:
+    if ref.kind != "txt" or ref.path is None or ref.byte_range is not None:
+        return None
+    try:
+        size = ref.path.stat().st_size
+        if size <= _MAX_TEXT_FILE_BYTES:
+            return None
+        with ref.path.open("rb") as f:
+            if f.read(2) in _UTF16_BOMS:
+                return None
+    except OSError:
+        return None
+    count = size // _PART_BYTES
+    log_summary(logger, "Reading split", file=ref.path, size=size, parts=count)
+    return [
+        dataclasses.replace(
+            ref,
+            title=f"{ref.title} ({i + 1}/{count})",
+            byte_range=(i * _PART_BYTES, (i + 1) * _PART_BYTES if i < count - 1 else None),
+        )
+        for i in range(count)
+    ]
+
+
+def split_oversize(refs: Iterable[ReadingSourceRef]) -> list[ReadingSourceRef]:
+    """Replace each ``.txt`` ref over the cap with its parts, in file order.
+
+    Every part is ``_PART_BYTES`` long except the last, which runs to end of
+    file and so also takes whatever was appended after the ``stat()``. Parts
+    are titled ``"<stem> (i/n)"``, which is what their cards' Source names.
+
+    Reads nothing but a ``stat()`` and two bytes, so the Novels tab can call it
+    on the GUI thread. Everything else passes through unchanged: other kinds,
+    files within the cap, a path that can't be read (the loader reports it when
+    the item runs), and UTF-16 files (see ``_UTF16_BOMS``), which then fail once
+    with the over-cap message.
+
+    Deliberately not part of ``detector.detect``: Audiobook Sync takes
+    ``detect()[0]`` as the whole book, and would silently get part 1 alone.
+    """
+    out: list[ReadingSourceRef] = []
+    for ref in refs:
+        out.extend(_parts_of(ref) or [ref])
+    return out
+
+
 # --- public API ----------------------------------------------------------
 
 
@@ -355,32 +462,48 @@ def load(
     built-in Japanese sniffing path (see ``_util._decode``). ``rules`` is that
     language's sentence-splitting policy; ``None`` is the built-in Japanese one.
     ``script_check`` validates a single-byte ladder leg (``_util._decode``).
+
+    A ref with a ``byte_range`` is one part of an over-cap file
+    (:func:`split_oversize`). It reads only its own lines and decodes them on
+    their own. Only the first part drops the Aozora header and only the last
+    cuts the colophon, as on the whole file: a corpus of concatenated books has
+    one 底本 colophon per book, and a per-part cut would drop the next book's
+    opening. A part keeps its ``"<stem> (i/n)"`` title so its cards name it.
     """
     _raise_if_cancelled(cancel_check)
     # Per-kind ref contract: file-backed kinds always carry a path.
     assert ref.path is not None
     try:
-        size = ref.path.stat().st_size
-        if size > _MAX_TEXT_FILE_BYTES:
-            raise SetupError(f"'{ref.path.name}' is too large to mine (over 32 MB).")
-        with ref.path.open("rb") as f:
-            raw = f.read(_MAX_TEXT_FILE_BYTES + 1)
-        _raise_if_cancelled(cancel_check)
-        if len(raw) > _MAX_TEXT_FILE_BYTES:
-            raise SetupError(f"'{ref.path.name}' is too large to mine (over 32 MB).")
+        if ref.byte_range is not None:
+            with ref.path.open("rb") as f:
+                raw = _read_part(f, ref.path.name, *ref.byte_range)
+            _raise_if_cancelled(cancel_check)
+        else:
+            size = ref.path.stat().st_size
+            if size > _MAX_TEXT_FILE_BYTES:
+                raise SetupError(f"'{ref.path.name}' is too large to mine (over 32 MB).")
+            with ref.path.open("rb") as f:
+                raw = f.read(_MAX_TEXT_FILE_BYTES + 1)
+            _raise_if_cancelled(cancel_check)
+            if len(raw) > _MAX_TEXT_FILE_BYTES:
+                raise SetupError(f"'{ref.path.name}' is too large to mine (over 32 MB).")
     except OSError as e:
         logger.debug("Aozora read failed: file=%s error=%s detail=%s", ref.path, type(e).__name__, e)
         raise SetupError(f"Cannot read novel file '{ref.path.name}': {e}") from e
+    first_part = ref.byte_range is None or ref.byte_range[0] == 0
+    last_part = ref.byte_range is None or ref.byte_range[1] is None
     text = _decode(raw, encodings=encodings, script_check=script_check)
-    lines = _cut_footer(_splitlines(text))
+    lines = _splitlines(text)
+    if last_part:
+        lines = _cut_footer(lines)
 
     aozora = _is_aozora(text)
-    if aozora:
-        title, body_lines = _extract_header(lines)
-        title = title or ref.title
-    else:
-        title = ref.title
-        body_lines = lines
+    title = ref.title
+    body_lines = lines
+    if aozora and first_part:
+        header_title, body_lines = _extract_header(lines)
+        if ref.byte_range is None:
+            title = header_title or ref.title
 
     units, paragraphs, skipped = _emit_units(
         body_lines,
@@ -399,6 +522,7 @@ def load(
         logger,
         "Aozora parse",
         file=ref.path,
+        byte_range=ref.byte_range,
         paragraphs=paragraphs,
         units=len(units),
         chars=sum(len(unit.text) for unit in units),

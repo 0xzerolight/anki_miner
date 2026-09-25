@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -212,6 +213,155 @@ def test_aozora_footer_cut_and_symbol_block_dropped(tmp_path):
     assert "記号について" not in joined  # symbol-explanation block dropped
     assert "ルビ" not in joined
     assert "筑摩書房" not in joined  # footer removed
+
+
+# --- parts of an over-cap file ------------------------------------------
+
+
+def _shrink_parts(monkeypatch, *, cap: int, part: int, slack: int) -> None:
+    """Shrink the cap, part size and line slack so a small file splits."""
+    assert slack < part and 2 * part <= cap  # the module's own invariants
+    monkeypatch.setattr(aozora_source, "_MAX_TEXT_FILE_BYTES", cap)
+    monkeypatch.setattr(aozora_source, "_PART_BYTES", part)
+    monkeypatch.setattr(aozora_source, "_LINE_SLACK", slack)
+
+
+def _read_at_cuts(path: Path, cuts: list[int]) -> list[bytes]:
+    """Read the parts starting at each cut (cuts[0] == 0), the last one open-ended."""
+    with path.open("rb") as f:
+        return [
+            aozora_source._read_part(f, path.name, start, end)
+            for start, end in zip(cuts, [*cuts[1:], None], strict=True)
+        ]
+
+
+def test_parts_rejoin_to_the_file_on_line_boundaries(tmp_path, monkeypatch):
+    slack = 24
+    _shrink_parts(monkeypatch, cap=10_000, part=64, slack=slack)
+    path = tmp_path / "corpus.txt"
+    for seed in range(300):
+        rng = random.Random(seed)
+        newline = rng.choice(["\n", "\r\n"])
+        bom = "﻿" if rng.random() < 0.2 else ""
+        lines = []
+        for _ in range(rng.randint(0, 40)):
+            # Up to exactly `slack` bytes with the newline (and the first line's
+            # BOM), in 1-3 byte characters.
+            line = "" if lines else bom
+            while True:
+                char = rng.choice("ab漢字あ。 ")
+                if len((line + char + newline).encode()) > slack:
+                    break
+                line += char
+                if rng.random() < 0.15:
+                    break
+            lines.append(line)
+        text = newline.join(lines) + (newline if lines and rng.random() < 0.5 else "")
+        data = text.encode()
+        path.write_bytes(data)
+        line_starts = [0] + [i + 1 for i, b in enumerate(data) if b == 0x0A]
+        pool = list(range(1, len(data))) + line_starts[1:]
+        cuts = [0, *sorted(set(rng.sample(pool, min(len(pool), rng.randint(0, 12)))))]
+
+        parts = _read_at_cuts(path, cuts)
+
+        assert b"".join(parts) == data, f"seed {seed}"
+        offset = 0
+        for part in parts:
+            if part:
+                assert offset in line_starts, f"seed {seed}: part at {offset} splits a line"
+            offset += len(part)
+
+
+def test_parts_mine_the_same_units_as_the_whole_file(tmp_path, monkeypatch):
+    text = "\n".join(f"{i}行目の文です。次の文です。" for i in range(200)) + "\n"
+    path = _write(tmp_path, text, "utf-8", name="big.txt")
+    whole = [u.text for u in load(_ref(path)).units]
+    _shrink_parts(monkeypatch, cap=4096, part=512, slack=128)
+
+    refs = aozora_source.split_oversize([_ref(path)])
+
+    size = path.stat().st_size
+    count = size // 512
+    assert len(refs) == count
+    assert [r.title for r in refs] == [f"big ({i}/{count})" for i in range(1, count + 1)]
+    assert [r.byte_range for r in refs] == [(i * 512, (i + 1) * 512) for i in range(count - 1)] + [
+        ((count - 1) * 512, None)
+    ]
+    with pytest.raises(SetupError, match="too large to mine"):
+        load(_ref(path))  # the whole file is over the cap; every part is not
+    docs = [load(r) for r in refs]
+    assert [u.text for doc in docs for u in doc.units] == whole
+    assert [doc.episode for doc in docs] == [r.title for r in refs]
+
+
+def test_aozora_corpus_parts_keep_whole_file_header_and_colophon_rules(tmp_path, monkeypatch):
+    # Five books in one file: whole-file semantics drop only the first header
+    # and cut only after the LAST 底本 colophon. A per-part cut would lose the
+    # opening of every book after a part's last colophon.
+    path = _write(tmp_path, "\n".join([_AOZORA] * 5), "utf-8", name="corpus.txt")
+    whole = [u.text for u in load(_ref(path)).units]
+    _shrink_parts(monkeypatch, cap=1024, part=256, slack=200)
+
+    refs = aozora_source.split_oversize([_ref(path)])
+    docs = [load(r) for r in refs]
+
+    assert len(refs) > 2
+    assert [u.text for doc in docs for u in doc.units] == whole
+    assert "桜の森の満開の下" in whole  # later books' headers are body text, as on the whole file
+    assert docs[0].title == f"corpus (1/{len(refs)})"  # a part never takes the header title
+
+
+def test_long_boundary_line_fails_only_the_two_parts_beside_it(tmp_path, monkeypatch):
+    _shrink_parts(monkeypatch, cap=10_000, part=16, slack=8)
+    path = tmp_path / "long.txt"
+    # "b"*30 spans offsets 20..50 and crosses the cut at 32.
+    path.write_bytes(b"aaaa\n" * 4 + b"b" * 30 + b"\n" + b"cccc\n" * 8)
+
+    with path.open("rb") as f:
+        assert aozora_source._read_part(f, "long.txt", 0, 16) == b"aaaa\n" * 4
+        with pytest.raises(SetupError, match="line over 1 MB"):
+            aozora_source._read_part(f, "long.txt", 16, 32)
+        with pytest.raises(SetupError, match="line over 1 MB"):
+            aozora_source._read_part(f, "long.txt", 32, 48)
+        assert aozora_source._read_part(f, "long.txt", 48, None) == b"cccc\n" * 8
+
+
+def test_boundary_line_ending_exactly_at_the_slack_is_skipped_as_it_is_kept(tmp_path, monkeypatch):
+    # Both sides must stop on the same byte: the part before reads exactly
+    # `slack` bytes past the cut and keeps the line, so the part after must
+    # skip it rather than call it too long.
+    _shrink_parts(monkeypatch, cap=10_000, part=16, slack=8)
+    path = tmp_path / "edge.txt"
+    path.write_bytes(b"aaa\n" + b"b" * 11 + b"\n" + b"cc\n")  # cut at 8 leaves 8 bytes of the b-line
+
+    assert _read_at_cuts(path, [0, 8]) == [b"aaa\n" + b"b" * 11 + b"\n", b"cc\n"]
+
+
+def test_last_part_takes_text_appended_after_the_split(tmp_path, monkeypatch):
+    path = _write(tmp_path, "本文の文です。\n" * 60, "utf-8", name="grow.txt")
+    _shrink_parts(monkeypatch, cap=512, part=128, slack=64)
+    refs = aozora_source.split_oversize([_ref(path)])
+    with path.open("ab") as f:
+        f.write("追記された文です。\n".encode())
+
+    assert load(refs[-1]).units[-1].text == "追記された文です。"
+
+
+def test_split_oversize_passes_through_what_it_cannot_or_need_not_split(tmp_path, monkeypatch):
+    _shrink_parts(monkeypatch, cap=64, part=16, slack=8)
+    small = _write(tmp_path, "短い。\n", "utf-8", name="small.txt")
+    utf16 = _write(tmp_path, "﻿" + "長い文です。\n" * 20, "utf-16-le", name="wide.txt")
+    epub = tmp_path / "book.epub"
+    epub.write_bytes(b"x" * 200)
+    refs = [
+        _ref(small),
+        _ref(utf16),  # a b"\n" split is unsafe in UTF-16
+        _ref(tmp_path / "missing.txt"),  # the loader reports it when the item runs
+        ReadingSourceRef(kind="epub", path=epub, title="book"),
+    ]
+
+    assert aozora_source.split_oversize(refs) == refs
 
 
 # --- gaiji edge cases through load --------------------------------------
