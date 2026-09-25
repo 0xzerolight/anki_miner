@@ -955,11 +955,14 @@ class FilteringSettingsPanel(FormPanel):
             reading_min_occurrence=self.get_reading_min_occurrence(),
         )
         # Language-scoped rows contribute only while their capability is present.
-        # The two variant combos write the same field and at most one of them is
-        # ever visible, so a blind write would stamp the hidden one's own default
-        # ("br", the Portuguese row's first item) onto a language that has
-        # neither setting. Visibility is the gate's own output, so there is one
-        # source of truth for "does this language have this setting".
+        # Every option-driven Script Type row reuses the two JA-historical
+        # fields (exclude_hiragana_only_words, exclude_katakana_only_words) as
+        # generic slots -- Korean's hangul-only and hanja-containing checkboxes
+        # among them -- and at most one language's row set is ever visible, so
+        # a blind write would stamp a hidden checkbox's stale value onto a
+        # language that has neither setting. Visibility is the gate's own
+        # output, so there is one source of truth for "does this language have
+        # this setting".
         # The kana boxes above already wrote these two fields unconditionally --
         # under another language they are hidden and still hold the loaded
         # value, so that write is a no-op. The visible option-driven row is the

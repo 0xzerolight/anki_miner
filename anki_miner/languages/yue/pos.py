@@ -30,7 +30,7 @@ YUE_ALLOWED_POS: tuple[str, ...] = ("NOUN", "VERB", "ADJ", "ADV")
 
 YUE_EXCLUDED_SUBTYPES: tuple[str, ...] = ()
 
-#: Shown beside each class in Settings -> Filtering.
+#: Shown beside each class in Settings -> Word Filters.
 YUE_POS_LABELS: Mapping[str, str] = {
     "NOUN": "Noun",
     "VERB": "Verb",

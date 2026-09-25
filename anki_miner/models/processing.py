@@ -181,7 +181,7 @@ class ProcessingResult:
     #: connection drop or timeout), which a later attempt may well survive. A
     #: deterministic failure re-run fails identically, so it stays False.
     failure_is_transient: bool = False
-    #: What this item's whitelist reached, when Settings -> Filtering had one
+    #: What this item's whitelist reached, when Settings -> Word Filters had one
     #: in effect; None otherwise. Stamped by ``EpisodeProcessor`` on every
     #: result it returns and folded over a run by ``RunReceiptAccumulator``.
     whitelist_coverage: WhitelistCoverage | None = None

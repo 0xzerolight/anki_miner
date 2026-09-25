@@ -125,7 +125,7 @@ def test_main_tab_index_unknown_key(window):
 
 
 # ---------------------------------------------------------------------------
-# A tool hidden in Settings -> Appearance & Language
+# A tool hidden in Settings -> General
 # ---------------------------------------------------------------------------
 
 

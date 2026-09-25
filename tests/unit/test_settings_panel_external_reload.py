@@ -5,8 +5,8 @@ Two families of settings used to survive a whole-config swap unrepainted
 ``config_refreshed`` fan-out):
 
 * ``UISettingsPanel`` — outside ``SettingsTab._save_panels``, so only its
-  language combo was re-synced; zoom, text size and the theme tree kept the
-  previous config's values.
+  language combo was re-synced; zoom and the theme tree kept the previous
+  config's values.
 * ``FrequencySettingsPanel`` / ``PitchSettingsPanel`` /
   ``AudioPackSettingsPanel`` — captured their storage root at construction and
   never updated it, so a config with a different root left them scanning (and

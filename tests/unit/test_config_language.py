@@ -232,7 +232,7 @@ def test_subtitle_generation_runs_under_an_unregistered_language(
 
 
 def test_manage_known_words_opens_under_an_unregistered_language(test_config, qtbot, monkeypatch, ko_unregistered):
-    """Settings -> Filtering -> Manage Known Words: the content style read the
+    """Settings -> Word Filters -> Manage Known Words: the content style read the
     degraded code already; this pins it (the site swallows exceptions into a
     screen issue, so a regression would surface as an error banner, not a
     raise)."""

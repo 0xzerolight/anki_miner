@@ -1,4 +1,4 @@
-"""Tests for the Settings -> Audio 'Retry missing expression audio' affordance."""
+"""Tests for the Settings -> Word Audio 'Retry missing expression audio' affordance."""
 
 from __future__ import annotations
 

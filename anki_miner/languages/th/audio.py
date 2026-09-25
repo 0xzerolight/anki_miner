@@ -8,7 +8,7 @@ reads Latin letters as Latin letters.
 No Edge read-aloud leg: ``edge_voice`` is for a language with no Google voice
 (fa, sl) or one a user may add by hand (he, yue). Thai has a Google voice, and
 the seam's contract is that a language declaring no voice gets no Edge leg
-offered in Settings -> Audio.
+offered in Settings -> Word Audio.
 
 Commons carries roughly 250 Thai recordings plus 289 Lingua Libre files -- too
 few to be worth a fetcher, and the wiktionary audio kind is out of scope this

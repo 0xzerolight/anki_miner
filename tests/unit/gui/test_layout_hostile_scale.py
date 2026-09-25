@@ -580,7 +580,7 @@ class TestSettingsFooterFitsTheWindowMinimum:
     Reset / Settings Profiles / Export / Import plus the save-status label sit in
     one ``QHBoxLayout`` outside the panels' scroll area, so their combined
     minimum is a hard floor on the tab's width -- the profiles button moved here
-    out of Appearance & Language, which could absorb it by scrolling.
+    out of General, which could absorb it by scrolling.
 
     Measured at a text scale of 1.5 in the REAL locale against the app's own
     ``WINDOW_MIN_WIDTH`` contract. The +25-character pseudo-locale is

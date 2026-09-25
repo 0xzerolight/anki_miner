@@ -329,9 +329,9 @@ class CardBackfillTab(RunOptionsMixin, TaskPublisherMixin, QWidget):
         )
 
     def changeEvent(self, a0) -> None:  # noqa: N802 - Qt override
-        """Re-derive the preview's row metrics when the UI text size changes.
+        """Re-derive the preview's row metrics when the UI zoom changes.
 
-        Text size applies live, so a row height and a floor computed once at
+        Zoom applies live, so a row height and a floor computed once at
         construction are stale from the next Settings save onward.
         """
         from PyQt6.QtCore import QEvent

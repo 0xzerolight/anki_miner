@@ -934,7 +934,7 @@ class MainWindow(ScreenIssueHost, QMainWindow):
         found (e.g. an optional tab was not registered) so a stale catalogue entry
         never crashes the UI.
 
-        A Utilities tool the user hid (Settings → Appearance & Language) has no
+        A Utilities tool the user hid (Settings → General) has no
         page to land on, so its target opens that tool's checkbox instead. The
         Usage Guide, a task chosen in the status bar and any later deep link
         all arrive here.

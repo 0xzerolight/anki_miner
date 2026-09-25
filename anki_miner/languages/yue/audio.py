@@ -10,7 +10,7 @@ Wiktionary fetcher (owner decision 1, no Stage W), so the chain starts at the
 next leg and no ``wiktionary_audio`` capability is declared.
 
 ``edge_voice`` is the Microsoft Edge read-aloud voice the user can ADD as a
-second synthetic leg (Settings -> Audio -> Add audio source... -> Online
+second synthetic leg (Settings -> Word Audio -> Add audio source... -> Online
 Source...). It is profile data only: the seam builds the leg when the chain
 holds an ``edgetts`` entry, and yue's default chain does not. ``zh-HK-HiuMaanNeural``
 was probed live by the seam owner; ``zh-HK-HiuGaaiNeural`` and

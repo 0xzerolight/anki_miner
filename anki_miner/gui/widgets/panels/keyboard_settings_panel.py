@@ -98,7 +98,7 @@ class KeyboardSettingsPanel(FormPanel):
     Every change goes through :meth:`set_binding`, which validates it
     (``key_bindings.binding_problem``) and, when the key is taken, emits the
     whole overrides map at once. SettingsTab commits that immediately, like the
-    Appearance & Language page, so this is not one of the Save-path panels. A
+    General page, so this is not one of the Save-path panels. A
     refused key never sticks: the editor snaps back to the binding in force and
     the row says why underneath. An empty recording -- a modifier pressed on
     its own, or Esc -- leaves the binding as it was; only the row's Clear

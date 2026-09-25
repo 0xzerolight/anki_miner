@@ -380,8 +380,8 @@ class HeaderWidget(QWidget):
         the combo from ``_PROFILE_COMBO_MIN_CHARS``, not from its widest item),
         so it is a clean measure of the chrome — frame, arrow, margins — wrapped
         around that many characters. Widening it by the remaining characters in
-        the same font keeps the cap a fixed CHARACTER budget at every
-        the text scale, which a frozen pixel count cannot be.
+        the same font keeps the cap a fixed CHARACTER budget at every zoom
+        level, which a frozen pixel count cannot be.
         """
         extra = _PROFILE_COMBO_MAX_CHARS - _PROFILE_COMBO_MIN_CHARS
         return self.profile_combo.sizeHint().width() + extra * metrics.horizontalAdvance("x")

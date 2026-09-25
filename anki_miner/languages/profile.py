@@ -202,7 +202,7 @@ class AudioDefaults:
     #: The Microsoft Edge read-aloud voice the ``edgetts`` word-audio kind
     #: speaks with — the service's short name (``fa-IR-DilaraNeural``). "" means
     #: the language has no Edge voice: service_factory builds no Edge leg and
-    #: Settings -> Audio does not offer one. A language with no Google voice
+    #: Settings -> Word Audio does not offer one. A language with no Google voice
     #: (``gtts_lang == ""``) names one and puts ``AudioSourceEntry(kind="edgetts")``
     #: in ``default_chain`` (spec D14, tests/unit/languages/test_edge_voice_contract.py).
     edge_voice: str = ""

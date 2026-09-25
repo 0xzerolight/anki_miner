@@ -47,7 +47,7 @@ SL_KEYS = CasefoldDictKeys()
 SL_AUDIO = AudioDefaults(
     # gTTS has no Slovenian voice (tts_langs() 2.5.4), so the synthetic leg is Microsoft Edge
     # read-aloud (seam-edgetts, D14). Petra is the female GA voice; sl-SI-RokNeural is the male one,
-    # and a user who prefers it can add the row in Settings -> Audio.
+    # and a user who prefers it can add the row in Settings -> Word Audio.
     gtts_lang="",
     edge_voice="sl-SI-PetraNeural",
     # Namespaced stems: the stem doubles as the Anki media filename. The Google prefixes keep the

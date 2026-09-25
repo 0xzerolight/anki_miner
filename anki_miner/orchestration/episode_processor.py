@@ -284,7 +284,7 @@ class _EpisodeContext:
     # curation step reads it to count unknowns per line. Empty on any path
     # that never reached phase 2.
     unknown_lemmas: set[str] = field(default_factory=set)
-    # Which whitelist entries this item reached (Settings -> Filtering): phase
+    # Which whitelist entries this item reached (Settings -> Word Filters): phase
     # 2 stamps the entries and the already-known ones; None when no whitelist
     # is in effect. The mined ones are added at the result funnel
     # (_stamp_whitelist_coverage), not here - a cancelled result never comes
@@ -584,7 +584,7 @@ class EpisodeProcessor:
         The expression-audio fetcher chain is closed unconditionally, even
         when the lookup services are worker-owned: ``SharedLookupServices``
         never holds an audio fetcher, so this processor is always the sole
-        owner of its persistent audio-pack handles (PB3) — Settings → Audio
+        owner of its persistent audio-pack handles (PB3) — Settings → Word Audio
         panel's pack-removal ``rmtree`` needs them released regardless of
         ``owns_lookup_services``.
 

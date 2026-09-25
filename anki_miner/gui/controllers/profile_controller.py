@@ -105,7 +105,7 @@ def _incoming_language_name(incoming: AnkiMinerConfig) -> str:
 def _boot_only_label(field: str) -> str:
     """User-facing label for a boot-only field name (falls back to the name)."""
     labels = {
-        # The labels the Appearance & Language panel itself shows — "Language"
+        # The labels the General panel itself shows — "Language"
         # read as the mining language, and nothing on screen is called
         # "Interface scale".
         "ui_language": QCoreApplication.translate("ProfileController", "Interface language"),

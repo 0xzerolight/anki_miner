@@ -225,7 +225,7 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
         )
 
     def changeEvent(self, a0) -> None:  # noqa: N802 - Qt override
-        """Re-derive the preview's row metrics when the UI text size changes."""
+        """Re-derive the preview's row metrics when the UI zoom changes."""
         from PyQt6.QtCore import QEvent
 
         super().changeEvent(a0)
@@ -299,7 +299,7 @@ class DeckFilterTab(TaskPublisherMixin, QWidget):
     def _refresh_filters_summary(self) -> None:
         """Say which filters the next scan will actually apply.
 
-        The scan reads the same Settings → Filtering config as mining; this
+        The scan reads the same Settings → Word Filters config as mining; this
         line keeps the screen honest about what "your filters" means today.
         """
         active: list[str] = []

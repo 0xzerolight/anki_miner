@@ -20,7 +20,7 @@ TH_ALLOWED_POS: tuple[str, ...] = ("NOUN", "VERB", "ADJ", "ADV")
 
 TH_EXCLUDED_SUBTYPES: tuple[str, ...] = ("stopword", "mark")
 
-#: Shown beside each class in Settings -> Filtering.
+#: Shown beside each class in Settings -> Word Filters.
 TH_POS_LABELS: Mapping[str, str] = {
     "NOUN": "Noun",
     "VERB": "Verb",

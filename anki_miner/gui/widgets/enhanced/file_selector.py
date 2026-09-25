@@ -150,7 +150,7 @@ class FileSelector(QWidget):
             self.label = QLabel(self._label_text)
             self.label.setObjectName("field-label")
             if self._label_width is not None:
-                # Minimum, not fixed: text size is applied LIVE (Settings -> UI)
+                # Minimum, not fixed: zoom is applied LIVE (Settings -> General)
                 # without rebuilding tabs, so a width frozen at construction is
                 # stale the moment the user scales text -- which is how a 105px
                 # box ended up holding 274px of German. A minimum lets the label
