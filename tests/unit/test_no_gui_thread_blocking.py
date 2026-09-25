@@ -137,7 +137,11 @@ ALLOWLIST: dict[str, set[str]] = {
         # curation result (the worker->GUI->worker handoff). Worker-side, not GUI.
         # Most hits in these files are docstring references to that same wait.
         "widgets/_mining_tab_base.py",
-        "widgets/batch_processing_tab.py",
+        # Prose only: _build_curation_context's docstring notes the worker is
+        # blocked in _curation_event.wait() while it runs (the worker->GUI->worker
+        # handoff). Lifted out of batch_processing_tab.py into the shared
+        # folder-series base (BatchProcessingTab, and Deck Builder after it).
+        "widgets/_folder_series_screen.py",
         # Prose only: shutdown's docstring references _curation_event.wait() (the
         # worker-side park the poison releases). The real join is the bounded
         # worker_thread.wait(_SHUTDOWN_WAIT_MS), which has an arg and never matches.
