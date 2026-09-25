@@ -29,6 +29,7 @@ from anki_miner.gui.widgets.backfill_tab import CardBackfillTab
 from anki_miner.gui.widgets.batch_processing_tab import BatchProcessingTab
 from anki_miner.gui.widgets.booksync_tab import BookSyncTab
 from anki_miner.gui.widgets.condense_tab import CondenseTab
+from anki_miner.gui.widgets.deck_builder_tab import DeckBuilderTab
 from anki_miner.gui.widgets.deck_filter_tab import DeckFilterTab
 from anki_miner.gui.widgets.download_tab import DownloadTab
 from anki_miner.gui.widgets.mokuro_tab import MokuroTab
@@ -71,6 +72,8 @@ def _build(name: str, config: AnkiMinerConfig) -> QWidget:
         return AudiobookTab(config, MagicMock(), MagicMock())
     if name == "backfill":
         return CardBackfillTab(config)
+    if name == "deckbuilder":
+        return DeckBuilderTab(config, _presenter(), _progress_callback())
     if name == "deckfilter":
         return DeckFilterTab(config)
     if name == "download":
@@ -102,6 +105,7 @@ SCREENS = [
     "generate",
     "retime",
     "backfill",
+    "deckbuilder",
     "deckfilter",
     "download",
     "mokuro",
