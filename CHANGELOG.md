@@ -73,11 +73,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Filtering splits into Word Filters and a new Sentences page (Settings).** Word Filters keeps what decides which words get mined; Sentences takes what shapes the example sentence itself — subtitle text cleanup, a secondary-language subtitle line, whole sentences instead of fragments, and bolding the mined word.
 - **Card Order and the reading tone colour moved off Word Filters, onto Settings → Cards & Anki.** They shape a card field, not which words are mined.
 - **Character Set and Regional Variety moved off Word Filters, onto Settings → Mining Language.**
-- **Card Media has separate Sentence audio and Screenshot sections, and one "Spoken sentences for manga and books" choice replaces the two TTS checkboxes** — Off, Google only, Papago only, or Google, then Papago.
+- **Card Media has separate Sentence Audio and Screenshot sections, and one "Spoken sentences for manga and books" choice, moved there from Word Audio, replaces the master TTS switch and the separate Google and Papago checkboxes** — Off, Google only, Papago only, or Google, then Papago.
 - **Animated screenshots take a Size preset — Small, Balanced or High (Settings → Card Media)** — instead of separate fps/height/quality fields. A saved triple matching none of the three shows as Custom and is kept until a preset is actually picked.
 - **One Sentence Rule choice replaces the deduplicate-by-sentence and i+1 checkboxes (Settings → Word Filters):** Mine every unknown word, One card per sentence, or Only i+1 sentences.
 - **Settings → Audio is now Word Audio, and Appearance & Language is now General**, where Check for updates on startup and Max parallel workers also live.
-- **Dictionary, frequency, pitch and Word Audio maintenance sit behind a More menu** on each chain row (Re-import…, Remove).
+- **Each of the Dictionaries, Frequency, Pitch Accent and Word Audio lists gets one "More" button beside Add**, holding Reimport All and Restore from Disk (Word Audio also gets Retry missing audio). Each row's own Re-import…/Remove menu is unchanged.
 - **The known-words toggle is renamed "Keep words known after their cards are deleted" (Settings → Word Filters).**
 - **GPU downloads sit under the device choice on Settings → Transcription & Alignment**, next to the engine and model it applies to.
 - **Manga OCR setup (mokuro path, Install) moved to Utilities → Manga OCR**, off Settings; System Health's Fix for a missing mokuro now routes there instead.
