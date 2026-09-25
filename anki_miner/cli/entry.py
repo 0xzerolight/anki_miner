@@ -32,6 +32,7 @@ from anki_miner.cli.events import SCHEMA_VERSION, EventSink, fd_writer
 from anki_miner.cli.runner import MiningRun
 from anki_miner.config import paths as config_paths
 from anki_miner.gui.utils.config_manager import GUIConfigManager
+from anki_miner.utils.logging_ext import suppressed
 
 if TYPE_CHECKING:
     from PyQt6.QtCore import QLockFile
@@ -220,7 +221,7 @@ def _private_stdout() -> Iterator[Callable[[bytes], None]]:
 
     def flush_originals() -> None:
         for stream in originals:
-            with contextlib.suppress(Exception):
+            with suppressed(logger, "CLI stdout flush"):
                 stream.flush()
 
     flush_originals()  # before the swap: earlier output stays where it was going
