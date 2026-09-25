@@ -8,6 +8,13 @@ from anki_miner.services.resource_bundle.export import (
     collect_export_candidates,
     write_resource_bundle,
 )
+from anki_miner.services.resource_bundle.install import (
+    BundleInstallResult,
+    ImportCandidate,
+    apply_install_to_config,
+    install_resource_bundle,
+    plan_import,
+)
 from anki_miner.services.resource_bundle.manifest import (
     MANIFEST_MEMBER,
     SLOT_KINDS,
@@ -29,6 +36,11 @@ __all__ = [
     "ProgressFn",
     "collect_export_candidates",
     "write_resource_bundle",
+    "BundleInstallResult",
+    "ImportCandidate",
+    "apply_install_to_config",
+    "install_resource_bundle",
+    "plan_import",
     "MANIFEST_MEMBER",
     "SLOT_KINDS",
     "WORDLIST_KINDS",

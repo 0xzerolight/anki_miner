@@ -14,6 +14,7 @@ from anki_miner.services.dictionary.importers.yomitan_importer import import_yom
 from anki_miner.services.frequency.source_importer import import_frequency_source
 from anki_miner.services.known_word_db import KnownWordDB
 from anki_miner.services.pitch_accent.source_importer import import_pitch_source
+from anki_miner.services.resource_bundle import collect_export_candidates, write_resource_bundle
 from tests.fixtures.dictionary.build_yomitan_fixture import build_yomitan_zip
 
 FREQ_ID = "test-freq"
@@ -68,3 +69,19 @@ def empty_receiver(root: Path, base: AnkiMinerConfig) -> AnkiMinerConfig:
         whitelist_path=None,
         use_whitelist=False,
     )
+
+
+def write_sender_bundle(root: Path, base: AnkiMinerConfig) -> tuple[AnkiMinerConfig, Path]:
+    """Build the sender setup under ``root/sender`` and export all of it to ``root/bundle.zip``."""
+    sender = build_resource_setup(root / "sender", base)
+    bundle = root / "bundle.zip"
+    write_resource_bundle(
+        bundle,
+        collect_export_candidates(sender, known_words_db=sender.known_words_db_path),
+        language="ja",
+        app_version="test",
+        known_words_db=sender.known_words_db_path,
+        progress=lambda *_: None,
+        cancel_check=lambda: False,
+    )
+    return sender, bundle
