@@ -49,7 +49,7 @@ from anki_miner.gui.workers._queue_worker_base import AttemptOutcome, Sequential
 from anki_miner.languages.registry import get_profile
 from anki_miner.models import CANCELLED_ERROR, MiningOutcome, ProcessingResult, classify_result, result_error_text
 from anki_miner.models.mining_queue import ReadyItemStatus
-from anki_miner.models.reading import ReadingDocument
+from anki_miner.models.reading import ReadingDocument, ReadingSourceRef
 from anki_miner.models.reading_queue import ReadingQueueItem
 from anki_miner.orchestration import EpisodeProcessor
 from anki_miner.services.reading import detector
@@ -57,6 +57,39 @@ from anki_miner.services.resource_staleness import stale_resource_reimport_error
 from anki_miner.utils.subtitle_encoding import script_check_kwarg
 
 logger = logging.getLogger(__name__)
+
+
+def load_reading_source(
+    processor: EpisodeProcessor,
+    config: AnkiMinerConfig,
+    source: ReadingSourceRef,
+    *,
+    cancel_check: Callable[[], bool],
+) -> ReadingDocument:
+    """Resolve a reading ref to a document with the run's own text seams.
+
+    The loader cleans cues with the SAME normaliser and bilingual-cue gate the
+    run's parser applies to every unit, so the two can never disagree (None =
+    the Japanese pair / every line kept). Shared with the command line.
+    """
+    ladder = import_decode_ladder(config)
+    profile = get_profile(config.language)
+    parser = getattr(processor, "subtitle_parser", None)
+    normalize = getattr(parser, "normalize", None)
+    has_target_script = getattr(parser, "has_target_script", None)
+    # One bundle: omitted keywords keep detector.load's pre-seam call shape.
+    loader_kwargs: dict[str, Any] = {**script_check_kwarg(ladder, profile.script)}
+    if normalize is not None:
+        loader_kwargs["normalize"] = normalize
+    if has_target_script is not None:
+        loader_kwargs["has_target_script"] = has_target_script
+    return detector.load(
+        source,
+        cancel_check=cancel_check,
+        encodings=ladder,
+        rules=profile.sentence_rules,
+        **loader_kwargs,
+    )
 
 
 class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
@@ -179,27 +212,8 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
         exception (load or mining) propagates to the error handling in
         ``_run_item``.
         """
-        ladder = import_decode_ladder(self._config)
-        profile = get_profile(self._config.language)
-        # The loader cleans cues with the SAME normaliser and bilingual-cue gate
-        # the run's parser applies to every unit, so the two can never disagree
-        # (None = the Japanese pair / every line kept).
-        parser = getattr(self._processor, "subtitle_parser", None)
-        normalize = getattr(parser, "normalize", None)
-        has_target_script = getattr(parser, "has_target_script", None)
-        # One bundle: omitted keywords keep detector.load's pre-seam call shape.
-        loader_kwargs: dict[str, Any] = {**script_check_kwarg(ladder, profile.script)}
-        if normalize is not None:
-            loader_kwargs["normalize"] = normalize
-        if has_target_script is not None:
-            loader_kwargs["has_target_script"] = has_target_script
-        document = detector.load(
-            item.source,
-            cancel_check=self.check_cancelled,
-            encodings=ladder,
-            rules=profile.sentence_rules,
-            **loader_kwargs,
-        )
+        assert self._processor is not None  # built at run() start
+        document = load_reading_source(self._processor, self._config, item.source, cancel_check=self.check_cancelled)
         # Published for the manga tab's curation context (page images). Set
         # before process_reading so it is always the in-flight item's document
         # by the time the curation callback parks this thread.
@@ -207,7 +221,6 @@ class ReadingQueueWorker(SequentialQueueWorker[ReadingQueueItem]):
 
         mining_cb = QueueMiningProgressAdapter(idx, self.item_progress.emit)
 
-        assert self._processor is not None  # built at run() start
         return self._processor.process_reading(
             document,
             progress_callback=mining_cb,
