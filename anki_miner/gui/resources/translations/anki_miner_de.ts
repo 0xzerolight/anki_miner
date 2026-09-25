@@ -2394,12 +2394,12 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>CUDA- oder Vulkan-Beschleunigung sowie das Stille-Überspringen-Paket für das lokale Whisper-Modell installieren.</translation>
     </message>
     <message>
-        <source>Tune subtitle alignment (alass)</source>
-        <translation>Untertitelausrichtung feinabstimmen (alass)</translation>
+        <source>Set the alass binary (subtitle alignment)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.</source>
-        <translation>Den für das Neutakten genutzten alass-Aligner konfigurieren: Trennstrafe, Bildratenkorrektur und Einzel-Offset-Modus.</translation>
+        <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2562,8 +2562,8 @@ Es werden keine Indexdateien gelöscht.</translation>
         <translation>Das gesammelte Wort in den Satzfeldern Ihrer Karten fett darstellen.</translation>
     </message>
     <message>
-        <source>Themes, dark mode, fonts &amp; zoom</source>
-        <translation>Designs, Dunkelmodus, Schriften &amp; Zoom</translation>
+        <source>Themes, dark mode &amp; zoom</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch light/dark themes and adjust UI zoom.</source>
@@ -3854,18 +3854,6 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
         <translation>Ein anderer Import läuft noch. Warten Sie, bis er abgeschlossen ist, und versuchen Sie es erneut.</translation>
     </message>
     <message>
-        <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
-        <translation>Keine JMdict-XML unter %1. Laden Sie sie von EDRDG herunter und legen Sie sie dort ab.</translation>
-    </message>
-    <message>
-        <source>Reimporting JMdict…</source>
-        <translation>JMdict wird erneut importiert…</translation>
-    </message>
-    <message>
-        <source>The dictionaries could not be re-imported.</source>
-        <translation>Die Wörterbücher konnten nicht erneut importiert werden.</translation>
-    </message>
-    <message>
         <source>Skipped (no usable saved copy — add each one again):
 </source>
         <translation>Übersprungen (keine nutzbare gespeicherte Kopie — fügen Sie jedes einzeln erneut hinzu):
@@ -3894,6 +3882,10 @@ Zu ändernde Notizen: {notes}; zu ändernde Felder: {fields}. Die betroffenen No
     <message>
         <source>Reimport All</source>
         <translation>Alle erneut importieren</translation>
+    </message>
+    <message>
+        <source>The dictionaries could not be re-imported.</source>
+        <translation>Die Wörterbücher konnten nicht erneut importiert werden.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -6482,7 +6474,7 @@ Fortfahren?</translation>
         <translation>Kartenmedien</translation>
     </message>
     <message>
-        <source>Sentence audio</source>
+        <source>Sentence Audio</source>
         <translation type="unfinished" />
     </message>
     <message>

@@ -2390,12 +2390,12 @@ No index files are deleted.</source>
         <translation>ローカルの Whisper モデル向けに、CUDA または Vulkan アクセラレーションと無音スキップパックをインストールします。</translation>
     </message>
     <message>
-        <source>Tune subtitle alignment (alass)</source>
-        <translation>字幕アライメントを調整（alass）</translation>
+        <source>Set the alass binary (subtitle alignment)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.</source>
-        <translation>リタイミングに使う alass アライナーを設定します：分割ペナルティ、フレームレート補正、単一オフセットモード。</translation>
+        <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2558,8 +2558,8 @@ No index files are deleted.</source>
         <translation>カードの例文フィールド内で、マイニングした単語を太字で囲みます。</translation>
     </message>
     <message>
-        <source>Themes, dark mode, fonts &amp; zoom</source>
-        <translation>テーマ、ダークモード、フォント、ズーム</translation>
+        <source>Themes, dark mode &amp; zoom</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch light/dark themes and adjust UI zoom.</source>
@@ -3850,18 +3850,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>別のインポートがまだ完了していません。完了してから再度お試しください。</translation>
     </message>
     <message>
-        <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
-        <translation>%1 にJMdictのXMLがありません。EDRDGからダウンロードしてそこに配置してください。</translation>
-    </message>
-    <message>
-        <source>Reimporting JMdict…</source>
-        <translation>JMdictを再インポートしています…</translation>
-    </message>
-    <message>
-        <source>The dictionaries could not be re-imported.</source>
-        <translation>辞書を再インポートできませんでした。</translation>
-    </message>
-    <message>
         <source>Skipped (no usable saved copy — add each one again):
 </source>
         <translation>スキップ（使用可能な保存済みコピーがありません — それぞれ追加し直してください）:
@@ -3890,6 +3878,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Reimport All</source>
         <translation>すべて再インポート</translation>
+    </message>
+    <message>
+        <source>The dictionaries could not be re-imported.</source>
+        <translation>辞書を再インポートできませんでした。</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -6466,7 +6458,7 @@ Continue?</source>
         <translation>カードメディア</translation>
     </message>
     <message>
-        <source>Sentence audio</source>
+        <source>Sentence Audio</source>
         <translation type="unfinished" />
     </message>
     <message>

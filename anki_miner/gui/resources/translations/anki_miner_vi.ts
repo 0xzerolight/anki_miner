@@ -2390,12 +2390,12 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Cài đặt tăng tốc CUDA hoặc Vulkan và gói bỏ qua khoảng lặng cho mô hình Whisper cục bộ.</translation>
     </message>
     <message>
-        <source>Tune subtitle alignment (alass)</source>
-        <translation>Tinh chỉnh căn chỉnh phụ đề (alass)</translation>
+        <source>Set the alass binary (subtitle alignment)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.</source>
-        <translation>Cấu hình bộ căn chỉnh alass dùng để chỉnh lại thời gian: phạt khi chia đoạn, sửa khác biệt tốc độ khung hình, và chế độ độ lệch đơn.</translation>
+        <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2558,8 +2558,8 @@ Không có tệp chỉ mục nào bị xóa.</translation>
         <translation>Bọc từ đã khai thác trong định dạng đậm bên trong các trường câu trên thẻ của bạn.</translation>
     </message>
     <message>
-        <source>Themes, dark mode, fonts &amp; zoom</source>
-        <translation>Chủ đề, chế độ tối, phông chữ và thu phóng</translation>
+        <source>Themes, dark mode &amp; zoom</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch light/dark themes and adjust UI zoom.</source>
@@ -3850,18 +3850,6 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
         <translation>Một lượt nhập khác vẫn đang hoàn tất. Vui lòng đợi rồi thử lại.</translation>
     </message>
     <message>
-        <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
-        <translation>Không có JMdict XML tại %1. Hãy tải về từ EDRDG và đặt tại đó.</translation>
-    </message>
-    <message>
-        <source>Reimporting JMdict…</source>
-        <translation>Đang nhập lại JMdict…</translation>
-    </message>
-    <message>
-        <source>The dictionaries could not be re-imported.</source>
-        <translation>Không thể nhập lại các từ điển.</translation>
-    </message>
-    <message>
         <source>Skipped (no usable saved copy — add each one again):
 </source>
         <translation>Đã bỏ qua (không có bản sao đã lưu dùng được — hãy thêm lại từng mục):
@@ -3890,6 +3878,10 @@ Thao tác này sẽ sửa đổi {notes} ghi chú ({fields} trường) và gắn
     <message>
         <source>Reimport All</source>
         <translation>Nhập lại tất cả</translation>
+    </message>
+    <message>
+        <source>The dictionaries could not be re-imported.</source>
+        <translation>Không thể nhập lại các từ điển.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -6466,7 +6458,7 @@ Tiếp tục?</translation>
         <translation>Phương tiện thẻ</translation>
     </message>
     <message>
-        <source>Sentence audio</source>
+        <source>Sentence Audio</source>
         <translation type="unfinished" />
     </message>
     <message>

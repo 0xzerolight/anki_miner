@@ -2390,12 +2390,12 @@ No index files are deleted.</source>
         <translation>為本機 Whisper 模型安裝 CUDA 或 Vulkan 加速，以及靜音跳過套件。</translation>
     </message>
     <message>
-        <source>Tune subtitle alignment (alass)</source>
-        <translation>調整字幕對齊（alass）</translation>
+        <source>Set the alass binary (subtitle alignment)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.</source>
-        <translation>設定用於重新校時的 alass 對齊工具：分割懲罰值、影格率修正，以及單一偏移模式。</translation>
+        <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2558,8 +2558,8 @@ No index files are deleted.</source>
         <translation>在卡片的例句欄位中，以粗體標示採集的單字。</translation>
     </message>
     <message>
-        <source>Themes, dark mode, fonts &amp; zoom</source>
-        <translation>佈景主題、深色模式、字型與縮放</translation>
+        <source>Themes, dark mode &amp; zoom</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch light/dark themes and adjust UI zoom.</source>
@@ -3850,18 +3850,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>另一項匯入作業尚未完成，請稍候完成後再試一次。</translation>
     </message>
     <message>
-        <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
-        <translation>%1 沒有 JMdict XML。請從 EDRDG 下載並放置於該處。</translation>
-    </message>
-    <message>
-        <source>Reimporting JMdict…</source>
-        <translation>正在重新匯入 JMdict…</translation>
-    </message>
-    <message>
-        <source>The dictionaries could not be re-imported.</source>
-        <translation>無法重新匯入字典。</translation>
-    </message>
-    <message>
         <source>Skipped (no usable saved copy — add each one again):
 </source>
         <translation>已略過（沒有可用的已儲存副本 — 請逐一重新加入）：
@@ -3890,6 +3878,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Reimport All</source>
         <translation>全部重新匯入</translation>
+    </message>
+    <message>
+        <source>The dictionaries could not be re-imported.</source>
+        <translation>無法重新匯入字典。</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -6466,7 +6458,7 @@ Continue?</source>
         <translation>卡片媒體</translation>
     </message>
     <message>
-        <source>Sentence audio</source>
+        <source>Sentence Audio</source>
         <translation type="unfinished" />
     </message>
     <message>

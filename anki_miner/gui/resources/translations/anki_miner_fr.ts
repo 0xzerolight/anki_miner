@@ -2394,12 +2394,12 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Installez l'accélération CUDA ou Vulkan et le pack d'ignorance des silences pour le modèle Whisper local.</translation>
     </message>
     <message>
-        <source>Tune subtitle alignment (alass)</source>
-        <translation>Ajustez l'alignement des sous-titres (alass)</translation>
+        <source>Set the alass binary (subtitle alignment)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.</source>
-        <translation>Configurez l'aligneur alass utilisé pour le retiming : pénalité de découpage, correction de fréquence d'images et mode décalage unique.</translation>
+        <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2562,8 +2562,8 @@ Aucun fichier d'index n'est supprimé.</translation>
         <translation>Encadrez le mot extrait en gras dans les champs de phrase de vos cartes.</translation>
     </message>
     <message>
-        <source>Themes, dark mode, fonts &amp; zoom</source>
-        <translation>Thèmes, mode sombre, polices et zoom</translation>
+        <source>Themes, dark mode &amp; zoom</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch light/dark themes and adjust UI zoom.</source>
@@ -3854,18 +3854,6 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
         <translation>Une autre importation est en cours. Attendez qu'elle se termine, puis réessayez.</translation>
     </message>
     <message>
-        <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
-        <translation>Aucun XML JMdict à %1. Téléchargez-le depuis EDRDG et placez-le là.</translation>
-    </message>
-    <message>
-        <source>Reimporting JMdict…</source>
-        <translation>Réimportation de JMdict…</translation>
-    </message>
-    <message>
-        <source>The dictionaries could not be re-imported.</source>
-        <translation>Impossible de réimporter les dictionnaires.</translation>
-    </message>
-    <message>
         <source>Skipped (no usable saved copy — add each one again):
 </source>
         <translation>Ignorés (aucune copie enregistrée utilisable — ajoutez chacun de nouveau) :
@@ -3894,6 +3882,10 @@ Nombre de notes à modifier : {notes} ; nombre de champs concernés : {fields
     <message>
         <source>Reimport All</source>
         <translation>Tout réimporter</translation>
+    </message>
+    <message>
+        <source>The dictionaries could not be re-imported.</source>
+        <translation>Impossible de réimporter les dictionnaires.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -6482,7 +6474,7 @@ Continuer ?</translation>
         <translation>Médias des cartes</translation>
     </message>
     <message>
-        <source>Sentence audio</source>
+        <source>Sentence Audio</source>
         <translation type="unfinished" />
     </message>
     <message>

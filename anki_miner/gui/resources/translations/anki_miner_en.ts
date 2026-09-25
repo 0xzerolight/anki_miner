@@ -2381,11 +2381,11 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Tune subtitle alignment (alass)</source>
+        <source>Set the alass binary (subtitle alignment)</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.</source>
+        <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -2549,7 +2549,7 @@ No index files are deleted.</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Themes, dark mode, fonts &amp; zoom</source>
+        <source>Themes, dark mode &amp; zoom</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -3839,18 +3839,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation type="unfinished" />
     </message>
     <message>
-        <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>Reimporting JMdict…</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
-        <source>The dictionaries could not be re-imported.</source>
-        <translation type="unfinished" />
-    </message>
-    <message>
         <source>Skipped (no usable saved copy — add each one again):
 </source>
         <translation type="unfinished" />
@@ -3877,6 +3865,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     </message>
     <message>
         <source>Reimport All</source>
+        <translation type="unfinished" />
+    </message>
+    <message>
+        <source>The dictionaries could not be re-imported.</source>
         <translation type="unfinished" />
     </message>
     <message>
@@ -6434,7 +6426,7 @@ Continue?</source>
         <translation type="unfinished" />
     </message>
     <message>
-        <source>Sentence audio</source>
+        <source>Sentence Audio</source>
         <translation type="unfinished" />
     </message>
     <message>

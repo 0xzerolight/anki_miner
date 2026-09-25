@@ -2398,12 +2398,12 @@ No index files are deleted.</source>
         <translation>Установите ускорение CUDA или Vulkan и пакет пропуска тишины для локальной модели Whisper.</translation>
     </message>
     <message>
-        <source>Tune subtitle alignment (alass)</source>
-        <translation>Настройте выравнивание субтитров (alass)</translation>
+        <source>Set the alass binary (subtitle alignment)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.</source>
-        <translation>Настройте выравниватель alass, используемый для переназначения тайминга: штраф за разбиение, коррекцию частоты кадров и режим единого смещения.</translation>
+        <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2566,8 +2566,8 @@ No index files are deleted.</source>
         <translation>Заключайте намайненное слово в жирное начертание в полях предложения на ваших карточках.</translation>
     </message>
     <message>
-        <source>Themes, dark mode, fonts &amp; zoom</source>
-        <translation>Темы, тёмный режим, шрифты и масштаб</translation>
+        <source>Themes, dark mode &amp; zoom</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch light/dark themes and adjust UI zoom.</source>
@@ -3858,18 +3858,6 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
         <translation>Другой импорт ещё не завершён. Дождитесь его завершения и попробуйте снова.</translation>
     </message>
     <message>
-        <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
-        <translation>Нет XML-файла JMdict по пути %1. Скачайте его с EDRDG и поместите туда.</translation>
-    </message>
-    <message>
-        <source>Reimporting JMdict…</source>
-        <translation>Повторный импорт JMdict…</translation>
-    </message>
-    <message>
-        <source>The dictionaries could not be re-imported.</source>
-        <translation>Не удалось повторно импортировать словари.</translation>
-    </message>
-    <message>
         <source>Skipped (no usable saved copy — add each one again):
 </source>
         <translation>Пропущено (нет пригодной сохранённой копии — добавьте каждый словарь заново):
@@ -3898,6 +3886,10 @@ This will modify {notes} note(s) ({fields} field(s)) and tag them {tag}. Continu
     <message>
         <source>Reimport All</source>
         <translation>Повторно импортировать все</translation>
+    </message>
+    <message>
+        <source>The dictionaries could not be re-imported.</source>
+        <translation>Не удалось повторно импортировать словари.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -6498,7 +6490,7 @@ Continue?</source>
         <translation>Медиа карточек</translation>
     </message>
     <message>
-        <source>Sentence audio</source>
+        <source>Sentence Audio</source>
         <translation type="unfinished" />
     </message>
     <message>

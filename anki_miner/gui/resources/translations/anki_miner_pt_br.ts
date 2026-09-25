@@ -2394,12 +2394,12 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Instale a aceleração CUDA ou Vulkan e o pacote de salto de silêncio para o modelo Whisper local.</translation>
     </message>
     <message>
-        <source>Tune subtitle alignment (alass)</source>
-        <translation>Ajustar o alinhamento de legendas (alass)</translation>
+        <source>Set the alass binary (subtitle alignment)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.</source>
-        <translation>Configure o alinhador alass usado para reajuste de tempo: penalidade de divisão, correção de taxa de quadros e modo de deslocamento único.</translation>
+        <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2562,8 +2562,8 @@ Nenhum arquivo de índice é excluído.</translation>
         <translation>Envolva a palavra minerada em negrito dentro dos campos de frase dos seus cartões.</translation>
     </message>
     <message>
-        <source>Themes, dark mode, fonts &amp; zoom</source>
-        <translation>Temas, modo escuro, fontes e zoom</translation>
+        <source>Themes, dark mode &amp; zoom</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch light/dark themes and adjust UI zoom.</source>
@@ -3854,18 +3854,6 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
         <translation>Outra importação ainda está sendo concluída. Aguarde a conclusão e tente novamente.</translation>
     </message>
     <message>
-        <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
-        <translation>Nenhum XML do JMdict em %1. Baixe do EDRDG e coloque-o ali.</translation>
-    </message>
-    <message>
-        <source>Reimporting JMdict…</source>
-        <translation>Reimportando JMdict…</translation>
-    </message>
-    <message>
-        <source>The dictionaries could not be re-imported.</source>
-        <translation>Não foi possível reimportar os dicionários.</translation>
-    </message>
-    <message>
         <source>Skipped (no usable saved copy — add each one again):
 </source>
         <translation>Ignorado (nenhuma cópia salva utilizável — adicione cada um novamente):
@@ -3894,6 +3882,10 @@ Notas a modificar: {notes}; campos a modificar: {fields}; etiqueta a adicionar: 
     <message>
         <source>Reimport All</source>
         <translation>Reimportar Tudo</translation>
+    </message>
+    <message>
+        <source>The dictionaries could not be re-imported.</source>
+        <translation>Não foi possível reimportar os dicionários.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -6482,7 +6474,7 @@ Continuar?</translation>
         <translation>Mídia do Cartão</translation>
     </message>
     <message>
-        <source>Sentence audio</source>
+        <source>Sentence Audio</source>
         <translation type="unfinished" />
     </message>
     <message>

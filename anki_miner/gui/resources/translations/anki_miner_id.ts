@@ -2390,12 +2390,12 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Pasang akselerasi CUDA atau Vulkan dan paket pelewat-keheningan untuk model Whisper lokal.</translation>
     </message>
     <message>
-        <source>Tune subtitle alignment (alass)</source>
-        <translation>Setel penyelarasan subtitel (alass)</translation>
+        <source>Set the alass binary (subtitle alignment)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.</source>
-        <translation>Konfigurasikan penyelaras alass yang digunakan untuk pengaturan ulang waktu: penalti pemisahan, koreksi laju bingkai, dan mode offset tunggal.</translation>
+        <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2558,8 +2558,8 @@ Tidak ada berkas indeks yang dihapus.</translation>
         <translation>Bungkus kata hasil mining dengan huruf tebal di dalam bidang kalimat pada kartu Anda.</translation>
     </message>
     <message>
-        <source>Themes, dark mode, fonts &amp; zoom</source>
-        <translation>Tema, mode gelap, fon &amp; zoom</translation>
+        <source>Themes, dark mode &amp; zoom</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch light/dark themes and adjust UI zoom.</source>
@@ -3850,18 +3850,6 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
         <translation>Impor lain masih berlangsung. Tunggu hingga selesai lalu coba lagi.</translation>
     </message>
     <message>
-        <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
-        <translation>Tidak ada XML JMdict di %1. Unduh dari EDRDG dan letakkan di sana.</translation>
-    </message>
-    <message>
-        <source>Reimporting JMdict…</source>
-        <translation>Mengimpor ulang JMdict…</translation>
-    </message>
-    <message>
-        <source>The dictionaries could not be re-imported.</source>
-        <translation>Kamus tidak dapat diimpor ulang.</translation>
-    </message>
-    <message>
         <source>Skipped (no usable saved copy — add each one again):
 </source>
         <translation>Dilewati (tidak ada salinan tersimpan yang dapat digunakan — tambahkan lagi masing-masing):
@@ -3890,6 +3878,10 @@ Tindakan ini akan mengubah {notes} catatan ({fields} bidang) dan menandainya den
     <message>
         <source>Reimport All</source>
         <translation>Impor Ulang Semua</translation>
+    </message>
+    <message>
+        <source>The dictionaries could not be re-imported.</source>
+        <translation>Kamus tidak dapat diimpor ulang.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -6466,7 +6458,7 @@ Lanjutkan?</translation>
         <translation>Media Kartu</translation>
     </message>
     <message>
-        <source>Sentence audio</source>
+        <source>Sentence Audio</source>
         <translation type="unfinished" />
     </message>
     <message>

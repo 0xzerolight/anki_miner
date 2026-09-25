@@ -2394,12 +2394,12 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Instale aceleración CUDA o Vulkan y el paquete de omisión de silencios para el modelo Whisper local.</translation>
     </message>
     <message>
-        <source>Tune subtitle alignment (alass)</source>
-        <translation>Ajustar la alineación de subtítulos (alass)</translation>
+        <source>Set the alass binary (subtitle alignment)</source>
+        <translation type="unfinished" />
     </message>
     <message>
-        <source>Configure the alass aligner used for re-timing: split penalty, frame-rate correction, and single-offset mode.</source>
-        <translation>Configure el alineador alass usado para el reajuste de tiempos: penalización de corte, corrección de tasa de fotogramas y modo de desfase único.</translation>
+        <source>Point alass, the subtitle re-timing tool, at a specific executable, or download it in-app (Linux/Windows; macOS installs it with Homebrew).</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Word pronunciation audio</source>
@@ -2562,8 +2562,8 @@ No se elimina ningún archivo de índice.</translation>
         <translation>Envuelva en negrita la palabra minada dentro de los campos de oración de sus tarjetas.</translation>
     </message>
     <message>
-        <source>Themes, dark mode, fonts &amp; zoom</source>
-        <translation>Temas, modo oscuro, fuentes y zoom</translation>
+        <source>Themes, dark mode &amp; zoom</source>
+        <translation type="unfinished" />
     </message>
     <message>
         <source>Switch light/dark themes and adjust UI zoom.</source>
@@ -3854,18 +3854,6 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
         <translation>Todavía hay otra importación en curso. Espera a que termine e inténtalo de nuevo.</translation>
     </message>
     <message>
-        <source>No JMdict XML at %1. Download from EDRDG and place it there.</source>
-        <translation>No hay XML de JMdict en %1. Descárguelo de EDRDG y colóquelo allí.</translation>
-    </message>
-    <message>
-        <source>Reimporting JMdict…</source>
-        <translation>Reimportando JMdict…</translation>
-    </message>
-    <message>
-        <source>The dictionaries could not be re-imported.</source>
-        <translation>No se pudieron volver a importar los diccionarios.</translation>
-    </message>
-    <message>
         <source>Skipped (no usable saved copy — add each one again):
 </source>
         <translation>Omitido (sin copia guardada utilizable — añada cada uno de nuevo):
@@ -3894,6 +3882,10 @@ Número de notas que se modificarán: {notes}. Número de campos que se modifica
     <message>
         <source>Reimport All</source>
         <translation>Reimportar todo</translation>
+    </message>
+    <message>
+        <source>The dictionaries could not be re-imported.</source>
+        <translation>No se pudieron volver a importar los diccionarios.</translation>
     </message>
     <message>
         <source>Nothing to restore</source>
@@ -6482,7 +6474,7 @@ Cierre primero el navegador de tarjetas y el editor de notas de Anki — una not
         <translation>Medios de tarjetas</translation>
     </message>
     <message>
-        <source>Sentence audio</source>
+        <source>Sentence Audio</source>
         <translation type="unfinished" />
     </message>
     <message>
