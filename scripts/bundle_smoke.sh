@@ -17,6 +17,8 @@
 #                 needs the pack seed under BUNDLE_SMOKE_PACK_SEEDS/asr (the
 #                 engine is an in-app download, not bundle content); without one
 #                 the leg skips.
+#   2e. cli      "$APP" version (stdout captured)            -> "status": "success"
+#                 proves the windowed exe writes JSON to a caller's pipe (fd 1)
 #   2c. mpv      ANKI_MINER_MPV_PROBE=1                     -> MPV_PROBE_OK
 #   2d. language  ANKI_MINER_SMOKE=<code> (opt-in: BUNDLE_SMOKE_LANGS) -> BUNDLED_SMOKE_PASS
 #                 each leg needs a pack seed under BUNDLE_SMOKE_PACK_SEEDS/<code>
@@ -119,6 +121,22 @@ if ANKI_MINER_SMOKE=asr-absent QT_QPA_PLATFORM=offscreen "$APP" 2>&1 | tee smoke
 else
   echo "FAIL asr-absent"
   FAILED+=("asr-absent")
+fi
+echo
+
+# --- 2e. CLI: the bundle answers `version` on a captured stdout ---------------
+# A console=False Windows exe has no sys.stdout; the command line writes fd 1
+# directly (anki_miner/cli/events.py). This leg is the proof, on every release
+# platform, that other tools can read an installed Anki Miner's JSON output.
+# Needs no seed, so it is never skipped.
+echo "=== smoke: cli ==="
+if "$APP" version > smoke_cli.log 2> smoke_cli.err \
+  && grep -q '"status": "success"' smoke_cli.log; then
+  echo "PASS cli"
+else
+  echo "FAIL cli"
+  cat smoke_cli.log smoke_cli.err || true
+  FAILED+=("cli")
 fi
 echo
 
@@ -364,7 +382,7 @@ echo
 # OPT-IN, empty by default. BUNDLE_SMOKE_LANGS is a space-separated list of
 # mining language codes; release.yml sets it to "zh ko". Empty means the loop runs
 # zero times, which is what keeps the app-invocation count (and therefore
-# tests/unit/test_bundle_smoke.py's len(homes) == 5: youtube, asr-absent, the
+# tests/unit/test_bundle_smoke.py's len(homes) == 6: youtube, asr-absent, cli, the
 # Vulkan probe, whispercpp, mpv — the seeded asr leg skips without a seed)
 # unchanged for every caller that does not opt in.
 if [ -n "${BUNDLE_SMOKE_LANGS:-}" ]; then

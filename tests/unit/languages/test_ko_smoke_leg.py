@@ -98,8 +98,9 @@ def _fake_dist(tmp_path: Path) -> Path:
     dist.mkdir(parents=True)
     app = dist / "AnkiMiner"
     app.write_text(
-        "#!/usr/bin/env bash\n"
-        "set -euo pipefail\n"
+        "#!/usr/bin/env bash\n" "set -euo pipefail\n"
+        # The bundle_smoke cli leg: `AnkiMiner version` prints one JSON result.
+        'if [ "${1:-}" = version ]; then echo \'{"event": "result", "status": "success"}\'; exit 0; fi\n'
         'case "${ANKI_MINER_SMOKE:-}" in\n'
         "  ko)\n"
         '    test -f "$ANKI_MINER_HOME/language_packs/ko/kiwipiepy_model/sj.morph"\n'
