@@ -203,10 +203,24 @@ def test_returned_transient_failure_is_retryable(services, test_config, tmp_path
     assert report.retryable is True
 
 
-def test_raised_generic_fetch_error_is_retryable(services, youtube, test_config) -> None:
-    youtube.probe_metadata.side_effect = YouTubeFetchError("connection reset")
-    [report] = runner.MiningRun(test_config, _sink()[0], threading.Event()).run([runner.YouTubeJob(VIDEO_URL)])
+def test_raised_generic_fetch_error_is_retryable(services, youtube, test_config, tmp_path: Path) -> None:
+    # A download that dropped mid-fetch: no note can have been written yet.
+    services.process_youtube_url.side_effect = YouTubeFetchError("connection reset")
+    with (
+        patch.object(runner, "classify_probe_result", return_value=(True, None, "manual_only")),
+        patch.object(runner, "allocate_youtube_workspace", return_value=tmp_path),
+    ):
+        [report] = runner.MiningRun(test_config, _sink()[0], threading.Event()).run([runner.YouTubeJob(VIDEO_URL)])
     assert report.status == "failed" and report.retryable is True
+
+
+def test_probe_failure_is_not_retryable(services, youtube, test_config) -> None:
+    # A private, deleted or region-locked video fails its probe with a generic
+    # YouTubeFetchError. The GUI never retries a probe error; neither may a caller.
+    youtube.probe_metadata.side_effect = YouTubeFetchError("Video unavailable")
+    [report] = runner.MiningRun(test_config, _sink()[0], threading.Event()).run([runner.YouTubeJob(VIDEO_URL)])
+    assert report.status == "failed" and report.errors == ["Video unavailable"]
+    assert report.retryable is False
 
 
 def test_raised_bot_detection_is_not_retryable(services, youtube, test_config) -> None:

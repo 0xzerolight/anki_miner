@@ -295,7 +295,15 @@ class MiningRun:
         return self._mine_youtube(job, processor)
 
     def _mine_youtube(self, job: YouTubeJob, processor: EpisodeProcessor) -> ProcessingResult:
-        info = create_youtube_fetcher(self._config).probe_metadata(job.url)
+        try:
+            info = create_youtube_fetcher(self._config).probe_metadata(job.url)
+        except YouTubeFetchError as exc:
+            if self._cancel.is_set():
+                raise
+            # A private, deleted or region-locked video fails its probe with a
+            # generic YouTubeFetchError; the GUI marks it PROBE_ERROR and never
+            # retries it, so the item is refused, never reported retryable.
+            raise _ItemRefused(str(exc)) from exc
         source = cast(SubtitleSource, self._config.youtube_subtitle_source)
         mineable, error, sub_mode = classify_probe_result(info, self._config, source)
         if not mineable or sub_mode is None:
