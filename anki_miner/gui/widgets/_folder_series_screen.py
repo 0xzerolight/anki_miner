@@ -21,7 +21,6 @@ from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QCoreApplication
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent
-from PyQt6.QtWidgets import QDoubleSpinBox, QWidget
 
 from anki_miner.gui.utils.qt_helpers import urls_from_event
 from anki_miner.gui.widgets._mining_tab_base import MiningTabBase
@@ -44,15 +43,13 @@ class FolderSeriesScreenBase(MiningTabBase):
     are identical across every such screen (see the module docstring).
     """
 
-    # The Add Series card's folder pickers and translation-offset row, built by
-    # every subclass (BatchProcessingTab's ``_create_add_series_section``
-    # today). Bare annotations only — see ``MiningTabBase.config`` — so the
-    # methods below can read them without a per-call type: ignore.
+    # The Add Series card's folder pickers, built by every subclass. Bare
+    # annotations only — see ``MiningTabBase.config`` — so the methods below
+    # can read them without a per-call type: ignore. The offset rows come from
+    # ``MiningTabBase._build_offset_rows``.
     video_folder_selector: FileSelector
     subtitle_folder_selector: FileSelector
     secondary_folder_selector: FileSelector
-    secondary_offset_spinbox: QDoubleSpinBox
-    secondary_offset_row: QWidget
 
     # Set by every subclass's ``__init__`` (``BatchProcessingTab`` today).
     # Declared here, bare, for the same reason.

@@ -26,11 +26,23 @@ from typing import TYPE_CHECKING, cast
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDragMoveEvent
-from PyQt6.QtWidgets import QAbstractButton, QBoxLayout, QCheckBox, QDialog, QScrollArea, QWidget
+from PyQt6.QtWidgets import (
+    QAbstractButton,
+    QBoxLayout,
+    QCheckBox,
+    QDialog,
+    QDoubleSpinBox,
+    QHBoxLayout,
+    QLabel,
+    QScrollArea,
+    QWidget,
+)
 
 from anki_miner.exceptions import AnkiMinerException
+from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.controllers.run_receipt import RunReceiptAccumulator
 from anki_miner.gui.presenters import GUIProgressCallback
+from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import result_copy
 from anki_miner.gui.utils.keyboard_shortcuts import primary_action_shortcut
 from anki_miner.gui.utils.run_off_thread import join_or_retain, run_off_thread, still_running
@@ -41,6 +53,7 @@ from anki_miner.gui.widgets.base import (
     TaskPublisherMixin,
     WorkflowActionBar,
     install_workflow_shell,
+    make_label_fit_text,
 )
 from anki_miner.gui.widgets.dialogs.word_curation_dialog import CurationMediaContext, WordCurationDialog
 from anki_miner.gui.widgets.inline_receipt import InlineReceipt
@@ -130,6 +143,13 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
     # one — which is why _seed_review_words_checkbox reaches it through
     # getattr. Bare annotation only — no runtime class attribute.
     review_words_checkbox: QCheckBox
+
+    # The per-run offset rows, built by :meth:`_build_offset_rows` on the three
+    # screens that take a subtitle offset (Single, Batch, Deck Builder). Bare
+    # annotations only -- see ``config`` above.
+    offset_spinbox: QDoubleSpinBox
+    secondary_offset_spinbox: QDoubleSpinBox
+    secondary_offset_row: QWidget
 
     # ------------------------------------------------------------------
     # Progress callback wiring
@@ -530,6 +550,87 @@ class MiningTabBase(RunOptionsMixin, TaskPublisherMixin, ScreenIssueHost, QWidge
         # behind it cannot answer.
         primary_action_shortcut(self, bar.trigger_primary)
         return bar
+
+    # ------------------------------------------------------------------
+    # Subtitle offset rows (Single, Batch, Deck Builder)
+    # ------------------------------------------------------------------
+
+    def _build_offset_rows(
+        self,
+        layout: QBoxLayout,
+        *,
+        label_w: int,
+        offset_label: str,
+        translation_label: str,
+        seconds_suffix: str,
+        offset_tip: str,
+        translation_tip: str,
+    ) -> None:
+        """Add the Subtitle Offset row and the hideable Translation Offset row to ``layout``.
+
+        Every string is the caller's own ``self.tr`` text, so each screen keeps
+        its translation context. The subtitle offset is per-session, seeded
+        from ``config.subtitle_offset`` (see :meth:`_adopt_offset_config`); the
+        translation offset starts at zero. The caller applies its own secondary
+        gate afterwards.
+        """
+        offset_layout = QHBoxLayout()
+        offset_layout.setSpacing(SPACING.xs)
+
+        label = QLabel(offset_label)
+        label.setObjectName("field-label")
+        label.setMinimumWidth(label_w)
+        make_label_fit_text(label)
+
+        self.offset_spinbox = QDoubleSpinBox()
+        self.offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
+        self.offset_spinbox.setSingleStep(0.5)
+        self.offset_spinbox.setValue(self.config.subtitle_offset)
+        self.offset_spinbox.setSuffix(seconds_suffix)
+        self.offset_spinbox.setToolTip(offset_tip)
+
+        offset_layout.addWidget(label)
+        offset_layout.addWidget(self.offset_spinbox)
+        offset_layout.addStretch()
+        layout.addLayout(offset_layout)
+
+        # Wrapped in a QWidget so the gate can hide the whole row: a bare
+        # QHBoxLayout has nothing to setVisible().
+        self.secondary_offset_row = QWidget()
+        secondary_offset_layout = QHBoxLayout(self.secondary_offset_row)
+        secondary_offset_layout.setContentsMargins(0, 0, 0, 0)
+        secondary_offset_layout.setSpacing(SPACING.xs)
+
+        secondary_label = QLabel(translation_label)
+        secondary_label.setObjectName("field-label")
+        secondary_label.setMinimumWidth(label_w)
+        make_label_fit_text(secondary_label)
+
+        self.secondary_offset_spinbox = QDoubleSpinBox()
+        self.secondary_offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
+        self.secondary_offset_spinbox.setSingleStep(0.5)
+        self.secondary_offset_spinbox.setValue(0.0)
+        self.secondary_offset_spinbox.setSuffix(seconds_suffix)
+        self.secondary_offset_spinbox.setToolTip(translation_tip)
+        secondary_label.setBuddy(self.secondary_offset_spinbox)
+
+        secondary_offset_layout.addWidget(secondary_label)
+        secondary_offset_layout.addWidget(self.secondary_offset_spinbox)
+        secondary_offset_layout.addStretch()
+        layout.addWidget(self.secondary_offset_row)
+
+    def _adopt_offset_config(self, config: AnkiMinerConfig) -> None:
+        """Adopt ``config``, following its subtitle offset only when that value changed.
+
+        The offset spinbox is a per-session value the user dials in for the next
+        run and is never persisted back to config. So it follows
+        ``config.subtitle_offset`` only when the *persisted* value actually
+        changed: an unrelated settings save or theme toggle (each of which
+        re-fires ``update_config``) must not wipe the in-progress offset.
+        """
+        if config.subtitle_offset != self.config.subtitle_offset:
+            self.offset_spinbox.setValue(config.subtitle_offset)
+        self.config = config
 
     # ------------------------------------------------------------------
     # Drag-and-drop scaffolding

@@ -31,7 +31,6 @@ from PyQt6.QtWidgets import (
 
 from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget
-from anki_miner.gui.constants import SUBTITLE_OFFSET_MAX, SUBTITLE_OFFSET_MIN
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
 from anki_miner.gui.resources.styles import SPACING
 from anki_miner.gui.utils import queue_state_store
@@ -44,7 +43,6 @@ from anki_miner.gui.widgets.base import (
     cap_row_field,
     configure_card_layout,
     field_label_width,
-    make_label_fit_text,
 )
 from anki_miner.gui.widgets.enhanced import FileSelector, ModernButton, SectionHeader
 from anki_miner.gui.widgets.log_widget import LogWidget
@@ -259,54 +257,15 @@ class DeckBuilderTab(FolderSeriesScreenBase):
 
         # Constant subtitle offset applied to every episode in the season
         # (mirrors Batch's Add Series card; per-session, seeded from config).
-        offset_layout = QHBoxLayout()
-        offset_layout.setSpacing(SPACING.xs)
-
-        offset_label = QLabel(self.tr("Subtitle Offset:"))
-        offset_label.setObjectName("field-label")
-        offset_label.setMinimumWidth(label_w)
-        make_label_fit_text(offset_label)
-
-        self.offset_spinbox = QDoubleSpinBox()
-        self.offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
-        self.offset_spinbox.setSingleStep(0.5)
-        self.offset_spinbox.setValue(self.config.subtitle_offset)
-        self.offset_spinbox.setSuffix(self.tr(" seconds"))
-        self.offset_spinbox.setToolTip(
-            self.tr("Adjust subtitle timing for the whole season (positive = later, negative = earlier)")
+        self._build_offset_rows(
+            layout,
+            label_w=label_w,
+            offset_label=self.tr("Subtitle Offset:"),
+            translation_label=self.tr("Translation Offset:"),
+            seconds_suffix=self.tr(" seconds"),
+            offset_tip=self.tr("Adjust subtitle timing for the whole season (positive = later, negative = earlier)"),
+            translation_tip=self.tr("Shift the translation subtitles only (positive = later, negative = earlier)"),
         )
-
-        offset_layout.addWidget(offset_label)
-        offset_layout.addWidget(self.offset_spinbox)
-        offset_layout.addStretch()
-        layout.addLayout(offset_layout)
-
-        # Wrapped in a QWidget so the gate can hide the whole row: a bare
-        # QHBoxLayout has nothing to setVisible().
-        self.secondary_offset_row = QWidget()
-        secondary_offset_layout = QHBoxLayout(self.secondary_offset_row)
-        secondary_offset_layout.setContentsMargins(0, 0, 0, 0)
-        secondary_offset_layout.setSpacing(SPACING.xs)
-
-        secondary_offset_label = QLabel(self.tr("Translation Offset:"))
-        secondary_offset_label.setObjectName("field-label")
-        secondary_offset_label.setMinimumWidth(label_w)
-        make_label_fit_text(secondary_offset_label)
-
-        self.secondary_offset_spinbox = QDoubleSpinBox()
-        self.secondary_offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
-        self.secondary_offset_spinbox.setSingleStep(0.5)
-        self.secondary_offset_spinbox.setValue(0.0)
-        self.secondary_offset_spinbox.setSuffix(self.tr(" seconds"))
-        self.secondary_offset_spinbox.setToolTip(
-            self.tr("Shift the translation subtitles only (positive = later, negative = earlier)")
-        )
-        secondary_offset_label.setBuddy(self.secondary_offset_spinbox)
-
-        secondary_offset_layout.addWidget(secondary_offset_label)
-        secondary_offset_layout.addWidget(self.secondary_offset_spinbox)
-        secondary_offset_layout.addStretch()
-        layout.addWidget(self.secondary_offset_row)
 
         section.setLayout(layout)
         return section
@@ -1005,15 +964,7 @@ class DeckBuilderTab(FolderSeriesScreenBase):
         Args:
             config: New configuration
         """
-        # The offset spinbox is a per-session value the user dials in for the
-        # next run; it is never persisted back to config. Only follow
-        # config.subtitle_offset when the *persisted* value actually changed,
-        # so an unrelated settings save / theme toggle (each of which re-fires
-        # update_config) doesn't wipe the in-progress offset. Mirrors
-        # BatchProcessingTab.update_config.
-        if config.subtitle_offset != self.config.subtitle_offset:
-            self.offset_spinbox.setValue(config.subtitle_offset)
-        self.config = config
+        self._adopt_offset_config(config)
         self._apply_secondary_gate()
         self._seed_selection_controls()
         self._seed_review_words_checkbox()

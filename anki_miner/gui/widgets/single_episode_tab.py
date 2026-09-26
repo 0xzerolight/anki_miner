@@ -13,7 +13,6 @@ from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence
 from PyQt6.QtWidgets import (
     QComboBox,
-    QDoubleSpinBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -27,8 +26,6 @@ from anki_miner.config import AnkiMinerConfig
 from anki_miner.gui.capabilities import CapabilityTarget, effective_hidden_utilities
 from anki_miner.gui.constants import (
     SUBTITLE_FILE_FILTER,
-    SUBTITLE_OFFSET_MAX,
-    SUBTITLE_OFFSET_MIN,
     VIDEO_FILE_FILTER,
 )
 from anki_miner.gui.presenters import GUIPresenter, GUIProgressCallback
@@ -394,48 +391,15 @@ class SingleEpisodeTab(MiningTabBase):
         layout.addLayout(source_layout)
 
         # Subtitle offset with helper text
-        offset_layout = QHBoxLayout()
-        offset_layout.setSpacing(SPACING.xs)
-
-        offset_label = QLabel(self.tr("Subtitle Offset:"))
-        offset_label.setObjectName("field-label")
-        offset_label.setMinimumWidth(label_w)
-        make_label_fit_text(offset_label)
-
-        self.offset_spinbox = QDoubleSpinBox()
-        self.offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
-        self.offset_spinbox.setSingleStep(0.5)
-        self.offset_spinbox.setValue(self.config.subtitle_offset)
-        self.offset_spinbox.setSuffix(self.tr(" seconds"))
-        self.offset_spinbox.setToolTip(self.tr("Adjust subtitle timing (positive = later, negative = earlier)"))
-
-        offset_layout.addWidget(offset_label)
-        offset_layout.addWidget(self.offset_spinbox)
-        offset_layout.addStretch()
-        layout.addLayout(offset_layout)
-
-        # A widget rather than a bare layout so the whole row can be hidden.
-        self.secondary_offset_row = QWidget()
-        secondary_offset_layout = QHBoxLayout(self.secondary_offset_row)
-        secondary_offset_layout.setContentsMargins(0, 0, 0, 0)
-        secondary_offset_layout.setSpacing(SPACING.xs)
-        secondary_offset_label = QLabel(self.tr("Translation Offset:"))
-        secondary_offset_label.setObjectName("field-label")
-        secondary_offset_label.setMinimumWidth(label_w)
-        make_label_fit_text(secondary_offset_label)
-        self.secondary_offset_spinbox = QDoubleSpinBox()
-        self.secondary_offset_spinbox.setRange(SUBTITLE_OFFSET_MIN, SUBTITLE_OFFSET_MAX)
-        self.secondary_offset_spinbox.setSingleStep(0.5)
-        self.secondary_offset_spinbox.setValue(0.0)
-        self.secondary_offset_spinbox.setSuffix(self.tr(" seconds"))
-        self.secondary_offset_spinbox.setToolTip(
-            self.tr("Shift the translation subtitles only (positive = later, negative = earlier)")
+        self._build_offset_rows(
+            layout,
+            label_w=label_w,
+            offset_label=self.tr("Subtitle Offset:"),
+            translation_label=self.tr("Translation Offset:"),
+            seconds_suffix=self.tr(" seconds"),
+            offset_tip=self.tr("Adjust subtitle timing (positive = later, negative = earlier)"),
+            translation_tip=self.tr("Shift the translation subtitles only (positive = later, negative = earlier)"),
         )
-        secondary_offset_label.setBuddy(self.secondary_offset_spinbox)
-        secondary_offset_layout.addWidget(secondary_offset_label)
-        secondary_offset_layout.addWidget(self.secondary_offset_spinbox)
-        secondary_offset_layout.addStretch()
-        layout.addWidget(self.secondary_offset_row)
         self._apply_secondary_gate()
 
         group.setLayout(layout)
@@ -1053,14 +1017,7 @@ class SingleEpisodeTab(MiningTabBase):
         Args:
             config: New configuration
         """
-        # The offset spinbox is a per-session value the user dials in for the
-        # current episode; it is never persisted back to config. Only follow
-        # config.subtitle_offset when the *persisted* value actually changed,
-        # so an unrelated settings save / theme toggle (each of which re-fires
-        # update_config) doesn't wipe the in-progress offset back to 0.0.
-        if config.subtitle_offset != self.config.subtitle_offset:
-            self.offset_spinbox.setValue(config.subtitle_offset)
-        self.config = config
+        self._adopt_offset_config(config)
         self._apply_secondary_gate()
 
     def shutdown(self) -> None:
