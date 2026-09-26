@@ -193,7 +193,8 @@ class _ToolTabBase(TaskPublisherMixin, ScreenIssueHost, QWidget):
         self._primary_button.setEnabled(False)
         if self._suppress_optional_startup:
             return
-        # The subclass's module logger, so the line keeps its original source.
+        # The subclass's module logger, so the line keeps its original source
+        # name; its %(lineno)d now points into this file, not the subclass.
         log = logging.getLogger(type(self).__module__)
 
         def _on_error(message: str) -> None:
