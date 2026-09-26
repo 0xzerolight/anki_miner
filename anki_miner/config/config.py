@@ -2,7 +2,7 @@
 
 import tempfile
 import types
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Literal, Mapping, Sequence
 
@@ -48,6 +48,21 @@ _LANGUAGE_CODES: tuple[str, ...] = (
 # Deliberate duplicate of anki_miner.languages.SCRIPT_VARIANT_IDS, for the same
 # reason as _LANGUAGE_CODES; test_stage_s_contract.py pins the two identical.
 _SCRIPT_VARIANT_IDS: tuple[str, ...] = ("", "simplified", "traditional", "br", "pt")
+
+# Enumerated fields __post_init__ resets to a default, in the order it checks
+# them: field -> (accepted values, default). An unrecognised value is reset
+# rather than carried into a combo lookup, which would silently leave the widget
+# on whatever index it happened to hold.
+_ENUM_RESETS: dict[str, tuple[frozenset[str], str]] = {
+    "deck_builder_mode": (frozenset({"all", "top_n", "coverage_pct"}), "all"),
+    "youtube_subtitle_source": (frozenset({"auto", "transcribe", "captions"}), "auto"),
+    # A stale or hand-edited config must never pass an unsupported model name to
+    # faster-whisper. The authoritative set lives in services/asr/model_manager.py;
+    # duplicated here to keep config self-contained and import-free.
+    "asr_model": (frozenset({"large-v3", "small"}), "large-v3"),
+    # Nor an unsupported backend name through to the transcriber.
+    "asr_device": (frozenset({"auto", "cuda", "cpu", "vulkan"}), "auto"),
+}
 
 # Discrete whole-UI zoom presets (whole percents) offered in the Zoom dropdown
 # (gui/widgets/panels/ui_settings_panel.py) and used to snap a folded legacy
@@ -741,117 +756,26 @@ class AnkiMinerConfig:
         if self.script_variant not in _SCRIPT_VARIANT_IDS:
             raise ValueError("script_variant must be one of " + ", ".join(repr(v) for v in _SCRIPT_VARIANT_IDS))
 
-        # Convert paths to Path objects (handles both str and Path inputs)
-        if isinstance(self.media_temp_folder, str):
-            object.__setattr__(self, "media_temp_folder", Path(self.media_temp_folder))
-        if isinstance(self.jmdict_path, str):
-            object.__setattr__(self, "jmdict_path", Path(self.jmdict_path))
-        if isinstance(self.dicts_root, str):
-            object.__setattr__(self, "dicts_root", Path(self.dicts_root))
-        if isinstance(self.audio_packs_root, str):
-            object.__setattr__(self, "audio_packs_root", Path(self.audio_packs_root))
-        if isinstance(self.pitch_accent_path, str):
-            object.__setattr__(self, "pitch_accent_path", Path(self.pitch_accent_path))
-        if isinstance(self.pitch_root, str):
-            object.__setattr__(self, "pitch_root", Path(self.pitch_root))
-        if isinstance(self.freqs_root, str):
-            object.__setattr__(self, "freqs_root", Path(self.freqs_root))
-        if isinstance(self.known_words_db_path, str):
-            object.__setattr__(self, "known_words_db_path", Path(self.known_words_db_path))
-        if isinstance(self.blacklist_path, str):
-            object.__setattr__(self, "blacklist_path", Path(self.blacklist_path) if self.blacklist_path else None)
-        if isinstance(self.whitelist_path, str):
-            object.__setattr__(self, "whitelist_path", Path(self.whitelist_path) if self.whitelist_path else None)
-        if isinstance(self.stats_db_path, str):
-            object.__setattr__(self, "stats_db_path", Path(self.stats_db_path))
-        if isinstance(self.log_path, str):
-            object.__setattr__(self, "log_path", Path(self.log_path))
-        if isinstance(self.youtube_cookies_file, str):
-            object.__setattr__(
-                self,
-                "youtube_cookies_file",
-                Path(self.youtube_cookies_file) if self.youtube_cookies_file else None,
-            )
-        if isinstance(self.youtube_ffmpeg_location, str):
-            object.__setattr__(
-                self,
-                "youtube_ffmpeg_location",
-                Path(self.youtube_ffmpeg_location) if self.youtube_ffmpeg_location else None,
-            )
-        if isinstance(self.ffmpeg_location, str):
-            object.__setattr__(
-                self,
-                "ffmpeg_location",
-                Path(self.ffmpeg_location) if self.ffmpeg_location else None,
-            )
-        if isinstance(self.ffprobe_location, str):
-            object.__setattr__(
-                self,
-                "ffprobe_location",
-                Path(self.ffprobe_location) if self.ffprobe_location else None,
-            )
-        if isinstance(self.alass_location, str):
-            object.__setattr__(
-                self,
-                "alass_location",
-                Path(self.alass_location) if self.alass_location else None,
-            )
-        if isinstance(self.mokuro_location, str):
-            object.__setattr__(
-                self,
-                "mokuro_location",
-                Path(self.mokuro_location) if self.mokuro_location else None,
-            )
-        if isinstance(self.ytdlp_location, str):
-            object.__setattr__(
-                self,
-                "ytdlp_location",
-                Path(self.ytdlp_location) if self.ytdlp_location else None,
-            )
-        if isinstance(self.themes_root, str):
-            object.__setattr__(self, "themes_root", Path(self.themes_root))
-        if isinstance(self.asr_models_root, str):
-            object.__setattr__(self, "asr_models_root", Path(self.asr_models_root))
-        if isinstance(self.cuda_libs_root, str):
-            object.__setattr__(self, "cuda_libs_root", Path(self.cuda_libs_root))
-        if isinstance(self.onnx_pack_root, str):
-            object.__setattr__(self, "onnx_pack_root", Path(self.onnx_pack_root))
-        if isinstance(self.bin_root, str):
-            object.__setattr__(self, "bin_root", Path(self.bin_root))
-        if isinstance(self.uv_root, str):
-            object.__setattr__(self, "uv_root", Path(self.uv_root))
-        # JSON round-trip yields a list for theme_favorites; coerce to tuple
-        # so the frozen dataclass stays internally immutable.
-        if isinstance(self.theme_favorites, list):
-            object.__setattr__(self, "theme_favorites", tuple(self.theme_favorites))
-        # JSON round-trip yields a list for hidden_utilities; coerce to tuple.
-        if isinstance(self.hidden_utilities, list):
-            object.__setattr__(self, "hidden_utilities", tuple(self.hidden_utilities))
-        # JSON round-trip yields a list for excluded_decks; coerce to tuple.
-        if isinstance(self.excluded_decks, list):
-            object.__setattr__(self, "excluded_decks", tuple(self.excluded_decks))
-        # JSON round-trip yields a list for excluded_wordsets; coerce to tuple.
-        if isinstance(self.excluded_wordsets, list):
-            object.__setattr__(self, "excluded_wordsets", tuple(self.excluded_wordsets))
-        # JSON round-trip yields a list for allowed_pos / excluded_subtypes;
-        # coerce to tuple so the frozen instance stays internally immutable.
-        if isinstance(self.allowed_pos, list):
-            object.__setattr__(self, "allowed_pos", tuple(self.allowed_pos))
-        if isinstance(self.excluded_subtypes, list):
-            object.__setattr__(self, "excluded_subtypes", tuple(self.excluded_subtypes))
-        # Wrap anki_fields in MappingProxyType so it cannot be mutated in place
-        # on the shared frozen config instance (tuple coercion pattern already
-        # applied to the other collection fields above).
-        if not isinstance(self.anki_fields, types.MappingProxyType):
-            object.__setattr__(self, "anki_fields", types.MappingProxyType(dict(self.anki_fields)))
-        # Same immutability wrap for the card-type marker name map.
-        if not isinstance(self.card_type_marker_fields, types.MappingProxyType):
-            object.__setattr__(
-                self, "card_type_marker_fields", types.MappingProxyType(dict(self.card_type_marker_fields))
-            )
-        # Same immutability wrap for the shortcut overrides.
-        if not isinstance(self.key_bindings, types.MappingProxyType):
-            object.__setattr__(self, "key_bindings", types.MappingProxyType(dict(self.key_bindings)))
+        # Coerce by declared type; the four tables sit below the class. A JSON
+        # round-trip yields str for a path and list for a tuple. Mappings are
+        # wrapped read-only so the shared frozen config cannot be mutated in
+        # place.
+        for name in _PATH_FIELDS:
+            value = getattr(self, name)
+            if isinstance(value, str):
+                object.__setattr__(self, name, Path(value))
+        for name in _OPTIONAL_PATH_FIELDS:
+            value = getattr(self, name)
+            if isinstance(value, str):
+                object.__setattr__(self, name, Path(value) if value else None)
+        for name in _TUPLE_FIELDS:
+            value = getattr(self, name)
+            if isinstance(value, list):
+                object.__setattr__(self, name, tuple(value))
+        for name in _MAPPING_FIELDS:
+            value = getattr(self, name)
+            if not isinstance(value, types.MappingProxyType):
+                object.__setattr__(self, name, types.MappingProxyType(dict(value)))
         if not isinstance(self.language_stash, types.MappingProxyType) or any(
             not isinstance(value, types.MappingProxyType) for value in self.language_stash.values()
         ):
@@ -871,10 +795,6 @@ class AnkiMinerConfig:
         # Clamp ui_zoom to [0.5, 2.0]
         object.__setattr__(self, "ui_zoom", max(0.5, min(2.0, float(self.ui_zoom))))
 
-        # JSON round-trip yields a list for backfill_field_groups; coerce to tuple.
-        if isinstance(self.backfill_field_groups, list):
-            object.__setattr__(self, "backfill_field_groups", tuple(self.backfill_field_groups))
-
         # Clamp the Deck Builder run options to their spinbox ranges. A config
         # value outside them would otherwise be silently re-clamped by the
         # widget at seed time, so the saved value and the shown value would
@@ -884,13 +804,12 @@ class AnkiMinerConfig:
             self, "deck_builder_coverage_pct", max(1.0, min(100.0, float(self.deck_builder_coverage_pct)))
         )
 
-        # Reset an unrecognised enumerated value rather than carrying it into a
-        # combo lookup, which would silently leave the widget on whatever index
-        # it happened to hold (mirrors the asr_model / asr_device resets).
-        if self.deck_builder_mode not in {"all", "top_n", "coverage_pct"}:
-            object.__setattr__(self, "deck_builder_mode", "all")
-        if self.youtube_subtitle_source not in {"auto", "transcribe", "captions"}:
-            object.__setattr__(self, "youtube_subtitle_source", "auto")
+        # Two loops so the ui_language line keeps its place between the
+        # run-option resets and the ASR resets (today's evaluation order).
+        for name in ("deck_builder_mode", "youtube_subtitle_source"):
+            allowed, default = _ENUM_RESETS[name]
+            if getattr(self, name) not in allowed:
+                object.__setattr__(self, name, default)
 
         # Normalize ui_language: lower-case, strip, empty → "en". Lenient (no
         # whitelist) so a contributor's freshly-added language code is accepted
@@ -898,17 +817,10 @@ class AnkiMinerConfig:
         # code with no .qm.
         object.__setattr__(self, "ui_language", str(self.ui_language).strip().lower() or "en")
 
-        # Validate asr_model: reset unknown values to the default so a stale or
-        # hand-edited config never silently passes an unsupported model name to
-        # faster-whisper. The authoritative set lives in services/asr/model_manager.py;
-        # duplicated here to keep config self-contained and import-free.
-        if self.asr_model not in {"large-v3", "small"}:
-            object.__setattr__(self, "asr_model", "large-v3")
-
-        # Validate asr_device the same way: a stale/hand-edited config must never
-        # pass an unsupported backend name through to the transcriber.
-        if self.asr_device not in {"auto", "cuda", "cpu", "vulkan"}:
-            object.__setattr__(self, "asr_device", "auto")
+        for name in ("asr_model", "asr_device"):
+            allowed, default = _ENUM_RESETS[name]
+            if getattr(self, name) not in allowed:
+                object.__setattr__(self, name, default)
 
         # Normalize and validate the mining language. An unknown or hand-edited
         # value resets to "ja" rather than raising, matching asr_model/asr_device:
@@ -943,3 +855,16 @@ class AnkiMinerConfig:
         the boot-time legacy migration back-fills it for existing CSV users.
         """
         return any(e.enabled for e in self.pitch_chain)
+
+
+def _fields_annotated(annotation: object) -> tuple[str, ...]:
+    """Names of the AnkiMinerConfig fields declared exactly ``annotation``, in declaration order."""
+    return tuple(f.name for f in fields(AnkiMinerConfig) if f.type == annotation)
+
+
+# __post_init__'s coercion tables, derived from the annotations so a new field
+# of one of these types is coerced with nothing to register.
+_PATH_FIELDS = _fields_annotated(Path)
+_OPTIONAL_PATH_FIELDS = _fields_annotated(Path | None)
+_TUPLE_FIELDS = _fields_annotated(tuple[str, ...])
+_MAPPING_FIELDS = _fields_annotated(Mapping[str, str])
